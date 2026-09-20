@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/PersonalFinance.ApiService/PersonalFinance.ApiService.csproj" />
+    <Project Path="src/PersonalFinance.Data/PersonalFinance.Data.csproj" />
+    <Project Path="src/PersonalFinance.Shared/PersonalFinance.Shared.csproj" />
+    <Project Path="src/PersonalFinance.Web/PersonalFinance.Web.csproj" />
+  </Folder>
+</Solution>

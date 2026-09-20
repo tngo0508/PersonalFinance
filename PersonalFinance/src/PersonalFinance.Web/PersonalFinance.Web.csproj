@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Project References -->
+        <ProjectReference Include="..\PersonalFinance.Shared\PersonalFinance.Shared.csproj"/>
+        <ProjectReference Include="..\PersonalFinance.Data\PersonalFinance.Data.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Refit HTTP Client with HttpClientFactory integration -->
+        <PackageReference Include="Refit.HttpClientFactory"/>
+
+        <!-- HTTP Client Resilience Pipeline (Retries, Circuit Breaker, Rate Limiter) -->
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience"/>
+
+        <!-- Serilog Logging -->
+        <PackageReference Include="Serilog.AspNetCore"/>
+        <PackageReference Include="Serilog.Sinks.Console"/>
+        <PackageReference Include="Serilog.Sinks.File"/>
+
+        <!-- LibMan Client-Side Library Manager Build Tool -->
+        <PackageReference Include="Microsoft.Web.LibraryManager.Build"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- ASP.NET Core Identity UI -->
+        <PackageReference Include="Microsoft.AspNetCore.Identity.UI"/>
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore"/>
+    </ItemGroup>
+
+</Project>

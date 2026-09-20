@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonalFinance.ApiService", "PersonalFinance\src\PersonalFinance.ApiService\PersonalFinance.ApiService.csproj", "{252F67C7-3740-41DB-A53B-94A1EF773D5E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonalFinance.Shared", "PersonalFinance\src\PersonalFinance.Shared\PersonalFinance.Shared.csproj", "{A529252D-75D8-4995-9FA3-025EE6304B16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonalFinance.Data", "PersonalFinance\src\PersonalFinance.Data\PersonalFinance.Data.csproj", "{3AD07DDF-4AA0-4F5E-A89B-0858406BD1A7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonalFinance.Web", "PersonalFinance\src\PersonalFinance.Web\PersonalFinance.Web.csproj", "{C131E62F-131E-4BF6-A01B-D2BA5E85370D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{252F67C7-3740-41DB-A53B-94A1EF773D5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{252F67C7-3740-41DB-A53B-94A1EF773D5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{252F67C7-3740-41DB-A53B-94A1EF773D5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{252F67C7-3740-41DB-A53B-94A1EF773D5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A529252D-75D8-4995-9FA3-025EE6304B16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A529252D-75D8-4995-9FA3-025EE6304B16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A529252D-75D8-4995-9FA3-025EE6304B16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A529252D-75D8-4995-9FA3-025EE6304B16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3AD07DDF-4AA0-4F5E-A89B-0858406BD1A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AD07DDF-4AA0-4F5E-A89B-0858406BD1A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AD07DDF-4AA0-4F5E-A89B-0858406BD1A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AD07DDF-4AA0-4F5E-A89B-0858406BD1A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C131E62F-131E-4BF6-A01B-D2BA5E85370D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C131E62F-131E-4BF6-A01B-D2BA5E85370D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C131E62F-131E-4BF6-A01B-D2BA5E85370D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C131E62F-131E-4BF6-A01B-D2BA5E85370D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
