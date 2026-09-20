@@ -11,9 +11,55 @@ The solution is organized into focused, decoupled projects:
 | Project | Role & Description |
 |---|---|
 | **`PersonalFinance.Data`** | Database schema, EF Core `AppDbContext`, domain entities, and migration definitions. |
-| **`PersonalFinance.ApiService`** | Backend RESTful API offering CRUD operations, OpenAPI spec generation, and interactive Scalar UI (`/scalar/v1`). |
-| **`PersonalFinance.Web`** | ASP.NET Core MVC and Razor Pages frontend consuming API endpoints via type-safe Refit client with resilience pipelines and ASP.NET Core Identity authentication. |
-| **`PersonalFinance.Shared`** | Shared DTOs, API contracts (`IItemsApi`), exceptions, and application constants. |
+| **`PersonalFinance.ApiService`** | Backend RESTful API offering CRUD operations, Google Drive folder explorer services (`GoogleDriveController`), OpenAPI spec generation, and interactive Scalar UI (`/scalar/v1`). |
+| **`PersonalFinance.Web`** | ASP.NET Core MVC and Razor Pages frontend consuming API endpoints via type-safe Refit clients (`IItemsApi`, `IGoogleDriveApi`) with resilience pipelines, DataTables, and ASP.NET Core Identity authentication. |
+| **`PersonalFinance.Shared`** | Shared DTOs (`GoogleDriveFileDto`, `ItemDto`), API contracts (`IGoogleDriveApi`, `IItemsApi`), URL helpers, and application constants. |
+| **`PersonalFinance.Tests`** | xUnit unit tests verifying URL parsing, MIME type resolution, byte formatting, and service handling. |
+
+---
+
+## Features
+
+### 1. Google Drive Folder Explorer
+Allows users to input any Google Drive folder URL (e.g. `https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link`) or raw Folder ID to list and browse its contained files on a dedicated interactive DataTables page (`/GoogleDrive`).
+- **Universal URL Parsing**: Supports standard folder URLs, shortened/view URLs, and raw folder IDs via `GoogleDriveHelper`.
+- **Interactive DataTables Integration**: Client-side filtering, sorting by name, size (raw byte sorting), category badges, creation/modification dates, and pagination.
+- **Summary Metrics**: High-level statistics displaying total items, cumulative data volume, and folder identifiers.
+- **Direct Access**: Clickable links to open files/folders directly in Google Drive, plus quick clipboard copy actions.
+- **Live API & Preview Modes**: Seamlessly interacts with Google Drive API v3 when a Google Cloud API key is provided, or displays realistic preview data when testing public sample links without an API key.
+
+#### How to Get a Free Google Cloud API Key (Step-by-Step for Non-Technical Users)
+
+To query live Google Drive folders, you can obtain a free API key from Google in about 2 minutes:
+
+1. **Open Google Cloud Console**:
+   - Go to [console.cloud.google.com](https://console.cloud.google.com/) and sign in with any standard Google/Gmail account.
+2. **Create a Project**:
+   - Click the **Project dropdown** at the top of the page (next to the Google Cloud logo) and click **"New Project"**.
+   - Enter a name (e.g., `PersonalFinance-DriveExplorer`) and click **"Create"**.
+3. **Enable the Google Drive API**:
+   - In the left sidebar navigation, click **APIs & Services** &rarr; **Library** (or search for *"Google Drive API"* in the top search bar).
+   - Select **Google Drive API** and click the blue **"Enable"** button.
+4. **Generate Your API Key**:
+   - In the left sidebar, click **APIs & Services** &rarr; **Credentials**.
+   - Click **"+ CREATE CREDENTIALS"** at the top of the page and choose **"API key"**.
+5. **Copy and Use Your Key**:
+   - A dialog will show your generated API key (starts with `AIzaSy...`).
+   - Copy the key and paste it into the **Google API Key** field on the `/GoogleDrive` web page, or add it to `PersonalFinance.ApiService/appsettings.json`:
+     ```json
+     "GoogleDrive": {
+       "ApiKey": "YOUR_API_KEY_HERE"
+     }
+     ```
+
+> **Note**:
+> - **Cost**: The Google Drive API is **free** for personal use (Google provides thousands of free queries per day).
+> - **Folder Sharing Requirement**: The Google Drive folder's General access must be set to **"Anyone with the link"** (Role: Viewer). API keys operate without user login credentials and can only query public/link-shared folders. If left as *"Restricted"*, Google Drive returns an HTTP 404 (Not Found) or HTTP 403 (Forbidden) access error.
+>
+> #### Troubleshooting File Listing Issues
+> 1. **HTTP 404 / Cannot See Files**: Google masks private folders with HTTP 404. In Google Drive, right-click the folder &rarr; click **Share** &rarr; **Share** &rarr; change General access to **"Anyone with the link"** (Viewer).
+> 2. **HTTP 403 Forbidden**: Ensure the **Google Drive API** is enabled in your Google Cloud Console under *APIs & Services > Library*, and that your API key has no restricting IP/HTTP referrers preventing requests.
+> 3. **0 Files Returned**: If files exist in the folder but are not listed, confirm both the folder and nested items are accessible to "Anyone with the link".
 
 ---
 

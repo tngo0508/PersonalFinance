@@ -1,5 +1,6 @@
 using Refit;
 using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using Microsoft.AspNetCore.Identity;
@@ -8,7 +9,9 @@ using PersonalFinance.Data;
 
 // 1. Bootstrap early logging to catch startup errors
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
+    .WriteTo.Console(
+        theme: AnsiConsoleTheme.Code,
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
     .CreateBootstrapLogger();
 
 try
@@ -22,7 +25,9 @@ try
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
-        .WriteTo.Console());
+        .WriteTo.Console(
+            theme: AnsiConsoleTheme.Code,
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
 
     // 3a. Register EF Core DbContext & ASP.NET Core Identity (shared solution-level database for local development)
     var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -43,7 +48,7 @@ try
     // 5. Register Health Checks
     builder.Services.AddHealthChecks();
 
-    // 6. Register Refit Client with Standard HTTP Resilience Pipeline
+    // 6. Register Refit Clients with Standard HTTP Resilience Pipeline
     var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7100";
 
     builder.Services.AddRefitClient<IItemsApi>()
@@ -54,6 +59,19 @@ try
         })
         // Enables Microsoft.Extensions.Http.Resilience (retries with exponential jitter, circuit breaker, rate limiter)
         .AddStandardResilienceHandler();
+
+    builder.Services.AddRefitClient<IGoogleDriveApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(35);
+        })
+        .AddStandardResilienceHandler(options =>
+        {
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(25);
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(35);
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(70);
+        });
 
     var app = builder.Build();
 

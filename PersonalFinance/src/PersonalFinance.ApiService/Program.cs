@@ -1,12 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 
 // 1. Bootstrap early logging to capture any startup or DI registration failures
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
+    .WriteTo.Console(
+        theme: AnsiConsoleTheme.Code,
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
     .CreateBootstrapLogger();
 
 try
@@ -20,7 +24,9 @@ try
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
-        .WriteTo.Console());
+        .WriteTo.Console(
+            theme: AnsiConsoleTheme.Code,
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
 
     // 3. Register EF Core DbContext with SQLite (shared solution-level database for local development)
     var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -35,6 +41,12 @@ try
 
     // 5. Health Checks for container orchestrators (Kubernetes / Docker) and load balancers
     builder.Services.AddHealthChecks();
+
+    // 5b. Register Google Drive integration service with typed HttpClient
+    builder.Services.AddHttpClient<IGoogleDriveService, GoogleDriveService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(15);
+    });
 
     builder.Services.AddControllers();
 
