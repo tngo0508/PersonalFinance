@@ -22,19 +22,13 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console());
 
-    // 3. Register EF Core DbContext with Connection Resiliency (automatic retry on transient network failures)
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                           ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    // 3. Register EF Core DbContext with SQLite (shared solution-level database for local development)
+    var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                              ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    var connectionString = DatabasePathHelper.ResolveConnectionString(rawConnectionString);
 
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(connectionString, sqlOptions =>
-        {
-            // Transient fault handling: retries SQL queries up to 5 times with exponential backoff
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
-                maxRetryDelay: TimeSpan.FromSeconds(30),
-                errorNumbersToAdd: null);
-        }));
+        options.UseSqlite(connectionString));
 
     // 4. Standard RFC 7807 ProblemDetails for standardized error responses
     builder.Services.AddProblemDetails();
@@ -97,12 +91,12 @@ try
                 .WithTheme(ScalarTheme.Moon);
         });
 
-        // Auto-create database schema and seed initial sample data for local development
+        // Auto-migrate database schema and seed initial sample data for local development
         try
         {
             using var scope = app.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.EnsureCreated();
+            db.Database.Migrate();
 
             if (!db.Items.Any())
             {

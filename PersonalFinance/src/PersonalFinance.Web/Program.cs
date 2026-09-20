@@ -24,9 +24,10 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console());
 
-    // 3a. Register EF Core DbContext & ASP.NET Core Identity (when --auth Individual is selected)
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                           ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    // 3a. Register EF Core DbContext & ASP.NET Core Identity (shared solution-level database for local development)
+    var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                              ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    var connectionString = DatabasePathHelper.ResolveConnectionString(rawConnectionString);
 
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlite(connectionString));
@@ -90,7 +91,7 @@ try
         {
             using var scope = app.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.EnsureCreated();
+            db.Database.Migrate();
         }
         catch (Exception ex)
         {

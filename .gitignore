@@ -1,8 +1,31 @@
+# Build and package folders
 bin/
 obj/
+[Bb]in/
+[Oo]bj/
+*bin\\*
+*obj\\*
 /packages/
+
+# JetBrains Rider & ReSharper
+.idea/
+*.sln.iml
+*.iml
 riderModule.iml
-/_ReSharper.Caches/
+_ReSharper*/
+_ReSharper.Caches/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+*.DotSettings
+
+# macOS & OS artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # SQLite Databases
 *.db
