@@ -1,5 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
+using PersonalFinance.Data.Helpers;
 using PersonalFinance.Shared.DTOs;
 using PersonalFinance.Shared.Helpers;
 
@@ -7,24 +11,29 @@ namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
 /// Service implementation interacting with Google Drive API v3 to retrieve files within a folder,
-/// with fallback preview support when no API key is supplied.
+/// with SQLite caching, incremental synchronization, multi-drive connection persistence,
+/// and re-authentication handling.
 /// </summary>
 public class GoogleDriveService : IGoogleDriveService
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
+    private readonly AppDbContext _dbContext;
     private readonly ILogger<GoogleDriveService> _logger;
 
     public GoogleDriveService(
         HttpClient httpClient,
         IConfiguration configuration,
+        AppDbContext dbContext,
         ILogger<GoogleDriveService> logger)
     {
         _httpClient = httpClient;
         _configuration = configuration;
+        _dbContext = dbContext;
         _logger = logger;
     }
 
+    /// <inheritdoc />
     public async Task<GoogleDriveFolderResponseDto> GetFolderFilesAsync(
         GoogleDriveRequestDto request,
         CancellationToken cancellationToken = default)
@@ -139,6 +148,405 @@ public class GoogleDriveService : IGoogleDriveService
             "No Google Drive API Key was provided. Showing preview files for this folder. To query live Google Drive folders, provide a Google Cloud API Key with Google Drive API enabled.");
     }
 
+    /// <inheritdoc />
+    public async Task<List<GoogleDriveConnectionDto>> GetUserConnectionsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return new List<GoogleDriveConnectionDto>();
+        }
+
+        var connections = await _dbContext.GoogleDriveConnections
+            .AsNoTracking()
+            .Where(c => c.UserId == userId)
+            .Include(c => c.CachedFiles)
+            .OrderByDescending(c => c.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        return connections.Select(MapToDto).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<GoogleDriveFolderResponseDto> GetConnectionFilesAsync(
+        int connectionId,
+        string userId,
+        bool forceRefresh = false,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = await _dbContext.GoogleDriveConnections
+            .Include(c => c.CachedFiles)
+            .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
+
+        if (connection == null)
+        {
+            return new GoogleDriveFolderResponseDto
+            {
+                Success = false,
+                ErrorMessage = "Google Drive connection not found."
+            };
+        }
+
+        // If not forced and cache exists and is fresh (within 30 minutes), return cached data from SQLite
+        var isCacheFresh = connection.LastSyncedAtUtc.HasValue &&
+                           (DateTime.UtcNow - connection.LastSyncedAtUtc.Value) < TimeSpan.FromMinutes(30) &&
+                           connection.CachedFiles.Any(f => !f.IsTrashed);
+
+        if (!forceRefresh && isCacheFresh)
+        {
+            _logger.LogInformation("Serving Google Drive data from SQLite cache for connection {ConnectionId} ('{FolderId}')", connectionId, connection.FolderId);
+            return MapConnectionToFolderResponse(connection);
+        }
+
+        // Otherwise synchronize with Google Drive
+        _logger.LogInformation("Synchronizing Google Drive data for connection {ConnectionId} ('{FolderId}')...", connectionId, connection.FolderId);
+        return await SyncConnectionInternalAsync(connection, forceRefresh, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<GoogleDriveConnectionDto> ConnectDriveAsync(
+        ConnectGoogleDriveRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.UserId))
+        {
+            throw new ArgumentException("UserId is required to connect a Google Drive.", nameof(request));
+        }
+
+        var folderId = GoogleDriveHelper.ExtractFolderId(request.FolderUrl);
+        if (string.IsNullOrWhiteSpace(folderId))
+        {
+            throw new ArgumentException("Invalid Google Drive folder URL or Folder ID.", nameof(request));
+        }
+
+        // Check if connection for this user and folder already exists
+        var existing = await _dbContext.GoogleDriveConnections
+            .Include(c => c.CachedFiles)
+            .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.FolderId == folderId, cancellationToken);
+
+        GoogleDriveConnection connection;
+
+        if (existing != null)
+        {
+            connection = existing;
+            if (!string.IsNullOrWhiteSpace(request.ConnectionName))
+            {
+                connection.Name = request.ConnectionName.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ApiKey))
+            {
+                connection.EncryptedApiKey = CredentialProtector.Encrypt(request.ApiKey);
+                connection.MaskedApiKey = CredentialProtector.Mask(request.ApiKey);
+            }
+
+            connection.IsValid = true;
+            connection.SyncStatus = "Pending";
+            connection.ErrorMessage = null;
+        }
+        else
+        {
+            connection = new GoogleDriveConnection
+            {
+                UserId = request.UserId,
+                FolderId = folderId,
+                FolderUrl = request.FolderUrl,
+                Name = !string.IsNullOrWhiteSpace(request.ConnectionName) ? request.ConnectionName.Trim() : "Google Drive Folder",
+                EncryptedApiKey = CredentialProtector.Encrypt(request.ApiKey),
+                MaskedApiKey = CredentialProtector.Mask(request.ApiKey),
+                IsValid = true,
+                SyncStatus = "Pending",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            _dbContext.GoogleDriveConnections.Add(connection);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Perform initial synchronization & SQLite caching
+        await SyncConnectionInternalAsync(connection, forceRefresh: true, cancellationToken);
+
+        return MapToDto(connection);
+    }
+
+    /// <inheritdoc />
+    public async Task<GoogleDriveFolderResponseDto> SyncConnectionAsync(
+        int connectionId,
+        string userId,
+        bool forceRefresh = false,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = await _dbContext.GoogleDriveConnections
+            .Include(c => c.CachedFiles)
+            .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
+
+        if (connection == null)
+        {
+            return new GoogleDriveFolderResponseDto
+            {
+                Success = false,
+                ErrorMessage = "Google Drive connection not found."
+            };
+        }
+
+        return await SyncConnectionInternalAsync(connection, forceRefresh, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<GoogleDriveConnectionDto> ReauthConnectionAsync(
+        int connectionId,
+        string userId,
+        string? newApiKey,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = await _dbContext.GoogleDriveConnections
+            .Include(c => c.CachedFiles)
+            .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
+
+        if (connection == null)
+        {
+            throw new KeyNotFoundException($"Connection with ID {connectionId} not found for user.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(newApiKey))
+        {
+            connection.EncryptedApiKey = CredentialProtector.Encrypt(newApiKey);
+            connection.MaskedApiKey = CredentialProtector.Mask(newApiKey);
+        }
+
+        connection.IsValid = true;
+        connection.SyncStatus = "Pending";
+        connection.ErrorMessage = null;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Sync with new credentials
+        await SyncConnectionInternalAsync(connection, forceRefresh: true, cancellationToken);
+
+        return MapToDto(connection);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> DeleteConnectionAsync(
+        int connectionId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = await _dbContext.GoogleDriveConnections
+            .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
+
+        if (connection == null)
+        {
+            return false;
+        }
+
+        _dbContext.GoogleDriveConnections.Remove(connection);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation("Deleted Google Drive connection {ConnectionId} and purged its SQLite cache.", connectionId);
+        return true;
+    }
+
+    private async Task<GoogleDriveFolderResponseDto> SyncConnectionInternalAsync(
+        GoogleDriveConnection connection,
+        bool forceRefresh,
+        CancellationToken cancellationToken)
+    {
+        var apiKey = CredentialProtector.Decrypt(connection.EncryptedApiKey);
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            apiKey = _configuration["GoogleDrive:ApiKey"]?.Trim();
+        }
+
+        GoogleDriveFolderResponseDto liveResponse;
+
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            try
+            {
+                liveResponse = await FetchLiveFolderFilesAsync(connection.FolderId, connection.FolderUrl, apiKey, cancellationToken);
+            }
+            catch (HttpRequestException httpEx) when (httpEx.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.BadRequest)
+            {
+                _logger.LogWarning(httpEx, "Google Drive API returned credential error HTTP {StatusCode} for connection {ConnectionId}.", httpEx.StatusCode, connection.Id);
+                
+                connection.IsValid = false;
+                connection.SyncStatus = "NeedsReauth";
+                connection.ErrorMessage = "Google credentials are invalid or expired. Please re-authenticate or update your API key.";
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                var cachedFallback = MapConnectionToFolderResponse(connection);
+                cachedFallback.Success = false;
+                cachedFallback.ErrorMessage = connection.ErrorMessage;
+                return cachedFallback;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error synchronizing live files from Google Drive API for connection {ConnectionId}. Falling back to preview/cache.", connection.Id);
+                liveResponse = GeneratePreviewResponse(
+                    connection.FolderId,
+                    connection.FolderUrl,
+                    "Unable to reach Google Drive API. Showing preview/cached data.");
+            }
+        }
+        else
+        {
+            liveResponse = GeneratePreviewResponse(
+                connection.FolderId,
+                connection.FolderUrl,
+                "No Google Drive API Key was provided. Showing preview files for this folder.");
+        }
+
+        if (liveResponse.Success)
+        {
+            if (!string.IsNullOrWhiteSpace(liveResponse.FolderName) && (connection.Name == "Google Drive" || connection.Name == "Google Drive Folder"))
+            {
+                connection.Name = liveResponse.FolderName;
+            }
+
+            // Incremental cache update
+            var existingFilesMap = connection.CachedFiles.ToDictionary(f => f.DriveFileId, f => f);
+            var activeFileIds = new HashSet<string>();
+
+            foreach (var fetchedFile in liveResponse.Files)
+            {
+                activeFileIds.Add(fetchedFile.Id);
+
+                if (existingFilesMap.TryGetValue(fetchedFile.Id, out var existingFile))
+                {
+                    // Update existing cached item if changed
+                    existingFile.Name = fetchedFile.Name;
+                    existingFile.MimeType = fetchedFile.MimeType;
+                    existingFile.Size = fetchedFile.Size;
+                    existingFile.SizeFormatted = fetchedFile.SizeFormatted;
+                    existingFile.CreatedTime = fetchedFile.CreatedTime;
+                    existingFile.ModifiedTime = fetchedFile.ModifiedTime;
+                    existingFile.WebViewLink = fetchedFile.WebViewLink;
+                    existingFile.IconLink = fetchedFile.IconLink;
+                    existingFile.ThumbnailLink = fetchedFile.ThumbnailLink;
+                    existingFile.FileType = fetchedFile.FileType;
+                    existingFile.IconBadgeClass = fetchedFile.IconBadgeClass;
+                    existingFile.IsFolder = fetchedFile.IsFolder;
+                    existingFile.IsTrashed = false;
+                    existingFile.LastFetchedUtc = DateTime.UtcNow;
+                }
+                else
+                {
+                    // Add new cached item
+                    var newCachedFile = new GoogleDriveCachedFile
+                    {
+                        ConnectionId = connection.Id,
+                        DriveFileId = fetchedFile.Id,
+                        Name = fetchedFile.Name,
+                        MimeType = fetchedFile.MimeType,
+                        Size = fetchedFile.Size,
+                        SizeFormatted = fetchedFile.SizeFormatted,
+                        CreatedTime = fetchedFile.CreatedTime,
+                        ModifiedTime = fetchedFile.ModifiedTime,
+                        WebViewLink = fetchedFile.WebViewLink,
+                        IconLink = fetchedFile.IconLink,
+                        ThumbnailLink = fetchedFile.ThumbnailLink,
+                        FileType = fetchedFile.FileType,
+                        IconBadgeClass = fetchedFile.IconBadgeClass,
+                        IsFolder = fetchedFile.IsFolder,
+                        IsTrashed = false,
+                        LastFetchedUtc = DateTime.UtcNow
+                    };
+
+                    connection.CachedFiles.Add(newCachedFile);
+                }
+            }
+
+            // Purge cached files that no longer exist in Drive
+            var filesToRemove = connection.CachedFiles
+                .Where(f => !activeFileIds.Contains(f.DriveFileId))
+                .ToList();
+
+            foreach (var removedFile in filesToRemove)
+            {
+                _dbContext.GoogleDriveCachedFiles.Remove(removedFile);
+            }
+
+            connection.LastSyncedAtUtc = DateTime.UtcNow;
+            connection.SyncStatus = "Synced";
+            connection.IsValid = true;
+            connection.ErrorMessage = null;
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return MapConnectionToFolderResponse(connection, liveResponse.WarningMessage, liveResponse.IsDemoData);
+    }
+
+    private static GoogleDriveConnectionDto MapToDto(GoogleDriveConnection connection)
+    {
+        var activeFiles = connection.CachedFiles.Where(f => !f.IsTrashed).ToList();
+        var totalBytes = activeFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
+
+        return new GoogleDriveConnectionDto
+        {
+            Id = connection.Id,
+            UserId = connection.UserId,
+            Name = connection.Name,
+            FolderId = connection.FolderId,
+            FolderUrl = connection.FolderUrl,
+            MaskedApiKey = connection.MaskedApiKey,
+            IsValid = connection.IsValid,
+            SyncStatus = connection.SyncStatus,
+            ErrorMessage = connection.ErrorMessage,
+            CreatedAtUtc = connection.CreatedAtUtc,
+            LastSyncedAtUtc = connection.LastSyncedAtUtc,
+            CachedFilesCount = activeFiles.Count,
+            TotalSizeBytes = totalBytes,
+            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalBytes)
+        };
+    }
+
+    private static GoogleDriveFolderResponseDto MapConnectionToFolderResponse(
+        GoogleDriveConnection connection,
+        string? warningMessage = null,
+        bool? isDemoData = null)
+    {
+        var activeFiles = connection.CachedFiles
+            .Where(f => !f.IsTrashed)
+            .OrderByDescending(f => f.IsFolder)
+            .ThenByDescending(f => f.ModifiedTime)
+            .Select(f => new GoogleDriveFileDto
+            {
+                Id = f.DriveFileId,
+                Name = f.Name,
+                MimeType = f.MimeType,
+                Size = f.Size,
+                SizeFormatted = f.SizeFormatted,
+                CreatedTime = f.CreatedTime,
+                ModifiedTime = f.ModifiedTime,
+                WebViewLink = f.WebViewLink,
+                IconLink = f.IconLink,
+                ThumbnailLink = f.ThumbnailLink,
+                FileType = f.FileType,
+                IconBadgeClass = f.IconBadgeClass,
+                IsFolder = f.IsFolder
+            })
+            .ToList();
+
+        var totalBytes = activeFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
+
+        return new GoogleDriveFolderResponseDto
+        {
+            Success = connection.IsValid,
+            FolderId = connection.FolderId,
+            FolderUrl = connection.FolderUrl,
+            FolderName = connection.Name,
+            Files = activeFiles,
+            TotalSizeBytes = totalBytes,
+            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalBytes),
+            ErrorMessage = connection.ErrorMessage,
+            WarningMessage = warningMessage,
+            IsDemoData = isDemoData ?? string.IsNullOrEmpty(connection.EncryptedApiKey)
+        };
+    }
+
     private async Task<GoogleDriveFolderResponseDto> FetchLiveFolderFilesAsync(
         string folderId,
         string rawInput,
@@ -216,16 +624,16 @@ public class GoogleDriveService : IGoogleDriveService
                     }
 
                     DateTime? modifiedTime = null;
-                    if (fileElem.TryGetProperty("modifiedTime", out var modifiedProp) && DateTime.TryParse(modifiedProp.GetString(), out var parsedModified))
+                    if (fileElem.TryGetProperty("modifiedTime", out var modProp) && DateTime.TryParse(modProp.GetString(), out var parsedMod))
                     {
-                        modifiedTime = parsedModified;
+                        modifiedTime = parsedMod;
                     }
 
-                    var webViewLink = fileElem.TryGetProperty("webViewLink", out var webViewProp) ? webViewProp.GetString() : $"https://drive.google.com/file/d/{id}/view";
+                    var webViewLink = fileElem.TryGetProperty("webViewLink", out var webLinkProp) ? webLinkProp.GetString() : null;
                     var iconLink = fileElem.TryGetProperty("iconLink", out var iconProp) ? iconProp.GetString() : null;
                     var thumbnailLink = fileElem.TryGetProperty("thumbnailLink", out var thumbProp) ? thumbProp.GetString() : null;
 
-                    var typeInfo = GoogleDriveHelper.ResolveTypeInfo(mimeType, name);
+                    var (fileType, badgeClass, isFolder) = GoogleDriveHelper.ResolveTypeInfo(mimeType, name);
 
                     files.Add(new GoogleDriveFileDto
                     {
@@ -239,22 +647,22 @@ public class GoogleDriveService : IGoogleDriveService
                         WebViewLink = webViewLink,
                         IconLink = iconLink,
                         ThumbnailLink = thumbnailLink,
-                        FileType = typeInfo.FileType,
-                        IconBadgeClass = typeInfo.BadgeClass,
-                        IsFolder = typeInfo.IsFolder
+                        FileType = fileType,
+                        IconBadgeClass = badgeClass,
+                        IsFolder = isFolder
                     });
                 }
             }
 
-            pageToken = root.TryGetProperty("nextPageToken", out var nextProp) ? nextProp.GetString() : null;
-
+            pageToken = root.TryGetProperty("nextPageToken", out var tokenProp) ? tokenProp.GetString() : null;
         } while (!string.IsNullOrEmpty(pageToken));
 
-        var totalSizeBytes = files.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
-        string? emptyFolderWarning = null;
+        var totalBytes = files.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
+
+        string? emptyWarning = null;
         if (files.Count == 0)
         {
-            emptyFolderWarning = "No files found in this Google Drive folder. If the folder contains files, ensure that the folder's General access is set to 'Anyone with the link' (Viewer) in Google Drive.";
+            emptyWarning = "No files were returned by the Google Drive API for this folder. Verify that the folder contains files, that General access is set to 'Anyone with the link' (Viewer), and that files are not restricted.";
         }
 
         return new GoogleDriveFolderResponseDto
@@ -262,160 +670,107 @@ public class GoogleDriveService : IGoogleDriveService
             Success = true,
             FolderId = folderId,
             FolderUrl = rawInput,
-            FolderName = folderName ?? $"Folder ({folderId})",
-            TotalSizeBytes = totalSizeBytes,
-            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalSizeBytes),
+            FolderName = folderName ?? "Google Drive Folder",
             Files = files,
-            WarningMessage = emptyFolderWarning,
-            IsDemoData = false
+            TotalSizeBytes = totalBytes,
+            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalBytes),
+            IsDemoData = false,
+            WarningMessage = emptyWarning
         };
     }
 
-    private static GoogleDriveFolderResponseDto GeneratePreviewResponse(string folderId, string rawInput, string warningMessage)
+    private GoogleDriveFolderResponseDto GeneratePreviewResponse(
+        string folderId,
+        string rawInput,
+        string warningMessage)
     {
         var sampleFiles = new List<GoogleDriveFileDto>
         {
             new()
             {
-                Id = "1aBcD_Financial_Report_2026",
-                Name = "Personal_Finance_Annual_Report_2026.pdf",
+                Id = "sample-doc-1",
+                Name = "Annual_Financial_Report_2025.pdf",
                 MimeType = "application/pdf",
-                Size = 4_250_000,
-                SizeFormatted = "4.05 MB",
-                CreatedTime = new DateTime(2026, 1, 15, 9, 30, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 9, 10, 14, 22, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/file/d/1aBcD_Financial_Report_2026/view",
+                Size = 2_450_000,
+                SizeFormatted = GoogleDriveHelper.FormatBytes(2_450_000),
+                CreatedTime = DateTime.UtcNow.AddDays(-14),
+                ModifiedTime = DateTime.UtcNow.AddDays(-2),
+                WebViewLink = $"https://drive.google.com/file/d/sample-doc-1/view",
                 FileType = "PDF Document",
                 IconBadgeClass = "bg-danger",
                 IsFolder = false
             },
             new()
             {
-                Id = "2eFgH_Monthly_Budget_Tracker",
-                Name = "Monthly_Budget_and_Expense_Tracker.xlsx",
+                Id = "sample-sheet-1",
+                Name = "Household_Budget_Model.xlsx",
                 MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                Size = 1_820_000,
-                SizeFormatted = "1.74 MB",
-                CreatedTime = new DateTime(2026, 2, 1, 11, 0, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 9, 18, 16, 45, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/file/d/2eFgH_Monthly_Budget_Tracker/view",
+                Size = 1_120_000,
+                SizeFormatted = GoogleDriveHelper.FormatBytes(1_120_000),
+                CreatedTime = DateTime.UtcNow.AddDays(-30),
+                ModifiedTime = DateTime.UtcNow.AddHours(-18),
+                WebViewLink = $"https://drive.google.com/file/d/sample-sheet-1/view",
                 FileType = "Spreadsheet",
                 IconBadgeClass = "bg-success",
                 IsFolder = false
             },
             new()
             {
-                Id = "3iJkL_Investment_Portfolio_Overview",
-                Name = "Investment_Portfolio_Q3_Overview.docx",
-                MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                Size = 850_000,
-                SizeFormatted = "830.08 KB",
-                CreatedTime = new DateTime(2026, 7, 5, 8, 15, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 9, 19, 10, 5, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/file/d/3iJkL_Investment_Portfolio_Overview/view",
-                FileType = "Document",
-                IconBadgeClass = "bg-primary",
-                IsFolder = false
-            },
-            new()
-            {
-                Id = "4mNoP_Receipts_And_Invoices_Folder",
-                Name = "Receipts & Invoices 2026",
+                Id = "sample-folder-1",
+                Name = "Tax_Receipts_2025",
                 MimeType = "application/vnd.google-apps.folder",
                 Size = null,
                 SizeFormatted = "-",
-                CreatedTime = new DateTime(2026, 1, 10, 8, 0, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 9, 20, 12, 0, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/drive/folders/4mNoP_Receipts_And_Invoices_Folder",
+                CreatedTime = DateTime.UtcNow.AddMonths(-3),
+                ModifiedTime = DateTime.UtcNow.AddDays(-5),
+                WebViewLink = $"https://drive.google.com/drive/folders/sample-folder-1",
                 FileType = "Folder",
-                IconBadgeClass = "bg-primary",
+                IconBadgeClass = "bg-warning text-dark",
                 IsFolder = true
             },
             new()
             {
-                Id = "5qRsT_Property_Deed_Scans",
-                Name = "Property_Deed_Scan_HighRes.png",
+                Id = "sample-img-1",
+                Name = "Investment_Portfolio_Q4_Chart.png",
                 MimeType = "image/png",
-                Size = 6_300_000,
-                SizeFormatted = "6.01 MB",
-                CreatedTime = new DateTime(2026, 4, 12, 14, 0, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 4, 12, 14, 0, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/file/d/5qRsT_Property_Deed_Scans/view",
+                Size = 850_000,
+                SizeFormatted = GoogleDriveHelper.FormatBytes(850_000),
+                CreatedTime = DateTime.UtcNow.AddDays(-7),
+                ModifiedTime = DateTime.UtcNow.AddDays(-1),
+                WebViewLink = $"https://drive.google.com/file/d/sample-img-1/view",
                 FileType = "Image",
                 IconBadgeClass = "bg-info text-dark",
                 IsFolder = false
             },
             new()
             {
-                Id = "6uVwX_Tax_Return_Statement_2025",
-                Name = "Tax_Return_Statement_Official.pdf",
-                MimeType = "application/pdf",
-                Size = 2_150_000,
-                SizeFormatted = "2.05 MB",
-                CreatedTime = new DateTime(2026, 3, 20, 10, 30, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 3, 22, 11, 0, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/file/d/6uVwX_Tax_Return_Statement_2025/view",
-                FileType = "PDF Document",
-                IconBadgeClass = "bg-danger",
-                IsFolder = false
-            },
-            new()
-            {
-                Id = "7yZaB_Savings_Growth_Projection",
-                Name = "Savings_Growth_Projection_Model.csv",
-                MimeType = "text/csv",
-                Size = 145_000,
-                SizeFormatted = "141.6 KB",
-                CreatedTime = new DateTime(2026, 5, 8, 17, 20, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 8, 30, 9, 10, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/file/d/7yZaB_Savings_Growth_Projection/view",
-                FileType = "Spreadsheet",
-                IconBadgeClass = "bg-success",
-                IsFolder = false
-            },
-            new()
-            {
-                Id = "8cDeF_Retirement_Planning_Presentation",
-                Name = "Retirement_Planning_Deck_2026.pptx",
-                MimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                Size = 12_400_000,
-                SizeFormatted = "11.83 MB",
-                CreatedTime = new DateTime(2026, 6, 14, 13, 0, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 9, 15, 15, 30, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/file/d/8cDeF_Retirement_Planning_Presentation/view",
-                FileType = "Presentation",
-                IconBadgeClass = "bg-warning text-dark",
-                IsFolder = false
-            },
-            new()
-            {
-                Id = "9gHiJ_Bank_Statements_Archive",
-                Name = "Bank_Statements_Archive_2025_2026.zip",
-                MimeType = "application/zip",
-                Size = 25_800_000,
-                SizeFormatted = "24.6 MB",
-                CreatedTime = new DateTime(2026, 8, 1, 9, 0, 0, DateTimeKind.Utc),
-                ModifiedTime = new DateTime(2026, 9, 1, 10, 0, 0, DateTimeKind.Utc),
-                WebViewLink = $"https://drive.google.com/file/d/9gHiJ_Bank_Statements_Archive/view",
-                FileType = "Archive",
-                IconBadgeClass = "bg-secondary",
+                Id = "sample-doc-2",
+                Name = "Retirement_Strategy_Notes.gdoc",
+                MimeType = "application/vnd.google-apps.document",
+                Size = null,
+                SizeFormatted = "-",
+                CreatedTime = DateTime.UtcNow.AddMonths(-1),
+                ModifiedTime = DateTime.UtcNow.AddHours(-6),
+                WebViewLink = $"https://drive.google.com/file/d/sample-doc-2/view",
+                FileType = "Document",
+                IconBadgeClass = "bg-primary",
                 IsFolder = false
             }
         };
 
-        var totalSizeBytes = sampleFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
+        var totalBytes = sampleFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
 
         return new GoogleDriveFolderResponseDto
         {
             Success = true,
             FolderId = folderId,
             FolderUrl = rawInput,
-            FolderName = $"Folder ({folderId})",
-            TotalSizeBytes = totalSizeBytes,
-            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalSizeBytes),
+            FolderName = "Financial Documents (Preview)",
             Files = sampleFiles,
-            WarningMessage = warningMessage,
-            IsDemoData = true
+            TotalSizeBytes = totalBytes,
+            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalBytes),
+            IsDemoData = true,
+            WarningMessage = warningMessage
         };
     }
 }

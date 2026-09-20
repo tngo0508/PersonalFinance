@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Google Drive Configuration Persistence & SQLite Caching**:
+  - Implemented persistent SQLite database storage for user Google Drive connections and retrieved file metadata in `AppDbContext`.
+  - Added `GoogleDriveConnection` entity for tracking connected drives, encrypted API credentials, synchronization timestamps, and health status.
+  - Added `GoogleDriveCachedFile` entity for caching retrieved Drive file items, categories, sizes, and timestamps locally in SQLite.
+  - Implemented automatic configuration and cache loading on subsequent logins to skip setup flows when a valid connection exists.
+  - Supported multiple Google Drive connections per user with an intuitive "Add another Drive" switcher and management controls.
+  - Added incremental cache synchronization logic to detect newly added, modified, or deleted files without re-downloading unchanged items.
+  - Added manual synchronization ("Sync / Refresh") actions and endpoints to update local SQLite caches on demand.
+  - Handled invalid and expired Google credentials with clear re-authentication alerts and modal key update actions.
+  - Implemented `CredentialProtector` for AES encryption and secure masking of API keys and tokens in SQLite and UI views.
+  - Added database migration `AddGoogleDrivePersistence` and updated SQLite schema models.
+  - Added unit and integration tests in `GoogleDrivePersistenceTests` and `GoogleDriveWebControllerTests` covering first-time setup, subsequent login, multi-drive switching, caching, incremental sync, manual refresh, removal, re-authentication, and user isolation.
 - **Google Drive Folder Explorer**:
   - Implemented Google Drive folder viewer allowing users to paste a Google Drive folder link (or raw folder ID) and browse all contained files in an interactive DataTables table.
   - Added `GoogleDriveHelper` in `PersonalFinance.Shared` for URL parsing (handling `/folders/`, `/u/0/folders/`, `/open?id=`, and raw IDs), friendly file category mapping, and human-readable byte formatting.

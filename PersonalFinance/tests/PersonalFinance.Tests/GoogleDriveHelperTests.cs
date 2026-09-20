@@ -1,6 +1,9 @@
+using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Services;
+using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs;
 using PersonalFinance.Shared.Helpers;
 using Xunit;
@@ -9,6 +12,17 @@ namespace PersonalFinance.Tests;
 
 public class GoogleDriveHelperTests
 {
+    private static AppDbContext CreateTestDbContext()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite("DataSource=:memory:")
+            .Options;
+        var context = new AppDbContext(options);
+        context.Database.OpenConnection();
+        context.Database.EnsureCreated();
+        return context;
+    }
+
     [Theory]
     [InlineData("https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
     [InlineData("https://drive.google.com/drive/u/0/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
@@ -66,10 +80,11 @@ public class GoogleDriveHelperTests
     [Fact]
     public async Task GoogleDriveService_WithValidFolderAndNoKey_ReturnsPreviewResponse()
     {
+        using var dbContext = CreateTestDbContext();
         var inMemorySettings = new Dictionary<string, string?>();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
         var httpClient = new HttpClient();
-        var service = new GoogleDriveService(httpClient, configuration, NullLogger<GoogleDriveService>.Instance);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -88,9 +103,10 @@ public class GoogleDriveHelperTests
     [Fact]
     public async Task GoogleDriveService_WithInvalidUrl_ReturnsErrorResponse()
     {
+        using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
-        var service = new GoogleDriveService(httpClient, configuration, NullLogger<GoogleDriveService>.Instance);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -107,11 +123,12 @@ public class GoogleDriveHelperTests
     [Fact]
     public async Task GoogleDriveService_WhenHttpClientTimesOut_FallsBackToPreviewGracefully()
     {
+        using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) =>
             throw new TaskCanceledException("A task was canceled.", new TimeoutException("The operation timed out.")));
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, NullLogger<GoogleDriveService>.Instance);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -129,6 +146,7 @@ public class GoogleDriveHelperTests
     [Fact]
     public async Task GoogleDriveService_WhenCallerCancels_ReturnsCanceledResult()
     {
+        using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         using var cts = new CancellationTokenSource();
         cts.Cancel(); // Pre-cancel
@@ -136,10 +154,10 @@ public class GoogleDriveHelperTests
         var handler = new DelegatingTestHandler((req, ct) =>
         {
             ct.ThrowIfCancellationRequested();
-            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, NullLogger<GoogleDriveService>.Instance);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -156,17 +174,18 @@ public class GoogleDriveHelperTests
     [Fact]
     public async Task GoogleDriveService_WhenHttp403Forbidden_FallsBackToPreviewGracefully()
     {
+        using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) =>
         {
-            var msg = new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)
+            var msg = new HttpResponseMessage(HttpStatusCode.Forbidden)
             {
                 ReasonPhrase = "Forbidden"
             };
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, NullLogger<GoogleDriveService>.Instance);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -185,17 +204,18 @@ public class GoogleDriveHelperTests
     [Fact]
     public async Task GoogleDriveService_WhenHttp404NotFound_ExplainsSharingPermissions()
     {
+        using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) =>
         {
-            var msg = new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
+            var msg = new HttpResponseMessage(HttpStatusCode.NotFound)
             {
                 ReasonPhrase = "Not Found"
             };
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, NullLogger<GoogleDriveService>.Instance);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -214,18 +234,19 @@ public class GoogleDriveHelperTests
     [Fact]
     public async Task GoogleDriveService_WhenLiveQueryReturnsEmptyFiles_ProvidesSharingGuidance()
     {
+        using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var emptyJsonResponse = @"{ ""files"": [] }";
         var handler = new DelegatingTestHandler((req, ct) =>
         {
-            var msg = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            var msg = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(emptyJsonResponse, System.Text.Encoding.UTF8, "application/json")
             };
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, NullLogger<GoogleDriveService>.Instance);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -243,25 +264,29 @@ public class GoogleDriveHelperTests
     }
 
     [Fact]
-    public void GoogleDriveController_HasAuthorizeAttribute()
+    public void GoogleDriveController_IsDecoratedWithAuthorizeAttribute()
     {
         var controllerType = typeof(PersonalFinance.Web.Controllers.GoogleDriveController);
         var authorizeAttribute = Attribute.GetCustomAttribute(controllerType, typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute));
+
         Assert.NotNull(authorizeAttribute);
     }
+}
 
-    private class DelegatingTestHandler : HttpMessageHandler
+/// <summary>
+/// Simple mock delegating handler for testing HttpClient responses without external networks.
+/// </summary>
+public class DelegatingTestHandler : HttpMessageHandler
+{
+    private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _handler;
+
+    public DelegatingTestHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler)
     {
-        private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _handler;
+        _handler = handler;
+    }
 
-        public DelegatingTestHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler)
-        {
-            _handler = handler;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            return _handler(request, cancellationToken);
-        }
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        return _handler(request, cancellationToken);
     }
 }

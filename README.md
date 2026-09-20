@@ -20,13 +20,16 @@ The solution is organized into focused, decoupled projects:
 
 ## Features
 
-### 1. Google Drive Folder Explorer
-Allows users to input any Google Drive folder URL (e.g. `https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link`) or raw Folder ID to list and browse its contained files on a dedicated interactive DataTables page (`/GoogleDrive`).
+### 1. Google Drive Folder Explorer & Persistent Caching
+Allows users to connect, manage, and cache Google Drive folders with persistent SQLite storage so they only need to connect a folder once and avoid repeated API requests (`/GoogleDrive`).
+- **Persistent SQLite Storage**: Google Drive folder connections (`GoogleDriveConnection`) and file metadata (`GoogleDriveCachedFile`) are saved in SQLite.
+- **Subsequent Login Auto-Loading**: Saved configurations load automatically upon login, skipping setup flows and serving cached data with zero external API calls.
+- **Multiple Drives Support**: Users can connect multiple Google Drive folders simultaneously, switch between them seamlessly, and add new drives without overwriting existing ones.
+- **Incremental Synchronization & Manual Refresh**: Smart synchronization updates modified files, inserts new items, and removes deleted files without re-downloading unchanged metadata. Users can trigger manual sync via the "Sync / Refresh" button.
+- **Credential Security & Re-authentication**: API credentials and tokens are AES-encrypted in SQLite, masked in UI outputs (`AIza...8xY2`), never logged in plaintext, and isolated by authenticated user. Expired credentials prompt an in-place re-authentication modal.
 - **Universal URL Parsing**: Supports standard folder URLs, shortened/view URLs, and raw folder IDs via `GoogleDriveHelper`.
-- **Interactive DataTables Integration**: Client-side filtering, sorting by name, size (raw byte sorting), category badges, creation/modification dates, and pagination.
-- **Summary Metrics**: High-level statistics displaying total items, cumulative data volume, and folder identifiers.
+- **Interactive DataTables & Grid Views**: Real-time category filtering (Sheets, Docs, PDFs, Images, Slides, Folders), sorting by name, size (raw byte sorting), creation/modification dates, and pagination.
 - **Direct Access**: Clickable links to open files/folders directly in Google Drive, plus quick clipboard copy actions.
-- **Live API & Preview Modes**: Seamlessly interacts with Google Drive API v3 when a Google Cloud API key is provided, or displays realistic preview data when testing public sample links without an API key.
 
 #### How to Get a Free Google Cloud API Key (Step-by-Step for Non-Technical Users)
 
