@@ -177,7 +177,7 @@ public class GoogleDriveService : IGoogleDriveService
         {
             var query = $"'{folderId}' in parents and trashed = false";
             var fields = "nextPageToken,files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,iconLink,thumbnailLink)";
-            var listUrl = $"https://www.googleapis.com/drive/v3/files?q={Uri.EscapeDataString(query)}&fields={Uri.EscapeDataString(fields)}&pageSize=100&key={Uri.EscapeDataString(apiKey)}";
+            var listUrl = $"https://www.googleapis.com/drive/v3/files?q={Uri.EscapeDataString(query)}&fields={Uri.EscapeDataString(fields)}&orderBy={Uri.EscapeDataString("modifiedTime desc")}&pageSize=100&key={Uri.EscapeDataString(apiKey)}";
 
             if (!string.IsNullOrEmpty(pageToken))
             {
