@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs;
@@ -7,8 +8,9 @@ namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Google Drive folder explorer feature.
-/// Allows users to enter a Google Drive folder link or ID and lists files in an interactive DataTable.
+/// Allows authenticated users to enter a Google Drive folder link or ID and lists files in an interactive DataTable.
 /// </summary>
+[Authorize]
 public class GoogleDriveController : Controller
 {
     private readonly IGoogleDriveApi _googleDriveApi;

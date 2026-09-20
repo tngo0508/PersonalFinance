@@ -17,6 +17,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\PersonalFinance.Shared\PersonalFinance.Shared.csproj" />
         <ProjectReference Include="..\..\src\PersonalFinance.ApiService\PersonalFinance.ApiService.csproj" />
+        <ProjectReference Include="..\..\src\PersonalFinance.Web\PersonalFinance.Web.csproj" />
     </ItemGroup>
 
     <ItemGroup>

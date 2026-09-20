@@ -242,6 +242,14 @@ public class GoogleDriveHelperTests
         Assert.Contains("Anyone with the link", response.WarningMessage);
     }
 
+    [Fact]
+    public void GoogleDriveController_HasAuthorizeAttribute()
+    {
+        var controllerType = typeof(PersonalFinance.Web.Controllers.GoogleDriveController);
+        var authorizeAttribute = Attribute.GetCustomAttribute(controllerType, typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute));
+        Assert.NotNull(authorizeAttribute);
+    }
+
     private class DelegatingTestHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _handler;

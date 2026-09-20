@@ -12,7 +12,7 @@ The solution is organized into focused, decoupled projects:
 |---|---|
 | **`PersonalFinance.Data`** | Database schema, EF Core `AppDbContext`, domain entities, and migration definitions. |
 | **`PersonalFinance.ApiService`** | Backend RESTful API offering CRUD operations, Google Drive folder explorer services (`GoogleDriveController`), OpenAPI spec generation, and interactive Scalar UI (`/scalar/v1`). |
-| **`PersonalFinance.Web`** | ASP.NET Core MVC and Razor Pages frontend consuming API endpoints via type-safe Refit clients (`IItemsApi`, `IGoogleDriveApi`) with resilience pipelines, DataTables, and ASP.NET Core Identity authentication. |
+| **`PersonalFinance.Web`** | ASP.NET Core MVC and Razor Pages frontend consuming API endpoints via type-safe Refit clients (`IGoogleDriveApi`) with resilience pipelines, DataTables, and ASP.NET Core Identity authentication. |
 | **`PersonalFinance.Shared`** | Shared DTOs (`GoogleDriveFileDto`, `ItemDto`), API contracts (`IGoogleDriveApi`, `IItemsApi`), URL helpers, and application constants. |
 | **`PersonalFinance.Tests`** | xUnit unit tests verifying URL parsing, MIME type resolution, byte formatting, and service handling. |
 

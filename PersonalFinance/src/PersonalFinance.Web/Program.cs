@@ -51,15 +51,6 @@ try
     // 6. Register Refit Clients with Standard HTTP Resilience Pipeline
     var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7100";
 
-    builder.Services.AddRefitClient<IItemsApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        // Enables Microsoft.Extensions.Http.Resilience (retries with exponential jitter, circuit breaker, rate limiter)
-        .AddStandardResilienceHandler();
-
     builder.Services.AddRefitClient<IGoogleDriveApi>()
         .ConfigureHttpClient(client =>
         {
