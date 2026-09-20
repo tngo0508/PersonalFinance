@@ -512,10 +512,8 @@
                                         ID: @file.Id
                                     </div>
                                 </td>
-                                <td>
-                                    <span class="gdrive-badge-soft @badgeClass">
-                                        @file.FileType
-                                    </span>
+                                <td data-search="@file.FileType" data-filter="@file.FileType">
+                                    <span class="gdrive-badge-soft @badgeClass">@file.FileType</span>
                                 </td>
                                 <td data-order="@rawSortSize">
                                     <span class="small @(file.IsFolder ? "text-muted" : "fw-semibold text-dark")">
@@ -863,9 +861,10 @@
                     if (category === 'all') {
                         dataTable.column(2).search('').draw();
                     } else if (category === 'other') {
-                        dataTable.column(2).search('^(?!Folder|Spreadsheet|Document|PDF Document|Image|Presentation).*$', true, false).draw();
+                        dataTable.column(2).search('^(?!\\s*(Folder|Spreadsheet|Document|PDF Document|Image|Presentation)\\s*$).*$', true, false).draw();
                     } else {
-                        dataTable.column(2).search('^' + category + '$', true, false).draw();
+                        var escapedCat = category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        dataTable.column(2).search('^\\s*' + escapedCat + '\\s*$', true, false).draw();
                     }
                 }
 
