@@ -447,7 +447,7 @@
                             <th>Size</th>
                             <th>Created</th>
                             <th>Last Modified</th>
-                            <th style="width: 90px;" class="text-end">Actions</th>
+                            <th style="width: 150px;" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -469,6 +469,7 @@
                             var rawSortDate = file.ModifiedTime?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "0001-01-01T00:00:00";
                             var rawCreatedDate = file.CreatedTime?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "0001-01-01T00:00:00";
                             var rawSortSize = file.Size.HasValue ? file.Size.Value.ToString() : "-1";
+                            var isMonthlyBudget = PersonalFinance.Shared.Helpers.GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
 
                             <tr data-file-type="@file.FileType" data-is-folder="@file.IsFolder.ToString().ToLower()">
                                 <td class="text-center">
@@ -530,14 +531,28 @@
                                         @(file.ModifiedTime?.ToString("yyyy-MM-dd HH:mm") ?? "-")
                                     </span>
                                 </td>
-                                <td class="text-end">
+                                <td class="text-end text-nowrap">
+                                    @if (isMonthlyBudget)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1 me-1 btn-budget-report shadow-sm"
+                                                data-file-id="@file.Id"
+                                                data-file-name="@file.Name"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#monthlyBudgetModal"
+                                                title="Generate Monthly Budget Summary Report &amp; Chart">
+                                            <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16" class="me-1">
+                                                <path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
+                                            </svg>
+                                            <span>Budget Report</span>
+                                        </button>
+                                    }
                                     @if (!string.IsNullOrEmpty(file.WebViewLink))
                                     {
                                         <a href="@file.WebViewLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" title="Open in Google Drive">
                                             Open &rarr;
                                         </a>
                                     }
-                                    else
+                                    else if (!isMonthlyBudget)
                                     {
                                         <span class="text-muted small">-</span>
                                     }
@@ -565,6 +580,7 @@
                     "Archive" => "gdrive-badge-archive",
                     _ => "gdrive-badge-generic"
                 };
+                var isMonthlyBudget = PersonalFinance.Shared.Helpers.GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
 
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3 grid-item-card" data-file-type="@file.FileType" data-is-folder="@file.IsFolder.ToString().ToLower()">
                     <div class="gdrive-grid-card">
@@ -623,12 +639,26 @@
                             <small class="text-muted font-monospace" style="font-size: 0.7rem;">
                                 @(file.Id.Length > 10 ? file.Id[..8] + "..." : file.Id)
                             </small>
-                            @if (!string.IsNullOrEmpty(file.WebViewLink))
-                            {
-                                <a href="@file.WebViewLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-link text-primary text-decoration-none p-0 fw-semibold">
-                                    Open &rarr;
-                                </a>
-                            }
+                            <div class="d-flex align-items-center gap-1">
+                                @if (isMonthlyBudget)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 btn-budget-report shadow-sm"
+                                            data-file-id="@file.Id"
+                                            data-file-name="@file.Name"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#monthlyBudgetModal"
+                                            style="font-size: 0.75rem;"
+                                            title="Generate Monthly Budget Summary Report &amp; Chart">
+                                        📊 Report
+                                    </button>
+                                }
+                                @if (!string.IsNullOrEmpty(file.WebViewLink))
+                                {
+                                    <a href="@file.WebViewLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-link text-primary text-decoration-none p-0 fw-semibold">
+                                        Open &rarr;
+                                    </a>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -653,6 +683,137 @@
             </a>
         </div>
     }
+</div>
+
+<!-- Monthly Budget Summary Report & Chart Modal -->
+<div class="modal fade" id="monthlyBudgetModal" tabindex="-1" aria-labelledby="monthlyBudgetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom bg-light py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 bg-success bg-opacity-10 text-success rounded-3">
+                        <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="monthlyBudgetModalLabel">
+                            Monthly Budget Summary &amp; Analytics
+                        </h5>
+                        <div class="d-flex align-items-center gap-2 flex-wrap small text-muted font-monospace mt-1" id="budgetModalFileHeader">
+                            <span>Spreadsheet: <strong id="budgetModalFileName" class="text-dark">-</strong></span>
+                            <span id="budgetModalDataSource"></span>
+                            <span id="budgetModalBalances"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-flex align-items-center gap-1" id="btnPrintBudgetReport" title="Print Budget Report">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+                        </svg>
+                        <span>Print</span>
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <div class="modal-body p-4" id="budgetReportPrintArea">
+                <!-- Month Filter Selection Bar -->
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 p-3 bg-light rounded-3 border">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="small fw-bold text-muted text-uppercase me-1">Select Month:</span>
+                        <div class="d-flex align-items-center gap-1 flex-wrap" id="budgetMonthButtonGroup">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                    <div class="small text-muted text-nowrap" id="budgetReportYearLabel">
+                        Year: <strong class="text-dark" id="budgetYearText">2026</strong>
+                    </div>
+                </div>
+
+                <!-- KPI Summary Cards Row -->
+                <div class="row g-3 mb-4" id="budgetKpiRow">
+                    <div class="col-6 col-lg-3">
+                        <div class="p-3 bg-white border rounded-3 shadow-sm h-100">
+                            <div class="small text-muted fw-semibold mb-1">Total Income</div>
+                            <div class="fs-4 fw-bold text-success" id="kpiTotalIncome">$0.00</div>
+                            <div class="small text-muted" id="kpiIncomeSubtext">Planned: $0.00</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="p-3 bg-white border rounded-3 shadow-sm h-100">
+                            <div class="small text-muted fw-semibold mb-1">Total Expenses</div>
+                            <div class="fs-4 fw-bold text-danger" id="kpiTotalExpenses">$0.00</div>
+                            <div class="small text-muted" id="kpiExpensesSubtext">Planned: $0.00</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="p-3 bg-white border rounded-3 shadow-sm h-100">
+                            <div class="small text-muted fw-semibold mb-1">Net Savings / Surplus</div>
+                            <div class="fs-4 fw-bold text-primary" id="kpiNetSavings">$0.00</div>
+                            <div class="small text-muted" id="kpiSavingsSubtext">Difference</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="p-3 bg-white border rounded-3 shadow-sm h-100">
+                            <div class="small text-muted fw-semibold mb-1">Savings Rate / Status</div>
+                            <div class="fs-4 fw-bold text-info" id="kpiSavingsRate">0.0%</div>
+                            <div class="small" id="kpiStatusBadge">
+                                <span class="badge bg-success">Under Budget</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="row g-3 mb-4">
+                    <!-- Main Trend / Comparison Chart -->
+                    <div class="col-12 col-lg-7">
+                        <div class="p-3 bg-white border rounded-3 shadow-sm h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold text-dark mb-0" id="mainChartTitle">Monthly Income vs. Expenses</h6>
+                                <span class="badge bg-light text-muted border small">Comparison Chart</span>
+                            </div>
+                            <div style="position: relative; height: 280px; width: 100%;">
+                                <canvas id="budgetMainChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Category Breakdown Doughnut Chart -->
+                    <div class="col-12 col-lg-5">
+                        <div class="p-3 bg-white border rounded-3 shadow-sm h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold text-dark mb-0" id="categoryChartTitle">Expense Categories</h6>
+                                <span class="badge bg-light text-muted border small">Breakdown</span>
+                            </div>
+                            <div style="position: relative; height: 280px; width: 100%;">
+                                <canvas id="budgetCategoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Tables Section -->
+                <div class="bg-white border rounded-3 shadow-sm p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-dark mb-0" id="tableSectionTitle">
+                            Detailed Monthly Budget Breakdown
+                        </h6>
+                    </div>
+                    <!-- Table for Month Categories or Full Year Months -->
+                    <div class="table-responsive" id="budgetReportTableContainer">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top bg-light">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Re-authentication / Update API Key Modal -->
@@ -890,6 +1051,443 @@
                         }
                     });
                 }
+            });
+
+            // ==========================================
+            // Monthly Budget Summary Report & Charts Logic
+            // ==========================================
+            var budgetMainChartInstance = null;
+            var budgetCategoryChartInstance = null;
+            var currentBudgetData = null;
+            var currentSelectedMonth = 0;
+
+            function formatCurrency(num) {
+                if (num === null || num === undefined) return '$0.00';
+                return '$' + Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function renderBudgetMonth(monthNum) {
+                if (!currentBudgetData || !currentBudgetData.months || currentBudgetData.months.length === 0) return;
+                currentSelectedMonth = monthNum;
+                var isSingleMonth = currentBudgetData.months.length === 1;
+
+                // Update active button state
+                $('.budget-month-btn').removeClass('btn-primary active text-white').addClass('btn-outline-secondary bg-white');
+                $('.budget-month-btn[data-month="' + monthNum + '"]').removeClass('btn-outline-secondary bg-white').addClass('btn-primary active text-white');
+
+                if (monthNum === 0 && !isSingleMonth) {
+                    // Full Year Overview
+                    $('#budgetYearText').text(currentBudgetData.year + ' (Full Year)');
+                    if (currentBudgetData.startingBalance !== null && currentBudgetData.startingBalance !== undefined && currentBudgetData.endingBalance !== null && currentBudgetData.endingBalance !== undefined) {
+                        $('#budgetModalBalances').html('<span class="badge bg-light text-dark border rounded-pill px-2">🏦 Start: ' + formatCurrency(currentBudgetData.startingBalance) + ' | End: ' + formatCurrency(currentBudgetData.endingBalance) + '</span>');
+                    } else {
+                        $('#budgetModalBalances').empty();
+                    }
+
+                    $('#kpiTotalIncome').text(formatCurrency(currentBudgetData.totalAnnualIncome));
+                    $('#kpiIncomeSubtext').text(currentBudgetData.totalAnnualBudgetedIncome > 0 ? 'Planned: ' + formatCurrency(currentBudgetData.totalAnnualBudgetedIncome) : 'Avg/month: ' + formatCurrency(currentBudgetData.totalAnnualIncome / 12));
+
+                    $('#kpiTotalExpenses').text(formatCurrency(currentBudgetData.totalAnnualExpenses));
+                    $('#kpiExpensesSubtext').text(currentBudgetData.totalAnnualBudgetedExpenses > 0 ? 'Planned: ' + formatCurrency(currentBudgetData.totalAnnualBudgetedExpenses) : 'Avg/month: ' + formatCurrency(currentBudgetData.totalAnnualExpenses / 12));
+
+                    $('#kpiNetSavings').text(formatCurrency(currentBudgetData.totalAnnualSavings));
+                    $('#kpiNetSavings').removeClass('text-success text-danger text-primary').addClass(currentBudgetData.totalAnnualSavings >= 0 ? 'text-primary' : 'text-danger');
+                    $('#kpiSavingsSubtext').text(currentBudgetData.totalAnnualSavings >= 0 ? 'Annual Surplus' : 'Annual Deficit');
+
+                    $('#kpiSavingsRate').text(currentBudgetData.averageSavingsRate.toFixed(1) + '%');
+                    var yrStatusBadge = currentBudgetData.totalAnnualSavings >= 0 ? '<span class="badge bg-success">Under Budget</span>' : '<span class="badge bg-danger">Over Budget</span>';
+                    $('#kpiStatusBadge').html(yrStatusBadge);
+
+                    $('#mainChartTitle').text('Monthly Income vs. Expenses (' + currentBudgetData.year + ')');
+                    $('#categoryChartTitle').text('Annual Category Breakdown');
+                    $('#tableSectionTitle').text('Month-by-Month Financial Summary (' + currentBudgetData.year + ')');
+
+                    // Main Chart (Income vs Expense bar chart across 12 months)
+                    var monthLabels = currentBudgetData.months.map(function (m) { return m.monthName.substring(0, 3); });
+                    var incomeData = currentBudgetData.months.map(function (m) { return m.actualIncome; });
+                    var expenseData = currentBudgetData.months.map(function (m) { return m.actualExpenses; });
+                    var savingsData = currentBudgetData.months.map(function (m) { return m.netSavings; });
+
+                    if (budgetMainChartInstance) budgetMainChartInstance.destroy();
+                    var ctxMain = document.getElementById('budgetMainChart').getContext('2d');
+                    budgetMainChartInstance = new Chart(ctxMain, {
+                        type: 'bar',
+                        data: {
+                            labels: monthLabels,
+                            datasets: [
+                                {
+                                    label: 'Actual Income',
+                                    data: incomeData,
+                                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                                    borderColor: '#10b981',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                },
+                                {
+                                    label: 'Actual Expenses',
+                                    data: expenseData,
+                                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                                    borderColor: '#ef4444',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                },
+                                {
+                                    label: 'Net Savings',
+                                    data: savingsData,
+                                    type: 'line',
+                                    borderColor: '#3b82f6',
+                                    backgroundColor: '#3b82f6',
+                                    borderWidth: 2,
+                                    tension: 0.3,
+                                    fill: false,
+                                    pointRadius: 4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            return ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function (val) { return '$' + val.toLocaleString(); }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Category Doughnut Chart (Aggregate all 12 months)
+                    var catTotals = {};
+                    var catColors = {};
+                    currentBudgetData.months.forEach(function (m) {
+                        m.categories.forEach(function (c) {
+                            catTotals[c.categoryName] = (catTotals[c.categoryName] || 0) + c.actualAmount;
+                            if (!catColors[c.categoryName]) catColors[c.categoryName] = c.colorHex;
+                        });
+                    });
+
+                    var catLabels = Object.keys(catTotals);
+                    var catValues = catLabels.map(function (k) { return catTotals[k]; });
+                    var catBg = catLabels.map(function (k) { return catColors[k] || '#3b82f6'; });
+
+                    if (budgetCategoryChartInstance) budgetCategoryChartInstance.destroy();
+                    var ctxCat = document.getElementById('budgetCategoryChart').getContext('2d');
+                    budgetCategoryChartInstance = new Chart(ctxCat, {
+                        type: 'doughnut',
+                        data: {
+                            labels: catLabels,
+                            datasets: [{
+                                data: catValues,
+                                backgroundColor: catBg,
+                                borderWidth: 2,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { boxWidth: 12, font: { size: 10 } }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            return ctx.label + ': ' + formatCurrency(ctx.parsed);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Table for all months
+                    var tableHtml = '<table class="table table-hover align-middle mb-0">' +
+                        '<thead class="table-light"><tr>' +
+                        '<th>Month</th>' +
+                        '<th>Actual Income</th>' +
+                        '<th>Budgeted Exp.</th>' +
+                        '<th>Actual Exp.</th>' +
+                        '<th>Net Savings</th>' +
+                        '<th>Savings Rate</th>' +
+                        '<th>Status</th>' +
+                        '<th class="text-end">Action</th>' +
+                        '</tr></thead><tbody>';
+
+                    currentBudgetData.months.forEach(function (m) {
+                        var mStatusBadge = m.status === 'Under Budget'
+                            ? '<span class="badge bg-success">Under Budget</span>'
+                            : (m.status === 'On Track' ? '<span class="badge bg-warning text-dark">On Track</span>' : '<span class="badge bg-danger">Over Budget</span>');
+
+                        tableHtml += '<tr>' +
+                            '<td class="fw-semibold">' + m.monthName + '</td>' +
+                            '<td class="text-success fw-medium">' + formatCurrency(m.actualIncome) + '</td>' +
+                            '<td class="text-muted">' + formatCurrency(m.budgetedExpenses) + '</td>' +
+                            '<td class="text-danger fw-medium">' + formatCurrency(m.actualExpenses) + '</td>' +
+                            '<td class="fw-bold ' + (m.netSavings >= 0 ? 'text-primary' : 'text-danger') + '">' + formatCurrency(m.netSavings) + '</td>' +
+                            '<td>' + m.savingsRate.toFixed(1) + '%</td>' +
+                            '<td>' + mStatusBadge + '</td>' +
+                            '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 btn-drill-month" data-month="' + m.monthNumber + '">View Month &rarr;</button></td>' +
+                            '</tr>';
+                    });
+
+                    tableHtml += '</tbody></table>';
+                    $('#budgetReportTableContainer').html(tableHtml);
+
+                } else {
+                    // Individual Month View
+                    var monthData = currentBudgetData.months.find(function (m) { return m.monthNumber === monthNum; }) || currentBudgetData.months[0];
+                    if (!monthData) return;
+
+                    $('#budgetYearText').text(currentBudgetData.year + ' — ' + monthData.monthName);
+                    if (monthData.startingBalance !== null && monthData.startingBalance !== undefined && monthData.endingBalance !== null && monthData.endingBalance !== undefined) {
+                        $('#budgetModalBalances').html('<span class="badge bg-light text-dark border rounded-pill px-2">🏦 Start: ' + formatCurrency(monthData.startingBalance) + ' | End: ' + formatCurrency(monthData.endingBalance) + '</span>');
+                    } else {
+                        $('#budgetModalBalances').empty();
+                    }
+
+                    $('#kpiTotalIncome').text(formatCurrency(monthData.actualIncome));
+                    $('#kpiIncomeSubtext').text('Planned: ' + formatCurrency(monthData.budgetedIncome));
+
+                    $('#kpiTotalExpenses').text(formatCurrency(monthData.actualExpenses));
+                    $('#kpiExpensesSubtext').text('Planned: ' + formatCurrency(monthData.budgetedExpenses));
+
+                    $('#kpiNetSavings').text(formatCurrency(monthData.netSavings));
+                    $('#kpiNetSavings').removeClass('text-success text-danger text-primary').addClass(monthData.netSavings >= 0 ? 'text-primary' : 'text-danger');
+                    var savingsSubtext = '';
+                    if (monthData.startingBalance !== null && monthData.startingBalance !== undefined && monthData.endingBalance !== null && monthData.endingBalance !== undefined) {
+                        savingsSubtext = 'Start: ' + formatCurrency(monthData.startingBalance) + ' → End: ' + formatCurrency(monthData.endingBalance);
+                    } else if (monthData.budgetedIncome > 0 || monthData.budgetedExpenses > 0) {
+                        savingsSubtext = 'Planned: ' + formatCurrency(monthData.budgetedIncome - monthData.budgetedExpenses);
+                    } else {
+                        savingsSubtext = monthData.netSavings >= 0 ? 'Surplus' : 'Deficit';
+                    }
+                    $('#kpiSavingsSubtext').text(savingsSubtext);
+
+                    $('#kpiSavingsRate').text(monthData.savingsRate.toFixed(1) + '%');
+                    var mStatusBadge = monthData.status === 'Under Budget'
+                        ? '<span class="badge bg-success">Under Budget</span>'
+                        : (monthData.status === 'On Track' ? '<span class="badge bg-warning text-dark">On Track</span>' : '<span class="badge bg-danger">Over Budget</span>');
+                    $('#kpiStatusBadge').html(mStatusBadge);
+
+                    $('#mainChartTitle').text(monthData.monthName + ' Budget vs. Actual Expenses');
+                    $('#categoryChartTitle').text(monthData.monthName + ' Category Distribution');
+                    $('#tableSectionTitle').text(monthData.monthName + ' Category Expense Breakdown');
+
+                    // Main Chart (Category Budgeted vs Actual for this month)
+                    var catNames = monthData.categories.map(function (c) { return c.categoryName; });
+                    var budgetedVals = monthData.categories.map(function (c) { return c.budgetedAmount; });
+                    var actualVals = monthData.categories.map(function (c) { return c.actualAmount; });
+
+                    if (budgetMainChartInstance) budgetMainChartInstance.destroy();
+                    var ctxMain = document.getElementById('budgetMainChart').getContext('2d');
+                    budgetMainChartInstance = new Chart(ctxMain, {
+                        type: 'bar',
+                        data: {
+                            labels: catNames,
+                            datasets: [
+                                {
+                                    label: 'Budgeted',
+                                    data: budgetedVals,
+                                    backgroundColor: 'rgba(59, 130, 246, 0.45)',
+                                    borderColor: '#3b82f6',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                },
+                                {
+                                    label: 'Actual',
+                                    data: actualVals,
+                                    backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                                    borderColor: '#ef4444',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            return ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: {
+                                        autoSkip: false,
+                                        maxRotation: 45,
+                                        minRotation: 25,
+                                        font: { size: 10 }
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function (val) { return '$' + val.toLocaleString(); }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Category Doughnut Chart for this month
+                    var catBg = monthData.categories.map(function (c) { return c.colorHex || '#3b82f6'; });
+
+                    if (budgetCategoryChartInstance) budgetCategoryChartInstance.destroy();
+                    var ctxCat = document.getElementById('budgetCategoryChart').getContext('2d');
+                    budgetCategoryChartInstance = new Chart(ctxCat, {
+                        type: 'doughnut',
+                        data: {
+                            labels: catNames,
+                            datasets: [{
+                                data: actualVals,
+                                backgroundColor: catBg,
+                                borderWidth: 2,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { boxWidth: 12, font: { size: 10 } }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            return ctx.label + ': ' + formatCurrency(ctx.parsed);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Category Breakdown Table
+                    var tableHtml = '<table class="table table-hover align-middle mb-0">' +
+                        '<thead class="table-light"><tr>' +
+                        '<th>Category</th>' +
+                        '<th>Budgeted</th>' +
+                        '<th>Actual</th>' +
+                        '<th>Variance</th>' +
+                        '<th style="width: 25%;">% Used</th>' +
+                        '<th>Status</th>' +
+                        '</tr></thead><tbody>';
+
+                    monthData.categories.forEach(function (c) {
+                        var catStatusBadge = c.status === 'Within Budget'
+                            ? '<span class="badge bg-success">Within Budget</span>'
+                            : (c.status === 'Near Limit' ? '<span class="badge bg-warning text-dark">Near Limit</span>' : '<span class="badge bg-danger">Over Budget</span>');
+
+                        var progressColor = c.percentageUsed <= 90 ? 'bg-success' : (c.percentageUsed <= 100 ? 'bg-warning' : 'bg-danger');
+                        var cappedWidth = Math.min(c.percentageUsed, 100);
+
+                        tableHtml += '<tr>' +
+                            '<td class="fw-semibold"><span class="d-inline-block rounded-circle me-2" style="width: 10px; height: 10px; background-color: ' + c.colorHex + ';"></span>' + c.categoryName + '</td>' +
+                            '<td class="text-muted">' + formatCurrency(c.budgetedAmount) + '</td>' +
+                            '<td class="text-dark fw-medium">' + formatCurrency(c.actualAmount) + '</td>' +
+                            '<td class="' + (c.variance >= 0 ? 'text-success' : 'text-danger') + ' fw-medium">' + (c.variance >= 0 ? '+' : '') + formatCurrency(c.variance) + '</td>' +
+                            '<td>' +
+                                '<div class="d-flex align-items-center gap-2">' +
+                                    '<div class="progress flex-grow-1" style="height: 6px;">' +
+                                        '<div class="progress-bar ' + progressColor + '" role="progressbar" style="width: ' + cappedWidth + '%;"></div>' +
+                                    '</div>' +
+                                    '<span class="small text-muted" style="font-size: 0.75rem; min-width: 38px;">' + c.percentageUsed.toFixed(0) + '%</span>' +
+                                '</div>' +
+                            '</td>' +
+                            '<td>' + catStatusBadge + '</td>' +
+                            '</tr>';
+                    });
+
+                    tableHtml += '</tbody></table>';
+                    $('#budgetReportTableContainer').html(tableHtml);
+                }
+            }
+
+            // Click Handler for "Budget Report" button on DataTables & Grid
+            $(document).on('click', '.btn-budget-report', function () {
+                var fileName = $(this).data('file-name');
+                var fileId = $(this).data('file-id');
+                var connectionId = '@(currentConn?.Id ?? 0)';
+
+                $('#budgetModalFileName').text(fileName);
+                $('#budgetModalDataSource').html('<span class="spinner-border spinner-border-sm text-primary" role="status"></span> <small class="text-muted">Reading spreadsheet from Google Drive...</small>');
+                $('#budgetMonthButtonGroup').html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div>');
+                $('#budgetReportTableContainer').html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><div class="small text-muted mt-2">Reading and analyzing spreadsheet data from Google Drive...</div></div>');
+
+                $.ajax({
+                    url: '@Url.Action("MonthlyBudgetReport", "GoogleDrive")',
+                    method: 'GET',
+                    data: { fileName: fileName, fileId: fileId, connectionId: connectionId },
+                    success: function (data) {
+                        currentBudgetData = data;
+
+                        if (data && data.dataSource) {
+                            var badgeClass = data.isLiveSpreadsheetData ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25';
+                            var rowsText = data.parsedRowCount > 0 ? ' (' + data.parsedRowCount + ' rows parsed)' : '';
+                            $('#budgetModalDataSource').html('<span class="badge ' + badgeClass + ' rounded-pill px-2">📊 ' + data.dataSource + rowsText + '</span>');
+                        } else {
+                            $('#budgetModalDataSource').html('<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2">📊 Google Spreadsheet</span>');
+                        }
+
+                        // Build Month Selector Buttons
+                        if (currentBudgetData.months && currentBudgetData.months.length === 1) {
+                            var singleM = currentBudgetData.months[0];
+                            var monthBtnHtml = '<button type="button" class="btn btn-sm btn-primary active rounded-pill px-3 m-1 budget-month-btn" data-month="' + singleM.monthNumber + '">' + singleM.monthName + ' ' + currentBudgetData.year + '</button>';
+                            $('#budgetMonthButtonGroup').html(monthBtnHtml);
+                            renderBudgetMonth(singleM.monthNumber);
+                        } else {
+                            var monthBtnHtml = '<button type="button" class="btn btn-sm btn-primary active rounded-pill px-3 m-1 budget-month-btn" data-month="0">Full Year Overview</button>';
+                            if (currentBudgetData.months && currentBudgetData.months.length > 0) {
+                                currentBudgetData.months.forEach(function (m) {
+                                    monthBtnHtml += '<button type="button" class="btn btn-sm btn-outline-secondary bg-white rounded-pill px-2 py-1 m-1 budget-month-btn" data-month="' + m.monthNumber + '">' + m.monthName.substring(0, 3) + '</button>';
+                                });
+                            }
+                            $('#budgetMonthButtonGroup').html(monthBtnHtml);
+                            renderBudgetMonth(0);
+                        }
+                    },
+                    error: function () {
+                        $('#budgetModalDataSource').html('<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2">⚠️ Error Reading Spreadsheet</span>');
+                        $('#budgetReportTableContainer').html('<div class="alert alert-danger mb-0">Failed to read or parse monthly budget report for this spreadsheet from Google Drive. Please verify the file format and try again.</div>');
+                    }
+                });
+            });
+
+            // Month Switcher Buttons Click Handler
+            $(document).on('click', '.budget-month-btn', function () {
+                var monthNum = parseInt($(this).data('month'), 10);
+                renderBudgetMonth(monthNum);
+            });
+
+            // Table Month Drill-down Click Handler
+            $(document).on('click', '.btn-drill-month', function () {
+                var monthNum = parseInt($(this).data('month'), 10);
+                renderBudgetMonth(monthNum);
+            });
+
+            // Print Budget Report Handler
+            $('#btnPrintBudgetReport').on('click', function () {
+                window.print();
             });
         });
     </script>

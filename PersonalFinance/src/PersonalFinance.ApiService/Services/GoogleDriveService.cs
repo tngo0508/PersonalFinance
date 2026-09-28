@@ -702,6 +702,34 @@ public class GoogleDriveService : IGoogleDriveService
             },
             new()
             {
+                Id = "sample-sheet-budget-1",
+                Name = "Monthly budget 2026.xlsx",
+                MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                Size = 1_350_000,
+                SizeFormatted = GoogleDriveHelper.FormatBytes(1_350_000),
+                CreatedTime = DateTime.UtcNow.AddDays(-20),
+                ModifiedTime = DateTime.UtcNow.AddHours(-12),
+                WebViewLink = "https://drive.google.com/file/d/sample-sheet-budget-1/view",
+                FileType = "Spreadsheet",
+                IconBadgeClass = "bg-success",
+                IsFolder = false
+            },
+            new()
+            {
+                Id = "sample-sheet-budget-sep",
+                Name = "Monthly budget - September 2026.xlsx",
+                MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                Size = 920_000,
+                SizeFormatted = GoogleDriveHelper.FormatBytes(920_000),
+                CreatedTime = DateTime.UtcNow.AddDays(-10),
+                ModifiedTime = DateTime.UtcNow.AddHours(-4),
+                WebViewLink = "https://drive.google.com/file/d/sample-sheet-budget-sep/view",
+                FileType = "Spreadsheet",
+                IconBadgeClass = "bg-success",
+                IsFolder = false
+            },
+            new()
+            {
                 Id = "sample-sheet-1",
                 Name = "Household_Budget_Model.xlsx",
                 MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -772,5 +800,134 @@ public class GoogleDriveService : IGoogleDriveService
             IsDemoData = true,
             WarningMessage = warningMessage
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(
+        string fileId,
+        string? fileName = null,
+        int? connectionId = null,
+        string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileId))
+        {
+            return GoogleDriveHelper.GenerateMonthlyBudgetReport(fileName, fileId);
+        }
+
+        _logger.LogInformation("Generating monthly budget report from spreadsheet file ID '{FileId}', fileName '{FileName}'...", fileId, fileName);
+
+        // Check if sample / preview file
+        if (fileId.StartsWith("sample-", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("File '{FileId}' is sample data. Parsing actual sample spreadsheet content...", fileId);
+            var sampleCsv = GoogleDriveHelper.GetSampleMonthlyBudgetSpreadsheetCsv();
+            var sampleReport = GoogleDriveHelper.ParseSpreadsheetBudgetReport(
+                sampleCsv,
+                fileName ?? "Monthly budget 2026.xlsx",
+                fileId,
+                dataSource: "Google Drive Spreadsheet (Actual Sample Data)");
+            return sampleReport;
+        }
+
+        // Retrieve connection and credentials if available
+        GoogleDriveConnection? connection = null;
+        if (connectionId.HasValue && connectionId.Value > 0)
+        {
+            connection = await _dbContext.GoogleDriveConnections
+                .Include(c => c.CachedFiles)
+                .FirstOrDefaultAsync(c => c.Id == connectionId.Value && (userId == null || c.UserId == userId), cancellationToken);
+        }
+        else if (!string.IsNullOrWhiteSpace(userId))
+        {
+            connection = await _dbContext.GoogleDriveConnections
+                .Include(c => c.CachedFiles)
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.CachedFiles.Any(f => f.DriveFileId == fileId), cancellationToken);
+        }
+
+        // Find cached file metadata if available
+        var cachedFile = connection?.CachedFiles.FirstOrDefault(f => f.DriveFileId == fileId);
+        var actualFileName = fileName ?? cachedFile?.Name ?? "Monthly budget.xlsx";
+        var mimeType = cachedFile?.MimeType ?? string.Empty;
+
+        var apiKey = connection != null && !string.IsNullOrWhiteSpace(connection.EncryptedApiKey)
+            ? CredentialProtector.Decrypt(connection.EncryptedApiKey)
+            : _configuration["GoogleDrive:ApiKey"]?.Trim();
+
+        // 1. Attempt Live Download / Export from Google Drive
+        try
+        {
+            var isGoogleSheet = mimeType == "application/vnd.google-apps.spreadsheet" ||
+                                Path.GetExtension(actualFileName).Equals(".gsheet", StringComparison.OrdinalIgnoreCase) ||
+                                (string.IsNullOrEmpty(Path.GetExtension(actualFileName)) && cachedFile?.FileType == "Spreadsheet");
+
+            // Option A: Google Sheet -> Export to CSV
+            if (isGoogleSheet)
+            {
+                var exportUrl = !string.IsNullOrWhiteSpace(apiKey)
+                    ? $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(fileId)}/export?mimeType=text%2Fcsv&key={Uri.EscapeDataString(apiKey)}"
+                    : $"https://docs.google.com/spreadsheets/d/{Uri.EscapeDataString(fileId)}/export?format=csv";
+
+                _logger.LogInformation("Exporting Google Spreadsheet '{FileId}' to CSV via '{Url}'...", fileId, exportUrl);
+                using var response = await _httpClient.GetAsync(exportUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (response.IsSuccessStatusCode)
+                {
+                    var csvContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    if (!string.IsNullOrWhiteSpace(csvContent))
+                    {
+                        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(
+                            csvContent,
+                            actualFileName,
+                            fileId,
+                            dataSource: "Google Drive Live Spreadsheet (Exported Data)");
+                        return report;
+                    }
+                }
+            }
+
+            // Option B: Excel / CSV Binary File Download
+            var isXlsx = actualFileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ||
+                         mimeType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+            var downloadUrl = !string.IsNullOrWhiteSpace(apiKey)
+                ? $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(fileId)}?alt=media&key={Uri.EscapeDataString(apiKey)}"
+                : $"https://drive.google.com/uc?export=download&id={Uri.EscapeDataString(fileId)}";
+
+            _logger.LogInformation("Downloading spreadsheet file '{FileId}' via '{Url}'...", fileId, downloadUrl);
+            using var fileResponse = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (fileResponse.IsSuccessStatusCode)
+            {
+                if (isXlsx)
+                {
+                    await using var stream = await fileResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    var report = GoogleDriveHelper.ParseXlsxBudgetReport(
+                        stream,
+                        actualFileName,
+                        fileId,
+                        dataSource: "Google Drive Live XLSX (Actual Data)");
+                    return report;
+                }
+                else
+                {
+                    var csvContent = await fileResponse.Content.ReadAsStringAsync(cancellationToken);
+                    if (!string.IsNullOrWhiteSpace(csvContent))
+                    {
+                        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(
+                            csvContent,
+                            actualFileName,
+                            fileId,
+                            dataSource: "Google Drive Live CSV (Actual Data)");
+                        return report;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Live download of spreadsheet file '{FileId}' failed. Falling back to structured budget report.", fileId);
+        }
+
+        // Fallback to structured report calculation
+        return GoogleDriveHelper.GenerateMonthlyBudgetReport(actualFileName, fileId);
     }
 }

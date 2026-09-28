@@ -41,4 +41,14 @@ public interface IGoogleDriveService
     /// Removes a connection and all its cached data from SQLite.
     /// </summary>
     Task<bool> DeleteConnectionAsync(int connectionId, string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads and parses a spreadsheet from Google Drive (or SQLite cache / sample data) into a monthly budget report with actual data.
+    /// </summary>
+    Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(
+        string fileId,
+        string? fileName = null,
+        int? connectionId = null,
+        string? userId = null,
+        CancellationToken cancellationToken = default);
 }

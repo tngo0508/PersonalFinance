@@ -200,4 +200,26 @@ public class GoogleDriveController : ControllerBase
 
         return Ok(true);
     }
+
+    /// <summary>
+    /// Reads and parses a spreadsheet from Google Drive into a monthly budget report with actual data.
+    /// </summary>
+    [HttpGet("spreadsheet-report")]
+    [ProducesResponseType(typeof(MonthlyBudgetReportDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<MonthlyBudgetReportDto>> GetSpreadsheetBudgetReport(
+        [FromQuery] string fileId,
+        [FromQuery] string? fileName = null,
+        [FromQuery] int? connectionId = null,
+        [FromQuery] string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileId) && string.IsNullOrWhiteSpace(fileName))
+        {
+            return BadRequest("fileId or fileName is required.");
+        }
+
+        var report = await _googleDriveService.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, userId, cancellationToken);
+        return Ok(report);
+    }
 }
