@@ -1,20 +1,74 @@
 # Personal Finance App
 
-A modular personal finance management application built on .NET 10, featuring a clean architecture split across API services, a modern web frontend, and a dedicated data access layer.
+A modular, multi-tier personal finance management application built on **.NET 10**, designed for high maintainability, efficiency, and data privacy. It features a clean architecture separating the backend RESTful API, responsive web frontend, shared contract/parsing logic, and a persistent SQLite data layer.
 
 ---
 
 ## Architecture Overview
 
-The solution is organized into focused, decoupled projects:
+The solution follows a modern, decoupled **Clean Architecture** pattern to maximize separation of concerns, testability, and operational simplicity.
 
-| Project | Role & Description |
+```
+                              ┌──────────────────────────────────────────────┐
+                              │            PersonalFinance.Web               │
+                              │  (ASP.NET Core MVC, Razor Pages, Identity,   │
+                              │   DataTables, Chart.js, Bootstrap 5)         │
+                              └───────────────────────┬──────────────────────┘
+                                                      │
+                                                      │ Typed Refit Client (IGoogleDriveApi)
+                                                      │ + Polly HTTP Resilience Pipeline
+                                                      ▼
+                              ┌──────────────────────────────────────────────┐
+                              │         PersonalFinance.ApiService           │
+                              │  (REST API, GoogleDriveService, OpenAPI,     │
+                              │   Scalar UI at /scalar/v1, Health Checks)    │
+                              └───────────────┬───────────────┬──────────────┘
+                                              │               │
+                     Shared Contracts / DTOs  │               │ EF Core 10 / SQLite
+                     & Parsing Algorithms     │               │ (Direct & Design-Time)
+                                              ▼               ▼
+                ┌──────────────────────────────────┐    ┌──────────────────────────────────┐
+                │     PersonalFinance.Shared       │    │      PersonalFinance.Data        │
+                │  - DTOs & API Contracts          │    │  - AppDbContext & SQLite Schema  │
+                │  - GoogleDriveHelper Parser      │    │  - GoogleDriveConnection Entity  │
+                │  - CredentialProtector (AES-256) │    │  - GoogleDriveCachedFile Entity  │
+                │  - URL & Byte Format Helpers     │    │  - DatabasePathHelper            │
+                └──────────────────────────────────┘    └─────────────────┬────────────────┘
+                                                                          │
+                                                                          ▼
+                                                               ┌─────────────────────┐
+                                                               │  PersonalFinance.db │
+                                                               │  (Solution Root)    │
+                                                               └─────────────────────┘
+```
+
+### Project Responsibilities
+
+| Project | Architectural Role & Responsibilities |
 |---|---|
-| **`PersonalFinance.Data`** | Database schema, EF Core `AppDbContext`, domain entities, and migration definitions. |
-| **`PersonalFinance.ApiService`** | Backend RESTful API offering CRUD operations, Google Drive folder explorer services (`GoogleDriveController`), OpenAPI spec generation, and interactive Scalar UI (`/scalar/v1`). |
-| **`PersonalFinance.Web`** | ASP.NET Core MVC and Razor Pages frontend consuming API endpoints via type-safe Refit clients (`IGoogleDriveApi`) with resilience pipelines, DataTables, and ASP.NET Core Identity authentication. |
-| **`PersonalFinance.Shared`** | Shared DTOs (`GoogleDriveFileDto`, `ItemDto`), API contracts (`IGoogleDriveApi`, `IItemsApi`), URL helpers, and application constants. |
-| **`PersonalFinance.Tests`** | xUnit unit tests verifying URL parsing, MIME type resolution, byte formatting, and service handling. |
+| **`PersonalFinance.Web`** | **Presentation Layer**: ASP.NET Core MVC & Razor Pages application. Handles user interaction, ASP.NET Core Identity authentication, session state, DataTables file browsing, interactive Chart.js financial visualizations, and communicates with `ApiService` using strongly-typed Refit clients protected by resilient retry policies. |
+| **`PersonalFinance.ApiService`** | **Application & API Layer**: RESTful backend service. Exposes OpenAPI endpoints, integrates with the Google Drive API v3, coordinates background data fetching, executes spreadsheet export conversions, serves structured budget reports, and exposes interactive Scalar API documentation (`/scalar/v1`) and `/health` endpoints. |
+| **`PersonalFinance.Data`** | **Persistence Layer**: EF Core database context (`AppDbContext`), ASP.NET Core Identity entities, domain models (`GoogleDriveConnection`, `GoogleDriveCachedFile`, `Item`), migrations, and design-time factory (`AppDbContextFactory`). Uses `DatabasePathHelper` to bind to a single shared SQLite database file (`PersonalFinance.db`). |
+| **`PersonalFinance.Shared`** | **Domain & Cross-Cutting Layer**: Core data transfer objects (DTOs), Refit API interface contracts (`IGoogleDriveApi`, `IItemsApi`), cryptographic helpers (`CredentialProtector` for AES-256 encryption and key masking), and financial parsing engines (`GoogleDriveHelper`). |
+| **`PersonalFinance.Tests`** | **Verification Layer**: Comprehensive xUnit unit and integration test suite (86+ tests) verifying URL parsing, MIME type resolution, budget CSV analytics engines, persistence caching, and controller actions. |
+
+---
+
+## Data Flow & System Interactions
+
+### 1. Google Drive Folder Exploration & Caching Flow
+1. **User Connection**: Authenticated user submits a Google Drive folder link or ID and API key on `/GoogleDrive`.
+2. **Security & Persistence**: The connection configuration is encrypted via `CredentialProtector` (AES-256) and saved in SQLite (`GoogleDriveConnection`).
+3. **Fetching & Caching**: `PersonalFinance.ApiService` queries Google Drive API v3, normalizes metadata (size, MIME category, timestamps), and persists records to `GoogleDriveCachedFile`.
+4. **Subsequent Access**: On repeat visits, metadata is served immediately from the local SQLite cache without triggering external API calls, providing near-instant page loads.
+5. **Incremental Sync**: The manual "Sync / Refresh" button detects new, updated, or removed files, updating only changed records.
+
+### 2. Monthly Budget Report & Analytics Flow
+1. **Spreadsheet Discovery**: User clicks "View Budget Report" on any Google Sheet or spreadsheet CSV in their Drive.
+2. **Fetch & Conversion**: `ApiService` exports the spreadsheet via Google Drive API (or uses cached CSV data) and passes the raw content to `GoogleDriveHelper`.
+3. **Parsing Engine**: `GoogleDriveHelper` automatically detects single-month and full-year multi-month budget formats, parses planned vs. actual income/expenses, extracts category allocations, and computes starting/ending balances.
+4. **Analytics Delivery**: A structured `MonthlyBudgetReportDto` is returned through the typed Refit client to the frontend.
+5. **Interactive Visualization**: The web client renders KPI summary cards (Total Income, Total Expenses, Net Surplus/Deficit, Savings Rate), Chart.js comparison charts, and category variance progress bars with print support.
 
 ---
 
@@ -30,6 +84,15 @@ Allows users to connect, manage, and cache Google Drive folders with persistent 
 - **Universal URL Parsing**: Supports standard folder URLs, shortened/view URLs, and raw folder IDs via `GoogleDriveHelper`.
 - **Interactive DataTables & Grid Views**: Real-time category filtering (Sheets, Docs, PDFs, Images, Slides, Folders), sorting by name, size (raw byte sorting), creation/modification dates, and pagination.
 - **Direct Access**: Clickable links to open files/folders directly in Google Drive, plus quick clipboard copy actions.
+
+### 2. Google Drive Monthly Budget Report & Financial Analytics
+Transforms raw budget spreadsheets stored in Google Drive into structured, actionable financial insights directly from the web interface.
+- **Automatic Layout Detection**: Seamlessly identifies and parses both single-month budget sheets and 12-month full-year overview spreadsheets.
+- **Income & Expense Analytics**: Computes planned vs. actual totals, net surplus/deficit, net savings rate (%), and budget variance across all categories.
+- **Starting & Ending Balances**: Tracks beginning and ending cash balances across months for cash flow visibility.
+- **Visual Analytics**: Interactive Chart.js visualizations including income vs. expense bar/line charts and category spending doughnut charts.
+- **Category Progress & Variance**: Visual progress bars highlighting under-budget and over-budget category allocations.
+- **Export & Print**: Dedicated clean printable report view for physical archiving and financial reviews.
 
 #### How to Get a Free Google Cloud API Key (Step-by-Step for Non-Technical Users)
 
@@ -210,8 +273,20 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 
 ---
 
-## Logging & Observability
+## Testing
 
-- **Serilog**: Structured logging configured in both services with console and enricher support.
-- **Health Checks**: Standard `/health` endpoints enabled for uptime monitoring and orchestrator probes.
-- **Resilience Pipelines**: Refit HTTP client configured with standard exponential retry and circuit-breaker policies via `Microsoft.Extensions.Http.Resilience`.
+Execute the automated test suite covering unit, parser, and controller integration tests:
+
+```bash
+dotnet test
+```
+
+---
+
+## Security, Resilience & Observability
+
+- **Credential Encryption**: Google API keys and credentials are encrypted using AES-256 (`CredentialProtector`) prior to database storage and masked (`AIza...8xY2`) in UI outputs.
+- **Identity & Isolation**: User authentication is enforced via ASP.NET Core Identity; Google Drive connections and cached records are isolated by authenticated user ID.
+- **Resilience Pipelines**: Outgoing HTTP calls to `ApiService` and external Google APIs leverage `Microsoft.Extensions.Http.Resilience` for automatic exponential backoff, retry handling, and circuit breakers.
+- **Logging**: Structured, high-contrast logging configured across all services via Serilog and `AnsiConsoleTheme.Code`.
+- **Health Checks & API Docs**: Built-in `/health` uptime endpoints for services and interactive OpenAPI documentation served via Scalar at `/scalar/v1`.
