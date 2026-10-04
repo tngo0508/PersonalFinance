@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Web.Controllers;
@@ -216,6 +217,43 @@ public class GoogleDriveController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Generates a monthly budget summary report and chart data by reading the spreadsheet from Google Drive.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> MonthlyBudgetReport(
+        [FromQuery] string fileName,
+        [FromQuery] string? fileId = null,
+        [FromQuery] int? connectionId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) && string.IsNullOrWhiteSpace(fileId))
+        {
+            return BadRequest(new { error = "File name or file ID is required." });
+        }
+
+        var userId = GetCurrentUserId();
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(fileId))
+            {
+                var report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, userId, cancellationToken);
+                if (report != null)
+                {
+                    return Json(report);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read spreadsheet from Google Drive for fileId '{FileId}', using fallback summary.", fileId);
+        }
+
+        var fallbackReport = GoogleDriveHelper.GenerateMonthlyBudgetReport(fileName, fileId);
+        return Json(fallbackReport);
     }
 
     private async Task<IActionResult> ConnectAndExploreAsync(

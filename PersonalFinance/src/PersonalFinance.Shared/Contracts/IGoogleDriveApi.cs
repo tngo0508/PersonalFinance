@@ -49,4 +49,15 @@ public interface IGoogleDriveApi
     /// </summary>
     [Delete("/api/googledrive/connections/{connectionId}")]
     Task<bool> DeleteConnectionAsync(int connectionId, [Query] string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads and parses a spreadsheet from Google Drive into a monthly budget report with actual data.
+    /// </summary>
+    [Get("/api/googledrive/spreadsheet-report")]
+    Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(
+        [Query] string fileId,
+        [Query] string? fileName = null,
+        [Query] int? connectionId = null,
+        [Query] string? userId = null,
+        CancellationToken cancellationToken = default);
 }

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models;
 using Xunit;
@@ -161,6 +162,72 @@ public class GoogleDriveWebControllerTests
         var redirectResult = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirectResult.ActionName);
     }
+
+    [Fact]
+    public async Task MonthlyBudgetReport_WithValidFileName_ReturnsJsonReport()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi();
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        // Act
+        var result = await controller.MonthlyBudgetReport("Monthly budget 2026.xlsx", "file-123");
+
+        // Assert
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var report = Assert.IsType<MonthlyBudgetReportDto>(jsonResult.Value);
+        Assert.Equal("Monthly budget 2026.xlsx", report.FileName);
+        Assert.Equal("file-123", report.FileId);
+        Assert.Equal(2026, report.Year);
+        Assert.Equal(12, report.Months.Count);
+        Assert.True(report.TotalAnnualIncome > 0);
+        Assert.True(report.TotalAnnualExpenses > 0);
+    }
+
+    [Fact]
+    public async Task MonthlyBudgetReport_WithSingleMonthSpreadsheet_ReturnsOnlySingleMonth()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi();
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        // Act
+        var result = await controller.MonthlyBudgetReport("Monthly budget - September 2026.xlsx", "file-sep-123");
+
+        // Assert
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var report = Assert.IsType<MonthlyBudgetReportDto>(jsonResult.Value);
+        Assert.Equal("Monthly budget - September 2026.xlsx", report.FileName);
+        Assert.Equal("file-sep-123", report.FileId);
+        Assert.Equal(2026, report.Year);
+        Assert.True(report.IsSingleMonth);
+        Assert.Single(report.Months);
+        Assert.Equal(9, report.Months[0].MonthNumber);
+        Assert.Equal("September", report.Months[0].MonthName);
+    }
+
+    [Fact]
+    public async Task MonthlyBudgetReport_WithEmptyFileName_ReturnsBadRequest()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi();
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        // Act
+        var result = await controller.MonthlyBudgetReport("");
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
 }
 
 public class FakeGoogleDriveApi : IGoogleDriveApi
@@ -201,6 +268,11 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
     public Task<bool> DeleteConnectionAsync(int connectionId, string userId, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(true);
+    }
+
+    public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string fileId, string? fileName = null, int? connectionId = null, string? userId = null, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(GoogleDriveHelper.GenerateMonthlyBudgetReport(fileName, fileId));
     }
 }
 
