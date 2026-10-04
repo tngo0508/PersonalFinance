@@ -4,8 +4,10 @@ using Serilog.Sinks.SystemConsole.Themes;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
+using PersonalFinance.Web.Services;
 
 // 1. Bootstrap early logging to catch startup errors
 Log.Logger = new LoggerConfiguration()
@@ -37,8 +39,16 @@ try
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlite(connectionString));
 
-    builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
+    builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
         .AddEntityFrameworkStores<AppDbContext>();
+
+    // 3b. Register Brevo Email Sender
+    builder.Services.Configure<BrevoOptions>(
+        builder.Configuration.GetSection("Brevo"));
+    builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(15);
+    });
 
     builder.Services.AddRazorPages();
 
