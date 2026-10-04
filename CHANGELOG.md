@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Google OAuth 2.0 External Authentication & Account Linking**:
+  - Integrated Google OAuth 2.0 external authentication using `Microsoft.AspNetCore.Authentication.Google` (v10.0.0) with central package management in `Directory.Packages.props` and `PersonalFinance.Web.csproj`.
+  - Configured Google authentication handler conditionally in `PersonalFinance.Web/Program.cs` supporting OpenID Connect scopes (`profile`, `email`) and claim action mappings (`urn:google:picture`, `urn:google:locale`, `urn:google:verified_email`) via `Authentication:Google` configuration and .NET User Secrets.
+  - Implemented external login workflow in `Areas/Identity/Pages/Account/ExternalLogin.cshtml` and `ExternalLogin.cshtml.cs` with OAuth challenge handling, provider callback processing, automated user provisioning for verified email addresses, and secure account linking for existing confirmed accounts.
+  - Added custom claim synchronization (`SynchronizeCustomClaimsAsync`) to persist and refresh Google profile picture URLs, given names, and locale preferences in Identity claims upon login and account linking.
+  - Updated `_LoginPartial.cshtml` navigation partial to render user profile pictures and display names retrieved from external identity claims.
+  - Modernized `Areas/Identity/Pages/Account/Login.cshtml` and `Register.cshtml` with accessible, branded Google sign-in and registration buttons dynamically populated from active authentication schemes.
+  - Configured API-aware application cookie redirect handlers in `PersonalFinance.Web/Program.cs` returning HTTP `401 Unauthorized` and `403 Forbidden` status codes for unauthenticated API, JSON, and AJAX requests instead of HTML 302 redirects.
+  - Added unit and integration test suite `ExternalAuthenticationTests.cs` in `PersonalFinance.Tests` covering scheme registration, option configuration, API-aware cookie redirect behaviors, user auto-provisioning, and secure account linking workflows.
 - **Developer Guide & Development Notes (`DEVELOPMENT.md`)**:
   - Created a comprehensive `DEVELOPMENT.md` guide covering local prerequisites, architecture overview, .NET User Secrets management, Aspire dashboard configuration, SQLite database workflows, EF Core Code-First commands, testing guidelines, and troubleshooting solutions.
 - **Secrets Management via .NET User Secrets**:
