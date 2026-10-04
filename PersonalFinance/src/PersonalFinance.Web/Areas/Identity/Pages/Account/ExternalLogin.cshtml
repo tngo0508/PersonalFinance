@@ -1,0 +1,41 @@
+@page
+@model ExternalLoginModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <h2 class="card-title fw-bold mb-1">Associate Account</h2>
+                    <h5 id="external-login-title" class="text-muted">Associate your @Model.ProviderDisplayName account.</h5>
+                </div>
+
+                <div class="alert alert-info py-2 small" role="alert">
+                    You've successfully authenticated with <strong>@Model.ProviderDisplayName</strong>.
+                    Please confirm your email address below to finish setting up your account.
+                </div>
+
+                <form asp-page-handler="Confirmation" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
+                        <label asp-for="Input.Email" class="form-label">Email address</label>
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                    </div>
+                    <button type="submit" class="w-100 btn btn-primary btn-lg">Register</button>
+                </form>
+            </div>
+            <div class="card-footer bg-light text-center py-3">
+                <span class="text-muted">Need help?</span>
+                <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="text-decoration-none ms-1">Back to log in</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
