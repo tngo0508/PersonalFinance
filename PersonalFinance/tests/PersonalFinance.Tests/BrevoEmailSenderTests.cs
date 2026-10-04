@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Mail;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Configuration;
@@ -11,32 +10,21 @@ using Xunit;
 
 namespace PersonalFinance.Tests;
 
-public class FakeSmtpClient : ISmtpClient
-{
-    public MailMessage? LastMessageSent { get; private set; }
-    public bool ShouldThrow { get; set; }
-
-    public Task SendMailAsync(MailMessage message, CancellationToken cancellationToken = default)
-    {
-        if (ShouldThrow)
-        {
-            throw new SmtpException("SMTP connection failed.");
-        }
-
-        LastMessageSent = message;
-        return Task.CompletedTask;
-    }
-}
-
 public class FakeHttpMessageHandler : HttpMessageHandler
 {
     public HttpRequestMessage? LastRequest { get; private set; }
     public string? LastRequestBody { get; private set; }
     public HttpStatusCode ResponseStatusCode { get; set; } = HttpStatusCode.OK;
     public string ResponseContent { get; set; } = "{\"messageId\":\"test-msg-123\"}";
+    public bool ShouldThrow { get; set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        if (ShouldThrow)
+        {
+            throw new HttpRequestException("Network failure");
+        }
+
         LastRequest = request;
         if (request.Content != null)
         {
@@ -53,18 +41,31 @@ public class FakeHttpMessageHandler : HttpMessageHandler
 public class BrevoEmailSenderTests
 {
     [Fact]
-    public async Task SendEmailAsync_WhenCredentialsMissingAndClientIsNull_DoesNotThrowAndSkips()
+    public async Task SendEmailAsync_WhenApiKeyMissing_DoesNotThrowAndSkips()
     {
         var options = Options.Create(new BrevoOptions
         {
             ApiKey = null,
-            Login = null,
-            Password = null
+            SenderEmail = "no-reply@personalfinance.local"
         });
 
-        var sender = new BrevoEmailSender(options, NullLogger<BrevoEmailSender>.Instance, httpClient: null, smtpClient: null);
+        var sender = new BrevoEmailSender(options, NullLogger<BrevoEmailSender>.Instance);
 
         // Should return cleanly without throwing exceptions
+        await sender.SendEmailAsync("user@example.com", "Confirm your account", "<p>Please confirm</p>");
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WhenSenderEmailMissing_DoesNotThrowAndSkips()
+    {
+        var options = Options.Create(new BrevoOptions
+        {
+            ApiKey = "xkeysib-test-api-key",
+            SenderEmail = null
+        });
+
+        var sender = new BrevoEmailSender(options, NullLogger<BrevoEmailSender>.Instance);
+
         await sender.SendEmailAsync("user@example.com", "Confirm your account", "<p>Please confirm</p>");
     }
 
@@ -124,51 +125,22 @@ public class BrevoEmailSenderTests
     }
 
     [Fact]
-    public async Task SendEmailAsync_WhenConfiguredWithSmtp_SendsHtmlEmailViaSmtp()
+    public async Task SendEmailAsync_WhenHttpThrows_HandlesGracefullyWithoutUncaughtException()
     {
         var options = Options.Create(new BrevoOptions
         {
-            SmtpServer = "smtp-relay.brevo.com",
-            Port = 587,
-            Login = "bc723b001@smtp-brevo.com",
-            Password = "fake-password",
-            SenderEmail = "bc723b001@smtp-brevo.com",
-            SenderName = "PersonalFinance",
-            EnableSsl = true
+            ApiKey = "xkeysib-test-api-key",
+            SenderEmail = "no-reply@personalfinance.local"
         });
 
-        var fakeClient = new FakeSmtpClient();
-        var sender = new BrevoEmailSender(options, NullLogger<BrevoEmailSender>.Instance, smtpClient: fakeClient);
-
-        await sender.SendEmailAsync("recipient@example.com", "Confirm Email", "<p>Click here</p>");
-
-        Assert.NotNull(fakeClient.LastMessageSent);
-        Assert.Equal("bc723b001@smtp-brevo.com", fakeClient.LastMessageSent.From?.Address);
-        Assert.Equal("PersonalFinance", fakeClient.LastMessageSent.From?.DisplayName);
-        Assert.Equal("recipient@example.com", fakeClient.LastMessageSent.To[0].Address);
-        Assert.Equal("Confirm Email", fakeClient.LastMessageSent.Subject);
-        Assert.Equal("<p>Click here</p>", fakeClient.LastMessageSent.Body);
-        Assert.True(fakeClient.LastMessageSent.IsBodyHtml);
-    }
-
-    [Fact]
-    public async Task SendEmailAsync_WhenSmtpThrows_HandlesGracefullyWithoutUncaughtException()
-    {
-        var options = Options.Create(new BrevoOptions
-        {
-            Login = "bc723b001@smtp-brevo.com",
-            Password = "fake-password"
-        });
-
-        var fakeClient = new FakeSmtpClient
+        var handler = new FakeHttpMessageHandler
         {
             ShouldThrow = true
         };
+        var httpClient = new HttpClient(handler);
+        var sender = new BrevoEmailSender(options, NullLogger<BrevoEmailSender>.Instance, httpClient: httpClient);
 
-        var sender = new BrevoEmailSender(options, NullLogger<BrevoEmailSender>.Instance, smtpClient: fakeClient);
-
-        // Exception caught and logged cleanly
-        await sender.SendEmailAsync("recipient@example.com", "Confirm Email", "<p>Click here</p>");
+        await sender.SendEmailAsync("user@example.com", "Confirm Email", "<p>Click</p>");
     }
 
     [Fact]
