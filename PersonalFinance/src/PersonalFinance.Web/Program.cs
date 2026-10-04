@@ -22,7 +22,10 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // 2. Wire up Serilog from appsettings.json
+    // 2. Add Aspire service defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
+    builder.AddServiceDefaults();
+
+    // 3. Wire up Serilog from appsettings.json
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
@@ -54,24 +57,19 @@ try
 
     // 4. Add MVC Controllers and Views
     builder.Services.AddControllersWithViews();
+    builder.Services.AddProblemDetails();
 
     // 5. Register Health Checks
     builder.Services.AddHealthChecks();
 
-    // 6. Register Refit Clients with Standard HTTP Resilience Pipeline
-    var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7100";
+    // 6. Register Refit Clients with Service Discovery
+    var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https+http://apiservice";
 
     builder.Services.AddRefitClient<IGoogleDriveApi>()
         .ConfigureHttpClient(client =>
         {
             client.BaseAddress = new Uri(apiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(35);
-        })
-        .AddStandardResilienceHandler(options =>
-        {
-            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(25);
-            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(35);
-            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(70);
         });
 
     var app = builder.Build();
@@ -79,9 +77,12 @@ try
     // 7. Enable Serilog HTTP request logging
     app.UseSerilogRequestLogging();
 
+    // 8. Map default Aspire endpoints (/health, /alive)
+    app.MapDefaultEndpoints();
+
     if (!app.Environment.IsDevelopment())
     {
-        app.UseExceptionHandler("/Home/Error");
+        app.UseExceptionHandler();
         app.UseHsts();
     }
 
@@ -91,11 +92,6 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapStaticAssets();
-
-    // 8. Health Check endpoint
-    app.MapHealthChecks("/health")
-        .WithName("HealthCheck")
-        .WithTags("System");
 
     app.MapControllerRoute(
             name: "default",

@@ -2,6 +2,8 @@
 
 A modular, multi-tier personal finance management application built on **.NET 10**, designed for high maintainability, efficiency, and data privacy. It features a clean architecture separating the backend RESTful API, responsive web frontend, shared contract/parsing logic, and a persistent SQLite data layer.
 
+> 📖 **Developer Documentation**: For detailed local setup, secrets management, Aspire dashboard debugging, EF Core migration workflows, and common troubleshooting solutions, see [**DEVELOPMENT.md**](DEVELOPMENT.md).
+
 ---
 
 ## Architecture Overview
@@ -46,11 +48,13 @@ The solution follows a modern, decoupled **Clean Architecture** pattern to maxim
 
 | Project | Architectural Role & Responsibilities |
 |---|---|
-| **`PersonalFinance.Web`** | **Presentation Layer**: ASP.NET Core MVC & Razor Pages application. Handles user interaction, ASP.NET Core Identity authentication, session state, DataTables file browsing, interactive Chart.js financial visualizations, and communicates with `ApiService` using strongly-typed Refit clients protected by resilient retry policies. |
+| **`PersonalFinance.AppHost`** | **Orchestration Layer (.NET Aspire)**: Aspire application host that coordinates startup, dependencies, service discovery, and telemetry across `PersonalFinance.ApiService` and `PersonalFinance.Web` with the Aspire dashboard. |
+| **`PersonalFinance.ServiceDefaults`** | **Cross-Cutting Service Defaults (.NET Aspire)**: Reusable Aspire defaults configuring OpenTelemetry metrics/tracing, liveness/readiness health checks (`/health`, `/alive`), resilient HTTP pipelines, and service discovery. |
+| **`PersonalFinance.Web`** | **Presentation Layer**: ASP.NET Core MVC & Razor Pages application. Handles user interaction, ASP.NET Core Identity authentication, session state, DataTables file browsing, interactive Chart.js financial visualizations, and communicates with `ApiService` using strongly-typed Refit clients with Aspire service discovery and resilience policies. |
 | **`PersonalFinance.ApiService`** | **Application & API Layer**: RESTful backend service. Exposes OpenAPI endpoints, integrates with the Google Drive API v3, coordinates background data fetching, executes spreadsheet export conversions, serves structured budget reports, and exposes interactive Scalar API documentation (`/scalar/v1`) and `/health` endpoints. |
 | **`PersonalFinance.Data`** | **Persistence Layer**: EF Core database context (`AppDbContext`), ASP.NET Core Identity entities, domain models (`GoogleDriveConnection`, `GoogleDriveCachedFile`, `Item`), migrations, and design-time factory (`AppDbContextFactory`). Uses `DatabasePathHelper` to bind to a single shared SQLite database file (`PersonalFinance.db`). |
 | **`PersonalFinance.Shared`** | **Domain & Cross-Cutting Layer**: Core data transfer objects (DTOs), Refit API interface contracts (`IGoogleDriveApi`, `IItemsApi`), cryptographic helpers (`CredentialProtector` for AES-256 encryption and key masking), and financial parsing engines (`GoogleDriveHelper`). |
-| **`PersonalFinance.Tests`** | **Verification Layer**: Comprehensive xUnit unit and integration test suite (86+ tests) verifying URL parsing, MIME type resolution, budget CSV analytics engines, persistence caching, and controller actions. |
+| **`PersonalFinance.Tests`** | **Verification Layer**: Comprehensive xUnit unit and integration test suite verifying URL parsing, MIME type resolution, budget CSV analytics engines, persistence caching, controller actions, and Aspire service defaults. |
 
 ---
 
@@ -111,11 +115,9 @@ To query live Google Drive folders, you can obtain a free API key from Google in
    - Click **"+ CREATE CREDENTIALS"** at the top of the page and choose **"API key"**.
 5. **Copy and Use Your Key**:
    - A dialog will show your generated API key (starts with `AIzaSy...`).
-   - Copy the key and paste it into the **Google API Key** field on the `/GoogleDrive` web page, or add it to `PersonalFinance.ApiService/appsettings.json`:
-     ```json
-     "GoogleDrive": {
-       "ApiKey": "YOUR_API_KEY_HERE"
-     }
+   - Copy the key and paste it into the **Google API Key** field on the `/GoogleDrive` web page, or configure it securely in local User Secrets:
+     ```bash
+     dotnet user-secrets set "GoogleDrive:ApiKey" "YOUR_API_KEY_HERE" --project PersonalFinance/src/PersonalFinance.ApiService
      ```
 
 > **Note**:
@@ -126,6 +128,27 @@ To query live Google Drive folders, you can obtain a free API key from Google in
 > 1. **HTTP 404 / Cannot See Files**: Google masks private folders with HTTP 404. In Google Drive, right-click the folder &rarr; click **Share** &rarr; **Share** &rarr; change General access to **"Anyone with the link"** (Viewer).
 > 2. **HTTP 403 Forbidden**: Ensure the **Google Drive API** is enabled in your Google Cloud Console under *APIs & Services > Library*, and that your API key has no restricting IP/HTTP referrers preventing requests.
 > 3. **0 Files Returned**: If files exist in the folder but are not listed, confirm both the folder and nested items are accessible to "Anyone with the link".
+
+---
+
+## Configuration & User Secrets Management
+
+To prevent accidental credential leaks into public Git repositories, private keys are managed via [.NET User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) during local development.
+
+### 1. Brevo Transactional Email Sender
+ASP.NET Core Identity is configured with `RequireConfirmedAccount = true`, requiring user verification upon registration. Transactional emails are dispatched via the **Brevo REST API** (`https://api.brevo.com/v3/smtp/email`) with responsive HTML templates.
+
+Configure the Brevo API key in your local secret store:
+
+```bash
+# Set Brevo API Key for Web Frontend
+dotnet user-secrets set "Brevo:ApiKey" "<YOUR_BREVO_API_KEY>" --project PersonalFinance/src/PersonalFinance.Web
+```
+
+Verify secrets stored for `PersonalFinance.Web`:
+```bash
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web
+```
 
 ---
 
@@ -256,7 +279,18 @@ If using JetBrains Rider:
 
 ## Running the Application
 
-### 1. Run ApiService
+### 1. Run via .NET Aspire AppHost (Recommended)
+Launch the entire solution with the Aspire dashboard, service discovery, metrics, and trace observability:
+```bash
+dotnet run --project PersonalFinance/src/PersonalFinance.AppHost
+```
+- **Aspire Dashboard**: Accessible at the URL output in terminal (e.g., `https://localhost:17227`)
+- **Web Frontend**: Automatically launched and configured to discover `ApiService`
+- **API Service**: Automatically launched with health and OpenAPI/Scalar endpoints
+
+### 2. Run Standalone Projects
+
+#### ApiService
 ```bash
 dotnet run --project PersonalFinance/src/PersonalFinance.ApiService
 ```
@@ -264,7 +298,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.ApiService
 - **OpenAPI Document**: `https://localhost:7100/openapi/v1.json`
 - **Health Check**: `https://localhost:7100/health`
 
-### 2. Run Web Frontend
+#### Web Frontend
 ```bash
 dotnet run --project PersonalFinance/src/PersonalFinance.Web
 ```
@@ -285,8 +319,10 @@ dotnet test
 
 ## Security, Resilience & Observability
 
-- **Credential Encryption**: Google API keys and credentials are encrypted using AES-256 (`CredentialProtector`) prior to database storage and masked (`AIza...8xY2`) in UI outputs.
-- **Identity & Isolation**: User authentication is enforced via ASP.NET Core Identity; Google Drive connections and cached records are isolated by authenticated user ID.
+- **Secrets Management**: Sensitive credentials (such as Brevo email API keys and Google Drive API keys) are kept out of source control using `.NET User Secrets` during development.
+- **Credential Encryption**: User-submitted Google API keys are encrypted using AES-256 (`CredentialProtector`) prior to SQLite persistence and masked (`AIza...8xY2`) in UI outputs.
+- **Identity & Email Verification**: User authentication is enforced via ASP.NET Core Identity with mandatory email verification (`RequireConfirmedAccount = true`) delivered via Brevo REST API and responsive HTML templates.
 - **Resilience Pipelines**: Outgoing HTTP calls to `ApiService` and external Google APIs leverage `Microsoft.Extensions.Http.Resilience` for automatic exponential backoff, retry handling, and circuit breakers.
 - **Logging**: Structured, high-contrast logging configured across all services via Serilog and `AnsiConsoleTheme.Code`.
-- **Health Checks & API Docs**: Built-in `/health` uptime endpoints for services and interactive OpenAPI documentation served via Scalar at `/scalar/v1`.
+- **Health Checks & Telemetry**: Built-in `/health` and `/alive` uptime endpoints with full OpenTelemetry tracing and metrics integrated into the .NET Aspire dashboard.
+- **API Documentation**: Interactive OpenAPI documentation served via Scalar at `/scalar/v1`.

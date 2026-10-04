@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <!-- Project References -->
+        <ProjectReference Include="..\PersonalFinance.ServiceDefaults\PersonalFinance.ServiceDefaults.csproj" />
         <ProjectReference Include="..\PersonalFinance.Shared\PersonalFinance.Shared.csproj" />
         <ProjectReference Include="..\PersonalFinance.Data\PersonalFinance.Data.csproj" />
     </ItemGroup>

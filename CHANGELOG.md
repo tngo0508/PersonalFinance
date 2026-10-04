@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Developer Guide & Development Notes (`DEVELOPMENT.md`)**:
+  - Created a comprehensive `DEVELOPMENT.md` guide covering local prerequisites, architecture overview, .NET User Secrets management, Aspire dashboard configuration, SQLite database workflows, EF Core Code-First commands, testing guidelines, and troubleshooting solutions.
+- **Secrets Management via .NET User Secrets**:
+  - Migrated private API credentials (such as Brevo REST API keys and Google Drive keys) to `.NET User Secrets` (`secrets.json`) during local development to prevent committing sensitive keys to Git repositories.
+- **.NET Aspire Orchestration & Service Defaults**:
+  - Integrated .NET Aspire into the solution to manage multi-project lifecycle, service discovery, resilient communication, and observability.
+  - Added `PersonalFinance.AppHost` project orchestrating `PersonalFinance.ApiService` and `PersonalFinance.Web` dependencies with `WithReference` and `WaitFor` definitions.
+  - Added `PersonalFinance.ServiceDefaults` shared extension library configuring OpenTelemetry metrics (`AspNetCore`, `HttpClient`, `Runtime`), distributed tracing, OTLP exporters, default liveness/readiness health check endpoints (`/health` and `/alive`), service discovery, and standard HTTP resilience pipelines.
+  - Configured `PersonalFinance.ApiService` and `PersonalFinance.Web` to reference `PersonalFinance.ServiceDefaults`, call `builder.AddServiceDefaults()`, and map endpoints with `app.MapDefaultEndpoints()`.
+  - Configured `PersonalFinance.Web` Refit client to communicate with `ApiService` using Aspire service discovery (`https+http://apiservice`).
+  - Added unit tests in `PersonalFinance.Tests` (`ServiceDefaultsTests`) verifying service registration for health checks, OpenTelemetry tracing, and metric providers.
+  - Added Aspire package versions centrally to `Directory.Packages.props` and registered new projects in `PersonalFinance.sln` and `PersonalFinance.slnx`.
 - **Custom HTML Email Templates & Identity Registration Scaffolding**:
   - Implemented `EmailTemplateHelper` in `PersonalFinance.Web/Services` providing responsive, branded HTML email templates with prominent call-to-action (CTA) confirmation buttons, cross-client email client styling, and fallback URL rendering.
   - Scaffolded Identity Razor pages `Register.cshtml`/`Register.cshtml.cs` and `ResendEmailConfirmation.cshtml`/`ResendEmailConfirmation.cshtml.cs` under `Areas/Identity/Pages/Account/` to integrate custom HTML confirmation email dispatch.
@@ -57,6 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added xUnit unit test suite `PersonalFinance.Tests` covering URL parsing, byte formatting, MIME type resolution, and service handling.
 
 ### Changed
+- **Removed Boilerplate HomeController & Views**:
+  - Removed obsolete template `HomeController`, default views (`Views/Home/Index.cshtml`, `Views/Home/Privacy.cshtml`), `ErrorViewModel`, and `Views/Shared/Error.cshtml`.
+  - Updated `_Layout.cshtml` navigation and brand links to route directly to `GoogleDriveController`, removing dead links to `Home` and `Privacy`.
+  - Configured standard `ProblemDetails` exception handling middleware in `PersonalFinance.Web/Program.cs`.
 - **Streamlined Brevo Email Sender to Direct REST API**:
   - Removed legacy SMTP fallback pathways, `ISmtpClient` interface, and unused SMTP configuration options (`SmtpServer`, `Port`, `Login`, `Password`, `EnableSsl`) from `BrevoOptions` and `BrevoEmailSender`, standardizing all transactional email delivery strictly on Brevo's REST API endpoint.
 - **Enforce Email Confirmation for User Registration**:
@@ -91,6 +107,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Serilog Console Theme**: Configured `AnsiConsoleTheme.Code` with formatted output templates across `PersonalFinance.ApiService` and `PersonalFinance.Web` for high-contrast, clear, and readable console log output.
 
 ### Fixed
+- **Sign Out Redirect to Removed HomeController**: Updated `_LoginPartial.cshtml` sign-out form `asp-route-returnUrl` from obsolete `Url.Action("Index", "Home", new { area = "" })` to `Url.Action("Index", "GoogleDrive", new { area = "" })`, ensuring user sign-out redirects smoothly to the active landing controller.
+- **Aspire Dashboard OTLP Endpoint Environment Variables**: Corrected misnamed dashboard environment variables in `PersonalFinance.AppHost/Properties/launchSettings.json` to standard `DOTNET_DASHBOARD_OTLP_ENDPOINT_URL` and `DOTNET_RESOURCE_SERVICE_ENDPOINT_URL`, resolving startup exceptions on dashboard resource configuration.
 - **Client-side Validation Assets**: Installed `jquery-validate` and `jquery-validation-unobtrusive` via LibMan into `PersonalFinance.Web/wwwroot/lib/`, resolving 404 errors for `jquery.validate.min.js` and `jquery.validate.unobtrusive.min.js` referenced in `_ValidationScriptsPartial.cshtml`.
 - **Google Drive Timeout & Cancellation Handling**: Added specific exception handling for `TaskCanceledException`, `OperationCanceledException`, and `TimeoutException` in `GoogleDriveService` and `GoogleDriveController`, preventing unhandled cancel errors when network queries time out and providing clean fallback preview responses. Aligned HttpClient and resilience pipeline timeout configurations.
 
