@@ -69,6 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added xUnit unit test suite `PersonalFinance.Tests` covering URL parsing, byte formatting, MIME type resolution, and service handling.
 
 ### Changed
+- **Removed Boilerplate HomeController & Views**:
+  - Removed obsolete template `HomeController`, default views (`Views/Home/Index.cshtml`, `Views/Home/Privacy.cshtml`), `ErrorViewModel`, and `Views/Shared/Error.cshtml`.
+  - Updated `_Layout.cshtml` navigation and brand links to route directly to `GoogleDriveController`, removing dead links to `Home` and `Privacy`.
+  - Configured standard `ProblemDetails` exception handling middleware in `PersonalFinance.Web/Program.cs`.
 - **Streamlined Brevo Email Sender to Direct REST API**:
   - Removed legacy SMTP fallback pathways, `ISmtpClient` interface, and unused SMTP configuration options (`SmtpServer`, `Port`, `Login`, `Password`, `EnableSsl`) from `BrevoOptions` and `BrevoEmailSender`, standardizing all transactional email delivery strictly on Brevo's REST API endpoint.
 - **Enforce Email Confirmation for User Registration**:
@@ -103,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Serilog Console Theme**: Configured `AnsiConsoleTheme.Code` with formatted output templates across `PersonalFinance.ApiService` and `PersonalFinance.Web` for high-contrast, clear, and readable console log output.
 
 ### Fixed
+- **Sign Out Redirect to Removed HomeController**: Updated `_LoginPartial.cshtml` sign-out form `asp-route-returnUrl` from obsolete `Url.Action("Index", "Home", new { area = "" })` to `Url.Action("Index", "GoogleDrive", new { area = "" })`, ensuring user sign-out redirects smoothly to the active landing controller.
 - **Aspire Dashboard OTLP Endpoint Environment Variables**: Corrected misnamed dashboard environment variables in `PersonalFinance.AppHost/Properties/launchSettings.json` to standard `DOTNET_DASHBOARD_OTLP_ENDPOINT_URL` and `DOTNET_RESOURCE_SERVICE_ENDPOINT_URL`, resolving startup exceptions on dashboard resource configuration.
 - **Client-side Validation Assets**: Installed `jquery-validate` and `jquery-validation-unobtrusive` via LibMan into `PersonalFinance.Web/wwwroot/lib/`, resolving 404 errors for `jquery.validate.min.js` and `jquery.validate.unobtrusive.min.js` referenced in `_ValidationScriptsPartial.cshtml`.
 - **Google Drive Timeout & Cancellation Handling**: Added specific exception handling for `TaskCanceledException`, `OperationCanceledException`, and `TimeoutException` in `GoogleDriveService` and `GoogleDriveController`, preventing unhandled cancel errors when network queries time out and providing clean fallback preview responses. Aligned HttpClient and resilience pipeline timeout configurations.

@@ -57,6 +57,7 @@ try
 
     // 4. Add MVC Controllers and Views
     builder.Services.AddControllersWithViews();
+    builder.Services.AddProblemDetails();
 
     // 5. Register Health Checks
     builder.Services.AddHealthChecks();
@@ -81,7 +82,7 @@ try
 
     if (!app.Environment.IsDevelopment())
     {
-        app.UseExceptionHandler("/Home/Error");
+        app.UseExceptionHandler();
         app.UseHsts();
     }
 
