@@ -330,6 +330,9 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 
 ## 5. Database & Entity Framework Core Workflows
 
+### ASP.NET Core Identity Schema Documentation
+For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetRoleClaims`, `AspNetUserLogins`, `AspNetUserTokens`), foreign key relationships, and integration with application tables (`GoogleDriveConnections`, `GoogleDriveCachedFiles`), see [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md).
+
 ### SQLite Solution-Level Path Resolution
 To avoid separate SQLite database files being created in each project subfolder during development, `DatabasePathHelper.ResolveConnectionString()` dynamically resolves `"Data Source=PersonalFinance.db"` to the root repository folder (`C:\workdir\repos\PersonalFinanceApp\PersonalFinance.db`).
 
