@@ -14,6 +14,12 @@ This document provides developer guidelines, architectural details, configuratio
   # Or update if already installed
   dotnet tool update --global dotnet-ef
   ```
+- **ASP.NET Core Code Generator (`dotnet-aspnet-codegenerator`)** *(for scaffolding Identity pages)*:
+  ```bash
+  dotnet tool install --global dotnet-aspnet-codegenerator
+  # Or update if already installed
+  dotnet tool update --global dotnet-aspnet-codegenerator
+  ```
 - **IDE**: JetBrains Rider (recommended), Visual Studio 2022+ / 2026+, or VS Code with C# Dev Kit.
 - **Git**
 
@@ -231,6 +237,54 @@ The authentication architecture is designed to support additional external provi
    ```
 3. **Automatic UI & Handler Integration**:
    Because `Login.cshtml`, `Register.cshtml`, and `ExternalLogin.cshtml.cs` leverage generic ASP.NET Core Identity scheme discovery (`SignInManager.GetExternalAuthenticationSchemesAsync()` and `SignInManager.GetExternalLoginInfoAsync()`), the newly registered provider button will automatically appear on the UI and route through the existing account provisioning and linking pipeline.
+
+---
+
+#### Step 4: Identity Scaffolding CLI Commands & Custom ExternalLogin Architecture
+
+ASP.NET Core Identity uses Razor Pages located under `Areas/Identity/Pages/Account/`. Developers can scaffold new pages using the official .NET code generation tool and apply custom business logic.
+
+##### 1. CLI Scaffolding Workflow
+To generate default Identity Razor Pages from the command line:
+
+```bash
+# 1. Install or update the ASP.NET Core Code Generator global tool
+dotnet tool install --global dotnet-aspnet-codegenerator
+# Or update if already installed
+dotnet tool update --global dotnet-aspnet-codegenerator
+
+# 2. Ensure Microsoft.VisualStudio.Web.CodeGeneration.Design is referenced in the Web project
+dotnet add PersonalFinance/src/PersonalFinance.Web/PersonalFinance.Web.csproj package Microsoft.VisualStudio.Web.CodeGeneration.Design
+
+# 3. Scaffold specific Identity pages (e.g., ExternalLogin, Login, Register)
+dotnet aspnet-codegenerator identity \
+  --project PersonalFinance/src/PersonalFinance.Web/PersonalFinance.Web.csproj \
+  --dbContext PersonalFinance.Data.AppDbContext \
+  --files "Account.ExternalLogin;Account.Login;Account.Register"
+```
+
+##### 2. Custom Enhancements in `ExternalLogin.cshtml.cs`
+Rather than relying on default boilerplate scaffolding, the `ExternalLogin` flow in this application has been customized with essential security and user experience enhancements:
+
+- **Automated User Provisioning**:
+  When a user signs in via an external OAuth provider for the first time, a new `IdentityUser` is provisioned with `EmailConfirmed = true` (since third-party providers like Google have already verified email ownership).
+- **Pre-Account Takeover Defense**:
+  When an existing local account matches the provider email address:
+  - **Confirmed Accounts (`EmailConfirmed == true`)**: The external login is automatically linked using `_userManager.AddLoginAsync(existingUser, info)` and the user is signed in.
+  - **Unconfirmed Accounts (`EmailConfirmed == false`)**: The external login association is rejected with an explicit error to prevent malicious pre-registration account takeover attacks.
+- **Dynamic Claims Synchronization (`SynchronizeCustomClaimsAsync`)**:
+  On every successful external authentication callback, user claims are refreshed:
+  - `urn:google:picture`: Synchronizes user avatar URL for display in `_LoginPartial.cshtml`.
+  - `ClaimTypes.GivenName`: Synchronizes user display name / given name.
+  - `urn:google:locale`: Synchronizes user language and locale preferences.
+- **Bootstrap 5 Card UI Layout**:
+  `ExternalLogin.cshtml` provides clean, centralized card styling matching the application design system with clear feedback notifications.
+
+##### 3. Key Files Reference
+- `PersonalFinance/src/PersonalFinance.Web/Areas/Identity/Pages/Account/ExternalLogin.cshtml`: Razor Page view.
+- `PersonalFinance/src/PersonalFinance.Web/Areas/Identity/Pages/Account/ExternalLogin.cshtml.cs`: Page model and authentication handlers.
+- `PersonalFinance/src/PersonalFinance.Web/Program.cs`: External authentication provider configuration and API redirect handling.
+- `PersonalFinance/tests/PersonalFinance.Tests/ExternalAuthenticationTests.cs`: Unit test coverage for claims mapping and provisioning logic.
 
 ---
 
