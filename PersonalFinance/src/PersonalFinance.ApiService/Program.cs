@@ -19,7 +19,10 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // 2. Configure Serilog full logging pipeline from appsettings.json
+    // 2. Add Aspire service defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
+    builder.AddServiceDefaults();
+
+    // 3. Configure Serilog full logging pipeline from appsettings.json
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
@@ -71,7 +74,10 @@ try
     // 8. Enable Serilog HTTP request logging with request duration & status codes
     app.UseSerilogRequestLogging();
 
-    // 9. Root Info & Version Endpoint (Instant Runtime Verification)
+    // 9. Map default Aspire endpoints (/health, /alive)
+    app.MapDefaultEndpoints();
+
+    // 10. Root Info & Version Endpoint (Instant Runtime Verification)
     app.MapGet("/", () => Results.Ok(new
         {
             Application = AppVersion.ApplicationName,
@@ -83,11 +89,6 @@ try
         }))
         .WithName("GetVersionInfo")
         .WithSummary("Returns current API service version and runtime status")
-        .WithTags("System");
-
-    // 10. Health check endpoint
-    app.MapHealthChecks("/health")
-        .WithName("HealthCheck")
         .WithTags("System");
 
     // 11. Development tooling (OpenAPI spec & Scalar UI)

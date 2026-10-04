@@ -6,8 +6,13 @@
   </Configurations>
   <Folder Name="/src/">
     <Project Path="src/PersonalFinance.ApiService/PersonalFinance.ApiService.csproj" />
+    <Project Path="src/PersonalFinance.AppHost/PersonalFinance.AppHost.csproj" />
     <Project Path="src/PersonalFinance.Data/PersonalFinance.Data.csproj" />
+    <Project Path="src/PersonalFinance.ServiceDefaults/PersonalFinance.ServiceDefaults.csproj" />
     <Project Path="src/PersonalFinance.Shared/PersonalFinance.Shared.csproj" />
     <Project Path="src/PersonalFinance.Web/PersonalFinance.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PersonalFinance.Tests/PersonalFinance.Tests.csproj" />
   </Folder>
 </Solution>
