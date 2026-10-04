@@ -31,9 +31,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- ASP.NET Core Identity UI -->
+        <!-- ASP.NET Core Identity UI & External Authentication -->
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     </ItemGroup>
 
 </Project>

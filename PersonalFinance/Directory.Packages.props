@@ -33,6 +33,7 @@
     <!-- Authentication & Identity -->
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.0" />
     <!-- Client-Side Library Manager (LibMan Build Tool) -->
     <PackageVersion Include="Microsoft.Web.LibraryManager.Build" Version="2.1.175" />

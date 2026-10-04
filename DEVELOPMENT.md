@@ -14,6 +14,12 @@ This document provides developer guidelines, architectural details, configuratio
   # Or update if already installed
   dotnet tool update --global dotnet-ef
   ```
+- **ASP.NET Core Code Generator (`dotnet-aspnet-codegenerator`)** *(for scaffolding Identity pages)*:
+  ```bash
+  dotnet tool install --global dotnet-aspnet-codegenerator
+  # Or update if already installed
+  dotnet tool update --global dotnet-aspnet-codegenerator
+  ```
 - **IDE**: JetBrains Rider (recommended), Visual Studio 2022+ / 2026+, or VS Code with C# Dev Kit.
 - **Git**
 
@@ -115,6 +121,173 @@ dotnet user-secrets set "GoogleDrive:ApiKey" "<YOUR_GOOGLE_API_KEY>" --project P
 
 ---
 
+### Google OAuth 2.0 & External Authentication Setup
+
+The application supports seamless third-party external authentication via ASP.NET Core Identity and OAuth 2.0 / OpenID Connect.
+
+#### How It Works Architecturally
+1. **Conditional Registration (`PersonalFinance.Web/Program.cs`)**:
+   Google authentication is conditionally registered during startup when `Authentication:Google:ClientId` and `Authentication:Google:ClientSecret` are populated in configuration. If credentials are empty, the application runs smoothly without external login buttons.
+2. **Dynamic UI Discovery (`Login.cshtml.cs` & `Register.cshtml.cs`)**:
+   Pages query `SignInManager.GetExternalAuthenticationSchemesAsync()`. Branded buttons are dynamically rendered only for active schemes.
+3. **Automated User Provisioning & Secure Account Linking (`ExternalLogin.cshtml.cs`)**:
+   - **New Users**: When a user logs in with Google for the first time, a new `IdentityUser` is created with `EmailConfirmed = true` (verified by Google) and linked to `AspNetUserLogins`.
+   - **Existing Confirmed Accounts**: If a local user with the matching email already exists and is confirmed (`EmailConfirmed == true`), the external provider is linked via `UserManager.AddLoginAsync` and the user is signed in immediately.
+   - **Unconfirmed Accounts**: If a local account exists but has not verified their email, linking is rejected until the email is confirmed to prevent unauthorized account takeover.
+4. **Custom Claims Synchronization**:
+   Google user metadata is extracted during sign-in and synchronized into user identity claims:
+   - `urn:google:picture`: User profile avatar (rendered in `_LoginPartial.cshtml`).
+   - `ClaimTypes.GivenName`: First name or display name.
+   - `urn:google:locale`: Language and regional preference.
+5. **API-Aware Cookie Redirection**:
+   Unauthenticated requests to API endpoints (`/api/...`) or requests with `Accept: application/json` / `X-Requested-With: XMLHttpRequest` receive HTTP `401 Unauthorized` or `403 Forbidden` instead of HTML 302 redirects to `/Account/Login`.
+
+---
+
+#### Step 1: Create OAuth 2.0 Credentials in Google Cloud Console
+
+1. **Access Google Cloud Console**:
+   - Navigate to [Google Cloud Console](https://console.cloud.google.com/) and sign in with your Google account.
+2. **Create / Select Project**:
+   - In the top navigation bar, open the project dropdown and click **"New Project"**.
+   - Set the Project Name (e.g., `PersonalFinance`) and click **"Create"**. Ensure the new project is selected.
+3. **Configure the OAuth Consent Screen**:
+   - In the left sidebar, navigate to **APIs & Services** &rarr; **OAuth consent screen** (or [Consent Screen](https://console.cloud.google.com/apis/credentials/consent)).
+   - Select **External** user type and click **Create**.
+   - Enter required application information:
+     - **App name**: `Personal Finance`
+     - **User support email**: Your email address
+     - **Developer contact information**: Your email address
+   - Click **Save and Continue**.
+   - **Scopes**: Click **Add or Remove Scopes**, select `openid`, `.../auth/userinfo.email`, and `.../auth/userinfo.profile`, then click **Update** and **Save and Continue**.
+   - **Test Users**: While in "Testing" mode, add your Gmail account (and any test accounts) under **Test users**, then click **Save and Continue**.
+4. **Create OAuth Client ID**:
+   - In the left sidebar, navigate to **APIs & Services** &rarr; **Credentials**.
+   - Click **+ CREATE CREDENTIALS** &rarr; **OAuth client ID**.
+   - Set **Application type** to **Web application**.
+   - Set **Name** to `PersonalFinance Web App`.
+5. **Configure Origins and Redirect URIs**:
+
+   | Configuration Field in Google Console | Format Rules | Development Example |
+   |---|---|---|
+   | **Authorized JavaScript origins** | Base origin only (`scheme://host:port`). **No path, no trailing slash.** | `https://localhost:7200`<br/>`http://localhost:5200` |
+   | **Authorized redirect URIs** | Full callback endpoint URL with `/signin-google` path. | `https://localhost:7200/signin-google`<br/>`http://localhost:5200/signin-google` |
+
+   > ⚠️ **Common Mistake**: Entering `https://localhost:7200/signin-google` into *Authorized JavaScript origins* will result in `Invalid Origin: URIs must not contain a path or end with "/"`. Ensure `/signin-google` is placed only in *Authorized redirect URIs*.
+
+6. Click **CREATE**. Copy the generated **Client ID** (e.g., `485689840313-...apps.googleusercontent.com`) and **Client Secret**.
+
+---
+
+#### Step 2: Configure Local Credentials via .NET User Secrets
+
+Store your Google credentials in the `PersonalFinance.Web` secret store:
+
+```bash
+# Set Google OAuth Client ID
+dotnet user-secrets set "Authentication:Google:ClientId" "<YOUR_GOOGLE_CLIENT_ID>.apps.googleusercontent.com" --project PersonalFinance/src/PersonalFinance.Web
+
+# Set Google OAuth Client Secret
+dotnet user-secrets set "Authentication:Google:ClientSecret" "<YOUR_GOOGLE_CLIENT_SECRET>" --project PersonalFinance/src/PersonalFinance.Web
+```
+
+Verify configured secrets:
+```bash
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web
+```
+
+#### Production & Container Configuration
+In production or staging environments, supply these values via environment variables:
+- `Authentication__Google__ClientId`
+- `Authentication__Google__ClientSecret`
+
+#### Configuration Schema (`appsettings.json`)
+`PersonalFinance.Web/appsettings.json` provides empty baseline placeholders:
+```json
+"Authentication": {
+  "Google": {
+    "ClientId": "",
+    "ClientSecret": ""
+  }
+}
+```
+
+---
+
+#### Step 3: Extending to Other OAuth Providers (GitHub, Microsoft, Facebook, etc.)
+
+The authentication architecture is designed to support additional external providers with minimal effort:
+
+1. **Add Package Reference**:
+   Add the provider package (e.g., `AspNet.Security.OAuth.GitHub` or `Microsoft.AspNetCore.Authentication.MicrosoftAccount`) to `Directory.Packages.props` and `PersonalFinance.Web.csproj`.
+2. **Register in `PersonalFinance.Web/Program.cs`**:
+   ```csharp
+   var githubClientId = builder.Configuration["Authentication:GitHub:ClientId"];
+   var githubClientSecret = builder.Configuration["Authentication:GitHub:ClientSecret"];
+   if (!string.IsNullOrEmpty(githubClientId) && !string.IsNullOrEmpty(githubClientSecret))
+   {
+       builder.Services.AddAuthentication()
+           .AddGitHub(options =>
+           {
+               options.ClientId = githubClientId;
+               options.ClientSecret = githubClientSecret;
+               options.CallbackPath = "/signin-github";
+           });
+   }
+   ```
+3. **Automatic UI & Handler Integration**:
+   Because `Login.cshtml`, `Register.cshtml`, and `ExternalLogin.cshtml.cs` leverage generic ASP.NET Core Identity scheme discovery (`SignInManager.GetExternalAuthenticationSchemesAsync()` and `SignInManager.GetExternalLoginInfoAsync()`), the newly registered provider button will automatically appear on the UI and route through the existing account provisioning and linking pipeline.
+
+---
+
+#### Step 4: Identity Scaffolding CLI Commands & Custom ExternalLogin Architecture
+
+ASP.NET Core Identity uses Razor Pages located under `Areas/Identity/Pages/Account/`. Developers can scaffold new pages using the official .NET code generation tool and apply custom business logic.
+
+##### 1. CLI Scaffolding Workflow
+To generate default Identity Razor Pages from the command line:
+
+```bash
+# 1. Install or update the ASP.NET Core Code Generator global tool
+dotnet tool install --global dotnet-aspnet-codegenerator
+# Or update if already installed
+dotnet tool update --global dotnet-aspnet-codegenerator
+
+# 2. Ensure Microsoft.VisualStudio.Web.CodeGeneration.Design is referenced in the Web project
+dotnet add PersonalFinance/src/PersonalFinance.Web/PersonalFinance.Web.csproj package Microsoft.VisualStudio.Web.CodeGeneration.Design
+
+# 3. Scaffold specific Identity pages (e.g., ExternalLogin, Login, Register)
+dotnet aspnet-codegenerator identity \
+  --project PersonalFinance/src/PersonalFinance.Web/PersonalFinance.Web.csproj \
+  --dbContext PersonalFinance.Data.AppDbContext \
+  --files "Account.ExternalLogin;Account.Login;Account.Register"
+```
+
+##### 2. Custom Enhancements in `ExternalLogin.cshtml.cs`
+Rather than relying on default boilerplate scaffolding, the `ExternalLogin` flow in this application has been customized with essential security and user experience enhancements:
+
+- **Automated User Provisioning**:
+  When a user signs in via an external OAuth provider for the first time, a new `IdentityUser` is provisioned with `EmailConfirmed = true` (since third-party providers like Google have already verified email ownership).
+- **Pre-Account Takeover Defense**:
+  When an existing local account matches the provider email address:
+  - **Confirmed Accounts (`EmailConfirmed == true`)**: The external login is automatically linked using `_userManager.AddLoginAsync(existingUser, info)` and the user is signed in.
+  - **Unconfirmed Accounts (`EmailConfirmed == false`)**: The external login association is rejected with an explicit error to prevent malicious pre-registration account takeover attacks.
+- **Dynamic Claims Synchronization (`SynchronizeCustomClaimsAsync`)**:
+  On every successful external authentication callback, user claims are refreshed:
+  - `urn:google:picture`: Synchronizes user avatar URL for display in `_LoginPartial.cshtml`.
+  - `ClaimTypes.GivenName`: Synchronizes user display name / given name.
+  - `urn:google:locale`: Synchronizes user language and locale preferences.
+- **Bootstrap 5 Card UI Layout**:
+  `ExternalLogin.cshtml` provides clean, centralized card styling matching the application design system with clear feedback notifications.
+
+##### 3. Key Files Reference
+- `PersonalFinance/src/PersonalFinance.Web/Areas/Identity/Pages/Account/ExternalLogin.cshtml`: Razor Page view.
+- `PersonalFinance/src/PersonalFinance.Web/Areas/Identity/Pages/Account/ExternalLogin.cshtml.cs`: Page model and authentication handlers.
+- `PersonalFinance/src/PersonalFinance.Web/Program.cs`: External authentication provider configuration and API redirect handling.
+- `PersonalFinance/tests/PersonalFinance.Tests/ExternalAuthenticationTests.cs`: Unit test coverage for claims mapping and provisioning logic.
+
+---
+
 ## 4. Running the Application
 
 ### Option A: Via .NET Aspire AppHost (Recommended)
@@ -156,6 +329,9 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 ---
 
 ## 5. Database & Entity Framework Core Workflows
+
+### ASP.NET Core Identity Schema Documentation
+For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetRoleClaims`, `AspNetUserLogins`, `AspNetUserTokens`), foreign key relationships, and integration with application tables (`GoogleDriveConnections`, `GoogleDriveCachedFiles`), see [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md).
 
 ### SQLite Solution-Level Path Resolution
 To avoid separate SQLite database files being created in each project subfolder during development, `DatabasePathHelper.ResolveConnectionString()` dynamically resolves `"Data Source=PersonalFinance.db"` to the root repository folder (`C:\workdir\repos\PersonalFinanceApp\PersonalFinance.db`).
@@ -199,6 +375,7 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 
 ### Key Test Suites
 - `IdentityConfigurationTests`: Validates `RequireConfirmedAccount` sign-in policies and registration flows.
+- `ExternalAuthenticationTests`: Tests Google OAuth scheme registration, option configuration, custom claim extraction (`urn:google:picture`, `urn:google:locale`), API-aware 401/403 status code redirects, user auto-provisioning with confirmed emails, and secure account linking.
 - `BrevoEmailSenderTests`: Tests Brevo REST API dispatch, payload serialization, error responses, and HTML email assembly.
 - `EmailTemplateHelperTests`: Tests custom HTML email templates, parameter escaping, CTA button styling, and fallback URL rendering.
 - `GoogleDriveHelperTests`: Tests URL parsing, multi-sheet OpenXML budget parsing, balance extraction, and category categorization.
@@ -275,3 +452,63 @@ Multiple processes holding write locks or active connections during intensive mi
    dotnet ef database update --project PersonalFinance/src/PersonalFinance.Data
    ```
 3. Restart via `PersonalFinance.AppHost`.
+
+---
+
+### 6. Google OAuth: `Error 400: redirect_uri_mismatch`
+**Symptom:**
+Clicking "Continue with Google" opens a Google error page displaying:
+```
+Access blocked: This app's request is invalid
+Error 400: redirect_uri_mismatch
+```
+**Cause:**
+The redirect URI sent by the application (e.g., `https://localhost:7200/signin-google`) does not exactly match any of the entries in **Authorized redirect URIs** in Google Cloud Console.
+**Resolution:**
+1. Click **error details** on the Google error page to view the exact `redirect_uri` requested by your browser.
+2. Open [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials) &rarr; edit your OAuth 2.0 Web Client.
+3. Under **Authorized redirect URIs**, add the exact URI:
+   - `https://localhost:7200/signin-google`
+   - `http://localhost:5200/signin-google`
+4. Click **Save** and retry after a few seconds.
+
+---
+
+### 7. Google Cloud Console: `Invalid Origin: URIs must not contain a path or end with "/"`
+**Symptom:**
+Google Cloud Console rejects entering a URL into the **Authorized JavaScript origins** field.
+**Cause:**
+A full callback path (e.g., `/signin-google`) or a trailing slash was entered into *Authorized JavaScript origins*.
+**Resolution:**
+- **Authorized JavaScript origins** requires the origin scheme, domain, and port **only** (e.g., `https://localhost:7200` or `http://localhost:5200`).
+- Place callback URLs with `/signin-google` strictly inside **Authorized redirect URIs**.
+
+---
+
+### 8. External Login Button Not Appearing on Login / Register Pages
+**Symptom:**
+The "or continue with" divider and Google sign-in buttons are missing from `/Identity/Account/Login` and `/Identity/Account/Register`.
+**Cause:**
+The application conditionally hides external login options when `Authentication:Google:ClientId` or `Authentication:Google:ClientSecret` are empty or missing.
+**Resolution:**
+1. Check configured secrets:
+   ```bash
+   dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web
+   ```
+2. If missing, configure credentials:
+   ```bash
+   dotnet user-secrets set "Authentication:Google:ClientId" "<YOUR_CLIENT_ID>" --project PersonalFinance/src/PersonalFinance.Web
+   dotnet user-secrets set "Authentication:Google:ClientSecret" "<YOUR_CLIENT_SECRET>" --project PersonalFinance/src/PersonalFinance.Web
+   ```
+3. Restart `PersonalFinance.Web` or `PersonalFinance.AppHost`.
+
+---
+
+### 9. Google Sign-In Error: `Account with this email already exists but has not been confirmed`
+**Symptom:**
+Signing in with Google fails with the validation error: *"An account with this email address already exists but has not been confirmed. Please confirm your email address first."*
+**Cause:**
+A local account was previously registered with the same email address via password, but the email confirmation link was not verified. For security, external logins are not linked to unconfirmed accounts to protect against pre-account-takeover attacks.
+**Resolution:**
+1. Navigate to `/Identity/Account/ResendEmailConfirmation` and confirm the local account via the confirmation email.
+2. Once the local email is confirmed, signing in with Google will automatically link the provider to the account.
