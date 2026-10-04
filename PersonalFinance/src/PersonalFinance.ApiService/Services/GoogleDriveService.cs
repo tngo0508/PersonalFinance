@@ -861,9 +861,38 @@ public class GoogleDriveService : IGoogleDriveService
                                 Path.GetExtension(actualFileName).Equals(".gsheet", StringComparison.OrdinalIgnoreCase) ||
                                 (string.IsNullOrEmpty(Path.GetExtension(actualFileName)) && cachedFile?.FileType == "Spreadsheet");
 
-            // Option A: Google Sheet -> Export to CSV
+            // Option A: Google Sheet -> Export to XLSX first (to capture all sheets including Summary & Transactions), fallback to CSV
             if (isGoogleSheet)
             {
+                var xlsxExportUrl = !string.IsNullOrWhiteSpace(apiKey)
+                    ? $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(fileId)}/export?mimeType=application%2Fvnd.openxmlformats-officedocument.spreadsheetml.sheet&key={Uri.EscapeDataString(apiKey)}"
+                    : $"https://docs.google.com/spreadsheets/d/{Uri.EscapeDataString(fileId)}/export?format=xlsx";
+
+                try
+                {
+                    _logger.LogInformation("Exporting Google Spreadsheet '{FileId}' to XLSX via '{Url}'...", fileId, xlsxExportUrl);
+                    using var xlsxResponse = await _httpClient.GetAsync(xlsxExportUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                    if (xlsxResponse.IsSuccessStatusCode)
+                    {
+                        await using var stream = await xlsxResponse.Content.ReadAsStreamAsync(cancellationToken);
+                        var report = GoogleDriveHelper.ParseXlsxBudgetReport(
+                            stream,
+                            actualFileName,
+                            fileId,
+                            dataSource: "Google Drive Live Spreadsheet (Exported XLSX)");
+
+                        if (report.IsLiveSpreadsheetData)
+                        {
+                            return report;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "XLSX export for Google Sheet '{FileId}' failed or not binary archive. Falling back to CSV export.", fileId);
+                }
+
+                // Fallback to CSV if XLSX export is unavailable or fails
                 var exportUrl = !string.IsNullOrWhiteSpace(apiKey)
                     ? $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(fileId)}/export?mimeType=text%2Fcsv&key={Uri.EscapeDataString(apiKey)}"
                     : $"https://docs.google.com/spreadsheets/d/{Uri.EscapeDataString(fileId)}/export?format=csv";

@@ -89,7 +89,7 @@ try
 
     app.MapControllerRoute(
             name: "default",
-            pattern: "{controller=Home}/{action=Index}/{id?}")
+            pattern: "{controller=GoogleDrive}/{action=Index}/{id?}")
         .WithStaticAssets();
 
     app.MapRazorPages();

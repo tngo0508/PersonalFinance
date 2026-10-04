@@ -487,6 +487,66 @@ Food,800,750";
         Assert.Equal(3250m, m1.NetSavings);
     }
 
+    [Fact]
+    public void ParseXlsxBudgetReport_WithMultiSheetSummaryAndTransactions_ParsesBothSheetsAccurately()
+    {
+        using var ms = new MemoryStream();
+        using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var wbEntry = archive.CreateEntry("xl/workbook.xml");
+            using (var writer = new StreamWriter(wbEntry.Open(), Encoding.UTF8))
+            {
+                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Summary\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Transactions\" sheetId=\"2\" r:id=\"rId2\"/></sheets></workbook>");
+            }
+
+            var wbRelsEntry = archive.CreateEntry("xl/_rels/workbook.xml.rels");
+            using (var writer = new StreamWriter(wbRelsEntry.Open(), Encoding.UTF8))
+            {
+                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/></Relationships>");
+            }
+
+            var ssEntry = archive.CreateEntry("xl/sharedStrings.xml");
+            using (var writer = new StreamWriter(ssEntry.Open(), Encoding.UTF8))
+            {
+                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"12\" uniqueCount=\"12\"><si><t>Starting balance</t></si><si><t>Ending balance</t></si><si><t>INCOME</t></si><si><t>Salary</t></si><si><t>EXPENSES</t></si><si><t>Rent</t></si><si><t>Groceries</t></si><si><t>Date</t></si><si><t>Amount</t></si><si><t>Description</t></si><si><t>Category</t></si><si><t>Trader Joe's</t></si></sst>");
+            }
+
+            // Sheet 1: Summary (September)
+            var ws1Entry = archive.CreateEntry("xl/worksheets/sheet1.xml");
+            using (var writer = new StreamWriter(ws1Entry.Open(), Encoding.UTF8))
+            {
+                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\"><v>2000</v></c><c r=\"C1\"><v>2000</v></c></row><row r=\"2\"><c r=\"A2\" t=\"s\"><v>1</v></c><c r=\"B2\"><v>3500</v></c><c r=\"C2\"><v>3600</v></c></row><row r=\"3\"><c r=\"A3\" t=\"s\"><v>2</v></c></row><row r=\"4\"><c r=\"A4\" t=\"s\"><v>3</v></c><c r=\"B4\"><v>5000</v></c><c r=\"C4\"><v>5000</v></c></row><row r=\"5\"><c r=\"A5\" t=\"s\"><v>4</v></c></row><row r=\"6\"><c r=\"A6\" t=\"s\"><v>5</v></c><c r=\"B6\"><v>1500</v></c><c r=\"C6\"><v>1500</v></c></row><row r=\"7\"><c r=\"A7\" t=\"s\"><v>6</v></c><c r=\"B7\"><v>600</v></c><c r=\"C7\"><v>500</v></c></row></sheetData></worksheet>");
+            }
+
+            // Sheet 2: Transactions
+            var ws2Entry = archive.CreateEntry("xl/worksheets/sheet2.xml");
+            using (var writer = new StreamWriter(ws2Entry.Open(), Encoding.UTF8))
+            {
+                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>7</v></c><c r=\"B1\" t=\"s\"><v>8</v></c><c r=\"C1\" t=\"s\"><v>9</v></c><c r=\"D1\" t=\"s\"><v>10</v></c></row><row r=\"2\"><c r=\"A2\"><v>2026-09-02</v></c><c r=\"B2\"><v>250</v></c><c r=\"C2\" t=\"s\"><v>11</v></c><c r=\"D2\" t=\"s\"><v>6</v></c></row><row r=\"3\"><c r=\"A3\"><v>2026-09-15</v></c><c r=\"B3\"><v>250</v></c><c r=\"C3\" t=\"s\"><v>11</v></c><c r=\"D3\" t=\"s\"><v>6</v></c></row></sheetData></worksheet>");
+            }
+        }
+
+        ms.Position = 0;
+        var report = GoogleDriveHelper.ParseXlsxBudgetReport(ms, "Monthly budget - September 2026.xlsx", "multi-sheet-1");
+
+        Assert.NotNull(report);
+        Assert.Single(report.Months);
+        var month = report.Months[0];
+
+        Assert.Equal(2000m, month.StartingBalance);
+        Assert.Equal(3600m, month.EndingBalance);
+        Assert.Equal(5000m, month.ActualIncome);
+        Assert.Equal(2000m, month.ActualExpenses); // 1500 (Rent) + 500 (Groceries)
+        Assert.Equal(3000m, month.NetSavings);
+
+        // Ensure transaction lines did not create categories named after dates or descriptions
+        Assert.Equal(2, month.Categories.Count);
+        Assert.Contains(month.Categories, c => c.CategoryName == "Rent");
+        Assert.Contains(month.Categories, c => c.CategoryName == "Groceries");
+        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("2026"));
+        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Trader"));
+    }
+
     [Theory]
     [InlineData("Monthly budget - September 2026", 9)]
     [InlineData("Monthly budget - September 2026.xlsx", 9)]
@@ -640,6 +700,138 @@ Total Expenses, 2050, 2000, 50, , Total Income, 5200, 5500, 300";
 
         Assert.Equal(3500m, month.NetSavings); // 5500 - 2000
         Assert.Equal("Under Budget", month.Status);
+    }
+
+    [Fact]
+    public void ParseSpreadsheetBudgetReport_WithTransactionsTable_AggregatesIntoCategoriesWithoutCorruptingNames()
+    {
+        var sampleCsv = @"Monthly budget - September 2026
+STARTING BALANCE, 2000, 2000
+ENDING BALANCE, 3500, 3500
+INCOME, Planned, Actual
+Salary, 4500, 4500
+
+EXPENSES, Planned, Actual
+Housing & Rent, 1500, 1500
+Groceries, 600, 0
+
+TRANSACTIONS
+Date, Amount, Description, Category
+2026-09-02, 120.00, Trader Joe's, Groceries
+2026-09-10, 80.00, Whole Foods, Groceries
+2026-09-18, 150.00, Safeway, Groceries";
+
+        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-tx-table");
+
+        Assert.NotNull(report);
+        Assert.Single(report.Months);
+        var month = report.Months[0];
+
+        Assert.Equal(4500m, month.ActualIncome);
+        Assert.Equal(1850m, month.ActualExpenses); // 1500 (Rent) + 350 (Groceries from transactions)
+        Assert.Equal(2650m, month.NetSavings);
+
+        // Ensure transaction lines did not create categories named after dates or descriptions
+        Assert.Equal(2, month.Categories.Count);
+        Assert.Contains(month.Categories, c => c.CategoryName == "Housing & Rent");
+        var grocCat = month.Categories.First(c => c.CategoryName == "Groceries");
+        Assert.Equal(350m, grocCat.ActualAmount);
+        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("2026"));
+        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Trader"));
+    }
+
+    [Fact]
+    public void ParseSpreadsheetBudgetReport_WithIncreaseInTotalSavingsRow_DoesNotDistortExpensesAndSavingsRate()
+    {
+        var sampleCsv = @"Monthly budget - September 2026
+
+STARTING BALANCE,1000.00,1000.00
+ENDING BALANCE,2500.00,2500.00
+INCREASE IN TOTAL SAVINGS,1200.00,1500.00
+
+INCOME,Planned,Actual,Difference
+Salary,5000.00,5000.00,0.00
+Total Income,5000.00,5000.00,0.00
+
+EXPENSES,Planned,Actual,Difference
+Housing & Rent,1800.00,1800.00,0.00
+Groceries & Food,800.00,750.00,50.00
+Utilities,400.00,380.00,20.00
+Dining & Entertainment,500.00,470.00,30.00
+Personal & Miscellaneous,300.00,100.00,200.00
+Total Expenses,3800.00,3500.00,300.00";
+
+        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-increase-savings");
+
+        Assert.NotNull(report);
+        Assert.Single(report.Months);
+        var month = report.Months[0];
+
+        // Income: 5000
+        Assert.Equal(5000.00m, month.ActualIncome);
+        Assert.Equal(5000.00m, month.BudgetedIncome);
+
+        // Expenses: 3500 actual, 3800 budgeted (NOT 5000 inflated by the 1500 savings surplus)
+        Assert.Equal(3500.00m, month.ActualExpenses);
+        Assert.Equal(3800.00m, month.BudgetedExpenses);
+
+        // Net Savings: 5000 - 3500 = 1500 (NOT 0.00)
+        Assert.Equal(1500.00m, month.NetSavings);
+
+        // Savings Rate: 1500 / 5000 * 100 = 30.0% (NOT 0.0%)
+        Assert.Equal(30.0, month.SavingsRate, 1);
+
+        // Status: Under Budget (Actual 3500 <= Budgeted 3800)
+        Assert.Equal("Under Budget", month.Status);
+
+        // Ensure "Increase in total savings" was not added as an expense category
+        Assert.Equal(5, month.Categories.Count);
+        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("savings", StringComparison.OrdinalIgnoreCase) && c.CategoryName.Contains("increase", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ParseSpreadsheetBudgetReport_WithDecreaseInTotalSavingsRow_CalculatesCorrectDeficitAndStatus()
+    {
+        var sampleCsv = @"Monthly budget - September 2026
+
+STARTING BALANCE,3000.00,3000.00
+ENDING BALANCE,2000.00,2000.00
+DECREASE IN TOTAL SAVINGS,-1000.00,-1000.00
+
+INCOME,Planned,Actual,Difference
+Salary,3000.00,3000.00,0.00
+Total Income,3000.00,3000.00,0.00
+
+EXPENSES,Planned,Actual,Difference
+Housing & Rent,2000.00,2000.00,0.00
+Groceries & Food,1000.00,1200.00,-200.00
+Utilities,500.00,800.00,-300.00
+Total Expenses,3500.00,4000.00,-500.00";
+
+        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-decrease-savings");
+
+        Assert.NotNull(report);
+        Assert.Single(report.Months);
+        var month = report.Months[0];
+
+        // Income: 3000
+        Assert.Equal(3000.00m, month.ActualIncome);
+        // Expenses: 4000 actual, 3500 budgeted (NOT reduced by the -1000 deficit row)
+        Assert.Equal(4000.00m, month.ActualExpenses);
+        Assert.Equal(3500.00m, month.BudgetedExpenses);
+
+        // Net Savings: 3000 - 4000 = -1000
+        Assert.Equal(-1000.00m, month.NetSavings);
+
+        // Savings Rate: -1000 / 3000 * 100 = -33.33%
+        Assert.Equal(-33.33, month.SavingsRate, 2);
+
+        // Status: Over Budget (Actual 4000 > Budgeted 3500)
+        Assert.Equal("Over Budget", month.Status);
+
+        // Categories must not include "Decrease in total savings"
+        Assert.Equal(3, month.Categories.Count);
+        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Decrease", StringComparison.OrdinalIgnoreCase));
     }
 }
 

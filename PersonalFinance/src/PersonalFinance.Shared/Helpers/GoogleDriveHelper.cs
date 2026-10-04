@@ -215,7 +215,7 @@ public static class GoogleDriveHelper
             Title = title,
             Year = year,
             DataSource = "Google Drive Budget Summary",
-            IsLiveSpreadsheetData = true
+            IsLiveSpreadsheetData = false
         };
 
         var monthsList = new List<MonthlyBudgetMonthSummaryDto>();
@@ -341,6 +341,7 @@ public static class GoogleDriveHelper
 
     /// <summary>
     /// Parses an OpenXML Excel (.xlsx) file stream downloaded from Google Drive into a monthly budget report.
+    /// Handles multi-sheet workbooks (e.g. Summary and Transactions sheets).
     /// </summary>
     public static MonthlyBudgetReportDto ParseXlsxBudgetReport(
         Stream stream,
@@ -371,70 +372,38 @@ public static class GoogleDriveHelper
                 }
             }
 
-            // 2. Read first worksheet or summary worksheet
-            var worksheetEntries = archive.Entries
-                .Where(e => e.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase) && e.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(e => e.FullName)
-                .ToList();
-
-            if (worksheetEntries.Count == 0)
+            // 2. Map sheet names and worksheet entries
+            var sheetEntries = GetWorksheetEntriesWithNames(archive);
+            if (sheetEntries.Count == 0)
             {
                 return GenerateMonthlyBudgetReport(fileName, fileId);
             }
 
-            var allRows = new List<List<string>>();
+            var summarySheet = sheetEntries.FirstOrDefault(s => IsSummarySheetName(s.SheetName));
+            var transactionSheets = sheetEntries.Where(s => IsTransactionSheetName(s.SheetName)).ToList();
 
-            foreach (var wsEntry in worksheetEntries)
+            if (summarySheet.Entry != null)
             {
-                using var wsStream = wsEntry.Open();
-                var wsDoc = XDocument.Load(wsStream);
-                var ns = wsDoc.Root?.Name.Namespace ?? XNamespace.None;
+                var summaryRows = ParseWorksheetRows(summarySheet.Entry, sharedStrings);
+                var report = ParseSpreadsheetRows(summaryRows, fileName, fileId, dataSource);
 
-                foreach (var rowElem in wsDoc.Descendants(ns + "row"))
+                if (transactionSheets.Count > 0)
                 {
-                    var rowCells = new List<(int Col, string Val)>();
-                    foreach (var cellElem in rowElem.Elements(ns + "c"))
+                    foreach (var txSheet in transactionSheets)
                     {
-                        var cellRef = cellElem.Attribute("r")?.Value ?? string.Empty;
-                        var colIdx = GetColumnIndexFromCellRef(cellRef);
-                        var type = cellElem.Attribute("t")?.Value;
-
-                        string cellVal = string.Empty;
-                        if (type == "s")
-                        {
-                            var vVal = cellElem.Element(ns + "v")?.Value;
-                            if (int.TryParse(vVal, out var sIdx) && sIdx >= 0 && sIdx < sharedStrings.Count)
-                            {
-                                cellVal = sharedStrings[sIdx];
-                            }
-                        }
-                        else if (type == "inlineStr")
-                        {
-                            cellVal = cellElem.Element(ns + "is")?.Element(ns + "t")?.Value ?? string.Empty;
-                        }
-                        else
-                        {
-                            cellVal = cellElem.Element(ns + "v")?.Value ?? string.Empty;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(cellVal))
-                        {
-                            rowCells.Add((colIdx, cellVal.Trim()));
-                        }
-                    }
-
-                    if (rowCells.Count > 0)
-                    {
-                        var maxCol = rowCells.Max(c => c.Col);
-                        var rowList = new List<string>(new string[maxCol + 1]);
-                        for (int i = 0; i <= maxCol; i++) rowList[i] = string.Empty;
-                        foreach (var (col, val) in rowCells)
-                        {
-                            rowList[col] = val;
-                        }
-                        allRows.Add(rowList);
+                        var txRows = ParseWorksheetRows(txSheet.Entry, sharedStrings);
+                        EnrichReportWithTransactions(report, txRows);
                     }
                 }
+
+                return report;
+            }
+
+            var allRows = new List<List<string>>();
+            foreach (var (_, wsEntry) in sheetEntries)
+            {
+                var wsRows = ParseWorksheetRows(wsEntry, sharedStrings);
+                allRows.AddRange(wsRows);
             }
 
             if (allRows.Count == 0)
@@ -563,6 +532,40 @@ public static class GoogleDriveHelper
             if (monthFromRow.HasValue && allRowNumbers.Count == 0 && !fileNameMonth.HasValue)
             {
                 targetMonth = monthFromRow.Value;
+                continue;
+            }
+
+            // Check if transaction row e.g. [Date, Amount, Description, Category]
+            if (row.Count >= 2 && (IsTransactionDate(firstCol) || (row.Count >= 3 && IsTransactionDate(row[1]))))
+            {
+                var txNums = ExtractDecimalsFromRow(row);
+                if (txNums.Count > 0)
+                {
+                    var amount = txNums[0];
+                    var textCells = row.Where(c => !TryParseDecimal(c, out _) && !IsTransactionDate(c)).ToList();
+                    if (textCells.Count > 0)
+                    {
+                        var catName = CleanCategoryName(textCells.Last());
+                        if (!string.IsNullOrWhiteSpace(catName) && !IsIgnoredHeaderText(catName))
+                        {
+                            var existingCat = monthlyExpenseCategories[targetMonth].FirstOrDefault(c => c.CategoryName.Equals(catName, StringComparison.OrdinalIgnoreCase));
+                            if (existingCat != null)
+                            {
+                                existingCat.ActualAmount += amount;
+                            }
+                            else
+                            {
+                                monthlyExpenseCategories[targetMonth].Add(new MonthlyBudgetCategoryItemDto
+                                {
+                                    CategoryName = catName,
+                                    BudgetedAmount = 0,
+                                    ActualAmount = amount,
+                                    ColorHex = AssignCategoryColor(catName)
+                                });
+                            }
+                        }
+                    }
+                }
                 continue;
             }
 
@@ -726,6 +729,7 @@ public static class GoogleDriveHelper
         // Reconcile and calculate final monthly summaries
         var hasAnyParsedData = explicitIncomeSummary.Values.Any(v => v.HasValue) ||
                                explicitExpenseSummary.Values.Any(v => v.HasValue) ||
+                               explicitNetSavings.Values.Any(v => v.HasValue) ||
                                plannedIncomePart.Values.Any(v => v.HasValue) ||
                                actualIncomePart.Values.Any(v => v.HasValue) ||
                                plannedExpensePart.Values.Any(v => v.HasValue) ||
@@ -924,7 +928,11 @@ public static class GoogleDriveHelper
     {
         var lower = text.ToLowerInvariant();
         return lower.Contains("net savings") || lower.Contains("net income") || lower.Contains("net surplus") ||
-               lower.Contains("increase in cash") || lower.Contains("net cash") || lower.Contains("net difference") ||
+               lower.Contains("increase in total savings") || lower.Contains("decrease in total savings") ||
+               lower.Contains("increase in savings") || lower.Contains("decrease in savings") ||
+               lower.Contains("total savings") || lower.Contains("change in savings") ||
+               lower.Contains("increase in cash") || lower.Contains("decrease in cash") ||
+               lower.Contains("net cash") || lower.Contains("net difference") ||
                lower.Contains("surplus / deficit") || lower.Equals("surplus", StringComparison.OrdinalIgnoreCase) ||
                lower.Equals("net", StringComparison.OrdinalIgnoreCase);
     }
@@ -980,7 +988,224 @@ public static class GoogleDriveHelper
         return lower == "category" || lower == "item" || lower == "description" ||
                lower == "month" || lower == "date" || lower == "difference" || lower == "diff" ||
                lower == "planned" || lower == "actual" || lower == "budgeted" || lower == "variance" ||
+               lower == "amount" || lower == "transactions" || lower == "transaction" ||
+               lower == "payee" || lower == "merchant" || lower == "notes" ||
                lower.StartsWith("monthly budget", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSummarySheetName(string name)
+    {
+        var lower = name.ToLowerInvariant().Trim();
+        return lower == "summary" || lower == "budget summary" || lower == "overview" ||
+               lower == "monthly budget" || lower == "budget" || lower == "annual summary" ||
+               lower.Contains("summary");
+    }
+
+    private static bool IsTransactionSheetName(string name)
+    {
+        var lower = name.ToLowerInvariant().Trim();
+        return lower == "transaction" || lower == "transactions" || lower == "expenses" ||
+               lower == "expense log" || lower == "transaction log" || lower.Contains("transaction");
+    }
+
+    private static List<(string SheetName, ZipArchiveEntry Entry)> GetWorksheetEntriesWithNames(ZipArchive archive)
+    {
+        var result = new List<(string SheetName, ZipArchiveEntry Entry)>();
+        var workbookEntry = archive.GetEntry("xl/workbook.xml");
+        var workbookRelsEntry = archive.GetEntry("xl/_rels/workbook.xml.rels");
+
+        if (workbookEntry != null && workbookRelsEntry != null)
+        {
+            try
+            {
+                using var wbStream = workbookEntry.Open();
+                var wbDoc = XDocument.Load(wbStream);
+                var wbNs = wbDoc.Root?.Name.Namespace ?? XNamespace.None;
+                var rNs = wbDoc.Root?.GetNamespaceOfPrefix("r") ?? XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+
+                using var relsStream = workbookRelsEntry.Open();
+                var relsDoc = XDocument.Load(relsStream);
+                var relsNs = relsDoc.Root?.Name.Namespace ?? XNamespace.None;
+
+                var relMap = relsDoc.Descendants(relsNs + "Relationship")
+                    .Where(r => r.Attribute("Id") != null && r.Attribute("Target") != null)
+                    .ToDictionary(r => r.Attribute("Id")!.Value, r => r.Attribute("Target")!.Value);
+
+                foreach (var sheetElem in wbDoc.Descendants(wbNs + "sheet"))
+                {
+                    var sheetName = sheetElem.Attribute("name")?.Value ?? string.Empty;
+                    var rId = sheetElem.Attribute(rNs + "id")?.Value ?? string.Empty;
+                    if (relMap.TryGetValue(rId, out var target))
+                    {
+                        var cleanTarget = target.TrimStart('/');
+                        if (!cleanTarget.StartsWith("xl/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cleanTarget = "xl/" + cleanTarget;
+                        }
+                        var wsEntry = archive.GetEntry(cleanTarget) ?? archive.Entries.FirstOrDefault(e => e.FullName.Equals(cleanTarget, StringComparison.OrdinalIgnoreCase));
+                        if (wsEntry != null)
+                        {
+                            result.Add((sheetName, wsEntry));
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback to direct worksheet lookup
+            }
+        }
+
+        if (result.Count == 0)
+        {
+            var worksheetEntries = archive.Entries
+                .Where(e => e.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase) && e.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(e => e.FullName)
+                .ToList();
+
+            foreach (var wsEntry in worksheetEntries)
+            {
+                result.Add((Path.GetFileNameWithoutExtension(wsEntry.FullName), wsEntry));
+            }
+        }
+
+        return result;
+    }
+
+    private static List<List<string>> ParseWorksheetRows(ZipArchiveEntry wsEntry, List<string> sharedStrings)
+    {
+        var rows = new List<List<string>>();
+        using var wsStream = wsEntry.Open();
+        var wsDoc = XDocument.Load(wsStream);
+        var ns = wsDoc.Root?.Name.Namespace ?? XNamespace.None;
+
+        foreach (var rowElem in wsDoc.Descendants(ns + "row"))
+        {
+            var rowCells = new List<(int Col, string Val)>();
+            foreach (var cellElem in rowElem.Elements(ns + "c"))
+            {
+                var cellRef = cellElem.Attribute("r")?.Value ?? string.Empty;
+                var colIdx = GetColumnIndexFromCellRef(cellRef);
+                var type = cellElem.Attribute("t")?.Value;
+
+                string cellVal = string.Empty;
+                if (type == "s")
+                {
+                    var vVal = cellElem.Element(ns + "v")?.Value;
+                    if (int.TryParse(vVal, out var sIdx) && sIdx >= 0 && sIdx < sharedStrings.Count)
+                    {
+                        cellVal = sharedStrings[sIdx];
+                    }
+                }
+                else if (type == "inlineStr")
+                {
+                    cellVal = cellElem.Element(ns + "is")?.Element(ns + "t")?.Value ?? string.Empty;
+                }
+                else
+                {
+                    cellVal = cellElem.Element(ns + "v")?.Value ?? string.Empty;
+                }
+
+                if (!string.IsNullOrWhiteSpace(cellVal))
+                {
+                    rowCells.Add((colIdx, cellVal.Trim()));
+                }
+            }
+
+            if (rowCells.Count > 0)
+            {
+                var maxCol = rowCells.Max(c => c.Col);
+                var rowList = new List<string>(new string[maxCol + 1]);
+                for (int i = 0; i <= maxCol; i++) rowList[i] = string.Empty;
+                foreach (var (col, val) in rowCells)
+                {
+                    rowList[col] = val;
+                }
+                rows.Add(rowList);
+            }
+        }
+
+        return rows;
+    }
+
+    private static void EnrichReportWithTransactions(MonthlyBudgetReportDto report, List<List<string>> txRows)
+    {
+        // Extract transactions from rows: look for columns like [Date, Amount, Description, Category]
+        var categoryTotals = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rawRow in txRows)
+        {
+            var row = rawRow.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).ToList();
+            if (row.Count < 2) continue;
+            if (IsIgnoredHeaderText(row[0])) continue;
+
+            // Find decimal amounts in row
+            var nums = ExtractDecimalsFromRow(row);
+            if (nums.Count == 0) continue;
+            var amount = nums[0];
+
+            // Find category text
+            var textCells = row.Where(c => !TryParseDecimal(c, out _) && !IsTransactionDate(c)).ToList();
+            if (textCells.Count == 0) continue;
+
+            var catName = CleanCategoryName(textCells.Last());
+            if (string.IsNullOrWhiteSpace(catName) || IsIgnoredHeaderText(catName)) continue;
+
+            if (categoryTotals.ContainsKey(catName))
+            {
+                categoryTotals[catName] += amount;
+            }
+            else
+            {
+                categoryTotals[catName] = amount;
+            }
+        }
+
+        if (categoryTotals.Count == 0) return;
+
+        // If report has months with zero actual expenses in categories, populate from aggregated transactions
+        foreach (var month in report.Months)
+        {
+            foreach (var cat in month.Categories)
+            {
+                if (cat.ActualAmount == 0 && categoryTotals.TryGetValue(cat.CategoryName, out var actualTxAmount))
+                {
+                    cat.ActualAmount = actualTxAmount;
+                }
+            }
+        }
+    }
+
+    private static bool IsTransactionDate(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var trimmed = text.Trim();
+
+        // Must contain at least one digit (to distinguish from month/day names like "September", "Monday")
+        if (!trimmed.Any(char.IsDigit))
+        {
+            return false;
+        }
+
+        // If it's a pure number or decimal, it's an amount/quantity, not a date
+        if (Regex.IsMatch(trimmed, @"^\d+(?:\.\d+)?$"))
+        {
+            return false;
+        }
+
+        // Date formats like YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, M/D/YY, YYYY/MM/DD
+        if (Regex.IsMatch(trimmed, @"^(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}(?:[-/]\d{2,4})?)$"))
+        {
+            return true;
+        }
+
+        // Formats like "Sep 1", "September 15", "1-Sep", "15-Sep-2026", "Sep 15, 2026"
+        if (Regex.IsMatch(trimmed, @"^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[- ]\d{1,2}(?:[- ,]+\d{2,4})?|\d{1,2}[- ](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*(?:[- ,]+\d{2,4})?)$", RegexOptions.IgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -1181,7 +1406,10 @@ Total Expenses,4870.00,5040.00,-170.00";
     {
         return firstCol.StartsWith("Total", StringComparison.OrdinalIgnoreCase) ||
                firstCol.StartsWith("Sum", StringComparison.OrdinalIgnoreCase) ||
-               firstCol.StartsWith("Net", StringComparison.OrdinalIgnoreCase);
+               firstCol.StartsWith("Net", StringComparison.OrdinalIgnoreCase) ||
+               firstCol.StartsWith("Increase in", StringComparison.OrdinalIgnoreCase) ||
+               firstCol.StartsWith("Decrease in", StringComparison.OrdinalIgnoreCase) ||
+               firstCol.StartsWith("Change in", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<MonthlyBudgetCategoryItemDto> CreateDefaultCategoriesForExpense(decimal actualExp, decimal budgetedExp)
