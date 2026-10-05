@@ -91,65 +91,302 @@ The repository provides a complete automated CI/CD pipeline in `.github/workflow
 
 ### Step 1: Configure Azure OIDC Federated Credentials
 
-Configure passwordless GitHub Actions authentication in your Microsoft Entra ID:
+Configure passwordless GitHub Actions authentication to eliminate the need for long-lived secrets:
 
-1. **Create an App Registration in Azure Portal**:
-   - Navigate to **Microsoft Entra ID** &rarr; **App registrations** &rarr; **New registration**.
-   - Name: `personalfinance-github-actions`.
-   - Supported account types: **Accounts in this organizational directory only**.
-   - Click **Register**. Copy the **Application (client) ID** and **Directory (tenant) ID**.
+#### 1. Create App Registration in Azure Portal
+1.  Navigate to **Microsoft Entra ID** &rarr; **App registrations** &rarr; **New registration**.
+2.  **Name**: `personalfinance-github-actions`
+3.  **Supported account types**: **Accounts in this organizational directory only**.
+4.  Click **Register**.
+5.  On the Overview page, record:
+    *   **Application (client) ID** (This becomes `AZURE_CLIENT_ID` in GitHub)
+    *   **Directory (tenant) ID** (This becomes `AZURE_TENANT_ID` in GitHub)
 
-2. **Grant Azure Role Assignment**:
-   - Navigate to your Azure Subscription (or target Resource Group `rg-personalfinance-prod`).
-   - Select **Access control (IAM)** &rarr; **Add role assignment**.
-   - Role: **Contributor** (and **User Access Administrator** if creating role assignments).
-   - Assign access to: **User, group, or service principal** &rarr; select `personalfinance-github-actions`.
+#### 2. Assign Contributor Role
+1.  Navigate to your Azure Subscription (or the target Resource Group `rg-personalfinance-prod`).
+2.  Select **Access control (IAM)** &rarr; **Add** &rarr; **Add role assignment**.
+3.  **Role**: **Contributor**.
+4.  **Assign access to**: **User, group, or service principal**.
+5.  Click **+ Select members**, search for `personalfinance-github-actions`, select it, and click **Select**.
+6.  Click **Review + assign**.
 
-3. **Add Federated Credential for GitHub Actions**:
-   - In the App Registration, select **Certificates & secrets** &rarr; **Federated credentials** &rarr; **Add credential**.
-   - Federated credential scenario: **GitHub Actions deploying Azure resources**.
-   - **Organization**: Your GitHub username or organization (e.g., `tngo0508`).
-   - **Repository**: `PersonalFinanceApp` (or your repository name).
-   - **Entity type**: **Branch** &rarr; Branch name: `main`.
-   - Name: `personalfinance-main-branch`.
-   - Click **Add**.
+#### 3. Add Federated Credential for GitHub Actions
+1.  In your App Registration (`personalfinance-github-actions`), select **Certificates & secrets** &rarr; **Federated credentials** &rarr; **Add credential**.
+2.  **Federated credential scenario**: **GitHub Actions deploying Azure resources**.
+3.  **Organization**: Your GitHub username/organization (e.g., `tngo0508`).
+4.  **Repository**: `PersonalFinanceApp`.
+5.  **Entity type**: **Branch**.
+6.  **GitHub branch**: `main`.
+7.  **Name**: `main-branch-deploy`.
+8.  Click **Add**.
 
----
+*Note: For advanced users, equivalent CLI commands are available in `DEVELOPMENT.md`.*
 
-### Step 2: Configure GitHub Repository Secrets
-
-In your GitHub repository, navigate to **Settings** &rarr; **Secrets and variables** &rarr; **Actions** &rarr; **New repository secret**, and create:
-
-```
-AZURE_CLIENT_ID          = <Application (client) ID from Step 1>
-AZURE_TENANT_ID          = <Directory (tenant) ID from Step 1>
-AZURE_SUBSCRIPTION_ID    = <Azure Subscription ID>
-GOOGLE_CLIENT_ID         = <Google OAuth Client ID>
-GOOGLE_CLIENT_SECRET     = <Google OAuth Client Secret>
-BREVO_API_KEY            = <Brevo v3 API Key>
-GOOGLE_DRIVE_API_KEY     = <Google Drive API v3 Key>
-```
+You will also need your **Subscription ID** (found on the Azure Portal Subscriptions blade) as `AZURE_SUBSCRIPTION_ID` in GitHub.
 
 ---
 
-### Step 3: Trigger CI/CD Pipeline
+### Step 2: Configure Google Cloud OAuth and Google Drive API Credentials
 
-#### Automatic Trigger
-Push any commit to the `main` branch:
+The application supports optional **Google OAuth 2.0 social sign-in** and **Google Drive API integration** for budget report analytics. Both are optional; if not configured, the application runs without these features.
+
+This step creates two separate credentials in Google Cloud Console:
+1. **OAuth 2.0 Web Client** (`GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`) — for user sign-in via Google account.
+2. **Google Drive API Key** (`GOOGLE_DRIVE_API_KEY`) — for querying Google Drive folders without user login.
+
+#### 1. Create a Google Cloud Project
+
+1. Navigate to [Google Cloud Console](https://console.cloud.google.com/) and sign in with your Google account.
+2. At the top of the page, click the **Project dropdown** (next to the Google Cloud logo).
+3. Click **New Project**.
+4. Enter a **Project Name** (e.g., `PersonalFinance-Prod`) and click **Create**.
+5. Wait for the project to be created, then ensure it is selected in the project dropdown.
+
+#### 2. Configure the OAuth Consent Screen
+
+Before creating OAuth credentials, you must configure the consent screen that users see during sign-in:
+
+1. In the left sidebar, navigate to **APIs & Services** &rarr; **OAuth consent screen** (or visit [console.cloud.google.com/apis/credentials/consent](https://console.cloud.google.com/apis/credentials/consent)).
+2. Select **External** as the user type and click **Create**.
+3. Fill in the required application information:
+   - **App name**: `Personal Finance`
+   - **User support email**: Your email address (e.g., `your-email@gmail.com`)
+   - **Developer contact information**: Your email address
+4. Click **Save and Continue**.
+5. On the **Scopes** page, click **Add or Remove Scopes**.
+6. Search for and select the following scopes:
+   - `openid`
+   - `.../auth/userinfo.email`
+   - `.../auth/userinfo.profile`
+7. Click **Update** and then **Save and Continue**.
+8. On the **Test users** page, click **Add users** and add your Gmail account (and any test accounts you plan to use).
+9. Click **Save and Continue**, then **Back to Dashboard**.
+
+#### 3. Create OAuth 2.0 Web Client Credentials
+
+1. In the left sidebar, navigate to **APIs & Services** &rarr; **Credentials** (or visit [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)).
+2. Click **+ CREATE CREDENTIALS** at the top and select **OAuth client ID**.
+3. Set **Application type** to **Web application**.
+4. Set **Name** to `PersonalFinance Web App`.
+5. Under **Authorized JavaScript origins**, add:
+   - `https://localhost:7200` (local development HTTPS)
+   - `http://localhost:5200` (local development HTTP)
+   - `https://<your-deployed-web-fqdn>` (example placeholder: `https://web.yellowmeadow-123.eastus.azurecontainerapps.io`; replace it with your actual hostname after the first deployment)
+
+   > ⚠️ **Important**: Enter only the **base origin** (scheme + host + port). Do NOT include `/signin-google` or any path.
+
+6. Under **Authorized redirect URIs**, add:
+   - `https://localhost:7200/signin-google`
+   - `http://localhost:5200/signin-google`
+   - `https://<your-deployed-web-fqdn>/signin-google` (example placeholder: `https://web.yellowmeadow-123.eastus.azurecontainerapps.io/signin-google`; replace it with your actual hostname after the first deployment)
+
+   > ⚠️ **Important**: The redirect URI **must** end with `/signin-google` (the exact path where ASP.NET Core Identity handles the OAuth callback).
+
+7. Click **CREATE**.
+8. A dialog will display your credentials. **Copy and save**:
+   - **Client ID** (e.g., `485689840313-abc123def456.apps.googleusercontent.com`)
+   - **Client Secret** (e.g., `GOCSPX-abc123def456xyz`)
+
+   These become `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in GitHub Secrets.
+
+#### 4. Enable Google Drive API and Create an API Key
+
+1. In the left sidebar, navigate to **APIs & Services** &rarr; **Library** (or visit [console.cloud.google.com/apis/library](https://console.cloud.google.com/apis/library)).
+2. Search for **Google Drive API** and click on it.
+3. Click the blue **Enable** button.
+4. Return to **APIs & Services** &rarr; **Credentials**.
+5. Click **+ CREATE CREDENTIALS** and select **API key**.
+6. A dialog will display your new API key (e.g., `AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe`).
+7. **Copy and save** this key as `GOOGLE_DRIVE_API_KEY` in GitHub Secrets.
+
+   > **Optional**: Click the **Edit** (pencil) icon next to your API key to restrict it to Google Drive API only and limit HTTP referrers to your deployed domain for security.
+
+---
+
+### Step 3: Generate Brevo Transactional Email API Key
+
+Transactional emails (e.g., account confirmation) depend on an external email service. The application supports [Brevo](https://www.brevo.com/) as its transactional email provider. This is optional; if not configured, the application will not be able to send automated emails.
+
+#### 1. Generate the Brevo v3 REST API Key
+
+1.  Log in to your [Brevo Dashboard](https://app.brevo.com/).
+2.  Click on your **Profile icon** (top right) &rarr; **SMTP & API**.
+3.  Click on the **API Keys** tab.
+4.  Click **Generate a new API key**.
+5.  **Name**: Enter a name, such as `PersonalFinance-Prod`.
+6.  Click **Generate**.
+7.  **Important**: Copy the key immediately, as it will not be shown again.
+8.  Save this as `BREVO_API_KEY` in GitHub Secrets (see the next step).
+
+#### 2. Verify Sender Email Address
+
+1.  In the Brevo Dashboard, navigate to **Senders & Domains** &rarr; **Senders**.
+2.  Click **Add a sender**.
+3.  Enter your Name and Email address.
+4.  Brevo will send a verification email to that address. Follow the instructions in the email to verify your sender identity.
+5.  This verified email and name are configured in your GitHub repository variables (`BREVO_SENDER_EMAIL` and `BREVO_SENDER_NAME`) to ensure correct email delivery.
+
+---
+
+### Step 4: Configure GitHub Repository Secrets and Variables
+
+All deployment credentials and configuration are stored in GitHub Repository Secrets and Variables. This step configures both.
+
+#### 4.1 Add Repository Secrets
+
+Navigate to your GitHub repository **Settings** &rarr; **Secrets and variables** &rarr; **Actions** &rarr; **New repository secret** and create the following secrets:
+
+**Required Azure OIDC Secrets** (for CI/CD authentication):
+| Secret Name | Value |
+|---|---|
+| `AZURE_CLIENT_ID` | Application (client) ID from Step 1 |
+| `AZURE_TENANT_ID` | Directory (tenant) ID from Step 1 |
+| `AZURE_SUBSCRIPTION_ID` | Azure Subscription ID |
+
+**Optional Application Integration Secrets** (leave empty if not configured):
+| Secret Name | Value |
+|---|---|
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID from Step 2 |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret from Step 2 |
+| `GOOGLE_DRIVE_API_KEY` | Google Drive API Key from Step 2 |
+| `BREVO_API_KEY` | Brevo v3 REST API Key from Step 3 |
+
+**Conditional Secrets** (only required if deploying Azure SQL Database):
+| Secret Name | Value | When Required |
+|---|---|---|
+| `SQL_ADMIN_PASSWORD` | Strong password for Azure SQL admin account | Only when `deploy_sql` input is `true` in workflow |
+| `CUSTOM_CONNECTION_STRING` | External SQL Server or database connection string | Only if using custom database instead of Azure SQL |
+
+#### 4.2 Add Repository Variables
+
+Navigate to **Settings** &rarr; **Secrets and variables** &rarr; **Actions** &rarr; **New repository variable** and create the following variables:
+
+| Variable Name | Default Value | Purpose |
+|---|---|---|
+| `BREVO_SENDER_EMAIL` | `tngo0508@gmail.com` | Verified sender email address for transactional emails (from Step 3). |
+| `BREVO_SENDER_NAME` | `PersonalFinance` | Display name for transactional email sender. |
+| `CUSTOM_DOMAIN_NAME` | *(empty)* | Optional custom domain name (e.g., `finance.mydomain.com`). Leave empty for auto-generated Azure Container Apps domain. |
+
+> **Note**: If you do not create these variables, the workflow will use the default values shown above.
+
+---
+
+### Step 5: Trigger and Validate the CI/CD Deployment Pipeline
+
+The repository provides an automated GitHub Actions workflow named **"Build, Test, and Deploy to Azure Container Apps"** (`.github/workflows/deploy-azure.yml`). This workflow:
+1. Compiles and tests the .NET 10 application.
+2. Builds and pushes Docker images to GitHub Container Registry (GHCR).
+3. Deploys infrastructure and containers to Azure Container Apps using Bicep.
+4. Runs automated smoke tests against the deployed endpoints.
+
+#### 5.1 Understand Workflow Triggers and Behavior
+
+The workflow is triggered in the following scenarios:
+
+| Trigger | Behavior | Deployment? |
+|---|---|---|
+| **Push to `main` branch** | Automatically runs on any commit to `main` (except markdown-only changes). | ✅ Yes (if tests pass) |
+| **Pull Request to `main`** | Runs build and test suite only; does NOT deploy. | ❌ No |
+| **Markdown-only commits** | Commits containing only `*.md`, `docs/**`, or `.gitignore` changes are skipped. | ❌ No |
+| **Manual `workflow_dispatch`** | Triggered manually from the Actions tab with optional inputs. | ✅ Yes (unless `dry_run` is enabled) |
+
+#### 5.2 Automatic Trigger (Push to `main`)
+
+To trigger the workflow automatically, push a commit to the `main` branch:
+
 ```bash
 git add .
 git commit -m "Deploy production update"
 git push origin main
 ```
 
-#### Manual Trigger via `workflow_dispatch`
+The workflow will start automatically. Monitor progress in the **Actions** tab.
+
+#### 5.3 Manual Trigger via `workflow_dispatch`
+
+For controlled deployments or testing, manually trigger the workflow:
+
 1. In GitHub, open the **Actions** tab.
-2. Select **Build, Test, and Deploy to Azure Container Apps** in the left sidebar.
-3. Click **Run workflow**:
-   - **Azure Environment Name prefix**: `pf-prod` (default).
-   - **Provision Azure SQL Database Serverless Free Tier ($0.00)**: `true` or `false` (default: `false` for SQLite).
-   - **Dry-run validation / What-If only**: `false` (set to `true` to test without deploying).
-4. Click **Run workflow**.
+2. In the left sidebar, select **Build, Test, and Deploy to Azure Container Apps**.
+3. Click the **Run workflow** button (top right).
+4. Configure the optional inputs:
+   - **`environment`** (string, default: `pf-prod`): Azure environment name prefix for resource naming.
+   - **`deploy_sql`** (boolean, default: `false`): Set to `true` to provision Azure SQL Database Serverless Free Tier. When enabled, you **must** provide `SQL_ADMIN_PASSWORD` secret.
+   - **`dry_run`** (boolean, default: `false`): Set to `true` to validate infrastructure without deploying (skips container push and Azure deployment).
+5. Click **Run workflow**.
+
+#### 5.4 Monitor Workflow Execution
+
+1. The workflow runs in the **Actions** tab. Click the workflow run to view detailed logs.
+2. The workflow has four main jobs:
+   - **Build & Test (.NET 10)**: Compiles the solution and runs the test suite.
+   - **Build & Push Containers (GHCR)**: Builds Docker images and pushes to GitHub Container Registry on deployment runs; it still runs on PRs and dry runs but does not push images in those cases.
+   - **Deploy to Azure Container Apps**: Authenticates via OIDC and deploys Bicep infrastructure (skipped on PRs and dry runs).
+   - **End-to-End Smoke Tests**: Validates deployed endpoints (skipped on PRs and dry runs).
+
+#### 5.5 Validate Deployment Success
+
+After the workflow completes, verify successful deployment:
+
+**Check Workflow Status**:
+- For a deployment run (a push to `main` or a manual run with `dry_run` set to `false`), Build & Test, Build & Push Containers, Deploy to Azure Container Apps, and End-to-End Smoke Tests should all complete successfully.
+- For a pull request or dry run, Build & Test and Build & Push Containers should complete successfully, while Deploy to Azure Container Apps and End-to-End Smoke Tests should show as skipped because no deployment occurs.
+- If any job fails, click it to view error logs.
+
+**Smoke Test Results**:
+The workflow automatically tests the following endpoints on the deployed web application:
+
+| Endpoint | Expected Result | Purpose |
+|---|---|---|
+| `/health` | HTTP 200 OK (with up to 30 retry attempts, 5-second intervals) | Readiness probe; validates application startup and database connectivity. |
+| `/alive` | HTTP 200 OK | Liveness probe; validates application is running. |
+| `/` | HTTP 200 OK or 302 (redirect) | Home page; validates web UI is accessible. |
+| `/Identity/Account/Login` | HTTP 200 OK | Login page; validates ASP.NET Core Identity UI is rendered. |
+
+> **Note**: The API Service (`PersonalFinance.ApiService`) has internal-only ingress and is not publicly smoke-tested. Its endpoints (`/scalar/v1`, `/openapi/v1.json`) are validated in the CI test suite.
+
+**Verify in Azure Portal**:
+1. Navigate to the Azure Portal and open your Resource Group (`rg-personalfinance-prod`).
+2. Verify that the following resources are created:
+   - **Container Apps Environment** (`cae-<environmentName>-<uniqueSuffix>`, for example `cae-pf-prod-<uniqueSuffix>`)
+   - **Web Container App** (`web`)
+   - **API Container App** (`apiservice`)
+   - **Log Analytics Workspace** (for monitoring)
+   - *(Optional)* **Azure SQL Database** (if `deploy_sql` was enabled)
+
+**Test Application Features**:
+1. Navigate to the deployed web application URL (shown in the workflow output or Azure Portal).
+2. Test the following:
+   - **Home page loads**: Verify the dashboard and UI render correctly.
+   - **Google OAuth sign-in** (if configured): Click the "Sign in with Google" button and verify the OAuth flow completes.
+   - **Account registration**: Create a new account and verify the confirmation email is sent (check your email inbox or Brevo dashboard logs).
+   - **Budget reports** (if Google Drive API is configured): Verify the Google Drive integration works.
+
+#### 5.6 Troubleshooting Common Issues
+
+**OIDC Authentication Failure** (`AADSTS70021` error):
+- Verify that the Federated Credential in the App Registration (Step 1) is configured for the `main` branch.
+- Ensure `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` secrets are correctly set.
+- Verify the App Registration has the `Contributor` role assigned at the Subscription or Resource Group scope.
+
+**Deployment Fails with Permission Error**:
+- Confirm the App Registration has `Contributor` role on the target Subscription or Resource Group.
+- Check that the Resource Group `rg-personalfinance-prod` exists or will be created by the Bicep template.
+
+**Smoke Tests Fail**:
+- Check the workflow logs for the specific endpoint that failed.
+- Verify the web application is running: navigate to the Azure Portal and check the Container App status.
+- If `/health` times out, the application may be experiencing a cold-start delay or database connectivity issue. Check application logs in Log Analytics.
+
+**Email Not Received**:
+- Verify `BREVO_API_KEY` is correctly set in GitHub Secrets.
+- Verify the sender email address is verified in the Brevo Dashboard (**Senders & Domains** &rarr; **Senders**).
+- Check Brevo Dashboard logs for delivery failures.
+
+**Google OAuth Not Working**:
+- Verify `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are correctly set.
+- Ensure the deployed web application URL is added to the OAuth 2.0 Web Client's **Authorized JavaScript origins** and **Authorized redirect URIs** in Google Cloud Console.
+- Check the application logs for OAuth-related errors.
 
 ---
 
