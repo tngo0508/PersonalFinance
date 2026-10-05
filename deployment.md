@@ -288,22 +288,24 @@ The workflow is triggered in the following scenarios:
 
 | Trigger | Behavior | Deployment? |
 |---|---|---|
-| **Push to `main` branch** | Automatically runs on any commit to `main` (except markdown-only changes). | ✅ Yes (if tests pass) |
-| **Pull Request to `main`** | Runs build and test suite only; does NOT deploy. | ❌ No |
-| **Markdown-only commits** | Commits containing only `*.md`, `docs/**`, or `.gitignore` changes are skipped. | ❌ No |
+| **Push to `main` branch** | Automatically runs build, test suite, container publishing, and Azure deployment. | ✅ Yes (if tests pass) |
+| **Pull Request to `main`** | Automatically runs build, test suite, container publishing, and Azure deployment. | ✅ Yes (if tests pass) |
 | **Manual `workflow_dispatch`** | Triggered manually from the Actions tab with optional inputs. | ✅ Yes (unless `dry_run` is enabled) |
 
-#### 5.2 Automatic Trigger (Push to `main`)
+#### 5.2 Automatic Trigger (Push or Pull Request to `main`)
 
-To trigger the workflow automatically, push a commit to the `main` branch:
+To trigger the workflow automatically, push a commit to the `main` branch or open a Pull Request targeting `main`:
 
 ```bash
+# Example: Creating and pushing a PR branch
+git checkout -b feature/my-update
 git add .
-git commit -m "Deploy production update"
-git push origin main
+git commit -m "Deploy update via PR"
+git push origin feature/my-update
+# Then create a Pull Request targeting main on GitHub
 ```
 
-The workflow will start automatically. Monitor progress in the **Actions** tab.
+The workflow will start automatically on PR creation and subsequent commits. Monitor progress in the **Actions** tab.
 
 #### 5.3 Manual Trigger via `workflow_dispatch`
 
@@ -323,17 +325,17 @@ For controlled deployments or testing, manually trigger the workflow:
 1. The workflow runs in the **Actions** tab. Click the workflow run to view detailed logs.
 2. The workflow has four main jobs:
    - **Build & Test (.NET 10)**: Compiles the solution and runs the test suite.
-   - **Build & Push Containers (GHCR)**: Builds Docker images and pushes to GitHub Container Registry on deployment runs; it still runs on PRs and dry runs but does not push images in those cases.
-   - **Deploy to Azure Container Apps**: Authenticates via OIDC and deploys Bicep infrastructure (skipped on PRs and dry runs).
-   - **End-to-End Smoke Tests**: Validates deployed endpoints (skipped on PRs and dry runs).
+   - **Build & Push Containers (GHCR)**: Builds Docker images and pushes to GitHub Container Registry (skipped only when `dry_run` is enabled).
+   - **Deploy to Azure Container Apps**: Authenticates via OIDC and deploys Bicep infrastructure (skipped only when `dry_run` is enabled).
+   - **End-to-End Smoke Tests**: Validates deployed endpoints (skipped only when `dry_run` is enabled).
 
 #### 5.5 Validate Deployment Success
 
 After the workflow completes, verify successful deployment:
 
 **Check Workflow Status**:
-- For a deployment run (a push to `main` or a manual run with `dry_run` set to `false`), Build & Test, Build & Push Containers, Deploy to Azure Container Apps, and End-to-End Smoke Tests should all complete successfully.
-- For a pull request or dry run, Build & Test and Build & Push Containers should complete successfully, while Deploy to Azure Container Apps and End-to-End Smoke Tests should show as skipped because no deployment occurs.
+- For a standard deployment run (a push to `main`, a pull request targeting `main`, or a manual run with `dry_run` set to `false`), Build & Test, Build & Push Containers, Deploy to Azure Container Apps, and End-to-End Smoke Tests should all complete successfully.
+- For a dry run (`dry_run` set to `true`), Build & Test and Build & Push Containers (build-only) complete, while Deploy to Azure Container Apps and End-to-End Smoke Tests show as skipped.
 - If any job fails, click it to view error logs.
 
 **Smoke Test Results**:
