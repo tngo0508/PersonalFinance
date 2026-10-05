@@ -265,7 +265,7 @@ $paramArgs | ConvertTo-Json -Compress
 
         var startInfo = new ProcessStartInfo
         {
-            FileName = "powershell.exe",
+            FileName = OperatingSystem.IsWindows() ? "powershell.exe" : "pwsh",
             Arguments = $"-NoProfile -NonInteractive -Command \"{psCommand.Replace("\"", "\\\"").Replace("\r\n", " ")}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
