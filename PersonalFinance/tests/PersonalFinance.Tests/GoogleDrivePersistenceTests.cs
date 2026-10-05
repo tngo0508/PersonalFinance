@@ -16,10 +16,10 @@ public class GoogleDrivePersistenceTests
 {
     private static AppDbContext CreateTestDbContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = new DbContextOptionsBuilder<SqliteAppDbContext>()
             .UseSqlite("DataSource=:memory:")
             .Options;
-        var context = new AppDbContext(options);
+        var context = new SqliteAppDbContext(options);
         context.Database.OpenConnection();
         context.Database.EnsureCreated();
         return context;

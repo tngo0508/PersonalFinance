@@ -1,0 +1,282 @@
+name: Build, Test, and Deploy to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Azure Environment Name prefix (e.g. pf-prod)'
+        required: false
+        default: 'pf-prod'
+        type: string
+      deploy_sql:
+        description: 'Provision Azure SQL Database Serverless Free Tier ($0.00)'
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: 'Dry-run validation / What-If only (skip container push and Azure deployment)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  REGISTRY: ghcr.io
+  API_IMAGE_NAME: personalfinance-api
+  WEB_IMAGE_NAME: personalfinance-web
+  AZURE_RESOURCE_GROUP: rg-personalfinance-prod
+  AZURE_LOCATION: eastus
+  ENVIRONMENT_NAME: pf-prod
+
+jobs:
+  # ============================================================================
+  # 1. BUILD & AUTOMATED TEST SUITE (.NET 10)
+  # ============================================================================
+  build-and-test:
+    name: Build & Test (.NET 10)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }} SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet packages
+        run: dotnet restore PersonalFinance.sln
+
+      - name: Build solution (Release)
+        run: dotnet build PersonalFinance.sln --configuration Release --no-restore
+
+      - name: Execute test suite
+        run: dotnet test PersonalFinance.sln --configuration Release --no-build --verbosity normal
+
+      - name: Validate Bicep infrastructure templates
+        run: az bicep build --file infra/main.bicep
+
+  # ============================================================================
+  # 2. BUILD & PUSH MULTI-STAGE CONTAINERS (GHCR - $0.00 REGISTRY)
+  # ============================================================================
+  build-and-push-containers:
+    name: Build & Push Containers (GHCR)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      api_image_tag: ${{ steps.tags.outputs.api_image_tag }}
+      web_image_tag: ${{ steps.tags.outputs.web_image_tag }}
+      owner_lc: ${{ steps.tags.outputs.owner_lc }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine Image Names and Tags
+        id: tags
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          API_IMAGE="ghcr.io/${OWNER_LC}/${{ env.API_IMAGE_NAME }}"
+          WEB_IMAGE="ghcr.io/${OWNER_LC}/${{ env.WEB_IMAGE_NAME }}"
+
+          echo "owner_lc=${OWNER_LC}" >> $GITHUB_OUTPUT
+          echo "api_image=${API_IMAGE}" >> $GITHUB_OUTPUT
+          echo "web_image=${WEB_IMAGE}" >> $GITHUB_OUTPUT
+          echo "api_image_tag=${API_IMAGE}:${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "web_image_tag=${WEB_IMAGE}:${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        if: !(inputs.dry_run == true)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for ApiService container
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.tags.outputs.api_image }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push ApiService container
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: PersonalFinance/src/PersonalFinance.ApiService/Dockerfile
+          push: ${{ !(inputs.dry_run == true) }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata for Web container
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.tags.outputs.web_image }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Web container
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: PersonalFinance/src/PersonalFinance.Web/Dockerfile
+          push: ${{ !(inputs.dry_run == true) }}
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================================
+  # 3. DEPLOY INFRASTRUCTURE & CONTAINER APPS (Bicep + Azure OIDC)
+  # ============================================================================
+  deploy-azure:
+    name: Deploy to Azure Container Apps
+    needs: build-and-push-containers
+    if: !(inputs.dry_run == true)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      web_url: ${{ steps.deploy-bicep.outputs.webUrl }}
+      web_fqdn: ${{ steps.deploy-bicep.outputs.webFqdn }}
+      api_fqdn: ${{ steps.deploy-bicep.outputs.apiFqdn }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login via Passwordless OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Azure Infrastructure & Container Apps (Bicep)
+        id: deploy-bicep
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: infra/main.bicep
+          parameters: >-
+            environmentName=${{ inputs.environment || env.ENVIRONMENT_NAME }}
+            location=${{ env.AZURE_LOCATION }}
+            apiImage=${{ needs.build-and-push-containers.outputs.api_image_tag }}
+            webImage=${{ needs.build-and-push-containers.outputs.web_image_tag }}
+            googleClientId=${{ secrets.GOOGLE_CLIENT_ID }}
+            googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            brevoApiKey=${{ secrets.BREVO_API_KEY }}
+            brevoSenderEmail=${{ vars.BREVO_SENDER_EMAIL || 'tngo0508@gmail.com' }}
+            brevoSenderName=${{ vars.BREVO_SENDER_NAME || 'PersonalFinance' }}
+            googleDriveApiKey=${{ secrets.GOOGLE_DRIVE_API_KEY }}
+            deploySqlDatabase=${{ inputs.deploy_sql || false }}
+            sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
+            customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}
+            customDomainName=${{ vars.CUSTOM_DOMAIN_NAME || '' }}
+
+  # ============================================================================
+  # 4. END-TO-END POST-DEPLOYMENT SMOKE TESTS
+  # ============================================================================
+  smoke-test:
+    name: End-to-End Smoke Tests
+    needs: deploy-azure
+    if: !(inputs.dry_run == true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run HTTP Smoke Tests against Deployed Endpoints
+        run: |
+          WEB_URL="${{ needs.deploy-azure.outputs.web_url }}"
+          if [ -z "$WEB_URL" ]; then
+            WEB_FQDN="${{ needs.deploy-azure.outputs.web_fqdn }}"
+            WEB_URL="https://${WEB_FQDN}"
+          fi
+
+          echo "================================================================"
+          echo " Commencing smoke tests against target: ${WEB_URL}"
+          echo " Note: ApiService (/scalar/v1, /openapi/v1.json) is internal-only"
+          echo " (ingress external=false in ACA) and validated in CI test suite."
+          echo "================================================================"
+
+          # 1. Probe readiness endpoint (/health) with retry loop for cold-start
+          echo ""
+          echo "[1/4] Probing readiness health endpoint (/health)..."
+          MAX_RETRIES=30
+          HEALTH_OK=false
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/health" || true)
+            echo "Attempt $i/$MAX_RETRIES: /health returned HTTP ${HTTP_CODE}"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "  -> Readiness probe passed (HTTP 200 OK)."
+              HEALTH_OK=true
+              break
+            fi
+            sleep 5
+          done
+
+          if [ "$HEALTH_OK" != "true" ]; then
+            echo "::error::Readiness health probe timed out after ${MAX_RETRIES} attempts."
+            exit 1
+          fi
+
+          # 2. Probe liveness endpoint (/alive)
+          echo ""
+          echo "[2/4] Probing liveness health endpoint (/alive)..."
+          ALIVE_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/alive" || true)
+          echo "  -> /alive returned HTTP ${ALIVE_CODE}"
+          if [ "$ALIVE_CODE" != "200" ]; then
+            echo "::error::Liveness health probe failed with HTTP ${ALIVE_CODE}."
+            exit 1
+          fi
+          echo "  -> Liveness probe passed (HTTP 200 OK)."
+
+          # 3. Probe root UI page (/)
+          echo ""
+          echo "[3/4] Probing Web home page (/)..."
+          ROOT_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/" || true)
+          echo "  -> / returned HTTP ${ROOT_CODE}"
+          if [ "$ROOT_CODE" != "200" ] && [ "$ROOT_CODE" != "302" ]; then
+            echo "::error::Home page probe failed with HTTP ${ROOT_CODE}."
+            exit 1
+          fi
+          echo "  -> Home page probe passed (HTTP ${ROOT_CODE})."
+
+          # 4. Probe Identity login page (/Identity/Account/Login)
+          echo ""
+          echo "[4/4] Probing Identity login page (/Identity/Account/Login)..."
+          LOGIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/Identity/Account/Login" || true)
+          echo "  -> /Identity/Account/Login returned HTTP ${LOGIN_CODE}"
+          if [ "$LOGIN_CODE" != "200" ]; then
+            echo "::error::Identity login page probe failed with HTTP ${LOGIN_CODE}."
+            exit 1
+          fi
+          echo "  -> Identity login probe passed (HTTP 200 OK)."
+
+          echo "================================================================"
+          echo " All post-deployment smoke tests passed successfully!"
+          echo "================================================================"

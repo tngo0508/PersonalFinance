@@ -4,8 +4,9 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-      <UserSecretsId>f2df30ee-ab0b-4237-9e63-7d63849a082b</UserSecretsId>
-  </PropertyGroup>
+        <UserSecretsId>f2df30ee-ab0b-4237-9e63-7d63849a082b</UserSecretsId>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
 
     <ItemGroup>
         <!-- Project References -->
@@ -31,10 +32,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- ASP.NET Core Identity UI & External Authentication -->
+        <!-- ASP.NET Core Identity UI, External Authentication & Data Protection -->
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
     </ItemGroup>
 
 </Project>

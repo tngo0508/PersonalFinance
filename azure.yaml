@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: personalfinance
+metadata:
+  template: personalfinance-aca@1.0.0
+infra:
+  provider: bicep
+  path: infra
+services:
+  web:
+    project: PersonalFinance/src/PersonalFinance.Web
+    language: dotnet
+    host: containerapp
+  apiservice:
+    project: PersonalFinance/src/PersonalFinance.ApiService
+    language: dotnet
+    host: containerapp

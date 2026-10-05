@@ -2,6 +2,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Refit;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -38,13 +40,8 @@ try
             theme: AnsiConsoleTheme.Code,
             outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
 
-    // 3a. Register EF Core DbContext & ASP.NET Core Identity (shared solution-level database for local development)
-    var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                              ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-    var connectionString = DatabasePathHelper.ResolveConnectionString(rawConnectionString);
-
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlite(connectionString));
+    // 3a. Register EF Core DbContext & ASP.NET Core Identity (Azure SQL Serverless / SQLite)
+    builder.Services.AddAppDbContext(builder.Configuration);
 
     builder.Services.AddDefaultIdentity<IdentityUser>(options =>
     {
@@ -57,6 +54,10 @@ try
         options.Password.RequiredLength = 8;
     })
     .AddEntityFrameworkStores<AppDbContext>();
+
+    // Persist Data Protection keys to AppDbContext to preserve authentication sessions & antiforgery tokens across container restarts
+    builder.Services.AddDataProtection()
+        .PersistKeysToDbContext<AppDbContext>();
 
     // 3b. Configure Identity Application Cookie with .NET 10 API-Aware Redirect Handling
     builder.Services.ConfigureApplicationCookie(options =>
@@ -132,6 +133,14 @@ try
         client.Timeout = TimeSpan.FromSeconds(15);
     });
 
+    // 3e. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
     builder.Services.AddRazorPages();
 
     // 4. Add MVC Controllers and Views
@@ -165,6 +174,7 @@ try
         app.UseHsts();
     }
 
+    app.UseForwardedHeaders();
     app.UseHttpsRedirection();
     app.UseRouting();
 
@@ -179,20 +189,17 @@ try
 
     app.MapRazorPages();
 
-    if (app.Environment.IsDevelopment())
+    // 7. Auto-migrate database schema and seed initial sample data across environments
+    if (args.Contains("--migrate-only") ||
+        string.Equals(Environment.GetEnvironmentVariable("MIGRATE_ONLY"), "true", StringComparison.OrdinalIgnoreCase))
     {
-        try
-        {
-            using var scope = app.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.Migrate();
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex,
-                "Could not automatically initialize Identity database on startup. Verify database connection string.");
-        }
+        Log.Information("Executing database migration task and exiting (--migrate-only)...");
+        await app.MigrateAndSeedDatabaseAsync();
+        Log.Information("Database migration task finished successfully.");
+        return;
     }
+
+    await app.MigrateAndSeedDatabaseAsync();
 
     app.Run();
 }

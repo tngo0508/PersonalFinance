@@ -31,13 +31,8 @@ try
             theme: AnsiConsoleTheme.Code,
             outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
 
-    // 3. Register EF Core DbContext with SQLite (shared solution-level database for local development)
-    var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                              ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-    var connectionString = DatabasePathHelper.ResolveConnectionString(rawConnectionString);
-
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlite(connectionString));
+    // 3. Register EF Core DbContext with environment-driven provider (Azure SQL Serverless / SQLite)
+    builder.Services.AddAppDbContext(builder.Configuration);
 
     // 4. Standard RFC 7807 ProblemDetails for standardized error responses
     builder.Services.AddProblemDetails();
@@ -103,50 +98,19 @@ try
             options.WithTitle($"{AppVersion.ApplicationName} API Reference (v{AppVersion.Current})")
                 .WithTheme(ScalarTheme.Moon);
         });
-
-        // Auto-migrate database schema and seed initial sample data for local development
-        try
-        {
-            using var scope = app.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.Migrate();
-
-            if (!db.Items.Any())
-            {
-                db.Items.AddRange(
-                    new PersonalFinance.Data.Entities.Item
-                    {
-                        Name = "Getting Started with Refit & OpenAPI",
-                        Description = "Explore the type-safe Refit client in Web consuming ApiService endpoints.",
-                        IsCompleted = true,
-                        CreatedAtUtc = DateTime.UtcNow.AddHours(-2)
-                    },
-                    new PersonalFinance.Data.Entities.Item
-                    {
-                        Name = "Configure Authentication Modes",
-                        Description =
-                            "Test Individual Identity or Windows Negotiate authentication scheme across services.",
-                        IsCompleted = false,
-                        CreatedAtUtc = DateTime.UtcNow.AddMinutes(-45)
-                    },
-                    new PersonalFinance.Data.Entities.Item
-                    {
-                        Name = "Verify Interactive Scalar UI & Health Checks",
-                        Description = "Access /scalar/v1 and /health endpoints to validate runtime service health.",
-                        IsCompleted = false,
-                        CreatedAtUtc = DateTime.UtcNow.AddMinutes(-15)
-                    }
-                );
-                db.SaveChanges();
-                Log.Information("Database initialized and seeded with sample items.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex,
-                "Could not automatically initialize the database on startup. Verify database connection string.");
-        }
     }
+
+    // 12. Auto-migrate database schema and seed initial sample data across environments
+    if (args.Contains("--migrate-only") ||
+        string.Equals(Environment.GetEnvironmentVariable("MIGRATE_ONLY"), "true", StringComparison.OrdinalIgnoreCase))
+    {
+        Log.Information("Executing database migration task and exiting (--migrate-only)...");
+        await app.MigrateAndSeedDatabaseAsync();
+        Log.Information("Database migration task finished successfully.");
+        return;
+    }
+
+    await app.MigrateAndSeedDatabaseAsync();
 
     app.UseHttpsRedirection();
     app.UseAuthorization();

@@ -47,4 +47,28 @@ public class ServiceDefaultsTests
         var healthCheckService = host.Services.GetService<HealthCheckService>();
         Assert.NotNull(healthCheckService);
     }
+
+    [Theory]
+    [InlineData("Development")]
+    [InlineData("Production")]
+    public void MapDefaultEndpoints_MapsHealthEndpoints_InAllEnvironments(string environmentName)
+    {
+        // Arrange
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = environmentName
+        });
+        builder.AddServiceDefaults();
+        var app = builder.Build();
+
+        // Act
+        app.MapDefaultEndpoints();
+
+        // Assert - verify endpoints are registered in endpoint data source
+        var endpointDataSources = ((Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)app).DataSources;
+        var endpoints = endpointDataSources.SelectMany(ds => ds.Endpoints).ToList();
+
+        Assert.Contains(endpoints, e => e is Microsoft.AspNetCore.Routing.RouteEndpoint route && route.RoutePattern.RawText == "/health");
+        Assert.Contains(endpoints, e => e is Microsoft.AspNetCore.Routing.RouteEndpoint route && route.RoutePattern.RawText == "/alive");
+    }
 }

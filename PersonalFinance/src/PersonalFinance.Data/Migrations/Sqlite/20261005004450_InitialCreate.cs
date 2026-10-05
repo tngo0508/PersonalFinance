@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace PersonalFinance.Data.Migrations
+namespace PersonalFinance.Data.Migrations.Sqlite
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -15,7 +15,7 @@ namespace PersonalFinance.Data.Migrations
                 name: "AspNetRoles",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Id = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true)
@@ -29,7 +29,7 @@ namespace PersonalFinance.Data.Migrations
                 name: "AspNetUsers",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Id = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -48,6 +48,43 @@ namespace PersonalFinance.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DataProtectionKeys",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    FriendlyName = table.Column<string>(type: "TEXT", nullable: true),
+                    Xml = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DataProtectionKeys", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GoogleDriveConnections",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    FolderId = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    FolderUrl = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: false),
+                    EncryptedApiKey = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
+                    MaskedApiKey = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
+                    IsValid = table.Column<bool>(type: "INTEGER", nullable: false),
+                    SyncStatus = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    ErrorMessage = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
+                    CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastSyncedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GoogleDriveConnections", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -72,7 +109,7 @@ namespace PersonalFinance.Data.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    RoleId = table.Column<string>(type: "TEXT", nullable: false),
+                    RoleId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     ClaimType = table.Column<string>(type: "TEXT", nullable: true),
                     ClaimValue = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -93,7 +130,7 @@ namespace PersonalFinance.Data.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     ClaimType = table.Column<string>(type: "TEXT", nullable: true),
                     ClaimValue = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -112,10 +149,10 @@ namespace PersonalFinance.Data.Migrations
                 name: "AspNetUserLogins",
                 columns: table => new
                 {
-                    LoginProvider = table.Column<string>(type: "TEXT", nullable: false),
-                    ProviderKey = table.Column<string>(type: "TEXT", nullable: false),
+                    LoginProvider = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    ProviderKey = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
                     ProviderDisplayName = table.Column<string>(type: "TEXT", nullable: true),
-                    UserId = table.Column<string>(type: "TEXT", nullable: false)
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -132,8 +169,8 @@ namespace PersonalFinance.Data.Migrations
                 name: "AspNetUserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<string>(type: "TEXT", nullable: false)
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    RoleId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -156,9 +193,9 @@ namespace PersonalFinance.Data.Migrations
                 name: "AspNetUserTokens",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
-                    LoginProvider = table.Column<string>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    LoginProvider = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
@@ -168,6 +205,40 @@ namespace PersonalFinance.Data.Migrations
                         name: "FK_AspNetUserTokens_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GoogleDriveCachedFiles",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ConnectionId = table.Column<int>(type: "INTEGER", nullable: false),
+                    DriveFileId = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    MimeType = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false),
+                    Size = table.Column<long>(type: "INTEGER", nullable: true),
+                    SizeFormatted = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    CreatedTime = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    ModifiedTime = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    WebViewLink = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
+                    IconLink = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
+                    ThumbnailLink = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
+                    FileType = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    IconBadgeClass = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    IsFolder = table.Column<bool>(type: "INTEGER", nullable: false),
+                    IsTrashed = table.Column<bool>(type: "INTEGER", nullable: false),
+                    LastFetchedUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GoogleDriveCachedFiles", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_GoogleDriveCachedFiles_GoogleDriveConnections_ConnectionId",
+                        column: x => x.ConnectionId,
+                        principalTable: "GoogleDriveConnections",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -210,6 +281,26 @@ namespace PersonalFinance.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_GoogleDriveCachedFiles_ConnectionId",
+                table: "GoogleDriveCachedFiles",
+                column: "ConnectionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GoogleDriveCachedFiles_ConnectionId_DriveFileId",
+                table: "GoogleDriveCachedFiles",
+                columns: new[] { "ConnectionId", "DriveFileId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GoogleDriveConnections_UserId",
+                table: "GoogleDriveConnections",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GoogleDriveConnections_UserId_FolderId",
+                table: "GoogleDriveConnections",
+                columns: new[] { "UserId", "FolderId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Items_CreatedAtUtc",
                 table: "Items",
                 column: "CreatedAtUtc");
@@ -234,6 +325,12 @@ namespace PersonalFinance.Data.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "DataProtectionKeys");
+
+            migrationBuilder.DropTable(
+                name: "GoogleDriveCachedFiles");
+
+            migrationBuilder.DropTable(
                 name: "Items");
 
             migrationBuilder.DropTable(
@@ -241,6 +338,9 @@ namespace PersonalFinance.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "GoogleDriveConnections");
         }
     }
 }
