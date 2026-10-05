@@ -227,6 +227,50 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
+    public async Task MigrateAndSeedDatabaseAsync_Sqlite_RecoversFromStaleTablesWithoutMigrationHistory()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"pf_stale_table_test_{Guid.NewGuid():N}.db");
+        try
+        {
+            // Create database with manual tables (simulating legacy EnsureCreated or pre-provider migration state)
+            using (var rawConn = new SqliteConnection($"Data Source={dbPath}"))
+            {
+                await rawConn.OpenAsync();
+                using var cmd = rawConn.CreateCommand();
+                cmd.CommandText = "CREATE TABLE AspNetRoles (Id TEXT PRIMARY KEY, Name TEXT, NormalizedName TEXT, ConcurrencyStamp TEXT);";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddAppDbContext($"Data Source={dbPath}", DatabaseProviderType.Sqlite);
+
+            using (var sp = services.BuildServiceProvider())
+            {
+                // Must recover gracefully and migrate successfully instead of throwing SQLite Error 1
+                await sp.MigrateAndSeedDatabaseAsync(NullLogger.Instance);
+
+                using var scope = sp.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                var appliedMigrations = (await db.Database.GetAppliedMigrationsAsync()).ToList();
+                Assert.NotEmpty(appliedMigrations);
+                Assert.Contains(appliedMigrations, m => m.Contains("InitialCreate"));
+
+                var items = await db.Items.ToListAsync();
+                Assert.Equal(3, items.Count);
+            }
+        }
+        finally
+        {
+            if (File.Exists(dbPath))
+            {
+                try { File.Delete(dbPath); } catch { /* ignore temp cleanup */ }
+            }
+        }
+    }
+
+    [Fact]
     public void SqlServer_MigrationScript_UsesBoundedKeyTypes_NotNvarcharMax()
     {
         // Generate SQL Server migration SQL without a live server. This is the strongest in-repo

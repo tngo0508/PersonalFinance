@@ -64,6 +64,28 @@ public static class DatabaseMigrationExtensions
             }
             catch (Exception ex) when (attempt < maxRetries && !cancellationToken.IsCancellationRequested)
             {
+                if (db.Database.IsSqlite() && ex.ToString().Contains("already exists", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger?.LogWarning(
+                        ex,
+                        "Detected legacy or incompatible SQLite database tables without matching migration history. Resetting SQLite schema to apply provider migrations...");
+
+                    try
+                    {
+                        await ResetSqliteDatabaseAsync(db, cancellationToken);
+                        await db.Database.MigrateAsync(cancellationToken);
+                        logger?.LogInformation("Database schema successfully migrated after SQLite schema reset.");
+
+                        await SeedInitialDataAsync(db, logger, cancellationToken);
+                        logger?.LogInformation("Database migration and initialization completed successfully.");
+                        return;
+                    }
+                    catch (Exception resetEx)
+                    {
+                        logger?.LogError(resetEx, "Failed while attempting to reset and migrate SQLite database schema.");
+                    }
+                }
+
                 logger?.LogWarning(
                     ex,
                     "Database migration attempt {Attempt} of {MaxRetries} failed. Retrying in {DelaySeconds}s (waiting for Serverless/Database ready state)...",
@@ -73,6 +95,55 @@ public static class DatabaseMigrationExtensions
 
                 await Task.Delay(delay, cancellationToken);
                 delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 1.5, 30));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resets all tables in a SQLite database when an orphaned schema without EF migration history is detected.
+    /// </summary>
+    private static async Task ResetSqliteDatabaseAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        var connection = db.Database.GetDbConnection();
+        var wasOpen = connection.State == System.Data.ConnectionState.Open;
+        if (!wasOpen)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            using var pragmaOff = connection.CreateCommand();
+            pragmaOff.CommandText = "PRAGMA foreign_keys = OFF;";
+            await pragmaOff.ExecuteNonQueryAsync(cancellationToken);
+
+            var tables = new List<string>();
+            using (var getTablesCmd = connection.CreateCommand())
+            {
+                getTablesCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';";
+                using var reader = await getTablesCmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    tables.Add(reader.GetString(0));
+                }
+            }
+
+            foreach (var table in tables)
+            {
+                using var dropCmd = connection.CreateCommand();
+                dropCmd.CommandText = $"DROP TABLE IF EXISTS \"{table}\";";
+                await dropCmd.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            using var pragmaOn = connection.CreateCommand();
+            pragmaOn.CommandText = "PRAGMA foreign_keys = ON;";
+            await pragmaOn.ExecuteNonQueryAsync(cancellationToken);
+        }
+        finally
+        {
+            if (!wasOpen)
+            {
+                await connection.CloseAsync();
             }
         }
     }
