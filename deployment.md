@@ -237,6 +237,7 @@ All deployment credentials and configuration are stored in GitHub Repository Sec
 Navigate to your GitHub repository **Settings** &rarr; **Secrets and variables** &rarr; **Actions** &rarr; **New repository secret** and create the following secrets:
 
 **Required Azure OIDC Secrets** (for CI/CD authentication):
+
 | Secret Name | Value |
 |---|---|
 | `AZURE_CLIENT_ID` | Application (client) ID from Step 1 |
@@ -244,6 +245,7 @@ Navigate to your GitHub repository **Settings** &rarr; **Secrets and variables**
 | `AZURE_SUBSCRIPTION_ID` | Azure Subscription ID |
 
 **Optional Application Integration Secrets** (leave empty if not configured):
+
 | Secret Name | Value |
 |---|---|
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID from Step 2 |
