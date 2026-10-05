@@ -33,7 +33,7 @@
       "value": ""
     },
     "deploySqlDatabase": {
-      "value": false
+      "value": true
     },
     "customDomainName": {
       "value": ""

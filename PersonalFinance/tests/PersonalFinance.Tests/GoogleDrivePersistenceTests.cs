@@ -16,11 +16,10 @@ public class GoogleDrivePersistenceTests
 {
     private static AppDbContext CreateTestDbContext()
     {
-        var options = new DbContextOptionsBuilder<SqliteAppDbContext>()
-            .UseSqlite("DataSource=:memory:")
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"GoogleDriveTest_{Guid.NewGuid():N}")
             .Options;
-        var context = new SqliteAppDbContext(options);
-        context.Database.OpenConnection();
+        var context = new AppDbContext(options);
         context.Database.EnsureCreated();
         return context;
     }
@@ -65,7 +64,7 @@ public class GoogleDrivePersistenceTests
         Assert.NotNull(result.LastSyncedAtUtc);
         Assert.True(result.CachedFilesCount > 0);
 
-        // Verify in SQLite database
+        // Verify in database
         var dbConnection = await dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
             .FirstOrDefaultAsync(c => c.Id == result.Id);
@@ -74,7 +73,7 @@ public class GoogleDrivePersistenceTests
         Assert.Equal("user-101", dbConnection.UserId);
         Assert.NotEmpty(dbConnection.CachedFiles);
         Assert.False(string.IsNullOrEmpty(dbConnection.EncryptedApiKey));
-        // Verify key is encrypted in SQLite
+        // Verify key is encrypted in database
         Assert.NotEqual("AIzaSyTestApiKey123456", dbConnection.EncryptedApiKey);
         Assert.Equal("AIzaSyTestApiKey123456", CredentialProtector.Decrypt(dbConnection.EncryptedApiKey));
     }
@@ -141,7 +140,7 @@ public class GoogleDrivePersistenceTests
     }
 
     [Fact]
-    public async Task GetConnectionFilesAsync_UsesSQLiteCache_AndAvoidsGoogleApiRequests()
+    public async Task GetConnectionFilesAsync_UsesDatabaseCache_AndAvoidsGoogleApiRequests()
     {
         // Arrange
         using var dbContext = CreateTestDbContext();
@@ -176,7 +175,7 @@ public class GoogleDrivePersistenceTests
         var cached1 = await service.GetConnectionFilesAsync(conn.Id, "user-cache", forceRefresh: false);
         var cached2 = await service.GetConnectionFilesAsync(conn.Id, "user-cache", forceRefresh: false);
 
-        // Assert - Zero additional API requests were made; served strictly from SQLite cache!
+        // Assert - Zero additional API requests were made; served strictly from database cache!
         Assert.Equal(callsAfterSetup, apiCallCount);
         Assert.True(cached1.Success);
         Assert.True(cached2.Success);

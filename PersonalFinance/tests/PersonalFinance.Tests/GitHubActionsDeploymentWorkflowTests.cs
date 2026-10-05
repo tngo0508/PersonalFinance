@@ -115,7 +115,7 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }}", workflow);
         Assert.Contains("brevoApiKey=${{ secrets.BREVO_API_KEY }}", workflow);
         Assert.Contains("googleDriveApiKey=${{ secrets.GOOGLE_DRIVE_API_KEY }}", workflow);
-        Assert.Contains("deploySqlDatabase=${{ inputs.deploy_sql || false }}", workflow);
+        Assert.Contains("deploySqlDatabase=${{ inputs.deploy_sql != false }}", workflow);
         Assert.Contains("customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}", workflow);
     }
 

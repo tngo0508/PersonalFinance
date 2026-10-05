@@ -5,16 +5,16 @@ namespace PersonalFinance.Data.Helpers;
 
 /// <summary>
 /// Helper to securely encrypt and mask sensitive credentials (API keys, OAuth tokens)
-/// stored in SQLite and displayed to users.
+/// stored in database and displayed to users.
 /// </summary>
 public static class CredentialProtector
 {
-    // Fixed deterministic IV/Key entropy for local SQLite development storage
+    // Fixed deterministic IV/Key entropy for secure credential storage
     private static readonly byte[] Key = SHA256.HashData(Encoding.UTF8.GetBytes("PersonalFinance_GoogleDrive_SecureKey_2026"));
     private static readonly byte[] Iv = MD5.HashData(Encoding.UTF8.GetBytes("PersonalFinance_IV_2026"));
 
     /// <summary>
-    /// Encrypts plaintext credentials before saving to SQLite database.
+    /// Encrypts plaintext credentials before saving to database.
     /// </summary>
     public static string? Encrypt(string? plaintext)
     {

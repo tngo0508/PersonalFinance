@@ -253,12 +253,26 @@ Navigate to your GitHub repository **Settings** &rarr; **Secrets and variables**
 | `GOOGLE_DRIVE_API_KEY` | Google Drive API Key from Step 2 |
 | `BREVO_API_KEY` | Brevo v3 REST API Key from Step 3 |
 
-**Conditional Secrets** (only required if deploying Azure SQL Database):
+**Conditional Database Secrets**:
 
-| Secret Name | Value | When Required |
-|---|---|---|
-| `SQL_ADMIN_PASSWORD` | Strong password for Azure SQL admin account | Only when `deploy_sql` input is `true` in workflow |
-| `CUSTOM_CONNECTION_STRING` | External SQL Server or database connection string | Only if using custom database instead of Azure SQL |
+| Secret Name | Value | When Required | Security & Secret Flow |
+|---|---|---|---|
+| `SQL_ADMIN_PASSWORD` | Strong password for Azure SQL admin account (`sqladmin`) | When `deploy_sql` input is `true` (Option A: Serverless Free Tier) | Passed to Bicep `@secure() param sqlAdministratorLoginPassword`. The connection string is generated dynamically by Bicep and stored securely in Container Apps secrets (`db-connection-string`). |
+| `CUSTOM_CONNECTION_STRING` | Full connection string to existing/external SQL Server or mounted database | When `deploy_sql` input is `false` (Option B: Custom DB) | Passed to Bicep `@secure() param customConnectionString` and registered in Container Apps secrets (`db-connection-string`). |
+
+##### Database Configuration Scenarios
+
+- **Option A: Automated Azure SQL Serverless Free Tier ($0.00)**
+  1. Generate a strong password meeting Azure SQL requirements (minimum 8 characters with uppercase, lowercase, numbers, and symbols).
+  2. Add `SQL_ADMIN_PASSWORD` to GitHub Secrets.
+  3. When running CI/CD, keep `deploy_sql: true`. Bicep provisions the SQL server, builds the encrypted connection string (`Encrypt=True;TrustServerCertificate=False;`), and mounts it via `secretRef: 'db-connection-string'` to environment variable `ConnectionStrings__DefaultConnection`.
+- **Option B: Existing or External SQL Server / Managed Database**
+  1. Construct the connection string with encryption enabled:
+     ```text
+     Server=tcp:<server-name>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+     ```
+  2. Add `CUSTOM_CONNECTION_STRING` to GitHub Secrets.
+  3. In workflow dispatch or Bicep params, set `deploy_sql: false`. The custom connection string is injected directly into Container Apps secrets.
 
 #### 4.2 Add Repository Variables
 
@@ -316,7 +330,7 @@ For controlled deployments or testing, manually trigger the workflow:
 3. Click the **Run workflow** button (top right).
 4. Configure the optional inputs:
    - **`environment`** (string, default: `pf-prod`): Azure environment name prefix for resource naming.
-   - **`deploy_sql`** (boolean, default: `false`): Set to `true` to provision Azure SQL Database Serverless Free Tier. When enabled, you **must** provide `SQL_ADMIN_PASSWORD` secret.
+   - **`deploy_sql`** (boolean, default: `true`): Set to `true` to provision Azure SQL Database Serverless Free Tier ($0.00). When enabled, you **must** provide `SQL_ADMIN_PASSWORD` secret.
    - **`dry_run`** (boolean, default: `false`): Set to `true` to validate infrastructure without deploying (skips container push and Azure deployment).
 5. Click **Run workflow**.
 

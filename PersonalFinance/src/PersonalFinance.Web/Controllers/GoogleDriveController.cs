@@ -29,7 +29,7 @@ public class GoogleDriveController : Controller
 
     /// <summary>
     /// Displays the Google Drive dashboard.
-    /// Loads saved configurations from SQLite, skipping setup when a connection exists.
+    /// Loads saved configurations from database, skipping setup when a connection exists.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(
@@ -48,7 +48,7 @@ public class GoogleDriveController : Controller
 
         try
         {
-            // 1. Load all saved connections for this user from SQLite
+            // 1. Load all saved connections for this user from database
             var connections = await _googleDriveApi.GetUserConnectionsAsync(userId, cancellationToken);
             model.Connections = connections ?? new List<GoogleDriveConnectionDto>();
 
@@ -67,7 +67,7 @@ public class GoogleDriveController : Controller
                 return await ConnectAndExploreAsync(model, cancellationToken);
             }
 
-            // 4. Subsequent login or normal view: Select connection and load from SQLite cache
+            // 4. Subsequent login or normal view: Select connection and load from database cache
             if (model.Connections.Any())
             {
                 var selectedId = connectionId.HasValue && model.Connections.Any(c => c.Id == connectionId.Value)
@@ -76,7 +76,7 @@ public class GoogleDriveController : Controller
 
                 model.SelectedConnectionId = selectedId;
 
-                // Load cached files from SQLite (zero external API requests if fresh)
+                // Load cached files from database (zero external API requests if fresh)
                 var cachedResponse = await _googleDriveApi.GetConnectionFilesAsync(selectedId, userId, forceRefresh: false, cancellationToken);
                 model.Response = cachedResponse;
                 model.HasQueried = true;
@@ -134,7 +134,7 @@ public class GoogleDriveController : Controller
 
             if (syncResponse.Success)
             {
-                TempData["StatusMessage"] = "Google Drive files synchronized successfully with local SQLite cache.";
+                TempData["StatusMessage"] = "Google Drive files synchronized successfully with database cache.";
             }
             else
             {
@@ -194,7 +194,7 @@ public class GoogleDriveController : Controller
     }
 
     /// <summary>
-    /// Removes a connected Drive and deletes all locally cached data from SQLite.
+    /// Removes a connected Drive and deletes all locally cached data from database.
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]

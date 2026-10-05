@@ -37,7 +37,7 @@ param brevoSenderName string = 'PersonalFinance'
 param googleDriveApiKey string = ''
 
 @description('Whether to provision Azure SQL Database Serverless Free Tier ($0.00 with 100k vCore-s + 32GB free lifetime)')
-param deploySqlDatabase bool = false
+param deploySqlDatabase bool = true
 
 @description('Administrator login for Azure SQL Database (if deployed)')
 param sqlAdministratorLogin string = 'sqladmin'

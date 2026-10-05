@@ -15,11 +15,10 @@ public class GoogleDriveHelperTests
 {
     private static AppDbContext CreateTestDbContext()
     {
-        var options = new DbContextOptionsBuilder<SqliteAppDbContext>()
-            .UseSqlite("DataSource=:memory:")
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"GoogleDriveHelperTest_{Guid.NewGuid():N}")
             .Options;
-        var context = new SqliteAppDbContext(options);
-        context.Database.OpenConnection();
+        var context = new AppDbContext(options);
         context.Database.EnsureCreated();
         return context;
     }

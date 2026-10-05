@@ -11,7 +11,7 @@ namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
 /// Service implementation interacting with Google Drive API v3 to retrieve files within a folder,
-/// with SQLite caching, incremental synchronization, multi-drive connection persistence,
+/// with database caching, incremental synchronization, multi-drive connection persistence,
 /// and re-authentication handling.
 /// </summary>
 public class GoogleDriveService : IGoogleDriveService
@@ -188,14 +188,14 @@ public class GoogleDriveService : IGoogleDriveService
             };
         }
 
-        // If not forced and cache exists and is fresh (within 30 minutes), return cached data from SQLite
+        // If not forced and cache exists and is fresh (within 30 minutes), return cached data from database
         var isCacheFresh = connection.LastSyncedAtUtc.HasValue &&
                            (DateTime.UtcNow - connection.LastSyncedAtUtc.Value) < TimeSpan.FromMinutes(30) &&
                            connection.CachedFiles.Any(f => !f.IsTrashed);
 
         if (!forceRefresh && isCacheFresh)
         {
-            _logger.LogInformation("Serving Google Drive data from SQLite cache for connection {ConnectionId} ('{FolderId}')", connectionId, connection.FolderId);
+            _logger.LogInformation("Serving Google Drive data from database cache for connection {ConnectionId} ('{FolderId}')", connectionId, connection.FolderId);
             return MapConnectionToFolderResponse(connection);
         }
 
@@ -265,7 +265,7 @@ public class GoogleDriveService : IGoogleDriveService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        // Perform initial synchronization & SQLite caching
+        // Perform initial synchronization & database caching
         await SyncConnectionInternalAsync(connection, forceRefresh: true, cancellationToken);
 
         return MapToDto(connection);
@@ -344,7 +344,7 @@ public class GoogleDriveService : IGoogleDriveService
 
         _dbContext.GoogleDriveConnections.Remove(connection);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Deleted Google Drive connection {ConnectionId} and purged its SQLite cache.", connectionId);
+        _logger.LogInformation("Deleted Google Drive connection {ConnectionId} and purged its database cache.", connectionId);
         return true;
     }
 

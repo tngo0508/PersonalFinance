@@ -17,7 +17,7 @@ on:
       deploy_sql:
         description: 'Provision Azure SQL Database Serverless Free Tier ($0.00)'
         required: false
-        default: false
+        default: true
         type: boolean
       dry_run:
         description: 'Dry-run validation / What-If only (skip container push and Azure deployment)'
@@ -194,7 +194,7 @@ jobs:
             brevoSenderEmail=${{ vars.BREVO_SENDER_EMAIL || 'tngo0508@gmail.com' }}
             brevoSenderName=${{ vars.BREVO_SENDER_NAME || 'PersonalFinance' }}
             googleDriveApiKey=${{ secrets.GOOGLE_DRIVE_API_KEY }}
-            deploySqlDatabase=${{ inputs.deploy_sql || false }}
+            deploySqlDatabase=${{ inputs.deploy_sql != false }}
             sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
             customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}
             customDomainName=${{ vars.CUSTOM_DOMAIN_NAME || '' }}
