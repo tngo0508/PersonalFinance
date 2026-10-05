@@ -1,8 +1,11 @@
 # Personal Finance App
 
+[![Build, Test, and Deploy to Azure Container Apps](https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml/badge.svg)](https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml)
+
 A modular, multi-tier personal finance management application built on **.NET 10**, designed for high maintainability, efficiency, and data privacy. It features a clean architecture separating the backend RESTful API, responsive web frontend, shared contract/parsing logic, and a persistent SQLite data layer.
 
-> 📖 **Developer Documentation**: For detailed local setup, secrets management, Aspire dashboard debugging, EF Core migration workflows, and common troubleshooting solutions, see [**DEVELOPMENT.md**](DEVELOPMENT.md).
+> 📖 **Developer Documentation**: For detailed local setup, secrets management, Aspire dashboard debugging, EF Core migration workflows, and common troubleshooting solutions, see [**DEVELOPMENT.md**](DEVELOPMENT.md).  
+> 🚀 **Deployment Guide**: For step-by-step instructions on deploying to Azure Container Apps (zero operating cost), local Docker, and CI/CD pipelines, see [**deployment.md**](deployment.md).
 
 ---
 

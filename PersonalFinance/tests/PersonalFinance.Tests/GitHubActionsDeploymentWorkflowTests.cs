@@ -232,4 +232,17 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("/Identity/Account/Login", script);
         Assert.Contains("Invoke-WebRequest", script);
     }
+
+    [Fact]
+    public void Readme_ContainsDeploymentStatusBadgeIndicator()
+    {
+        var root = FindProjectRoot();
+        var readmePath = Path.Combine(root, "README.md");
+
+        Assert.True(File.Exists(readmePath), "README.md must exist in the repository root.");
+        var readme = File.ReadAllText(readmePath);
+
+        Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml/badge.svg", readme);
+        Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml", readme);
+    }
 }
