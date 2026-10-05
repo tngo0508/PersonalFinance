@@ -8,10 +8,10 @@ using PersonalFinance.Data;
 
 #nullable disable
 
-namespace PersonalFinance.Data.Migrations
+namespace PersonalFinance.Data.Migrations.Sqlite
 {
-    [DbContext(typeof(AppDbContext))]
-    [Migration("20260920215614_InitialCreate")]
+    [DbContext(typeof(SqliteAppDbContext))]
+    [Migration("20261005004450_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,9 +20,27 @@ namespace PersonalFinance.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
 
+            modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FriendlyName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Xml")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataProtectionKeys");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -60,6 +78,7 @@ namespace PersonalFinance.Data.Migrations
 
                     b.Property<string>("RoleId")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -72,6 +91,7 @@ namespace PersonalFinance.Data.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUser", b =>
                 {
                     b.Property<string>("Id")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("AccessFailedCount")
@@ -147,6 +167,7 @@ namespace PersonalFinance.Data.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -159,9 +180,11 @@ namespace PersonalFinance.Data.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderKey")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderDisplayName")
@@ -169,6 +192,7 @@ namespace PersonalFinance.Data.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("LoginProvider", "ProviderKey");
@@ -181,9 +205,11 @@ namespace PersonalFinance.Data.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.Property<string>("UserId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RoleId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "RoleId");
@@ -196,12 +222,15 @@ namespace PersonalFinance.Data.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LoginProvider")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Value")
@@ -210,6 +239,145 @@ namespace PersonalFinance.Data.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveCachedFile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ConnectionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CreatedTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DriveFileId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IconBadgeClass")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IconLink")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsFolder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsTrashed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastFetchedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ModifiedTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SizeFormatted")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ThumbnailLink")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WebViewLink")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId");
+
+                    b.HasIndex("ConnectionId", "DriveFileId");
+
+                    b.ToTable("GoogleDriveCachedFiles");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveConnection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EncryptedApiKey")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FolderId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FolderUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsValid")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastSyncedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MaskedApiKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SyncStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "FolderId");
+
+                    b.ToTable("GoogleDriveConnections");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.Item", b =>
@@ -289,6 +457,22 @@ namespace PersonalFinance.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveCachedFile", b =>
+                {
+                    b.HasOne("PersonalFinance.Data.Entities.GoogleDriveConnection", "Connection")
+                        .WithMany("CachedFiles")
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Connection");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveConnection", b =>
+                {
+                    b.Navigation("CachedFiles");
                 });
 #pragma warning restore 612, 618
         }

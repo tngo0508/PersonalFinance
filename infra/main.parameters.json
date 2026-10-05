@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "pf-prod"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "apiImage": {
+      "value": "ghcr.io/tngo0508/personalfinance-api:latest"
+    },
+    "webImage": {
+      "value": "ghcr.io/tngo0508/personalfinance-web:latest"
+    },
+    "googleClientId": {
+      "value": ""
+    },
+    "googleClientSecret": {
+      "value": ""
+    },
+    "brevoApiKey": {
+      "value": ""
+    },
+    "brevoSenderEmail": {
+      "value": "tngo0508@gmail.com"
+    },
+    "brevoSenderName": {
+      "value": "PersonalFinance"
+    },
+    "googleDriveApiKey": {
+      "value": ""
+    },
+    "deploySqlDatabase": {
+      "value": false
+    },
+    "customDomainName": {
+      "value": ""
+    }
+  }
+}

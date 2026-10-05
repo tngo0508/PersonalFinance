@@ -37,7 +37,7 @@ public class ExternalAuthenticationTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IWebHostEnvironment, TestWebHostEnvironment>();
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddDbContext<AppDbContext, SqliteAppDbContext>(options =>
             options.UseSqlite("DataSource=:memory:"));
 
         services.AddDefaultIdentity<IdentityUser>(options =>

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data.Entities;
@@ -6,11 +7,17 @@ using PersonalFinance.Data.Entities;
 namespace PersonalFinance.Data;
 
 /// <summary>
-/// Database context inheriting from IdentityDbContext for ASP.NET Core Identity authentication tables.
+/// Database context inheriting from IdentityDbContext for ASP.NET Core Identity authentication tables
+/// and implementing IDataProtectionKeyContext for persistent Data Protection keyring across container restarts.
+/// Runtime DI registers a provider-specific subclass (<see cref="SqliteAppDbContext"/> or <see cref="SqlServerAppDbContext"/>)
+/// so EF Core applies the matching provider migration set.
 /// </summary>
-public class AppDbContext : IdentityDbContext<IdentityUser>
+public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    /// <summary>
+    /// Non-generic options constructor so provider-specific subclasses can forward their typed options.
+    /// </summary>
+    public AppDbContext(DbContextOptions options) : base(options)
     {
     }
 
@@ -29,9 +36,59 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     /// </summary>
     public DbSet<GoogleDriveCachedFile> GoogleDriveCachedFiles => Set<GoogleDriveCachedFile>();
 
+    /// <summary>
+    /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Explicit Identity key/FK lengths so both providers (and design-time scaffolding) produce
+        // bounded string columns. SQL Server cannot index or key nvarchar(max).
+        const int identityKeyMaxLength = 450;
+        const int identityLoginTokenMaxLength = 128;
+
+        modelBuilder.Entity<IdentityUser>(entity =>
+        {
+            entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength);
+        });
+
+        modelBuilder.Entity<IdentityRole>(entity =>
+        {
+            entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength);
+        });
+
+        modelBuilder.Entity<IdentityUserLogin<string>>(entity =>
+        {
+            entity.Property(e => e.LoginProvider).HasMaxLength(identityLoginTokenMaxLength);
+            entity.Property(e => e.ProviderKey).HasMaxLength(identityLoginTokenMaxLength);
+            entity.Property(e => e.UserId).HasMaxLength(identityKeyMaxLength);
+        });
+
+        modelBuilder.Entity<IdentityUserRole<string>>(entity =>
+        {
+            entity.Property(e => e.UserId).HasMaxLength(identityKeyMaxLength);
+            entity.Property(e => e.RoleId).HasMaxLength(identityKeyMaxLength);
+        });
+
+        modelBuilder.Entity<IdentityUserToken<string>>(entity =>
+        {
+            entity.Property(e => e.UserId).HasMaxLength(identityKeyMaxLength);
+            entity.Property(e => e.LoginProvider).HasMaxLength(identityLoginTokenMaxLength);
+            entity.Property(e => e.Name).HasMaxLength(identityLoginTokenMaxLength);
+        });
+
+        modelBuilder.Entity<IdentityUserClaim<string>>(entity =>
+        {
+            entity.Property(e => e.UserId).HasMaxLength(identityKeyMaxLength);
+        });
+
+        modelBuilder.Entity<IdentityRoleClaim<string>>(entity =>
+        {
+            entity.Property(e => e.RoleId).HasMaxLength(identityKeyMaxLength);
+        });
 
         // Configure Item entity schema constraints
         modelBuilder.Entity<Item>(entity =>
@@ -81,5 +138,27 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
             entity.HasIndex(e => e.ConnectionId);
             entity.HasIndex(e => new { e.ConnectionId, e.DriveFileId });
         });
+    }
+}
+
+/// <summary>
+/// SQLite-specific AppDbContext used for EF Core migrations under <c>Migrations/Sqlite</c>
+/// and as the DI implementation when the active provider is SQLite.
+/// </summary>
+public sealed class SqliteAppDbContext : AppDbContext
+{
+    public SqliteAppDbContext(DbContextOptions<SqliteAppDbContext> options) : base(options)
+    {
+    }
+}
+
+/// <summary>
+/// SQL Server / Azure SQL-specific AppDbContext used for EF Core migrations under <c>Migrations/SqlServer</c>
+/// and as the DI implementation when the active provider is SQL Server.
+/// </summary>
+public sealed class SqlServerAppDbContext : AppDbContext
+{
+    public SqlServerAppDbContext(DbContextOptions<SqlServerAppDbContext> options) : base(options)
+    {
     }
 }

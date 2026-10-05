@@ -14,7 +14,7 @@ public class IdentityConfigurationTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddDbContext<AppDbContext, SqliteAppDbContext>(options =>
             options.UseSqlite("DataSource=:memory:"));
 
         services.AddDefaultIdentity<IdentityUser>(options =>

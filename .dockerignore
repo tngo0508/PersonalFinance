@@ -1,0 +1,42 @@
+**/.git
+**/.github
+**/.gitignore
+**/.vs
+**/.idea
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+
+# Build and package artifacts
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+**/out/
+**/publish/
+
+# SQLite databases & runtime locks
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+PersonalFinance.db
+PersonalFinance.db-shm
+PersonalFinance.db-wal
+
+# Logs & test results
+*.log
+**/logs/
+**/TestResults/
+**/testresults/
+
+# Secrets and local environment files
+**/secrets.json
+**/appsettings.Development.json
+**/appsettings.*.local.json
+.env
+
+# Tooling and session metadata
+.junie/

@@ -56,7 +56,7 @@ PersonalFinanceApp/
 | `PersonalFinance.ServiceDefaults` | Shared OpenTelemetry metrics, distributed tracing, health endpoints (`/health`, `/alive`), and HTTP resilience. | OpenTelemetry, Polly |
 | `PersonalFinance.Web` | Frontend web UI, Identity user authentication, file explorer, Chart.js financial analytics. | MVC, Razor Pages, Identity, Bootstrap 5, Chart.js, Refit |
 | `PersonalFinance.ApiService` | Backend REST API, Google Drive API v3 integration, OpenAPI & Scalar docs (`/scalar/v1`). | ASP.NET Core Minimal APIs / Controllers, Scalar |
-| `PersonalFinance.Data` | SQLite database persistence, Identity stores, migrations, and design-time DbContext factory. | EF Core 10, SQLite |
+| `PersonalFinance.Data` | EF Core persistence with provider-specific migrations (SQLite + SQL Server/Azure SQL), Identity stores, Data Protection keys. | EF Core 10, SQLite, SQL Server |
 | `PersonalFinance.Shared` | Shared DTOs, API interfaces (`IGoogleDriveApi`), parsing algorithms (`GoogleDriveHelper`), AES-256 helpers. | Refit, System.Security.Cryptography |
 | `PersonalFinance.Tests` | Automated unit and integration test suite (104+ tests). | xUnit, Moq, FluentAssertions |
 
@@ -331,32 +331,61 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 ## 5. Database & Entity Framework Core Workflows
 
 ### ASP.NET Core Identity Schema Documentation
-For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetRoleClaims`, `AspNetUserLogins`, `AspNetUserTokens`), foreign key relationships, and integration with application tables (`GoogleDriveConnections`, `GoogleDriveCachedFiles`), see [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md).
+For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetRoleClaims`, `AspNetUserLogins`, `AspNetUserTokens`), foreign key relationships, and integration with application tables (`GoogleDriveConnections`, `GoogleDriveCachedFiles`, `DataProtectionKeys`), see [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md).
+
+### Environment-Driven Database Provider Switching
+The application supports both **Microsoft Azure SQL Database (Serverless Free Tier)** (primary production path) and **SQLite** (local dev or Azure Files mounted volume fallback):
+- **Automatic Detection**: If the connection string contains SQL Server indicators (`Server=`, `database.windows.net`, `Data Source=tcp:`, `Initial Catalog=`, etc.), `DatabaseProviderHelper` automatically selects the `SqlServer` provider with exponential backoff connection resilience (`EnableRetryOnFailure`). Otherwise, it defaults to `Sqlite`.
+- **Explicit Override**: Specify `"Database:Provider": "SqlServer"` or `"Database:Provider": "Sqlite"` in configuration or set the `DATABASE_PROVIDER` environment variable.
+- **DI wiring**: `AddAppDbContext` registers `AppDbContext` with a provider-specific implementation (`SqlServerAppDbContext` or `SqliteAppDbContext`) so EF Core discovers the matching migration set at runtime.
+
+### Provider-Specific EF Core Migrations (required for Azure SQL)
+A single shared migration history is **not** used. SQLite-scaffolded migrations bake store types like `TEXT`/`INTEGER` into designers and omit `maxLength` on Identity keys; replaying them on SQL Server yields invalid `nvarchar(max)` primary keys/indexes.
+
+Instead, each provider has its own migration set and model snapshot:
+
+| Provider | Context type | Migrations folder |
+|---|---|---|
+| SQLite | `SqliteAppDbContext` | `PersonalFinance.Data/Migrations/Sqlite` |
+| SQL Server / Azure SQL | `SqlServerAppDbContext` | `PersonalFinance.Data/Migrations/SqlServer` |
+
+Identity string keys/FKs are explicitly bounded in `AppDbContext.OnModelCreating` (`Id`/`UserId`/`RoleId` = 450, login/token providers = 128) so SQL Server scaffolding emits `nvarchar(450)` / `nvarchar(128)`.
+
+**Note:** After switching to provider-specific migrations, delete any local `PersonalFinance.db` once and let startup recreate it (migration IDs changed).
+
+### Data Protection Keyring Persistence
+To ensure authentication cookies and antiforgery tokens remain valid across container restarts and scale-to-zero cycles in Azure Container Apps, Data Protection keys are stored directly in `AppDbContext` via `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` (`DataProtectionKeys` table).
 
 ### SQLite Solution-Level Path Resolution
 To avoid separate SQLite database files being created in each project subfolder during development, `DatabasePathHelper.ResolveConnectionString()` dynamically resolves `"Data Source=PersonalFinance.db"` to the root repository folder (`C:\workdir\repos\PersonalFinanceApp\PersonalFinance.db`).
 
-### Automatic Migrations
-When starting `ApiService` or `Web` in `Development` mode, pending migrations are applied automatically via `db.Database.Migrate()`.
+### Automated Migrations & Cold-Start Resilience
+- Pending migrations and starter sample data are automatically applied on startup via `app.MigrateAndSeedDatabaseAsync()` using the active provider's migration set.
+- Built-in retry logic (5 retries with exponential backoff) handles Azure SQL Serverless auto-pause wake-up latencies (~10-30s cold starts) without crashing container startup.
+- Dedicated migration execution: Run `dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --migrate-only` or set `MIGRATE_ONLY=true` for ACA Jobs or initialization containers.
 
 ### EF Core CLI Commands
-Run all EF Core commands from the solution root:
+Run all EF Core commands from the solution root. **Always pass `--context`** so the correct provider migration set is updated:
 
 ```bash
-# Add a new migration
-dotnet ef migrations add <MigrationName> --project PersonalFinance/src/PersonalFinance.Data
+# Add a SQLite migration
+dotnet ef migrations add <MigrationName> --context SqliteAppDbContext --output-dir Migrations/Sqlite --project PersonalFinance/src/PersonalFinance.Data
 
-# Apply migrations to database
-dotnet ef database update --project PersonalFinance/src/PersonalFinance.Data
+# Add a SQL Server / Azure SQL migration (keep both sets in sync for schema changes)
+dotnet ef migrations add <MigrationName> --context SqlServerAppDbContext --output-dir Migrations/SqlServer --project PersonalFinance/src/PersonalFinance.Data
 
-# Revert to a previous migration
-dotnet ef database update <TargetMigrationName> --project PersonalFinance/src/PersonalFinance.Data
+# Apply SQLite migrations
+dotnet ef database update --context SqliteAppDbContext --project PersonalFinance/src/PersonalFinance.Data
 
-# Remove last unapplied migration
-dotnet ef migrations remove --project PersonalFinance/src/PersonalFinance.Data
+# Apply SQL Server migrations
+dotnet ef database update --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string "Server=...;Database=...;..."
 
-# List migrations
-dotnet ef migrations list --project PersonalFinance/src/PersonalFinance.Data
+# Generate idempotent SQL Server script (validates nvarchar(450) keys without a live server)
+dotnet ef migrations script --idempotent --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data -o sqlserver.sql
+
+# List migrations per provider
+dotnet ef migrations list --context SqliteAppDbContext --project PersonalFinance/src/PersonalFinance.Data
+dotnet ef migrations list --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data
 ```
 
 ---
@@ -380,6 +409,7 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 - `EmailTemplateHelperTests`: Tests custom HTML email templates, parameter escaping, CTA button styling, and fallback URL rendering.
 - `GoogleDriveHelperTests`: Tests URL parsing, multi-sheet OpenXML budget parsing, balance extraction, and category categorization.
 - `GoogleDrivePersistenceTests`: Tests SQLite connection storage, file caching, incremental sync, and AES encryption.
+- `DatabasePersistenceAndMigrationTests`: Provider switching, provider-specific migration sets, SQLite migrate/seed pipeline, SQL Server migration script inspection (`nvarchar(450)` keys), and Data Protection key persistence.
 - `ServiceDefaultsTests`: Validates OpenTelemetry providers, health check registration, and Aspire defaults.
 
 ---
@@ -512,3 +542,215 @@ A local account was previously registered with the same email address via passwo
 **Resolution:**
 1. Navigate to `/Identity/Account/ResendEmailConfirmation` and confirm the local account via the confirmation email.
 2. Once the local email is confirmed, signing in with Google will automatically link the provider to the account.
+
+---
+
+## 7. Containerization & Docker Builds
+
+The application provides multi-stage, production-ready `Dockerfile` configurations for both `PersonalFinance.ApiService` and `PersonalFinance.Web` targeting **.NET 10** with Ubuntu Noble chiseled runtime images (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra`) and non-root security (`USER $APP_UID`).
+
+### Building Container Images Locally
+
+Run Docker build commands from the repository root:
+
+```bash
+# Build ApiService container image
+docker build -t personalfinance-apiservice:latest -f PersonalFinance/src/PersonalFinance.ApiService/Dockerfile .
+
+# Build Web container image
+docker build -t personalfinance-web:latest -f PersonalFinance/src/PersonalFinance.Web/Dockerfile .
+```
+
+### Running Containers Locally
+
+```bash
+# Run ApiService
+docker run -d --name personalfinance-api -p 8081:8080 personalfinance-apiservice:latest
+
+# Run Web Frontend
+docker run -d --name personalfinance-web -p 8080:8080 personalfinance-web:latest
+```
+
+Health check endpoints `/health` and `/alive` are available on port 8080 for both container instances.
+
+---
+
+## 8. Azure Deployment & Infrastructure as Code (Bicep)
+
+The application provides zero-cost Azure Infrastructure as Code (IaC) using modular Bicep templates targeting **Azure Container Apps (ACA) Consumption Profiles** with scale-to-zero autoscaling (0 to 1 replica), Log Analytics 5 GB/mo free grant, and Azure SQL Serverless Free Tier.
+
+### Infrastructure Structure
+
+```
+infra/
+├── main.bicep                  # Orchestrates ACA Environment, Log Analytics, Database, and Container Apps
+├── main.parameters.json        # Parameter mapping for environment
+├── modules/
+│   ├── log-analytics.bicep     # Free 5GB/mo workspace (PerGB2018 SKU, 30 days retention)
+│   ├── container-env.bicep     # Container Apps Managed Environment (Consumption profile)
+│   ├── sql-database.bicep      # Azure SQL Serverless Free Tier (GP_S_Gen5_1, AutoPause, 32GB)
+│   ├── api-service.bicep       # ApiService Container App (Internal ingress, scale-to-zero)
+│   └── web-service.bicep       # Web App Container App (External HTTPS ingress, scale-to-zero)
+└── deploy.ps1                  # Single-command local deployment and validation script
+```
+
+### Validating & Deploying Infrastructure Locally
+
+#### 1. Dry-Run Template Validation
+Validate Bicep syntax and ARM schema against Azure Resource Manager without deploying resources:
+```powershell
+.\infra\deploy.ps1 -ResourceGroupName "rg-personalfinance-prod" -Location "eastus" -ValidateOnly
+```
+
+#### 2. What-If Deployment Preview
+Generate a What-If diff of planned cloud resource changes:
+```powershell
+.\infra\deploy.ps1 -ResourceGroupName "rg-personalfinance-prod" -Location "eastus" -WhatIf
+```
+
+#### 3. Provisioning & Deployment
+Deploy the full stack to Azure Container Apps:
+```powershell
+.\infra\deploy.ps1 `
+  -ResourceGroupName "rg-personalfinance-prod" `
+  -Location "eastus" `
+  -GoogleClientId "<YOUR_CLIENT_ID>" `
+  -GoogleClientSecret "<YOUR_CLIENT_SECRET>" `
+  -BrevoApiKey "<YOUR_BREVO_KEY>" `
+  -GoogleDriveApiKey "<YOUR_DRIVE_KEY>"
+```
+
+### Production Secrets & Environment Variables
+
+| Variable / Secret | Target ACA Secret / Env | Purpose |
+|---|---|---|
+| `Authentication:Google:ClientId` | `google-client-id` / `Authentication__Google__ClientId` | Google OAuth 2.0 Web Client ID |
+| `Authentication:Google:ClientSecret` | `google-client-secret` / `Authentication__Google__ClientSecret` | Google OAuth 2.0 Client Secret |
+| `Brevo:ApiKey` | `brevo-api-key` / `Brevo__ApiKey` | Brevo REST API Key for email confirmation |
+| `Brevo:SenderEmail` | `Brevo__SenderEmail` | Brevo verified sender email |
+| `GoogleDrive:ApiKey` | `google-drive-api-key` / `GoogleDrive__ApiKey` | Google Drive API v3 public folder access |
+| `ConnectionStrings:DefaultConnection` | `db-connection-string` / `ConnectionStrings__DefaultConnection` | Azure SQL or SQLite connection string |
+| `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` | Forwarded headers for SSL termination behind ACA ingress |
+
+---
+
+## 9. CI/CD Pipeline (GitHub Actions, GHCR & Azure OIDC)
+
+The repository includes a zero-cost continuous integration and deployment pipeline defined in [`.github/workflows/deploy-azure.yml`](.github/workflows/deploy-azure.yml).
+
+### Zero-Cost CI/CD Architecture
+- **GitHub Container Registry (`ghcr.io`)**: Stores multi-stage container images for `PersonalFinance.ApiService` and `PersonalFinance.Web` at **$0.00** cost (eliminating the ~$5/month Azure Container Registry fee).
+- **Azure OIDC Passwordless Authentication**: Authenticates GitHub Actions runners using OpenID Connect federated credentials, eliminating long-lived Azure service principal passwords and secrets.
+- **Automated Validation & Testing**: Runs compilation, unit tests, Bicep syntax validation, container image builds, Bicep provisioning, and live HTTP smoke tests on every push to `main`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Dev as Developer / Git
+    participant GHA as GitHub Actions Runner
+    participant GHCR as GitHub Container Registry (ghcr.io)
+    participant Azure as Azure (OIDC / ARM)
+    participant ACA as Azure Container Apps (Consumption)
+
+    Dev->>GHA: Push commit to main branch
+    activate GHA
+    GHA->>GHA: 1. Build .NET 10 solution & execute test suite
+    GHA->>GHA: 2. Validate Bicep infrastructure templates
+    GHA->>GHCR: 3. Build & push multi-stage images (api & web)
+    GHA->>Azure: 4. Authenticate via OIDC federated credentials
+    GHA->>ACA: 5. Deploy / update Bicep template with image tags
+    GHA->>ACA: 6. Execute post-deployment smoke tests (/health, /alive, /, /Identity/Account/Login)
+    deactivate GHA
+```
+
+### GitHub Repository Secrets & Variables
+
+Configure the following secrets in GitHub Repository Settings &rarr; **Secrets and variables** &rarr; **Actions**:
+
+#### Repository Secrets (`secrets.*`)
+| Secret Name | Description | Example / Source |
+|---|---|---|
+| `AZURE_CLIENT_ID` | Application (client) ID of Azure App Registration / Managed Identity | `00000000-0000-0000-0000-000000000000` |
+| `AZURE_TENANT_ID` | Azure Active Directory Tenant ID | `00000000-0000-0000-0000-000000000000` |
+| `AZURE_SUBSCRIPTION_ID` | Azure Subscription ID | `00000000-0000-0000-0000-000000000000` |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | `<id>.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 Client Secret | `GOCSPX-...` |
+| `BREVO_API_KEY` | Brevo REST API Key for email verification | `xkeysib-...` |
+| `GOOGLE_DRIVE_API_KEY` | Google Drive API v3 Key | `AIzaSy...` |
+| `CUSTOM_CONNECTION_STRING` | *(Optional)* Connection string for external DB / mounted SQLite | `Data Source=tcp:sqlserver...` |
+| `SQL_ADMIN_PASSWORD` | *(Optional)* Password for Azure SQL Serverless Free Tier | `P@ssw0rd12345!` |
+
+#### Repository Variables (`vars.*`)
+| Variable Name | Description | Default Value |
+|---|---|---|
+| `BREVO_SENDER_EMAIL` | Verified Brevo sender email address | `tngo0508@gmail.com` |
+| `BREVO_SENDER_NAME` | Sender display name | `PersonalFinance` |
+| `CUSTOM_DOMAIN_NAME` | *(Optional)* Custom domain name for the Web App | *(empty)* |
+
+---
+
+### Step-by-Step: Setting Up Azure OIDC Federated Credentials
+
+Run the following Azure CLI commands to configure passwordless GitHub Actions authentication:
+
+```bash
+# 1. Define variables
+APP_NAME="personalfinance-github-deployer"
+GITHUB_ORG_OR_USER="<YOUR_GITHUB_USERNAME_OR_ORG>"
+GITHUB_REPO="PersonalFinanceApp"
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+RESOURCE_GROUP="rg-personalfinance-prod"
+
+# 2. Create Azure AD Application / App Registration
+APP_ID=$(az ad app create --display-name $APP_NAME --query appId -o tsv)
+
+# 3. Create Service Principal for the application
+az ad sp create --id $APP_ID
+
+# 4. Assign Contributor role to the Resource Group
+az role assignment create \
+  --role "Contributor" \
+  --assignee $APP_ID \
+  --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP"
+
+# 5. Add Federated Identity Credential for main branch
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters "{
+    \"name\": \"github-actions-main\",
+    \"issuer\": \"https://token.actions.githubusercontent.com\",
+    \"subject\": \"repo:${GITHUB_ORG_OR_USER}/${GITHUB_REPO}:ref:refs/heads/main\",
+    \"description\": \"GitHub Actions deployment for main branch\",
+    \"audiences\": [\"api://AzureADTokenExchange\"]
+  }"
+
+# 6. Add Federated Identity Credential for Pull Requests (optional)
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters "{
+    \"name\": \"github-actions-pr\",
+    \"issuer\": \"https://token.actions.githubusercontent.com\",
+    \"subject\": \"repo:${GITHUB_ORG_OR_USER}/${GITHUB_REPO}:pull_request\",
+    \"description\": \"GitHub Actions PR validation\",
+    \"audiences\": [\"api://AzureADTokenExchange\"]
+  }"
+```
+
+---
+
+### Post-Deployment Smoke Testing
+
+The deployment pipeline runs automated smoke tests against the public web endpoint. You can also run the smoke test suite locally against any deployed instance:
+
+```powershell
+.\infra\smoke-test.ps1 -WebUrl "https://web.yellowmeadow-12345.eastus.azurecontainerapps.io"
+```
+
+Endpoints validated:
+- `/health`: Readiness probe ensuring database and dependencies are responsive.
+- `/alive`: Liveness probe ensuring ASP.NET Core process is running.
+- `/`: Home landing page verifying Razor / MVC routing and asset serving.
+- `/Identity/Account/Login`: Identity login UI verifying cookie and Data Protection setup.
+
+> **Microservice Network Isolation & `/scalar/v1`:**
+> `PersonalFinance.ApiService` is provisioned with internal-only ingress (`external: false`) in Azure Container Apps to prevent unauthorized public exposure of backend endpoints. Consequently, internal endpoints such as `/scalar/v1` and `/openapi/v1.json` are not exposed to public internet smoke tests; they are verified during development and CI pipeline test executions.

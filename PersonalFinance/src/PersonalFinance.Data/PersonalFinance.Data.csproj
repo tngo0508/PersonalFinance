@@ -23,8 +23,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- ASP.NET Core Identity EF Core Store -->
+        <!-- ASP.NET Core Identity EF Core Store & Data Protection -->
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore"/>
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore"/>
     </ItemGroup>
 
 </Project>
