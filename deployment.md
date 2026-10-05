@@ -254,6 +254,7 @@ Navigate to your GitHub repository **Settings** &rarr; **Secrets and variables**
 | `BREVO_API_KEY` | Brevo v3 REST API Key from Step 3 |
 
 **Conditional Secrets** (only required if deploying Azure SQL Database):
+
 | Secret Name | Value | When Required |
 |---|---|---|
 | `SQL_ADMIN_PASSWORD` | Strong password for Azure SQL admin account | Only when `deploy_sql` input is `true` in workflow |
