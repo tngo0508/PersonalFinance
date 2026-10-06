@@ -18,7 +18,7 @@ public interface IGoogleDriveService
     Task<List<GoogleDriveConnectionDto>> GetUserConnectionsAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves files for a connection from SQLite cache (or syncs if stale/forced).
+    /// Retrieves files for a connection from database cache (or syncs if stale/forced).
     /// </summary>
     Task<GoogleDriveFolderResponseDto> GetConnectionFilesAsync(int connectionId, string userId, bool forceRefresh = false, CancellationToken cancellationToken = default);
 
@@ -28,7 +28,7 @@ public interface IGoogleDriveService
     Task<GoogleDriveConnectionDto> ConnectDriveAsync(ConnectGoogleDriveRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Synchronizes a connected Google Drive folder with SQLite cache incrementally.
+    /// Synchronizes a connected Google Drive folder with database cache incrementally.
     /// </summary>
     Task<GoogleDriveFolderResponseDto> SyncConnectionAsync(int connectionId, string userId, bool forceRefresh = false, CancellationToken cancellationToken = default);
 
@@ -38,12 +38,12 @@ public interface IGoogleDriveService
     Task<GoogleDriveConnectionDto> ReauthConnectionAsync(int connectionId, string userId, string? newApiKey, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Removes a connection and all its cached data from SQLite.
+    /// Removes a connection and all its cached data from database.
     /// </summary>
     Task<bool> DeleteConnectionAsync(int connectionId, string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Reads and parses a spreadsheet from Google Drive (or SQLite cache / sample data) into a monthly budget report with actual data.
+    /// Reads and parses a spreadsheet from Google Drive (or database cache / sample data) into a monthly budget report with actual data.
     /// </summary>
     Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(
         string fileId,

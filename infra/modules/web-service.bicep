@@ -63,6 +63,94 @@ param certificateId string = ''
 @description('Tags to apply to the resource')
 param tags object = {}
 
+var secrets = concat(
+  !empty(googleClientId) ? [
+    {
+      name: 'google-client-id'
+      value: googleClientId
+    }
+  ] : [],
+  !empty(googleClientSecret) ? [
+    {
+      name: 'google-client-secret'
+      value: googleClientSecret
+    }
+  ] : [],
+  !empty(brevoApiKey) ? [
+    {
+      name: 'brevo-api-key'
+      value: brevoApiKey
+    }
+  ] : [],
+  !empty(dbConnectionString) ? [
+    {
+      name: 'db-connection-string'
+      value: dbConnectionString
+    }
+  ] : []
+)
+
+var baseEnv = [
+  {
+    name: 'ASPNETCORE_ENVIRONMENT'
+    value: 'Production'
+  }
+  {
+    name: 'ASPNETCORE_HTTP_PORTS'
+    value: '8080'
+  }
+  {
+    name: 'ASPNETCORE_FORWARDEDHEADERS_ENABLED'
+    value: 'true'
+  }
+  {
+    name: 'ApiSettings__BaseUrl'
+    value: 'https://${apiServiceFqdn}'
+  }
+  {
+    name: 'services__apiservice__http__0'
+    value: 'http://${apiServiceName}'
+  }
+  {
+    name: 'Brevo__SenderEmail'
+    value: brevoSenderEmail
+  }
+  {
+    name: 'Brevo__SenderName'
+    value: brevoSenderName
+  }
+]
+
+var googleClientIdEnv = !empty(googleClientId) ? [
+  {
+    name: 'Authentication__Google__ClientId'
+    secretRef: 'google-client-id'
+  }
+] : []
+
+var googleClientSecretEnv = !empty(googleClientSecret) ? [
+  {
+    name: 'Authentication__Google__ClientSecret'
+    secretRef: 'google-client-secret'
+  }
+] : []
+
+var brevoEnv = !empty(brevoApiKey) ? [
+  {
+    name: 'Brevo__ApiKey'
+    secretRef: 'brevo-api-key'
+  }
+] : []
+
+var dbEnv = !empty(dbConnectionString) ? [
+  {
+    name: 'ConnectionStrings__DefaultConnection'
+    secretRef: 'db-connection-string'
+  }
+] : []
+
+var containerEnvVars = concat(baseEnv, googleClientIdEnv, googleClientSecretEnv, brevoEnv, dbEnv)
+
 resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
   location: location
@@ -84,24 +172,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
           }
         ] : null
       }
-      secrets: [
-        {
-          name: 'google-client-id'
-          value: googleClientId
-        }
-        {
-          name: 'google-client-secret'
-          value: googleClientSecret
-        }
-        {
-          name: 'brevo-api-key'
-          value: brevoApiKey
-        }
-        {
-          name: 'db-connection-string'
-          value: dbConnectionString
-        }
-      ]
+      secrets: !empty(secrets) ? secrets : null
     }
     template: {
       containers: [
@@ -112,52 +183,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json(cpu)
             memory: memory
           }
-          env: [
-            {
-              name: 'ASPNETCORE_ENVIRONMENT'
-              value: 'Production'
-            }
-            {
-              name: 'ASPNETCORE_HTTP_PORTS'
-              value: '8080'
-            }
-            {
-              name: 'ASPNETCORE_FORWARDEDHEADERS_ENABLED'
-              value: 'true'
-            }
-            {
-              name: 'ApiSettings__BaseUrl'
-              value: 'https://${apiServiceFqdn}'
-            }
-            {
-              name: 'services__apiservice__http__0'
-              value: 'http://${apiServiceName}'
-            }
-            {
-              name: 'Authentication__Google__ClientId'
-              secretRef: 'google-client-id'
-            }
-            {
-              name: 'Authentication__Google__ClientSecret'
-              secretRef: 'google-client-secret'
-            }
-            {
-              name: 'Brevo__ApiKey'
-              secretRef: 'brevo-api-key'
-            }
-            {
-              name: 'Brevo__SenderEmail'
-              value: brevoSenderEmail
-            }
-            {
-              name: 'Brevo__SenderName'
-              value: brevoSenderName
-            }
-            {
-              name: 'ConnectionStrings__DefaultConnection'
-              secretRef: 'db-connection-string'
-            }
-          ]
+          env: containerEnvVars
           probes: [
             {
               type: 'Liveness'

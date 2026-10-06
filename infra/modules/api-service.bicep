@@ -37,6 +37,48 @@ param maxReplicas int = 1
 @description('Tags to apply to the resource')
 param tags object = {}
 
+var secrets = concat(
+  !empty(googleDriveApiKey) ? [
+    {
+      name: 'google-drive-api-key'
+      value: googleDriveApiKey
+    }
+  ] : [],
+  !empty(dbConnectionString) ? [
+    {
+      name: 'db-connection-string'
+      value: dbConnectionString
+    }
+  ] : []
+)
+
+var baseEnv = [
+  {
+    name: 'ASPNETCORE_ENVIRONMENT'
+    value: 'Production'
+  }
+  {
+    name: 'ASPNETCORE_HTTP_PORTS'
+    value: '8080'
+  }
+]
+
+var googleDriveEnv = !empty(googleDriveApiKey) ? [
+  {
+    name: 'GoogleDrive__ApiKey'
+    secretRef: 'google-drive-api-key'
+  }
+] : []
+
+var dbEnv = !empty(dbConnectionString) ? [
+  {
+    name: 'ConnectionStrings__DefaultConnection'
+    secretRef: 'db-connection-string'
+  }
+] : []
+
+var containerEnvVars = concat(baseEnv, googleDriveEnv, dbEnv)
+
 resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
   location: location
@@ -51,16 +93,7 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
         transport: 'auto'
         allowInsecure: false
       }
-      secrets: [
-        {
-          name: 'google-drive-api-key'
-          value: googleDriveApiKey
-        }
-        {
-          name: 'db-connection-string'
-          value: dbConnectionString
-        }
-      ]
+      secrets: !empty(secrets) ? secrets : null
     }
     template: {
       containers: [
@@ -71,24 +104,7 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json(cpu)
             memory: memory
           }
-          env: [
-            {
-              name: 'ASPNETCORE_ENVIRONMENT'
-              value: 'Production'
-            }
-            {
-              name: 'ASPNETCORE_HTTP_PORTS'
-              value: '8080'
-            }
-            {
-              name: 'GoogleDrive__ApiKey'
-              secretRef: 'google-drive-api-key'
-            }
-            {
-              name: 'ConnectionStrings__DefaultConnection'
-              secretRef: 'db-connection-string'
-            }
-          ]
+          env: containerEnvVars
           probes: [
             {
               type: 'Liveness'

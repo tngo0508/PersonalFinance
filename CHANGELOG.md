@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Database Connection String & Secrets Management Documentation**:
+  - Documented secure database connection string workflows across CI/CD, Infrastructure-as-Code (Bicep), design-time EF Core tools, and local development in `DEVELOPMENT.md` and `deployment.md`.
+  - Added step-by-step instructions for `.NET User Secrets` configuration (`ConnectionStrings:DefaultConnection`) across `PersonalFinance.Web` and `PersonalFinance.ApiService` to prevent sensitive credentials from being committed to Git or stored in `appsettings.json`.
+  - Documented dual CI/CD secret handling: Option A for automated Azure SQL Serverless Free Tier (`SQL_ADMIN_PASSWORD`) and Option B for external/custom SQL databases (`CUSTOM_CONNECTION_STRING`) via Bicep `@secure()` parameters and Azure Container Apps secret references (`secretRef: 'db-connection-string'`).
 - **Google OAuth 2.0 External Authentication & Account Linking**:
   - Integrated Google OAuth 2.0 external authentication using `Microsoft.AspNetCore.Authentication.Google` (v10.0.0) with central package management in `Directory.Packages.props` and `PersonalFinance.Web.csproj`.
   - Configured Google authentication handler conditionally in `PersonalFinance.Web/Program.cs` supporting OpenID Connect scopes (`profile`, `email`) and claim action mappings (`urn:google:picture`, `urn:google:locale`, `urn:google:verified_email`) via `Authentication:Google` configuration and .NET User Secrets.
@@ -116,6 +120,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Serilog Console Theme**: Configured `AnsiConsoleTheme.Code` with formatted output templates across `PersonalFinance.ApiService` and `PersonalFinance.Web` for high-contrast, clear, and readable console log output.
 
 ### Fixed
+- **Post-Deployment Smoke Test Timeouts & Hang Prevention in CI/CD**:
+  - Enforced connection (`--connect-timeout 5`) and maximum execution (`--max-time 10`) timeouts on all `curl` probes in `.github/workflows/deploy-azure.yml`, preventing post-deployment smoke tests from hanging indefinitely on unresolved sockets or cold-starting Azure Container Apps ingress.
+  - Added default HTTP `000` status capture fallback when network requests fail or time out, preventing broken subshell evaluations.
+  - Added URL normalization and trailing slash stripping (`${WEB_URL%/}`) with fail-fast validation when target deployment endpoints cannot be resolved from Azure outputs.
+  - Configured job-level `timeout-minutes` limits across all workflow stages (`build-and-test: 15`, `build-and-push-containers: 20`, `deploy-azure: 25`, `smoke-test: 10`) to eliminate runaway workflow execution and conserve runner compute resources.
+  - Added unit test coverage in `GitHubActionsDeploymentWorkflowTests.cs` verifying job timeouts and smoke test curl configuration.
+- **Database Migration Target Host Logging & Container Apps Troubleshooting**:
+  - Enhanced `DatabaseMigrationExtensions.cs` to explicitly log the target database host (`DataSource`) during startup migration initialization, making connection resolution and host configuration immediately visible in Azure Container Apps logs.
+  - Added troubleshooting guidance to `deployment.md` for diagnosing `SocketException: Cannot assign requested address [::1]:1433` (Error Number: 10049) when container instances lack connection strings and fall back to local IPv6 loopbacks.
+- **CI/CD Docker Image Tag Mismatch in GitHub Container Registry (GHCR)**:
+  - Fixed `docker/metadata-action` tag format in `.github/workflows/deploy-azure.yml` by setting `prefix=` for `type=sha,format=short`, ensuring built container images are tagged with `<short_sha>` (e.g. `:3d8c356`) matching the parameters passed to Bicep rather than defaulting to `:sha-<short_sha>`.
+  - Added troubleshooting guidance in `deployment.md` for resolving `MANIFEST_UNKNOWN` container image pull errors and configuring GitHub Container Registry package visibility settings.
 - **Sign Out Redirect to Removed HomeController**: Updated `_LoginPartial.cshtml` sign-out form `asp-route-returnUrl` from obsolete `Url.Action("Index", "Home", new { area = "" })` to `Url.Action("Index", "GoogleDrive", new { area = "" })`, ensuring user sign-out redirects smoothly to the active landing controller.
 - **Aspire Dashboard OTLP Endpoint Environment Variables**: Corrected misnamed dashboard environment variables in `PersonalFinance.AppHost/Properties/launchSettings.json` to standard `DOTNET_DASHBOARD_OTLP_ENDPOINT_URL` and `DOTNET_RESOURCE_SERVICE_ENDPOINT_URL`, resolving startup exceptions on dashboard resource configuration.
 - **Client-side Validation Assets**: Installed `jquery-validate` and `jquery-validation-unobtrusive` via LibMan into `PersonalFinance.Web/wwwroot/lib/`, resolving 404 errors for `jquery.validate.min.js` and `jquery.validate.unobtrusive.min.js` referenced in `_ValidationScriptsPartial.cshtml`.

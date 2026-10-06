@@ -6,7 +6,7 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// RESTful API controller for Google Drive folder exploration, connection management,
-/// SQLite caching, incremental synchronization, and re-authentication.
+/// database caching, incremental synchronization, and re-authentication.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -73,7 +73,7 @@ public class GoogleDriveController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves files for a specific connection from SQLite cache (or syncs if stale or requested).
+    /// Retrieves files for a specific connection from database cache (or syncs if stale or requested).
     /// </summary>
     [HttpGet("connections/{connectionId:int}")]
     [ProducesResponseType(typeof(GoogleDriveFolderResponseDto), StatusCodes.Status200OK)]
@@ -125,7 +125,7 @@ public class GoogleDriveController : ControllerBase
     }
 
     /// <summary>
-    /// Synchronizes a connected Google Drive folder with SQLite cache incrementally.
+    /// Synchronizes a connected Google Drive folder with database cache incrementally.
     /// </summary>
     [HttpPost("connections/{connectionId:int}/sync")]
     [ProducesResponseType(typeof(GoogleDriveFolderResponseDto), StatusCodes.Status200OK)]
@@ -177,7 +177,7 @@ public class GoogleDriveController : ControllerBase
     }
 
     /// <summary>
-    /// Removes a connection and its locally cached files from SQLite.
+    /// Removes a connection and its locally cached files from database.
     /// </summary>
     [HttpDelete("connections/{connectionId:int}")]
     [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]

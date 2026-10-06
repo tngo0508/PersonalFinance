@@ -11,19 +11,18 @@ namespace PersonalFinance.Data;
 public enum DatabaseProviderType
 {
     /// <summary>
-    /// Local or persistent SQLite database file.
-    /// </summary>
-    Sqlite,
-
-    /// <summary>
     /// Microsoft Azure SQL Database (Serverless Free Tier / General Purpose) or on-prem SQL Server.
     /// </summary>
-    SqlServer
+    SqlServer,
+
+    /// <summary>
+    /// In-memory database for lightweight fast test execution.
+    /// </summary>
+    InMemory
 }
 
 /// <summary>
-/// Helper to manage environment-driven database provider resolution, connection strings, and EF Core options configuration.
-/// Each provider uses its own EF Core migration set (<c>Migrations/Sqlite</c> vs <c>Migrations/SqlServer</c>).
+/// Helper to manage database connection strings, EF Core options configuration, and service registration.
 /// </summary>
 public static class DatabaseProviderHelper
 {
@@ -32,37 +31,26 @@ public static class DatabaseProviderHelper
     public const string DatabaseProviderEnvVar = "DATABASE_PROVIDER";
 
     /// <summary>
+    /// Default fallback SQL Server connection string for local development when unconfigured.
+    /// In development, sensitive credentials should be configured using dotnet user-secrets.
+    /// In production/cloud deployments, connection strings should be provided via environment variables or secret stores.
+    /// </summary>
+    public const string DefaultSqlConnectionString =
+        "Server=localhost,1433;Database=PersonalFinance;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True;";
+
+    /// <summary>
     /// Determines the database provider based on explicit configuration/env vars or connection string heuristics.
+    /// Defaults to <see cref="DatabaseProviderType.SqlServer"/>.
     /// </summary>
     public static DatabaseProviderType DetermineProvider(IConfiguration? configuration, string? connectionString)
     {
-        // 1. Explicit configuration key or environment variable
         var explicitProvider = configuration?[DatabaseProviderConfigKey]
             ?? configuration?["DatabaseProvider"]
             ?? configuration?["DB_PROVIDER"]
             ?? Environment.GetEnvironmentVariable(DatabaseProviderEnvVar)
             ?? Environment.GetEnvironmentVariable("DB_PROVIDER");
 
-        if (!string.IsNullOrWhiteSpace(explicitProvider))
-        {
-            var trimmed = explicitProvider.Trim();
-            if (trimmed.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.Equals("MSSQL", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.Equals("AzureSql", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.Equals("SqlAzure", StringComparison.OrdinalIgnoreCase))
-            {
-                return DatabaseProviderType.SqlServer;
-            }
-
-            if (trimmed.Equals("Sqlite", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.Equals("SQLite", StringComparison.OrdinalIgnoreCase))
-            {
-                return DatabaseProviderType.Sqlite;
-            }
-        }
-
-        // 2. Connection string heuristic auto-detection
-        return DetectProviderFromConnectionString(connectionString);
+        return ParseProviderName(explicitProvider, connectionString);
     }
 
     /// <summary>
@@ -73,88 +61,56 @@ public static class DatabaseProviderHelper
         if (!string.IsNullOrWhiteSpace(explicitProvider))
         {
             var trimmed = explicitProvider.Trim();
-            if (trimmed.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.Equals("MSSQL", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.Equals("AzureSql", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.Equals("SqlAzure", StringComparison.OrdinalIgnoreCase) ||
-                (trimmed.StartsWith("Sql", StringComparison.OrdinalIgnoreCase)
-                 && !trimmed.StartsWith("Sqlite", StringComparison.OrdinalIgnoreCase)))
+            if (trimmed.Equals("InMemory", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.Equals("Memory", StringComparison.OrdinalIgnoreCase))
             {
-                return DatabaseProviderType.SqlServer;
-            }
-
-            if (trimmed.Equals("Sqlite", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.Equals("SQLite", StringComparison.OrdinalIgnoreCase))
-            {
-                return DatabaseProviderType.Sqlite;
+                return DatabaseProviderType.InMemory;
             }
         }
 
-        return DetectProviderFromConnectionString(connectionStringFallback);
+        if (!string.IsNullOrWhiteSpace(connectionStringFallback))
+        {
+            var trimmed = connectionStringFallback.Trim();
+            if (trimmed.StartsWith("InMemory:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.Equals(":memory:", StringComparison.OrdinalIgnoreCase))
+            {
+                return DatabaseProviderType.InMemory;
+            }
+        }
+
+        return DatabaseProviderType.SqlServer;
     }
 
     /// <summary>
-    /// Detects the database provider from connection string syntax.
+    /// Resolves connection string, falling back to the configured default Azure SQL connection string if empty.
     /// </summary>
-    public static DatabaseProviderType DetectProviderFromConnectionString(string? connectionString)
+    public static string ResolveConnectionString(string? connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            return DatabaseProviderType.Sqlite;
+            return DefaultSqlConnectionString;
         }
 
-        var normalized = connectionString.Trim();
-
-        // SQL Server / Azure SQL connection string indicators
-        if (normalized.Contains("database.windows.net", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("Server=", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("Data Source=tcp:", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("Initial Catalog=", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("User ID=", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("User Id=", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("Trusted_Connection=", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("Integrated Security=", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("TrustServerCertificate=", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("MultipleActiveResultSets=", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("Application Name=", StringComparison.OrdinalIgnoreCase))
-        {
-            return DatabaseProviderType.SqlServer;
-        }
-
-        return DatabaseProviderType.Sqlite;
+        return connectionString.Trim();
     }
 
     /// <summary>
-    /// Resolves connection string based on provider type.
-    /// For SQLite, ensures paths are anchored properly. For SQL Server, preserves native connection strings as-is.
-    /// </summary>
-    public static string ResolveConnectionString(
-        string? connectionString,
-        DatabaseProviderType providerType,
-        string defaultDbName = DatabasePathHelper.DefaultDatabaseFileName)
-    {
-        if (providerType == DatabaseProviderType.SqlServer)
-        {
-            return connectionString ?? string.Empty;
-        }
-
-        return DatabasePathHelper.ResolveConnectionString(connectionString, defaultDbName);
-    }
-
-    /// <summary>
-    /// Configures DbContextOptionsBuilder with the appropriate database provider, resilience policies,
-    /// and provider-specific migrations assembly folder context type.
+    /// Configures DbContextOptionsBuilder with SQL Server or In-Memory provider and resilience policies.
     /// </summary>
     public static DbContextOptionsBuilder ConfigureAppDbContext(
         this DbContextOptionsBuilder options,
         string connectionString,
-        DatabaseProviderType providerType,
-        Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null,
-        Action<SqliteDbContextOptionsBuilder>? sqliteOptionsAction = null)
+        DatabaseProviderType providerType = DatabaseProviderType.SqlServer,
+        Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null)
     {
-        if (providerType == DatabaseProviderType.SqlServer)
+        if (providerType == DatabaseProviderType.InMemory)
         {
-            options.UseSqlServer(connectionString, sqlServerOptions =>
+            options.UseInMemoryDatabase(string.IsNullOrWhiteSpace(connectionString) ? "PersonalFinanceInMemory" : connectionString);
+        }
+        else
+        {
+            var resolvedConnectionString = ResolveConnectionString(connectionString);
+            options.UseSqlServer(resolvedConnectionString, sqlServerOptions =>
             {
                 // Enable resilient execution strategy for Azure SQL Serverless auto-pause resumption and transient network drops
                 sqlServerOptions.EnableRetryOnFailure(
@@ -165,81 +121,51 @@ public static class DatabaseProviderHelper
                 sqlServerOptionsAction?.Invoke(sqlServerOptions);
             });
         }
-        else
-        {
-            options.UseSqlite(connectionString, sqliteOptions =>
-            {
-                sqliteOptionsAction?.Invoke(sqliteOptions);
-            });
-        }
 
         return options;
     }
 
     /// <summary>
-    /// Registers <see cref="AppDbContext"/> with a provider-specific implementation so the correct
-    /// EF Core migration set is discovered at runtime (Sqlite vs SqlServer).
+    /// Registers <see cref="AppDbContext"/> and <see cref="SqlServerAppDbContext"/> with SQL Server database provider.
     /// </summary>
     public static IServiceCollection AddAppDbContext(
         this IServiceCollection services,
         IConfiguration configuration,
         string connectionStringName = DefaultConnectionStringName,
-        Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null,
-        Action<SqliteDbContextOptionsBuilder>? sqliteOptionsAction = null)
+        Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null)
     {
         var rawConnectionString = configuration.GetConnectionString(connectionStringName)
             ?? configuration[connectionStringName]
             ?? Environment.GetEnvironmentVariable($"ConnectionStrings__{connectionStringName}")
             ?? Environment.GetEnvironmentVariable(connectionStringName)
-            ?? DatabasePathHelper.GetSqliteConnectionString();
+            ?? DefaultSqlConnectionString;
 
         var providerType = DetermineProvider(configuration, rawConnectionString);
-        var resolvedConnectionString = ResolveConnectionString(rawConnectionString, providerType);
+        var resolvedConnectionString = ResolveConnectionString(rawConnectionString);
 
-        if (providerType == DatabaseProviderType.SqlServer)
+        services.AddDbContext<AppDbContext, SqlServerAppDbContext>(options =>
         {
-            services.AddDbContext<AppDbContext, SqlServerAppDbContext>(options =>
-            {
-                options.ConfigureAppDbContext(resolvedConnectionString, providerType, sqlServerOptionsAction, sqliteOptionsAction);
-            });
-        }
-        else
-        {
-            services.AddDbContext<AppDbContext, SqliteAppDbContext>(options =>
-            {
-                options.ConfigureAppDbContext(resolvedConnectionString, providerType, sqlServerOptionsAction, sqliteOptionsAction);
-            });
-        }
+            options.ConfigureAppDbContext(resolvedConnectionString, providerType, sqlServerOptionsAction);
+        });
 
         return services;
     }
 
     /// <summary>
-    /// Registers a provider-specific <see cref="AppDbContext"/> implementation for tests or custom hosts.
+    /// Registers <see cref="AppDbContext"/> with a specific connection string for tests or custom hosts.
     /// </summary>
     public static IServiceCollection AddAppDbContext(
         this IServiceCollection services,
         string connectionString,
-        DatabaseProviderType providerType,
-        Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null,
-        Action<SqliteDbContextOptionsBuilder>? sqliteOptionsAction = null)
+        DatabaseProviderType providerType = DatabaseProviderType.SqlServer,
+        Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null)
     {
-        var resolvedConnectionString = ResolveConnectionString(connectionString, providerType);
+        var resolvedConnectionString = ResolveConnectionString(connectionString);
 
-        if (providerType == DatabaseProviderType.SqlServer)
+        services.AddDbContext<AppDbContext, SqlServerAppDbContext>(options =>
         {
-            services.AddDbContext<AppDbContext, SqlServerAppDbContext>(options =>
-            {
-                options.ConfigureAppDbContext(resolvedConnectionString, providerType, sqlServerOptionsAction, sqliteOptionsAction);
-            });
-        }
-        else
-        {
-            services.AddDbContext<AppDbContext, SqliteAppDbContext>(options =>
-            {
-                options.ConfigureAppDbContext(resolvedConnectionString, providerType, sqlServerOptionsAction, sqliteOptionsAction);
-            });
-        }
+            options.ConfigureAppDbContext(resolvedConnectionString, providerType, sqlServerOptionsAction);
+        });
 
         return services;
     }

@@ -37,7 +37,7 @@ param brevoSenderName string = 'PersonalFinance'
 param googleDriveApiKey string = ''
 
 @description('Whether to provision Azure SQL Database Serverless Free Tier ($0.00 with 100k vCore-s + 32GB free lifetime)')
-param deploySqlDatabase bool = false
+param deploySqlDatabase bool = true
 
 @description('Administrator login for Azure SQL Database (if deployed)')
 param sqlAdministratorLogin string = 'sqladmin'
@@ -105,7 +105,9 @@ module sqlDatabase 'modules/sql-database.bicep' = if (deploySqlDatabase) {
   }
 }
 
-var effectiveConnectionString = deploySqlDatabase ? sqlDatabase.outputs.connectionString : customConnectionString
+var effectiveConnectionString = deploySqlDatabase
+  ? 'Server=tcp:${sqlDatabase.?outputs.serverFqdn ?? ''},1433;Initial Catalog=${sqlDatabase.?outputs.databaseName ?? ''};Persist Security Info=False;User ID=${sqlAdministratorLogin};Password=${sqlAdministratorLoginPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+  : customConnectionString
 
 // 4. API Service Container App (Internal ingress, scale-to-zero)
 module apiService 'modules/api-service.bicep' = {
@@ -148,4 +150,4 @@ output webFqdn string = webService.outputs.fqdn
 output apiFqdn string = apiService.outputs.fqdn
 output containerAppEnvironmentName string = containerEnv.outputs.name
 output logAnalyticsWorkspaceName string = logAnalytics.outputs.name
-output sqlServerFqdn string = deploySqlDatabase ? sqlDatabase.outputs.serverFqdn : ''
+output sqlServerFqdn string = deploySqlDatabase ? (sqlDatabase.?outputs.serverFqdn ?? '') : ''

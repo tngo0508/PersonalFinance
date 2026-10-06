@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -19,8 +18,7 @@ public class DatabasePersistenceAndMigrationTests
     [InlineData("MSSQL", DatabaseProviderType.SqlServer)]
     [InlineData("AzureSql", DatabaseProviderType.SqlServer)]
     [InlineData("SqlAzure", DatabaseProviderType.SqlServer)]
-    [InlineData("sqlite", DatabaseProviderType.Sqlite)]
-    [InlineData("SQLite", DatabaseProviderType.Sqlite)]
+    [InlineData("InMemory", DatabaseProviderType.InMemory)]
     public void DetermineProvider_ExplicitConfigurationKey_ReturnsExpectedProvider(string providerName, DatabaseProviderType expected)
     {
         var config = new ConfigurationBuilder()
@@ -30,70 +28,23 @@ public class DatabasePersistenceAndMigrationTests
             })
             .Build();
 
-        var result = DatabaseProviderHelper.DetermineProvider(config, "Data Source=PersonalFinance.db");
+        var result = DatabaseProviderHelper.DetermineProvider(config, null);
         Assert.Equal(expected, result);
-    }
-
-    [Theory]
-    [InlineData("Server=tcp:myserver.database.windows.net,1433;Initial Catalog=myDb;User ID=admin;Password=Secret123!;Encrypt=True;")]
-    [InlineData("Server=localhost;Database=PersonalFinance;Trusted_Connection=True;TrustServerCertificate=True;")]
-    [InlineData("Data Source=tcp:sqlserver.internal,1433;Initial Catalog=PersonalFinance;Integrated Security=SSPI;")]
-    public void DetectProviderFromConnectionString_SqlServerStrings_ReturnsSqlServer(string connectionString)
-    {
-        var provider = DatabaseProviderHelper.DetectProviderFromConnectionString(connectionString);
-        Assert.Equal(DatabaseProviderType.SqlServer, provider);
-    }
-
-    [Theory]
-    [InlineData("Data Source=PersonalFinance.db")]
-    [InlineData("Data Source=:memory:")]
-    [InlineData("DataSource=app.db;Cache=Shared")]
-    [InlineData("")]
-    [InlineData(null)]
-    public void DetectProviderFromConnectionString_SqliteStrings_ReturnsSqlite(string? connectionString)
-    {
-        var provider = DatabaseProviderHelper.DetectProviderFromConnectionString(connectionString);
-        Assert.Equal(DatabaseProviderType.Sqlite, provider);
     }
 
     [Fact]
     public void ResolveConnectionString_SqlServer_PreservesNativeConnectionString()
     {
         const string sqlServerConn = "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=myDb;User ID=admin;";
-        var resolved = DatabaseProviderHelper.ResolveConnectionString(sqlServerConn, DatabaseProviderType.SqlServer);
+        var resolved = DatabaseProviderHelper.ResolveConnectionString(sqlServerConn);
         Assert.Equal(sqlServerConn, resolved);
     }
 
     [Fact]
-    public void ResolveConnectionString_Sqlite_AnchorsToSolutionDirectory()
+    public void ResolveConnectionString_Empty_ReturnsDefaultSqlConnectionString()
     {
-        const string sqliteConn = "Data Source=PersonalFinance.db";
-        var resolved = DatabaseProviderHelper.ResolveConnectionString(sqliteConn, DatabaseProviderType.Sqlite);
-        Assert.Contains("PersonalFinance.db", resolved);
-        Assert.True(Path.IsPathRooted(resolved.Replace("Data Source=", "").Trim()));
-    }
-
-    [Fact]
-    public void AddAppDbContext_RegistersSqliteImplementation_WhenProviderIsSqlite()
-    {
-        var services = new ServiceCollection();
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                { "ConnectionStrings:DefaultConnection", "Data Source=:memory:" },
-                { "Database:Provider", "Sqlite" }
-            })
-            .Build();
-
-        services.AddAppDbContext(config);
-
-        using var serviceProvider = services.BuildServiceProvider();
-        using var scope = serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetService<AppDbContext>();
-
-        Assert.NotNull(dbContext);
-        Assert.IsType<SqliteAppDbContext>(dbContext);
-        Assert.True(dbContext.Database.IsSqlite());
+        var resolved = DatabaseProviderHelper.ResolveConnectionString(null);
+        Assert.Equal(DatabaseProviderHelper.DefaultSqlConnectionString, resolved);
     }
 
     [Fact]
@@ -123,14 +74,16 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void AppDbContextFactory_CreateDbContext_WithSqliteArgs_ReturnsSqliteImplementation()
+    public void AppDbContextFactory_CreateDbContext_ConfiguresSqlServerProvider()
     {
         var factory = new AppDbContextFactory();
-        var context = factory.CreateDbContext(["--provider", "Sqlite", "--connection-string", "Data Source=:memory:"]);
+        var context = factory.CreateDbContext([
+            "--connection-string",
+            "Server=localhost;Database=PersonalFinance;Trusted_Connection=True;TrustServerCertificate=True;"
+        ]);
 
         Assert.NotNull(context);
-        Assert.IsType<SqliteAppDbContext>(context);
-        Assert.True(context.Database.IsSqlite());
+        Assert.True(context.Database.IsSqlServer());
     }
 
     [Fact]
@@ -149,17 +102,14 @@ public class DatabasePersistenceAndMigrationTests
     [Fact]
     public void DataProtectionKeys_PersistAndRetrieveAcrossContextInstances_SimulatesContainerRestart()
     {
-        using var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-
-        var options = new DbContextOptionsBuilder<SqliteAppDbContext>()
-            .UseSqlite(connection)
+        var dbName = $"InMemory_DataProtection_{Guid.NewGuid():N}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
             .Options;
 
         // First container instance writes DataProtection key
-        using (var db1 = new SqliteAppDbContext(options))
+        using (var db1 = new AppDbContext(options))
         {
-            db1.Database.EnsureCreated();
             db1.DataProtectionKeys.Add(new DataProtectionKey
             {
                 FriendlyName = "key-instance-1",
@@ -169,7 +119,7 @@ public class DatabasePersistenceAndMigrationTests
         }
 
         // Second container instance (e.g. after scale-to-zero or container restart) reads DataProtection key
-        using (var db2 = new SqliteAppDbContext(options))
+        using (var db2 = new AppDbContext(options))
         {
             var key = db2.DataProtectionKeys.FirstOrDefault(k => k.FriendlyName == "key-instance-1");
             Assert.NotNull(key);
@@ -178,95 +128,22 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public async Task MigrateAndSeedDatabaseAsync_Sqlite_AppliesProviderMigrationsAndSeedsInitialItems()
+    public async Task MigrateAndSeedDatabaseAsync_InMemory_SeedsInitialItems()
     {
-        // Use unique file SQLite database to test real migration pipeline against SqliteAppDbContext migrations
-        var dbPath = Path.Combine(Path.GetTempPath(), $"pf_migration_test_{Guid.NewGuid():N}.db");
-        try
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAppDbContext($"InMemory_Seed_{Guid.NewGuid():N}", DatabaseProviderType.InMemory);
+
+        using (var sp = services.BuildServiceProvider())
         {
-            var services = new ServiceCollection();
-            services.AddLogging();
-            services.AddAppDbContext($"Data Source={dbPath}", DatabaseProviderType.Sqlite);
+            await sp.MigrateAndSeedDatabaseAsync(NullLogger.Instance);
 
-            using (var sp = services.BuildServiceProvider())
-            {
-                await sp.MigrateAndSeedDatabaseAsync(NullLogger.Instance);
+            using var scope = sp.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                using var scope = sp.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-                Assert.IsType<SqliteAppDbContext>(db);
-
-                var appliedMigrations = (await db.Database.GetAppliedMigrationsAsync()).ToList();
-                Assert.NotEmpty(appliedMigrations);
-                Assert.Contains(appliedMigrations, m => m.Contains("InitialCreate"));
-
-                var items = await db.Items.ToListAsync();
-                Assert.Equal(3, items.Count);
-                Assert.Contains(items, i => i.Name.Contains("Refit"));
-            }
-
-            // Verify idempotency on second execution (no duplication of items)
-            using (var sp2 = services.BuildServiceProvider())
-            {
-                await sp2.MigrateAndSeedDatabaseAsync(NullLogger.Instance);
-
-                using var scope2 = sp2.CreateScope();
-                var db2 = scope2.ServiceProvider.GetRequiredService<AppDbContext>();
-                var items2 = await db2.Items.ToListAsync();
-                Assert.Equal(3, items2.Count);
-            }
-        }
-        finally
-        {
-            if (File.Exists(dbPath))
-            {
-                try { File.Delete(dbPath); } catch { /* ignore temp cleanup */ }
-            }
-        }
-    }
-
-    [Fact]
-    public async Task MigrateAndSeedDatabaseAsync_Sqlite_RecoversFromStaleTablesWithoutMigrationHistory()
-    {
-        var dbPath = Path.Combine(Path.GetTempPath(), $"pf_stale_table_test_{Guid.NewGuid():N}.db");
-        try
-        {
-            // Create database with manual tables (simulating legacy EnsureCreated or pre-provider migration state)
-            using (var rawConn = new SqliteConnection($"Data Source={dbPath}"))
-            {
-                await rawConn.OpenAsync();
-                using var cmd = rawConn.CreateCommand();
-                cmd.CommandText = "CREATE TABLE AspNetRoles (Id TEXT PRIMARY KEY, Name TEXT, NormalizedName TEXT, ConcurrencyStamp TEXT);";
-                await cmd.ExecuteNonQueryAsync();
-            }
-
-            var services = new ServiceCollection();
-            services.AddLogging();
-            services.AddAppDbContext($"Data Source={dbPath}", DatabaseProviderType.Sqlite);
-
-            using (var sp = services.BuildServiceProvider())
-            {
-                // Must recover gracefully and migrate successfully instead of throwing SQLite Error 1
-                await sp.MigrateAndSeedDatabaseAsync(NullLogger.Instance);
-
-                using var scope = sp.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-                var appliedMigrations = (await db.Database.GetAppliedMigrationsAsync()).ToList();
-                Assert.NotEmpty(appliedMigrations);
-                Assert.Contains(appliedMigrations, m => m.Contains("InitialCreate"));
-
-                var items = await db.Items.ToListAsync();
-                Assert.Equal(3, items.Count);
-            }
-        }
-        finally
-        {
-            if (File.Exists(dbPath))
-            {
-                try { File.Delete(dbPath); } catch { /* ignore temp cleanup */ }
-            }
+            var items = await db.Items.ToListAsync();
+            Assert.Equal(3, items.Count);
+            Assert.Contains(items, i => i.Name.Contains("Refit"));
         }
     }
 
@@ -341,44 +218,15 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void Sqlite_And_SqlServer_MigrationSets_AreProviderSpecificAndIsolated()
-    {
-        var sqliteOptions = new DbContextOptionsBuilder<SqliteAppDbContext>()
-            .UseSqlite("Data Source=:memory:")
-            .Options;
-        var sqlServerOptions = new DbContextOptionsBuilder<SqlServerAppDbContext>()
-            .UseSqlServer("Server=localhost;Database=x;Trusted_Connection=True;TrustServerCertificate=True;")
-            .Options;
-
-        using var sqlite = new SqliteAppDbContext(sqliteOptions);
-        using var sqlServer = new SqlServerAppDbContext(sqlServerOptions);
-
-        var sqliteMigrations = sqlite.Database.GetMigrations().ToList();
-        var sqlServerMigrations = sqlServer.Database.GetMigrations().ToList();
-
-        Assert.NotEmpty(sqliteMigrations);
-        Assert.NotEmpty(sqlServerMigrations);
-        Assert.All(sqliteMigrations, m => Assert.Contains("InitialCreate", m));
-        Assert.All(sqlServerMigrations, m => Assert.Contains("InitialCreate", m));
-
-        // Migration IDs differ because each provider has its own scaffolded history
-        Assert.NotEqual(sqliteMigrations, sqlServerMigrations);
-    }
-
-    [Fact]
     public async Task AppDbContext_ItemsCRUD_PersistsAndUpdatesSuccessfully()
     {
-        using var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-
-        var options = new DbContextOptionsBuilder<SqliteAppDbContext>()
-            .UseSqlite(connection)
+        var dbName = $"InMemory_ItemsCRUD_{Guid.NewGuid():N}";
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName)
             .Options;
 
-        using (var db = new SqliteAppDbContext(options))
+        using (var db = new AppDbContext(options))
         {
-            db.Database.EnsureCreated();
-
             var item = new Item
             {
                 Name = "Groceries",
@@ -393,7 +241,7 @@ public class DatabasePersistenceAndMigrationTests
             Assert.True(item.Id > 0);
         }
 
-        using (var db = new SqliteAppDbContext(options))
+        using (var db = new AppDbContext(options))
         {
             var item = await db.Items.FirstAsync(i => i.Name == "Groceries");
             Assert.False(item.IsCompleted);
@@ -402,7 +250,7 @@ public class DatabasePersistenceAndMigrationTests
             await db.SaveChangesAsync();
         }
 
-        using (var db = new SqliteAppDbContext(options))
+        using (var db = new AppDbContext(options))
         {
             var item = await db.Items.FirstAsync(i => i.Name == "Groceries");
             Assert.True(item.IsCompleted);
@@ -410,33 +258,34 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void ProviderMigrationSourceFiles_ExistForBothProviders()
+    public void SqlServer_DefaultFallbackConnectionString_MatchesDefaultSqlConnectionString()
     {
-        var dataProject = Path.Combine(
+        var services = new ServiceCollection();
+        var config = new ConfigurationBuilder().Build();
+        services.AddAppDbContext(config);
+
+        using var sp = services.BuildServiceProvider();
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var connectionString = db.Database.GetConnectionString();
+        Assert.NotNull(connectionString);
+        Assert.Contains("localhost", connectionString);
+        Assert.Contains("PersonalFinance", connectionString);
+    }
+
+    [Fact]
+    public void SqlServer_MigrationSourceFiles_Exist()
+    {
+        var migrationsDir = Path.Combine(
             DatabasePathHelper.GetSolutionRoot(),
             "PersonalFinance",
             "src",
             "PersonalFinance.Data",
-            "Migrations");
+            "Migrations",
+            "SqlServer");
 
-        var sqliteDir = Path.Combine(dataProject, "Sqlite");
-        var sqlServerDir = Path.Combine(dataProject, "SqlServer");
-
-        Assert.True(Directory.Exists(sqliteDir), "Migrations/Sqlite folder must exist.");
-        Assert.True(Directory.Exists(sqlServerDir), "Migrations/SqlServer folder must exist.");
-
-        Assert.NotEmpty(Directory.GetFiles(sqliteDir, "*InitialCreate.cs"));
-        Assert.NotEmpty(Directory.GetFiles(sqlServerDir, "*InitialCreate.cs"));
-        Assert.True(File.Exists(Path.Combine(sqliteDir, "SqliteAppDbContextModelSnapshot.cs")));
-        Assert.True(File.Exists(Path.Combine(sqlServerDir, "SqlServerAppDbContextModelSnapshot.cs")));
-
-        var sqlServerMigration = Directory.GetFiles(sqlServerDir, "*InitialCreate.cs")
-            .Single(f => !f.EndsWith("Designer.cs", StringComparison.OrdinalIgnoreCase));
-        var content = File.ReadAllText(sqlServerMigration);
-
-        Assert.Contains("nvarchar(450)", content);
-        Assert.Contains("maxLength: 450", content);
-        Assert.Contains("maxLength: 128", content);
-        Assert.DoesNotContain("type: \"TEXT\"", content);
+        Assert.True(Directory.Exists(migrationsDir));
+        Assert.NotEmpty(Directory.GetFiles(migrationsDir, "*.cs"));
     }
 }

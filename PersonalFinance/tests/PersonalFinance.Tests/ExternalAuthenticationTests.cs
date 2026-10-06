@@ -37,8 +37,8 @@ public class ExternalAuthenticationTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IWebHostEnvironment, TestWebHostEnvironment>();
-        services.AddDbContext<AppDbContext, SqliteAppDbContext>(options =>
-            options.UseSqlite("DataSource=:memory:"));
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseInMemoryDatabase($"AuthTest_{Guid.NewGuid():N}"));
 
         services.AddDefaultIdentity<IdentityUser>(options =>
             options.SignIn.RequireConfirmedAccount = requireConfirmedAccount)
@@ -105,7 +105,6 @@ public class ExternalAuthenticationTests
 
         var provider = services.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<AppDbContext>();
-        dbContext.Database.OpenConnection();
         dbContext.Database.EnsureCreated();
 
         return provider;

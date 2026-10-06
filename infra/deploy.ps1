@@ -31,7 +31,7 @@
     Google Drive API v3 key.
 
 .PARAMETER DeploySqlDatabase
-    Switch to provision Azure SQL Database Serverless Free Tier ($0.00).
+    Switch to provision Azure SQL Database Serverless Free Tier ($0.00). Defaults to true.
 
 .PARAMETER SqlAdminPassword
     Administrator password if deploying Azure SQL Database.
@@ -64,7 +64,7 @@ param (
     [string]$BrevoSenderEmail = "tngo0508@gmail.com",
     [string]$BrevoSenderName = "PersonalFinance",
     [string]$GoogleDriveApiKey = "",
-    [switch]$DeploySqlDatabase,
+    [switch]$DeploySqlDatabase = $true,
     [string]$SqlAdminPassword = "",
     [string]$CustomConnectionString = "",
     [string]$CustomDomainName = "",

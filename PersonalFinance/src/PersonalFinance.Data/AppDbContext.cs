@@ -9,8 +9,6 @@ namespace PersonalFinance.Data;
 /// <summary>
 /// Database context inheriting from IdentityDbContext for ASP.NET Core Identity authentication tables
 /// and implementing IDataProtectionKeyContext for persistent Data Protection keyring across container restarts.
-/// Runtime DI registers a provider-specific subclass (<see cref="SqliteAppDbContext"/> or <see cref="SqlServerAppDbContext"/>)
-/// so EF Core applies the matching provider migration set.
 /// </summary>
 public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyContext
 {
@@ -138,17 +136,6 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.HasIndex(e => e.ConnectionId);
             entity.HasIndex(e => new { e.ConnectionId, e.DriveFileId });
         });
-    }
-}
-
-/// <summary>
-/// SQLite-specific AppDbContext used for EF Core migrations under <c>Migrations/Sqlite</c>
-/// and as the DI implementation when the active provider is SQLite.
-/// </summary>
-public sealed class SqliteAppDbContext : AppDbContext
-{
-    public SqliteAppDbContext(DbContextOptions<SqliteAppDbContext> options) : base(options)
-    {
     }
 }
 

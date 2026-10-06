@@ -263,10 +263,13 @@ if ($dynamicParams.Count -gt 0) {
 $paramArgs | ConvertTo-Json -Compress
 ";
 
+        var bytes = System.Text.Encoding.Unicode.GetBytes(psCommand);
+        var base64Command = Convert.ToBase64String(bytes);
+
         var startInfo = new ProcessStartInfo
         {
             FileName = OperatingSystem.IsWindows() ? "powershell.exe" : "pwsh",
-            Arguments = $"-NoProfile -NonInteractive -Command \"{psCommand.Replace("\"", "\\\"").Replace("\r\n", " ")}\"",
+            Arguments = $"-NoProfile -NonInteractive -EncodedCommand {base64Command}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,

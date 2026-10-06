@@ -115,7 +115,7 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }}", workflow);
         Assert.Contains("brevoApiKey=${{ secrets.BREVO_API_KEY }}", workflow);
         Assert.Contains("googleDriveApiKey=${{ secrets.GOOGLE_DRIVE_API_KEY }}", workflow);
-        Assert.Contains("deploySqlDatabase=${{ inputs.deploy_sql || false }}", workflow);
+        Assert.Contains("deploySqlDatabase=${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}", workflow);
         Assert.Contains("customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}", workflow);
     }
 
@@ -217,6 +217,37 @@ public class GitHubActionsDeploymentWorkflowTests
     }
 
     [Fact]
+    public void DeploymentWorkflow_AllJobs_DefineExplicitTimeouts()
+    {
+        var root = FindProjectRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+
+        var timeoutMatches = Regex.Matches(workflow, @"timeout-minutes:\s*(\d+)");
+        Assert.Equal(4, timeoutMatches.Count);
+
+        // Verify smoke-test job specifically limits execution duration
+        var smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
+        Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
+        Assert.Contains("timeout-minutes:", smokeTestJobMatch.Value);
+    }
+
+    [Fact]
+    public void DeploymentWorkflow_SmokeTestJob_ConfiguresCurlTimeoutsAndFallback()
+    {
+        var root = FindProjectRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+
+        var smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
+        Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
+        var content = smokeTestJobMatch.Value;
+
+        // Verify connection timeout and max time are enforced on curl calls to prevent hanging
+        Assert.Contains("--connect-timeout", content);
+        Assert.Contains("--max-time", content);
+        Assert.Contains("echo \"000\"", content);
+    }
+
+    [Fact]
     public void SmokeTestScript_ExistsAndDefinesExpectedEndpointsAndOptions()
     {
         var root = FindProjectRoot();
@@ -231,5 +262,18 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("/alive", script);
         Assert.Contains("/Identity/Account/Login", script);
         Assert.Contains("Invoke-WebRequest", script);
+    }
+
+    [Fact]
+    public void Readme_ContainsDeploymentStatusBadgeIndicator()
+    {
+        var root = FindProjectRoot();
+        var readmePath = Path.Combine(root, "README.md");
+
+        Assert.True(File.Exists(readmePath), "README.md must exist in the repository root.");
+        var readme = File.ReadAllText(readmePath);
+
+        Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml/badge.svg", readme);
+        Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml", readme);
     }
 }

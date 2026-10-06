@@ -1,7 +1,7 @@
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
-/// Database persistence entity representing a cached Google Drive file or folder in SQLite.
+/// Database persistence entity representing a cached Google Drive file or folder in database.
 /// </summary>
 public class GoogleDriveCachedFile
 {
@@ -83,7 +83,7 @@ public class GoogleDriveCachedFile
     public bool IsTrashed { get; set; }
 
     /// <summary>
-    /// Timestamp when this item was fetched and cached locally in SQLite.
+    /// Timestamp when this item was fetched and cached locally in database.
     /// </summary>
     public DateTime LastFetchedUtc { get; set; } = DateTime.UtcNow;
 

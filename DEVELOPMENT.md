@@ -288,6 +288,43 @@ Rather than relying on default boilerplate scaffolding, the `ExternalLogin` flow
 
 ---
 
+### Database Connection String & Secrets Management
+
+To protect credentials and prevent sensitive database connection strings from being committed to source control or exposed in deployment logs, connection strings are managed securely across development, design-time tooling, and production.
+
+#### 1. Local Development via .NET User Secrets
+For local development against cloud databases or private instances (such as Azure SQL or custom SQL Server), never add passwords to `appsettings.json`. Instead, store the connection string in the .NET User Secrets store for both the Web and ApiService projects:
+
+```bash
+# Set connection string for Web Frontend
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server-name>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.Web
+
+# Set connection string for ApiService Backend
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server-name>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.ApiService
+```
+
+*Note: For standard local SQLite development, no User Secrets are needed; `DatabasePathHelper` automatically resolves `"Data Source=PersonalFinance.db"` dynamically to the root repository folder.*
+
+#### 2. Design-Time EF Core CLI Tooling (`AppDbContextFactory`)
+Design-time tools (like `dotnet ef migrations add` and `dotnet ef database update`) resolve the database connection string using `DesignTimeDbContextFactoryHelper.ResolveConnectionString()`:
+1. `--connection-string "<value>"` command-line argument passed to `dotnet ef database update`
+2. `ConnectionStrings__DefaultConnection` or `DefaultConnection` environment variable
+3. Fallback default (`Data Source=PersonalFinance.db`)
+
+Example running EF Core migrations against Azure SQL securely:
+```bash
+dotnet ef database update --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string "Server=tcp:...;Database=...;User ID=...;Password=...;"
+```
+
+#### 3. Production & CI/CD Pipeline Injection
+In Azure Container Apps, credentials are never written to plain-text configuration files or container image layers:
+- **Bicep `@secure()` Parameters**: `sqlAdministratorLoginPassword` and `customConnectionString` in `infra/main.bicep` are decorated with `@secure()`, ensuring values are masked in Azure Resource Manager deployment logs and ARM outputs.
+- **Container Apps Secret Store**: In `infra/modules/web-service.bicep` and `infra/modules/api-service.bicep`, the connection string is registered in the Container App environment's native secret store (`db-connection-string`).
+- **Container Environment Binding**: Bound securely via `secretRef: 'db-connection-string'` to environment variable `ConnectionStrings__DefaultConnection`.
+- **Runtime Resolution**: At startup, ASP.NET Core reads `builder.Configuration.GetConnectionString("DefaultConnection")`, automatically injecting the secret into EF Core `AppDbContext`.
+
+---
+
 ## 4. Running the Application
 
 ### Option A: Via .NET Aspire AppHost (Recommended)

@@ -21,7 +21,7 @@ public interface IGoogleDriveApi
     Task<List<GoogleDriveConnectionDto>> GetUserConnectionsAsync([Query] string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets files for a specific connection from local SQLite cache (or synchronizes if stale/forced).
+    /// Gets files for a specific connection from local database cache (or synchronizes if stale/forced).
     /// </summary>
     [Get("/api/googledrive/connections/{connectionId}")]
     Task<GoogleDriveFolderResponseDto> GetConnectionFilesAsync(int connectionId, [Query] string userId, [Query] bool forceRefresh = false, CancellationToken cancellationToken = default);
@@ -45,7 +45,7 @@ public interface IGoogleDriveApi
     Task<GoogleDriveConnectionDto> ReauthConnectionAsync(int connectionId, [Body] ReauthGoogleDriveRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Removes a connected Drive and deletes all locally cached files from SQLite.
+    /// Removes a connected Drive and deletes all locally cached files from database.
     /// </summary>
     [Delete("/api/googledrive/connections/{connectionId}")]
     Task<bool> DeleteConnectionAsync(int connectionId, [Query] string userId, CancellationToken cancellationToken = default);

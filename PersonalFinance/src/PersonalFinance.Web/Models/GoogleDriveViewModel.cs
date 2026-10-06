@@ -43,7 +43,7 @@ public class GoogleDriveViewModel
         Connections.FirstOrDefault(c => c.Id == SelectedConnectionId);
 
     /// <summary>
-    /// Holds the retrieved folder metadata and files list (from SQLite cache or live sync).
+    /// Holds the retrieved folder metadata and files list (from database cache or live sync).
     /// </summary>
     public GoogleDriveFolderResponseDto? Response { get; set; }
 
