@@ -46,6 +46,7 @@ jobs:
   build-and-test:
     name: Build & Test (.NET 10)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,6 +75,7 @@ jobs:
     name: Build & Push Containers (GHCR)
     needs: build-and-test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -158,6 +160,7 @@ jobs:
     needs: build-and-push-containers
     if: ${{ inputs.dry_run != true }}
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
       id-token: write
@@ -207,13 +210,24 @@ jobs:
     needs: deploy-azure
     if: ${{ inputs.dry_run != true }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Run HTTP Smoke Tests against Deployed Endpoints
         run: |
           WEB_URL="${{ needs.deploy-azure.outputs.web_url }}"
           if [ -z "$WEB_URL" ]; then
             WEB_FQDN="${{ needs.deploy-azure.outputs.web_fqdn }}"
-            WEB_URL="https://${WEB_FQDN}"
+            if [ -n "$WEB_FQDN" ]; then
+              WEB_URL="https://${WEB_FQDN}"
+            fi
+          fi
+
+          # Normalize base URL (strip trailing slash)
+          WEB_URL="${WEB_URL%/}"
+
+          if [ -z "$WEB_URL" ] || [ "$WEB_URL" = "https://" ] || [ "$WEB_URL" = "http://" ]; then
+            echo "::error::Target Web URL could not be resolved from deployment outputs."
+            exit 1
           fi
 
           echo "================================================================"
@@ -229,7 +243,7 @@ jobs:
           HEALTH_OK=false
 
           for i in $(seq 1 $MAX_RETRIES); do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/health" || true)
+            HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/health" 2>/dev/null || echo "000")
             echo "Attempt $i/$MAX_RETRIES: /health returned HTTP ${HTTP_CODE}"
             if [ "$HTTP_CODE" = "200" ]; then
               echo "  -> Readiness probe passed (HTTP 200 OK)."
@@ -247,7 +261,7 @@ jobs:
           # 2. Probe liveness endpoint (/alive)
           echo ""
           echo "[2/4] Probing liveness health endpoint (/alive)..."
-          ALIVE_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/alive" || true)
+          ALIVE_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/alive" 2>/dev/null || echo "000")
           echo "  -> /alive returned HTTP ${ALIVE_CODE}"
           if [ "$ALIVE_CODE" != "200" ]; then
             echo "::error::Liveness health probe failed with HTTP ${ALIVE_CODE}."
@@ -258,7 +272,7 @@ jobs:
           # 3. Probe root UI page (/)
           echo ""
           echo "[3/4] Probing Web home page (/)..."
-          ROOT_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/" || true)
+          ROOT_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/" 2>/dev/null || echo "000")
           echo "  -> / returned HTTP ${ROOT_CODE}"
           if [ "$ROOT_CODE" != "200" ] && [ "$ROOT_CODE" != "302" ]; then
             echo "::error::Home page probe failed with HTTP ${ROOT_CODE}."
@@ -269,7 +283,7 @@ jobs:
           # 4. Probe Identity login page (/Identity/Account/Login)
           echo ""
           echo "[4/4] Probing Identity login page (/Identity/Account/Login)..."
-          LOGIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/Identity/Account/Login" || true)
+          LOGIN_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/Identity/Account/Login" 2>/dev/null || echo "000")
           echo "  -> /Identity/Account/Login returned HTTP ${LOGIN_CODE}"
           if [ "$LOGIN_CODE" != "200" ]; then
             echo "::error::Identity login page probe failed with HTTP ${LOGIN_CODE}."

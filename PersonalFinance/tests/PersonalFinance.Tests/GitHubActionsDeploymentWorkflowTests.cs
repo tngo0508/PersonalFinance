@@ -217,6 +217,37 @@ public class GitHubActionsDeploymentWorkflowTests
     }
 
     [Fact]
+    public void DeploymentWorkflow_AllJobs_DefineExplicitTimeouts()
+    {
+        var root = FindProjectRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+
+        var timeoutMatches = Regex.Matches(workflow, @"timeout-minutes:\s*(\d+)");
+        Assert.Equal(4, timeoutMatches.Count);
+
+        // Verify smoke-test job specifically limits execution duration
+        var smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
+        Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
+        Assert.Contains("timeout-minutes:", smokeTestJobMatch.Value);
+    }
+
+    [Fact]
+    public void DeploymentWorkflow_SmokeTestJob_ConfiguresCurlTimeoutsAndFallback()
+    {
+        var root = FindProjectRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+
+        var smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
+        Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
+        var content = smokeTestJobMatch.Value;
+
+        // Verify connection timeout and max time are enforced on curl calls to prevent hanging
+        Assert.Contains("--connect-timeout", content);
+        Assert.Contains("--max-time", content);
+        Assert.Contains("echo \"000\"", content);
+    }
+
+    [Fact]
     public void SmokeTestScript_ExistsAndDefinesExpectedEndpointsAndOptions()
     {
         var root = FindProjectRoot();
