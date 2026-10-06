@@ -105,7 +105,7 @@ jobs:
           echo "web_image_tag=${WEB_IMAGE}:${SHORT_SHA}" >> $GITHUB_OUTPUT
 
       - name: Log in to GitHub Container Registry (GHCR)
-        if: ${{ inputs.dry_run != true }}
+        if: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -126,7 +126,7 @@ jobs:
         with:
           context: .
           file: PersonalFinance/src/PersonalFinance.ApiService/Dockerfile
-          push: ${{ inputs.dry_run != true }}
+          push: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
@@ -146,7 +146,7 @@ jobs:
         with:
           context: .
           file: PersonalFinance/src/PersonalFinance.Web/Dockerfile
-          push: ${{ inputs.dry_run != true }}
+          push: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha
@@ -158,7 +158,7 @@ jobs:
   deploy-azure:
     name: Deploy to Azure Container Apps
     needs: build-and-push-containers
-    if: ${{ inputs.dry_run != true }}
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && inputs.dry_run != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -179,6 +179,22 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Validate database deployment configuration
+        env:
+          DEPLOY_SQL: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+          CUSTOM_CONNECTION_STRING: ${{ secrets.CUSTOM_CONNECTION_STRING }}
+        run: |
+          if [[ "$DEPLOY_SQL" == "true" && -z "$SQL_ADMIN_PASSWORD" ]]; then
+            echo "::error::SQL_ADMIN_PASSWORD is required when Azure SQL deployment is enabled."
+            exit 1
+          fi
+
+          if [[ "$DEPLOY_SQL" != "true" && -z "$CUSTOM_CONNECTION_STRING" ]]; then
+            echo "::error::CUSTOM_CONNECTION_STRING is required when Azure SQL deployment is disabled."
+            exit 1
+          fi
+
       - name: Deploy Azure Infrastructure & Container Apps (Bicep)
         id: deploy-bicep
         uses: azure/arm-deploy@v2
@@ -197,7 +213,7 @@ jobs:
             brevoSenderEmail=${{ vars.BREVO_SENDER_EMAIL || 'tngo0508@gmail.com' }}
             brevoSenderName=${{ vars.BREVO_SENDER_NAME || 'PersonalFinance' }}
             googleDriveApiKey=${{ secrets.GOOGLE_DRIVE_API_KEY }}
-            deploySqlDatabase=${{ inputs.deploy_sql != false }}
+            deploySqlDatabase=${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}
             sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
             customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}
             customDomainName=${{ vars.CUSTOM_DOMAIN_NAME || '' }}
