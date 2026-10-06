@@ -116,7 +116,7 @@ jobs:
         with:
           images: ${{ steps.tags.outputs.api_image }}
           tags: |
-            type=sha,format=short
+            type=sha,format=short,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push ApiService container
@@ -136,7 +136,7 @@ jobs:
         with:
           images: ${{ steps.tags.outputs.web_image }}
           tags: |
-            type=sha,format=short
+            type=sha,format=short,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Web container
