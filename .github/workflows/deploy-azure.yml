@@ -184,6 +184,15 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
+            # A resource group's location is immutable metadata only; resources inside it
+            # are deployed to AZURE_LOCATION via the Bicep `location` parameter. Reuse an
+            # existing group regardless of its region instead of failing on a mismatch.
+            if [[ "$(az group exists --name "${{ env.AZURE_RESOURCE_GROUP }}")" == "true" ]]; then
+              EXISTING_LOCATION=$(az group show --name "${{ env.AZURE_RESOURCE_GROUP }}" --query location --output tsv)
+              echo "Resource group '${{ env.AZURE_RESOURCE_GROUP }}' already exists in '${EXISTING_LOCATION}'; resources will deploy to '${{ env.AZURE_LOCATION }}'."
+              exit 0
+            fi
+
             az group create \
               --name "${{ env.AZURE_RESOURCE_GROUP }}" \
               --location "${{ env.AZURE_LOCATION }}" \
