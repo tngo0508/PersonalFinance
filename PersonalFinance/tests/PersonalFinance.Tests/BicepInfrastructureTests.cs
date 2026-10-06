@@ -67,6 +67,7 @@ public class BicepInfrastructureTests
         Assert.Contains("output containerAppEnvironmentName string", mainBicep);
         Assert.Contains("param sqlLocation string", mainBicep);
         Assert.Contains("location: sqlLocation", mainBicep);
+        Assert.Contains("uniqueString(resourceGroup().id, location)", mainBicep);
     }
 
     [Fact]

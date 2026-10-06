@@ -36,7 +36,7 @@ env:
   API_IMAGE_NAME: personalfinance-api
   WEB_IMAGE_NAME: personalfinance-web
   AZURE_RESOURCE_GROUP: rg-personalfinance-prod
-  AZURE_LOCATION: eastus
+  AZURE_LOCATION: westus2
   AZURE_SQL_LOCATION: westus2
   ENVIRONMENT_NAME: pf-prod
 
@@ -274,6 +274,27 @@ jobs:
             sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
             customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}
             customDomainName=${{ vars.CUSTOM_DOMAIN_NAME || '' }}
+
+      - name: Show Azure deployment operations on failure
+        if: ${{ failure() }}
+        uses: azure/cli@v2
+        env:
+          RESOURCE_GROUP: ${{ env.AZURE_RESOURCE_GROUP }}
+        with:
+          inlineScript: |
+            az deployment operation group list \
+              --resource-group "$RESOURCE_GROUP" \
+              --name main \
+              --query "[].{state:properties.provisioningState,target:properties.targetResource.resourceName,error:properties.statusMessage.error.message}" \
+              --output json
+
+            for deployment in logAnalyticsDeployment containerEnvDeployment sqlDatabaseDeployment apiServiceDeployment webServiceDeployment; do
+              az deployment operation group list \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$deployment" \
+                --query "[].{state:properties.provisioningState,target:properties.targetResource.resourceName,error:properties.statusMessage.error.message}" \
+                --output json 2>/dev/null || true
+            done
 
   # ============================================================================
   # 4. END-TO-END POST-DEPLOYMENT SMOKE TESTS
