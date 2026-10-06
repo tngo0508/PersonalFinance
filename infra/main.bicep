@@ -67,11 +67,11 @@ param tags object = {
   CostTier: 'ZeroCost-Consumption'
 }
 
-var uniqueSuffix = uniqueString(resourceGroup().id)
-var logAnalyticsWorkspaceName = 'law-${environmentName}-${uniqueSuffix}'
-var containerAppEnvironmentName = 'cae-${environmentName}-${uniqueSuffix}'
-var apiAppName = 'apiservice'
-var webAppName = 'web'
+var locationSuffix = uniqueString(resourceGroup().id, location)
+var logAnalyticsWorkspaceName = 'law-${environmentName}-${locationSuffix}'
+var containerAppEnvironmentName = 'cae-${environmentName}-${locationSuffix}'
+var apiAppName = 'api-${environmentName}-${locationSuffix}'
+var webAppName = 'web-${environmentName}-${locationSuffix}'
 // Include the SQL region in the deterministic name. Azure SQL server names are
 // location-bound, and a failed deployment can leave a name reserved in the
 // original region even when provisioning did not complete.

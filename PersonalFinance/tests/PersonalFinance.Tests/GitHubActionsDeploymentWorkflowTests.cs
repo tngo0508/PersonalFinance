@@ -87,6 +87,8 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("az group create", workflow);
         Assert.Contains("Wait for stale Container Apps environment deletion", workflow);
         Assert.Contains("ScheduledForDelete", workflow);
+        Assert.Contains("Show Azure deployment operations on failure", workflow);
+        Assert.Contains("az deployment operation group list", workflow);
     }
 
     [Fact]
