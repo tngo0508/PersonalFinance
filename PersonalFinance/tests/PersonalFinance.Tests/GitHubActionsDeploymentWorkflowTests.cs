@@ -83,6 +83,8 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("client-id: ${{ secrets.AZURE_CLIENT_ID }}", workflow);
         Assert.Contains("tenant-id: ${{ secrets.AZURE_TENANT_ID }}", workflow);
         Assert.Contains("subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}", workflow);
+        Assert.Contains("uses: azure/cli@v2", workflow);
+        Assert.Contains("az group create", workflow);
     }
 
     [Fact]
@@ -109,6 +111,7 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("template: infra/main.bicep", workflow);
         Assert.Contains("environmentName=${{ inputs.environment || env.ENVIRONMENT_NAME }}", workflow);
         Assert.Contains("location=${{ env.AZURE_LOCATION }}", workflow);
+        Assert.Contains("sqlLocation=${{ env.AZURE_SQL_LOCATION }}", workflow);
         Assert.Contains("apiImage=${{ needs.build-and-push-containers.outputs.api_image_tag }}", workflow);
         Assert.Contains("webImage=${{ needs.build-and-push-containers.outputs.web_image_tag }}", workflow);
         Assert.Contains("googleClientId=${{ secrets.GOOGLE_CLIENT_ID }}", workflow);

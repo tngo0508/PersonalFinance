@@ -65,6 +65,8 @@ public class BicepInfrastructureTests
         Assert.Contains("output webFqdn string", mainBicep);
         Assert.Contains("output apiFqdn string", mainBicep);
         Assert.Contains("output containerAppEnvironmentName string", mainBicep);
+        Assert.Contains("param sqlLocation string", mainBicep);
+        Assert.Contains("location: sqlLocation", mainBicep);
     }
 
     [Fact]

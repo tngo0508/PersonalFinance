@@ -8,6 +8,9 @@ param environmentName string = 'pf-prod'
 @description('Azure region for the deployed resources')
 param location string = resourceGroup().location
 
+@description('Azure region for Azure SQL resources. This can differ from the Container Apps region when SQL provisioning is restricted.')
+param sqlLocation string = 'westus2'
+
 @description('Container image reference for PersonalFinance.ApiService from GHCR or container registry')
 param apiImage string = 'ghcr.io/tngo0508/personalfinance-api:latest'
 
@@ -98,7 +101,7 @@ module sqlDatabase 'modules/sql-database.bicep' = if (deploySqlDatabase) {
   params: {
     serverName: sqlServerName
     databaseName: 'PersonalFinance'
-    location: location
+    location: sqlLocation
     administratorLogin: sqlAdministratorLogin
     administratorLoginPassword: sqlAdministratorLoginPassword
     tags: tags
