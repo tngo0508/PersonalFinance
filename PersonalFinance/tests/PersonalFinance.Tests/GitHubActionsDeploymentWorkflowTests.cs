@@ -85,6 +85,8 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}", workflow);
         Assert.Contains("uses: azure/cli@v2", workflow);
         Assert.Contains("az group create", workflow);
+        Assert.Contains("Wait for stale Container Apps environment deletion", workflow);
+        Assert.Contains("ScheduledForDelete", workflow);
     }
 
     [Fact]

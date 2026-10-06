@@ -161,7 +161,7 @@ jobs:
     needs: build-and-push-containers
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && inputs.dry_run != true }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     permissions:
       contents: read
       id-token: write
@@ -188,6 +188,52 @@ jobs:
               --name "${{ env.AZURE_RESOURCE_GROUP }}" \
               --location "${{ env.AZURE_LOCATION }}" \
               --tags Application=PersonalFinance Environment="${{ inputs.environment || env.ENVIRONMENT_NAME }}" ManagedBy=GitHubActions
+
+      - name: Wait for stale Container Apps environment deletion
+        uses: azure/cli@v2
+        env:
+          RESOURCE_GROUP: ${{ env.AZURE_RESOURCE_GROUP }}
+          APP_ENVIRONMENT: ${{ inputs.environment || env.ENVIRONMENT_NAME }}
+        with:
+          inlineScript: |
+            ENVIRONMENT_PREFIX="cae-${APP_ENVIRONMENT}-"
+            ENVIRONMENT_NAME=$(az resource list \
+              --resource-group "$RESOURCE_GROUP" \
+              --resource-type Microsoft.App/managedEnvironments \
+              --query "[?starts_with(name, '${ENVIRONMENT_PREFIX}')].name | [0]" \
+              --output tsv)
+
+            if [[ -z "$ENVIRONMENT_NAME" ]]; then
+              echo "No existing Container Apps environment found."
+              exit 0
+            fi
+
+            ENVIRONMENT_ID=$(az resource show \
+              --resource-group "$RESOURCE_GROUP" \
+              --resource-type Microsoft.App/managedEnvironments \
+              --name "$ENVIRONMENT_NAME" \
+              --query id \
+              --output tsv)
+            STATE=$(az resource show --ids "$ENVIRONMENT_ID" --query properties.provisioningState --output tsv 2>/dev/null || true)
+
+            if [[ "$STATE" != "ScheduledForDelete" ]]; then
+              echo "Container Apps environment '$ENVIRONMENT_NAME' is in state '$STATE'."
+              exit 0
+            fi
+
+            echo "Container Apps environment '$ENVIRONMENT_NAME' is scheduled for deletion; waiting for Azure cleanup."
+            for attempt in $(seq 1 30); do
+              if ! az resource show --ids "$ENVIRONMENT_ID" --output none 2>/dev/null; then
+                echo "Container Apps environment deletion completed."
+                exit 0
+              fi
+
+              echo "Deletion still in progress (attempt $attempt/30); waiting 30 seconds."
+              sleep 30
+            done
+
+            echo "::error::Container Apps environment '$ENVIRONMENT_NAME' remained scheduled for deletion after 15 minutes."
+            exit 1
 
       - name: Validate database deployment configuration
         env:
