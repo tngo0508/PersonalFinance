@@ -72,7 +72,10 @@ var logAnalyticsWorkspaceName = 'law-${environmentName}-${uniqueSuffix}'
 var containerAppEnvironmentName = 'cae-${environmentName}-${uniqueSuffix}'
 var apiAppName = 'apiservice'
 var webAppName = 'web'
-var sqlServerName = 'sql-${environmentName}-${uniqueSuffix}'
+// Include the SQL region in the deterministic name. Azure SQL server names are
+// location-bound, and a failed deployment can leave a name reserved in the
+// original region even when provisioning did not complete.
+var sqlServerName = 'sql-${environmentName}-${uniqueString(resourceGroup().id, sqlLocation)}'
 
 // 1. Free 5GB/month Log Analytics Workspace
 module logAnalytics 'modules/log-analytics.bicep' = {
