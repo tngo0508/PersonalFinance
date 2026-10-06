@@ -29,7 +29,11 @@ public static class DatabaseMigrationExtensions
         logger ??= scope.ServiceProvider.GetService<ILogger<AppDbContext>>();
 
         var providerName = db.Database.ProviderName ?? "Unknown";
-        logger?.LogInformation("Starting database migration and initialization for provider: {Provider}...", providerName);
+        var targetHost = db.Database.IsRelational() ? db.Database.GetDbConnection().DataSource : "(in-memory)";
+        logger?.LogInformation(
+            "Starting database migration and initialization for provider: {Provider} on target host: {TargetHost}...",
+            providerName,
+            string.IsNullOrWhiteSpace(targetHost) ? "(unspecified/localhost)" : targetHost);
 
         for (var attempt = 1; attempt <= maxRetries; attempt++)
         {

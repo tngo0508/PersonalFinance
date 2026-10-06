@@ -120,6 +120,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Serilog Console Theme**: Configured `AnsiConsoleTheme.Code` with formatted output templates across `PersonalFinance.ApiService` and `PersonalFinance.Web` for high-contrast, clear, and readable console log output.
 
 ### Fixed
+- **Database Migration Target Host Logging & Container Apps Troubleshooting**:
+  - Enhanced `DatabaseMigrationExtensions.cs` to explicitly log the target database host (`DataSource`) during startup migration initialization, making connection resolution and host configuration immediately visible in Azure Container Apps logs.
+  - Added troubleshooting guidance to `deployment.md` for diagnosing `SocketException: Cannot assign requested address [::1]:1433` (Error Number: 10049) when container instances lack connection strings and fall back to local IPv6 loopbacks.
 - **CI/CD Docker Image Tag Mismatch in GitHub Container Registry (GHCR)**:
   - Fixed `docker/metadata-action` tag format in `.github/workflows/deploy-azure.yml` by setting `prefix=` for `type=sha,format=short`, ensuring built container images are tagged with `<short_sha>` (e.g. `:3d8c356`) matching the parameters passed to Bicep rather than defaulting to `:sha-<short_sha>`.
   - Added troubleshooting guidance in `deployment.md` for resolving `MANIFEST_UNKNOWN` container image pull errors and configuring GitHub Container Registry package visibility settings.

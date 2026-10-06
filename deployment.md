@@ -395,6 +395,14 @@ The workflow automatically tests the following endpoints on the deployed web app
   2. Click on `personalfinance-api` and `personalfinance-web`.
   3. Go to **Package settings** &rarr; scroll to **Danger Zone** &rarr; **Change visibility** &rarr; select **Public** &rarr; confirm.
 
+**Database Connection Failure (`Cannot assign requested address [::1]:1433` or `Error Number: 10049`)**:
+- **Root Cause**: The application container inside Azure Container Apps attempted to connect to `[::1]:1433` (`localhost:1433`) because the database connection string was missing or empty in the Container App environment secrets.
+- **Resolution**:
+  1. Ensure the secret is added under **Repository secrets** (not Environment secrets): Navigate to **Settings** &rarr; **Secrets and variables** &rarr; **Actions** &rarr; **New repository secret**.
+  2. For Option A (Azure SQL Serverless Free Tier): Add `SQL_ADMIN_PASSWORD` with a strong password (minimum 8 characters with uppercase, lowercase, numbers, and symbols).
+  3. For Option B (Existing or External Database): Add `CUSTOM_CONNECTION_STRING` with your full encrypted connection string.
+  4. Trigger a new workflow run in GitHub Actions.
+
 **Smoke Tests Fail**:
 - Check the workflow logs for the specific endpoint that failed.
 - Verify the web application is running: navigate to the Azure Portal and check the Container App status.
