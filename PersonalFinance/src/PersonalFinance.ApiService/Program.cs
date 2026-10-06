@@ -86,8 +86,9 @@ try
         .WithSummary("Returns current API service version and runtime status")
         .WithTags("System");
 
-    // 11. Development tooling (OpenAPI spec & Scalar UI)
-    if (app.Environment.IsDevelopment())
+    // 11. API documentation tooling (OpenAPI spec & Scalar UI) - always in Development,
+    //     opt-in elsewhere via ApiDocs:Enabled (set when the API is exposed for testing)
+    if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("ApiDocs:Enabled"))
     {
         // Generates the OpenAPI spec endpoint at /openapi/v1.json
         app.MapOpenApi();

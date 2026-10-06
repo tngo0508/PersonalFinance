@@ -116,6 +116,7 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("template: infra/main.bicep", workflow);
         Assert.Contains("environmentName=${{ inputs.environment || env.ENVIRONMENT_NAME }}", workflow);
         Assert.Contains("location=${{ env.AZURE_LOCATION }}", workflow);
+        Assert.Contains("exposeApiPublicly=", workflow);
         Assert.Contains("sqlLocation=${{ env.AZURE_SQL_LOCATION }}", workflow);
         Assert.Contains("apiImage=${{ needs.build-and-push-containers.outputs.api_image_tag }}", workflow);
         Assert.Contains("webImage=${{ needs.build-and-push-containers.outputs.web_image_tag }}", workflow);

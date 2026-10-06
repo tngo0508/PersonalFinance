@@ -59,6 +59,9 @@ param customDomainName string = ''
 @description('Optional certificate ID for custom domain')
 param certificateId string = ''
 
+@description('Expose the API service publicly with the Scalar UI enabled. The API has no authentication; use for testing only.')
+param exposeApiPublicly bool = false
+
 @description('Tags to apply to all resources')
 param tags object = {
   Application: 'PersonalFinance'
@@ -115,7 +118,7 @@ var effectiveConnectionString = deploySqlDatabase
   ? 'Server=tcp:${sqlDatabase.?outputs.serverFqdn ?? ''},1433;Initial Catalog=${sqlDatabase.?outputs.databaseName ?? ''};Persist Security Info=False;User ID=${sqlAdministratorLogin};Password=${sqlAdministratorLoginPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
   : customConnectionString
 
-// 4. API Service Container App (Internal ingress, scale-to-zero)
+// 4. API Service Container App (Internal ingress unless exposeApiPublicly, scale-to-zero)
 module apiService 'modules/api-service.bicep' = {
   name: 'apiServiceDeployment'
   params: {
@@ -125,6 +128,7 @@ module apiService 'modules/api-service.bicep' = {
     containerImage: apiImage
     googleDriveApiKey: googleDriveApiKey
     dbConnectionString: effectiveConnectionString
+    exposePublicly: exposeApiPublicly
     tags: tags
   }
 }

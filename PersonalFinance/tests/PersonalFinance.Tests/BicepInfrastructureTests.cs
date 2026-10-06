@@ -80,8 +80,10 @@ public class BicepInfrastructureTests
         Assert.Contains("param minReplicas int = 0", apiBicep);
         Assert.Contains("minReplicas: minReplicas", apiBicep);
 
-        // Internal ingress on port 8080
-        Assert.Contains("external: false", apiBicep);
+        // Internal ingress on port 8080 by default; public exposure is opt-in
+        Assert.Contains("param exposePublicly bool = false", apiBicep);
+        Assert.Contains("external: exposePublicly", apiBicep);
+        Assert.Contains("name: 'ApiDocs__Enabled'", apiBicep);
         Assert.Contains("targetPort: 8080", apiBicep);
 
         // Probes

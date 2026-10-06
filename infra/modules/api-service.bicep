@@ -34,6 +34,9 @@ param minReplicas int = 0
 @maxValue(10)
 param maxReplicas int = 1
 
+@description('Expose the API publicly (external ingress) and serve the OpenAPI spec + Scalar UI. The API has no authentication, so keep this false outside of testing.')
+param exposePublicly bool = false
+
 @description('Tags to apply to the resource')
 param tags object = {}
 
@@ -60,6 +63,10 @@ var baseEnv = [
   {
     name: 'ASPNETCORE_HTTP_PORTS'
     value: '8080'
+  }
+  {
+    name: 'ApiDocs__Enabled'
+    value: string(exposePublicly)
   }
 ]
 
@@ -88,7 +95,7 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
     workloadProfileName: 'Consumption'
     configuration: {
       ingress: {
-        external: false // Internal-only ingress for backend API service
+        external: exposePublicly // Internal-only by default; public only when explicitly exposed for testing
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false

@@ -283,6 +283,7 @@ jobs:
             sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
             customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}
             customDomainName=${{ vars.CUSTOM_DOMAIN_NAME || '' }}
+            exposeApiPublicly=true
 
       - name: Show Azure deployment operations on failure
         if: ${{ failure() }}
