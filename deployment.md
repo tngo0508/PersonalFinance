@@ -48,7 +48,7 @@ flowchart LR
     dev -. "git push / PR / manual run" .-> repo
     repo -. "triggers" .-> actions
     secrets -. "injected at deploy" .-> actions
-    actions -. "docker push (sha + latest tags)" .-> ghcr
+    actions -. "docker push (sha tag; latest after smoke test)" .-> ghcr
     actions -. "OIDC token exchange" .-> entra
     actions -. "az deployment group create<br/>(Bicep)" .-> RG
     ghcr -. "image pull" .-> CAE
@@ -103,24 +103,28 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-    trigger{{"Trigger"}}
-    trigger -->|"pull_request → main"| bt
-    trigger -->|"push → main"| bt
-    trigger -->|"workflow_dispatch<br/>(environment, deploy_sql, dry_run)"| bt
+    trigger{{"Trigger<br/>(docs-only changes are skipped)"}}
+    trigger -->|"pull_request → main · push → main ·<br/>workflow_dispatch (environment, deploy_sql, dry_run)"| parallel
 
-    subgraph job1["Job 1 · build-and-test (≤15 min)"]
-        bt["checkout → setup .NET 10 →<br/>dotnet restore → build (Release) →<br/>dotnet test → az bicep build"]
+    subgraph parallel["Run in parallel"]
+        subgraph job1["build-and-test (≤15 min)"]
+            bt["checkout → setup .NET 10 →<br/>NuGet cache → restore → build (Release) →<br/>dotnet test"]
+        end
+        subgraph job1b["validate-infra (≤5 min)"]
+            vi["az bicep build<br/>main.bicep + local-dev.bicep"]
+        end
+        subgraph job2["build-and-push-containers (≤20 min) · matrix"]
+            imgapi["api image<br/>(cache scope: api)"]
+            imgweb["web image<br/>(cache scope: web)"]
+        end
     end
 
-    subgraph job2["Job 2 · build-and-push-containers (≤20 min)"]
-        img["Buildx multi-stage builds<br/>ApiService + Web Dockerfiles<br/>(GitHub Actions layer cache)"]
-        push{"PR or dry_run?"}
-        img --> push
-        push -->|"yes"| nopush["Build only<br/>(validates Dockerfiles)"]
-        push -->|"no"| pushed["Push to GHCR<br/>tags: &lt;short-sha&gt;, latest"]
-    end
+    push{"PR or dry_run?"}
+    imgapi & imgweb --> push
+    push -->|"yes"| nopush["Build only · read-only cache<br/>(validates Dockerfiles)"]
+    push -->|"no"| pushed["Push to GHCR<br/>tag: &lt;short-sha&gt;<br/>+ export layer cache"]
 
-    subgraph job3["Job 3 · deploy-azure (≤40 min) · push / dispatch only, not dry_run"]
+    subgraph job3["deploy-azure (≤40 min) · push / dispatch only, not dry_run"]
         login["azure/login (OIDC)"]
         rg["Ensure resource group exists<br/>(reuse if present)"]
         wait["Wait if old Container Apps<br/>environment is being deleted"]
@@ -131,27 +135,38 @@ flowchart TD
         bicep -. "failure()" .-> diag
     end
 
-    subgraph job4["Job 4 · smoke-test (≤10 min)"]
+    subgraph job4["smoke-test (≤10 min)"]
         smoke["curl the Web URL from deploy outputs:<br/>/health (30 retries, cold start) →<br/>/alive → / (200/302) →<br/>/Identity/Account/Login"]
     end
 
-    bt --> img
-    pushed --> login
+    subgraph job5["promote-latest (≤5 min) · default branch only"]
+        latest["docker buildx imagetools create<br/>&lt;short-sha&gt; → latest"]
+    end
+
+    bt & vi & pushed -->|"all must succeed"| login
     bicep -->|"outputs: webUrl, webFqdn, apiFqdn"| smoke
+    smoke --> latest
 ```
 
-| Trigger | Build & test | Build images | Push to GHCR | Deploy to Azure | Smoke test |
-|---|:-:|:-:|:-:|:-:|:-:|
-| Pull request to `main` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Push / merge to `main` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Manual (`workflow_dispatch`) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Manual with `dry_run = true` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Trigger | Build & test + Bicep | Build images | Push to GHCR | Deploy to Azure | Smoke test | Move `latest` |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Pull request to `main` | ✅ | ✅ (cache read-only) | ❌ | ❌ | ❌ | ❌ |
+| Push / merge to `main` | ✅ | ✅ | ✅ `<sha>` | ✅ | ✅ | ✅ |
+| Manual (`workflow_dispatch`) | ✅ | ✅ | ✅ `<sha>` | ✅ | ✅ | ✅ *(on `main`)* |
+| Manual with `dry_run = true` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Only `*.md` / IDE folders changed | *workflow not triggered* | | | | | |
 
 > **Note**: `dry_run` skips pushing and deploying; it does not run an Azure What-If. For a What-If preview use `.\infra\deploy.ps1 -WhatIf` (Section 4).
 
 **Why it is built this way (things worth learning)**:
-- **Fail fast, cheapest first**: tests and `az bicep build` run before any image is built or anything touches Azure.
-- **Immutable deployments**: the deploy step uses the `<short-sha>` image tag, never `latest`, so every Container App revision maps to exactly one commit and a rollback is "redeploy the previous SHA".
+- **Parallel, not serial**: the tests, the Bicep check and the two image builds start at the same time. Only `deploy-azure` waits for all of them (`needs: [build-and-test, validate-infra, build-and-push-containers]`), so nothing reaches Azure unless every check passed.
+- **Cheap PR runs**:
+  - A new push to a PR cancels the PR's in-progress run (`concurrency` + `cancel-in-progress`). Runs on `main` queue instead, so a deployment is never cut off halfway.
+  - Docs-only changes skip the workflow (`paths-ignore`).
+  - PR image builds read the Docker layer cache from `main` but don't upload one.
+- **Per-image layer cache**: each image has its own GitHub Actions cache scope (`scope=api` / `scope=web`), so the two builds don't overwrite each other's cache and the `dotnet restore` layer stays cached until a `.csproj` or `Directory.Packages.props` changes.
+- **Immutable deployments**: images are pushed with the `<short-sha>` tag and the deploy step uses that tag, so every Container App revision maps to exactly one commit. A rollback is "redeploy the previous SHA".
+- **`latest` means "verified"**: `promote-latest` points `latest` at the new SHA only after the deploy and smoke tests pass. Re-tagging is a manifest-only operation, so no layers are copied. `deploy.ps1` and `azd` default to `latest`, so they always pull a known-good build.
 - **PRs validate everything except the deploy**: Dockerfiles are still built on PRs, so a broken image is caught before merge.
 - **No long-lived cloud credentials**: GitHub requests a short-lived OIDC token, and Entra ID trusts it because of the federated credential configured in Step 1 below.
 

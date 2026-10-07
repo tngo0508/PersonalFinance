@@ -40,14 +40,14 @@ COPY ["PersonalFinance/src/PersonalFinance.ServiceDefaults/", "PersonalFinance/s
 COPY ["PersonalFinance/src/PersonalFinance.Web/", "PersonalFinance/src/PersonalFinance.Web/"]
 
 WORKDIR "/src/PersonalFinance/src/PersonalFinance.Web"
-RUN dotnet build "PersonalFinance.Web.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # ---------------------------------------------------------
 # Stage 3: Publish Standalone / Release Artifacts
 # ---------------------------------------------------------
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "PersonalFinance.Web.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# publish compiles the project itself, so there is no separate `dotnet build` step (saves a full compile per image)
+RUN dotnet publish "PersonalFinance.Web.csproj" -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
 # ---------------------------------------------------------
 # Stage 4: Production Final Runtime
