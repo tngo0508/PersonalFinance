@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Local Development Azure SQL Provisioning**:
+  - Added standalone `infra/local-dev.bicep` template provisioning only the Azure SQL server and Serverless Free Tier `PersonalFinance` database for running the app locally against Azure SQL.
+  - Added `infra/deploy-local-sql.ps1` script that creates the `rg-personalfinance-dev` resource group, auto-detects the developer machine's public IP for the SQL firewall, deploys the template, and stores the resulting connection string in .NET User Secrets (`ConnectionStrings:DefaultConnection`) for `PersonalFinance.ApiService` and `PersonalFinance.Web`.
+  - Added `allowedClientIpAddresses` parameter to `infra/modules/sql-database.bicep` creating per-IP server firewall rules (`AllowClientIp-{n}`).
 - **Database Connection String & Secrets Management Documentation**:
   - Documented secure database connection string workflows across CI/CD, Infrastructure-as-Code (Bicep), design-time EF Core tools, and local development in `DEVELOPMENT.md` and `deployment.md`.
   - Added step-by-step instructions for `.NET User Secrets` configuration (`ConnectionStrings:DefaultConnection`) across `PersonalFinance.Web` and `PersonalFinance.ApiService` to prevent sensitive credentials from being committed to Git or stored in `appsettings.json`.
@@ -120,6 +124,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Serilog Console Theme**: Configured `AnsiConsoleTheme.Code` with formatted output templates across `PersonalFinance.ApiService` and `PersonalFinance.Web` for high-contrast, clear, and readable console log output.
 
 ### Fixed
+- **Local SQL Provisioning Script Parameter Quoting on Windows PowerShell**:
+  - Fixed `infra/deploy-local-sql.ps1` failing with `Failed to parse string as JSON` because Windows PowerShell 5.1 strips embedded double quotes from native command arguments, corrupting the inline `allowedClientIpAddresses` JSON array (and passwords containing quotes or symbols).
+  - Deployment parameters are now written to a temporary ARM parameters file passed via `--parameters @file`, which is deleted after deployment.
+  - Added `az` exit code checking so failed deployments report a clear error instead of an empty provisioning state.
 - **Post-Deployment Smoke Test Timeouts & Hang Prevention in CI/CD**:
   - Enforced connection (`--connect-timeout 5`) and maximum execution (`--max-time 10`) timeouts on all `curl` probes in `.github/workflows/deploy-azure.yml`, preventing post-deployment smoke tests from hanging indefinitely on unresolved sockets or cold-starting Azure Container Apps ingress.
   - Added default HTTP `000` status capture fallback when network requests fail or time out, preventing broken subshell evaluations.

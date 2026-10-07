@@ -97,17 +97,39 @@ if (-not $SqlAdminPassword) {
 # 4. Deploy
 Write-Host "`n[4/5] Deploying Azure SQL (this can take a few minutes)..." -ForegroundColor Yellow
 $deploymentName = "localdev-sql-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-$deploymentResult = az deployment group create `
-    --name $deploymentName `
-    --resource-group $ResourceGroupName `
-    --template-file $TemplateFile `
-    --parameters `
-        "environmentName=$EnvironmentName" `
-        "sqlLocation=$SqlLocation" `
-        "sqlAdministratorLogin=$SqlAdminLogin" `
-        "sqlAdministratorLoginPassword=$SqlAdminPassword" `
-        "allowedClientIpAddresses=[`"$ClientIpAddress`"]" `
-    --output json | ConvertFrom-Json
+
+# Pass parameters via a temp JSON file: Windows PowerShell strips embedded quotes when
+# calling native commands, which breaks inline JSON (array param) and symbol-heavy passwords.
+$parametersFile = Join-Path ([System.IO.Path]::GetTempPath()) "$deploymentName.parameters.json"
+@{
+    '$schema'      = "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#"
+    contentVersion = "1.0.0.0"
+    parameters     = @{
+        environmentName               = @{ value = $EnvironmentName }
+        sqlLocation                   = @{ value = $SqlLocation }
+        sqlAdministratorLogin         = @{ value = $SqlAdminLogin }
+        sqlAdministratorLoginPassword = @{ value = $SqlAdminPassword }
+        allowedClientIpAddresses      = @{ value = @($ClientIpAddress) }
+    }
+} | ConvertTo-Json -Depth 5 | Set-Content -Path $parametersFile -Encoding UTF8
+
+try {
+    $deploymentJson = az deployment group create `
+        --name $deploymentName `
+        --resource-group $ResourceGroupName `
+        --template-file $TemplateFile `
+        --parameters "@$parametersFile" `
+        --output json
+    $azExitCode = $LASTEXITCODE
+} finally {
+    Remove-Item -Path $parametersFile -Force -ErrorAction SilentlyContinue
+}
+
+if ($azExitCode -ne 0 -or -not $deploymentJson) {
+    Write-Error "Azure deployment failed (see az error output above)."
+    exit 1
+}
+$deploymentResult = $deploymentJson | ConvertFrom-Json
 
 if ($deploymentResult.properties.provisioningState -ne "Succeeded") {
     Write-Error "Deployment finished with state: $($deploymentResult.properties.provisioningState)"
