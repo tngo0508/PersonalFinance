@@ -4,9 +4,21 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      # Docs and IDE settings don't affect the build or deployment
+      - '**/*.md'
+      - '.idea/**'
+      - '.junie/**'
+      - '.claude/**'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      # Docs and IDE settings don't affect the build or deployment
+      - '**/*.md'
+      - '.idea/**'
+      - '.junie/**'
+      - '.claude/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -29,6 +41,12 @@ permissions:
   contents: read
   packages: write
   id-token: write
+
+# One run per PR / branch. A new push to a PR cancels its in-progress run; runs on main
+# queue instead of cancelling so an Azure deployment is never interrupted mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_VERSION: '10.0.x'
@@ -57,6 +75,14 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
       - name: Restore NuGet packages
         run: dotnet restore PersonalFinance.sln
 
@@ -66,21 +92,47 @@ jobs:
       - name: Execute test suite
         run: dotnet test PersonalFinance.sln --configuration Release --no-build --verbosity normal
 
+  # ============================================================================
+  # 1b. VALIDATE INFRASTRUCTURE TEMPLATES (runs in parallel with build-and-test)
+  # ============================================================================
+  validate-infra:
+    name: Validate Bicep Templates
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Validate Bicep infrastructure templates
-        run: az bicep build --file infra/main.bicep
+        run: |
+          az bicep build --file infra/main.bicep --stdout > /dev/null
+          az bicep build --file infra/local-dev.bicep --stdout > /dev/null
 
   # ============================================================================
   # 2. BUILD & PUSH MULTI-STAGE CONTAINERS (GHCR - $0.00 REGISTRY)
+  # Runs in parallel with build-and-test (one matrix leg per image). Images are pushed
+  # with the commit SHA tag only; deploy-azure still requires every check to pass, and
+  # `latest` is moved by promote-latest only after a successful deploy + smoke test.
   # ============================================================================
   build-and-push-containers:
-    name: Build & Push Containers (GHCR)
-    needs: build-and-test
+    name: Build & Push Containers (GHCR) · ${{ matrix.service }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api
+            dockerfile: PersonalFinance/src/PersonalFinance.ApiService/Dockerfile
+          - service: web
+            dockerfile: PersonalFinance/src/PersonalFinance.Web/Dockerfile
+    env:
+      PUSH_IMAGE: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
     outputs:
+      # Deterministic from the commit SHA, so both matrix legs write identical values
       api_image_tag: ${{ steps.tags.outputs.api_image_tag }}
       web_image_tag: ${{ steps.tags.outputs.web_image_tag }}
       owner_lc: ${{ steps.tags.outputs.owner_lc }}
@@ -99,66 +151,49 @@ jobs:
           API_IMAGE="ghcr.io/${OWNER_LC}/${{ env.API_IMAGE_NAME }}"
           WEB_IMAGE="ghcr.io/${OWNER_LC}/${{ env.WEB_IMAGE_NAME }}"
 
+          if [[ "${{ matrix.service }}" == "api" ]]; then IMAGE="$API_IMAGE"; else IMAGE="$WEB_IMAGE"; fi
+
           echo "owner_lc=${OWNER_LC}" >> $GITHUB_OUTPUT
-          echo "api_image=${API_IMAGE}" >> $GITHUB_OUTPUT
-          echo "web_image=${WEB_IMAGE}" >> $GITHUB_OUTPUT
+          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
           echo "api_image_tag=${API_IMAGE}:${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "web_image_tag=${WEB_IMAGE}:${SHORT_SHA}" >> $GITHUB_OUTPUT
 
       - name: Log in to GitHub Container Registry (GHCR)
-        if: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
+        if: ${{ env.PUSH_IMAGE == 'true' }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for ApiService container
-        id: meta-api
+      - name: Extract container metadata
+        id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.tags.outputs.api_image }}
+          images: ${{ steps.tags.outputs.image }}
           tags: |
             type=sha,format=short,prefix=
-            type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push ApiService container
+      # Each image has its own cache scope so the two builds don't overwrite each other.
+      # PRs only read the cache: exporting it (mode=max includes the SDK layers) costs
+      # ~50s per image and a PR's cache can't be reused by other branches anyway.
+      - name: Build and push ${{ matrix.service }} container
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: PersonalFinance/src/PersonalFinance.ApiService/Dockerfile
-          push: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
-          tags: ${{ steps.meta-api.outputs.tags }}
-          labels: ${{ steps.meta-api.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max,ignore-error=true
-
-      - name: Extract metadata for Web container
-        id: meta-web
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ steps.tags.outputs.web_image }}
-          tags: |
-            type=sha,format=short,prefix=
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Web container
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: PersonalFinance/src/PersonalFinance.Web/Dockerfile
-          push: ${{ github.event_name != 'pull_request' && inputs.dry_run != true }}
-          tags: ${{ steps.meta-web.outputs.tags }}
-          labels: ${{ steps.meta-web.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max,ignore-error=true
+          file: ${{ matrix.dockerfile }}
+          push: ${{ env.PUSH_IMAGE == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: ${{ env.PUSH_IMAGE == 'true' && format('type=gha,scope={0},mode=max,ignore-error=true', matrix.service) || '' }}
 
   # ============================================================================
   # 3. DEPLOY INFRASTRUCTURE & CONTAINER APPS (Bicep + Azure OIDC)
   # ============================================================================
   deploy-azure:
     name: Deploy to Azure Container Apps
-    needs: build-and-push-containers
+    needs: [build-and-test, validate-infra, build-and-push-containers]
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && inputs.dry_run != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -398,3 +433,34 @@ jobs:
           echo "================================================================"
           echo " All post-deployment smoke tests passed successfully!"
           echo "================================================================"
+
+  # ============================================================================
+  # 5. PROMOTE DEPLOYED IMAGES TO `latest` (only after deploy + smoke tests pass)
+  # ============================================================================
+  promote-latest:
+    name: Promote Images to latest
+    needs: [build-and-push-containers, smoke-test]
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag deployed images as latest
+        env:
+          API_IMAGE_TAG: ${{ needs.build-and-push-containers.outputs.api_image_tag }}
+          WEB_IMAGE_TAG: ${{ needs.build-and-push-containers.outputs.web_image_tag }}
+        run: |
+          # Re-points the manifest; no layers are pulled or pushed
+          for IMAGE_TAG in "$API_IMAGE_TAG" "$WEB_IMAGE_TAG"; do
+            docker buildx imagetools create --tag "${IMAGE_TAG%:*}:latest" "$IMAGE_TAG"
+            echo "  -> ${IMAGE_TAG%:*}:latest now points to ${IMAGE_TAG##*:}"
+          done

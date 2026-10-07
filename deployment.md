@@ -4,45 +4,354 @@ This guide provides deterministic, step-by-step instructions for deploying the *
 
 ---
 
-## 1. Architecture & Deployment Strategy Overview
+## 1. Architecture & Deployment Overview
 
-The application comprises two core containerized workloads running in .NET 10:
-- **`PersonalFinance.Web` (Frontend)**: ASP.NET Core MVC with Razor Pages, Identity UI, Bootstrap 5, and Chart.js. Exposed via external HTTPS ingress.
-- **`PersonalFinance.ApiService` (Backend)**: Minimal API REST backend handling Google Drive integration and OpenAPI documentation (`/scalar/v1`). Configured with internal ingress only within the Container Apps Environment for zero-trust security.
-- **Data Persistence Tier**: Supports **SQLite** (local volume/file-backed) or **Azure SQL Database (Serverless Free Tier)** with automatic cold-start retry resilience.
+This section is the "big picture": what gets built, where it runs, how a commit becomes a running container, and how a request flows through the system at runtime. Every diagram below is derived from the actual pipeline (`.github/workflows/deploy-azure.yml`) and infrastructure code (`infra/main.bicep` + `infra/modules/*.bicep`), so it doubles as a map for reading the source.
 
+> **How to read the diagrams**: they are [Mermaid](https://mermaid.js.org/) diagrams and render automatically on GitHub and in most Markdown previewers (VS Code, Rider). Solid arrows are runtime traffic; dashed arrows are build/deploy-time actions.
+
+### 1.1 The Big Picture (System Context)
+
+```mermaid
+flowchart LR
+    dev(["👩‍💻 Developer"])
+    user(["🧑 End user<br/>(browser)"])
+
+    subgraph GH["GitHub"]
+        repo[("Repository<br/>tngo0508/PersonalFinanceApp")]
+        actions["GitHub Actions<br/>deploy-azure.yml"]
+        secrets[["Repository secrets<br/>&amp; variables"]]
+        ghcr[("GitHub Container Registry<br/>ghcr.io/&lt;owner&gt;/personalfinance-api<br/>ghcr.io/&lt;owner&gt;/personalfinance-web")]
+    end
+
+    entra["Microsoft Entra ID<br/>App registration +<br/>federated credential (OIDC)"]
+
+    subgraph AZ["Azure subscription"]
+        subgraph RG["Resource group: rg-personalfinance-prod"]
+            law[("Log Analytics workspace<br/>law-pf-prod-*")]
+            subgraph CAE["Container Apps environment: cae-pf-prod-* (Consumption)"]
+                web["Container App: web-pf-prod-*<br/>PersonalFinance.Web<br/>ASP.NET Core MVC + Identity<br/>external HTTPS ingress"]
+                api["Container App: api-pf-prod-*<br/>PersonalFinance.ApiService<br/>REST API (controllers)<br/>ingress: see 1.10"]
+            end
+            subgraph SQLS["Azure SQL logical server: sql-pf-prod-* (westus2)"]
+                sqldb[("Database: PersonalFinance<br/>Serverless GP_S_Gen5_1<br/>free offer, auto-pause")]
+            end
+        end
+    end
+
+    subgraph EXT["External SaaS"]
+        goauth["Google OAuth 2.0<br/>(sign-in)"]
+        gdrive["Google Drive API v3<br/>(files, sheet export)"]
+        brevo["Brevo REST API<br/>(transactional email)"]
+    end
+
+    dev -. "git push / PR / manual run" .-> repo
+    repo -. "triggers" .-> actions
+    secrets -. "injected at deploy" .-> actions
+    actions -. "docker push (sha tag; latest after smoke test)" .-> ghcr
+    actions -. "OIDC token exchange" .-> entra
+    actions -. "az deployment group create<br/>(Bicep)" .-> RG
+    ghcr -. "image pull" .-> CAE
+
+    user -- "HTTPS" --> web
+    web -- "Refit HTTP client<br/>/api/googledrive/*" --> api
+    web -- "Identity, data-protection keys<br/>(EF Core)" --> sqldb
+    api -- "Drive cache, connections<br/>(EF Core)" --> sqldb
+    api -- "HTTPS + API key" --> gdrive
+    web -- "OAuth redirect flow" --> goauth
+    web -- "confirmation / reset emails" --> brevo
+    CAE -- "console logs" --> law
 ```
-                      ┌──────────────────────────────────────────────┐
-                      │            PersonalFinance System            │
-                      └──────────────────────┬───────────────────────┘
-                                             │
-             ┌───────────────────────────────┼──────────────────────────────┐
-             │                               │                              │
-             ▼                               ▼                              ▼
-  [ GitHub Actions CI/CD ]       [ Local Azure CLI / azd ]        [ Local Docker Engine ]
-   • .github/workflows/           • infra/deploy.ps1               • Dockerfile build/run
-     deploy-azure.yml             • azd up (azure.yaml)            • Multi-container test
-             │                               │                              │
-             │                               │                              │
-             └───────────────────────┬───────┴──────────────────────────────┘
-                                     │
-                                     ▼
-                     ┌───────────────────────────────┐
-                     │   Azure Container Apps (ACA)  │
-                     │  • Web: External Ingress      │
-                     │  • API: Internal Ingress      │
-                     │  • Database: SQLite/Azure SQL │
-                     └───────────────────────────────┘
+
+**In one sentence**: a push to `main` builds and tests the .NET 10 solution, packages two Docker images into GHCR, signs in to Azure *without a stored password* (OIDC), deploys the Bicep templates that describe the whole environment, and finally smoke-tests the public site.
+
+### 1.2 Solution Projects and What Runs Where
+
+```mermaid
+flowchart TB
+    subgraph deployed["Deployed as containers"]
+        web["PersonalFinance.Web<br/>MVC views, Identity UI,<br/>Refit client"]
+        api["PersonalFinance.ApiService<br/>API controllers, Google Drive service,<br/>OpenAPI + Scalar"]
+    end
+    subgraph libs["Class libraries (compiled into both images)"]
+        data["PersonalFinance.Data<br/>AppDbContext, migrations,<br/>MigrateAndSeedDatabaseAsync"]
+        shared["PersonalFinance.Shared<br/>DTOs, IGoogleDriveApi (Refit contract),<br/>GoogleDriveHelper"]
+        sd["PersonalFinance.ServiceDefaults<br/>OpenTelemetry, /health, /alive,<br/>resilience, service discovery"]
+    end
+    subgraph localonly["Local development only"]
+        apphost["PersonalFinance.AppHost<br/>.NET Aspire orchestrator"]
+        tests["PersonalFinance.Tests<br/>xUnit (run in CI)"]
+    end
+
+    web --> data & shared & sd
+    api --> data & shared & sd
+    apphost -. "starts &amp; wires" .-> web & api
+    tests -. "tests" .-> web & api & data & shared
 ```
 
-### Deployment Modality Selection Matrix
+| Project | Runs in Azure? | Role |
+|---|---|---|
+| `PersonalFinance.Web` | ✅ Container App `web-*` | The only public entry point. Server-rendered MVC + Razor Pages (Identity), cookie authentication, Google sign-in, Brevo email, and a typed **Refit** client (`IGoogleDriveApi`) that calls the API. |
+| `PersonalFinance.ApiService` | ✅ Container App `api-*` | Business logic for Google Drive: explore folders, persist connections and cached file metadata, export spreadsheets and build budget reports. Serves OpenAPI/Scalar when `ApiDocs__Enabled=true`. |
+| `PersonalFinance.Data` | Inside both images | EF Core `AppDbContext` (Identity tables + Drive tables), SQL Server migrations, and the startup migration/seed routine both apps call. |
+| `PersonalFinance.Shared` | Inside both images | Contracts shared by both sides: DTOs and the Refit interface, so the client and server cannot drift apart silently. |
+| `PersonalFinance.ServiceDefaults` | Inside both images | Aspire "service defaults": OpenTelemetry, `/health` + `/alive` endpoints used by the Container Apps probes, HTTP resilience. |
+| `PersonalFinance.AppHost` | ❌ local only | `dotnet run` it to start both apps together with the Aspire dashboard. In Azure, Bicep replaces it (it wires the same `services__apiservice__*` settings). |
+| `PersonalFinance.Tests` | ❌ CI only | Unit/integration tests executed by the `build-and-test` job. |
+
+### 1.3 The CI/CD Pipeline
+
+```mermaid
+flowchart TD
+    trigger{{"Trigger<br/>(docs-only changes are skipped)"}}
+    trigger -->|"pull_request → main · push → main ·<br/>workflow_dispatch (environment, deploy_sql, dry_run)"| parallel
+
+    subgraph parallel["Run in parallel"]
+        subgraph job1["build-and-test (≤15 min)"]
+            bt["checkout → setup .NET 10 →<br/>NuGet cache → restore → build (Release) →<br/>dotnet test"]
+        end
+        subgraph job1b["validate-infra (≤5 min)"]
+            vi["az bicep build<br/>main.bicep + local-dev.bicep"]
+        end
+        subgraph job2["build-and-push-containers (≤20 min) · matrix"]
+            imgapi["api image<br/>(cache scope: api)"]
+            imgweb["web image<br/>(cache scope: web)"]
+        end
+    end
+
+    push{"PR or dry_run?"}
+    imgapi & imgweb --> push
+    push -->|"yes"| nopush["Build only · read-only cache<br/>(validates Dockerfiles)"]
+    push -->|"no"| pushed["Push to GHCR<br/>tag: &lt;short-sha&gt;<br/>+ export layer cache"]
+
+    subgraph job3["deploy-azure (≤40 min) · push / dispatch only, not dry_run"]
+        login["azure/login (OIDC)"]
+        rg["Ensure resource group exists<br/>(reuse if present)"]
+        wait["Wait if old Container Apps<br/>environment is being deleted"]
+        val["Validate DB secrets:<br/>SQL_ADMIN_PASSWORD or<br/>CUSTOM_CONNECTION_STRING"]
+        bicep["azure/arm-deploy → infra/main.bicep<br/>images pinned to &lt;short-sha&gt;"]
+        diag["On failure: dump deployment<br/>operations per module"]
+        login --> rg --> wait --> val --> bicep
+        bicep -. "failure()" .-> diag
+    end
+
+    subgraph job4["smoke-test (≤10 min)"]
+        smoke["curl the Web URL from deploy outputs:<br/>/health (30 retries, cold start) →<br/>/alive → / (200/302) →<br/>/Identity/Account/Login"]
+    end
+
+    subgraph job5["promote-latest (≤5 min) · default branch only"]
+        latest["docker buildx imagetools create<br/>&lt;short-sha&gt; → latest"]
+    end
+
+    bt & vi & pushed -->|"all must succeed"| login
+    bicep -->|"outputs: webUrl, webFqdn, apiFqdn"| smoke
+    smoke --> latest
+```
+
+| Trigger | Build & test + Bicep | Build images | Push to GHCR | Deploy to Azure | Smoke test | Move `latest` |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Pull request to `main` | ✅ | ✅ (cache read-only) | ❌ | ❌ | ❌ | ❌ |
+| Push / merge to `main` | ✅ | ✅ | ✅ `<sha>` | ✅ | ✅ | ✅ |
+| Manual (`workflow_dispatch`) | ✅ | ✅ | ✅ `<sha>` | ✅ | ✅ | ✅ *(on `main`)* |
+| Manual with `dry_run = true` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Only `*.md` / IDE folders changed | *workflow not triggered* | | | | | |
+
+> **Note**: `dry_run` skips pushing and deploying; it does not run an Azure What-If. For a What-If preview use `.\infra\deploy.ps1 -WhatIf` (Section 4).
+
+**Why it is built this way (things worth learning)**:
+- **Parallel, not serial**: the tests, the Bicep check and the two image builds start at the same time. Only `deploy-azure` waits for all of them (`needs: [build-and-test, validate-infra, build-and-push-containers]`), so nothing reaches Azure unless every check passed.
+- **Cheap PR runs**:
+  - A new push to a PR cancels the PR's in-progress run (`concurrency` + `cancel-in-progress`). Runs on `main` queue instead, so a deployment is never cut off halfway.
+  - Docs-only changes skip the workflow (`paths-ignore`).
+  - PR image builds read the Docker layer cache from `main` but don't upload one.
+- **Per-image layer cache**: each image has its own GitHub Actions cache scope (`scope=api` / `scope=web`), so the two builds don't overwrite each other's cache and the `dotnet restore` layer stays cached until a `.csproj` or `Directory.Packages.props` changes.
+- **Immutable deployments**: images are pushed with the `<short-sha>` tag and the deploy step uses that tag, so every Container App revision maps to exactly one commit. A rollback is "redeploy the previous SHA".
+- **`latest` means "verified"**: `promote-latest` points `latest` at the new SHA only after the deploy and smoke tests pass. Re-tagging is a manifest-only operation, so no layers are copied. `deploy.ps1` and `azd` default to `latest`, so they always pull a known-good build.
+- **PRs validate everything except the deploy**: Dockerfiles are still built on PRs, so a broken image is caught before merge.
+- **No long-lived cloud credentials**: GitHub requests a short-lived OIDC token, and Entra ID trusts it because of the federated credential configured in Step 1 below.
+
+### 1.4 What Happens Inside `deploy-azure`
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant R as GitHub runner
+    participant E as Entra ID
+    participant ARM as Azure Resource Manager
+    participant LAW as Log Analytics
+    participant CAE as Container Apps env
+    participant SQL as Azure SQL
+    participant API as api-* app
+    participant WEB as web-* app
+    participant G as GHCR
+
+    R->>E: OIDC token (repo + branch claims)
+    E-->>R: Azure access token (Contributor role)
+    R->>ARM: az group exists / create rg-personalfinance-prod
+    R->>ARM: arm-deploy infra/main.bicep (params + @secure secrets)
+    ARM->>LAW: module logAnalyticsDeployment
+    ARM->>CAE: module containerEnvDeployment (needs workspace key)
+    ARM->>SQL: module sqlDatabaseDeployment (if deploySqlDatabase)
+    ARM->>API: module apiServiceDeployment (secrets: Drive key, connection string)
+    API->>G: pull personalfinance-api:<sha>
+    ARM->>WEB: module webServiceDeployment (needs API FQDN)
+    WEB->>G: pull personalfinance-web:<sha>
+    Note over API,WEB: New revision starts → startup probe /alive →<br/>EF Core migrations run → readiness probe /health
+    ARM-->>R: outputs webUrl, webFqdn, apiFqdn, sqlServerFqdn
+```
+
+The Bicep modules and their dependencies (ARM works out the order from these references and runs independent modules in parallel):
+
+```mermaid
+flowchart LR
+    main["infra/main.bicep"]
+    la["log-analytics.bicep<br/>PerGB2018, 30-day retention"]
+    env["container-env.bicep<br/>Consumption workload profile"]
+    sql["sql-database.bicep<br/>server + firewall + DB<br/>(optional)"]
+    apim["api-service.bicep<br/>0.25 vCPU / 0.5 Gi, 0–1 replicas"]
+    webm["web-service.bicep<br/>0.25 vCPU / 0.5 Gi, 0–1 replicas"]
+
+    main --> la & env & sql & apim & webm
+    la -- "workspace id" --> env
+    env -- "environment id" --> apim & webm
+    sql -- "server FQDN → connection string" --> apim & webm
+    apim -- "app name + FQDN" --> webm
+```
+
+| Resource | Bicep module | Name pattern | Cost model |
+|---|---|---|---|
+| Log Analytics workspace | `log-analytics.bicep` | `law-<env>-<hash>` | First 5 GB/month ingestion free |
+| Container Apps environment | `container-env.bicep` | `cae-<env>-<hash>` | No charge itself (Consumption profile) |
+| Container App (API) | `api-service.bicep` | `api-<env>-<hash>` | Consumption; scales to zero; monthly free grant |
+| Container App (Web) | `web-service.bicep` | `web-<env>-<hash>` | Consumption; scales to zero; monthly free grant |
+| Azure SQL server + database | `sql-database.bicep` | `sql-<env>-<hash>` / `PersonalFinance` | Serverless `GP_S_Gen5_1` with the free offer (auto-pause) |
+| Container images | *(GitHub)* | `ghcr.io/<owner>/personalfinance-{api,web}` | Free for public packages |
+
+`<hash>` is `uniqueString(resourceGroup().id, location)`, which gives names that are stable across redeploys and unique per resource group. The SQL server hashes `sqlLocation` instead, because SQL server names are tied to their region.
+
+### 1.5 Runtime Request Flow (Example: Opening a Budget Report)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Browser
+    participant W as Web (MVC)
+    participant DB as Azure SQL
+    participant A as ApiService
+    participant D as Google Drive API
+
+    U->>W: GET /GoogleDrive (auth cookie)
+    W->>DB: Identity: validate user / security stamp
+    W->>A: Refit GET /api/googledrive/connections?userId=…
+    A->>DB: load connections + cached file metadata
+    A-->>W: JSON (DTOs from PersonalFinance.Shared)
+    W-->>U: Razor view + /js/google-drive/*.js
+    U->>W: XHR GET /GoogleDrive/MonthlyBudgetReport?fileId=…
+    W->>A: Refit GET /api/googledrive/spreadsheet-report
+    A->>D: export sheet as .xlsx (fallback: CSV) with API key
+    D-->>A: spreadsheet bytes
+    A->>A: parse sheets, aggregate months & categories
+    A-->>W: MonthlyBudgetReportDto
+    W-->>U: JSON → budget-report.js renders tiles, charts, meters
+```
+
+Key points:
+- **The browser only ever talks to Web.** Web is a backend-for-frontend: it owns authentication, then calls the API server-to-server.
+- **The database is shared.** Both apps use the same `AppDbContext` and the same Azure SQL database (Identity tables plus Google Drive tables).
+- **The serverless database auto-pauses when idle.** The first query after a pause can take up to about a minute; `EnableRetryOnFailure` in `PersonalFinance.Data` absorbs it.
+
+### 1.6 Configuration & Secrets Flow
+
+A secret is never written into an image or committed to Git. It travels like this:
+
+```mermaid
+flowchart LR
+    s1[["GitHub secret<br/>e.g. BREVO_API_KEY"]]
+    s2["arm-deploy parameter<br/>brevoApiKey=***"]
+    s3["Bicep @secure() param<br/>(redacted in deployment history)"]
+    s4["Container App secret<br/>brevo-api-key"]
+    s5["Env var with secretRef<br/>Brevo__ApiKey"]
+    s6["IConfiguration key<br/>Brevo:ApiKey → BrevoOptions"]
+    s1 --> s2 --> s3 --> s4 --> s5 --> s6
+```
+
+`__` (double underscore) in an environment variable name becomes `:` in .NET configuration, so `ConnectionStrings__DefaultConnection` is read by `GetConnectionString("DefaultConnection")`.
+
+| GitHub secret / variable | Container App secret | Env var in container | Used by |
+|---|---|---|---|
+| `SQL_ADMIN_PASSWORD` *(builds the connection string)* or `CUSTOM_CONNECTION_STRING` | `db-connection-string` | `ConnectionStrings__DefaultConnection` | Web + API |
+| `GOOGLE_DRIVE_API_KEY` | `google-drive-api-key` | `GoogleDrive__ApiKey` | API |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `google-client-id` / `google-client-secret` | `Authentication__Google__ClientId` / `__ClientSecret` | Web |
+| `BREVO_API_KEY` | `brevo-api-key` | `Brevo__ApiKey` | Web |
+| `vars.BREVO_SENDER_EMAIL` / `vars.BREVO_SENDER_NAME` | *(plain env)* | `Brevo__SenderEmail` / `Brevo__SenderName` | Web |
+| *(computed by Bicep)* | *(plain env)* | `ApiSettings__BaseUrl=https://<api FQDN>`, `services__apiservice__http__0` | Web → API |
+| `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID` | — | — | Pipeline login only (OIDC) |
+
+Locally the same keys come from **.NET User Secrets** (`dotnet user-secrets set "ConnectionStrings:DefaultConnection" …`), so the code reads configuration the same way in every environment.
+
+### 1.7 Startup, Health and Scale-to-Zero Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Zero: no traffic
+    Zero --> Starting: first HTTP request arrives
+    Starting --> Migrating: startup probe /alive passes
+    Migrating --> Ready: EF Core migrations + seed complete,<br/>readiness probe /health passes
+    Ready --> Ready: liveness /alive every 15s
+    Ready --> Zero: idle → scaled to 0 replicas
+    Ready --> Starting: new revision deployed
+```
+
+- **Scale rule**: HTTP, 100 concurrent requests per replica, `minReplicas: 0`, `maxReplicas: 1`. With zero replicas the app costs nothing, but the first request waits for a cold start; the smoke test retries `/health` up to 30 times for this reason.
+- **Migrations at startup**: both `Program.cs` files call `MigrateAndSeedDatabaseAsync()`, so a deploy that adds a migration applies it when the new revision starts. `--migrate-only` / `MIGRATE_ONLY=true` runs migrations and exits, for use as a one-off job.
+- **Logs**: container stdout (Serilog console output) goes to the Log Analytics workspace (`ContainerAppConsoleLogs_CL`). See Section 8.6 for live tailing.
+
+### 1.8 Environments at a Glance
+
+| Environment | How you start it | Orchestration | Database | Secrets source |
+|---|---|---|---|---|
+| **Local (Aspire)** | `dotnet run --project PersonalFinance/src/PersonalFinance.AppHost` | .NET Aspire AppHost + dashboard | Dev Azure SQL from `infra/deploy-local-sql.ps1` (`rg-personalfinance-dev`) or a local SQL Server | .NET User Secrets |
+| **Local (Docker)** | Section 6 | `docker network` with two containers | Any SQL Server reachable from Docker, passed via `ConnectionStrings__DefaultConnection` | `-e` environment variables |
+| **Azure (production)** | Push to `main` (Section 3), `deploy.ps1` (Section 4) or `azd up` (Section 5) | Azure Container Apps | Serverless Azure SQL, or `CUSTOM_CONNECTION_STRING` | GitHub secrets → Container App secrets |
+| **Tests** | `dotnet test` | — | EF Core InMemory provider | — |
+
+### 1.9 Deployment Modality Selection Matrix
 
 | Deployment Method | Target Environment | Best For | Ingress & Networking | Database Tier |
 |---|---|---|---|---|
-| **Option 1: GitHub Actions CI/CD (Recommended)** | Azure Container Apps | Automated production deployments, continuous delivery on push to `main` or manual trigger. | Web: External<br/>API: Internal | Azure SQL Serverless Free or SQLite |
-| **Option 2: PowerShell / Azure CLI (`deploy.ps1`)** | Azure Container Apps | Direct terminal control, parameter tweaking, dry-run validation (`-ValidateOnly`, `-WhatIf`). | Web: External<br/>API: Internal | Azure SQL Serverless Free or SQLite |
-| **Option 3: Azure Developer CLI (`azd`)** | Azure Container Apps | Standardized developer workflows and single-command provisioning (`azd up`). | Web: External<br/>API: Internal | Azure SQL Serverless Free or SQLite |
-| **Option 4: Local Multi-Stage Docker** | Local Machine (Docker) | Pre-commit validation, isolated local integration testing, zero Azure account dependency. | Localhost ports `8080` (Web) & `8081` (API) | Local SQLite |
+| **Option 1: GitHub Actions CI/CD (Recommended)** | Azure Container Apps | Automated production deployments, continuous delivery on push to `main` or manual trigger. | Web: External<br/>API: see 1.10 | Azure SQL Serverless Free, or custom connection string |
+| **Option 2: PowerShell / Azure CLI (`deploy.ps1`)** | Azure Container Apps | Direct terminal control, parameter tweaking, dry-run validation (`-ValidateOnly`, `-WhatIf`). | Web: External<br/>API: Internal | Azure SQL Serverless Free (`-DeploySqlDatabase`), or custom connection string |
+| **Option 3: Azure Developer CLI (`azd`)** | Azure Container Apps | Standardized developer workflows and single-command provisioning (`azd up`). | Web: External<br/>API: Internal | Azure SQL Serverless Free, or custom connection string |
+| **Option 4: Local Multi-Stage Docker** | Local machine (Docker) | Pre-commit validation and isolated local integration testing. | Localhost ports `8080` (Web) & `8081` (API) | Any reachable SQL Server (e.g. the dev Azure SQL database) |
+
+### 1.10 Security Posture and Known Gaps
+
+What the design already does well:
+- **Passwordless CI/CD**: OIDC federation, so no Azure secret is stored in GitHub.
+- **Secrets stay out of code and images**: secure Bicep params, then Container App secrets, then `secretRef` env vars.
+- **HTTPS-only ingress** (`allowInsecure: false`), and the Web app trusts `X-Forwarded-*` from the Container Apps proxy.
+- **Hardened images**: chiseled, non-root (`USER $APP_UID`) runtime images built in multiple stages.
+- **Web app protections**: Identity with confirmed accounts and strong passwords, secure/HttpOnly cookies, global antiforgery validation, and data-protection keys stored in SQL so sign-ins survive restarts.
+
+Gaps to understand (and fix before handling real financial data):
+
+| Gap | Where | Why it matters | Typical fix |
+|---|---|---|---|
+| **API is public and unauthenticated in CI deployments** | `deploy-azure.yml` passes `exposeApiPublicly=true` (added for testing); the API trusts the `userId` it is given | Anyone who finds the `api-*` URL can call it and read or modify other users' Drive connections | Set `exposeApiPublicly=false` (internal ingress) and/or require a token from Web (managed identity or a JWT) |
+| **SQL admin login in the connection string** | `main.bicep` builds the connection string with `sqladmin` + password | One shared admin credential is used by both apps | Microsoft Entra authentication with the Container Apps' managed identities (`Authentication=Active Directory Managed Identity`) |
+| **SQL firewall allows all Azure IPs** | `sql-database.bicep` rule `AllowAllWindowsAzureIps` (0.0.0.0) | Any Azure-hosted service (any tenant) can reach the server's login endpoint | Private endpoint + VNet-integrated Container Apps environment, or narrow outbound-IP rules |
+| **Broad pipeline permissions** | Step 1 allows assigning *Contributor* at subscription scope | A compromised workflow could change anything in the subscription | Scope the role to `rg-personalfinance-prod` (pre-create the group, since creating a group needs subscription-level rights) |
+
+### 1.11 Concepts This Solution Teaches
+
+- **Infrastructure as Code (Bicep)**: the whole environment can be recreated from `infra/` in minutes; modules, `@secure()` params, outputs and conditional modules (`if (deploySqlDatabase)`).
+- **GitHub Actions**: job graphs (`needs`), conditional jobs (`if:`), job outputs passed between jobs, timeouts, and OIDC (`id-token: write`).
+- **Containers**: multi-stage Dockerfiles, layer caching, non-root chiseled images, immutable SHA tags.
+- **Azure Container Apps**: environments, revisions, ingress (external vs internal), probes, HTTP scale rules and scale-to-zero.
+- **.NET Aspire**: one set of service defaults (telemetry, health, resilience) used by both the local AppHost and the cloud deployment.
+- **Backend-for-frontend**: an MVC app that owns authentication and calls an internal API through a shared, typed Refit contract.
+- **12-factor configuration**: the same code is configured per environment through environment variables and User Secrets.
+- **Serverless data**: cost-optimized Azure SQL with auto-pause, and resilient connections that tolerate cold starts.
 
 ---
 
@@ -362,7 +671,7 @@ The workflow automatically tests the following endpoints on the deployed web app
 | `/` | HTTP 200 OK or 302 (redirect) | Home page; validates web UI is accessible. |
 | `/Identity/Account/Login` | HTTP 200 OK | Login page; validates ASP.NET Core Identity UI is rendered. |
 
-> **Note**: The API Service (`PersonalFinance.ApiService`) has internal-only ingress and is not publicly smoke-tested. Its endpoints (`/scalar/v1`, `/openapi/v1.json`) are validated in the CI test suite.
+> **Note**: The smoke test only probes the Web app. The API Service (`PersonalFinance.ApiService`) is internal-only by default, but the CI workflow currently deploys it with `exposeApiPublicly=true` (public ingress + Scalar UI, no authentication) for testing. See [1.10 Security Posture and Known Gaps](#110-security-posture-and-known-gaps).
 
 **Verify in Azure Portal**:
 1. Navigate to the Azure Portal and open your Resource Group (`rg-personalfinance-prod`).
@@ -481,7 +790,7 @@ Preview the resource graph additions and modifications:
 
 #### Step 4: Provision & Deploy Full Stack
 
-##### Option A: Default Zero-Cost SQLite Stack
+##### Option A: Bring Your Own Database (Custom Connection String)
 ```powershell
 .\infra\deploy.ps1 `
   -ResourceGroupName "rg-personalfinance-prod" `
@@ -490,8 +799,11 @@ Preview the resource graph additions and modifications:
   -GoogleClientId "your-google-client-id.apps.googleusercontent.com" `
   -GoogleClientSecret "your-google-client-secret" `
   -BrevoApiKey "your-brevo-api-key" `
-  -GoogleDriveApiKey "your-google-drive-key"
+  -GoogleDriveApiKey "your-google-drive-key" `
+  -CustomConnectionString "Server=tcp:<server>,1433;Initial Catalog=PersonalFinance;..."
 ```
+
+> **Important**: pass `-DeploySqlDatabase` explicitly when you want Azure SQL provisioned (Option B). The script sends `$DeploySqlDatabase.IsPresent`, so the `= $true` default in its `param()` block has no effect: omitting the switch deploys **without** a database, and the apps then need `-CustomConnectionString`.
 
 ##### Option B: Azure SQL Database Serverless Free Tier Stack ($0.00)
 ```powershell
@@ -553,6 +865,7 @@ azd down --purge
 For local testing, CI runner validation, or developer verification without deploying to Azure, build and run both services using Docker.
 
 ### Container Architecture & Security
+- Both containers need `ConnectionStrings__DefaultConnection` pointing at a SQL Server they can reach (for example the dev Azure SQL database from `infra/deploy-local-sql.ps1`); without it they fall back to `localhost`, which inside a container is the container itself.
 - Built on .NET 10 SDK and multi-stage distroless runtime images (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra`).
 - Hardened non-root user execution (`USER $APP_UID`, UID `1654`).
 - Granular restore layer caching utilizing `Directory.Packages.props` Central Package Management (CPM).
@@ -585,6 +898,7 @@ docker run -d \
   --network personalfinance-net \
   -p 8081:8080 \
   -e ASPNETCORE_ENVIRONMENT=Development \
+  -e ConnectionStrings__DefaultConnection="<SQL_SERVER_CONNECTION_STRING>" \
   -e GoogleDrive__ApiKey="<OPTIONAL_GOOGLE_DRIVE_KEY>" \
   personalfinance-apiservice:latest
 
@@ -596,6 +910,7 @@ docker run -d \
   -e ASPNETCORE_ENVIRONMENT=Development \
   -e ApiSettings__BaseUrl="http://personalfinance-api:8080" \
   -e services__apiservice__http__0="http://personalfinance-api:8080" \
+  -e ConnectionStrings__DefaultConnection="<SQL_SERVER_CONNECTION_STRING>" \
   -e Authentication__Google__ClientId="<OPTIONAL_GOOGLE_CLIENT_ID>" \
   -e Authentication__Google__ClientSecret="<OPTIONAL_GOOGLE_CLIENT_SECRET>" \
   -e Brevo__ApiKey="<OPTIONAL_BREVO_KEY>" \
@@ -651,7 +966,7 @@ The repository includes an automated verification script that tests readiness, l
 | `/alive` | Liveness Probe | `200 OK` | Verifies process responsiveness and runtime availability. |
 | `/` | Landing / UI | `200 OK` or `302 Found` | Verifies MVC pipeline routing, layout rendering, and static assets. |
 | `/Identity/Account/Login` | Identity UI | `200 OK` | Verifies ASP.NET Core Identity Razor Pages and external provider button discovery. |
-| `/scalar/v1` *(ApiService)* | OpenAPI / Docs | `200 OK` | Internal-only API documentation (accessible internally via Container Apps Environment or locally). |
+| `/scalar/v1` *(ApiService)* | OpenAPI / Docs | `200 OK` | API documentation; reachable only when the API is exposed (`exposeApiPublicly=true`) or locally. |
 
 ### Manual Terminal Verification (cURL / PowerShell)
 
@@ -692,11 +1007,10 @@ Use the following runbook to diagnose and remediate common operational and deplo
 ---
 
 ### 3. Database Migration Lock or Schema Conflict
-- **Symptom**: Application logs show `SQLite Error 1: 'table "..." already exists'` or SQL Server lock timeouts.
+- **Symptom**: Application logs show `There is already an object named '...' in the database` or SQL Server lock timeouts during startup migrations.
 - **Root Cause**: An interrupted previous deployment held an EF Core migration lock or legacy pre-scaffolded tables were present.
 - **Remediation**:
-  - For SQLite: `DatabaseMigrationExtensions` automatically detects un-tracked legacy schemas and resets the SQLite database to cleanly apply current provider migrations.
-  - For Azure SQL: Run a dedicated migration execution:
+  - Run a dedicated migration execution (applies pending migrations and exits):
     ```bash
     dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --migrate-only
     ```

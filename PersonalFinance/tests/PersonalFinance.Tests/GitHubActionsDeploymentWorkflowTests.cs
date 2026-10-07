@@ -231,13 +231,48 @@ public class GitHubActionsDeploymentWorkflowTests
         var root = FindProjectRoot();
         var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
-        var timeoutMatches = Regex.Matches(workflow, @"timeout-minutes:\s*(\d+)");
-        Assert.Equal(4, timeoutMatches.Count);
+        // Every job (2-space indented key under `jobs:`) must declare its own timeout
+        var jobsSection = workflow[workflow.IndexOf("\njobs:", StringComparison.Ordinal)..];
+        var jobBlocks = Regex.Matches(jobsSection, @"\n  ([a-zA-Z0-9_-]+):[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
+        Assert.NotEmpty(jobBlocks);
+        foreach (Match job in jobBlocks)
+        {
+            Assert.True(Regex.IsMatch(job.Value, @"\n    timeout-minutes:\s*\d+"),
+                $"Job '{job.Groups[1].Value}' must define timeout-minutes.");
+        }
 
         // Verify smoke-test job specifically limits execution duration
         var smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
         Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
         Assert.Contains("timeout-minutes:", smokeTestJobMatch.Value);
+    }
+
+    [Fact]
+    public void DeploymentWorkflow_PullRequests_AreOptimizedForSpeed()
+    {
+        var root = FindProjectRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+
+        // Superseded PR runs are cancelled, but main deployments are never interrupted
+        Assert.Contains("concurrency:", workflow);
+        Assert.Contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", workflow);
+
+        // Docs-only changes skip the pipeline
+        Assert.Contains("paths-ignore:", workflow);
+        Assert.Contains("'**/*.md'", workflow);
+
+        // Images build as parallel matrix legs with per-image cache scopes; PRs don't export cache
+        Assert.Contains("matrix:", workflow);
+        Assert.Contains("cache-from: type=gha,scope=${{ matrix.service }}", workflow);
+        Assert.Contains("cache-to: ${{ env.PUSH_IMAGE == 'true' &&", workflow);
+
+        // Deployment still waits for tests, infra validation and both images
+        Assert.Contains("needs: [build-and-test, validate-infra, build-and-push-containers]", workflow);
+
+        // `latest` only moves after a successful deploy + smoke test
+        Assert.Contains("promote-latest:", workflow);
+        Assert.Contains("needs: [build-and-push-containers, smoke-test]", workflow);
+        Assert.DoesNotContain("type=raw,value=latest", workflow);
     }
 
     [Fact]

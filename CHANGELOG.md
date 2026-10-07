@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Architecture & Deployment Overview in `deployment.md`**:
+  - Rewrote Section 1 as a learning-oriented architecture guide with Mermaid diagrams derived from `deploy-azure.yml` and `infra/*.bicep`: system context, solution project map, CI/CD job graph with a trigger matrix, `deploy-azure` sequence and Bicep module dependency graph, runtime request flow, configuration/secrets flow, and the startup/health/scale-to-zero lifecycle.
+  - Added an Azure resource table (name patterns and cost model), an environment comparison (Aspire, Docker, Azure, tests), a secrets-to-environment-variable mapping, and a "Security Posture and Known Gaps" section (public unauthenticated API when `exposeApiPublicly=true`, SQL admin connection string, `AllowAllWindowsAzureIps` firewall rule, broad pipeline role scope).
+- **`promote-latest` CI/CD Job**: Moves the `latest` GHCR tags to the deployed commit with `docker buildx imagetools create` only after `deploy-azure` and `smoke-test` succeed, so `latest` (the default image for `deploy.ps1` and `azd`) always points to a verified build.
+- **`validate-infra` CI/CD Job**: Validates `infra/main.bicep` and `infra/local-dev.bicep` in a parallel job.
 - **Local Development Azure SQL Provisioning**:
   - Added standalone `infra/local-dev.bicep` template provisioning only the Azure SQL server and Serverless Free Tier `PersonalFinance` database for running the app locally against Azure SQL.
   - Added `infra/deploy-local-sql.ps1` script that creates the `rg-personalfinance-dev` resource group, auto-detects the developer machine's public IP for the SQL firewall, deploys the template, and stores the resulting connection string in .NET User Secrets (`ConnectionStrings:DefaultConnection`) for `PersonalFinance.ApiService` and `PersonalFinance.Web`.
@@ -86,6 +91,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added xUnit unit test suite `PersonalFinance.Tests` covering URL parsing, byte formatting, MIME type resolution, and service handling.
 
 ### Changed
+- **Faster Pull Request CI/CD Pipeline** (`.github/workflows/deploy-azure.yml`):
+  - Container images now build as a parallel matrix (`api`, `web`) alongside `build-and-test` and `validate-infra` instead of sequentially after tests; `deploy-azure` still requires all three (`needs: [build-and-test, validate-infra, build-and-push-containers]`).
+  - Pull requests read the Docker layer cache but no longer export it (the `mode=max` export took ~50s per image); `main` and manual runs still export it.
+  - Added `concurrency` with `cancel-in-progress` for pull requests so a new push cancels the superseded run; runs on `main` queue rather than cancel, so deployments are never interrupted.
+  - Added `paths-ignore` so changes limited to `**/*.md`, `.idea/`, `.junie/` and `.claude/` don't trigger the workflow.
+  - Added NuGet package caching (`actions/cache` keyed on `Directory.Packages.props` and `*.csproj`) to `build-and-test`.
+  - Images are pushed with the commit SHA tag only; `latest` is applied by `promote-latest`.
+- **Dockerfiles**: Removed the redundant `dotnet build` step from the ApiService and Web Dockerfiles; `dotnet publish --no-restore` compiles once, saving a full compile per image.
+- **Workflow Tests**: `GitHubActionsDeploymentWorkflowTests` now verifies that every job defines `timeout-minutes` (instead of asserting exactly four) and adds coverage for concurrency, `paths-ignore`, per-image cache scopes, deploy gating and `promote-latest`.
 - **Monthly Budget Summary & Analytics Redesign**:
   - Redesigned the budget report modal in `Views/GoogleDrive/Index.cshtml` around a plain-language period summary (amount saved, savings rate, spending vs. plan, over-budget categories; best/toughest month and biggest expense in the year view).
   - Added a single period selector (Full year + months) with previous/next buttons and left/right arrow-key navigation.
@@ -138,6 +152,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Serilog Console Theme**: Configured `AnsiConsoleTheme.Code` with formatted output templates across `PersonalFinance.ApiService` and `PersonalFinance.Web` for high-contrast, clear, and readable console log output.
 
 ### Fixed
+- **Docker Layer Cache Collisions in CI/CD**: The ApiService and Web builds shared the default GitHub Actions cache scope and overwrote each other's cache, causing `dotnet restore` layer misses; each image now uses its own scope (`scope=api` / `scope=web`).
+- **Outdated Deployment Documentation**: Removed SQLite references from `deployment.md`, corrected notes that described the API as internal-only (CI deploys it with `exposeApiPublicly=true`), added the required `ConnectionStrings__DefaultConnection` to the local Docker run commands, replaced the `deploy.ps1` "SQLite" option with a custom connection string option, and documented that `-DeploySqlDatabase` must be passed explicitly (the script sends `$DeploySqlDatabase.IsPresent`, so its `= $true` default has no effect).
 - **Budget Report Calculations & Rendering**:
   - Fixed the year-view "Avg / month" figures dividing by 12 regardless of how many months the spreadsheet contains.
   - Fixed budget charts rendering blank when report data arrived before the modal finished opening (charts now re-measure on `shown.bs.modal`).
