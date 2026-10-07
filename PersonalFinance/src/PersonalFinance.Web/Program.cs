@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
 using Refit;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -144,7 +145,9 @@ try
     builder.Services.AddRazorPages();
 
     // 4. Add MVC Controllers and Views
-    builder.Services.AddControllersWithViews();
+    // Validate antiforgery tokens on every unsafe (POST/PUT/PATCH/DELETE) MVC action by default
+    builder.Services.AddControllersWithViews(options =>
+        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
     builder.Services.AddProblemDetails();
 
     // 5. Register Health Checks
