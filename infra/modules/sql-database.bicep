@@ -14,6 +14,9 @@ param administratorLogin string = 'sqladmin'
 @secure()
 param administratorLoginPassword string
 
+@description('Additional client IPv4 addresses allowed through the server firewall (e.g. a developer machine for local development)')
+param allowedClientIpAddresses array = []
+
 @description('Tags to apply to the resources')
 param tags object = {}
 
@@ -39,6 +42,16 @@ resource allowAzureIps 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' 
     endIpAddress: '0.0.0.0'
   }
 }
+
+// Allow specific client IPs (e.g. a developer workstation running the app locally)
+resource allowClientIps 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = [for (ip, i) in allowedClientIpAddresses: {
+  parent: sqlServer
+  name: 'AllowClientIp-${i}'
+  properties: {
+    startIpAddress: ip
+    endIpAddress: ip
+  }
+}]
 
 // Azure SQL Database configured for Lifetime Free Tier (Serverless GP_S_Gen5_1, AutoPause, 32GB)
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
