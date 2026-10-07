@@ -36,7 +36,7 @@
             </div>
             <div>
                 <h3 class="fw-bold mb-0 text-dark">Google Drive Manager</h3>
-                <p class="text-muted small mb-0">Persistent SQLite storage, multi-drive management, and cached file synchronization</p>
+                <p class="text-muted small mb-0">Persistent Azure SQL storage, multi-drive management, and cached file synchronization</p>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -134,7 +134,7 @@
                         <form asp-action="Sync" method="post" class="d-inline" id="syncForm">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@currentConn.Id" />
-                            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm" id="btnSyncDrive" title="Incrementally sync changes from Google Drive API to SQLite cache">
+                            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm" id="btnSyncDrive" title="Incrementally sync changes from Google Drive API to the Azure SQL cache">
                                 <span id="syncSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                 <svg id="syncIcon" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                                     <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
@@ -153,7 +153,7 @@
                         </button>
 
                         <!-- Delete / Disconnect Drive Button -->
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#deleteDriveModal" title="Remove connection and clear SQLite cache">
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#deleteDriveModal" title="Remove connection and clear cached files">
                             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
                                 <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
@@ -238,14 +238,14 @@
                             </button>
                         </div>
                         <input asp-for="ApiKey" class="form-control form-control-sm font-monospace" placeholder="AIzaSy... (leave blank to use preview mode or configured key)" />
-                        <small class="text-muted">Encrypted securely and stored in SQLite. Only needed if querying non-public Google Drive configurations.</small>
+                        <small class="text-muted">Encrypted securely and stored in Azure SQL Database. Only needed if querying non-public Google Drive configurations.</small>
                     </div>
                 </div>
             </form>
         </div>
     }
 
-    <!-- Results Section (Files from SQLite Cache or Live Google Drive) -->
+    <!-- Results Section (Files from Azure SQL Cache or Live Google Drive) -->
     @if (response != null && response.Success)
     {
         @if (response.IsDemoData)
@@ -292,7 +292,7 @@
                             @if (currentConn?.LastSyncedAtUtc != null)
                             {
                                 <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2">
-                                    &#9889; Cached in SQLite: @currentConn.LastSyncedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC
+                                    &#9889; Cached in Azure SQL: @currentConn.LastSyncedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC
                                 </span>
                             }
                             @if (currentConn != null)
@@ -676,7 +676,7 @@
             </div>
             <h4 class="fw-bold text-dark mb-2">No Google Drive Connected</h4>
             <p class="text-muted mx-auto mb-4" style="max-width: 500px;">
-                Connect a shared Google Drive folder once to explore, sort, and cache its files in local SQLite. On subsequent visits, your saved drives and cached files will load automatically.
+                Connect a shared Google Drive folder once to explore, sort, and cache its files in Azure SQL Database. On subsequent visits, your saved drives and cached files will load automatically.
             </p>
             <a asp-action="Index" asp-route-addNew="true" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold shadow-sm">
                 Connect a Google Drive Folder &rarr;
@@ -836,7 +836,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-dark">Google Cloud API Key:</label>
                         <input type="text" name="apiKey" class="form-control font-monospace" placeholder="AIzaSy..." />
-                        <small class="text-muted">Stored securely in SQLite and used to synchronize folder metadata.</small>
+                        <small class="text-muted">Encrypted, stored securely in Azure SQL Database, and used to synchronize folder metadata.</small>
                     </div>
                 </div>
                 <div class="modal-footer border-top">
@@ -865,7 +865,7 @@
                         Are you sure you want to remove <strong>@currentConn.Name</strong> (Folder ID: <code>@currentConn.FolderId</code>)?
                     </p>
                     <div class="alert alert-warning small mb-0">
-                        This will remove the connection configuration and purge all <strong>@currentConn.CachedFilesCount locally cached items</strong> from SQLite. You can reconnect it anytime.
+                        This will remove the connection configuration and purge all <strong>@currentConn.CachedFilesCount cached items</strong> from the database. You can reconnect it anytime.
                     </div>
                 </div>
                 <div class="modal-footer border-top">
@@ -900,7 +900,7 @@
                 <div class="alert alert-primary d-flex align-items-center gap-2 mb-4" role="alert">
                     <span class="fs-4">&#128161;</span>
                     <div>
-                        <strong>SQLite Persistent Caching Active:</strong> When connected, folder contents are cached in SQLite and served instantly on subsequent logins with zero repeated API requests.
+                        <strong>Azure SQL Persistent Caching Active:</strong> When connected, folder metadata is stored in Azure SQL Database (Serverless) by the API service and served from there on subsequent visits, so Google Drive is only queried when you sync. The first request after the database auto-pauses may take a few extra seconds while it resumes.
                     </div>
                 </div>
 
