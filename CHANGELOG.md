@@ -86,6 +86,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added xUnit unit test suite `PersonalFinance.Tests` covering URL parsing, byte formatting, MIME type resolution, and service handling.
 
 ### Changed
+- **Monthly Budget Summary & Analytics Redesign**:
+  - Redesigned the budget report modal in `Views/GoogleDrive/Index.cshtml` around a plain-language period summary (amount saved, savings rate, spending vs. plan, over-budget categories; best/toughest month and biggest expense in the year view).
+  - Added a single period selector (Full year + months) with previous/next buttons and left/right arrow-key navigation.
+  - Simplified KPI tiles (Income, Spending, Net saved, Savings rate) with whole-dollar amounts and "over/under plan" sub-lines; status is always shown as icon + label rather than color alone.
+  - Replaced the category doughnut and rotated-label budget-vs-actual bar chart with per-category budget meters ("$X of $Y", "$N left/over", % used; within / near limit / over budget), with unbudgeted categories labeled "No budget set" instead of over budget.
+  - Split year-view charts into "Income vs. spending by month" and "Net saved each month" (positive/negative bars instead of an overlaid line); clicking a month in either chart, or its table row, opens that month.
+  - Adopted a validated, color-vision-deficiency-safe chart palette, hairline gridlines and compact currency axis ticks via new `bgt-*` styles in `wwwroot/css/site.css`.
+  - Added dedicated loading and error states (with "Try again") so previous results are no longer shown while a new spreadsheet loads; the table view is collapsible.
+- **Google Drive UI Storage Wording**: Replaced outdated SQLite references in `Views/GoogleDrive/Index.cshtml` and the `GoogleDriveController` connect message to reflect Azure SQL Database persistence via the API service, including a note about serverless auto-pause resume latency.
+- **MVC & JavaScript Best Practices for the Google Drive Page**:
+  - Moved ~700 lines of inline view script into `wwwroot/js/google-drive/explorer.js` and `wwwroot/js/google-drive/budget-report.js`, loaded with `asp-append-version` for cache busting and wrapped in strict-mode IIFEs to avoid global variables.
+  - Removed Razor expressions from JavaScript; the report URL and connection ID are passed via `data-report-url` / `data-connection-id` attributes on `#monthlyBudgetModal`.
+  - Modernized declarations from `var` to block-scoped `const` / `let` (applied with ESLint `no-var` and `prefer-const` autofixes).
+  - Trimmed `Views/Shared/_Layout.cshtml` to load only jQuery, Bootstrap and `site.js` globally; removed unused Leaflet and Select2 assets from every page and moved DataTables and Chart.js into the Google Drive page's `Scripts` / new `Styles` sections.
 - **Removed Boilerplate HomeController & Views**:
   - Removed obsolete template `HomeController`, default views (`Views/Home/Index.cshtml`, `Views/Home/Privacy.cshtml`), `ErrorViewModel`, and `Views/Shared/Error.cshtml`.
   - Updated `_Layout.cshtml` navigation and brand links to route directly to `GoogleDriveController`, removing dead links to `Home` and `Privacy`.
@@ -124,6 +138,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Serilog Console Theme**: Configured `AnsiConsoleTheme.Code` with formatted output templates across `PersonalFinance.ApiService` and `PersonalFinance.Web` for high-contrast, clear, and readable console log output.
 
 ### Fixed
+- **Budget Report Calculations & Rendering**:
+  - Fixed the year-view "Avg / month" figures dividing by 12 regardless of how many months the spreadsheet contains.
+  - Fixed budget charts rendering blank when report data arrived before the modal finished opening (charts now re-measure on `shown.bs.modal`).
+  - Fixed stale responses from a previously opened spreadsheet overwriting the current report.
+  - Print now outputs only the budget report with the details table expanded, instead of the whole page.
 - **Local SQL Provisioning Script Parameter Quoting on Windows PowerShell**:
   - Fixed `infra/deploy-local-sql.ps1` failing with `Failed to parse string as JSON` because Windows PowerShell 5.1 strips embedded double quotes from native command arguments, corrupting the inline `allowedClientIpAddresses` JSON array (and passwords containing quotes or symbols).
   - Deployment parameters are now written to a temporary ARM parameters file passed via `--parameters @file`, which is deleted after deployment.
@@ -144,6 +163,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Aspire Dashboard OTLP Endpoint Environment Variables**: Corrected misnamed dashboard environment variables in `PersonalFinance.AppHost/Properties/launchSettings.json` to standard `DOTNET_DASHBOARD_OTLP_ENDPOINT_URL` and `DOTNET_RESOURCE_SERVICE_ENDPOINT_URL`, resolving startup exceptions on dashboard resource configuration.
 - **Client-side Validation Assets**: Installed `jquery-validate` and `jquery-validation-unobtrusive` via LibMan into `PersonalFinance.Web/wwwroot/lib/`, resolving 404 errors for `jquery.validate.min.js` and `jquery.validate.unobtrusive.min.js` referenced in `_ValidationScriptsPartial.cshtml`.
 - **Google Drive Timeout & Cancellation Handling**: Added specific exception handling for `TaskCanceledException`, `OperationCanceledException`, and `TimeoutException` in `GoogleDriveService` and `GoogleDriveController`, preventing unhandled cancel errors when network queries time out and providing clean fallback preview responses. Aligned HttpClient and resilience pipeline timeout configurations.
+
+### Security
+- **Global Antiforgery Validation**: Registered `AutoValidateAntiforgeryTokenAttribute` as a global MVC filter in `PersonalFinance.Web/Program.cs` so every unsafe (POST/PUT/PATCH/DELETE) action validates antiforgery tokens by default.
+- **HTML Escaping of Spreadsheet Content**: Budget report category names, month names and data-source labels read from Google Sheets are now HTML-escaped before rendering, preventing script/HTML injection from spreadsheet content.
 
 ---
 
