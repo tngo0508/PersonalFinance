@@ -6,13 +6,7 @@
     <title>@ViewData["Title"] - PersonalFinance.Web</title>
     <!-- Bootstrap 5 CSS -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
-    <!-- DataTables Bootstrap 5 CSS -->
-    <link rel="stylesheet" href="~/lib/datatables-bs5/dataTables.bootstrap5.min.css"/>
-    <!-- Select2 CSS & Bootstrap 5 Theme -->
-    <link rel="stylesheet" href="~/lib/select2/css/select2.min.css"/>
-    <link rel="stylesheet" href="~/lib/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css"/>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="~/lib/leaflet/leaflet.css"/>
+    @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
 </head>
 <body>
@@ -61,15 +55,6 @@
 <!-- jQuery & Bootstrap Bundle -->
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<!-- DataTables JS & Bootstrap 5 Integration -->
-<script src="~/lib/datatables/dataTables.min.js"></script>
-<script src="~/lib/datatables-bs5/dataTables.bootstrap5.min.js"></script>
-<!-- Select2 JS -->
-<script src="~/lib/select2/js/select2.min.js"></script>
-<!-- Chart.js UMD -->
-<script src="~/lib/chartjs/chart.umd.min.js"></script>
-<!-- Leaflet JS -->
-<script src="~/lib/leaflet/leaflet.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>

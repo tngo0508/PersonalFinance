@@ -282,7 +282,7 @@ public class GoogleDriveController : Controller
                 },
                 cancellationToken);
 
-            TempData["StatusMessage"] = $"Connected to '{connection.Name}' and cached {connection.CachedFilesCount} items in SQLite.";
+            TempData["StatusMessage"] = $"Connected to '{connection.Name}' and cached {connection.CachedFilesCount} items.";
             return RedirectToAction(nameof(Index), new { connectionId = connection.Id });
         }
         catch (Refit.ApiException apiEx)
