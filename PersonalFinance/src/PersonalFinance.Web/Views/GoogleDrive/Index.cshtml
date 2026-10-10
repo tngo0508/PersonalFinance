@@ -92,7 +92,7 @@
             </button>
         }
         <button type="button" class="btn btn-sm btn-outline-secondary btn-sheet-transactions"
-                data-file-id="@file.Id" data-file-name="@file.Name"
+                data-file-id="@file.Id" data-file-name="@file.Name" data-is-budget="@(IsMonthlyBudget(file) ? "true" : "false")"
                 data-bs-toggle="modal" data-bs-target="#transactionsModal">
             Transactions
         </button>
@@ -505,7 +505,7 @@
                                                             </li>
                                                         }
                                                         <li>
-                                                            <button type="button" class="dropdown-item btn-sheet-transactions" data-file-id="@file.Id" data-file-name="@file.Name"
+                                                            <button type="button" class="dropdown-item btn-sheet-transactions" data-file-id="@file.Id" data-file-name="@file.Name" data-is-budget="@(IsMonthlyBudget(file) ? "true" : "false")"
                                                                     data-bs-toggle="modal" data-bs-target="#transactionsModal">Transactions</button>
                                                         </li>
                                                         @if (!string.IsNullOrEmpty(file.WebViewLink))
@@ -586,36 +586,35 @@
     </div>
 </div>
 
-<!-- Monthly Budget Summary Report & Chart Modal -->
+<!-- Budget Report Modal -->
 <div class="modal fade" id="monthlyBudgetModal" tabindex="-1" aria-labelledby="monthlyBudgetModalLabel" aria-hidden="true"
      data-report-url="@Url.Action("MonthlyBudgetReport", "GoogleDrive")"
      data-connection-id="@(currentConn?.Id ?? 0)">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4 bgt-root">
-            <div class="modal-header border-bottom py-3 justify-content-between">
+            <div class="modal-header bgt-modal-header">
                 <div class="d-flex align-items-center gap-3 overflow-hidden">
-                    <div class="bgt-header-icon flex-shrink-0">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <div class="bgt-header-icon flex-shrink-0" aria-hidden="true">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
                         </svg>
                     </div>
                     <div class="overflow-hidden">
-                        <h5 class="modal-title fw-bold mb-0" id="monthlyBudgetModalLabel">Monthly Budget Summary &amp; Analytics</h5>
-                        <div class="d-flex align-items-center gap-2 small text-muted overflow-hidden" id="budgetModalFileHeader">
+                        <h5 class="modal-title bgt-modal-title" id="monthlyBudgetModalLabel">Budget report</h5>
+                        <div class="bgt-file-line">
                             <span class="text-truncate" id="budgetModalFileName" title="">-</span>
-                            <span class="flex-shrink-0" id="budgetModalDataSource"></span>
+                            <span class="flex-shrink-0 d-none d-sm-inline" id="budgetModalDataSource"></span>
                         </div>
                     </div>
                 </div>
-                <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-3">
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-flex align-items-center gap-1" id="btnPrintBudgetReport" title="Print this report" disabled>
-                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
-                            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
-                        </svg>
-                        <span>Print</span>
+                <div class="bgt-header-actions">
+                    <button type="button" class="btn btn-sm btn-light border btn-sheet-transactions" id="btnBudgetToTransactions"
+                            data-bs-toggle="modal" data-bs-target="#transactionsModal" disabled>
+                        Transactions
                     </button>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnExportBudget" disabled>Export CSV</button>
+                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnPrintBudgetReport" disabled>Print</button>
+                    <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
             </div>
 
@@ -640,43 +639,42 @@
                     <!-- Period selector: scopes everything below -->
                     <div class="bgt-toolbar mb-3">
                         <button type="button" class="bgt-nav-btn" id="btnBudgetPrev" aria-label="Previous period">&lsaquo;</button>
-                        <div class="bgt-period-scroll" id="budgetMonthButtonGroup" role="tablist" aria-label="Choose a period">
-                            <!-- Populated dynamically via JS -->
-                        </div>
+                        <div class="bgt-period-scroll" id="budgetMonthButtonGroup" role="tablist" aria-label="Choose a period"></div>
                         <button type="button" class="bgt-nav-btn" id="btnBudgetNext" aria-label="Next period">&rsaquo;</button>
                     </div>
 
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-1 mb-3">
-                        <div>
-                            <h4 class="fw-bold mb-0 bgt-ink" id="budgetPeriodTitle">-</h4>
-                            <div class="small bgt-ink-2" id="budgetPeriodSubtitle"></div>
+                    <!-- Summary -->
+                    <section class="bgt-hero mb-3" id="budgetHero" data-tone="good" aria-labelledby="budgetPeriodTitle">
+                        <div class="bgt-hero-main">
+                            <div class="bgt-hero-eyebrow" id="budgetPeriodSubtitle"></div>
+                            <h4 class="bgt-hero-title" id="budgetPeriodTitle">-</h4>
+                            <p class="bgt-hero-text mb-0" id="budgetInsight"></p>
                         </div>
-                        <div class="small text-muted d-none d-md-block" id="budgetKeyboardHint">Tip: use the &larr; &rarr; keys to switch periods</div>
-                    </div>
-
-                    <!-- Plain-language summary -->
-                    <div class="bgt-insight mb-4" id="budgetInsight"></div>
+                        <div class="bgt-hero-status" id="budgetHeroStatus"></div>
+                    </section>
 
                     <!-- KPI tiles -->
-                    <div class="row g-3 mb-4">
+                    <div class="row g-3 mb-3">
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
                                 <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--income" aria-hidden="true"></span>Income</div>
-                                <div class="bgt-tile-value" id="kpiTotalIncome">$0.00</div>
+                                <div class="bgt-tile-value" id="kpiTotalIncome">$0</div>
+                                <div class="bgt-tile-meter" id="kpiIncomeMeter"></div>
                                 <div class="bgt-tile-sub" id="kpiIncomeSubtext"></div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
                                 <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--spend" aria-hidden="true"></span>Spending</div>
-                                <div class="bgt-tile-value" id="kpiTotalExpenses">$0.00</div>
+                                <div class="bgt-tile-value" id="kpiTotalExpenses">$0</div>
+                                <div class="bgt-tile-meter" id="kpiExpensesMeter"></div>
                                 <div class="bgt-tile-sub" id="kpiExpensesSubtext"></div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
                                 <div class="bgt-tile-label">Net saved</div>
-                                <div class="bgt-tile-value" id="kpiNetSavings">$0.00</div>
+                                <div class="bgt-tile-value" id="kpiNetSavings">$0</div>
                                 <div class="bgt-tile-sub" id="kpiSavingsSubtext"></div>
                             </div>
                         </div>
@@ -684,13 +682,26 @@
                             <div class="bgt-tile h-100">
                                 <div class="bgt-tile-label">Savings rate</div>
                                 <div class="bgt-tile-value" id="kpiSavingsRate">0%</div>
-                                <div class="bgt-tile-sub" id="kpiStatusBadge"></div>
+                                <div class="bgt-tile-meter" id="kpiSavingsMeter"></div>
+                                <div class="bgt-tile-sub" id="kpiSavingsRateSub"></div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Where income went -->
+                    <div class="bgt-card mb-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                            <div>
+                                <h6 class="bgt-card-title mb-0">Where your income went</h6>
+                                <div class="bgt-card-sub" id="budgetAllocationSub"></div>
+                            </div>
+                            <div class="bgt-legend" id="budgetAllocationLegend"></div>
+                        </div>
+                        <div id="budgetAllocation"></div>
+                    </div>
+
                     <!-- Year overview charts (hidden in month view) -->
-                    <div class="row g-3 mb-4" id="budgetYearCharts">
+                    <div class="row g-3 mb-3" id="budgetYearCharts">
                         <div class="col-12 col-lg-8">
                             <div class="bgt-card h-100">
                                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
@@ -728,21 +739,30 @@
                     </div>
 
                     <!-- Category breakdown -->
-                    <div class="bgt-card mb-4">
-                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                    <div class="bgt-card mb-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
                             <div>
                                 <h6 class="bgt-card-title mb-0" id="budgetCategoryTitle">Spending by category</h6>
-                                <div class="bgt-card-sub" id="budgetCategorySubtitle">Largest first. Bars show how much of each budget is used.</div>
+                                <div class="bgt-card-sub" id="budgetCategorySubtitle">Bars show how much of each budget is used.</div>
                             </div>
-                            <div class="bgt-legend" aria-hidden="true">
-                                <span><span class="bgt-swatch bgt-swatch--ok"></span>Within budget</span>
-                                <span><span class="bgt-swatch bgt-swatch--warning"></span>Near limit</span>
-                                <span><span class="bgt-swatch bgt-swatch--critical"></span>Over budget</span>
+                            <div class="d-flex flex-wrap align-items-center gap-3">
+                                <div class="form-check form-switch mb-0 small">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="budgetOverOnly">
+                                    <label class="form-check-label" for="budgetOverOnly">Only over budget</label>
+                                </div>
+                                <select class="form-select form-select-sm w-auto" id="budgetCategorySort" aria-label="Sort categories">
+                                    <option value="amount">Largest first</option>
+                                    <option value="over">Most over budget</option>
+                                    <option value="name">A–Z</option>
+                                </select>
                             </div>
                         </div>
-                        <div class="bgt-cat-grid" id="budgetCategoryList">
-                            <!-- Populated by JS -->
+                        <div class="bgt-legend mb-3" aria-hidden="true">
+                            <span><span class="bgt-swatch bgt-swatch--ok"></span>Within budget</span>
+                            <span><span class="bgt-swatch bgt-swatch--warning"></span>Near limit (90–100%)</span>
+                            <span><span class="bgt-swatch bgt-swatch--critical"></span>Over budget</span>
                         </div>
+                        <div class="bgt-cat-grid" id="budgetCategoryList"></div>
                     </div>
 
                     <!-- Table view -->
@@ -751,16 +771,14 @@
                             <h6 class="bgt-card-title mb-0" id="tableSectionTitle">Details</h6>
                             <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" id="btnToggleBudgetTable" aria-expanded="false" aria-controls="budgetReportTableContainer">Show table</button>
                         </div>
-                        <div class="table-responsive mt-3 d-none" id="budgetReportTableContainer">
-                            <!-- Populated by JS -->
-                        </div>
+                        <div class="table-responsive mt-3 d-none" id="budgetReportTableContainer"></div>
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer border-top justify-content-between">
-                <div class="small text-muted">"Planned" is what you budgeted in the sheet; "spent" is what you recorded.</div>
-                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+                <div class="small text-muted d-none d-md-block" id="budgetKeyboardHint">Tip: use the &larr; &rarr; keys to switch periods.</div>
+                <button type="button" class="btn btn-light border px-4 ms-auto" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -772,22 +790,29 @@
      data-connection-id="@(currentConn?.Id ?? 0)">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4 bgt-root">
-            <div class="modal-header border-bottom py-3">
+            <div class="modal-header bgt-modal-header">
                 <div class="d-flex align-items-center gap-3 overflow-hidden">
-                    <div class="bgt-header-icon flex-shrink-0">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <div class="bgt-header-icon flex-shrink-0" aria-hidden="true">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
                         </svg>
                     </div>
                     <div class="overflow-hidden">
-                        <h5 class="modal-title fw-bold mb-0" id="transactionsModalLabel">Transactions</h5>
-                        <div class="d-flex align-items-center gap-2 small text-muted overflow-hidden">
+                        <h5 class="modal-title bgt-modal-title" id="transactionsModalLabel">Transactions</h5>
+                        <div class="bgt-file-line">
                             <span class="text-truncate" id="txModalFileName" title="">-</span>
-                            <span class="flex-shrink-0" id="txModalDataSource"></span>
+                            <span class="flex-shrink-0 d-none d-sm-inline" id="txModalDataSource"></span>
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn-close ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="bgt-header-actions">
+                    <button type="button" class="btn btn-sm btn-light border btn-budget-report d-none" id="btnTxToBudget"
+                            data-bs-toggle="modal" data-bs-target="#monthlyBudgetModal">
+                        Budget report
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnExportTx" disabled>Export CSV</button>
+                    <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
             </div>
 
             <div class="modal-body p-3 p-md-4 bgt-body">
@@ -808,7 +833,28 @@
 
                 <!-- Transactions -->
                 <div class="d-none" id="txContent">
-                    <div class="row g-3 mb-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-6 col-lg-3">
+                            <div class="bgt-tile h-100">
+                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--spend" aria-hidden="true"></span>Spending</div>
+                                <div class="bgt-tile-value" id="txKpiExpenses">$0</div>
+                                <div class="bgt-tile-sub" id="txKpiExpensesSub"></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="bgt-tile h-100">
+                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--income" aria-hidden="true"></span>Income</div>
+                                <div class="bgt-tile-value" id="txKpiIncome">$0</div>
+                                <div class="bgt-tile-sub" id="txKpiIncomeSub"></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="bgt-tile h-100">
+                                <div class="bgt-tile-label">Net</div>
+                                <div class="bgt-tile-value" id="txKpiNet">$0</div>
+                                <div class="bgt-tile-sub" id="txKpiNetSub">Income minus spending</div>
+                            </div>
+                        </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
                                 <div class="bgt-tile-label">Transactions</div>
@@ -816,42 +862,53 @@
                                 <div class="bgt-tile-sub" id="txKpiRange"></div>
                             </div>
                         </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--spend" aria-hidden="true"></span>Spending</div>
-                                <div class="bgt-tile-value" id="txKpiExpenses">$0.00</div>
-                                <div class="bgt-tile-sub" id="txKpiExpensesSub"></div>
+                    </div>
+
+                    <ul class="bgt-facts mb-3" id="txInsights" aria-label="Highlights"></ul>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-lg-7">
+                            <div class="bgt-card h-100">
+                                <div class="mb-2">
+                                    <h6 class="bgt-card-title mb-0">Spending over time</h6>
+                                    <div class="bgt-card-sub" id="txTimelineSub"></div>
+                                </div>
+                                <div class="bgt-chart-box bgt-chart-box--short">
+                                    <canvas id="txTimelineChart" role="img" aria-label="Column chart of spending over time. The same transactions are listed in the table below."></canvas>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--income" aria-hidden="true"></span>Income</div>
-                                <div class="bgt-tile-value" id="txKpiIncome">$0.00</div>
-                                <div class="bgt-tile-sub" id="txKpiIncomeSub"></div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label">Net</div>
-                                <div class="bgt-tile-value" id="txKpiNet">$0.00</div>
-                                <div class="bgt-tile-sub">Income minus spending</div>
+                        <div class="col-12 col-lg-5">
+                            <div class="bgt-card h-100">
+                                <div class="mb-3">
+                                    <h6 class="bgt-card-title mb-0">Top spending categories</h6>
+                                    <div class="bgt-card-sub">Share of total spending. Select one to filter the list.</div>
+                                </div>
+                                <div class="bgt-rank" id="txCategoryBars"></div>
                             </div>
                         </div>
                     </div>
 
                     <div class="bgt-card">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                            <div class="gd-search flex-grow-1">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                </svg>
+                                <input type="search" id="txSearch" class="form-control form-control-sm" placeholder="Search description or category" aria-label="Search transactions" />
+                            </div>
                             <div class="btn-group btn-group-sm" role="group" aria-label="Filter by type">
-                                <button type="button" class="btn btn-outline-secondary active tx-type-filter" data-type="" aria-pressed="true">All</button>
-                                <button type="button" class="btn btn-outline-secondary tx-type-filter" data-type="Expense" aria-pressed="false">Spending</button>
-                                <button type="button" class="btn btn-outline-secondary tx-type-filter" data-type="Income" aria-pressed="false">Income</button>
+                                <button type="button" class="btn btn-light border active tx-type-filter" data-type="" aria-pressed="true">All</button>
+                                <button type="button" class="btn btn-light border tx-type-filter" data-type="Expense" aria-pressed="false">Spending</button>
+                                <button type="button" class="btn btn-light border tx-type-filter" data-type="Income" aria-pressed="false">Income</button>
                             </div>
                             <select class="form-select form-select-sm w-auto" id="txCategoryFilter" aria-label="Filter by category">
                                 <option value="">All categories</option>
                             </select>
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none d-none" id="txClearFilters">Clear filters</button>
                         </div>
                         <div class="table-responsive">
-                            <table id="txTable" class="table table-hover align-middle w-100 mb-0">
+                            <table id="txTable" class="table table-hover align-middle w-100 mb-0 bgt-table">
                                 <thead>
                                     <tr>
                                         <th scope="col">Date</th>
@@ -864,13 +921,14 @@
                                 <tbody></tbody>
                             </table>
                         </div>
+                        <div class="bgt-filter-summary" id="txFilterSummary" aria-live="polite"></div>
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer border-top justify-content-between">
                 <div class="small text-muted" id="txSheetName"></div>
-                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-light border px-4 ms-auto" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

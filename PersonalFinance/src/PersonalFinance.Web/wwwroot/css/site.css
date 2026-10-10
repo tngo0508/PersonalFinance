@@ -710,19 +710,282 @@ html {
 .bgt-period-btn:focus-visible,
 .bgt-nav-btn:focus-visible { outline: 2px solid var(--bgt-income); outline-offset: 1px; }
 
-/* Plain-language summary */
-.bgt-insight {
+/* Modal header */
+.bgt-modal-header {
+  padding: 14px 20px;
+  gap: 12px;
+  border-bottom: 1px solid var(--bgt-border);
+}
+.bgt-modal-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 1px;
+}
+.bgt-file-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--bgt-ink-2);
+}
+.bgt-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Summary card: headline for the period, accent stripe follows the status tone */
+.bgt-hero {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px 24px;
+  padding: 18px 20px 18px 24px;
   background: var(--bgt-surface);
   border: 1px solid var(--bgt-border);
-  border-left: 4px solid var(--bgt-muted);
-  border-radius: 12px;
-  padding: 12px 16px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.bgt-hero::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--bgt-muted);
+}
+.bgt-hero[data-tone="good"]::before { background: var(--bgt-good); }
+.bgt-hero[data-tone="warning"]::before { background: var(--bgt-warning); }
+.bgt-hero[data-tone="critical"]::before { background: var(--bgt-critical); }
+.bgt-hero-main { flex: 1 1 420px; min-width: 0; }
+.bgt-hero-eyebrow {
+  font-size: 0.8125rem;
+  color: var(--bgt-ink-2);
+  margin-bottom: 2px;
+}
+.bgt-hero-title {
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: var(--bgt-ink);
+  margin-bottom: 6px;
+}
+.bgt-hero-text {
   color: var(--bgt-ink);
   line-height: 1.6;
 }
-.bgt-insight[data-tone="good"] { border-left-color: var(--bgt-good); }
-.bgt-insight[data-tone="warning"] { border-left-color: var(--bgt-warning); }
-.bgt-insight[data-tone="critical"] { border-left-color: var(--bgt-critical); }
+.bgt-hero-status {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bgt-plane);
+  border: 1px solid var(--bgt-border);
+}
+.bgt-hero-status:empty { display: none; }
+
+/* Actual-vs-plan meter inside a KPI tile; the tick marks the plan or goal */
+.bgt-tile-meter:empty { display: none; }
+.bgt-mini-meter {
+  position: relative;
+  height: 6px;
+  margin: 8px 0 6px;
+  border-radius: 3px;
+  background: var(--bgt-meter-track);
+}
+.bgt-mini-meter-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.bgt-mini-meter-fill--income { background: var(--bgt-income); }
+.bgt-mini-meter-fill--spend { background: var(--bgt-spend); }
+.bgt-mini-meter-mark {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--bgt-ink);
+}
+
+/* Where your income went: spent / saved / overspent, 2px surface gap between segments */
+.bgt-alloc {
+  display: flex;
+  gap: 2px;
+  height: 36px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.bgt-alloc-seg {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 10px;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.bgt-alloc-seg span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bgt-alloc-seg--spend { background: var(--bgt-spend); }
+.bgt-alloc-seg--save { background: var(--bgt-income); }
+/* Hatched so "overspent" doesn't rely on color alone next to the orange segment */
+.bgt-alloc-seg--over,
+.bgt-swatch--over {
+  background: repeating-linear-gradient(135deg, var(--bgt-negative) 0 6px, #f19c9b 6px 9px);
+}
+.bgt-alloc-seg--over { color: var(--bgt-ink); }
+
+/* Highlights row */
+.bgt-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+}
+.bgt-facts li {
+  flex: 1 1 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  background: var(--bgt-surface);
+  border: 1px solid var(--bgt-border);
+  border-radius: 12px;
+  min-width: 0;
+}
+.bgt-facts-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--bgt-ink-2);
+}
+.bgt-facts-value {
+  color: var(--bgt-ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* On phones the highlights collapse into one compact list instead of three tall cards */
+@media (max-width: 575.98px) {
+  .bgt-facts {
+    gap: 0;
+    background: var(--bgt-surface);
+    border: 1px solid var(--bgt-border);
+    border-radius: 12px;
+  }
+  .bgt-facts li {
+    flex-basis: 100%;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .bgt-facts li + li { border-top: 1px solid var(--bgt-border); }
+}
+
+/* Ranked category bars (single hue; the label carries identity) */
+.bgt-rank {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bgt-rank-row {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+}
+button.bgt-rank-row:hover { background: var(--bgt-hover); }
+.bgt-rank-row.active {
+  background: #e7f0fb;
+  border-color: rgba(42, 120, 214, 0.35);
+}
+.bgt-rank-row:focus-visible { outline: 2px solid var(--bgt-income); outline-offset: 1px; }
+.bgt-rank-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+.bgt-rank-name {
+  font-weight: 600;
+  color: var(--bgt-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bgt-rank-value {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--bgt-ink);
+}
+.bgt-rank-value small { color: var(--bgt-ink-2); margin-left: 2px; }
+.bgt-rank-track {
+  display: block;
+  height: 6px;
+  margin-top: 5px;
+  border-radius: 3px;
+  background: var(--bgt-meter-track);
+}
+.bgt-rank-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--bgt-spend);
+}
+
+/* Transactions table bits */
+.bgt-chip {
+  display: inline-block;
+  max-width: 220px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--bgt-plane);
+  border: 1px solid var(--bgt-border);
+  color: var(--bgt-ink-2);
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.bgt-amount-in { color: var(--bgt-good-text); }
+.bgt-filter-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bgt-plane);
+  font-size: 0.875rem;
+  color: var(--bgt-ink-2);
+}
+.bgt-filter-summary:empty { display: none; }
+.bgt-filter-summary strong { color: var(--bgt-ink); font-variant-numeric: tabular-nums; }
+.bgt-chart-box--short { height: 240px; }
+.bgt-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bgt-muted);
+  font-size: 0.875rem;
+}
 
 /* Tiles & cards */
 .bgt-tile,
