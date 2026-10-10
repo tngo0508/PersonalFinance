@@ -1,13 +1,14 @@
 @model PersonalFinance.Web.Models.GoogleDriveViewModel
+@using PersonalFinance.Shared.DTOs
+@using PersonalFinance.Shared.Helpers
 
 @{
-    ViewData["Title"] = "Google Drive Manager & Explorer";
+    ViewData["Title"] = "Google Drive";
     var response = Model.Response;
-    var files = response?.Files ?? new List<PersonalFinance.Shared.DTOs.GoogleDriveFileDto>();
+    var files = response?.Files ?? new List<GoogleDriveFileDto>();
     var folderCount = files.Count(f => f.IsFolder);
-    var docCount = files.Count(f => !f.IsFolder);
 
-    // Grouping file categories for quick filter chips
+    // Counts for the type filter tabs
     var spreadsheetCount = files.Count(f => f.FileType == "Spreadsheet");
     var documentCount = files.Count(f => f.FileType == "Document");
     var pdfCount = files.Count(f => f.FileType == "PDF Document");
@@ -15,702 +16,574 @@
     var presentationCount = files.Count(f => f.FileType == "Presentation");
     var otherCount = files.Count(f => !f.IsFolder && f.FileType != "Spreadsheet" && f.FileType != "Document" && f.FileType != "PDF Document" && f.FileType != "Image" && f.FileType != "Presentation");
 
+    const int featuredSheetLimit = 6;
+    var spreadsheets = files.Where(IsSpreadsheet).OrderByDescending(f => f.ModifiedTime).ToList();
+
     var currentConn = Model.SelectedConnection;
-    var hasMultipleDrives = Model.Connections.Count > 1;
     var isNeedsReauth = currentConn != null && (!currentConn.IsValid || currentConn.SyncStatus == "NeedsReauth");
+    var showConnectForm = Model.ShowConnectForm || !Model.Connections.Any();
 }
 
-<div class="container py-3">
-    <!-- Top Header & Brand Bar -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 pb-3 mb-3 border-bottom">
-        <div class="d-flex align-items-center gap-3">
-            <div class="p-2 bg-light rounded-3 border d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                <svg width="32" height="32" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-                    <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-                    <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>
-                    <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
-                    <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-                    <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-                    <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
-                </svg>
-            </div>
-            <div>
-                <h3 class="fw-bold mb-0 text-dark">Google Drive Manager</h3>
-                <p class="text-muted small mb-0">Persistent Azure SQL storage, multi-drive management, and cached file synchronization</p>
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            @if (Model.Connections.Any())
-            {
-                <a asp-action="Index" asp-route-addNew="true" class="btn btn-sm btn-primary rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                    </svg>
-                    Add another Drive
-                </a>
-            }
-            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">
-                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                </svg>
-                API &amp; Sharing Guide
+@functions {
+    private static bool IsMonthlyBudget(GoogleDriveFileDto file) =>
+        GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
+
+    private static bool IsSpreadsheet(GoogleDriveFileDto file) =>
+        IsMonthlyBudget(file) || (!file.IsFolder && file.FileType == "Spreadsheet");
+
+    private static bool NeedsAttention(GoogleDriveConnectionDto conn) =>
+        !conn.IsValid || conn.SyncStatus == "NeedsReauth";
+
+    private static string TimeAgo(DateTime utc)
+    {
+        var span = DateTime.UtcNow - utc;
+        if (span.TotalMinutes < 1) return "just now";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} min ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours} hr ago";
+        if (span.TotalDays < 2) return "yesterday";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays} days ago";
+        return utc.ToString("MMM d, yyyy");
+    }
+
+    private void RenderFileIcon(GoogleDriveFileDto file, int size)
+    {
+        if (file.IsFolder)
+        {
+            <svg width="@size" height="@size" fill="#fbbc04" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.54 3.87A2 2 0 0 1 2.5 3h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3z"/>
+            </svg>
+        }
+        else if (file.FileType == "Spreadsheet")
+        {
+            <svg width="@size" height="@size" fill="#0f9d58" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h10v2H3zm0 1h10v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"/>
+            </svg>
+        }
+        else if (file.FileType == "PDF Document")
+        {
+            <svg width="@size" height="@size" fill="#ea4335" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+            </svg>
+        }
+        else if (file.FileType == "Image")
+        {
+            <svg width="@size" height="@size" fill="#9334e6" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+            </svg>
+        }
+        else
+        {
+            <svg width="@size" height="@size" fill="#4285f4" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+            </svg>
+        }
+    }
+
+    // Visible buttons for a spreadsheet's finance views (used by the featured cards and grid cards)
+    private void RenderSheetButtons(GoogleDriveFileDto file)
+    {
+        if (IsMonthlyBudget(file))
+        {
+            <button type="button" class="btn btn-sm btn-success btn-budget-report"
+                    data-file-id="@file.Id" data-file-name="@file.Name"
+                    data-bs-toggle="modal" data-bs-target="#monthlyBudgetModal">
+                Budget report
             </button>
-        </div>
-    </div>
-
-    <!-- Feedback Alerts (Success & Error) -->
-    @if (!string.IsNullOrEmpty(Model.StatusMessage))
-    {
-        <div class="alert alert-success alert-dismissible fade show shadow-sm rounded-3 border-0 d-flex align-items-center" role="alert">
-            <span class="fs-5 me-2">&#10003;</span>
-            <div class="flex-grow-1">
-                @Model.StatusMessage
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        }
+        <button type="button" class="btn btn-sm btn-outline-secondary btn-sheet-transactions"
+                data-file-id="@file.Id" data-file-name="@file.Name"
+                data-bs-toggle="modal" data-bs-target="#transactionsModal">
+            Transactions
+        </button>
     }
 
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    private void RenderOpenLink(GoogleDriveFileDto file)
     {
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-3 border-0 d-flex align-items-center" role="alert">
-            <span class="fs-5 me-2">&#9888;</span>
-            <div class="flex-grow-1">
-                <strong>Error:</strong> @Model.ErrorMessage
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        if (!string.IsNullOrEmpty(file.WebViewLink))
+        {
+            <a href="@file.WebViewLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-light gd-icon-btn"
+               title="Open in Google Drive" aria-label="Open @file.Name in Google Drive">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
+                    <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
+                </svg>
+            </a>
+        }
     }
+}
 
-    <!-- Re-authentication Alert if Credentials Expired/Invalid -->
-    @if (isNeedsReauth)
-    {
-        <div class="alert alert-warning border-warning shadow-sm rounded-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-4" role="alert">
-            <div class="d-flex align-items-center gap-2">
-                <span class="fs-4 text-warning">&#9888;</span>
-                <div>
-                    <strong class="text-dark">Authentication Required</strong>
-                    <div class="small text-muted">
-                        @(currentConn?.ErrorMessage ?? "Your Google Drive credentials have expired or are invalid. Please update your API key or re-authenticate to synchronize files.")
-                    </div>
-                </div>
-            </div>
-            <button type="button" class="btn btn-warning btn-sm rounded-pill px-3 fw-semibold text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">
-                Update Key / Re-authenticate &rarr;
-            </button>
+<div class="gd-page py-3"
+     data-status-message="@Model.StatusMessage">
+    <!-- Page header -->
+    <header class="d-flex justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h4 fw-bold mb-0">Google Drive</h1>
+            <p class="text-muted small mb-0">Browse your shared folders and analyze your budget spreadsheets.</p>
         </div>
-    }
+        <button type="button" class="btn btn-sm btn-light border d-flex align-items-center gap-1 text-nowrap" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+            </svg>
+            Help &amp; setup
+        </button>
+    </header>
 
-    <!-- Multi-Drive Connection Switcher Toolbar (When user has saved connections) -->
-    @if (Model.Connections.Any())
-    {
-        <div class="gdrive-card p-3 mb-4 bg-light">
-            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
-                <!-- Connection Switcher Dropdown / Tabs -->
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="small fw-bold text-muted text-uppercase me-1">Connected Drives:</span>
-                    <div class="btn-group">
+    <div class="row g-4">
+        @if (Model.Connections.Any())
+        {
+            <!-- Drive navigation -->
+            <aside class="col-lg-3">
+                <nav class="gd-sidebar d-none d-lg-block" aria-label="Your drives">
+                    <div class="gd-sidebar-title">Your drives</div>
+                    <ul class="list-unstyled mb-3">
                         @foreach (var conn in Model.Connections)
                         {
-                            var isActive = conn.Id == Model.SelectedConnectionId;
-                            <a asp-action="Index" asp-route-connectionId="@conn.Id"
-                               class="btn btn-sm @(isActive ? "btn-primary fw-bold" : "btn-outline-secondary bg-white") rounded-pill px-3 me-1 mb-1 d-flex align-items-center gap-2">
-                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31z"/>
-                                </svg>
-                                <span>@conn.Name</span>
-                                <span class="badge @(isActive ? "bg-white text-primary" : "bg-light text-secondary border") rounded-pill">
-                                    @conn.CachedFilesCount
-                                </span>
-                            </a>
+                            var isActive = !showConnectForm && conn.Id == Model.SelectedConnectionId;
+                            <li>
+                                <a asp-action="Index" asp-route-connectionId="@conn.Id"
+                                   class="gd-drive-link @(isActive ? "active" : "")"
+                                   aria-current="@(isActive ? "page" : null)">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="flex-shrink-0" aria-hidden="true">
+                                        <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31z"/>
+                                    </svg>
+                                    <span class="text-truncate flex-grow-1" title="@conn.Name">@conn.Name</span>
+                                    @if (NeedsAttention(conn))
+                                    {
+                                        <span class="gd-status-dot gd-status-dot--warning" title="Needs attention"></span>
+                                        <span class="visually-hidden">(needs attention)</span>
+                                    }
+                                    <span class="gd-drive-count">@conn.CachedFilesCount</span>
+                                </a>
+                            </li>
                         }
-                    </div>
-                </div>
-
-                <!-- Active Connection Controls (Sync, Reauth, Delete) -->
-                @if (currentConn != null)
-                {
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <!-- Incremental / Force Sync Button -->
-                        <form asp-action="Sync" method="post" class="d-inline" id="syncForm">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@currentConn.Id" />
-                            <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm" id="btnSyncDrive" title="Incrementally sync changes from Google Drive API to the Azure SQL cache">
-                                <span id="syncSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                <svg id="syncIcon" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                                </svg>
-                                <span>Sync / Refresh</span>
-                            </button>
-                        </form>
-
-                        <!-- Re-authenticate Key Modal Button -->
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#reauthModal" title="Update API credentials for this connection">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                            </svg>
-                            <span>@(currentConn.HasApiKey ? "Update Key" : "Add Key")</span>
-                        </button>
-
-                        <!-- Delete / Disconnect Drive Button -->
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#deleteDriveModal" title="Remove connection and clear cached files">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                            </svg>
-                            <span>Remove</span>
-                        </button>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-
-    <!-- Connect / Add Another Drive Omnibox Form (Shown on first setup or explicit Add New Drive) -->
-    @if (Model.ShowConnectForm || !Model.Connections.Any())
-    {
-        <div class="gdrive-card p-3 p-md-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0 text-dark">
-                    @(Model.Connections.Any() ? "Connect Another Google Drive Folder" : "Connect Your Google Drive")
-                </h5>
-                @if (Model.Connections.Any())
-                {
-                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                        Cancel
+                    </ul>
+                    <a asp-action="Index" asp-route-addNew="true" class="btn btn-sm btn-outline-primary w-100 @(Model.ShowConnectForm ? "active" : "")">
+                        + Connect a drive
                     </a>
-                }
-            </div>
+                </nav>
 
-            <form asp-action="Index" method="post" id="driveExplorerForm">
-                @Html.AntiForgeryToken()
-
-                <div class="row g-2 mb-2">
-                    <div class="col-md-8">
-                        <label asp-for="FolderUrl" class="form-label fw-semibold small text-dark mb-1">Google Drive Folder Link or Folder ID:</label>
-                        <div class="input-group gdrive-omnibox">
-                            <span class="input-group-text bg-white border-0 text-muted ps-3 pe-2">
-                                <svg width="20" height="20" fill="currentColor" class="text-primary" viewBox="0 0 16 16">
-                                    <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139C1.72 3.042 1.95 3 2.19 3h11.62c.24 0 .47.042.684.12l.006-.139a1 1 0 0 0-1-.981h-3.982a1 1 0 0 0-.707-.293l-.828-.828A1 1 0 0 0 7.172 1H6.88z"/>
-                                </svg>
-                            </span>
-                            <input asp-for="FolderUrl" id="folderUrlInput" class="form-control border-0 ps-1 font-monospace"
-                                   placeholder="Paste folder link or ID (e.g. https://drive.google.com/drive/folders/...)" required />
-                            <button type="button" class="btn btn-light border-start text-secondary px-3" id="btnPasteSample" title="Insert a working public sample folder URL">
-                                Paste Sample
-                            </button>
-                        </div>
-                        <span asp-validation-for="FolderUrl" class="text-danger small"></span>
-                    </div>
-                    <div class="col-md-4">
-                        <label asp-for="ConnectionName" class="form-label fw-semibold small text-dark mb-1">Friendly Label (Optional):</label>
-                        <input asp-for="ConnectionName" class="form-control" placeholder="e.g. Tax Documents, Personal" />
-                    </div>
+                <!-- Compact drive picker on small screens -->
+                <div class="dropdown d-lg-none">
+                    <button class="btn btn-light border w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="text-truncate">
+                            <span class="text-muted small me-1">Drive:</span>
+                            <strong>@(showConnectForm ? "Connect a drive" : currentConn?.Name ?? "Choose a drive")</strong>
+                        </span>
+                        <span class="dropdown-toggle"></span>
+                    </button>
+                    <ul class="dropdown-menu w-100 shadow-sm">
+                        @foreach (var conn in Model.Connections)
+                        {
+                            <li>
+                                <a asp-action="Index" asp-route-connectionId="@conn.Id"
+                                   class="dropdown-item d-flex justify-content-between align-items-center @(conn.Id == Model.SelectedConnectionId && !showConnectForm ? "active" : "")">
+                                    <span class="text-truncate">@conn.Name</span>
+                                    <span class="small opacity-75">@conn.CachedFilesCount items</span>
+                                </a>
+                            </li>
+                        }
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a asp-action="Index" asp-route-addNew="true" class="dropdown-item text-primary">+ Connect a drive</a></li>
+                    </ul>
                 </div>
-
-                <!-- Bottom Row: Help Tip & Collapsible API Key Option & Connect Submit -->
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 pt-2">
-                    <div class="text-muted small d-flex align-items-center gap-1">
-                        <svg width="14" height="14" fill="#0d6efd" viewBox="0 0 16 16">
-                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-                        </svg>
-                        <span><strong>Access Requirement:</strong> Folder must be set to <em>"Anyone with the link"</em> (Viewer) in Google Drive.</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-sm btn-link text-decoration-none text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#advancedSettingsCollapse" aria-expanded="false" aria-controls="advancedSettingsCollapse">
-                            <small>&#9881; Optional: API Key &darr;</small>
-                        </button>
-                        <button type="submit" class="btn btn-primary px-4 fw-semibold d-flex align-items-center gap-2" id="btnSubmitExplore">
-                            <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                            <span id="submitText">Connect &amp; Cache</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Collapsible Advanced API Key Panel -->
-                <div class="collapse mt-3" id="advancedSettingsCollapse">
-                    <div class="p-3 bg-light rounded-3 border">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label asp-for="ApiKey" class="form-label fw-semibold small mb-0 text-dark">Google Cloud API Key (Optional for Live Queries):</label>
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 small" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">
-                                How to get a free API Key?
-                            </button>
-                        </div>
-                        <input asp-for="ApiKey" class="form-control form-control-sm font-monospace" placeholder="AIzaSy... (leave blank to use preview mode or configured key)" />
-                        <small class="text-muted">Encrypted securely and stored in Azure SQL Database. Only needed if querying non-public Google Drive configurations.</small>
-                    </div>
-                </div>
-            </form>
-        </div>
-    }
-
-    <!-- Results Section (Files from Azure SQL Cache or Live Google Drive) -->
-    @if (response != null && response.Success)
-    {
-        @if (response.IsDemoData)
-        {
-            <div class="alert alert-secondary border-warning border-2 shadow-sm rounded-3 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2" role="alert">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fs-4 text-warning">&#9888;</span>
-                    <div>
-                        <strong class="text-dark">Preview Demo Mode Active</strong>
-                        <div class="small text-muted">
-                            @(response.WarningMessage ?? "Displaying sample data for demonstration. To query live Google Drive files, provide a Google Cloud API Key.")
-                        </div>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">
-                    Setup Live API Key &rarr;
-                </button>
-            </div>
+            </aside>
         }
 
-        <!-- Active Folder Header & Metrics Bar -->
-        <div class="gdrive-card p-3 p-md-4 mb-4">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 pb-3 border-bottom mb-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3">
-                        <svg width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.54 3.87A2 2 0 0 1 2.5 3h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h4 class="fw-bold mb-0 text-dark">@(response.FolderName ?? currentConn?.Name ?? "Google Drive Folder")</h4>
-                            <span class="badge bg-light text-secondary border font-monospace small" title="Folder ID: @response.FolderId">
-                                ID: @response.FolderId
-                            </span>
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-secondary btn-copy-id" data-id="@response.FolderId" title="Copy Folder ID">
-                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
-                                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap small text-muted mt-1">
-                            @if (currentConn?.LastSyncedAtUtc != null)
-                            {
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2">
-                                    &#9889; Cached in Azure SQL: @currentConn.LastSyncedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC
-                                </span>
-                            }
-                            @if (currentConn != null)
-                            {
-                                <span class="badge @(currentConn.HasApiKey ? "bg-info text-dark" : "bg-light text-muted border") rounded-pill px-2">
-                                    @(currentConn.HasApiKey ? $"API Key: {currentConn.MaskedApiKey}" : "No Custom Key")
-                                </span>
-                            }
-                        </div>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    @if (!string.IsNullOrEmpty(response.FolderId))
-                    {
-                        <a href="https://drive.google.com/drive/folders/@response.FolderId" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary d-flex align-items-center gap-2">
-                            <span>Open in Drive</span>
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
-                                <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
-                            </svg>
-                        </a>
-                    }
-                </div>
-            </div>
-
-            <!-- Stats Bar -->
-            <div class="row g-2">
-                <div class="col-6 col-md-3">
-                    <div class="gdrive-stat-pill">
-                        <div class="fs-4 text-primary fw-bold">@response.TotalFilesCount</div>
-                        <div>
-                            <div class="small fw-semibold text-dark">Total Items</div>
-                            <div class="small text-muted" style="font-size: 0.75rem;">@docCount files, @folderCount folders</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="gdrive-stat-pill">
-                        <div class="fs-4 text-success fw-bold">@response.TotalSizeFormatted</div>
-                        <div>
-                            <div class="small fw-semibold text-dark">Total Storage</div>
-                            <div class="small text-muted" style="font-size: 0.75rem;">Calculated size</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="gdrive-stat-pill">
-                        <div class="fs-4 text-warning fw-bold">@folderCount</div>
-                        <div>
-                            <div class="small fw-semibold text-dark">Subfolders</div>
-                            <div class="small text-muted" style="font-size: 0.75rem;">Directories</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="gdrive-stat-pill">
-                        <div class="fs-4 text-info fw-bold">@docCount</div>
-                        <div>
-                            <div class="small fw-semibold text-dark">Documents</div>
-                            <div class="small text-muted" style="font-size: 0.75rem;">Files &amp; Media</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filter Chips & View Mode Switcher -->
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
-            <!-- Category Filter Chips -->
-            <div class="d-flex align-items-center gap-2 flex-wrap" id="filterChipsContainer">
-                <button type="button" class="gdrive-filter-chip active" data-filter="all">
-                    <span>All Items</span>
-                    <span class="chip-count">@response.TotalFilesCount</span>
-                </button>
-                @if (folderCount > 0)
-                {
-                    <button type="button" class="gdrive-filter-chip" data-filter="Folder">
-                        <span>Folders</span>
-                        <span class="chip-count">@folderCount</span>
-                    </button>
-                }
-                @if (spreadsheetCount > 0)
-                {
-                    <button type="button" class="gdrive-filter-chip" data-filter="Spreadsheet">
-                        <span>Sheets</span>
-                        <span class="chip-count">@spreadsheetCount</span>
-                    </button>
-                }
-                @if (documentCount > 0)
-                {
-                    <button type="button" class="gdrive-filter-chip" data-filter="Document">
-                        <span>Docs</span>
-                        <span class="chip-count">@documentCount</span>
-                    </button>
-                }
-                @if (pdfCount > 0)
-                {
-                    <button type="button" class="gdrive-filter-chip" data-filter="PDF Document">
-                        <span>PDFs</span>
-                        <span class="chip-count">@pdfCount</span>
-                    </button>
-                }
-                @if (imageCount > 0)
-                {
-                    <button type="button" class="gdrive-filter-chip" data-filter="Image">
-                        <span>Images</span>
-                        <span class="chip-count">@imageCount</span>
-                    </button>
-                }
-                @if (presentationCount > 0)
-                {
-                    <button type="button" class="gdrive-filter-chip" data-filter="Presentation">
-                        <span>Slides</span>
-                        <span class="chip-count">@presentationCount</span>
-                    </button>
-                }
-                @if (otherCount > 0)
-                {
-                    <button type="button" class="gdrive-filter-chip" data-filter="other">
-                        <span>Other</span>
-                        <span class="chip-count">@otherCount</span>
-                    </button>
-                }
-            </div>
-
-            <!-- Table / Grid Layout Switcher -->
-            <div class="btn-group p-1 bg-light rounded-pill border" role="group" aria-label="View switch">
-                <button type="button" class="btn btn-sm btn-white rounded-pill active px-3 shadow-sm" id="btnViewTable" title="Table View">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="me-1">
-                        <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
-                    </svg>
-                    List
-                </button>
-                <button type="button" class="btn btn-sm text-secondary rounded-pill px-3" id="btnViewGrid" title="Grid View">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="me-1">
-                        <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
-                    </svg>
-                    Grid
-                </button>
-            </div>
-        </div>
-
-        <!-- View Mode 1: Interactive DataTables View -->
-        <div id="tableViewSection" class="gdrive-card p-3 p-md-4 mb-4">
-            <div class="table-responsive">
-                <table id="googleDriveDataTable" class="table table-hover align-middle gdrive-table w-100 mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 40px;" class="text-center">Type</th>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th>Size</th>
-                            <th>Created</th>
-                            <th>Last Modified</th>
-                            <th style="width: 150px;" class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var file in files)
-                        {
-                            var badgeClass = file.FileType switch
-                            {
-                                "Folder" => "gdrive-badge-folder",
-                                "Spreadsheet" => "gdrive-badge-sheet",
-                                "Document" => "gdrive-badge-doc",
-                                "Presentation" => "gdrive-badge-slide",
-                                "PDF Document" => "gdrive-badge-pdf",
-                                "Image" => "gdrive-badge-image",
-                                "Video" => "gdrive-badge-video",
-                                "Archive" => "gdrive-badge-archive",
-                                _ => "gdrive-badge-generic"
-                            };
-
-                            var rawSortDate = file.ModifiedTime?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "0001-01-01T00:00:00";
-                            var rawCreatedDate = file.CreatedTime?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "0001-01-01T00:00:00";
-                            var rawSortSize = file.Size.HasValue ? file.Size.Value.ToString() : "-1";
-                            var isMonthlyBudget = PersonalFinance.Shared.Helpers.GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
-                            var isSpreadsheet = isMonthlyBudget || (!file.IsFolder && file.FileType == "Spreadsheet");
-
-                            <tr data-file-type="@file.FileType" data-is-folder="@file.IsFolder.ToString().ToLower()">
-                                <td class="text-center">
-                                    @if (file.IsFolder)
-                                    {
-                                        <svg width="22" height="22" fill="#fbbc04" viewBox="0 0 16 16">
-                                            <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.54 3.87A2 2 0 0 1 2.5 3h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3z"/>
-                                        </svg>
-                                    }
-                                    else if (file.FileType == "Spreadsheet")
-                                    {
-                                        <svg width="20" height="20" fill="#0f9d58" viewBox="0 0 16 16">
-                                            <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h10v2H3zm0 1h10v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"/>
-                                        </svg>
-                                    }
-                                    else if (file.FileType == "PDF Document")
-                                    {
-                                        <svg width="20" height="20" fill="#ea4335" viewBox="0 0 16 16">
-                                            <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
-                                        </svg>
-                                    }
-                                    else if (file.FileType == "Image")
-                                    {
-                                        <svg width="20" height="20" fill="#9334e6" viewBox="0 0 16 16">
-                                            <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-                                            <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
-                                        </svg>
-                                    }
-                                    else
-                                    {
-                                        <svg width="20" height="20" fill="#4285f4" viewBox="0 0 16 16">
-                                            <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
-                                        </svg>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="fw-semibold text-dark text-truncate" style="max-width: 320px;" title="@file.Name">
-                                        @file.Name
-                                    </div>
-                                    <div class="text-muted font-monospace" style="font-size: 0.72rem;">
-                                        ID: @file.Id
-                                    </div>
-                                </td>
-                                <td data-search="@file.FileType" data-filter="@file.FileType">
-                                    <span class="gdrive-badge-soft @badgeClass">@file.FileType</span>
-                                </td>
-                                <td data-order="@rawSortSize">
-                                    <span class="small @(file.IsFolder ? "text-muted" : "fw-semibold text-dark")">
-                                        @file.SizeFormatted
-                                    </span>
-                                </td>
-                                <td data-order="@rawCreatedDate">
-                                    <span class="small text-muted">
-                                        @(file.CreatedTime?.ToString("yyyy-MM-dd HH:mm") ?? "-")
-                                    </span>
-                                </td>
-                                <td data-order="@rawSortDate">
-                                    <span class="small text-dark fw-medium">
-                                        @(file.ModifiedTime?.ToString("yyyy-MM-dd HH:mm") ?? "-")
-                                    </span>
-                                </td>
-                                <td class="text-end text-nowrap">
-                                    @if (isMonthlyBudget)
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1 me-1 btn-budget-report shadow-sm"
-                                                data-file-id="@file.Id"
-                                                data-file-name="@file.Name"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#monthlyBudgetModal"
-                                                title="Generate Monthly Budget Summary Report &amp; Chart">
-                                            <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16" class="me-1">
-                                                <path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
-                                            </svg>
-                                            <span>Budget Report</span>
-                                        </button>
-                                    }
-                                    @if (isSpreadsheet)
-                                    {
-                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 me-1 btn-sheet-transactions shadow-sm"
-                                                data-file-id="@file.Id"
-                                                data-file-name="@file.Name"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#transactionsModal"
-                                                title="View the transactions recorded in this spreadsheet">
-                                            <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16" class="me-1" aria-hidden="true">
-                                                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
-                                            </svg>
-                                            <span>Transactions</span>
-                                        </button>
-                                    }
-                                    @if (!string.IsNullOrEmpty(file.WebViewLink))
-                                    {
-                                        <a href="@file.WebViewLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" title="Open in Google Drive">
-                                            Open &rarr;
-                                        </a>
-                                    }
-                                    else if (!isSpreadsheet)
-                                    {
-                                        <span class="text-muted small">-</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- View Mode 2: Modern Google Drive Card Grid View -->
-        <div id="gridViewSection" class="row g-3 mb-4 d-none">
-            @foreach (var file in files)
+        <section class="@(Model.Connections.Any() ? "col-lg-9" : "col-12")">
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
             {
-                var badgeClass = file.FileType switch
-                {
-                    "Folder" => "gdrive-badge-folder",
-                    "Spreadsheet" => "gdrive-badge-sheet",
-                    "Document" => "gdrive-badge-doc",
-                    "Presentation" => "gdrive-badge-slide",
-                    "PDF Document" => "gdrive-badge-pdf",
-                    "Image" => "gdrive-badge-image",
-                    "Video" => "gdrive-badge-video",
-                    "Archive" => "gdrive-badge-archive",
-                    _ => "gdrive-badge-generic"
-                };
-                var isMonthlyBudget = PersonalFinance.Shared.Helpers.GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
-                var isSpreadsheet = isMonthlyBudget || (!file.IsFolder && file.FileType == "Spreadsheet");
+                <div class="alert alert-danger alert-dismissible fade show rounded-3 d-flex align-items-start gap-2" role="alert">
+                    <span aria-hidden="true">&#9888;</span>
+                    <div class="flex-grow-1">@Model.ErrorMessage</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
 
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3 grid-item-card" data-file-type="@file.FileType" data-is-folder="@file.IsFolder.ToString().ToLower()">
-                    <div class="gdrive-grid-card">
-                        <!-- Preview Thumbnail / Icon Box -->
-                        <div class="gdrive-grid-preview">
-                            @if (!string.IsNullOrEmpty(file.ThumbnailLink))
-                            {
-                                <img src="@file.ThumbnailLink" alt="@file.Name" loading="lazy" />
-                            }
-                            else if (file.IsFolder)
-                            {
-                                <svg width="44" height="44" fill="#fbbc04" viewBox="0 0 16 16">
-                                    <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.54 3.87A2 2 0 0 1 2.5 3h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3z"/>
-                                </svg>
-                            }
-                            else if (file.FileType == "Spreadsheet")
-                            {
-                                <svg width="38" height="38" fill="#0f9d58" viewBox="0 0 16 16">
-                                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h10v2H3zm0 1h10v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"/>
-                                </svg>
-                            }
-                            else if (file.FileType == "PDF Document")
-                            {
-                                <svg width="38" height="38" fill="#ea4335" viewBox="0 0 16 16">
-                                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
-                                </svg>
-                            }
-                            else
-                            {
-                                <svg width="38" height="38" fill="#4285f4" viewBox="0 0 16 16">
-                                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
-                                </svg>
-                            }
-                        </div>
+            @if (showConnectForm)
+            {
+                <!-- Connect a drive -->
+                <div class="gdrive-card gd-connect p-4 p-md-5 mx-auto">
+                    <h2 class="h4 fw-bold mb-1">
+                        @(Model.Connections.Any() ? "Connect another folder" : "Connect your Google Drive")
+                    </h2>
+                    <p class="text-muted mb-4">
+                        Link a shared folder once and it's saved here, so your files and budget reports load right away next time.
+                    </p>
 
-                        <!-- Card Body Details -->
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
-                                <span class="gdrive-badge-soft @badgeClass" style="font-size: 0.7rem;">
-                                    @file.FileType
+                    <ol class="gd-steps mb-4">
+                        <li>
+                            <strong>Share the folder.</strong>
+                            <span class="text-muted">In Google Drive, open <em>Share</em> and set General access to <em>Anyone with the link</em> (Viewer).</span>
+                        </li>
+                        <li>
+                            <strong>Paste the folder link below.</strong>
+                        </li>
+                    </ol>
+
+                    <form asp-action="Index" method="post" id="driveExplorerForm">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label asp-for="FolderUrl" class="form-label fw-semibold small">Folder link or ID</label>
+                            <div class="input-group gdrive-omnibox">
+                                <span class="input-group-text bg-white border-0 text-primary ps-3 pe-2" aria-hidden="true">
+                                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31z"/>
+                                    </svg>
                                 </span>
-                                <span class="small text-muted" style="font-size: 0.75rem;">
-                                    @file.SizeFormatted
-                                </span>
+                                <input asp-for="FolderUrl" id="folderUrlInput" class="form-control border-0 ps-1"
+                                       placeholder="https://drive.google.com/drive/folders/..." required />
                             </div>
-                            <h6 class="fw-semibold text-dark text-truncate mb-1" title="@file.Name">
-                                @file.Name
-                            </h6>
-                            <div class="small text-muted mb-2" style="font-size: 0.75rem;">
-                                Modified: @(file.ModifiedTime?.ToString("yyyy-MM-dd") ?? "-")
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <span asp-validation-for="FolderUrl" class="text-danger small"></span>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none ms-auto" id="btnPasteSample">Use a sample folder</button>
                             </div>
                         </div>
 
-                        <!-- Card Action Footer -->
-                        <div class="pt-2 border-top d-flex justify-content-between align-items-center">
-                            <small class="text-muted font-monospace" style="font-size: 0.7rem;">
-                                @(file.Id.Length > 10 ? file.Id[..8] + "..." : file.Id)
-                            </small>
-                            <div class="d-flex align-items-center gap-1">
-                                @if (isMonthlyBudget)
+                        <div class="mb-3">
+                            <label asp-for="ConnectionName" class="form-label fw-semibold small">Name <span class="text-muted fw-normal">(optional)</span></label>
+                            <input asp-for="ConnectionName" class="form-control" placeholder="e.g. Household budget" />
+                        </div>
+
+                        <button class="btn btn-link btn-sm text-decoration-none text-muted p-0 mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#advancedSettingsCollapse" aria-expanded="false" aria-controls="advancedSettingsCollapse">
+                            Advanced: use my own Google API key
+                        </button>
+                        <div class="collapse" id="advancedSettingsCollapse">
+                            <div class="p-3 bg-light rounded-3 border mb-3">
+                                <label asp-for="ApiKey" class="form-label fw-semibold small">Google Cloud API key</label>
+                                <input asp-for="ApiKey" class="form-control form-control-sm font-monospace" placeholder="AIzaSy..." />
+                                <div class="form-text">
+                                    Only needed if the folder doesn't load without it. The key is stored encrypted.
+                                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">How do I get one?</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 pt-2">
+                            <button type="submit" class="btn btn-primary px-4 fw-semibold d-flex align-items-center gap-2" id="btnSubmitExplore">
+                                <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <span id="submitText">Connect folder</span>
+                            </button>
+                            @if (Model.Connections.Any())
+                            {
+                                <a asp-action="Index" class="btn btn-light border">Cancel</a>
+                            }
+                        </div>
+                    </form>
+                </div>
+            }
+            else if (response != null && response.Success)
+            {
+                <!-- Drive header -->
+                <div class="gdrive-card p-3 p-md-4 mb-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                        <div class="gd-min-w-0">
+                            <h2 class="h5 fw-bold mb-1 text-truncate">@(response.FolderName ?? currentConn?.Name ?? "Google Drive folder")</h2>
+                            <div class="small text-muted gd-meta">
+                                <span>@response.TotalFilesCount @(response.TotalFilesCount == 1 ? "item" : "items")</span>
+                                <span>@response.TotalSizeFormatted</span>
+                                @if (currentConn?.LastSyncedAtUtc != null)
                                 {
-                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 btn-budget-report shadow-sm"
-                                            data-file-id="@file.Id"
-                                            data-file-name="@file.Name"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#monthlyBudgetModal"
-                                            style="font-size: 0.75rem;"
-                                            title="Generate Monthly Budget Summary Report &amp; Chart">
-                                        📊 Report
-                                    </button>
+                                    <span title="@currentConn.LastSyncedAtUtc.Value.ToString("yyyy-MM-dd HH:mm") UTC">Synced @TimeAgo(currentConn.LastSyncedAtUtc.Value)</span>
                                 }
-                                @if (isSpreadsheet)
-                                {
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 btn-sheet-transactions shadow-sm"
-                                            data-file-id="@file.Id"
-                                            data-file-name="@file.Name"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#transactionsModal"
-                                            style="font-size: 0.75rem;"
-                                            title="View the transactions recorded in this spreadsheet">
-                                        Transactions
+                            </div>
+                        </div>
+
+                        @if (currentConn != null)
+                        {
+                            <div class="d-flex align-items-center gap-2">
+                                <form asp-action="Sync" method="post" id="syncForm">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@currentConn.Id" />
+                                    <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-1" id="btnSyncDrive" title="Get the latest files from Google Drive">
+                                        <span id="syncSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                        <svg id="syncIcon" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                                        </svg>
+                                        <span>Sync now</span>
                                     </button>
-                                }
-                                @if (!string.IsNullOrEmpty(file.WebViewLink))
+                                </form>
+                                @if (!string.IsNullOrEmpty(response.FolderId))
                                 {
-                                    <a href="@file.WebViewLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-link text-primary text-decoration-none p-0 fw-semibold">
-                                        Open &rarr;
+                                    <a href="https://drive.google.com/drive/folders/@response.FolderId" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-light border text-nowrap">
+                                        Open in Drive
                                     </a>
                                 }
+                                <div class="dropdown">
+                                    <button type="button" class="btn btn-sm btn-light border gd-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More options for this drive">
+                                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                                        </svg>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                        <li>
+                                            <button type="button" class="dropdown-item btn-copy-id" data-id="@response.FolderId">Copy folder ID</button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#reauthModal">
+                                                @(currentConn.HasApiKey ? "Change API key" : "Add API key")
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteDriveModal">Remove drive&hellip;</button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @if (isNeedsReauth)
+                    {
+                        <div class="gd-notice gd-notice--warning mt-3" role="alert">
+                            <div>
+                                <strong>This drive needs a new API key.</strong>
+                                <div class="small">@(currentConn?.ErrorMessage ?? "Your Google credentials have expired or are invalid, so files can't be synced.")</div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-warning text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">Update key</button>
+                        </div>
+                    }
+                    else if (response.IsDemoData)
+                    {
+                        <div class="gd-notice mt-3" role="status">
+                            <div>
+                                <strong>You're looking at sample files.</strong>
+                                <div class="small">@(response.WarningMessage ?? "Add a Google API key to see the real files in this folder.")</div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">Add API key</button>
+                        </div>
+                    }
+                </div>
+
+                @if (spreadsheets.Any())
+                {
+                    <!-- Featured spreadsheets: the finance views live here -->
+                    <section class="mb-4" aria-labelledby="sheetsHeading">
+                        <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+                            <h3 id="sheetsHeading" class="h6 fw-bold mb-0">Spreadsheets</h3>
+                            <span class="small text-muted">See a budget report or browse the transactions in a sheet</span>
+                        </div>
+                        <div class="row g-3">
+                            @foreach (var sheet in spreadsheets.Take(featuredSheetLimit))
+                            {
+                                <div class="col-sm-6 col-xl-4">
+                                    <div class="gd-sheet-card h-100">
+                                        <div class="d-flex align-items-start gap-2 mb-3">
+                                            @{ RenderFileIcon(sheet, 22); }
+                                            <div class="gd-min-w-0">
+                                                <div class="fw-semibold text-truncate" title="@sheet.Name">@sheet.Name</div>
+                                                <div class="small text-muted">Edited @(sheet.ModifiedTime?.ToString("MMM d, yyyy") ?? "—")</div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mt-auto">
+                                            @{ RenderSheetButtons(sheet); }
+                                            <span class="ms-auto">@{ RenderOpenLink(sheet); }</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (spreadsheets.Count > featuredSheetLimit)
+                        {
+                            <button type="button" class="btn btn-link btn-sm px-0 mt-2 text-decoration-none js-show-filter" data-filter="Spreadsheet">
+                                Show all @spreadsheets.Count spreadsheets &darr;
+                            </button>
+                        }
+                    </section>
+                }
+
+                <!-- All files -->
+                <section class="gdrive-card p-3 p-md-4" aria-labelledby="filesHeading" id="allFilesSection">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h3 id="filesHeading" class="h6 fw-bold mb-0">All files</h3>
+                        <div class="d-flex align-items-center gap-2 flex-grow-1 flex-sm-grow-0">
+                            <div class="gd-search flex-grow-1">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                </svg>
+                                <input type="search" id="fileSearch" class="form-control form-control-sm" placeholder="Search files" aria-label="Search files" />
+                            </div>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
+                                <button type="button" class="btn btn-light border gd-icon-btn active" id="btnViewTable" aria-pressed="true" title="List view" aria-label="List view">
+                                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="btn btn-light border gd-icon-btn" id="btnViewGrid" aria-pressed="false" title="Grid view" aria-label="Grid view">
+                                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                        <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Type filter -->
+                    <div class="gd-chip-row mb-3" id="filterChipsContainer" role="group" aria-label="Filter by type">
+                        <button type="button" class="gdrive-filter-chip active" data-filter="all" aria-pressed="true">All <span class="chip-count">@response.TotalFilesCount</span></button>
+                        @if (folderCount > 0)
+                        {
+                            <button type="button" class="gdrive-filter-chip" data-filter="Folder" aria-pressed="false">Folders <span class="chip-count">@folderCount</span></button>
+                        }
+                        @if (spreadsheetCount > 0)
+                        {
+                            <button type="button" class="gdrive-filter-chip" data-filter="Spreadsheet" aria-pressed="false">Sheets <span class="chip-count">@spreadsheetCount</span></button>
+                        }
+                        @if (documentCount > 0)
+                        {
+                            <button type="button" class="gdrive-filter-chip" data-filter="Document" aria-pressed="false">Docs <span class="chip-count">@documentCount</span></button>
+                        }
+                        @if (pdfCount > 0)
+                        {
+                            <button type="button" class="gdrive-filter-chip" data-filter="PDF Document" aria-pressed="false">PDFs <span class="chip-count">@pdfCount</span></button>
+                        }
+                        @if (imageCount > 0)
+                        {
+                            <button type="button" class="gdrive-filter-chip" data-filter="Image" aria-pressed="false">Images <span class="chip-count">@imageCount</span></button>
+                        }
+                        @if (presentationCount > 0)
+                        {
+                            <button type="button" class="gdrive-filter-chip" data-filter="Presentation" aria-pressed="false">Slides <span class="chip-count">@presentationCount</span></button>
+                        }
+                        @if (otherCount > 0)
+                        {
+                            <button type="button" class="gdrive-filter-chip" data-filter="other" aria-pressed="false">Other <span class="chip-count">@otherCount</span></button>
+                        }
+                    </div>
+
+                    <!-- List view -->
+                    <div id="tableViewSection" class="table-responsive">
+                        <table id="googleDriveDataTable" class="table table-hover align-middle gdrive-table w-100 mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Modified</th>
+                                    <th scope="col">Size</th>
+                                    <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var file in files)
+                                {
+                                    var isSheet = IsSpreadsheet(file);
+                                    <tr>
+                                        <td data-order="@(file.IsFolder ? "0" : "1")@file.Name">
+                                            <div class="d-flex align-items-center gap-2">
+                                                @{ RenderFileIcon(file, 20); }
+                                                <div class="gd-min-w-0">
+                                                    <div class="fw-semibold text-truncate gd-file-name" title="@file.Name">@file.Name</div>
+                                                    <div class="small text-muted d-md-none">@file.FileType</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="small text-muted">@file.FileType</td>
+                                        <td data-order="@(file.ModifiedTime?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "0001-01-01T00:00:00")" class="text-nowrap small">
+                                            @(file.ModifiedTime?.ToString("MMM d, yyyy") ?? "—")
+                                        </td>
+                                        <td data-order="@(file.Size ?? -1)" class="text-nowrap small text-muted">
+                                            @(file.IsFolder || !file.Size.HasValue ? "—" : file.SizeFormatted)
+                                        </td>
+                                        <td class="text-end text-nowrap">
+                                            @if (isSheet)
+                                            {
+                                                <div class="dropdown d-inline-block">
+                                                    <button type="button" class="btn btn-sm btn-light border dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
+                                                            data-bs-popper-config='{"strategy":"fixed"}'>
+                                                        View
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                        @if (IsMonthlyBudget(file))
+                                                        {
+                                                            <li>
+                                                                <button type="button" class="dropdown-item btn-budget-report" data-file-id="@file.Id" data-file-name="@file.Name"
+                                                                        data-bs-toggle="modal" data-bs-target="#monthlyBudgetModal">Budget report</button>
+                                                            </li>
+                                                        }
+                                                        <li>
+                                                            <button type="button" class="dropdown-item btn-sheet-transactions" data-file-id="@file.Id" data-file-name="@file.Name"
+                                                                    data-bs-toggle="modal" data-bs-target="#transactionsModal">Transactions</button>
+                                                        </li>
+                                                        @if (!string.IsNullOrEmpty(file.WebViewLink))
+                                                        {
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li><a class="dropdown-item" href="@file.WebViewLink" target="_blank" rel="noopener noreferrer">Open in Google Drive</a></li>
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                RenderOpenLink(file);
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Grid view -->
+                    <div id="gridViewSection" class="d-none">
+                        <div class="row g-3">
+                            @foreach (var file in files)
+                            {
+                                <div class="col-12 col-sm-6 col-md-4 grid-item-card" data-file-type="@file.FileType" data-file-name="@file.Name.ToLowerInvariant()">
+                                    <div class="gdrive-grid-card">
+                                        <div class="gdrive-grid-preview">
+                                            @if (!string.IsNullOrEmpty(file.ThumbnailLink))
+                                            {
+                                                <img src="@file.ThumbnailLink" alt="" loading="lazy" />
+                                            }
+                                            else
+                                            {
+                                                RenderFileIcon(file, 36);
+                                            }
+                                        </div>
+                                        <div class="fw-semibold text-truncate" title="@file.Name">@file.Name</div>
+                                        <div class="small text-muted mb-2">
+                                            @file.FileType · @(file.ModifiedTime?.ToString("MMM d, yyyy") ?? "—")
+                                        </div>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mt-auto">
+                                            @if (IsSpreadsheet(file))
+                                            {
+                                                RenderSheetButtons(file);
+                                            }
+                                            <span class="ms-auto">@{ RenderOpenLink(file); }</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <p class="text-muted text-center small py-4 mb-0 d-none" id="gridEmptyState">No files match your filters.</p>
+                    </div>
+                </section>
+            }
+            else if (currentConn != null)
+            {
+                <!-- Drive selected but its files couldn't be loaded -->
+                <div class="gdrive-card p-5 text-center">
+                    <h2 class="h5 fw-bold mb-2">We couldn't load the files in @currentConn.Name</h2>
+                    <p class="text-muted mb-4">Check that the folder is still shared with "Anyone with the link", then try syncing again.</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <form asp-action="Sync" method="post" id="syncForm">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@currentConn.Id" />
+                            <button type="submit" class="btn btn-primary d-flex align-items-center gap-2" id="btnSyncDrive">
+                                <span id="syncSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                Try again
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#reauthModal">Update API key</button>
                     </div>
                 </div>
             }
-        </div>
-    }
-    else if (!Model.ShowConnectForm && !Model.Connections.Any())
-    {
-        <!-- First-Time Welcoming Hero State -->
-        <div class="gdrive-card p-5 text-center mb-4">
-            <div class="mb-3 text-primary">
-                <svg width="64" height="64" fill="currentColor" viewBox="0 0 16 16" class="opacity-75">
-                    <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.54 3.87A2 2 0 0 1 2.5 3h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3z"/>
-                </svg>
-            </div>
-            <h4 class="fw-bold text-dark mb-2">No Google Drive Connected</h4>
-            <p class="text-muted mx-auto mb-4" style="max-width: 500px;">
-                Connect a shared Google Drive folder once to explore, sort, and cache its files in Azure SQL Database. On subsequent visits, your saved drives and cached files will load automatically.
-            </p>
-            <a asp-action="Index" asp-route-addNew="true" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold shadow-sm">
-                Connect a Google Drive Folder &rarr;
-            </a>
-        </div>
-    }
+        </section>
+    </div>
 </div>
 
 <!-- Monthly Budget Summary Report & Chart Modal -->
@@ -1003,64 +876,60 @@
     </div>
 </div>
 
-<!-- Re-authentication / Update API Key Modal -->
+<!-- API Key Modal -->
 <div class="modal fade" id="reauthModal" tabindex="-1" aria-labelledby="reauthModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-bottom pb-3">
-                <h5 class="modal-title fw-bold text-dark" id="reauthModalLabel">
-                    <span class="text-primary me-1">&#9881;</span> Google Drive API Credentials
-                </h5>
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="reauthModalLabel">API key for @(currentConn?.Name ?? "this drive")</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form asp-action="Reauth" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@(currentConn?.Id ?? 0)" />
                 <div class="modal-body">
-                    <p class="text-muted small">
-                        Update or provide a Google Cloud API Key with <em>Google Drive API</em> enabled for <strong>@(currentConn?.Name ?? "this connection")</strong>.
-                    </p>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small text-dark">Google Cloud API Key:</label>
-                        <input type="text" name="apiKey" class="form-control font-monospace" placeholder="AIzaSy..." />
-                        <small class="text-muted">Encrypted, stored securely in Azure SQL Database, and used to synchronize folder metadata.</small>
+                    @if (currentConn?.HasApiKey == true)
+                    {
+                        <p class="small text-muted">Current key: <code>@currentConn.MaskedApiKey</code></p>
+                    }
+                    <label for="reauthApiKey" class="form-label fw-semibold small">Google Cloud API key</label>
+                    <input type="text" id="reauthApiKey" name="apiKey" class="form-control font-monospace" placeholder="AIzaSy..." />
+                    <div class="form-text">
+                        The key needs the Google Drive API enabled. It's stored encrypted and used to sync this folder.
+                        <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">How do I get one?</button>
                     </div>
                 </div>
                 <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Save &amp; Re-sync</button>
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">Save and sync</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Remove / Delete Connection Confirmation Modal -->
+<!-- Remove Drive Confirmation Modal -->
 @if (currentConn != null)
 {
     <div class="modal fade" id="deleteDriveModal" tabindex="-1" aria-labelledby="deleteDriveModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-4">
-                <div class="modal-header border-bottom pb-3">
-                    <h5 class="modal-title fw-bold text-danger" id="deleteDriveModalLabel">
-                        <span>&#9888;</span> Remove Google Drive Connection
-                    </h5>
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold" id="deleteDriveModalLabel">Remove @currentConn.Name?</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-dark mb-2">
-                        Are you sure you want to remove <strong>@currentConn.Name</strong> (Folder ID: <code>@currentConn.FolderId</code>)?
+                    <p class="mb-0">
+                        This disconnects the folder and clears its @currentConn.CachedFilesCount saved items from this app.
+                        Nothing is deleted from your Google Drive, and you can reconnect it anytime.
                     </p>
-                    <div class="alert alert-warning small mb-0">
-                        This will remove the connection configuration and purge all <strong>@currentConn.CachedFilesCount cached items</strong> from the database. You can reconnect it anytime.
-                    </div>
                 </div>
                 <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
                     <form asp-action="Delete" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="id" value="@currentConn.Id" />
-                        <button type="submit" class="btn btn-danger rounded-pill px-4 fw-semibold">Remove Drive</button>
+                        <button type="submit" class="btn btn-danger fw-semibold">Remove drive</button>
                     </form>
                 </div>
             </div>
@@ -1068,56 +937,53 @@
     </div>
 }
 
-<!-- API & Sharing Guide Modal -->
+<!-- Help & Setup Modal -->
 <div class="modal fade" id="apiKeyGuideModal" tabindex="-1" aria-labelledby="apiKeyGuideModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-bottom pb-3">
-                <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="apiKeyGuideModalLabel">
-                    <span class="p-1 bg-primary text-white rounded">
-                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                        </svg>
-                    </span>
-                    Google Drive Access &amp; API Key Guide
-                </h5>
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="apiKeyGuideModalLabel">Help &amp; setup</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="alert alert-primary d-flex align-items-center gap-2 mb-4" role="alert">
-                    <span class="fs-4">&#128161;</span>
-                    <div>
-                        <strong>Azure SQL Persistent Caching Active:</strong> When connected, folder metadata is stored in Azure SQL Database (Serverless) by the API service and served from there on subsequent visits, so Google Drive is only queried when you sync. The first request after the database auto-pauses may take a few extra seconds while it resumes.
-                    </div>
-                </div>
-
-                <h6 class="fw-bold text-dark mb-2">1. Sharing Permissions ("Anyone with the link")</h6>
+                <h6 class="fw-bold mb-2">1. Share your folder</h6>
                 <p class="text-muted small">
-                    For Google Drive to allow file exploration via API, your folder access must be public or shared. Open Google Drive, right-click the folder, click <strong>Share</strong>, and set General access to <strong>"Anyone with the link"</strong> (Viewer).
+                    In Google Drive, right-click the folder, choose <strong>Share</strong>, and set General access to
+                    <strong>Anyone with the link</strong> (Viewer). Private folders can't be read and show up as "not found".
                 </p>
 
-                <h6 class="fw-bold text-dark mb-2 mt-4">2. Optional: Getting a Google Cloud API Key</h6>
-                <ol class="text-muted small ps-3 mb-0">
-                    <li class="mb-2">Go to the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console</a> and create or select a project.</li>
-                    <li class="mb-2">Enable the <strong>Google Drive API</strong> in APIs &amp; Services &gt; Library.</li>
-                    <li class="mb-2">Go to <strong>APIs &amp; Services &gt; Credentials</strong> and click <strong>Create Credentials &gt; API Key</strong>.</li>
-                    <li>Copy your API key and paste it into the connection or re-auth dialog.</li>
+                <h6 class="fw-bold mb-2 mt-4">2. Name your budget spreadsheets</h6>
+                <p class="text-muted small">
+                    Spreadsheets whose name starts with <strong>Monthly budget</strong> get a budget report.
+                    Any spreadsheet with a sheet that has <strong>Date</strong> and <strong>Amount</strong> columns can show its transactions.
+                </p>
+
+                <h6 class="fw-bold mb-2 mt-4">3. Optional: add a Google API key</h6>
+                <ol class="text-muted small ps-3">
+                    <li class="mb-1">Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console</a> and create or pick a project.</li>
+                    <li class="mb-1">Enable the <strong>Google Drive API</strong> under APIs &amp; Services &gt; Library.</li>
+                    <li class="mb-1">Under <strong>APIs &amp; Services &gt; Credentials</strong>, choose <strong>Create credentials &gt; API key</strong>.</li>
+                    <li>Paste the key when connecting a folder, or from the drive's <strong>&#8943;</strong> menu.</li>
                 </ol>
+
+                <h6 class="fw-bold mb-2 mt-4">How syncing works</h6>
+                <p class="text-muted small mb-0">
+                    The file list is saved after each sync, so the page loads quickly without contacting Google.
+                    Use <strong>Sync now</strong> to pick up changes. The first load after a quiet period can take a few extra seconds.
+                </p>
             </div>
             <div class="modal-footer border-top">
-                <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-dismiss="modal">Got it!</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Toast Feedback Container -->
+<!-- Toast Feedback -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
-    <div id="copyToast" class="toast align-items-center text-white bg-dark border-0 rounded-3" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="pageToast" class="toast align-items-center text-white bg-dark border-0 rounded-3" role="status" aria-live="polite" aria-atomic="true">
         <div class="d-flex">
-            <div class="toast-body small" id="copyToastMessage">
-                Folder ID copied to clipboard!
-            </div>
+            <div class="toast-body small" id="pageToastMessage"></div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
