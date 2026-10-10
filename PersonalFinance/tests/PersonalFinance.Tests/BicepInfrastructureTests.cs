@@ -65,6 +65,8 @@ public class BicepInfrastructureTests
         Assert.Contains("output webFqdn string", mainBicep);
         Assert.Contains("output apiFqdn string", mainBicep);
         Assert.Contains("output containerAppEnvironmentName string", mainBicep);
+        Assert.Contains("param logRetentionInDays int = 30", mainBicep);
+        Assert.Contains("retentionInDays: logRetentionInDays", mainBicep);
         Assert.Contains("param sqlLocation string", mainBicep);
         Assert.Contains("location: sqlLocation", mainBicep);
         Assert.Contains("uniqueString(resourceGroup().id, location)", mainBicep);
@@ -144,6 +146,7 @@ public class BicepInfrastructureTests
         Assert.Contains("Microsoft.OperationalInsights/workspaces", laBicep);
         Assert.Contains("name: 'PerGB2018'", laBicep);
         Assert.Contains("retentionInDays", laBicep);
+        Assert.Contains("param retentionInDays int = 30", laBicep);
         Assert.Contains("param dailyQuotaGb int = -1", laBicep);
     }
 
@@ -192,6 +195,7 @@ public class BicepInfrastructureTests
         Assert.True(parameters.TryGetProperty("apiImage", out _));
         Assert.True(parameters.TryGetProperty("webImage", out _));
         Assert.True(parameters.TryGetProperty("deploySqlDatabase", out _));
+        Assert.True(parameters.TryGetProperty("logRetentionInDays", out _));
     }
 
     [Fact]

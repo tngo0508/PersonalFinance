@@ -18,9 +18,9 @@ using PersonalFinance.Web.Services;
 
 // 1. Bootstrap early logging to catch startup errors
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console(
+    .WriteTo.Async(a => a.Console(
         theme: AnsiConsoleTheme.Code,
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
     .CreateBootstrapLogger();
 
 try
@@ -32,14 +32,15 @@ try
     // 2. Add Aspire service defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
     builder.AddServiceDefaults();
 
-    // 3. Wire up Serilog from appsettings.json
+    // 3. Wire up Serilog with non-blocking async console sink and OpenTelemetry forwarding
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
-        .WriteTo.Console(
+        .WriteTo.Async(a => a.Console(
             theme: AnsiConsoleTheme.Code,
-            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"));
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
+        writeToProviders: true);
 
     // 3a. Register EF Core DbContext & ASP.NET Core Identity (Azure SQL Serverless / SQLite)
     builder.Services.AddAppDbContext(builder.Configuration);
