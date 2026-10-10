@@ -9,7 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-10
+
 ### Added
+- **Spreadsheet Transactions Viewer**:
+  - Added a **Transactions** action for every spreadsheet on the Google Drive page that opens the rows of the sheet's Transactions table in a searchable, sortable modal.
+  - Added `GET /api/googledrive/spreadsheet-transactions` in `PersonalFinance.ApiService`, the `IGoogleDriveApi.GetSpreadsheetTransactionsAsync` Refit method, and the `SpreadsheetTransactions` action in the Web `GoogleDriveController`, returning the new `SpreadsheetTransactionsDto` / `SpreadsheetTransactionDto`.
+  - Added `GoogleDriveHelper.ParseXlsxTransactions`, `ParseCsvTransactions` and `ParseTransactionRows`. A header row with `Date` and `Amount` starts a table, side-by-side tables are supported (Google's Monthly budget template puts Expenses and Income next to each other), the section label above each table sets the type, a `Type` column or signed amounts are used when there is no label, Excel serial dates are converted, and "Total…" rows are skipped. Sheets named like "Transactions" are read first.
+  - Downloads reuse the budget report path (Google Sheets are exported as XLSX so every sheet is available, with CSV fallback). Failures return an error message instead of generated sample rows.
+  - Added sample transactions for preview files, plus tests in `GoogleDriveHelperTests` and `GoogleDriveWebControllerTests`.
+- **Budget Report Additions**:
+  - Summary card with the period, status badge and plain-language takeaway; plan meters on the Income and Spending tiles; savings rate measured against a 20% savings goal.
+  - "Where your income went" bar showing spent vs. saved per $100 earned, with a hatched segment when spending exceeds income.
+  - Category sorting (largest, most over budget, A–Z) and an "Only over budget" filter.
+  - **Export CSV** of the current view (months for the full year, categories for a month) and a **Transactions** link to the same file's transactions.
+- **Transactions Insights**:
+  - Highlights for the largest expense, top category share and most frequent category, plus a spending-over-time chart (daily, or monthly for ranges over two months) with hover tooltips.
+  - Ranked top spending categories (the tail folds into "Other") that filter the table when selected.
+  - Live totals for the filtered rows, **Export CSV** of the filtered rows, and a **Budget report** link for monthly budget sheets.
 - **Architecture & Deployment Overview in `deployment.md`**:
   - Rewrote Section 1 as a learning-oriented architecture guide with Mermaid diagrams derived from `deploy-azure.yml` and `infra/*.bicep`: system context, solution project map, CI/CD job graph with a trigger matrix, `deploy-azure` sequence and Bicep module dependency graph, runtime request flow, configuration/secrets flow, and the startup/health/scale-to-zero lifecycle.
   - Added an Azure resource table (name patterns and cost model), an environment comparison (Aspire, Docker, Azure, tests), a secrets-to-environment-variable mapping, and a "Security Posture and Known Gaps" section (public unauthenticated API when `exposeApiPublicly=true`, SQL admin connection string, `AllowAllWindowsAzureIps` firewall rule, broad pipeline role scope).
@@ -91,6 +108,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added xUnit unit test suite `PersonalFinance.Tests` covering URL parsing, byte formatting, MIME type resolution, and service handling.
 
 ### Changed
+- **Site Layout & Navigation Redesign** (`_Layout.cshtml`, `_LoginPartial.cshtml`, `site.css`):
+  - New sticky header with a brand mark, active-page indicator, and an account menu (avatar or initial, name, email, Account settings, Sign out) replacing the "Hello …!" text and Sign out button; signed-out visitors get **Log in** and **Create account** buttons.
+  - Added a "Skip to main content" link, page titles in the form "Page · PersonalFinance", a light page background with a width-limited container, and a slim footer that stays at the bottom without fixed positioning.
+  - Unified Bootstrap buttons, links and focus rings on one brand blue.
+- **Google Drive Page Redesign** (`Views/GoogleDrive/Index.cshtml`, `explorer.js`):
+  - Two-pane layout: a "Your drives" sidebar with file counts and a needs-attention indicator (a drive picker dropdown on phones), and one drive header showing items, size and "Synced … ago" with **Sync now**, **Open in Drive** and a **⋯** menu for Copy folder ID, API key and Remove drive.
+  - Added a Spreadsheets section with visible **Budget report** and **Transactions** actions. The file table is reduced to Name / Type / Modified / Size with a single **View** menu for spreadsheets, and one search box and type filter now drive both the list and grid views.
+  - Sample-data and expired-key warnings moved into the drive header, success messages show as a toast, the connect form became two numbered steps with the API key under "Advanced", and user-facing wording no longer mentions internal storage details. The help dialog is now **Help & setup**.
+  - Removed the four stat tiles, file IDs in rows, and the Created column.
+- **Budget Report & Transactions Modals Redesign**: Shared header layout with file name, data source and actions. The transactions table shows categories as chips, marks income with a green "+", hides the redundant Type column, and moves search and filters into one toolbar. New charts use the same validated blue/orange series colors as the existing year charts.
+- **Spreadsheet Source Lookup**: Extracted `GoogleDriveService.ResolveSpreadsheetSourceAsync` so the budget report and transactions share the connection, cached-file and API-key lookup.
 - **Faster Pull Request CI/CD Pipeline** (`.github/workflows/deploy-azure.yml`):
   - Container images now build as a parallel matrix (`api`, `web`) alongside `build-and-test` and `validate-infra` instead of sequentially after tests; `deploy-azure` still requires all three (`needs: [build-and-test, validate-infra, build-and-push-containers]`).
   - Pull requests read the Docker layer cache but no longer export it (the `mode=max` export took ~50s per image); `main` and manual runs still export it.
@@ -152,6 +180,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Serilog Console Theme**: Configured `AnsiConsoleTheme.Code` with formatted output templates across `PersonalFinance.ApiService` and `PersonalFinance.Web` for high-contrast, clear, and readable console log output.
 
 ### Fixed
+- **Google Drive Page Layout Issues**: The file table no longer overflows on phones, DataTables sort arrows no longer overlap column headers, and files without a size show "—" consistently.
+- **Floating-Label Placeholders on Login/Register**: Removed leftover template CSS that displayed placeholder text (e.g. "name@example.com") next to the floating field labels.
+- **Unused Layout Stylesheet**: Removed `Views/Shared/_Layout.cshtml.css`, whose scoped styles were never loaded because the CSS isolation bundle isn't referenced.
 - **Docker Layer Cache Collisions in CI/CD**: The ApiService and Web builds shared the default GitHub Actions cache scope and overwrote each other's cache, causing `dotnet restore` layer misses; each image now uses its own scope (`scope=api` / `scope=web`).
 - **Outdated Deployment Documentation**: Removed SQLite references from `deployment.md`, corrected notes that described the API as internal-only (CI deploys it with `exposeApiPublicly=true`), added the required `ConnectionStrings__DefaultConnection` to the local Docker run commands, replaced the `deploy.ps1` "SQLite" option with a custom connection string option, and documented that `-DeploySqlDatabase` must be passed explicitly (the script sends `$DeploySqlDatabase.IsPresent`, so its `= $true` default has no effect).
 - **Budget Report Calculations & Rendering**:
