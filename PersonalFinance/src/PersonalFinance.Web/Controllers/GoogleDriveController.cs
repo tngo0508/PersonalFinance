@@ -256,6 +256,35 @@ public class GoogleDriveController : Controller
         return Json(fallbackReport);
     }
 
+    /// <summary>
+    /// Returns the transaction log read from the spreadsheet's Transactions sheet.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> SpreadsheetTransactions(
+        [FromQuery] string fileId,
+        [FromQuery] string? fileName = null,
+        [FromQuery] int? connectionId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileId))
+        {
+            return BadRequest(new { error = "File ID is required." });
+        }
+
+        var userId = GetCurrentUserId();
+
+        try
+        {
+            var result = await _googleDriveApi.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, userId, cancellationToken);
+            return Json(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to read transactions from spreadsheet '{FileId}'.", fileId);
+            return StatusCode(StatusCodes.Status502BadGateway, new { error = "The spreadsheet could not be read. Please try again." });
+        }
+    }
+
     private async Task<IActionResult> ConnectAndExploreAsync(
         GoogleDriveViewModel model,
         CancellationToken cancellationToken)

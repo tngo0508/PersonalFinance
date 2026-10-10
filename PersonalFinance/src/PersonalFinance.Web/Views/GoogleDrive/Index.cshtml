@@ -470,6 +470,7 @@
                             var rawCreatedDate = file.CreatedTime?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "0001-01-01T00:00:00";
                             var rawSortSize = file.Size.HasValue ? file.Size.Value.ToString() : "-1";
                             var isMonthlyBudget = PersonalFinance.Shared.Helpers.GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
+                            var isSpreadsheet = isMonthlyBudget || (!file.IsFolder && file.FileType == "Spreadsheet");
 
                             <tr data-file-type="@file.FileType" data-is-folder="@file.IsFolder.ToString().ToLower()">
                                 <td class="text-center">
@@ -546,13 +547,27 @@
                                             <span>Budget Report</span>
                                         </button>
                                     }
+                                    @if (isSpreadsheet)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 me-1 btn-sheet-transactions shadow-sm"
+                                                data-file-id="@file.Id"
+                                                data-file-name="@file.Name"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#transactionsModal"
+                                                title="View the transactions recorded in this spreadsheet">
+                                            <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16" class="me-1" aria-hidden="true">
+                                                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
+                                            </svg>
+                                            <span>Transactions</span>
+                                        </button>
+                                    }
                                     @if (!string.IsNullOrEmpty(file.WebViewLink))
                                     {
                                         <a href="@file.WebViewLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" title="Open in Google Drive">
                                             Open &rarr;
                                         </a>
                                     }
-                                    else if (!isMonthlyBudget)
+                                    else if (!isSpreadsheet)
                                     {
                                         <span class="text-muted small">-</span>
                                     }
@@ -581,6 +596,7 @@
                     _ => "gdrive-badge-generic"
                 };
                 var isMonthlyBudget = PersonalFinance.Shared.Helpers.GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
+                var isSpreadsheet = isMonthlyBudget || (!file.IsFolder && file.FileType == "Spreadsheet");
 
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3 grid-item-card" data-file-type="@file.FileType" data-is-folder="@file.IsFolder.ToString().ToLower()">
                     <div class="gdrive-grid-card">
@@ -650,6 +666,18 @@
                                             style="font-size: 0.75rem;"
                                             title="Generate Monthly Budget Summary Report &amp; Chart">
                                         📊 Report
+                                    </button>
+                                }
+                                @if (isSpreadsheet)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 btn-sheet-transactions shadow-sm"
+                                            data-file-id="@file.Id"
+                                            data-file-name="@file.Name"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#transactionsModal"
+                                            style="font-size: 0.75rem;"
+                                            title="View the transactions recorded in this spreadsheet">
+                                        Transactions
                                     </button>
                                 }
                                 @if (!string.IsNullOrEmpty(file.WebViewLink))
@@ -865,6 +893,116 @@
     </div>
 </div>
 
+<!-- Spreadsheet Transactions Modal -->
+<div class="modal fade" id="transactionsModal" tabindex="-1" aria-labelledby="transactionsModalLabel" aria-hidden="true"
+     data-transactions-url="@Url.Action("SpreadsheetTransactions", "GoogleDrive")"
+     data-connection-id="@(currentConn?.Id ?? 0)">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 bgt-root">
+            <div class="modal-header border-bottom py-3">
+                <div class="d-flex align-items-center gap-3 overflow-hidden">
+                    <div class="bgt-header-icon flex-shrink-0">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
+                        </svg>
+                    </div>
+                    <div class="overflow-hidden">
+                        <h5 class="modal-title fw-bold mb-0" id="transactionsModalLabel">Transactions</h5>
+                        <div class="d-flex align-items-center gap-2 small text-muted overflow-hidden">
+                            <span class="text-truncate" id="txModalFileName" title="">-</span>
+                            <span class="flex-shrink-0" id="txModalDataSource"></span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-3 p-md-4 bgt-body">
+                <!-- Loading state -->
+                <div class="bgt-state" id="txLoadingState" role="status">
+                    <div class="spinner-border text-secondary mb-3" aria-hidden="true"></div>
+                    <div class="fw-semibold">Reading your transactions&hellip;</div>
+                    <div class="small text-muted">Pulling the Transactions sheet from Google Drive. This usually takes a few seconds.</div>
+                </div>
+
+                <!-- Error state -->
+                <div class="bgt-state d-none" id="txErrorState" role="alert">
+                    <div class="bgt-state-icon mb-3" aria-hidden="true">!</div>
+                    <div class="fw-semibold">We couldn't find any transactions in this spreadsheet</div>
+                    <div class="small text-muted mb-3" id="txErrorMessage"></div>
+                    <button type="button" class="btn btn-sm btn-dark rounded-pill px-4" id="btnTxRetry">Try again</button>
+                </div>
+
+                <!-- Transactions -->
+                <div class="d-none" id="txContent">
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-lg-3">
+                            <div class="bgt-tile h-100">
+                                <div class="bgt-tile-label">Transactions</div>
+                                <div class="bgt-tile-value" id="txKpiCount">0</div>
+                                <div class="bgt-tile-sub" id="txKpiRange"></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="bgt-tile h-100">
+                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--spend" aria-hidden="true"></span>Spending</div>
+                                <div class="bgt-tile-value" id="txKpiExpenses">$0.00</div>
+                                <div class="bgt-tile-sub" id="txKpiExpensesSub"></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="bgt-tile h-100">
+                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--income" aria-hidden="true"></span>Income</div>
+                                <div class="bgt-tile-value" id="txKpiIncome">$0.00</div>
+                                <div class="bgt-tile-sub" id="txKpiIncomeSub"></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="bgt-tile h-100">
+                                <div class="bgt-tile-label">Net</div>
+                                <div class="bgt-tile-value" id="txKpiNet">$0.00</div>
+                                <div class="bgt-tile-sub">Income minus spending</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bgt-card">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Filter by type">
+                                <button type="button" class="btn btn-outline-secondary active tx-type-filter" data-type="" aria-pressed="true">All</button>
+                                <button type="button" class="btn btn-outline-secondary tx-type-filter" data-type="Expense" aria-pressed="false">Spending</button>
+                                <button type="button" class="btn btn-outline-secondary tx-type-filter" data-type="Income" aria-pressed="false">Income</button>
+                            </div>
+                            <select class="form-select form-select-sm w-auto" id="txCategoryFilter" aria-label="Filter by category">
+                                <option value="">All categories</option>
+                            </select>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="txTable" class="table table-hover align-middle w-100 mb-0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Date</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col">Category</th>
+                                        <th scope="col">Type</th>
+                                        <th scope="col" class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top justify-content-between">
+                <div class="small text-muted" id="txSheetName"></div>
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Re-authentication / Update API Key Modal -->
 <div class="modal fade" id="reauthModal" tabindex="-1" aria-labelledby="reauthModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -996,4 +1134,5 @@
     <script src="~/lib/chartjs/chart.umd.min.js"></script>
     <script src="~/js/google-drive/explorer.js" asp-append-version="true"></script>
     <script src="~/js/google-drive/budget-report.js" asp-append-version="true"></script>
+    <script src="~/js/google-drive/transactions.js" asp-append-version="true"></script>
 }

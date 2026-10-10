@@ -354,23 +354,7 @@ public static class GoogleDriveHelper
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
 
             // 1. Extract shared strings table
-            var sharedStrings = new List<string>();
-            var sharedStringsEntry = archive.GetEntry("xl/sharedStrings.xml");
-            if (sharedStringsEntry != null)
-            {
-                using var ssStream = sharedStringsEntry.Open();
-                var ssDoc = XDocument.Load(ssStream);
-                var ns = ssDoc.Root?.Name.Namespace ?? XNamespace.None;
-                foreach (var si in ssDoc.Descendants(ns + "si"))
-                {
-                    var sb = new StringBuilder();
-                    foreach (var t in si.Descendants(ns + "t"))
-                    {
-                        sb.Append(t.Value);
-                    }
-                    sharedStrings.Add(sb.ToString());
-                }
-            }
+            var sharedStrings = ReadSharedStrings(archive);
 
             // 2. Map sheet names and worksheet entries
             var sheetEntries = GetWorksheetEntriesWithNames(archive);
@@ -417,6 +401,303 @@ public static class GoogleDriveHelper
         {
             return GenerateMonthlyBudgetReport(fileName, fileId);
         }
+    }
+
+    /// <summary>
+    /// Reads the transaction log from an OpenXML Excel (.xlsx) workbook.
+    /// Sheets named like "Transactions" are read first; other sheets are only scanned when none of those yield rows.
+    /// </summary>
+    public static SpreadsheetTransactionsDto ParseXlsxTransactions(
+        Stream stream,
+        string? fileName = null,
+        string? fileId = null,
+        string dataSource = "Google Drive Spreadsheet (Actual Data)")
+    {
+        var result = new SpreadsheetTransactionsDto
+        {
+            FileName = fileName ?? string.Empty,
+            FileId = fileId,
+            DataSource = dataSource
+        };
+
+        try
+        {
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
+            var sharedStrings = ReadSharedStrings(archive);
+            var sheetEntries = GetWorksheetEntriesWithNames(archive);
+
+            var preferredSheets = sheetEntries.Where(s => IsTransactionSheetName(s.SheetName)).ToList();
+            var otherSheets = sheetEntries.Except(preferredSheets).ToList();
+
+            foreach (var candidates in new[] { preferredSheets, otherSheets })
+            {
+                var sheetNames = new List<string>();
+                foreach (var (sheetName, entry) in candidates)
+                {
+                    var transactions = ParseTransactionRows(ParseWorksheetRows(entry, sharedStrings));
+                    if (transactions.Count == 0) continue;
+
+                    result.Transactions.AddRange(transactions);
+                    sheetNames.Add(sheetName);
+                }
+
+                if (result.Transactions.Count > 0)
+                {
+                    result.SheetName = string.Join(", ", sheetNames);
+                    return result;
+                }
+            }
+
+            result.ErrorMessage = "No transactions table was found. Add a sheet with Date and Amount column headers.";
+        }
+        catch
+        {
+            result.ErrorMessage = "The spreadsheet could not be read as an Excel workbook.";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Reads the transaction log from CSV / delimited text content.
+    /// </summary>
+    public static SpreadsheetTransactionsDto ParseCsvTransactions(
+        string? csvContent,
+        string? fileName = null,
+        string? fileId = null,
+        string dataSource = "Google Drive Spreadsheet (Actual Data)")
+    {
+        var result = new SpreadsheetTransactionsDto
+        {
+            FileName = fileName ?? string.Empty,
+            FileId = fileId,
+            DataSource = dataSource
+        };
+
+        if (!string.IsNullOrWhiteSpace(csvContent))
+        {
+            result.Transactions = ParseTransactionRows(ParseCsvTable(csvContent));
+        }
+
+        if (result.Transactions.Count == 0)
+        {
+            result.ErrorMessage = "No transactions table was found. Add a sheet with Date and Amount column headers.";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Extracts transactions from tabular rows. A header row containing "Date" and "Amount" starts a table;
+    /// several tables can sit side by side (e.g. Google's Monthly budget template puts Expenses and Income next to each other).
+    /// The section label above each table ("Expenses" / "Income") decides the transaction type.
+    /// </summary>
+    public static List<SpreadsheetTransactionDto> ParseTransactionRows(List<List<string>> rows)
+    {
+        var transactions = new List<SpreadsheetTransactionDto>();
+        var tables = new List<TransactionTableLayout>();
+
+        for (int r = 0; r < rows.Count; r++)
+        {
+            var headerTables = DetectTransactionTables(rows, r);
+            if (headerTables.Count > 0)
+            {
+                ApplySignBasedTypes(tables);
+                tables = headerTables;
+                continue;
+            }
+
+            foreach (var table in tables)
+            {
+                var tx = ReadTransaction(rows[r], table);
+                if (tx != null)
+                {
+                    table.Transactions.Add(tx);
+                    transactions.Add(tx);
+                }
+            }
+        }
+
+        ApplySignBasedTypes(tables);
+        return transactions;
+    }
+
+    /// <summary>
+    /// Provides sample transactions CSV laid out like the Transactions sheet of Google's Monthly budget template.
+    /// </summary>
+    public static string GetSampleTransactionsCsv()
+    {
+        return @"Transactions
+
+Expenses,,,,,Income
+Date,Amount,Description,Category,,Date,Amount,Description,Category
+9/1/2026,1500.00,September rent,Housing & Rent,,9/1/2026,3000.00,Employer direct deposit,Paycheck 1
+9/2/2026,84.12,Trader Joe's,Groceries & Food,,9/15/2026,2650.00,Employer direct deposit,Paycheck 2
+9/3/2026,62.40,Shell gas station,Transportation & Gas,,9/30/2026,320.00,Brokerage dividends,Investment Returns
+9/5/2026,155.00,Electric & water bill,Utilities & Internet
+9/7/2026,58.75,Dinner with friends,Dining & Entertainment
+9/9/2026,300.00,Health insurance premium,Healthcare & Insurance
+9/10/2026,1150.00,Transfer to savings,Savings & Investments
+9/12/2026,212.30,Costco,Groceries & Food
+9/14/2026,155.00,Internet & phone,Utilities & Internet
+9/18/2026,96.50,Concert tickets,Dining & Entertainment
+9/20/2026,180.60,Car service,Transportation & Gas
+9/22/2026,230.00,Clothing & household,Personal & Miscellaneous
+9/24/2026,388.58,Whole Foods,Groceries & Food
+9/27/2026,284.75,Restaurants & takeout,Dining & Entertainment
+9/29/2026,182.00,Gas & parking,Transportation & Gas";
+    }
+
+    private sealed class TransactionTableLayout
+    {
+        public int DateCol { get; init; }
+        public int AmountCol { get; init; }
+        public int DescriptionCol { get; init; } = -1;
+        public int CategoryCol { get; init; } = -1;
+        public int TypeCol { get; init; } = -1;
+        public string? SectionType { get; init; }
+        public List<SpreadsheetTransactionDto> Transactions { get; } = new();
+    }
+
+    private static List<TransactionTableLayout> DetectTransactionTables(List<List<string>> rows, int headerRow)
+    {
+        var tables = new List<TransactionTableLayout>();
+        var row = rows[headerRow];
+        var dateCols = Enumerable.Range(0, row.Count).Where(i => IsDateHeader(row[i])).ToList();
+
+        for (int t = 0; t < dateCols.Count; t++)
+        {
+            var start = dateCols[t];
+            var end = t + 1 < dateCols.Count ? dateCols[t + 1] - 1 : row.Count - 1;
+
+            int Find(Func<string, bool> predicate) =>
+                Enumerable.Range(start, end - start + 1).FirstOrDefault(i => i != start && predicate(row[i].Trim().ToLowerInvariant()), -1);
+
+            var amountCol = Find(h => h.Contains("amount") || h is "amt" or "cost" or "price" or "value");
+            if (amountCol < 0) continue;
+
+            tables.Add(new TransactionTableLayout
+            {
+                DateCol = start,
+                AmountCol = amountCol,
+                DescriptionCol = Find(h => h is "description" or "payee" or "merchant" or "memo" or "details" or "item" or "name" or "notes" or "note"),
+                CategoryCol = Find(h => h.Contains("category")),
+                TypeCol = Find(h => h == "type"),
+                SectionType = FindSectionType(rows, headerRow, start, end)
+            });
+        }
+
+        return tables;
+    }
+
+    private static bool IsDateHeader(string text)
+    {
+        var lower = text.Trim().ToLowerInvariant();
+        return lower == "date" || lower.EndsWith(" date");
+    }
+
+    // Looks a few rows above the header, within the table's columns, for an "Expenses" / "Income" section label
+    private static string? FindSectionType(List<List<string>> rows, int headerRow, int startCol, int endCol)
+    {
+        for (int r = headerRow - 1; r >= Math.Max(0, headerRow - 3); r--)
+        {
+            var row = rows[r];
+            for (int c = startCol; c <= Math.Min(endCol, row.Count - 1); c++)
+            {
+                var type = ClassifyTypeText(row[c]);
+                if (type != null) return type;
+            }
+        }
+        return null;
+    }
+
+    private static string? ClassifyTypeText(string text)
+    {
+        var lower = text.Trim().ToLowerInvariant();
+        if (lower.Length == 0) return null;
+        if (lower.Contains("income") || lower.Contains("deposit") || lower.Contains("credit")) return SpreadsheetTransactionDto.IncomeType;
+        if (lower.Contains("expense") || lower.Contains("spending") || lower.Contains("debit") || lower.Contains("withdrawal")) return SpreadsheetTransactionDto.ExpenseType;
+        return null;
+    }
+
+    private static SpreadsheetTransactionDto? ReadTransaction(List<string> row, TransactionTableLayout table)
+    {
+        string Cell(int col) => col >= 0 && col < row.Count ? row[col].Trim() : string.Empty;
+
+        if (!TryParseDecimal(Cell(table.AmountCol), out var amount)) return null;
+
+        var dateText = Cell(table.DateCol);
+        var description = Cell(table.DescriptionCol);
+        var category = Cell(table.CategoryCol);
+        if (dateText.Length == 0 && description.Length == 0 && category.Length == 0) return null;
+        // Only "Total..." for descriptions: IsTotalRow's "Net"/"Sum" prefixes would drop payees like "Netflix"
+        if (IsTotalRow(dateText) || description.StartsWith("Total", StringComparison.OrdinalIgnoreCase)) return null;
+
+        return new SpreadsheetTransactionDto
+        {
+            Date = ParseSheetDate(dateText),
+            DateText = dateText,
+            Amount = Math.Round(amount, 2),
+            Description = description,
+            Category = category,
+            Type = ClassifyTypeText(Cell(table.TypeCol)) ?? table.SectionType ?? SpreadsheetTransactionDto.ExpenseType
+        };
+    }
+
+    // Unlabelled tables with signed amounts (bank-export style): negatives are spending, positives are income
+    private static void ApplySignBasedTypes(List<TransactionTableLayout> tables)
+    {
+        foreach (var table in tables.Where(t => t.SectionType == null && t.TypeCol < 0))
+        {
+            if (!table.Transactions.Any(t => t.Amount < 0)) continue;
+
+            foreach (var tx in table.Transactions)
+            {
+                tx.Type = tx.Amount < 0 ? SpreadsheetTransactionDto.ExpenseType : SpreadsheetTransactionDto.IncomeType;
+                tx.Amount = Math.Abs(tx.Amount);
+            }
+        }
+    }
+
+    // XLSX stores dates as OLE Automation serial numbers unless the cell holds text
+    private static DateTime? ParseSheetDate(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var serial))
+        {
+            return serial is >= 1 and < 2958466 ? DateTime.FromOADate(serial).Date : null;
+        }
+
+        if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ||
+            DateTime.TryParse(text, CultureInfo.CurrentCulture, DateTimeStyles.None, out date))
+        {
+            return date.Date;
+        }
+
+        return null;
+    }
+
+    private static List<string> ReadSharedStrings(ZipArchive archive)
+    {
+        var sharedStrings = new List<string>();
+        var sharedStringsEntry = archive.GetEntry("xl/sharedStrings.xml");
+        if (sharedStringsEntry == null) return sharedStrings;
+
+        using var ssStream = sharedStringsEntry.Open();
+        var ssDoc = XDocument.Load(ssStream);
+        var ns = ssDoc.Root?.Name.Namespace ?? XNamespace.None;
+        foreach (var si in ssDoc.Descendants(ns + "si"))
+        {
+            var sb = new StringBuilder();
+            foreach (var t in si.Descendants(ns + "t"))
+            {
+                sb.Append(t.Value);
+            }
+            sharedStrings.Add(sb.ToString());
+        }
+
+        return sharedStrings;
     }
 
     /// <summary>

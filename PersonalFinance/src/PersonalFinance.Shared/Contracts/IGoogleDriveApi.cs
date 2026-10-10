@@ -60,4 +60,15 @@ public interface IGoogleDriveApi
         [Query] int? connectionId = null,
         [Query] string? userId = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the transaction log (e.g. the "Transactions" sheet) from a spreadsheet on Google Drive.
+    /// </summary>
+    [Get("/api/googledrive/spreadsheet-transactions")]
+    Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(
+        [Query] string fileId,
+        [Query] string? fileName = null,
+        [Query] int? connectionId = null,
+        [Query] string? userId = null,
+        CancellationToken cancellationToken = default);
 }
