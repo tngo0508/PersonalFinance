@@ -546,6 +546,91 @@ Food,800,750";
         Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Trader"));
     }
 
+    [Fact]
+    public void ParseCsvTransactions_WithSideBySideExpenseAndIncomeTables_ReadsBothSections()
+    {
+        var result = GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleTransactionsCsv(), "Monthly budget 2026.xlsx", "sample-tx");
+
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(18, result.Transactions.Count);
+        Assert.Equal(15, result.Transactions.Count(t => t.Type == SpreadsheetTransactionDto.ExpenseType));
+        Assert.Equal(3, result.Transactions.Count(t => t.Type == SpreadsheetTransactionDto.IncomeType));
+        Assert.Equal(5970m, result.TotalIncome);
+        Assert.Equal(5040m, result.TotalExpenses);
+
+        var rent = result.Transactions.First(t => t.Description == "September rent");
+        Assert.Equal(new DateTime(2026, 9, 1), rent.Date);
+        Assert.Equal(1500m, rent.Amount);
+        Assert.Equal("Housing & Rent", rent.Category);
+        Assert.Equal(new DateTime(2026, 9, 1), result.FirstDate);
+        Assert.Equal(new DateTime(2026, 9, 30), result.LastDate);
+    }
+
+    [Fact]
+    public void ParseCsvTransactions_WithUnlabelledSignedAmounts_UsesSignForType()
+    {
+        var csv = "Date,Description,Amount\n2026-09-01,Paycheck,2500.00\n2026-09-03,Netflix,-15.99\n2026-09-04,Groceries,(80.00)\nTotal,,2404.01";
+
+        var result = GoogleDriveHelper.ParseCsvTransactions(csv);
+
+        Assert.Equal(3, result.Transactions.Count);
+        Assert.Equal(2500m, result.TotalIncome);
+        Assert.Equal(95.99m, result.TotalExpenses);
+        Assert.All(result.Transactions, t => Assert.True(t.Amount > 0));
+        Assert.Contains(result.Transactions, t => t.Description == "Netflix" && t.Type == SpreadsheetTransactionDto.ExpenseType);
+    }
+
+    [Fact]
+    public void ParseCsvTransactions_WithoutTransactionTable_ReturnsErrorMessage()
+    {
+        var result = GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleMonthlyBudgetSpreadsheetCsv());
+
+        Assert.Empty(result.Transactions);
+        Assert.NotNull(result.ErrorMessage);
+    }
+
+    [Fact]
+    public void ParseXlsxTransactions_WithSerialDatesOnTransactionsSheet_ReadsOnlyTransactionsSheet()
+    {
+        using var ms = new MemoryStream();
+        using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            void WriteEntry(string name, string xml)
+            {
+                using var writer = new StreamWriter(archive.CreateEntry(name).Open(), Encoding.UTF8);
+                writer.Write(xml);
+            }
+
+            WriteEntry("xl/workbook.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Summary\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Transactions\" sheetId=\"2\" r:id=\"rId2\"/></sheets></workbook>");
+            WriteEntry("xl/_rels/workbook.xml.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/></Relationships>");
+            // 0 Date, 1 Amount, 2 Description, 3 Category, 4 Expenses, 5 Income, 6 Trader Joe's, 7 Groceries, 8 Paycheck, 9 Salary
+            WriteEntry("xl/sharedStrings.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><si><t>Date</t></si><si><t>Amount</t></si><si><t>Description</t></si><si><t>Category</t></si><si><t>Expenses</t></si><si><t>Income</t></si><si><t>Trader Joe's</t></si><si><t>Groceries</t></si><si><t>Paycheck</t></si><si><t>Salary</t></si></sst>");
+            // Summary sheet also has a Date/Amount table that must be ignored
+            WriteEntry("xl/worksheets/sheet1.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>1</v></c></row><row r=\"2\"><c r=\"A2\"><v>46266</v></c><c r=\"B2\"><v>999</v></c></row></sheetData></worksheet>");
+            // Transactions sheet: Expenses table in B:E, Income table in G:J, labels on row 4, headers on row 5
+            WriteEntry("xl/worksheets/sheet2.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>" +
+                "<row r=\"4\"><c r=\"B4\" t=\"s\"><v>4</v></c><c r=\"G4\" t=\"s\"><v>5</v></c></row>" +
+                "<row r=\"5\"><c r=\"B5\" t=\"s\"><v>0</v></c><c r=\"C5\" t=\"s\"><v>1</v></c><c r=\"D5\" t=\"s\"><v>2</v></c><c r=\"E5\" t=\"s\"><v>3</v></c><c r=\"G5\" t=\"s\"><v>0</v></c><c r=\"H5\" t=\"s\"><v>1</v></c><c r=\"I5\" t=\"s\"><v>2</v></c><c r=\"J5\" t=\"s\"><v>3</v></c></row>" +
+                "<row r=\"6\"><c r=\"B6\"><v>46267</v></c><c r=\"C6\"><v>84.12</v></c><c r=\"D6\" t=\"s\"><v>6</v></c><c r=\"E6\" t=\"s\"><v>7</v></c><c r=\"G6\"><v>46266</v></c><c r=\"H6\"><v>3000</v></c><c r=\"I6\" t=\"s\"><v>8</v></c><c r=\"J6\" t=\"s\"><v>9</v></c></row>" +
+                "<row r=\"7\"><c r=\"B7\"><v>46268</v></c><c r=\"C7\"><v>40</v></c><c r=\"D7\" t=\"s\"><v>6</v></c><c r=\"E7\" t=\"s\"><v>7</v></c></row>" +
+                "</sheetData></worksheet>");
+        }
+
+        ms.Position = 0;
+        var result = GoogleDriveHelper.ParseXlsxTransactions(ms, "Monthly budget.xlsx", "xlsx-tx-1");
+
+        Assert.Equal("Transactions", result.SheetName);
+        Assert.Equal(3, result.Transactions.Count);
+        Assert.Equal(124.12m, result.TotalExpenses);
+        Assert.Equal(3000m, result.TotalIncome);
+
+        var paycheck = Assert.Single(result.Transactions, t => t.Type == SpreadsheetTransactionDto.IncomeType);
+        Assert.Equal(new DateTime(2026, 9, 1), paycheck.Date);
+        Assert.Equal("Paycheck", paycheck.Description);
+        Assert.Equal("Salary", paycheck.Category);
+        Assert.Contains(result.Transactions, t => t.Date == new DateTime(2026, 9, 2) && t.Amount == 84.12m && t.Category == "Groceries");
+    }
+
     [Theory]
     [InlineData("Monthly budget - September 2026", 9)]
     [InlineData("Monthly budget - September 2026.xlsx", 9)]

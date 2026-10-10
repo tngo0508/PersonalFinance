@@ -228,6 +228,43 @@ public class GoogleDriveWebControllerTests
         // Assert
         Assert.IsType<BadRequestObjectResult>(result);
     }
+
+    [Fact]
+    public async Task SpreadsheetTransactions_WithValidFileId_ReturnsJsonTransactions()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi();
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        // Act
+        var result = await controller.SpreadsheetTransactions("file-123", "Monthly budget 2026.xlsx");
+
+        // Assert
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var transactions = Assert.IsType<SpreadsheetTransactionsDto>(jsonResult.Value);
+        Assert.Equal("file-123", transactions.FileId);
+        Assert.NotEmpty(transactions.Transactions);
+    }
+
+    [Fact]
+    public async Task SpreadsheetTransactions_WithEmptyFileId_ReturnsBadRequest()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi();
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        // Act
+        var result = await controller.SpreadsheetTransactions("");
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
 }
 
 public class FakeGoogleDriveApi : IGoogleDriveApi
@@ -273,6 +310,11 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
     public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string fileId, string? fileName = null, int? connectionId = null, string? userId = null, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(GoogleDriveHelper.GenerateMonthlyBudgetReport(fileName, fileId));
+    }
+
+    public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string fileId, string? fileName = null, int? connectionId = null, string? userId = null, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleTransactionsCsv(), fileName, fileId));
     }
 }
 

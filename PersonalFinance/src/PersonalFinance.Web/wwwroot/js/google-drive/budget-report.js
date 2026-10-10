@@ -155,19 +155,116 @@
             $('#btnToggleBudgetTable').text(visible ? 'Hide table' : 'Show table').attr('aria-expanded', visible);
         }
 
-        function renderInsight(tone, sentences) {
-            $('#budgetInsight')
-                .attr('data-tone', tone)
-                .html(sentences.filter(Boolean).join(' '));
+        // Summary card: tone colors the accent stripe, status pill sits on the right
+        function renderInsight(tone, sentences, statusHtml) {
+            $('#budgetHero').attr('data-tone', tone);
+            $('#budgetInsight').html(sentences.filter(Boolean).join(' '));
+            $('#budgetHeroStatus').html(statusHtml || '');
+        }
+
+        // Actual-vs-plan meter for a KPI tile; the tick marks the plan
+        function renderTileMeter(selector, actual, planned, kind, label) {
+            const $el = $(selector);
+            if (!(planned > 0)) { $el.empty(); return; }
+            const scale = Math.max(actual, planned) || 1;
+            const fillPct = Math.max(0, actual) / scale * 100;
+            const planPct = planned / scale * 100;
+            $el.html('<div class="bgt-mini-meter" role="meter" aria-valuemin="0" aria-valuemax="' + Math.round(scale) + '" aria-valuenow="' + Math.round(actual) + '"' +
+                ' aria-label="' + escapeHtml(label + ': ' + formatMoney(actual) + ' of ' + formatMoney(planned) + ' planned') + '">' +
+                '<div class="bgt-mini-meter-fill bgt-mini-meter-fill--' + kind + '" style="width:' + fillPct.toFixed(1) + '%"></div>' +
+                '<div class="bgt-mini-meter-mark" style="left:' + planPct.toFixed(1) + '%" title="Plan: ' + formatMoney(planned) + '"></div>' +
+                '</div>');
+        }
+
+        // Savings rate against the common "save 20% of income" guideline
+        const SAVINGS_GOAL_PCT = 20;
+        function renderSavingsRate(rate) {
+            const scale = Math.max(SAVINGS_GOAL_PCT * 1.5, rate);
+            const fill = Math.max(0, rate) / scale * 100;
+            $('#kpiSavingsRate').text(rate.toFixed(1) + '%');
+            $('#kpiSavingsMeter').html('<div class="bgt-mini-meter" role="meter" aria-valuemin="0" aria-valuemax="' + Math.round(scale) + '" aria-valuenow="' + Math.round(rate) + '"' +
+                ' aria-label="Savings rate ' + rate.toFixed(1) + '% against a ' + SAVINGS_GOAL_PCT + '% goal">' +
+                '<div class="bgt-mini-meter-fill bgt-mini-meter-fill--income" style="width:' + fill.toFixed(1) + '%"></div>' +
+                '<div class="bgt-mini-meter-mark" style="left:' + (SAVINGS_GOAL_PCT / scale * 100).toFixed(1) + '%" title="Goal: ' + SAVINGS_GOAL_PCT + '%"></div>' +
+                '</div>');
+            const gap = rate - SAVINGS_GOAL_PCT;
+            $('#kpiSavingsRateSub').text(gap >= 0
+                ? 'Meets the ' + SAVINGS_GOAL_PCT + '% savings goal'
+                : Math.abs(gap).toFixed(1) + ' pts below the ' + SAVINGS_GOAL_PCT + '% goal');
+        }
+
+        // Income split into spent vs. saved; spending beyond income shows as a hatched "overspent" segment
+        function renderAllocation(income, spending) {
+            const $bar = $('#budgetAllocation');
+            const $legend = $('#budgetAllocationLegend');
+            if (!(income > 0) && !(spending > 0)) {
+                $bar.html('<div class="text-muted small">No income or spending was recorded for this period.</div>');
+                $legend.empty();
+                $('#budgetAllocationSub').text('');
+                return;
+            }
+
+            const scale = Math.max(income, spending);
+            const spentWithinIncome = Math.min(spending, income);
+            const saved = Math.max(0, income - spending);
+            const overspent = Math.max(0, spending - income);
+            const pct = function (v) { return (v / scale * 100).toFixed(2) + '%'; };
+            const segment = function (cls, value, label) {
+                return value > 0
+                    ? '<div class="bgt-alloc-seg bgt-alloc-seg--' + cls + '" style="width:' + pct(value) + '" title="' + escapeHtml(label + ': ' + formatMoney(value)) + '">' +
+                      '<span>' + escapeHtml(label) + ' ' + formatMoney(value) + '</span></div>'
+                    : '';
+            };
+
+            $bar.html('<div class="bgt-alloc" role="img" aria-label="' + escapeHtml(
+                    'Income ' + formatMoney(income) + ': spent ' + formatMoney(spending) +
+                    (overspent > 0 ? ', overspent by ' + formatMoney(overspent) : ', saved ' + formatMoney(saved))) + '">' +
+                segment('spend', spentWithinIncome, 'Spent') +
+                segment('save', saved, 'Saved') +
+                segment('over', overspent, 'Overspent') +
+                '</div>');
+
+            let legend = '<span><span class="bgt-swatch bgt-swatch--spend"></span>Spent</span>';
+            legend += overspent > 0
+                ? '<span><span class="bgt-swatch bgt-swatch--over"></span>Overspent</span>'
+                : '<span><span class="bgt-swatch bgt-swatch--income"></span>Saved</span>';
+            $legend.html(legend);
+
+            if (income > 0) {
+                const per100Spent = Math.round(spending / income * 100);
+                $('#budgetAllocationSub').text(overspent > 0
+                    ? 'For every $100 earned, you spent $' + per100Spent + ', more than came in.'
+                    : 'For every $100 earned, you spent $' + per100Spent + ' and saved $' + (100 - per100Spent) + '.');
+            } else {
+                $('#budgetAllocationSub').text('No income was recorded for this period.');
+            }
+        }
+
+        // Category list state, so the sort and "only over budget" controls can re-render without a reload
+        let currentCategories = [];
+
+        function sortedVisibleCategories() {
+            const sortBy = $('#budgetCategorySort').val();
+            const overOnly = $('#budgetOverOnly').is(':checked');
+            let items = currentCategories.filter(function (c) { return (c.actualAmount || 0) !== 0 || (c.budgetedAmount || 0) !== 0; });
+            if (overOnly) items = items.filter(function (c) { return categoryTone(c) === 'critical'; });
+            items.sort(function (a, b) {
+                if (sortBy === 'name') return a.categoryName.localeCompare(b.categoryName);
+                if (sortBy === 'over') return (b.actualAmount - b.budgetedAmount) - (a.actualAmount - a.budgetedAmount);
+                return b.actualAmount - a.actualAmount;
+            });
+            return items;
         }
 
         function renderCategoryList(categories) {
-            const items = categories.filter(function (c) { return (c.actualAmount || 0) !== 0 || (c.budgetedAmount || 0) !== 0; });
+            if (categories) currentCategories = categories;
+            const items = sortedVisibleCategories();
             if (items.length === 0) {
-                $('#budgetCategoryList').html('<div class="text-muted small">No category spending was found for this period.</div>');
+                $('#budgetCategoryList').html('<div class="text-muted small">' +
+                    ($('#budgetOverOnly').is(':checked') ? 'No category went over budget in this period.' : 'No category spending was found for this period.') +
+                    '</div>');
                 return;
             }
-            items.sort(function (a, b) { return b.actualAmount - a.actualAmount; });
             const maxActual = Math.max.apply(null, items.map(function (c) { return c.actualAmount; }).concat([1]));
 
             let html = '';
@@ -310,8 +407,10 @@
                 ('Avg ' + formatMoney(data.totalAnnualExpenses / months.length) + ' / month'));
             $('#kpiNetSavings').text(formatMoney(data.totalAnnualSavings));
             $('#kpiSavingsSubtext').text(data.totalAnnualSavings >= 0 ? 'Income minus spending' : 'Spent more than you earned');
-            $('#kpiSavingsRate').text(data.averageSavingsRate.toFixed(1) + '%');
-            $('#kpiStatusBadge').html(statusPill(monthStatusTone(status), monthStatusLabel(status)));
+            renderTileMeter('#kpiIncomeMeter', data.totalAnnualIncome, data.totalAnnualBudgetedIncome, 'income', 'Income');
+            renderTileMeter('#kpiExpensesMeter', data.totalAnnualExpenses, data.totalAnnualBudgetedExpenses, 'spend', 'Spending');
+            renderSavingsRate(data.averageSavingsRate);
+            renderAllocation(data.totalAnnualIncome, data.totalAnnualExpenses);
 
             // Plain-language summary
             const best = months.reduce(function (a, b) { return b.netSavings > a.netSavings ? b : a; });
@@ -329,7 +428,7 @@
                     ? 'Biggest expense: ' + escapeHtml(top.categoryName) + ' (' + formatMoney(top.actualAmount) + ', ' + Math.round(top.actualAmount / data.totalAnnualExpenses * 100) + '% of spending).'
                     : ''
             ];
-            renderInsight(monthStatusTone(status), sentences);
+            renderInsight(monthStatusTone(status), sentences, statusPill(monthStatusTone(status), monthStatusLabel(status)));
 
             // Charts
             $('#budgetYearCharts').removeClass('d-none');
@@ -337,7 +436,7 @@
 
             // Categories
             $('#budgetCategoryTitle').text('Spending by category in ' + data.year);
-            $('#budgetCategorySubtitle').text('Totals across all months, largest first. Bars show how much of each yearly budget is used.');
+            $('#budgetCategorySubtitle').text('Totals across all months. Bars show how much of each yearly budget is used.');
             renderCategoryList(categories);
 
             // Month-by-month table (also the keyboard-accessible way to drill into a month)
@@ -387,8 +486,10 @@
                 (monthData.budgetedIncome > 0 || monthData.budgetedExpenses > 0)
                     ? 'Planned: ' + formatMoney(monthData.budgetedNetSavings !== undefined ? monthData.budgetedNetSavings : monthData.budgetedIncome - monthData.budgetedExpenses)
                     : (monthData.netSavings >= 0 ? 'Income minus spending' : 'Spent more than you earned'));
-            $('#kpiSavingsRate').text(monthData.savingsRate.toFixed(1) + '%');
-            $('#kpiStatusBadge').html(statusPill(tone, monthStatusLabel(monthData.status)));
+            renderTileMeter('#kpiIncomeMeter', monthData.actualIncome, monthData.budgetedIncome, 'income', 'Income');
+            renderTileMeter('#kpiExpensesMeter', monthData.actualExpenses, monthData.budgetedExpenses, 'spend', 'Spending');
+            renderSavingsRate(monthData.savingsRate);
+            renderAllocation(monthData.actualIncome, monthData.actualExpenses);
 
             // Plain-language summary
             const categories = monthData.categories || [];
@@ -413,7 +514,7 @@
                     ? 'Spending came in <strong>' + formatMoney(Math.abs(planDiff)) + (planDiff >= 0 ? ' under' : ' over') + '</strong> your ' + formatMoney(monthData.budgetedExpenses) + ' plan.'
                     : '',
                 overText
-            ]);
+            ], statusPill(tone, monthStatusLabel(monthData.status)));
 
             // No year charts in month view
             destroyYearCharts();
@@ -421,7 +522,7 @@
 
             // Categories
             $('#budgetCategoryTitle').text('Spending by category');
-            $('#budgetCategorySubtitle').text('Largest first. Bars show how much of each budget is used.');
+            $('#budgetCategorySubtitle').text('Bars show how much of each budget is used.');
             renderCategoryList(categories);
 
             // Category table
@@ -481,7 +582,8 @@
             $('#budgetLoadingState').toggleClass('d-none', state !== 'loading');
             $('#budgetErrorState').toggleClass('d-none', state !== 'error');
             $('#budgetReportContent').toggleClass('d-none', state !== 'report');
-            $('#btnPrintBudgetReport').prop('disabled', state !== 'report');
+            $('#btnPrintBudgetReport, #btnExportBudget').prop('disabled', state !== 'report');
+            $('#btnBudgetToTransactions').prop('disabled', state === 'loading');
         }
 
         function loadBudgetReport(request) {
@@ -492,6 +594,10 @@
             destroyYearCharts();
 
             $('#budgetModalFileName').text(request.fileName).attr('title', request.fileName);
+            // jQuery caches data-* reads, so set both the cache and the attribute the transactions script reads
+            $('#btnBudgetToTransactions')
+                .attr({ 'data-file-id': request.fileId, 'data-file-name': request.fileName, 'data-is-budget': 'true' })
+                .data({ fileId: request.fileId, fileName: request.fileName, isBudget: true });
             $('#budgetModalDataSource').empty();
             showBudgetState('loading');
 
@@ -566,6 +672,52 @@
             e.stopPropagation();
             renderBudgetMonth(parseInt($(this).data('month'), 10));
             $('#monthlyBudgetModal .modal-body').scrollTop(0);
+        });
+
+        $('#budgetCategorySort, #budgetOverOnly').on('change', function () {
+            renderCategoryList();
+        });
+
+        // Export the table behind the current view: months for the full year, categories for a month
+        function csvCell(value) {
+            const text = String(value === null || value === undefined ? '' : value);
+            return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+        }
+
+        function downloadCsv(fileName, rows) {
+            const csv = rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
+            // BOM so Excel opens the file as UTF-8
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+        }
+
+        $('#btnExportBudget').on('click', function () {
+            if (!currentBudgetData) return;
+            const baseName = String(lastBudgetRequest && lastBudgetRequest.fileName || 'budget').replace(/\.[^.]+$/, '');
+            const isYear = currentSelectedMonth === 0 && currentBudgetData.months.length > 1;
+            let rows;
+            if (isYear) {
+                rows = [['Month', 'Planned income', 'Income', 'Planned spending', 'Spent', 'Net saved', 'Savings rate %', 'Status']];
+                currentBudgetData.months.forEach(function (m) {
+                    rows.push([m.monthName, m.budgetedIncome, m.actualIncome, m.budgetedExpenses, m.actualExpenses, m.netSavings, m.savingsRate.toFixed(1), m.status]);
+                });
+            } else {
+                const month = currentBudgetData.months.find(function (m) { return m.monthNumber === currentSelectedMonth; }) || currentBudgetData.months[0];
+                rows = [['Category', 'Planned', 'Spent', 'Left (negative = over)', '% used', 'Status']];
+                (month.categories || []).forEach(function (c) {
+                    const tone = categoryTone(c);
+                    rows.push([c.categoryName, c.budgetedAmount, c.actualAmount, (c.budgetedAmount - c.actualAmount).toFixed(2),
+                        c.budgetedAmount > 0 ? c.percentageUsed.toFixed(0) : '', categoryStatusLabel(tone)]);
+                });
+            }
+            const period = isYear ? String(currentBudgetData.year) : (currentBudgetData.months.find(function (m) { return m.monthNumber === currentSelectedMonth; }) || {}).monthName || 'month';
+            downloadCsv(baseName + ' - ' + period + '.csv', rows);
         });
 
         $('#btnToggleBudgetTable').on('click', function () {

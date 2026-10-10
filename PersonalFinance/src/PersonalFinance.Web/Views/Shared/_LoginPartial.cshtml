@@ -2,42 +2,51 @@
 @using Microsoft.AspNetCore.Identity
 @inject SignInManager<IdentityUser> SignInManager
 
-<ul class="navbar-nav align-items-center">
 @if (SignInManager.IsSignedIn(User))
 {
-    var profilePictureUrl = User.FindFirst("urn:google:picture")?.Value 
+    var profilePictureUrl = User.FindFirst("urn:google:picture")?.Value
                          ?? User.FindFirst("profile_picture")?.Value;
-    var displayName = User.FindFirst(ClaimTypes.GivenName)?.Value 
-                   ?? User.Identity?.Name;
+    var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? string.Empty;
+    var displayName = User.FindFirst(ClaimTypes.GivenName)?.Value
+                   ?? (email.Contains('@') ? email[..email.IndexOf('@')] : email);
+    var initial = string.IsNullOrEmpty(displayName) ? "?" : displayName[..1].ToUpperInvariant();
 
-    <li class="nav-item d-flex align-items-center me-3">
-        @if (!string.IsNullOrEmpty(profilePictureUrl))
-        {
-            <img src="@profilePictureUrl" 
-                 alt="Profile" 
-                 class="rounded-circle border me-2" 
-                 width="32" 
-                 height="32" 
-                 referrerpolicy="no-referrer" 
-                 style="object-fit: cover;" />
-        }
-        <a class="nav-link text-dark fw-semibold p-0" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage your account">
-            Hello @displayName!
-        </a>
-    </li>
-    <li class="nav-item">
-        <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "GoogleDrive", new { area = "" })" method="post">
-            <button type="submit" class="btn btn-sm btn-outline-secondary">Sign out</button>
-        </form>
-    </li>
+    <ul class="navbar-nav align-items-md-center">
+        <li class="nav-item dropdown">
+            <button type="button" class="btn app-user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu for @displayName">
+                @if (!string.IsNullOrEmpty(profilePictureUrl))
+                {
+                    <img src="@profilePictureUrl" alt="" class="app-avatar" width="32" height="32" referrerpolicy="no-referrer" />
+                }
+                else
+                {
+                    <span class="app-avatar app-avatar--initial" aria-hidden="true">@initial</span>
+                }
+                <span class="app-user-name">@displayName</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm app-user-menu">
+                <li class="px-3 py-2">
+                    <div class="fw-semibold text-truncate">@displayName</div>
+                    <div class="small text-muted text-truncate">@email</div>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index">Account settings</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "GoogleDrive", new { area = "" })" method="post">
+                        <button type="submit" class="dropdown-item">Sign out</button>
+                    </form>
+                </li>
+            </ul>
+        </li>
+    </ul>
 }
 else
 {
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Log in</a>
-    </li>
+    <div class="d-flex flex-column flex-md-row gap-2 py-2 py-md-0">
+        <a class="btn btn-sm btn-light border" asp-area="Identity" asp-page="/Account/Login">Log in</a>
+        <a class="btn btn-sm btn-primary" asp-area="Identity" asp-page="/Account/Register">Create account</a>
+    </div>
 }
-</ul>

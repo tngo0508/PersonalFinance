@@ -222,4 +222,26 @@ public class GoogleDriveController : ControllerBase
         var report = await _googleDriveService.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, userId, cancellationToken);
         return Ok(report);
     }
+
+    /// <summary>
+    /// Reads the transaction log (e.g. the "Transactions" sheet) from a spreadsheet on Google Drive.
+    /// </summary>
+    [HttpGet("spreadsheet-transactions")]
+    [ProducesResponseType(typeof(SpreadsheetTransactionsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SpreadsheetTransactionsDto>> GetSpreadsheetTransactions(
+        [FromQuery] string fileId,
+        [FromQuery] string? fileName = null,
+        [FromQuery] int? connectionId = null,
+        [FromQuery] string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileId))
+        {
+            return BadRequest("fileId is required.");
+        }
+
+        var transactions = await _googleDriveService.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, userId, cancellationToken);
+        return Ok(transactions);
+    }
 }

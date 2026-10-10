@@ -1,14 +1,26 @@
-// Google Drive explorer page: connect/sync forms, copy-to-clipboard, DataTables, view switcher and type filters.
+// Google Drive explorer page: connect/sync forms, toasts, file table, search, type filters and view switcher.
 (function ($) {
     'use strict';
 
+    const KNOWN_TYPES = ['Folder', 'Spreadsheet', 'Document', 'PDF Document', 'Image', 'Presentation'];
+
     $(function () {
-        // Paste Sample Handler
+        function showToast(message) {
+            const toastEl = document.getElementById('pageToast');
+            if (!toastEl || !message) return;
+            $('#pageToastMessage').text(message);
+            bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4000 }).show();
+        }
+
+        // Success messages from the previous request (connect, sync, remove) show as a toast
+        showToast($('.gd-page').data('status-message'));
+
+        // Sample folder link
         $('#btnPasteSample').on('click', function () {
-            $('#folderUrlInput').val('https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link');
+            $('#folderUrlInput').val('https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link').trigger('focus');
         });
 
-        // Form Submit Spinner
+        // Connect form spinner
         $('#driveExplorerForm').on('submit', function () {
             if ($(this).valid()) {
                 $('#submitSpinner').removeClass('d-none');
@@ -17,103 +29,119 @@
             }
         });
 
-        // Sync Form Spinner
+        // Sync form spinner
         $('#syncForm').on('submit', function () {
             $('#syncSpinner').removeClass('d-none');
             $('#syncIcon').addClass('d-none');
             $('#btnSyncDrive').prop('disabled', true);
         });
 
-        // Copy Folder ID Toast
+        // Copy folder ID
         $('.btn-copy-id').on('click', function () {
             const folderId = $(this).data('id');
             if (navigator.clipboard && folderId) {
                 navigator.clipboard.writeText(folderId).then(function () {
-                    const toastEl = document.getElementById('copyToast');
-                    if (toastEl) {
-                        const toast = new bootstrap.Toast(toastEl, { delay: 2500 });
-                        $('#copyToastMessage').text('Folder ID copied to clipboard: ' + folderId);
-                        toast.show();
-                    }
+                    showToast('Folder ID copied to clipboard.');
                 });
             }
         });
 
-        // Initialize DataTables with sorting by modifiedTime desc (column 5)
+        // File table. Columns: 0 Name, 1 Type, 2 Modified, 3 Size, 4 Actions
         let dataTable = null;
         if ($('#googleDriveDataTable').length > 0) {
             dataTable = $('#googleDriveDataTable').DataTable({
-                responsive: true,
                 pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                order: [[5, 'desc']], // Default ordering: Column 5 (Last Modified) descending
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                order: [[2, 'desc']],
+                autoWidth: false,
+                columnDefs: [
+                    { targets: 1, className: 'd-none d-md-table-cell' },
+                    { targets: 2, className: 'd-none d-sm-table-cell' },
+                    { targets: 3, className: 'd-none d-md-table-cell' },
+                    { targets: 4, orderable: false, searchable: false }
+                ],
                 language: {
-                    search: "",
-                    searchPlaceholder: "Filter files in table...",
-                    emptyTable: "No files found in this Google Drive folder."
+                    emptyTable: 'This folder is empty.',
+                    zeroRecords: 'No files match your filters.',
+                    info: '_START_–_END_ of _TOTAL_ files',
+                    infoEmpty: 'No files',
+                    infoFiltered: '',
+                    lengthMenu: 'Show _MENU_'
                 },
-                dom: "<'row mb-2'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                     "<'row'<'col-sm-12'tr>>" +
-                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
+                // Search lives in the shared toolbar above, so only table, info, length and paging here
+                dom: "<'row'<'col-12'tr>>" +
+                     "<'row align-items-center mt-3 small text-muted'<'col-sm-12 col-md-4'i><'col-sm-12 col-md-3'l><'col-sm-12 col-md-5'p>>"
             });
         }
 
-        // View Mode Switcher (Table vs Grid)
-        $('#btnViewTable').on('click', function () {
-            $('#btnViewTable').addClass('active btn-white shadow-sm').removeClass('text-secondary');
-            $('#btnViewGrid').removeClass('active btn-white shadow-sm').addClass('text-secondary');
-            $('#tableViewSection').removeClass('d-none');
-            $('#gridViewSection').addClass('d-none');
-        });
+        // Shared search + type filter state for both the list and grid views
+        let activeFilter = 'all';
+        let searchTerm = '';
 
-        $('#btnViewGrid').on('click', function () {
-            $('#btnViewGrid').addClass('active btn-white shadow-sm').removeClass('text-secondary');
-            $('#btnViewTable').removeClass('active btn-white shadow-sm').addClass('text-secondary');
-            $('#gridViewSection').removeClass('d-none');
-            $('#tableViewSection').addClass('d-none');
-        });
+        function matchesType(fileType) {
+            if (activeFilter === 'all') return true;
+            if (activeFilter === 'other') return KNOWN_TYPES.indexOf(fileType) === -1;
+            return fileType === activeFilter;
+        }
 
-        // Category Filter Chips Sync
-        $('.gdrive-filter-chip').on('click', function () {
-            $('.gdrive-filter-chip').removeClass('active');
-            $(this).addClass('active');
-
-            const category = $(this).data('filter');
-
-            // 1. Filter DataTables
+        function applyFilters() {
             if (dataTable) {
-                if (category === 'all') {
-                    dataTable.column(2).search('').draw();
-                } else if (category === 'other') {
-                    dataTable.column(2).search('^(?!\\s*(Folder|Spreadsheet|Document|PDF Document|Image|Presentation)\\s*$).*$', true, false).draw();
-                } else {
-                    const escapedCat = category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    dataTable.column(2).search('^\\s*' + escapedCat + '\\s*$', true, false).draw();
+                let typePattern = '';
+                if (activeFilter === 'other') {
+                    typePattern = '^(?!\\s*(' + KNOWN_TYPES.join('|') + ')\\s*$).*$';
+                } else if (activeFilter !== 'all') {
+                    typePattern = '^\\s*' + DataTable.util.escapeRegex(activeFilter) + '\\s*$';
                 }
+                dataTable.column(1).search(typePattern, true, false);
+                dataTable.search(searchTerm).draw();
             }
 
-            // 2. Filter Grid Cards
-            if (category === 'all') {
-                $('.grid-item-card').show();
-            } else if (category === 'other') {
-                $('.grid-item-card').each(function () {
-                    const itemType = $(this).data('file-type');
-                    if (itemType !== 'Folder' && itemType !== 'Spreadsheet' && itemType !== 'Document' && itemType !== 'PDF Document' && itemType !== 'Image' && itemType !== 'Presentation') {
-                        $(this).show();
-                    } else {
-                        $(this).hide();
-                    }
-                });
-            } else {
-                $('.grid-item-card').each(function () {
-                    const itemType = $(this).data('file-type');
-                    if (itemType === category) {
-                        $(this).show();
-                    } else {
-                        $(this).hide();
-                    }
-                });
-            }
+            const term = searchTerm.toLowerCase();
+            let visibleCards = 0;
+            $('.grid-item-card').each(function () {
+                const $card = $(this);
+                const visible = matchesType($card.data('file-type')) && String($card.data('file-name')).indexOf(term) !== -1;
+                $card.toggleClass('d-none', !visible);
+                if (visible) visibleCards++;
+            });
+            $('#gridEmptyState').toggleClass('d-none', visibleCards > 0);
+        }
+
+        function setFilter(filter) {
+            activeFilter = filter;
+            $('.gdrive-filter-chip').each(function () {
+                const isActive = $(this).data('filter') === filter;
+                $(this).toggleClass('active', isActive).attr('aria-pressed', String(isActive));
+            });
+            applyFilters();
+        }
+
+        $('.gdrive-filter-chip').on('click', function () {
+            setFilter($(this).data('filter'));
         });
+
+        $('#fileSearch').on('input', function () {
+            searchTerm = $(this).val().trim();
+            applyFilters();
+        });
+
+        // "Show all spreadsheets" link in the featured section
+        $('.js-show-filter').on('click', function () {
+            setFilter($(this).data('filter'));
+            document.getElementById('allFilesSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        // List / grid switcher
+        function setView(view) {
+            const isTable = view === 'table';
+            $('#tableViewSection').toggleClass('d-none', !isTable);
+            $('#gridViewSection').toggleClass('d-none', isTable);
+            $('#btnViewTable').toggleClass('active', isTable).attr('aria-pressed', String(isTable));
+            $('#btnViewGrid').toggleClass('active', !isTable).attr('aria-pressed', String(!isTable));
+            if (isTable && dataTable) dataTable.columns.adjust();
+        }
+
+        $('#btnViewTable').on('click', function () { setView('table'); });
+        $('#btnViewGrid').on('click', function () { setView('grid'); });
     });
 })(jQuery);

@@ -830,37 +830,12 @@ public class GoogleDriveService : IGoogleDriveService
             return sampleReport;
         }
 
-        // Retrieve connection and credentials if available
-        GoogleDriveConnection? connection = null;
-        if (connectionId.HasValue && connectionId.Value > 0)
-        {
-            connection = await _dbContext.GoogleDriveConnections
-                .Include(c => c.CachedFiles)
-                .FirstOrDefaultAsync(c => c.Id == connectionId.Value && (userId == null || c.UserId == userId), cancellationToken);
-        }
-        else if (!string.IsNullOrWhiteSpace(userId))
-        {
-            connection = await _dbContext.GoogleDriveConnections
-                .Include(c => c.CachedFiles)
-                .FirstOrDefaultAsync(c => c.UserId == userId && c.CachedFiles.Any(f => f.DriveFileId == fileId), cancellationToken);
-        }
-
-        // Find cached file metadata if available
-        var cachedFile = connection?.CachedFiles.FirstOrDefault(f => f.DriveFileId == fileId);
-        var actualFileName = fileName ?? cachedFile?.Name ?? "Monthly budget.xlsx";
-        var mimeType = cachedFile?.MimeType ?? string.Empty;
-
-        var apiKey = connection != null && !string.IsNullOrWhiteSpace(connection.EncryptedApiKey)
-            ? CredentialProtector.Decrypt(connection.EncryptedApiKey)
-            : _configuration["GoogleDrive:ApiKey"]?.Trim();
+        var (actualFileName, mimeType, isGoogleSheet, apiKey) =
+            await ResolveSpreadsheetSourceAsync(fileId, fileName, "Monthly budget.xlsx", connectionId, userId, cancellationToken);
 
         // 1. Attempt Live Download / Export from Google Drive
         try
         {
-            var isGoogleSheet = mimeType == "application/vnd.google-apps.spreadsheet" ||
-                                Path.GetExtension(actualFileName).Equals(".gsheet", StringComparison.OrdinalIgnoreCase) ||
-                                (string.IsNullOrEmpty(Path.GetExtension(actualFileName)) && cachedFile?.FileType == "Spreadsheet");
-
             // Option A: Google Sheet -> Export to XLSX first (to capture all sheets including Summary & Transactions), fallback to CSV
             if (isGoogleSheet)
             {
@@ -958,5 +933,137 @@ public class GoogleDriveService : IGoogleDriveService
 
         // Fallback to structured report calculation
         return GoogleDriveHelper.GenerateMonthlyBudgetReport(actualFileName, fileId);
+    }
+
+    /// <inheritdoc />
+    public async Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(
+        string fileId,
+        string? fileName = null,
+        int? connectionId = null,
+        string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Reading transactions from spreadsheet file ID '{FileId}', fileName '{FileName}'...", fileId, fileName);
+
+        if (fileId.StartsWith("sample-", StringComparison.OrdinalIgnoreCase))
+        {
+            return GoogleDriveHelper.ParseCsvTransactions(
+                GoogleDriveHelper.GetSampleTransactionsCsv(),
+                fileName ?? "Monthly budget 2026.xlsx",
+                fileId,
+                dataSource: "Google Drive Spreadsheet (Actual Sample Data)");
+        }
+
+        var (actualFileName, mimeType, isGoogleSheet, apiKey) =
+            await ResolveSpreadsheetSourceAsync(fileId, fileName, "Spreadsheet.xlsx", connectionId, userId, cancellationToken);
+
+        try
+        {
+            // Google Sheet: the XLSX export keeps every sheet; the CSV export only contains the first one
+            if (isGoogleSheet)
+            {
+                var xlsxExportUrl = !string.IsNullOrWhiteSpace(apiKey)
+                    ? $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(fileId)}/export?mimeType=application%2Fvnd.openxmlformats-officedocument.spreadsheetml.sheet&key={Uri.EscapeDataString(apiKey)}"
+                    : $"https://docs.google.com/spreadsheets/d/{Uri.EscapeDataString(fileId)}/export?format=xlsx";
+
+                using var xlsxResponse = await _httpClient.GetAsync(xlsxExportUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (xlsxResponse.IsSuccessStatusCode)
+                {
+                    await using var stream = await xlsxResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    var result = GoogleDriveHelper.ParseXlsxTransactions(stream, actualFileName, fileId, "Google Drive Live Spreadsheet (Exported XLSX)");
+                    if (result.Transactions.Count > 0)
+                    {
+                        return result;
+                    }
+                }
+
+                var csvExportUrl = !string.IsNullOrWhiteSpace(apiKey)
+                    ? $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(fileId)}/export?mimeType=text%2Fcsv&key={Uri.EscapeDataString(apiKey)}"
+                    : $"https://docs.google.com/spreadsheets/d/{Uri.EscapeDataString(fileId)}/export?format=csv";
+
+                using var csvResponse = await _httpClient.GetAsync(csvExportUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (csvResponse.IsSuccessStatusCode)
+                {
+                    var csvContent = await csvResponse.Content.ReadAsStringAsync(cancellationToken);
+                    return GoogleDriveHelper.ParseCsvTransactions(csvContent, actualFileName, fileId, "Google Drive Live Spreadsheet (Exported Data)");
+                }
+            }
+            else
+            {
+                var isXlsx = actualFileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ||
+                             mimeType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+                var downloadUrl = !string.IsNullOrWhiteSpace(apiKey)
+                    ? $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(fileId)}?alt=media&key={Uri.EscapeDataString(apiKey)}"
+                    : $"https://drive.google.com/uc?export=download&id={Uri.EscapeDataString(fileId)}";
+
+                using var fileResponse = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (fileResponse.IsSuccessStatusCode)
+                {
+                    if (isXlsx)
+                    {
+                        await using var stream = await fileResponse.Content.ReadAsStreamAsync(cancellationToken);
+                        return GoogleDriveHelper.ParseXlsxTransactions(stream, actualFileName, fileId, "Google Drive Live XLSX (Actual Data)");
+                    }
+
+                    var csvContent = await fileResponse.Content.ReadAsStringAsync(cancellationToken);
+                    return GoogleDriveHelper.ParseCsvTransactions(csvContent, actualFileName, fileId, "Google Drive Live CSV (Actual Data)");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Live download of spreadsheet file '{FileId}' for transactions failed.", fileId);
+        }
+
+        // No fabricated fallback here: made-up transactions would be indistinguishable from real ones
+        return new SpreadsheetTransactionsDto
+        {
+            FileName = actualFileName,
+            FileId = fileId,
+            IsLiveSpreadsheetData = false,
+            DataSource = "Unavailable",
+            ErrorMessage = "The spreadsheet could not be downloaded from Google Drive. Check that the drive is still shared and your API key is valid."
+        };
+    }
+
+    /// <summary>
+    /// Looks up the connection's cached file metadata and API key needed to download a spreadsheet.
+    /// </summary>
+    private async Task<(string FileName, string MimeType, bool IsGoogleSheet, string? ApiKey)> ResolveSpreadsheetSourceAsync(
+        string fileId,
+        string? fileName,
+        string defaultFileName,
+        int? connectionId,
+        string? userId,
+        CancellationToken cancellationToken)
+    {
+        GoogleDriveConnection? connection = null;
+        if (connectionId.HasValue && connectionId.Value > 0)
+        {
+            connection = await _dbContext.GoogleDriveConnections
+                .Include(c => c.CachedFiles)
+                .FirstOrDefaultAsync(c => c.Id == connectionId.Value && (userId == null || c.UserId == userId), cancellationToken);
+        }
+        else if (!string.IsNullOrWhiteSpace(userId))
+        {
+            connection = await _dbContext.GoogleDriveConnections
+                .Include(c => c.CachedFiles)
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.CachedFiles.Any(f => f.DriveFileId == fileId), cancellationToken);
+        }
+
+        var cachedFile = connection?.CachedFiles.FirstOrDefault(f => f.DriveFileId == fileId);
+        var actualFileName = fileName ?? cachedFile?.Name ?? defaultFileName;
+        var mimeType = cachedFile?.MimeType ?? string.Empty;
+
+        var apiKey = connection != null && !string.IsNullOrWhiteSpace(connection.EncryptedApiKey)
+            ? CredentialProtector.Decrypt(connection.EncryptedApiKey)
+            : _configuration["GoogleDrive:ApiKey"]?.Trim();
+
+        var isGoogleSheet = mimeType == "application/vnd.google-apps.spreadsheet" ||
+                            Path.GetExtension(actualFileName).Equals(".gsheet", StringComparison.OrdinalIgnoreCase) ||
+                            (string.IsNullOrEmpty(Path.GetExtension(actualFileName)) && cachedFile?.FileType == "Spreadsheet");
+
+        return (actualFileName, mimeType, isGoogleSheet, apiKey);
     }
 }

@@ -1,58 +1,78 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
+@using PersonalFinance.Shared.Constants
+@{
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var currentController = ViewContext.RouteData.Values["controller"] as string;
+    var pageTitle = ViewData["Title"] as string;
+}
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>@ViewData["Title"] - PersonalFinance.Web</title>
-    <!-- Bootstrap 5 CSS -->
+    <meta name="theme-color" content="#ffffff"/>
+    <title>@(string.IsNullOrEmpty(pageTitle) ? AppVersion.ApplicationName : $"{pageTitle} · {AppVersion.ApplicationName}")</title>
+    <link rel="icon" href="~/favicon.ico"/>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
 </head>
-<body>
-<header>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-        <div class="container-fluid">
-            <a class="navbar-brand" asp-area="" asp-controller="GoogleDrive" asp-action="Index">
-                PersonalFinance.Web <span class="badge bg-secondary fs-6">v@(PersonalFinance.Shared.Constants.AppVersion.Current)</span>
+<body class="app-body">
+<a class="visually-hidden-focusable app-skip-link" href="#main-content">Skip to main content</a>
+
+<header class="app-header">
+    <nav class="navbar navbar-expand-md" aria-label="Main navigation">
+        <div class="container-xl">
+            <a class="navbar-brand app-brand" asp-area="" asp-controller="GoogleDrive" asp-action="Index">
+                <span class="app-brand-mark" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1 13.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 0-1H2V2.5a.5.5 0 0 0-1 0v11z"/>
+                        <path d="M4.5 11a.5.5 0 0 1-.354-.854l3-3a.5.5 0 0 1 .708 0L9.5 8.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0L7.5 8.207l-2.646 2.647A.5.5 0 0 1 4.5 11z"/>
+                    </svg>
+                </span>
+                <span class="app-brand-name">@AppVersion.ApplicationName</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#appNavbar"
+                    aria-controls="appNavbar" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                <ul class="navbar-nav flex-grow-1">
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
+
+            <div class="collapse navbar-collapse" id="appNavbar">
+                @if (isSignedIn)
+                {
+                    <ul class="navbar-nav me-auto app-nav">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="GoogleDrive" asp-action="Index">Google Drive Files</a>
+                            @{ var isDriveActive = currentController == "GoogleDrive"; }
+                            <a class="nav-link @(isDriveActive ? "active" : "")" aria-current="@(isDriveActive ? "page" : null)"
+                               asp-area="" asp-controller="GoogleDrive" asp-action="Index">
+                                Google Drive
+                            </a>
                         </li>
-                    }
-                </ul>
+                    </ul>
+                }
+                else
+                {
+                    <div class="me-auto"></div>
+                }
                 <partial name="_LoginPartial"/>
             </div>
         </div>
     </nav>
 </header>
-<div class="container">
-    <main role="main" class="pb-3">
-        @RenderBody()
-    </main>
-</div>
 
-<footer class="border-top footer text-muted">
-    <div class="container d-flex flex-wrap justify-content-between align-items-center py-2">
-        <div>
-            &copy; @DateTime.Now.Year - PersonalFinance.Web
-        </div>
-        <div>
-            <span class="badge bg-light text-dark border">
-                Application Version: <strong>v@(PersonalFinance.Shared.Constants.AppVersion.Current)</strong>
-            </span>
-        </div>
+<main id="main-content" class="app-main" role="main" tabindex="-1">
+    <div class="container-xl">
+        @RenderBody()
+    </div>
+</main>
+
+<footer class="app-footer">
+    <div class="container-xl d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>&copy; @DateTime.Now.Year @AppVersion.ApplicationName</span>
+        <span>Version @AppVersion.Current</span>
     </div>
 </footer>
 
-<!-- jQuery & Bootstrap Bundle -->
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
