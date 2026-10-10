@@ -42,6 +42,11 @@ param googleDriveApiKey string = ''
 @description('Whether to provision Azure SQL Database Serverless Free Tier ($0.00 with 100k vCore-s + 32GB free lifetime)')
 param deploySqlDatabase bool = true
 
+@description('Number of days of log retention in the Log Analytics Workspace (30 days included in free tier)')
+@minValue(30)
+@maxValue(730)
+param logRetentionInDays int = 30
+
 @description('Administrator login for Azure SQL Database (if deployed)')
 param sqlAdministratorLogin string = 'sqladmin'
 
@@ -86,6 +91,7 @@ module logAnalytics 'modules/log-analytics.bicep' = {
   params: {
     name: logAnalyticsWorkspaceName
     location: location
+    retentionInDays: logRetentionInDays
     tags: tags
   }
 }

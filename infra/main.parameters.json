@@ -35,6 +35,9 @@
     "deploySqlDatabase": {
       "value": true
     },
+    "logRetentionInDays": {
+      "value": 30
+    },
     "customDomainName": {
       "value": ""
     }

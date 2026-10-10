@@ -65,6 +65,7 @@ param (
     [string]$BrevoSenderName = "PersonalFinance",
     [string]$GoogleDriveApiKey = "",
     [switch]$DeploySqlDatabase = $true,
+    [int]$LogRetentionInDays = 30,
     [string]$SqlAdminPassword = "",
     [string]$CustomConnectionString = "",
     [string]$CustomDomainName = "",
@@ -134,6 +135,7 @@ if ($BrevoApiKey) { $dynamicParams += "brevoApiKey=$BrevoApiKey" }
 if ($BrevoSenderEmail) { $dynamicParams += "brevoSenderEmail=$BrevoSenderEmail" }
 if ($BrevoSenderName) { $dynamicParams += "brevoSenderName=$BrevoSenderName" }
 if ($GoogleDriveApiKey) { $dynamicParams += "googleDriveApiKey=$GoogleDriveApiKey" }
+if ($LogRetentionInDays) { $dynamicParams += "logRetentionInDays=$LogRetentionInDays" }
 if ($SqlAdminPassword) { $dynamicParams += "sqlAdministratorLoginPassword=$SqlAdminPassword" }
 if ($CustomConnectionString) { $dynamicParams += "customConnectionString=$CustomConnectionString" }
 if ($CustomDomainName) { $dynamicParams += "customDomainName=$CustomDomainName" }
