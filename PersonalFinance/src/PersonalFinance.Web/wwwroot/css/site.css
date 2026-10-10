@@ -1,5 +1,31 @@
+/* ==========================================================================
+   App shell: brand tokens, header, main, footer (app-*)
+   ========================================================================== */
+
+:root {
+  --app-brand: #1a73e8;
+  --app-brand-hover: #1557b0;
+  --app-brand-soft: #e8f0fe;
+  --app-bg: #f6f7f9;
+  --app-surface: #ffffff;
+  --app-border: #e2e8f0;
+  --app-text: #1f2937;
+  --app-text-muted: #64748b;
+  --app-header-height: 60px;
+
+  /* One brand blue for links and focus rings across Bootstrap components */
+  --bs-primary: var(--app-brand);
+  --bs-primary-rgb: 26, 115, 232;
+  --bs-link-color: var(--app-brand);
+  --bs-link-color-rgb: 26, 115, 232;
+  --bs-link-hover-color: var(--app-brand-hover);
+  --bs-link-hover-color-rgb: 21, 87, 176;
+  --bs-body-color: var(--app-text);
+  --bs-border-color: var(--app-border);
+}
+
 html {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 @media (min-width: 768px) {
@@ -8,26 +34,212 @@ html {
   }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+/* Sticky footer: the body is a column and main takes the remaining height */
+.app-body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-bg);
+  -webkit-font-smoothing: antialiased;
 }
 
-html {
+.app-main {
+  flex: 1 0 auto;
+  padding: 1.5rem 0 3rem;
+}
+
+.app-main:focus {
+  outline: none;
+}
+
+.app-skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1100;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--app-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--app-brand);
+  --bs-btn-border-color: var(--app-brand);
+  --bs-btn-hover-bg: var(--app-brand-hover);
+  --bs-btn-hover-border-color: var(--app-brand-hover);
+  --bs-btn-active-bg: var(--app-brand-hover);
+  --bs-btn-active-border-color: var(--app-brand-hover);
+  --bs-btn-disabled-bg: var(--app-brand);
+  --bs-btn-disabled-border-color: var(--app-brand);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--app-brand);
+  --bs-btn-border-color: var(--app-brand);
+  --bs-btn-hover-bg: var(--app-brand);
+  --bs-btn-hover-border-color: var(--app-brand);
+  --bs-btn-active-bg: var(--app-brand-hover);
+  --bs-btn-active-border-color: var(--app-brand-hover);
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+  background-color: var(--app-brand);
+}
+
+.btn:focus-visible,
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.2rem rgba(26, 115, 232, 0.25);
+}
+
+/* Header */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(8px);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.app-header .navbar {
+  min-height: var(--app-header-height);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--app-text);
+  letter-spacing: -0.01em;
+}
+
+.app-brand:hover {
+  color: var(--app-text);
+}
+
+.app-brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-brand);
+  color: #ffffff;
+}
+
+.app-nav {
+  margin-left: 1rem;
+}
+
+.app-nav .nav-link {
   position: relative;
-  min-height: 100%;
+  color: var(--app-text-muted);
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
 }
 
-body {
-  margin-bottom: 60px;
+.app-nav .nav-link:hover {
+  color: var(--app-text);
+  background: #f1f5f9;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+.app-nav .nav-link.active {
+  color: var(--app-brand);
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+/* Underline the current page on desktop, where the nav sits in the header bar */
+@media (min-width: 768px) {
+  .app-nav .nav-link.active::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc((var(--app-header-height) - 2.5rem) / -2);
+    height: 2px;
+    border-radius: 2px;
+    background: var(--app-brand);
+  }
+
+  .app-nav .nav-link.active:hover {
+    background: transparent;
+  }
+}
+
+.app-user-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--app-text);
+  font-weight: 500;
+}
+
+.app-user-toggle:hover,
+.app-user-toggle[aria-expanded="true"] {
+  background: #f1f5f9;
+  border-color: var(--app-border);
+}
+
+.app-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.app-avatar--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.app-user-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-user-menu {
+  min-width: 240px;
+  max-width: 300px;
+}
+
+@media (max-width: 767.98px) {
+  .app-header .navbar-collapse {
+    padding-bottom: 0.75rem;
+  }
+
+  .app-nav {
+    margin-left: 0;
+  }
+}
+
+/* Footer */
+.app-footer {
+  flex-shrink: 0;
+  padding: 1rem 0;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  font-size: 0.85rem;
 }
 
 /* ==========================================================================
@@ -195,7 +407,7 @@ body {
 
 .gd-sidebar {
   position: sticky;
-  top: 1rem;
+  top: calc(var(--app-header-height) + 1.5rem);
 }
 
 .gd-sidebar-title {
