@@ -48,6 +48,13 @@
                                 Google Drive
                             </a>
                         </li>
+                        <li class="nav-item">
+                            @{ var isNetworthActive = currentController == "Networth"; }
+                            <a class="nav-link @(isNetworthActive ? "active" : "")" aria-current="@(isNetworthActive ? "page" : null)"
+                               asp-area="" asp-controller="Networth" asp-action="Index">
+                                Net Worth
+                            </a>
+                        </li>
                     </ul>
                 }
                 else

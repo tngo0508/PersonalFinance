@@ -1,0 +1,332 @@
+/* ==========================================================================
+   Net Worth Projection Page Styles (nw-*)
+   ========================================================================== */
+
+:root {
+  --nw-primary: #1a73e8;
+  --nw-primary-hover: #1557b0;
+  --nw-primary-light: #e8f0fe;
+  --nw-surface: #ffffff;
+  --nw-bg: #f8fafd;
+  --nw-border: #e2e8f0;
+  --nw-text-main: #1f2937;
+  --nw-text-muted: #64748b;
+  --nw-success: #0f9d58;
+  --nw-success-light: #e6f4ea;
+  --nw-accent: #f4b400;
+  --nw-accent-light: #fef7e0;
+  --nw-bold: #ea4335;
+  --nw-bold-light: #fce8e6;
+  --nw-conservative: #9334e6;
+  --nw-conservative-light: #f3e8ff;
+  --nw-fi: #0369a1;
+}
+
+/* Page container */
+.nw-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+.nw-header {
+  margin-bottom: 1.5rem;
+}
+
+.nw-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--nw-text-main);
+  margin-bottom: 0.25rem;
+}
+
+.nw-subtitle {
+  font-size: 1rem;
+  color: var(--nw-text-muted);
+  margin-bottom: 0;
+}
+
+/* Cards */
+.nw-card {
+  background: var(--nw-surface);
+  border: 1px solid var(--nw-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.nw-card .card-body {
+  padding: 1.25rem 1.5rem;
+}
+
+/* Section titles */
+.nw-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--nw-text-main);
+  margin-bottom: 1rem;
+}
+
+/* Form inputs */
+.nw-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--nw-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.nw-input {
+  font-size: 0.9rem;
+  border: 1px solid var(--nw-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.nw-input:focus {
+  border-color: var(--nw-primary);
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+}
+
+.nw-btn-calculate {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  height: 38px;
+}
+
+/* Metric cards */
+.nw-metric-card {
+  background: var(--nw-surface);
+  border: 1px solid var(--nw-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nw-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.nw-metric-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--nw-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.nw-metric-value {
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+}
+
+.nw-metric-primary { color: var(--nw-primary); }
+.nw-metric-success { color: var(--nw-success); }
+.nw-metric-accent { color: var(--nw-accent); }
+.nw-metric-bold { color: var(--nw-bold); }
+
+.nw-metric-sub {
+  font-size: 0.8125rem;
+  color: var(--nw-text-muted);
+}
+
+/* Scenario cards */
+.nw-scenario-card {
+  background: var(--nw-surface);
+  border: 1px solid var(--nw-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  height: 100%;
+}
+
+.nw-scenario-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.nw-scenario-base {
+  border-top: 4px solid var(--nw-primary);
+}
+
+.nw-scenario-conservative {
+  border-top: 4px solid var(--nw-conservative);
+}
+
+.nw-scenario-aggressive {
+  border-top: 4px solid var(--nw-success);
+}
+
+.nw-scenario-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--nw-text-main);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--nw-border);
+}
+
+.nw-scenario-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0;
+  font-size: 0.875rem;
+}
+
+.nw-scenario-row span {
+  color: var(--nw-text-muted);
+}
+
+.nw-scenario-row strong {
+  color: var(--nw-text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chart containers */
+.nw-chart-container {
+  position: relative;
+  height: 350px;
+  width: 100%;
+}
+
+.nw-chart-sm {
+  height: 280px;
+}
+
+/* Legend */
+.nw-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 0.8125rem;
+  color: var(--nw-text-muted);
+}
+
+.nw-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nw-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.nw-dot-base { background: var(--nw-primary); }
+.nw-dot-conservative { background: var(--nw-conservative); }
+.nw-dot-aggressive { background: var(--nw-success); }
+.nw-dot-fi { background: var(--nw-fi); }
+
+/* Scenario tabs */
+.nw-scenario-tabs .nw-tab-btn {
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.35rem 1rem;
+  margin-left: 4px;
+}
+
+.nw-scenario-tabs .nw-tab-btn.active {
+  background: var(--nw-primary);
+  border-color: var(--nw-primary);
+  color: #ffffff;
+}
+
+.nw-scenario-tabs .nw-tab-btn:hover:not(.active) {
+  background: var(--nw-primary-light);
+  color: var(--nw-primary);
+}
+
+/* Projection table */
+.nw-table {
+  font-size: 0.875rem;
+}
+
+.nw-table thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--nw-text-muted);
+  background: var(--nw-bg);
+  border-bottom: 1px solid var(--nw-border);
+  white-space: nowrap;
+  padding: 0.75rem 1rem;
+}
+
+.nw-table tbody td {
+  padding: 0.6rem 1rem;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+.nw-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.nw-table tbody tr:hover {
+  background-color: var(--nw-bg) !important;
+}
+
+.nw-currency {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Alert */
+.nw-alert {
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+  .nw-title {
+    font-size: 1.5rem;
+  }
+
+  .nw-metric-value {
+    font-size: 1.35rem;
+  }
+
+  .nw-chart-container {
+    height: 280px;
+  }
+
+  .nw-chart-sm {
+    height: 220px;
+  }
+
+  .nw-scenario-tabs {
+    margin-top: 0.5rem;
+  }
+
+  .nw-table thead th,
+  .nw-table tbody td {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .nw-chart-container {
+    height: 240px;
+  }
+
+  .nw-chart-sm {
+    height: 200px;
+  }
+
+  .nw-legend {
+    gap: 4px 12px;
+    font-size: 0.75rem;
+  }
+}
