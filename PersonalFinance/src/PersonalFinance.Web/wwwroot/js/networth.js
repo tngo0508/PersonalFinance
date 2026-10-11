@@ -394,36 +394,7 @@
                     duration: 1000,
                     easing: 'easeOutQuart'
                 }
-            },
-            plugins: [{
-                // Subtle glow effect for bars
-                id: 'barGlow',
-                afterDraw: function (chart) {
-                    var ctx = chart.ctx;
-                    var meta = chart.getDatasetMeta(0);
-                    if (meta.hidden) return;
-
-                    ctx.save();
-                    meta.data.forEach(function (bar, i) {
-                        var color = chart.data.datasets[0].borderColor[i];
-                        ctx.shadowColor = color;
-                        ctx.shadowBlur = 8;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 0;
-                        ctx.fillStyle = color;
-                        ctx.globalAlpha = 0.08;
-                        ctx.beginPath();
-                        // Fallback for browsers without roundRect
-                        if (typeof ctx.roundRect === 'function') {
-                            ctx.roundRect(bar.x - 1, bar.y - 1, bar.width + 2, bar.base - bar.y + 2, 8);
-                        } else {
-                            ctx.rect(bar.x - 1, bar.y - 1, bar.width + 2, bar.base - bar.y + 2);
-                        }
-                        ctx.fill();
-                    });
-                    ctx.restore();
-                }
-            }]
+            }
         });
     }
 
