@@ -39,7 +39,10 @@
         <div class="nw-form">
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label asp-for="StartingBalance" class="form-label nw-label"></label>
+                    <label asp-for="StartingBalance" class="form-label nw-label">
+                        Starting Balance
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current total investable assets (brokerage accounts, retirement accounts, cash, etc.)"></i>
+                    </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input asp-for="StartingBalance" type="number" step="1000"
@@ -48,7 +51,10 @@
                     <span asp-validation-for="StartingBalance" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3">
-                    <label asp-for="AnnualSavings" class="form-label nw-label"></label>
+                    <label asp-for="AnnualSavings" class="form-label nw-label">
+                        Annual Savings
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="How much you plan to save and invest each year from your income"></i>
+                    </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input asp-for="AnnualSavings" type="number" step="1000"
@@ -57,19 +63,28 @@
                     <span asp-validation-for="AnnualSavings" class="text-danger small"></span>
                 </div>
                 <div class="col-md-2">
-                    <label asp-for="CurrentAge" class="form-label nw-label"></label>
+                    <label asp-for="CurrentAge" class="form-label nw-label">
+                        Current Age
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current age in years"></i>
+                    </label>
                     <input asp-for="CurrentAge" type="number"
                            class="form-control nw-input" id="nwCurrentAge"/>
                     <span asp-validation-for="CurrentAge" class="text-danger small"></span>
                 </div>
                 <div class="col-md-2">
-                    <label asp-for="RetirementAge" class="form-label nw-label"></label>
+                    <label asp-for="RetirementAge" class="form-label nw-label">
+                        Retirement Age
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="The age you plan to stop working and begin withdrawing from your portfolio"></i>
+                    </label>
                     <input asp-for="RetirementAge" type="number"
                            class="form-control nw-input" id="nwRetirementAge"/>
                     <span asp-validation-for="RetirementAge" class="text-danger small"></span>
                 </div>
                 <div class="col-md-2">
-                    <label asp-for="AnnualIncome" class="form-label nw-label"></label>
+                    <label asp-for="AnnualIncome" class="form-label nw-label">
+                        Annual Income
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your total yearly gross income before taxes"></i>
+                    </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input asp-for="AnnualIncome" type="number" step="1000"
@@ -80,7 +95,10 @@
             </div>
             <div class="row g-3 mt-1">
                 <div class="col-md-2">
-                    <label asp-for="AnnualSpending" class="form-label nw-label"></label>
+                    <label asp-for="AnnualSpending" class="form-label nw-label">
+                        Annual Spending
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="How much you spend each year after taxes — used to calculate your FI Target (Annual Spending × 25)"></i>
+                    </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input asp-for="AnnualSpending" type="number" step="1000"
@@ -89,25 +107,37 @@
                     <span asp-validation-for="AnnualSpending" class="text-danger small"></span>
                 </div>
                 <div class="col-md-2">
-                    <label asp-for="BaseRoi" class="form-label nw-label"></label>
+                    <label asp-for="BaseRoi" class="form-label nw-label">
+                        Base ROI (%)
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Expected annual return on investment for the base scenario (e.g., 7% for a balanced portfolio)"></i>
+                    </label>
                     <input asp-for="BaseRoi" type="number" step="0.1"
                            class="form-control nw-input" id="nwBaseRoi"/>
                     <span asp-validation-for="BaseRoi" class="text-danger small"></span>
                 </div>
                 <div class="col-md-2">
-                    <label asp-for="ConservativeRoi" class="form-label nw-label"></label>
+                    <label asp-for="ConservativeRoi" class="form-label nw-label">
+                        Conservative ROI (%)
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Lower expected annual return for a more cautious, bond-heavy portfolio"></i>
+                    </label>
                     <input asp-for="ConservativeRoi" type="number" step="0.1"
                            class="form-control nw-input" id="nwConservativeRoi"/>
                     <span asp-validation-for="ConservativeRoi" class="text-danger small"></span>
                 </div>
                 <div class="col-md-2">
-                    <label asp-for="AggressiveRoi" class="form-label nw-label"></label>
+                    <label asp-for="AggressiveRoi" class="form-label nw-label">
+                        Aggressive ROI (%)
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher expected annual return for a growth-oriented, stock-heavy portfolio"></i>
+                    </label>
                     <input asp-for="AggressiveRoi" type="number" step="0.1"
                            class="form-control nw-input" id="nwAggressiveRoi"/>
                     <span asp-validation-for="AggressiveRoi" class="text-danger small"></span>
                 </div>
                 <div class="col-md-2">
-                    <label asp-for="AggressiveSavings" class="form-label nw-label"></label>
+                    <label asp-for="AggressiveSavings" class="form-label nw-label">
+                        Aggressive Savings
+                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher annual savings amount for the aggressive scenario, assuming increased income or reduced spending"></i>
+                    </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input asp-for="AggressiveSavings" type="number" step="1000"
@@ -291,6 +321,15 @@
     </div>
 </div>
 
+<!-- 4% Rule Explanation -->
+<div class="card nw-card mb-4">
+    <div class="card-body">
+        <h5 class="nw-section-title">Understanding the 4% Rule</h5>
+        <p class="nw-text mb-2">The <strong>4% Rule</strong> is a widely accepted guideline for financial independence. It states that you can safely withdraw 4% of your investment portfolio each year without running out of money over a 30-year retirement.</p>
+        <p class="nw-text mb-0">Your <strong>FI Target</strong> is calculated as <strong>Annual Spending × 25</strong> (the inverse of 4%). Once your net worth reaches this number, your investments can cover your yearly expenses through withdrawals alone.</p>
+    </div>
+</div>
+
 <!-- Year-by-Year Projection Table -->
 <div class="card nw-card mb-4">
     <div class="card-body">
@@ -304,6 +343,15 @@
                 <button type="button" class="btn btn-outline-primary btn-sm nw-tab-btn"
                         data-scenario="Aggressive">Aggressive</button>
             </div>
+        </div>
+        <!-- Row Highlight Legend -->
+        <div class="nw-legend mt-3 mb-3">
+            <span class="nw-legend-item">
+                <span class="nw-legend-swatch nw-swatch-fi"></span> FI Target reached — Your net worth covers your annual spending
+            </span>
+            <span class="nw-legend-item">
+                <span class="nw-legend-swatch nw-swatch-5m"></span> $5M milestone — You've reached a $5 million net worth
+            </span>
         </div>
         <div class="table-responsive">
             <table class="table nw-table" id="nwProjectionTable">

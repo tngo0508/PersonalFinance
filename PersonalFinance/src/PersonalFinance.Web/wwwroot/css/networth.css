@@ -74,6 +74,34 @@
   margin-bottom: 0.25rem;
 }
 
+/* Tooltip info icon */
+.nw-tooltip-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 0.75rem;
+  line-height: 14px;
+  text-align: center;
+  color: var(--nw-text-muted);
+  background: var(--nw-border);
+  border-radius: 50%;
+  cursor: help;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.nw-tooltip-icon::before {
+  content: "?";
+}
+
+.nw-tooltip-icon:hover {
+  color: var(--nw-primary);
+  background: var(--nw-primary-light);
+}
+
 .nw-input {
   font-size: 0.9rem;
   border: 1px solid var(--nw-border);
@@ -303,6 +331,31 @@
 
 .nw-currency {
   font-variant-numeric: tabular-nums;
+}
+
+/* Explanation text */
+.nw-text {
+  font-size: 0.9rem;
+  color: var(--nw-text-main);
+  line-height: 1.6;
+}
+
+/* Legend color swatches for row highlights */
+.nw-legend-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.nw-swatch-fi {
+  background-color: #fef9c3;
+}
+
+.nw-swatch-5m {
+  background-color: #bbf7d0;
 }
 
 /* Alert */

@@ -447,11 +447,24 @@
     }
 
     /**
+     * Initialize Bootstrap tooltips for parameter hints.
+     */
+    function initTooltips() {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
+    }
+
+    /**
      * Initialize everything when DOM is ready
      */
     function init() {
         const data = window.nwProjectionData;
         if (!data) return;
+
+        // Initialize tooltips for parameter hints
+        initTooltips();
 
         // Render charts
         renderGrowthChart(data);
