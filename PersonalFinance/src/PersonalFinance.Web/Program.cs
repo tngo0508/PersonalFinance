@@ -166,6 +166,14 @@ try
         })
         .AddStandardResilienceHandler();
 
+    builder.Services.AddRefitClient<INetWorthApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddStandardResilienceHandler();
+
     var app = builder.Build();
 
     // 7. Enable Serilog HTTP request logging

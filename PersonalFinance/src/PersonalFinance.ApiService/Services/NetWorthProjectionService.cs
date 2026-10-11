@@ -1,11 +1,10 @@
 using PersonalFinance.Shared.DTOs;
-using PersonalFinance.Web.Models;
 
-namespace PersonalFinance.Web.Services;
+namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
 /// Service responsible for computing net worth projection scenarios.
-/// Separates business logic from the controller for testability and single responsibility.
+/// Lives in the ApiService layer so the projection logic is shared via the API.
 /// </summary>
 public static class NetWorthProjectionService
 {
@@ -17,34 +16,34 @@ public static class NetWorthProjectionService
     /// <summary>
     /// Computes the complete net worth projection for all three scenarios.
     /// </summary>
-    /// <param name="model">The view model containing user-configurable parameters.</param>
+    /// <param name="request">The request containing user-configurable parameters.</param>
     /// <returns>A projection DTO with Base, Conservative, and Aggressive scenarios.</returns>
-    public static NetWorthProjectionDto ComputeProjection(NetWorthViewModel model)
+    public static NetWorthProjectionDto ComputeProjection(NetWorthProjectionRequestDto request)
     {
         var currentYear = DateTime.Now.Year;
         var projection = new NetWorthProjectionDto
         {
             CurrentYear = currentYear,
-            CurrentAge = model.CurrentAge,
-            AnnualIncome = model.AnnualIncome,
-            AnnualSpending = model.AnnualSpending,
-            FiTarget = model.AnnualSpending * FiRuleMultiplier
+            CurrentAge = request.CurrentAge,
+            AnnualIncome = request.AnnualIncome,
+            AnnualSpending = request.AnnualSpending,
+            FiTarget = request.AnnualSpending * FiRuleMultiplier
         };
 
         // Base scenario
         projection.Base = BuildScenario(
-            "Base", model.StartingBalance, model.AnnualSavings, model.CurrentAge,
-            model.RetirementAge, model.BaseRoi / 100m, currentYear);
+            "Base", request.StartingBalance, request.AnnualSavings, request.CurrentAge,
+            request.RetirementAge, request.BaseRoi / 100m, currentYear);
 
         // Conservative scenario
         projection.Conservative = BuildScenario(
-            "Conservative", model.StartingBalance, model.AnnualSavings, model.CurrentAge,
-            model.RetirementAge, model.ConservativeRoi / 100m, currentYear);
+            "Conservative", request.StartingBalance, request.AnnualSavings, request.CurrentAge,
+            request.RetirementAge, request.ConservativeRoi / 100m, currentYear);
 
         // Aggressive scenario
         projection.Aggressive = BuildScenario(
-            "Aggressive", model.StartingBalance, model.AggressiveSavings, model.CurrentAge,
-            model.RetirementAge, model.AggressiveRoi / 100m, currentYear);
+            "Aggressive", request.StartingBalance, request.AggressiveSavings, request.CurrentAge,
+            request.RetirementAge, request.AggressiveRoi / 100m, currentYear);
 
         return projection;
     }
@@ -52,14 +51,6 @@ public static class NetWorthProjectionService
     /// <summary>
     /// Builds a single scenario by computing year-by-year compound interest growth.
     /// </summary>
-    /// <param name="name">Scenario name (e.g., "Base").</param>
-    /// <param name="startingBalance">Initial net worth balance.</param>
-    /// <param name="annualSavings">Amount saved and invested each year.</param>
-    /// <param name="startAge">Age at the start of the projection.</param>
-    /// <param name="retirementAge">Target retirement age.</param>
-    /// <param name="roiRate">Annual return on investment as a decimal (e.g., 0.07 for 7%).</param>
-    /// <param name="startYear">Calendar year the projection starts.</param>
-    /// <returns>A scenario DTO containing year-by-year data and summary metrics.</returns>
     private static NetWorthScenarioDto BuildScenario(
         string name,
         decimal startingBalance,
