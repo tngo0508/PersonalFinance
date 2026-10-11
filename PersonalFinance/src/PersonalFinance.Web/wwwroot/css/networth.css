@@ -273,26 +273,32 @@
   transition: background-color 0.15s ease;
 }
 
-.nw-table tbody tr:hover {
+/* Row highlight: FI Target reached (light yellow) */
+.nw-table tbody tr.nw-row-fi,
+.nw-table tbody tr.nw-row-fi td {
+  background-color: #fef9c3 !important;
+}
+
+/* Row highlight: exceeds $5 million (light green) — highest priority */
+.nw-table tbody tr.nw-row-5m,
+.nw-table tbody tr.nw-row-5m td {
+  background-color: #bbf7d0 !important;
+}
+
+/* Hover preserves highlight colors */
+.nw-table tbody tr:hover,
+.nw-table tbody tr:hover td {
   background-color: var(--nw-bg) !important;
 }
 
-/* Row highlight: FI Target reached (green) */
-.nw-table tbody tr.nw-row-fi,
-.nw-table tbody tr.nw-row-fi:hover {
-  background-color: #c6f6d5 !important;
+.nw-table tbody tr.nw-row-fi:hover,
+.nw-table tbody tr.nw-row-fi:hover td {
+  background-color: #fef3c7 !important;
 }
 
-/* Row highlight: exceeds annual income (blue) */
-.nw-table tbody tr.nw-row-income,
-.nw-table tbody tr.nw-row-income:hover {
-  background-color: #bee3f8 !important;
-}
-
-/* Row highlight: exceeds $5 million (gold) — highest priority */
-.nw-table tbody tr.nw-row-5m,
-.nw-table tbody tr.nw-row-5m:hover {
-  background-color: #fefcbf !important;
+.nw-table tbody tr.nw-row-5m:hover,
+.nw-table tbody tr.nw-row-5m:hover td {
+  background-color: #86efac !important;
 }
 
 .nw-currency {

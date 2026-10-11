@@ -321,20 +321,16 @@
      * @returns {string} Space-separated CSS class names for the row.
      */
     function getRowHighlightClass(endingBalance, fiTarget, annualIncome) {
-        const classes = [];
         const fiveMillion = 5000000;
 
-        if (endingBalance >= fiTarget) {
-            classes.push('nw-row-fi');
-        }
-        if (endingBalance >= annualIncome) {
-            classes.push('nw-row-income');
-        }
         if (endingBalance >= fiveMillion) {
-            classes.push('nw-row-5m');
+            return ' class="nw-row-5m"';
+        }
+        if (endingBalance >= fiTarget) {
+            return ' class="nw-row-fi"';
         }
 
-        return classes.length > 0 ? ' class="' + classes.join(' ') + '"' : '';
+        return '';
     }
 
     /**

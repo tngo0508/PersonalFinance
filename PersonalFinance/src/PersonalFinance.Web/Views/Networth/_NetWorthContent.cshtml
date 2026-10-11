@@ -320,11 +320,15 @@
                 <tbody id="nwTableBody">
                     @foreach (var year in projection.Base.Years)
                     {
-                        var rowClasses = new List<string>();
-                        if (year.EndingBalance >= projection.FiTarget) rowClasses.Add("nw-row-fi");
-                        if (year.EndingBalance >= projection.AnnualIncome) rowClasses.Add("nw-row-income");
-                        if (year.EndingBalance >= 5000000m) rowClasses.Add("nw-row-5m");
-                        var rowClass = string.Join(" ", rowClasses);
+                        string rowClass = "";
+                        if (year.EndingBalance >= 5000000m)
+                        {
+                            rowClass = "nw-row-5m";
+                        }
+                        else if (year.EndingBalance >= projection.FiTarget)
+                        {
+                            rowClass = "nw-row-fi";
+                        }
                         <tr class="@rowClass">
                             <td>@year.Year</td>
                             <td>@year.Age</td>
