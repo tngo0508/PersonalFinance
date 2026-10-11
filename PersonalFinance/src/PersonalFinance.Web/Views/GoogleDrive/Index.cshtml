@@ -294,6 +294,16 @@
                         @if (currentConn != null)
                         {
                             <div class="d-flex align-items-center gap-2">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 text-nowrap"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#newBudgetSheetModal"
+                                        title="How to start a new Monthly budget spreadsheet">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                        <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/>
+                                    </svg>
+                                    <span>New budget sheet</span>
+                                </button>
                                 <form asp-action="Sync" method="post" id="syncForm">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@currentConn.Id" />
@@ -1016,7 +1026,14 @@
                     Any spreadsheet with a sheet that has <strong>Date</strong> and <strong>Amount</strong> columns can show its transactions.
                 </p>
 
-                <h6 class="fw-bold mb-2 mt-4">3. Optional: add a Google API key</h6>
+                <h6 class="fw-bold mb-2 mt-4">3. Start a new monthly budget</h6>
+                <p class="text-muted small">
+                    In <a href="https://docs.google.com/spreadsheets/" target="_blank" rel="noopener noreferrer">Google Sheets</a>, open the
+                    <strong>Template gallery</strong> and choose <strong>Monthly budget</strong>. Move the new spreadsheet into your connected
+                    folder, then click <strong>Sync now</strong>. See <strong>New budget sheet</strong> for step-by-step instructions.
+                </p>
+
+                <h6 class="fw-bold mb-2 mt-4">4. Optional: add a Google API key</h6>
                 <ol class="text-muted small ps-3">
                     <li class="mb-1">Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console</a> and create or pick a project.</li>
                     <li class="mb-1">Enable the <strong>Google Drive API</strong> under APIs &amp; Services &gt; Library.</li>
@@ -1032,6 +1049,66 @@
             </div>
             <div class="modal-footer border-top">
                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Monthly Budget Sheet Instructions Modal -->
+<div class="modal fade" id="newBudgetSheetModal" tabindex="-1" aria-labelledby="newBudgetSheetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="newBudgetSheetModalLabel">New budget sheet</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small">Use Google's free Monthly budget template to start a new month.</p>
+
+                <h6 class="fw-bold mb-1">1. Create it from Google's template</h6>
+                <p class="text-muted small">
+                    Open <a href="https://docs.google.com/spreadsheets/" target="_blank" rel="noopener noreferrer">Google Sheets</a>
+                    (signed in to the account that owns <strong>@(currentConn?.Name ?? "your connected folder")</strong>).
+                    At the top, click <strong>Template gallery</strong>, then choose <strong>Monthly budget</strong>.
+                </p>
+
+                <h6 class="fw-bold mb-1 mt-3">2. Keep the name starting with "Monthly budget"</h6>
+                <p class="text-muted small">
+                    The new spreadsheet is called <em>Monthly budget</em>. You can add the month, for example
+                    <em>Monthly budget - @DateTime.UtcNow.ToString("MMMM yyyy")</em>, but keep "Monthly budget" at the start.
+                    That's how this app knows to show a budget report for it.
+                </p>
+
+                <h6 class="fw-bold mb-1 mt-3">3. Fill it in</h6>
+                <p class="text-muted small">
+                    On the <strong>Summary</strong> tab, enter your starting balance and planned income and expenses.
+                    Record what you actually earn and spend on the <strong>Transactions</strong> tab.
+                </p>
+
+                <h6 class="fw-bold mb-1 mt-3">4. Move it into your connected folder</h6>
+                <p class="text-muted small">
+                    In the spreadsheet, choose <em>File &rarr; Move</em> and pick
+                    @if (!string.IsNullOrWhiteSpace(currentConn?.FolderUrl))
+                    {
+                        <a href="@currentConn.FolderUrl" target="_blank" rel="noopener noreferrer"><strong>@currentConn.Name</strong></a>
+                    }
+                    else
+                    {
+                        <strong>@(currentConn?.Name ?? "your connected folder")</strong>
+                    }.
+                    New spreadsheets are saved to My Drive, and this app only sees files inside the connected folder.
+                </p>
+
+                <h6 class="fw-bold mb-1 mt-3">5. Sync</h6>
+                <p class="text-muted small mb-0">
+                    Come back here and click <strong>Sync now</strong>. The sheet appears under <strong>Spreadsheets</strong>.
+                    Not there? Check that it's in the folder, its name starts with "Monthly budget", and the folder is still shared as
+                    <strong>Anyone with the link</strong>.
+                </p>
+            </div>
+            <div class="modal-footer border-top">
+                <a href="https://docs.google.com/spreadsheets/" target="_blank" rel="noopener noreferrer" class="btn btn-success">Open Google Sheets &nearr;</a>
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
