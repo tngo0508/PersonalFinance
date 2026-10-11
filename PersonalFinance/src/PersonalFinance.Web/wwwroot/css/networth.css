@@ -659,26 +659,127 @@
 }
 
 /* ==========================================================================
-   Chart Containers
+   Chart Containers — Dark Futuristic Theme
    ========================================================================== */
+
+.nw-card--chart {
+  position: relative;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--nw-radius-lg);
+  overflow: hidden;
+  box-shadow:
+    0 0 40px rgba(99, 102, 241, 0.08),
+    0 0 80px rgba(139, 92, 246, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.nw-card--chart::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(99, 102, 241, 0.6) 20%,
+    rgba(139, 92, 246, 0.8) 50%,
+    rgba(99, 102, 241, 0.6) 80%,
+    transparent 100%
+  );
+  z-index: 1;
+}
+
+.nw-card--chart::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse 600px 300px at 20% 10%, rgba(99, 102, 241, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 200px at 80% 90%, rgba(139, 92, 246, 0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.nw-card--chart .card-body {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+.nw-card--chart .nw-card__header {
+  position: relative;
+  z-index: 1;
+}
+
+.nw-card--chart .nw-section-title {
+  color: #f1f5f9;
+  text-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+.nw-card--chart .nw-card__subtitle {
+  color: #94a3b8;
+}
+
+/* Chart card icons — enhanced glow on dark bg */
+.nw-card--chart .nw-card__icon--green {
+  background: linear-gradient(135deg, #34d399 0%, #06b6d4 100%);
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.35), 0 2px 8px rgba(52, 211, 153, 0.2);
+}
+
+.nw-card--chart .nw-card__icon--purple {
+  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%);
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.35), 0 2px 8px rgba(167, 139, 250, 0.2);
+}
+
+/* Subtle scanline overlay for futuristic feel */
+.nw-chart-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(99, 102, 241, 0.015) 2px,
+    rgba(99, 102, 241, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.nw-chart-container canvas {
+  position: relative;
+  z-index: 1;
+}
 
 .nw-chart-container {
   position: relative;
   height: 350px;
   width: 100%;
+  z-index: 1;
 }
 
 .nw-chart-sm {
   height: 280px;
 }
 
-/* Legend */
+/* Legend — dark futuristic */
 .nw-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 20px;
   font-size: 0.8125rem;
-  color: var(--nw-text-muted);
+  color: #94a3b8;
+  position: relative;
+  z-index: 1;
 }
 
 .nw-legend-item {
@@ -693,12 +794,25 @@
   height: 10px;
   border-radius: 3px;
   flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
 }
 
-.nw-dot-base { background: var(--nw-primary); }
-.nw-dot-conservative { background: var(--nw-conservative); }
-.nw-dot-aggressive { background: var(--nw-aggressive); }
-.nw-dot-fi { background: var(--nw-fi); }
+.nw-dot-base {
+  background: #818cf8;
+  color: #818cf8;
+}
+.nw-dot-conservative {
+  background: #a78bfa;
+  color: #a78bfa;
+}
+.nw-dot-aggressive {
+  background: #34d399;
+  color: #34d399;
+}
+.nw-dot-fi {
+  background: #38bdf8;
+  color: #38bdf8;
+}
 
 /* ==========================================================================
    Info Card (4% Rule)

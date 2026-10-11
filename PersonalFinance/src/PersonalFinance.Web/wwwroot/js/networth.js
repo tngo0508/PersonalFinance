@@ -12,15 +12,20 @@
     let growthChart = null;
     let comparisonChart = null;
 
-    // Color palette — ADA-compliant, WCAG 2.1 AA
+    // Color palette — Dark futuristic neon theme
     const colors = {
-        base: '#4f46e5',
-        conservative: '#7c3aed',
-        aggressive: '#059669',
-        fi: '#0369a1',
-        baseAlpha: 'rgba(79, 70, 229, 0.1)',
-        conservativeAlpha: 'rgba(124, 58, 237, 0.1)',
-        aggressiveAlpha: 'rgba(5, 150, 105, 0.1)'
+        base: '#818cf8',
+        conservative: '#a78bfa',
+        aggressive: '#34d399',
+        fi: '#38bdf8',
+        baseAlpha: 'rgba(129, 140, 248, 0.15)',
+        conservativeAlpha: 'rgba(167, 139, 250, 0.1)',
+        aggressiveAlpha: 'rgba(52, 211, 153, 0.15)',
+        gridColor: 'rgba(148, 163, 184, 0.08)',
+        gridColorStrong: 'rgba(148, 163, 184, 0.15)',
+        tickColor: '#64748b',
+        tooltipBg: 'rgba(15, 23, 42, 0.96)',
+        tooltipBorder: 'rgba(99, 102, 241, 0.3)'
     };
 
     // Scenario name mapping for safe property access
@@ -55,58 +60,104 @@
     }
 
     /**
+     * Create a gradient fill for a chart line
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {string} colorHex - Hex color for the gradient
+     * @returns {CanvasGradient} The gradient object
+     */
+    function createLineGradient(ctx, colorHex) {
+        var gradient = ctx.createLinearGradient(0, 0, 0, 350);
+        gradient.addColorStop(0, hexToRgba(colorHex, 0.35));
+        gradient.addColorStop(0.5, hexToRgba(colorHex, 0.12));
+        gradient.addColorStop(1, hexToRgba(colorHex, 0.0));
+        return gradient;
+    }
+
+    /**
+     * Convert hex color to rgba string
+     * @param {string} hex - Hex color (e.g. '#818cf8')
+     * @param {number} alpha - Alpha value 0-1
+     * @returns {string} RGBA string
+     */
+    function hexToRgba(hex, alpha) {
+        var r = parseInt(hex.slice(1, 3), 16);
+        var g = parseInt(hex.slice(3, 5), 16);
+        var b = parseInt(hex.slice(5, 7), 16);
+        return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+    }
+
+    /**
      * Render the growth chart showing all three scenarios over time
      */
     function renderGrowthChart(data) {
-        const ctx = document.getElementById('nwGrowthChart');
-        if (!ctx) return;
+        var ctxEl = document.getElementById('nwGrowthChart');
+        if (!ctxEl) return;
 
         if (growthChart) {
             growthChart.destroy();
         }
 
-        const labels = data.base.years.map(y => y.year);
-        const fiTarget = data.fiTarget;
+        var ctx = ctxEl.getContext('2d');
+        var labels = data.base.years.map(function (y) { return y.year; });
+        var fiTarget = data.fiTarget;
 
-        const datasets = [
+        // Build gradient fills
+        var baseGrad = createLineGradient(ctx, colors.base);
+        var consGrad = createLineGradient(ctx, colors.conservative);
+        var aggGrad = createLineGradient(ctx, colors.aggressive);
+
+        var datasets = [
             {
                 label: 'Base (' + data.base.roiPercent + '%)',
-                data: data.base.years.map(y => y.endingBalance),
+                data: data.base.years.map(function (y) { return y.endingBalance; }),
                 borderColor: colors.base,
-                backgroundColor: colors.baseAlpha,
-                fill: false,
-                tension: 0.3,
+                backgroundColor: baseGrad,
+                fill: true,
+                tension: 0.4,
                 pointRadius: 0,
-                pointHoverRadius: 5,
-                borderWidth: 2.5
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: colors.base,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2,
+                borderWidth: 3,
+                borderCapStyle: 'round'
             },
             {
                 label: 'Conservative (' + data.conservative.roiPercent + '%)',
-                data: data.conservative.years.map(y => y.endingBalance),
+                data: data.conservative.years.map(function (y) { return y.endingBalance; }),
                 borderColor: colors.conservative,
-                backgroundColor: colors.conservativeAlpha,
-                fill: false,
-                tension: 0.3,
+                backgroundColor: consGrad,
+                fill: true,
+                tension: 0.4,
                 pointRadius: 0,
-                pointHoverRadius: 5,
-                borderWidth: 2
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: colors.conservative,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2,
+                borderWidth: 2,
+                borderCapStyle: 'round'
             },
             {
                 label: 'Aggressive (' + data.aggressive.roiPercent + '%)',
-                data: data.aggressive.years.map(y => y.endingBalance),
+                data: data.aggressive.years.map(function (y) { return y.endingBalance; }),
                 borderColor: colors.aggressive,
-                backgroundColor: colors.aggressiveAlpha,
-                fill: false,
-                tension: 0.3,
+                backgroundColor: aggGrad,
+                fill: true,
+                tension: 0.4,
                 pointRadius: 0,
-                pointHoverRadius: 5,
-                borderWidth: 2
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: colors.aggressive,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2,
+                borderWidth: 3,
+                borderCapStyle: 'round'
             },
             {
                 label: 'FI Target',
                 data: Array(labels.length).fill(fiTarget),
                 borderColor: colors.fi,
-                borderDash: [6, 4],
+                backgroundColor: 'transparent',
+                borderDash: [8, 5],
                 borderWidth: 1.5,
                 pointRadius: 0,
                 fill: false
@@ -128,14 +179,25 @@
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(31, 41, 55, 0.95)',
-                        titleFont: { size: 13, weight: '600' },
-                        bodyFont: { size: 12 },
-                        padding: 12,
-                        cornerRadius: 8,
+                        backgroundColor: colors.tooltipBg,
+                        borderColor: colors.tooltipBorder,
+                        borderWidth: 1,
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#cbd5e1',
+                        titleFont: { size: 13, weight: '700', family: '"Inter", system-ui, sans-serif' },
+                        bodyFont: { size: 12, family: '"Inter", system-ui, sans-serif' },
+                        padding: 14,
+                        cornerRadius: 10,
+                        displayColors: true,
+                        boxPadding: 6,
+                        usePointStyle: true,
                         callbacks: {
+                            title: function (items) {
+                                return '📅 ' + items[0].label;
+                            },
                             label: function (context) {
-                                return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                                var val = formatCurrency(context.parsed.y);
+                                return ' ' + context.dataset.label + ':  ' + val;
                             }
                         }
                     }
@@ -143,29 +205,73 @@
                 scales: {
                     x: {
                         grid: {
-                            display: false
+                            color: colors.gridColor,
+                            drawBorder: false
                         },
                         ticks: {
-                            font: { size: 11 },
-                            color: '#475569',
+                            font: { size: 11, weight: '500' },
+                            color: colors.tickColor,
                             maxTicksLimit: 15
+                        },
+                        border: {
+                            display: false
                         }
                     },
                     y: {
                         grid: {
-                            color: 'rgba(226, 232, 240, 0.5)',
+                            color: colors.gridColor,
                             drawBorder: false
                         },
                         ticks: {
-                            font: { size: 11 },
-                            color: '#475569',
+                            font: { size: 11, weight: '500' },
+                            color: colors.tickColor,
                             callback: function (value) {
                                 return formatCompact(value);
                             }
+                        },
+                        border: {
+                            display: false
                         }
                     }
+                },
+                animation: {
+                    duration: 1200,
+                    easing: 'easeOutQuart'
                 }
-            }
+            },
+            plugins: [{
+                // Glow effect plugin for lines
+                id: 'lineGlow',
+                afterDraw: function (chart) {
+                    var ctx = chart.ctx;
+                    chart.data.datasets.forEach(function (dataset, i) {
+                        if (i === 3) return; // skip FI target
+                        var meta = chart.getDatasetMeta(i);
+                        if (meta.hidden || !meta.dataset) return;
+
+                        ctx.save();
+                        ctx.shadowColor = dataset.borderColor;
+                        ctx.shadowBlur = 12;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 0;
+                        ctx.strokeStyle = dataset.borderColor;
+                        ctx.lineWidth = dataset.borderWidth;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+
+                        // Draw the glow line by iterating over points
+                        if (meta.data.length > 1) {
+                            ctx.beginPath();
+                            ctx.moveTo(meta.data[0].x, meta.data[0].y);
+                            for (var j = 1; j < meta.data.length; j++) {
+                                ctx.lineTo(meta.data[j].x, meta.data[j].y);
+                            }
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                    });
+                }
+            }]
         });
     }
 
@@ -173,17 +279,32 @@
      * Render the comparison bar chart showing final net worth across scenarios
      */
     function renderComparisonChart(data) {
-        const ctx = document.getElementById('nwComparisonChart');
-        if (!ctx) return;
+        var ctxEl = document.getElementById('nwComparisonChart');
+        if (!ctxEl) return;
 
         if (comparisonChart) {
             comparisonChart.destroy();
         }
 
+        var ctx = ctxEl.getContext('2d');
+
         // Use ending balance from the last year of each scenario for comparison
-        const baseLastYear = data.base.years[data.base.years.length - 1];
-        const conservativeLastYear = data.conservative.years[data.conservative.years.length - 1];
-        const aggressiveLastYear = data.aggressive.years[data.aggressive.years.length - 1];
+        var baseLastYear = data.base.years[data.base.years.length - 1];
+        var conservativeLastYear = data.conservative.years[data.conservative.years.length - 1];
+        var aggressiveLastYear = data.aggressive.years[data.aggressive.years.length - 1];
+
+        // Create gradient backgrounds for bars
+        var baseBarGrad = ctx.createLinearGradient(0, 0, 0, 280);
+        baseBarGrad.addColorStop(0, colors.base);
+        baseBarGrad.addColorStop(1, hexToRgba(colors.base, 0.4));
+
+        var consBarGrad = ctx.createLinearGradient(0, 0, 0, 280);
+        consBarGrad.addColorStop(0, colors.conservative);
+        consBarGrad.addColorStop(1, hexToRgba(colors.conservative, 0.4));
+
+        var aggBarGrad = ctx.createLinearGradient(0, 0, 0, 280);
+        aggBarGrad.addColorStop(0, colors.aggressive);
+        aggBarGrad.addColorStop(1, hexToRgba(colors.aggressive, 0.4));
 
         comparisonChart = new Chart(ctx, {
             type: 'bar',
@@ -196,26 +317,47 @@
                         conservativeLastYear ? conservativeLastYear.endingBalance : 0,
                         aggressiveLastYear ? aggressiveLastYear.endingBalance : 0
                     ],
-                    backgroundColor: [colors.base, colors.conservative, colors.aggressive],
-                    borderRadius: 8,
+                    backgroundColor: [baseBarGrad, consBarGrad, aggBarGrad],
+                    borderColor: [colors.base, colors.conservative, colors.aggressive],
+                    borderWidth: 1.5,
+                    borderRadius: 10,
                     borderSkipped: false,
-                    barThickness: 48
+                    barThickness: 52,
+                    hoverBackgroundColor: [colors.base, colors.conservative, colors.aggressive],
+                    hoverBorderColor: ['#fff', '#fff', '#fff'],
+                    hoverBorderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(31, 41, 55, 0.95)',
-                        padding: 12,
-                        cornerRadius: 8,
+                        backgroundColor: colors.tooltipBg,
+                        borderColor: colors.tooltipBorder,
+                        borderWidth: 1,
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#cbd5e1',
+                        titleFont: { size: 13, weight: '700', family: '"Inter", system-ui, sans-serif' },
+                        bodyFont: { size: 12, family: '"Inter", system-ui, sans-serif' },
+                        padding: 14,
+                        cornerRadius: 10,
+                        displayColors: true,
+                        boxPadding: 6,
+                        usePointStyle: true,
                         callbacks: {
+                            title: function (items) {
+                                return '📊 ' + items[0].label + ' Scenario';
+                            },
                             label: function (context) {
-                                return formatCurrency(context.parsed.y);
+                                return ' Final Net Worth:  ' + formatCurrency(context.parsed.y);
                             }
                         }
                     }
@@ -225,24 +367,63 @@
                         grid: { display: false },
                         ticks: {
                             font: { size: 12, weight: '600' },
-                            color: '#475569'
+                            color: colors.tickColor
+                        },
+                        border: {
+                            display: false
                         }
                     },
                     y: {
                         grid: {
-                            color: 'rgba(226, 232, 240, 0.5)',
+                            color: colors.gridColor,
                             drawBorder: false
                         },
                         ticks: {
-                            font: { size: 11 },
-                            color: '#475569',
+                            font: { size: 11, weight: '500' },
+                            color: colors.tickColor,
                             callback: function (value) {
                                 return formatCompact(value);
                             }
+                        },
+                        border: {
+                            display: false
                         }
                     }
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
                 }
-            }
+            },
+            plugins: [{
+                // Subtle glow effect for bars
+                id: 'barGlow',
+                afterDraw: function (chart) {
+                    var ctx = chart.ctx;
+                    var meta = chart.getDatasetMeta(0);
+                    if (meta.hidden) return;
+
+                    ctx.save();
+                    meta.data.forEach(function (bar, i) {
+                        var color = chart.data.datasets[0].borderColor[i];
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 8;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 0;
+                        ctx.fillStyle = color;
+                        ctx.globalAlpha = 0.08;
+                        ctx.beginPath();
+                        // Fallback for browsers without roundRect
+                        if (typeof ctx.roundRect === 'function') {
+                            ctx.roundRect(bar.x - 1, bar.y - 1, bar.width + 2, bar.base - bar.y + 2, 8);
+                        } else {
+                            ctx.rect(bar.x - 1, bar.y - 1, bar.width + 2, bar.base - bar.y + 2);
+                        }
+                        ctx.fill();
+                    });
+                    ctx.restore();
+                }
+            }]
         });
     }
 
