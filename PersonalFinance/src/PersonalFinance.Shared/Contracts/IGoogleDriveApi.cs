@@ -71,12 +71,4 @@ public interface IGoogleDriveApi
         [Query] int? connectionId = null,
         [Query] string? userId = null,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Creates a new Monthly Budget template spreadsheet in the connected Google Drive folder.
-    /// </summary>
-    [Post("/api/googledrive/templates/monthly-budget")]
-    Task<CreateMonthlyBudgetTemplateResponseDto> CreateMonthlyBudgetTemplateAsync(
-        [Body] CreateMonthlyBudgetTemplateRequestDto request,
-        CancellationToken cancellationToken = default);
 }

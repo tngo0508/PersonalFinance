@@ -127,12 +127,6 @@ try
             });
     }
 
-    // 3c-ii. Register Google Drive write authorization (per-user OAuth tokens with drive.file scope)
-    builder.Services.AddHttpClient<IGoogleDriveAuthorizationService, GoogleDriveAuthorizationService>(client =>
-    {
-        client.Timeout = TimeSpan.FromSeconds(15);
-    });
-
     // 3d. Register Brevo Email Sender
     builder.Services.Configure<BrevoOptions>(
         builder.Configuration.GetSection("Brevo"));

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.DTOs;
-using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -244,45 +243,5 @@ public class GoogleDriveController : ControllerBase
 
         var transactions = await _googleDriveService.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, userId, cancellationToken);
         return Ok(transactions);
-    }
-
-    /// <summary>
-    /// Downloads the raw Monthly Budget Excel template (.xlsx) binary file.
-    /// </summary>
-    [HttpGet("templates/monthly-budget/download")]
-    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult DownloadMonthlyBudgetTemplate()
-    {
-        var bytes = GoogleDriveHelper.GetMonthlyBudgetTemplateBytes();
-        if (bytes == null || bytes.Length == 0)
-        {
-            return NotFound("Monthly budget template asset not found.");
-        }
-
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Monthly budget.xlsx");
-    }
-
-    /// <summary>
-    /// Programmatically instantiates a new Monthly Budget Google Sheet template in the connected Google Drive folder.
-    /// </summary>
-    [HttpPost("templates/monthly-budget")]
-    [ProducesResponseType(typeof(CreateMonthlyBudgetTemplateResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<CreateMonthlyBudgetTemplateResponseDto>> CreateMonthlyBudgetTemplate(
-        [FromBody] CreateMonthlyBudgetTemplateRequestDto request,
-        CancellationToken cancellationToken = default)
-    {
-        if (request == null || string.IsNullOrWhiteSpace(request.UserId) || request.ConnectionId <= 0)
-        {
-            return BadRequest(new CreateMonthlyBudgetTemplateResponseDto
-            {
-                Success = false,
-                ErrorMessage = "UserId and valid ConnectionId are required."
-            });
-        }
-
-        var result = await _googleDriveService.CreateMonthlyBudgetTemplateAsync(request, cancellationToken);
-        return Ok(result);
     }
 }
