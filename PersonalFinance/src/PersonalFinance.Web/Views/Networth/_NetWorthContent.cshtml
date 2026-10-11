@@ -28,128 +28,179 @@
 
 <!-- Page Header -->
 <div class="nw-header mb-4">
-    <h1 class="nw-title">Net Worth &amp; FI Projection</h1>
-    <p class="nw-subtitle">Track your path to Financial Independence with scenario-based projections</p>
+    <div class="nw-header__content">
+        <div>
+            <h1 class="nw-title">
+                <span class="nw-title__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+                </span>
+                Net Worth &amp; FI Projection
+            </h1>
+            <p class="nw-subtitle">Track your path to Financial Independence with scenario-based projections</p>
+        </div>
+        <button type="button" class="nw-help-btn" data-bs-toggle="modal" data-bs-target="#nwHelpModal">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            How it works
+        </button>
+    </div>
 </div>
 
 <!-- Input Parameters Panel -->
-<div class="card nw-card mb-4">
+<div class="card nw-card mb-4 nw-card--parameters">
     <div class="card-body">
-        <h5 class="nw-section-title">Projection Parameters</h5>
+        <div class="nw-card__header">
+            <div class="nw-card__icon nw-card__icon--blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </div>
+            <div>
+                <h5 class="nw-section-title mb-1">Projection Parameters</h5>
+                <p class="nw-card__subtitle mb-0">Adjust your inputs to see how different scenarios affect your financial future</p>
+            </div>
+        </div>
         <div class="nw-form">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label asp-for="StartingBalance" class="form-label nw-label">
-                        Starting Balance
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current total investable assets (brokerage accounts, retirement accounts, cash, etc.)"></i>
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input asp-for="StartingBalance" type="number" step="1000" min="0" max="1000000000" required
-                               class="form-control nw-input" id="nwStartingBalance"/>
+            <div class="nw-form__group">
+                <div class="nw-form__group-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/><path d="M17 13a1 1 0 0 0 1 1v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-1a1 1 0 0 0 1-1"/><path d="M15 21V13h-6v8"/></svg>
+                    Financial Overview
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label asp-for="StartingBalance" class="form-label nw-label">
+                            Starting Balance
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current total investable assets (brokerage accounts, retirement accounts, cash, etc.)"></i>
+                        </label>
+                        <div class="input-group nw-input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="StartingBalance" type="number" step="1000" min="0" max="1000000000" required
+                                   class="form-control nw-input" id="nwStartingBalance"/>
+                        </div>
+                        <span asp-validation-for="StartingBalance" class="text-danger small"></span>
                     </div>
-                    <span asp-validation-for="StartingBalance" class="text-danger small"></span>
-                </div>
-                <div class="col-md-3">
-                    <label asp-for="AnnualSavings" class="form-label nw-label">
-                        Annual Savings
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="How much you plan to save and invest each year from your income"></i>
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input asp-for="AnnualSavings" type="number" step="1000" min="0" max="10000000" required
-                               class="form-control nw-input" id="nwAnnualSavings"/>
+                    <div class="col-md-3">
+                        <label asp-for="AnnualSavings" class="form-label nw-label">
+                            Annual Savings
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="How much you plan to save and invest each year from your income"></i>
+                        </label>
+                        <div class="input-group nw-input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="AnnualSavings" type="number" step="1000" min="0" max="10000000" required
+                                   class="form-control nw-input" id="nwAnnualSavings"/>
+                        </div>
+                        <span asp-validation-for="AnnualSavings" class="text-danger small"></span>
                     </div>
-                    <span asp-validation-for="AnnualSavings" class="text-danger small"></span>
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="CurrentAge" class="form-label nw-label">
-                        Current Age
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current age in years"></i>
-                    </label>
-                    <input asp-for="CurrentAge" type="number" min="18" max="100" required
-                           class="form-control nw-input" id="nwCurrentAge"/>
-                    <span asp-validation-for="CurrentAge" class="text-danger small"></span>
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="RetirementAge" class="form-label nw-label">
-                        Retirement Age
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="The age you plan to stop working and begin withdrawing from your portfolio"></i>
-                    </label>
-                    <input asp-for="RetirementAge" type="number" min="18" max="120" required
-                           class="form-control nw-input" id="nwRetirementAge"/>
-                    <span asp-validation-for="RetirementAge" class="text-danger small"></span>
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="AnnualIncome" class="form-label nw-label">
-                        Annual Income
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your total yearly gross income before taxes"></i>
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input asp-for="AnnualIncome" type="number" step="1000" min="0" max="100000000" required
-                               class="form-control nw-input" id="nwAnnualIncome"/>
+                    <div class="col-md-2">
+                        <label asp-for="AnnualIncome" class="form-label nw-label">
+                            Annual Income
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your total yearly gross income before taxes"></i>
+                        </label>
+                        <div class="input-group nw-input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="AnnualIncome" type="number" step="1000" min="0" max="100000000" required
+                                   class="form-control nw-input" id="nwAnnualIncome"/>
+                        </div>
+                        <span asp-validation-for="AnnualIncome" class="text-danger small"></span>
                     </div>
-                    <span asp-validation-for="AnnualIncome" class="text-danger small"></span>
+                    <div class="col-md-2">
+                        <label asp-for="AnnualSpending" class="form-label nw-label">
+                            Annual Spending
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="How much you spend each year after taxes — used to calculate your FI Target (Annual Spending × 25)"></i>
+                        </label>
+                        <div class="input-group nw-input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="AnnualSpending" type="number" step="1000" min="0" max="10000000" required
+                                   class="form-control nw-input" id="nwAnnualSpending"/>
+                        </div>
+                        <span asp-validation-for="AnnualSpending" class="text-danger small"></span>
+                    </div>
                 </div>
             </div>
-            <div class="row g-3 mt-1">
-                <div class="col-md-2">
-                    <label asp-for="AnnualSpending" class="form-label nw-label">
-                        Annual Spending
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="How much you spend each year after taxes — used to calculate your FI Target (Annual Spending × 25)"></i>
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input asp-for="AnnualSpending" type="number" step="1000" min="0" max="10000000" required
-                               class="form-control nw-input" id="nwAnnualSpending"/>
+            <div class="nw-form__group">
+                <div class="nw-form__group-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    Timeline
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label asp-for="CurrentAge" class="form-label nw-label">
+                            Current Age
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current age in years"></i>
+                        </label>
+                        <input asp-for="CurrentAge" type="number" min="18" max="100" required
+                               class="form-control nw-input" id="nwCurrentAge"/>
+                        <span asp-validation-for="CurrentAge" class="text-danger small"></span>
                     </div>
-                    <span asp-validation-for="AnnualSpending" class="text-danger small"></span>
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="BaseRoi" class="form-label nw-label">
-                        Base ROI (%)
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Expected annual return on investment for the base scenario (e.g., 7% for a balanced portfolio)"></i>
-                    </label>
-                    <input asp-for="BaseRoi" type="number" step="0.1" min="0" max="50" required
-                           class="form-control nw-input" id="nwBaseRoi"/>
-                    <span asp-validation-for="BaseRoi" class="text-danger small"></span>
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="ConservativeRoi" class="form-label nw-label">
-                        Conservative ROI (%)
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Lower expected annual return for a more cautious, bond-heavy portfolio"></i>
-                    </label>
-                    <input asp-for="ConservativeRoi" type="number" step="0.1" min="0" max="50" required
-                           class="form-control nw-input" id="nwConservativeRoi"/>
-                    <span asp-validation-for="ConservativeRoi" class="text-danger small"></span>
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="AggressiveRoi" class="form-label nw-label">
-                        Aggressive ROI (%)
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher expected annual return for a growth-oriented, stock-heavy portfolio"></i>
-                    </label>
-                    <input asp-for="AggressiveRoi" type="number" step="0.1" min="0" max="50" required
-                           class="form-control nw-input" id="nwAggressiveRoi"/>
-                    <span asp-validation-for="AggressiveRoi" class="text-danger small"></span>
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="AggressiveSavings" class="form-label nw-label">
-                        Aggressive Savings
-                        <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher annual savings amount for the aggressive scenario, assuming increased income or reduced spending"></i>
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input asp-for="AggressiveSavings" type="number" step="1000" min="0" max="10000000" required
-                               class="form-control nw-input" id="nwAggressiveSavings"/>
+                    <div class="col-md-3">
+                        <label asp-for="RetirementAge" class="form-label nw-label">
+                            Retirement Age
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="The age you plan to stop working and begin withdrawing from your portfolio"></i>
+                        </label>
+                        <input asp-for="RetirementAge" type="number" min="18" max="120" required
+                               class="form-control nw-input" id="nwRetirementAge"/>
+                        <span asp-validation-for="RetirementAge" class="text-danger small"></span>
                     </div>
-                    <span asp-validation-for="AggressiveSavings" class="text-danger small"></span>
                 </div>
             </div>
-            <div class="row mt-3">
-                <div class="col-12 text-end">
-                    <button type="button" class="btn nw-btn-reset" id="nwResetBtn">Reset to Defaults</button>
+            <div class="nw-form__group">
+                <div class="nw-form__group-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 12-3.5-3.5"/><path d="M4 16V10a2 2 0 0 1 2-2h3.5"/><path d="M20 8V4a2 2 0 0 0-2-2h-3.5"/><path d="M2 18v-4a2 2 0 0 1 2-2h3.5"/><path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/></svg>
+                    Return Assumptions
                 </div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label asp-for="BaseRoi" class="form-label nw-label">
+                            Base ROI (%)
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Expected annual return on investment for the base scenario (e.g., 7% for a balanced portfolio)"></i>
+                        </label>
+                        <div class="input-group nw-input-group">
+                            <input asp-for="BaseRoi" type="number" step="0.1" min="0" max="50" required
+                                   class="form-control nw-input" id="nwBaseRoi"/>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <span asp-validation-for="BaseRoi" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="ConservativeRoi" class="form-label nw-label">
+                            Conservative ROI (%)
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Lower expected annual return for a more cautious, bond-heavy portfolio"></i>
+                        </label>
+                        <div class="input-group nw-input-group">
+                            <input asp-for="ConservativeRoi" type="number" step="0.1" min="0" max="50" required
+                                   class="form-control nw-input" id="nwConservativeRoi"/>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <span asp-validation-for="ConservativeRoi" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="AggressiveRoi" class="form-label nw-label">
+                            Aggressive ROI (%)
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher expected annual return for a growth-oriented, stock-heavy portfolio"></i>
+                        </label>
+                        <div class="input-group nw-input-group">
+                            <input asp-for="AggressiveRoi" type="number" step="0.1" min="0" max="50" required
+                                   class="form-control nw-input" id="nwAggressiveRoi"/>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <span asp-validation-for="AggressiveRoi" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="AggressiveSavings" class="form-label nw-label">
+                            Aggressive Savings
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher annual savings amount for the aggressive scenario, assuming increased income or reduced spending"></i>
+                        </label>
+                        <div class="input-group nw-input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="AggressiveSavings" type="number" step="1000" min="0" max="10000000" required
+                                   class="form-control nw-input" id="nwAggressiveSavings"/>
+                        </div>
+                        <span asp-validation-for="AggressiveSavings" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="nw-form__actions">
+                <button type="button" class="btn nw-btn-reset" id="nwResetBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
+                    Reset to Defaults
+                </button>
             </div>
         </div>
     </div>
@@ -158,10 +209,13 @@
 <!-- Summary Metrics Cards -->
 <div class="row g-3 mb-4" id="nwMetricsRow">
     <div class="col-md-3">
-        <div class="card nw-metric-card" id="nwMetricFi">
+        <div class="card nw-metric-card nw-metric-card--fi" id="nwMetricFi">
             <div class="card-body text-center">
+                <div class="nw-metric-card__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                </div>
                 <div class="nw-metric-label">FI Target (4% Rule)</div>
-                <div class="nw-metric-value nw-metric-primary nw-metric-fi-value">
+                <div class="nw-metric-value nw-metric-fi-value">
                     @FormatCurrency(projection.FiTarget)
                 </div>
                 <div class="nw-metric-sub nw-metric-fi-sub">Based on $@FormatCompact(projection.AnnualSpending)/yr spending</div>
@@ -169,10 +223,13 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card nw-metric-card" id="nwMetricCurrent">
+        <div class="card nw-metric-card nw-metric-card--current" id="nwMetricCurrent">
             <div class="card-body text-center">
+                <div class="nw-metric-card__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                </div>
                 <div class="nw-metric-label">Current Net Worth</div>
-                <div class="nw-metric-value nw-metric-success nw-metric-current-value">
+                <div class="nw-metric-value nw-metric-current-value">
                     @FormatCurrency(projection.Base.StartingBalance)
                 </div>
                 <div class="nw-metric-sub nw-metric-current-sub">Age @projection.CurrentAge, Year @projection.CurrentYear</div>
@@ -180,10 +237,13 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card nw-metric-card" id="nwMetricBase">
+        <div class="card nw-metric-card nw-metric-card--base" id="nwMetricBase">
             <div class="card-body text-center">
+                <div class="nw-metric-card__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                </div>
                 <div class="nw-metric-label">Base Final Net Worth</div>
-                <div class="nw-metric-value nw-metric-accent nw-metric-base-value">
+                <div class="nw-metric-value nw-metric-base-value">
                     @FormatCurrency(projection.Base.FinalNetWorth)
                 </div>
                 <div class="nw-metric-sub nw-metric-base-sub">@projection.Base.RoiPercent% ROI · Age @Model.RetirementAge</div>
@@ -191,10 +251,13 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card nw-metric-card" id="nwMetricAggressive">
+        <div class="card nw-metric-card nw-metric-card--aggressive" id="nwMetricAggressive">
             <div class="card-body text-center">
+                <div class="nw-metric-card__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                </div>
                 <div class="nw-metric-label">Aggressive Final</div>
-                <div class="nw-metric-value nw-metric-bold nw-metric-aggressive-value">
+                <div class="nw-metric-value nw-metric-aggressive-value">
                     @FormatCurrency(projection.Aggressive.FinalNetWorth)
                 </div>
                 <div class="nw-metric-sub nw-metric-aggressive-sub">@projection.Aggressive.RoiPercent% ROI · $@FormatCompact(projection.Aggressive.AnnualSavings)/yr savings</div>
@@ -208,26 +271,31 @@
     <div class="col-md-4">
         <div class="card nw-scenario-card nw-scenario-base" id="nwScenarioBase">
             <div class="card-body">
-                <h6 class="nw-scenario-title">Base Scenario</h6>
-                <div class="nw-scenario-row">
-                    <span>ROI</span>
-                    <strong class="nw-sc-base-roi">@projection.Base.RoiPercent%</strong>
+                <div class="nw-scenario-header">
+                    <div class="nw-scenario-icon nw-scenario-icon--base">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    </div>
+                    <div>
+                        <h6 class="nw-scenario-title mb-0">Base Scenario</h6>
+                        <span class="nw-scenario-badge nw-scenario-badge--base">@projection.Base.RoiPercent% ROI</span>
+                    </div>
                 </div>
+                <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
                     <strong class="nw-sc-base-savings">$@FormatCompact(projection.Base.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-metric-accent nw-sc-base-final">$@FormatCompact(projection.Base.FinalNetWorth)</strong>
+                    <strong class="nw-sc-base-final">$@FormatCompact(projection.Base.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
                     <strong class="nw-sc-base-contrib">$@FormatCompact(projection.Base.TotalContributions)</strong>
                 </div>
-                <div class="nw-scenario-row">
+                <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="text-success nw-sc-base-interest">$@FormatCompact(projection.Base.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-base-interest">$@FormatCompact(projection.Base.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
@@ -235,26 +303,31 @@
     <div class="col-md-4">
         <div class="card nw-scenario-card nw-scenario-conservative" id="nwScenarioConservative">
             <div class="card-body">
-                <h6 class="nw-scenario-title">Conservative Scenario</h6>
-                <div class="nw-scenario-row">
-                    <span>ROI</span>
-                    <strong class="nw-sc-cons-roi">@projection.Conservative.RoiPercent%</strong>
+                <div class="nw-scenario-header">
+                    <div class="nw-scenario-icon nw-scenario-icon--conservative">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+                    </div>
+                    <div>
+                        <h6 class="nw-scenario-title mb-0">Conservative Scenario</h6>
+                        <span class="nw-scenario-badge nw-scenario-badge--conservative">@projection.Conservative.RoiPercent% ROI</span>
+                    </div>
                 </div>
+                <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
                     <strong class="nw-sc-cons-savings">$@FormatCompact(projection.Conservative.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-metric-accent nw-sc-cons-final">$@FormatCompact(projection.Conservative.FinalNetWorth)</strong>
+                    <strong class="nw-sc-cons-final">$@FormatCompact(projection.Conservative.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
                     <strong class="nw-sc-cons-contrib">$@FormatCompact(projection.Conservative.TotalContributions)</strong>
                 </div>
-                <div class="nw-scenario-row">
+                <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="text-success nw-sc-cons-interest">$@FormatCompact(projection.Conservative.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-cons-interest">$@FormatCompact(projection.Conservative.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
@@ -262,26 +335,31 @@
     <div class="col-md-4">
         <div class="card nw-scenario-card nw-scenario-aggressive" id="nwScenarioAggressive">
             <div class="card-body">
-                <h6 class="nw-scenario-title">Aggressive Scenario</h6>
-                <div class="nw-scenario-row">
-                    <span>ROI</span>
-                    <strong class="nw-sc-agg-roi">@projection.Aggressive.RoiPercent%</strong>
+                <div class="nw-scenario-header">
+                    <div class="nw-scenario-icon nw-scenario-icon--aggressive">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    </div>
+                    <div>
+                        <h6 class="nw-scenario-title mb-0">Aggressive Scenario</h6>
+                        <span class="nw-scenario-badge nw-scenario-badge--aggressive">@projection.Aggressive.RoiPercent% ROI</span>
+                    </div>
                 </div>
+                <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
                     <strong class="nw-sc-agg-savings">$@FormatCompact(projection.Aggressive.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-metric-accent nw-sc-agg-final">$@FormatCompact(projection.Aggressive.FinalNetWorth)</strong>
+                    <strong class="nw-sc-agg-final">$@FormatCompact(projection.Aggressive.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
                     <strong class="nw-sc-agg-contrib">$@FormatCompact(projection.Aggressive.TotalContributions)</strong>
                 </div>
-                <div class="nw-scenario-row">
+                <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="text-success nw-sc-agg-interest">$@FormatCompact(projection.Aggressive.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-agg-interest">$@FormatCompact(projection.Aggressive.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
@@ -291,9 +369,17 @@
 <!-- Charts Section -->
 <div class="row g-3 mb-4">
     <div class="col-lg-8">
-        <div class="card nw-card">
+        <div class="card nw-card nw-card--chart">
             <div class="card-body">
-                <h5 class="nw-section-title">Net Worth Growth Over Time</h5>
+                <div class="nw-card__header">
+                    <div class="nw-card__icon nw-card__icon--green">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    </div>
+                    <div>
+                        <h5 class="nw-section-title mb-1">Net Worth Growth Over Time</h5>
+                        <p class="nw-card__subtitle mb-0">Compare how your net worth grows under different investment scenarios</p>
+                    </div>
+                </div>
                 <div class="nw-chart-container">
                     <canvas id="nwGrowthChart"></canvas>
                 </div>
@@ -315,9 +401,14 @@
         </div>
     </div>
     <div class="col-lg-4">
-        <div class="card nw-card">
+        <div class="card nw-card nw-card--chart">
             <div class="card-body">
-                <h5 class="nw-section-title">Final Net Worth Comparison</h5>
+                <div class="nw-card__header">
+                    <div class="nw-card__icon nw-card__icon--purple">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+                    </div>
+                    <h5 class="nw-section-title mb-0">Final Net Worth Comparison</h5>
+                </div>
                 <div class="nw-chart-container nw-chart-sm">
                     <canvas id="nwComparisonChart"></canvas>
                 </div>
@@ -327,30 +418,51 @@
 </div>
 
 <!-- 4% Rule Explanation -->
-<div class="card nw-card mb-4">
+<div class="card nw-card nw-card--info mb-4">
     <div class="card-body">
-        <h5 class="nw-section-title">Understanding the 4% Rule</h5>
-        <p class="nw-text mb-2">The <strong>4% Rule</strong> is a widely accepted guideline for financial independence. It states that you can safely withdraw 4% of your investment portfolio each year without running out of money over a 30-year retirement.</p>
-        <p class="nw-text mb-0">Your <strong>FI Target</strong> is calculated as <strong>Annual Spending × 25</strong> (the inverse of 4%). Once your net worth reaches this number, your investments can cover your yearly expenses through withdrawals alone.</p>
+        <div class="nw-info-header">
+            <div class="nw-info-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h5 class="nw-section-title mb-0">Understanding the 4% Rule</h5>
+        </div>
+        <div class="nw-info-content">
+            <p class="nw-text mb-2">The <strong>4% Rule</strong> is a widely accepted guideline for financial independence. It states that you can safely withdraw 4% of your investment portfolio each year without running out of money over a 30-year retirement.</p>
+            <p class="nw-text mb-0">Your <strong>FI Target</strong> is calculated as <strong>Annual Spending × 25</strong> (the inverse of 4%). Once your net worth reaches this number, your investments can cover your yearly expenses through withdrawals alone.</p>
+        </div>
     </div>
 </div>
 
 <!-- Year-by-Year Projection Table -->
-<div class="card nw-card mb-4">
+<div class="card nw-card nw-card--table mb-4">
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="nw-section-title mb-0">Year-by-Year Projection</h5>
-            <div class="btn-group nw-scenario-tabs" role="group" aria-label="Scenario selection">
-                <button type="button" class="btn btn-outline-primary btn-sm nw-tab-btn active"
-                        data-scenario="Base">Base</button>
-                <button type="button" class="btn btn-outline-primary btn-sm nw-tab-btn"
-                        data-scenario="Conservative">Conservative</button>
-                <button type="button" class="btn btn-outline-primary btn-sm nw-tab-btn"
-                        data-scenario="Aggressive">Aggressive</button>
+        <div class="nw-table-header">
+            <div class="nw-card__header">
+                <div class="nw-card__icon nw-card__icon--orange">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M12 17V5"/><path d="M17 17v-5"/><path d="M7 17V9"/></svg>
+                </div>
+                <div>
+                    <h5 class="nw-section-title mb-1">Year-by-Year Projection</h5>
+                    <p class="nw-card__subtitle mb-0">Detailed annual breakdown of your projected net worth growth</p>
+                </div>
+            </div>
+            <div class="nw-scenario-tabs" role="group" aria-label="Scenario selection">
+                <button type="button" class="btn nw-tab-btn active" data-scenario="Base">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    Base
+                </button>
+                <button type="button" class="btn nw-tab-btn" data-scenario="Conservative">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+                    Conservative
+                </button>
+                <button type="button" class="btn nw-tab-btn" data-scenario="Aggressive">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    Aggressive
+                </button>
             </div>
         </div>
         <!-- Row Highlight Legend -->
-        <div class="nw-legend mt-3 mb-3">
+        <div class="nw-legend mb-3">
             <span class="nw-legend-item">
                 <span class="nw-legend-swatch nw-swatch-fi"></span> FI Target reached — Your net worth covers your annual spending
             </span>
@@ -358,7 +470,7 @@
                 <span class="nw-legend-swatch nw-swatch-5m"></span> $5M milestone — You've reached a $5 million net worth
             </span>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive nw-table-responsive">
             <table class="table nw-table" id="nwProjectionTable">
                 <thead>
                     <tr>
@@ -393,6 +505,56 @@
                     }
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade nw-modal" id="nwHelpModal" tabindex="-1" aria-labelledby="nwHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content nw-modal-content">
+            <div class="modal-header nw-modal-header">
+                <div class="nw-modal-header__content">
+                    <div class="nw-modal-header__icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <h5 class="modal-title" id="nwHelpModalLabel">How Net Worth Projection Works</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body nw-modal-body">
+                <div class="nw-help-section">
+                    <div class="nw-help-section__header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        <h6>Financial Independence Target</h6>
+                    </div>
+                    <p class="nw-text mb-0">Your FI Target is calculated using the <strong>4% Rule</strong>: multiply your annual spending by 25. This represents the portfolio size needed to sustain your lifestyle through withdrawals alone. For example, if you spend $50,000/year, your FI target is $1,250,000.</p>
+                </div>
+                <div class="nw-help-section">
+                    <div class="nw-help-section__header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 12-3.5-3.5"/><path d="M4 16V10a2 2 0 0 1 2-2h3.5"/><path d="M20 8V4a2 2 0 0 0-2-2h-3.5"/><path d="M2 18v-4a2 2 0 0 1 2-2h3.5"/><path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/></svg>
+                        <h6>Three Scenarios</h6>
+                    </div>
+                    <p class="nw-text mb-0"><strong>Base</strong> — Your expected return and savings rate. <strong>Conservative</strong> — Lower returns for a cautious, bond-heavy portfolio. <strong>Aggressive</strong> — Higher returns and savings for a growth-oriented strategy. Comparing all three helps you understand the range of possible outcomes.</p>
+                </div>
+                <div class="nw-help-section">
+                    <div class="nw-help-section__header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                        <h6>Reading the Charts</h6>
+                    </div>
+                    <p class="nw-text mb-0">The <strong>growth chart</strong> shows how your net worth compounds over time for each scenario. The dashed line marks your FI Target — when a scenario line crosses it, you've reached financial independence. The <strong>comparison chart</strong> shows the final net worth at retirement age side by side.</p>
+                </div>
+                <div class="nw-help-section">
+                    <div class="nw-help-section__header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                        <h6>Row Highlights in the Table</h6>
+                    </div>
+                    <p class="nw-text mb-0">Rows turn <span style="display:inline-block;width:12px;height:12px;background:#fef9c3;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid rgba(0,0,0,0.1)"></span> <strong>yellow</strong> when your net worth reaches the FI Target, and <span style="display:inline-block;width:12px;height:12px;background:#bbf7d0;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid rgba(0,0,0,0.1)"></span> <strong>green</strong> when it exceeds $5 million — helping you quickly spot milestone years.</p>
+                </div>
+            </div>
+            <div class="modal-footer nw-modal-footer">
+                <button type="button" class="btn nw-btn-close" data-bs-dismiss="modal">Got it</button>
+            </div>
         </div>
     </div>
 </div>

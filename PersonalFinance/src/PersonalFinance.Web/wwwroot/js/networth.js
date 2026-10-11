@@ -12,15 +12,15 @@
     let growthChart = null;
     let comparisonChart = null;
 
-    // Color palette
+    // Color palette — ADA-compliant, WCAG 2.1 AA
     const colors = {
-        base: '#1a73e8',
-        conservative: '#9334e6',
-        aggressive: '#0f9d58',
+        base: '#4f46e5',
+        conservative: '#7c3aed',
+        aggressive: '#059669',
         fi: '#0369a1',
-        baseAlpha: 'rgba(26, 115, 232, 0.1)',
-        conservativeAlpha: 'rgba(147, 52, 230, 0.1)',
-        aggressiveAlpha: 'rgba(15, 157, 88, 0.1)'
+        baseAlpha: 'rgba(79, 70, 229, 0.1)',
+        conservativeAlpha: 'rgba(124, 58, 237, 0.1)',
+        aggressiveAlpha: 'rgba(5, 150, 105, 0.1)'
     };
 
     // Scenario name mapping for safe property access
@@ -147,7 +147,7 @@
                         },
                         ticks: {
                             font: { size: 11 },
-                            color: '#64748b',
+                            color: '#475569',
                             maxTicksLimit: 15
                         }
                     },
@@ -158,7 +158,7 @@
                         },
                         ticks: {
                             font: { size: 11 },
-                            color: '#64748b',
+                            color: '#475569',
                             callback: function (value) {
                                 return formatCompact(value);
                             }
@@ -225,7 +225,7 @@
                         grid: { display: false },
                         ticks: {
                             font: { size: 12, weight: '600' },
-                            color: '#64748b'
+                            color: '#475569'
                         }
                     },
                     y: {
@@ -235,7 +235,7 @@
                         },
                         ticks: {
                             font: { size: 11 },
-                            color: '#64748b',
+                            color: '#475569',
                             callback: function (value) {
                                 return formatCompact(value);
                             }

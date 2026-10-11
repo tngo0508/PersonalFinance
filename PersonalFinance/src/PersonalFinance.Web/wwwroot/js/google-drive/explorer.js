@@ -46,6 +46,17 @@
             }
         });
 
+        // Keyboard shortcut: Ctrl+K / Cmd+K to focus search
+        $(document).on('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const $search = $('#fileSearch');
+                if ($search.length) {
+                    $search.focus();
+                }
+            }
+        });
+
         // File table. Columns: 0 Name, 1 Type, 2 Modified, 3 Size, 4 Actions
         let dataTable = null;
         if ($('#googleDriveDataTable').length > 0) {
@@ -84,6 +95,24 @@
             return fileType === activeFilter;
         }
 
+        // Update the results count indicator
+        function updateResultsCount(tableCount, gridCount) {
+            const $count = $('#fileResultsCount');
+            const hasFilter = activeFilter !== 'all' || searchTerm.length > 0;
+
+            if (!hasFilter) {
+                $count.addClass('d-none').text('');
+                return;
+            }
+
+            const count = tableCount !== undefined ? tableCount : gridCount;
+            if (count !== undefined && count >= 0) {
+                $count.removeClass('d-none').text(`${count} file${count !== 1 ? 's' : ''} found`);
+            } else {
+                $count.addClass('d-none').text('');
+            }
+        }
+
         function applyFilters() {
             if (dataTable) {
                 let typePattern = '';
@@ -94,6 +123,9 @@
                 }
                 dataTable.column(1).search(typePattern, true, false);
                 dataTable.search(searchTerm).draw();
+                // Update results count from DataTable
+                const tableCount = dataTable.page.info().recordsDisplay;
+                updateResultsCount(tableCount);
             }
 
             const term = searchTerm.toLowerCase();
@@ -105,6 +137,11 @@
                 if (visible) visibleCards++;
             });
             $('#gridEmptyState').toggleClass('d-none', visibleCards > 0);
+
+            // If grid view is active, update count from grid
+            if (!$('#gridViewSection').hasClass('d-none')) {
+                updateResultsCount(undefined, visibleCards);
+            }
         }
 
         function setFilter(filter) {
@@ -139,6 +176,8 @@
             $('#btnViewTable').toggleClass('active', isTable).attr('aria-pressed', String(isTable));
             $('#btnViewGrid').toggleClass('active', !isTable).attr('aria-pressed', String(!isTable));
             if (isTable && dataTable) dataTable.columns.adjust();
+            // Recalculate results count for the active view
+            applyFilters();
         }
 
         $('#btnViewTable').on('click', function () { setView('table'); });
