@@ -45,7 +45,7 @@
                     </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input asp-for="StartingBalance" type="number" step="1000"
+                        <input asp-for="StartingBalance" type="number" step="1000" min="0" max="1000000000" required
                                class="form-control nw-input" id="nwStartingBalance"/>
                     </div>
                     <span asp-validation-for="StartingBalance" class="text-danger small"></span>
@@ -57,7 +57,7 @@
                     </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input asp-for="AnnualSavings" type="number" step="1000"
+                        <input asp-for="AnnualSavings" type="number" step="1000" min="0" max="10000000" required
                                class="form-control nw-input" id="nwAnnualSavings"/>
                     </div>
                     <span asp-validation-for="AnnualSavings" class="text-danger small"></span>
@@ -67,7 +67,7 @@
                         Current Age
                         <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current age in years"></i>
                     </label>
-                    <input asp-for="CurrentAge" type="number"
+                    <input asp-for="CurrentAge" type="number" min="18" max="100" required
                            class="form-control nw-input" id="nwCurrentAge"/>
                     <span asp-validation-for="CurrentAge" class="text-danger small"></span>
                 </div>
@@ -76,7 +76,7 @@
                         Retirement Age
                         <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="The age you plan to stop working and begin withdrawing from your portfolio"></i>
                     </label>
-                    <input asp-for="RetirementAge" type="number"
+                    <input asp-for="RetirementAge" type="number" min="18" max="120" required
                            class="form-control nw-input" id="nwRetirementAge"/>
                     <span asp-validation-for="RetirementAge" class="text-danger small"></span>
                 </div>
@@ -87,7 +87,7 @@
                     </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input asp-for="AnnualIncome" type="number" step="1000"
+                        <input asp-for="AnnualIncome" type="number" step="1000" min="0" max="100000000" required
                                class="form-control nw-input" id="nwAnnualIncome"/>
                     </div>
                     <span asp-validation-for="AnnualIncome" class="text-danger small"></span>
@@ -101,7 +101,7 @@
                     </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input asp-for="AnnualSpending" type="number" step="1000"
+                        <input asp-for="AnnualSpending" type="number" step="1000" min="0" max="10000000" required
                                class="form-control nw-input" id="nwAnnualSpending"/>
                     </div>
                     <span asp-validation-for="AnnualSpending" class="text-danger small"></span>
@@ -111,7 +111,7 @@
                         Base ROI (%)
                         <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Expected annual return on investment for the base scenario (e.g., 7% for a balanced portfolio)"></i>
                     </label>
-                    <input asp-for="BaseRoi" type="number" step="0.1"
+                    <input asp-for="BaseRoi" type="number" step="0.1" min="0" max="50" required
                            class="form-control nw-input" id="nwBaseRoi"/>
                     <span asp-validation-for="BaseRoi" class="text-danger small"></span>
                 </div>
@@ -120,7 +120,7 @@
                         Conservative ROI (%)
                         <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Lower expected annual return for a more cautious, bond-heavy portfolio"></i>
                     </label>
-                    <input asp-for="ConservativeRoi" type="number" step="0.1"
+                    <input asp-for="ConservativeRoi" type="number" step="0.1" min="0" max="50" required
                            class="form-control nw-input" id="nwConservativeRoi"/>
                     <span asp-validation-for="ConservativeRoi" class="text-danger small"></span>
                 </div>
@@ -129,7 +129,7 @@
                         Aggressive ROI (%)
                         <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher expected annual return for a growth-oriented, stock-heavy portfolio"></i>
                     </label>
-                    <input asp-for="AggressiveRoi" type="number" step="0.1"
+                    <input asp-for="AggressiveRoi" type="number" step="0.1" min="0" max="50" required
                            class="form-control nw-input" id="nwAggressiveRoi"/>
                     <span asp-validation-for="AggressiveRoi" class="text-danger small"></span>
                 </div>
@@ -140,10 +140,15 @@
                     </label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input asp-for="AggressiveSavings" type="number" step="1000"
+                        <input asp-for="AggressiveSavings" type="number" step="1000" min="0" max="10000000" required
                                class="form-control nw-input" id="nwAggressiveSavings"/>
                     </div>
                     <span asp-validation-for="AggressiveSavings" class="text-danger small"></span>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12 text-end">
+                    <button type="button" class="btn nw-btn-reset" id="nwResetBtn">Reset to Defaults</button>
                 </div>
             </div>
         </div>

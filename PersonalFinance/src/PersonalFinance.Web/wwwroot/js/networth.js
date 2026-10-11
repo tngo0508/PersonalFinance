@@ -402,9 +402,87 @@
     }
 
     /**
+     * Validate input values client-side before sending to the server.
+     * @returns {boolean} True if all inputs are valid, false otherwise.
+     */
+    function validateInputs() {
+        let isValid = true;
+        const validators = [
+            { id: 'nwStartingBalance', min: 0, max: 1000000000, label: 'Starting balance' },
+            { id: 'nwAnnualSavings', min: 0, max: 10000000, label: 'Annual savings' },
+            { id: 'nwAnnualIncome', min: 0, max: 100000000, label: 'Annual income' },
+            { id: 'nwAnnualSpending', min: 0, max: 10000000, label: 'Annual spending' },
+            { id: 'nwAggressiveSavings', min: 0, max: 10000000, label: 'Aggressive savings' },
+            { id: 'nwCurrentAge', min: 18, max: 100, label: 'Current age' },
+            { id: 'nwRetirementAge', min: 18, max: 120, label: 'Retirement age' },
+            { id: 'nwBaseRoi', min: 0, max: 50, label: 'Base ROI' },
+            { id: 'nwConservativeRoi', min: 0, max: 50, label: 'Conservative ROI' },
+            { id: 'nwAggressiveRoi', min: 0, max: 50, label: 'Aggressive ROI' }
+        ];
+
+        // Clear previous validation states
+        validators.forEach(function (v) {
+            const el = document.getElementById(v.id);
+            if (el) {
+                el.classList.remove('nw-input-invalid');
+            }
+        });
+
+        validators.forEach(function (v) {
+            const el = document.getElementById(v.id);
+            if (!el) return;
+            const val = parseFloat(el.value);
+            if (isNaN(val) || val < v.min || val > v.max) {
+                el.classList.add('nw-input-invalid');
+                isValid = false;
+            }
+        });
+
+        // Check retirement age > current age
+        const currentAge = parseInt(document.getElementById('nwCurrentAge')?.value, 10);
+        const retirementAge = parseInt(document.getElementById('nwRetirementAge')?.value, 10);
+        if (!isNaN(currentAge) && !isNaN(retirementAge) && retirementAge <= currentAge) {
+            document.getElementById('nwRetirementAge')?.classList.add('nw-input-invalid');
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    /**
+     * Reset all input fields to their default values and recalculate.
+     */
+    function resetToDefaults() {
+        document.getElementById('nwStartingBalance').value = 195033.14;
+        document.getElementById('nwAnnualSavings').value = 32000;
+        document.getElementById('nwAnnualIncome').value = 108409.60;
+        document.getElementById('nwAnnualSpending').value = 50000;
+        document.getElementById('nwCurrentAge').value = 33;
+        document.getElementById('nwRetirementAge').value = 65;
+        document.getElementById('nwBaseRoi').value = 7.0;
+        document.getElementById('nwConservativeRoi').value = 6.0;
+        document.getElementById('nwAggressiveRoi').value = 10.0;
+        document.getElementById('nwAggressiveSavings').value = 45000;
+
+        // Clear any validation errors
+        clearValidationMessage();
+        document.querySelectorAll('.nw-input-invalid').forEach(function (el) {
+            el.classList.remove('nw-input-invalid');
+        });
+
+        // Recalculate with default values
+        recalculate();
+    }
+
+    /**
      * Recalculate projections via AJAX and update all UI elements.
      */
     function recalculate() {
+        // Validate inputs before sending
+        if (!validateInputs()) {
+            return;
+        }
+
         const params = {
             startingBalance: parseFloat(document.getElementById('nwStartingBalance')?.value) || 0,
             annualSavings: parseFloat(document.getElementById('nwAnnualSavings')?.value) || 0,
@@ -425,11 +503,18 @@
         fetch(url)
             .then(function (response) {
                 if (!response.ok) {
+                    if (response.status === 400) {
+                        return response.text().then(function (msg) {
+                            showValidationMessage(msg);
+                            throw new Error('Validation error');
+                        });
+                    }
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 return response.json();
             })
             .then(function (data) {
+                clearValidationMessage();
                 window.nwProjectionData = data;
                 renderGrowthChart(data);
                 renderComparisonChart(data);
@@ -442,8 +527,37 @@
                 }
             })
             .catch(function (err) {
-                console.error('Failed to recalculate projection:', err);
+                if (err.message !== 'Validation error') {
+                    console.error('Failed to recalculate projection:', err);
+                }
             });
+    }
+
+    /**
+     * Display a validation error message to the user.
+     * @param {string} message - The error message from the server.
+     */
+    function showValidationMessage(message) {
+        clearValidationMessage();
+        const container = document.querySelector('.nw-header');
+        if (!container) return;
+
+        const alert = document.createElement('div');
+        alert.id = 'nwValidationAlert';
+        alert.className = 'alert alert-danger alert-dismissible fade show nw-alert mt-3';
+        alert.role = 'alert';
+        alert.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+        container.appendChild(alert);
+    }
+
+    /**
+     * Clear any displayed validation error message.
+     */
+    function clearValidationMessage() {
+        const alert = document.getElementById('nwValidationAlert');
+        if (alert) {
+            alert.remove();
+        }
     }
 
     /**
@@ -475,6 +589,12 @@
 
         // Initialize live recalculation
         initLiveRecalculation();
+
+        // Initialize reset button
+        const resetBtn = document.getElementById('nwResetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', resetToDefaults);
+        }
     }
 
     // Run on DOM ready

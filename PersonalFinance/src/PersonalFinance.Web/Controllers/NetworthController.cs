@@ -38,15 +38,41 @@ public class NetworthController : Controller
         decimal aggressiveRoi = 10.0m,
         decimal aggressiveSavings = 45000m)
     {
-        // Validate input ranges
-        if (startingBalance < 0 || annualSavings < 0 || annualIncome < 0 || annualSpending < 0)
+        // Validate financial values
+        if (startingBalance < 0 || startingBalance > 1_000_000_000m)
         {
-            return BadRequest("Financial values cannot be negative.");
+            return BadRequest("Starting balance must be between 0 and 1 billion.");
         }
 
+        if (annualSavings < 0 || annualSavings > 10_000_000m)
+        {
+            return BadRequest("Annual savings must be between 0 and 10 million.");
+        }
+
+        if (annualIncome < 0 || annualIncome > 100_000_000m)
+        {
+            return BadRequest("Annual income must be between 0 and 100 million.");
+        }
+
+        if (annualSpending < 0 || annualSpending > 10_000_000m)
+        {
+            return BadRequest("Annual spending must be between 0 and 10 million.");
+        }
+
+        if (aggressiveSavings < 0 || aggressiveSavings > 10_000_000m)
+        {
+            return BadRequest("Aggressive savings must be between 0 and 10 million.");
+        }
+
+        // Validate age values
         if (currentAge < 18 || currentAge > 100)
         {
             return BadRequest("Current age must be between 18 and 100.");
+        }
+
+        if (retirementAge < 18 || retirementAge > 120)
+        {
+            return BadRequest("Retirement age must be between 18 and 120.");
         }
 
         if (retirementAge <= currentAge)
@@ -54,9 +80,20 @@ public class NetworthController : Controller
             return BadRequest("Retirement age must be greater than current age.");
         }
 
-        if (baseRoi < 0 || baseRoi > 50 || conservativeRoi < 0 || conservativeRoi > 50 || aggressiveRoi < 0 || aggressiveRoi > 50)
+        // Validate ROI values
+        if (baseRoi < 0 || baseRoi > 50)
         {
-            return BadRequest("ROI values must be between 0% and 50%.");
+            return BadRequest("Base ROI must be between 0% and 50%.");
+        }
+
+        if (conservativeRoi < 0 || conservativeRoi > 50)
+        {
+            return BadRequest("Conservative ROI must be between 0% and 50%.");
+        }
+
+        if (aggressiveRoi < 0 || aggressiveRoi > 50)
+        {
+            return BadRequest("Aggressive ROI must be between 0% and 50%.");
         }
 
         var model = new NetWorthViewModel

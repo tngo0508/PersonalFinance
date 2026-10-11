@@ -115,11 +115,32 @@
   box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
 }
 
+.nw-input-invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2) !important;
+}
+
 .nw-btn-calculate {
   border-radius: 8px;
   font-weight: 600;
   padding: 0.5rem 1rem;
   height: 38px;
+}
+
+.nw-btn-reset {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.5rem 1.25rem;
+  height: 38px;
+  color: var(--nw-text-main);
+  background: var(--nw-surface);
+  border: 1px solid var(--nw-border);
+  transition: background 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.nw-btn-reset:hover {
+  background: var(--nw-border);
+  color: var(--nw-text-main);
 }
 
 /* Metric cards */
