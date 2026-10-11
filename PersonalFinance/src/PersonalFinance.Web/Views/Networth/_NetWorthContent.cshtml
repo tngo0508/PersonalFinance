@@ -1,0 +1,341 @@
+@model PersonalFinance.Web.Models.NetWorthViewModel
+@using System.Text.Json
+@using PersonalFinance.Shared.DTOs
+
+@{
+    var projection = Model.Projection;
+}
+
+@functions {
+    private static string FormatCurrency(decimal value)
+    {
+        return value.ToString("C0");
+    }
+
+    private static string FormatCompact(decimal value)
+    {
+        if (value >= 1_000_000m)
+        {
+            return $"{value / 1_000_000m:F1}M";
+        }
+        if (value >= 1_000m)
+        {
+            return $"{value / 1_000m:F0}K";
+        }
+        return value.ToString("F0");
+    }
+}
+
+<!-- Page Header -->
+<div class="nw-header mb-4">
+    <h1 class="nw-title">Net Worth &amp; FI Projection</h1>
+    <p class="nw-subtitle">Track your path to Financial Independence with scenario-based projections</p>
+</div>
+
+<!-- Input Parameters Panel -->
+<div class="card nw-card mb-4">
+    <div class="card-body">
+        <h5 class="nw-section-title">Projection Parameters</h5>
+        <div class="nw-form">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label asp-for="StartingBalance" class="form-label nw-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="StartingBalance" type="number" step="1000"
+                               class="form-control nw-input" id="nwStartingBalance"/>
+                    </div>
+                    <span asp-validation-for="StartingBalance" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="AnnualSavings" class="form-label nw-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="AnnualSavings" type="number" step="1000"
+                               class="form-control nw-input" id="nwAnnualSavings"/>
+                    </div>
+                    <span asp-validation-for="AnnualSavings" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="CurrentAge" class="form-label nw-label"></label>
+                    <input asp-for="CurrentAge" type="number"
+                           class="form-control nw-input" id="nwCurrentAge"/>
+                    <span asp-validation-for="CurrentAge" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="RetirementAge" class="form-label nw-label"></label>
+                    <input asp-for="RetirementAge" type="number"
+                           class="form-control nw-input" id="nwRetirementAge"/>
+                    <span asp-validation-for="RetirementAge" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="AnnualIncome" class="form-label nw-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="AnnualIncome" type="number" step="1000"
+                               class="form-control nw-input" id="nwAnnualIncome"/>
+                    </div>
+                    <span asp-validation-for="AnnualIncome" class="text-danger small"></span>
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-md-2">
+                    <label asp-for="AnnualSpending" class="form-label nw-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="AnnualSpending" type="number" step="1000"
+                               class="form-control nw-input" id="nwAnnualSpending"/>
+                    </div>
+                    <span asp-validation-for="AnnualSpending" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="BaseRoi" class="form-label nw-label"></label>
+                    <input asp-for="BaseRoi" type="number" step="0.1"
+                           class="form-control nw-input" id="nwBaseRoi"/>
+                    <span asp-validation-for="BaseRoi" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="ConservativeRoi" class="form-label nw-label"></label>
+                    <input asp-for="ConservativeRoi" type="number" step="0.1"
+                           class="form-control nw-input" id="nwConservativeRoi"/>
+                    <span asp-validation-for="ConservativeRoi" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="AggressiveRoi" class="form-label nw-label"></label>
+                    <input asp-for="AggressiveRoi" type="number" step="0.1"
+                           class="form-control nw-input" id="nwAggressiveRoi"/>
+                    <span asp-validation-for="AggressiveRoi" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="AggressiveSavings" class="form-label nw-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input asp-for="AggressiveSavings" type="number" step="1000"
+                               class="form-control nw-input" id="nwAggressiveSavings"/>
+                    </div>
+                    <span asp-validation-for="AggressiveSavings" class="text-danger small"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Metrics Cards -->
+<div class="row g-3 mb-4" id="nwMetricsRow">
+    <div class="col-md-3">
+        <div class="card nw-metric-card" id="nwMetricFi">
+            <div class="card-body text-center">
+                <div class="nw-metric-label">FI Target (4% Rule)</div>
+                <div class="nw-metric-value nw-metric-primary nw-metric-fi-value">
+                    @FormatCurrency(projection.FiTarget)
+                </div>
+                <div class="nw-metric-sub nw-metric-fi-sub">Based on $@FormatCompact(projection.AnnualSpending)/yr spending</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card nw-metric-card" id="nwMetricCurrent">
+            <div class="card-body text-center">
+                <div class="nw-metric-label">Current Net Worth</div>
+                <div class="nw-metric-value nw-metric-success nw-metric-current-value">
+                    @FormatCurrency(projection.Base.StartingBalance)
+                </div>
+                <div class="nw-metric-sub nw-metric-current-sub">Age @projection.CurrentAge, Year @projection.CurrentYear</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card nw-metric-card" id="nwMetricBase">
+            <div class="card-body text-center">
+                <div class="nw-metric-label">Base Final Net Worth</div>
+                <div class="nw-metric-value nw-metric-accent nw-metric-base-value">
+                    @FormatCurrency(projection.Base.FinalNetWorth)
+                </div>
+                <div class="nw-metric-sub nw-metric-base-sub">@projection.Base.RoiPercent% ROI · Age @Model.RetirementAge</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card nw-metric-card" id="nwMetricAggressive">
+            <div class="card-body text-center">
+                <div class="nw-metric-label">Aggressive Final</div>
+                <div class="nw-metric-value nw-metric-bold nw-metric-aggressive-value">
+                    @FormatCurrency(projection.Aggressive.FinalNetWorth)
+                </div>
+                <div class="nw-metric-sub nw-metric-aggressive-sub">@projection.Aggressive.RoiPercent% ROI · $@FormatCompact(projection.Aggressive.AnnualSavings)/yr savings</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scenario Comparison Cards -->
+<div class="row g-3 mb-4" id="nwScenarioRow">
+    <div class="col-md-4">
+        <div class="card nw-scenario-card nw-scenario-base" id="nwScenarioBase">
+            <div class="card-body">
+                <h6 class="nw-scenario-title">Base Scenario</h6>
+                <div class="nw-scenario-row">
+                    <span>ROI</span>
+                    <strong class="nw-sc-base-roi">@projection.Base.RoiPercent%</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Annual Savings</span>
+                    <strong class="nw-sc-base-savings">$@FormatCompact(projection.Base.AnnualSavings)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Final Net Worth</span>
+                    <strong class="nw-metric-accent nw-sc-base-final">$@FormatCompact(projection.Base.FinalNetWorth)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Total Contributions</span>
+                    <strong class="nw-sc-base-contrib">$@FormatCompact(projection.Base.TotalContributions)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Interest Earned</span>
+                    <strong class="text-success nw-sc-base-interest">$@FormatCompact(projection.Base.TotalInterestEarned)</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card nw-scenario-card nw-scenario-conservative" id="nwScenarioConservative">
+            <div class="card-body">
+                <h6 class="nw-scenario-title">Conservative Scenario</h6>
+                <div class="nw-scenario-row">
+                    <span>ROI</span>
+                    <strong class="nw-sc-cons-roi">@projection.Conservative.RoiPercent%</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Annual Savings</span>
+                    <strong class="nw-sc-cons-savings">$@FormatCompact(projection.Conservative.AnnualSavings)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Final Net Worth</span>
+                    <strong class="nw-metric-accent nw-sc-cons-final">$@FormatCompact(projection.Conservative.FinalNetWorth)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Total Contributions</span>
+                    <strong class="nw-sc-cons-contrib">$@FormatCompact(projection.Conservative.TotalContributions)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Interest Earned</span>
+                    <strong class="text-success nw-sc-cons-interest">$@FormatCompact(projection.Conservative.TotalInterestEarned)</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card nw-scenario-card nw-scenario-aggressive" id="nwScenarioAggressive">
+            <div class="card-body">
+                <h6 class="nw-scenario-title">Aggressive Scenario</h6>
+                <div class="nw-scenario-row">
+                    <span>ROI</span>
+                    <strong class="nw-sc-agg-roi">@projection.Aggressive.RoiPercent%</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Annual Savings</span>
+                    <strong class="nw-sc-agg-savings">$@FormatCompact(projection.Aggressive.AnnualSavings)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Final Net Worth</span>
+                    <strong class="nw-metric-accent nw-sc-agg-final">$@FormatCompact(projection.Aggressive.FinalNetWorth)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Total Contributions</span>
+                    <strong class="nw-sc-agg-contrib">$@FormatCompact(projection.Aggressive.TotalContributions)</strong>
+                </div>
+                <div class="nw-scenario-row">
+                    <span>Interest Earned</span>
+                    <strong class="text-success nw-sc-agg-interest">$@FormatCompact(projection.Aggressive.TotalInterestEarned)</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card nw-card">
+            <div class="card-body">
+                <h5 class="nw-section-title">Net Worth Growth Over Time</h5>
+                <div class="nw-chart-container">
+                    <canvas id="nwGrowthChart"></canvas>
+                </div>
+                <div class="nw-legend mt-3" id="nwLegend">
+                    <span class="nw-legend-item" id="nwLegendBase">
+                        <span class="nw-legend-dot nw-dot-base"></span> Base (@projection.Base.RoiPercent%)
+                    </span>
+                    <span class="nw-legend-item" id="nwLegendConservative">
+                        <span class="nw-legend-dot nw-dot-conservative"></span> Conservative (@projection.Conservative.RoiPercent%)
+                    </span>
+                    <span class="nw-legend-item" id="nwLegendAggressive">
+                        <span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (@projection.Aggressive.RoiPercent%)
+                    </span>
+                    <span class="nw-legend-item">
+                        <span class="nw-legend-dot nw-dot-fi"></span> FI Target
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card nw-card">
+            <div class="card-body">
+                <h5 class="nw-section-title">Final Net Worth Comparison</h5>
+                <div class="nw-chart-container nw-chart-sm">
+                    <canvas id="nwComparisonChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Year-by-Year Projection Table -->
+<div class="card nw-card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="nw-section-title mb-0">Year-by-Year Projection</h5>
+            <div class="btn-group nw-scenario-tabs" role="group" aria-label="Scenario selection">
+                <button type="button" class="btn btn-outline-primary btn-sm nw-tab-btn active"
+                        data-scenario="Base">Base</button>
+                <button type="button" class="btn btn-outline-primary btn-sm nw-tab-btn"
+                        data-scenario="Conservative">Conservative</button>
+                <button type="button" class="btn btn-outline-primary btn-sm nw-tab-btn"
+                        data-scenario="Aggressive">Aggressive</button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table nw-table" id="nwProjectionTable">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Age</th>
+                        <th class="text-end">Starting Balance</th>
+                        <th class="text-end">Savings</th>
+                        <th class="text-end">ROI Earned</th>
+                        <th class="text-end">Ending Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="nwTableBody">
+                    @foreach (var year in projection.Base.Years)
+                    {
+                        var rowClasses = new List<string>();
+                        if (year.EndingBalance >= projection.FiTarget) rowClasses.Add("nw-row-fi");
+                        if (year.EndingBalance >= projection.AnnualIncome) rowClasses.Add("nw-row-income");
+                        if (year.EndingBalance >= 5000000m) rowClasses.Add("nw-row-5m");
+                        var rowClass = string.Join(" ", rowClasses);
+                        <tr class="@rowClass">
+                            <td>@year.Year</td>
+                            <td>@year.Age</td>
+                            <td class="text-end nw-currency">@FormatCurrency(year.StartingBalance)</td>
+                            <td class="text-end nw-currency">@FormatCurrency(year.Savings)</td>
+                            <td class="text-end nw-currency text-success">@FormatCurrency(year.Roi)</td>
+                            <td class="text-end nw-currency fw-semibold">@FormatCurrency(year.EndingBalance)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

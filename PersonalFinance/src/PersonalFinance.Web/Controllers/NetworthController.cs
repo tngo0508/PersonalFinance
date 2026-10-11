@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.Shared.DTOs;
 using PersonalFinance.Web.Models;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -18,24 +18,7 @@ public class NetworthController : Controller
     public IActionResult Index()
     {
         var model = new NetWorthViewModel();
-        model.Projection = ComputeProjection(model);
-        return View(model);
-    }
-
-    /// <summary>
-    /// Handles form submission to recalculate projections with updated parameters.
-    /// </summary>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public IActionResult Index(NetWorthViewModel model)
-    {
-        if (!ModelState.IsValid)
-        {
-            return View(model);
-        }
-
-        model.Projection = ComputeProjection(model);
-        model.StatusMessage = "Projection updated successfully.";
+        model.Projection = NetWorthProjectionService.ComputeProjection(model);
         return View(model);
     }
 
@@ -55,6 +38,27 @@ public class NetworthController : Controller
         decimal aggressiveRoi = 10.0m,
         decimal aggressiveSavings = 45000m)
     {
+        // Validate input ranges
+        if (startingBalance < 0 || annualSavings < 0 || annualIncome < 0 || annualSpending < 0)
+        {
+            return BadRequest("Financial values cannot be negative.");
+        }
+
+        if (currentAge < 18 || currentAge > 100)
+        {
+            return BadRequest("Current age must be between 18 and 100.");
+        }
+
+        if (retirementAge <= currentAge)
+        {
+            return BadRequest("Retirement age must be greater than current age.");
+        }
+
+        if (baseRoi < 0 || baseRoi > 50 || conservativeRoi < 0 || conservativeRoi > 50 || aggressiveRoi < 0 || aggressiveRoi > 50)
+        {
+            return BadRequest("ROI values must be between 0% and 50%.");
+        }
+
         var model = new NetWorthViewModel
         {
             StartingBalance = startingBalance,
@@ -69,88 +73,7 @@ public class NetworthController : Controller
             AggressiveSavings = aggressiveSavings
         };
 
-        var projection = ComputeProjection(model);
+        var projection = NetWorthProjectionService.ComputeProjection(model);
         return Json(projection);
-    }
-
-    private static NetWorthProjectionDto ComputeProjection(NetWorthViewModel model)
-    {
-        var currentYear = DateTime.Now.Year;
-        var projection = new NetWorthProjectionDto
-        {
-            CurrentYear = currentYear,
-            CurrentAge = model.CurrentAge,
-            AnnualIncome = model.AnnualIncome,
-            AnnualSpending = model.AnnualSpending,
-            FiTarget = model.AnnualSpending * 25m // 4% rule
-        };
-
-        // Base scenario
-        projection.Base = BuildScenario(
-            "Base", model.StartingBalance, model.AnnualSavings, model.CurrentAge,
-            model.RetirementAge, model.BaseRoi / 100m, currentYear);
-
-        // Conservative scenario
-        projection.Conservative = BuildScenario(
-            "Conservative", model.StartingBalance, model.AnnualSavings, model.CurrentAge,
-            model.RetirementAge, model.ConservativeRoi / 100m, currentYear);
-
-        // Aggressive scenario
-        projection.Aggressive = BuildScenario(
-            "Aggressive", model.StartingBalance, model.AggressiveSavings, model.CurrentAge,
-            model.RetirementAge, model.AggressiveRoi / 100m, currentYear);
-
-        return projection;
-    }
-
-    private static NetWorthScenarioDto BuildScenario(
-        string name,
-        decimal startingBalance,
-        decimal annualSavings,
-        int startAge,
-        int retirementAge,
-        decimal roiRate,
-        int startYear)
-    {
-        var scenario = new NetWorthScenarioDto
-        {
-            Name = name,
-            RoiPercent = roiRate * 100m,
-            AnnualSavings = annualSavings,
-            StartingBalance = startingBalance,
-            StartingAge = startAge
-        };
-
-        decimal balance = startingBalance;
-        decimal totalContributions = startingBalance;
-        int year = startYear;
-        int age = startAge;
-
-        while (age <= retirementAge)
-        {
-            var roi = balance * roiRate;
-            var endingBalance = balance + annualSavings + roi;
-
-            scenario.Years.Add(new NetWorthYearDto
-            {
-                Year = year,
-                Age = age,
-                StartingBalance = balance,
-                Savings = annualSavings,
-                Roi = roi,
-                EndingBalance = endingBalance
-            });
-
-            totalContributions += annualSavings;
-            balance = endingBalance;
-            year++;
-            age++;
-        }
-
-        scenario.FinalNetWorth = balance;
-        scenario.TotalContributions = totalContributions;
-        scenario.TotalInterestEarned = balance - totalContributions;
-
-        return scenario;
     }
 }

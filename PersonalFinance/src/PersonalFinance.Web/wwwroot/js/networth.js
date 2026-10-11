@@ -2,9 +2,11 @@
  * Net Worth Projection page JavaScript
  * Handles chart rendering, scenario tab switching, and AJAX recalculation.
  */
-
 (function () {
     'use strict';
+
+    // Debounce delay in milliseconds for live recalculation
+    const DEBOUNCE_DELAY = 500;
 
     // Chart instances
     let growthChart = null;
@@ -21,15 +23,26 @@
         aggressiveAlpha: 'rgba(15, 157, 88, 0.1)'
     };
 
+    // Scenario name mapping for safe property access
+    const scenarioMap = {
+        Base: 'base',
+        Conservative: 'conservative',
+        Aggressive: 'aggressive'
+    };
+
     /**
-     * Format currency for display
+     * Format a numeric value as a currency string.
+     * @param {number} value - The numeric value to format.
+     * @returns {string} Formatted currency string (e.g., "$1,234,567").
      */
     function formatCurrency(value) {
         return '$' + Math.round(value).toLocaleString('en-US');
     }
 
     /**
-     * Format compact currency (e.g., $1.2M)
+     * Format a numeric value as a compact currency string.
+     * @param {number} value - The numeric value to format.
+     * @returns {string} Compact currency string (e.g., "$1.2M", "$50K").
      */
     function formatCompact(value) {
         if (value >= 1_000_000) {
@@ -167,6 +180,11 @@
             comparisonChart.destroy();
         }
 
+        // Use ending balance from the last year of each scenario for comparison
+        const baseLastYear = data.base.years[data.base.years.length - 1];
+        const conservativeLastYear = data.conservative.years[data.conservative.years.length - 1];
+        const aggressiveLastYear = data.aggressive.years[data.aggressive.years.length - 1];
+
         comparisonChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -174,9 +192,9 @@
                 datasets: [{
                     label: 'Final Net Worth',
                     data: [
-                        data.base.finalNetWorth,
-                        data.conservative.finalNetWorth,
-                        data.aggressive.finalNetWorth
+                        baseLastYear ? baseLastYear.endingBalance : 0,
+                        conservativeLastYear ? conservativeLastYear.endingBalance : 0,
+                        aggressiveLastYear ? aggressiveLastYear.endingBalance : 0
                     ],
                     backgroundColor: [colors.base, colors.conservative, colors.aggressive],
                     borderRadius: 8,
@@ -229,107 +247,131 @@
     }
 
     /**
-     * Update summary metric cards and legend
+     * Update summary metric cards and legend.
+     * @param {Object} data - The projection data object.
      */
     function updateMetrics(data) {
         // FI Target card
-        var fiValue = document.querySelector('.nw-metric-fi-value');
-        var fiSub = document.querySelector('.nw-metric-fi-sub');
+        const fiValue = document.querySelector('.nw-metric-fi-value');
+        const fiSub = document.querySelector('.nw-metric-fi-sub');
         if (fiValue) fiValue.textContent = formatCurrency(data.fiTarget);
-        if (fiSub) fiSub.textContent = 'Based on $' + formatCompact(data.annualSpending) + '/yr spending';
+        if (fiSub) fiSub.textContent = `Based on $${formatCompact(data.annualSpending)}/yr spending`;
 
         // Current Net Worth card
-        var currentValue = document.querySelector('.nw-metric-current-value');
-        var currentSub = document.querySelector('.nw-metric-current-sub');
+        const currentValue = document.querySelector('.nw-metric-current-value');
+        const currentSub = document.querySelector('.nw-metric-current-sub');
         if (currentValue) currentValue.textContent = formatCurrency(data.base.startingBalance);
-        if (currentSub) currentSub.textContent = 'Age ' + data.currentAge + ', Year ' + data.currentYear;
+        if (currentSub) currentSub.textContent = `Age ${data.currentAge}, Year ${data.currentYear}`;
 
         // Base Final card
-        var baseValue = document.querySelector('.nw-metric-base-value');
-        var baseSub = document.querySelector('.nw-metric-base-sub');
+        const baseValue = document.querySelector('.nw-metric-base-value');
+        const baseSub = document.querySelector('.nw-metric-base-sub');
         if (baseValue) baseValue.textContent = formatCurrency(data.base.finalNetWorth);
-        if (baseSub) baseSub.textContent = data.base.roiPercent + '% ROI';
+        if (baseSub) baseSub.textContent = `${data.base.roiPercent}% ROI`;
 
         // Aggressive Final card
-        var aggValue = document.querySelector('.nw-metric-aggressive-value');
-        var aggSub = document.querySelector('.nw-metric-aggressive-sub');
+        const aggValue = document.querySelector('.nw-metric-aggressive-value');
+        const aggSub = document.querySelector('.nw-metric-aggressive-sub');
         if (aggValue) aggValue.textContent = formatCurrency(data.aggressive.finalNetWorth);
-        if (aggSub) aggSub.textContent = data.aggressive.roiPercent + '% ROI · $' + formatCompact(data.aggressive.annualSavings) + '/yr savings';
+        if (aggSub) aggSub.textContent = `${data.aggressive.roiPercent}% ROI · $${formatCompact(data.aggressive.annualSavings)}/yr savings`;
 
         // Update legend
-        var legendBase = document.getElementById('nwLegendBase');
-        var legendCons = document.getElementById('nwLegendConservative');
-        var legendAgg = document.getElementById('nwLegendAggressive');
-        if (legendBase) legendBase.innerHTML = '<span class="nw-legend-dot nw-dot-base"></span> Base (' + data.base.roiPercent + '%)';
-        if (legendCons) legendCons.innerHTML = '<span class="nw-legend-dot nw-dot-conservative"></span> Conservative (' + data.conservative.roiPercent + '%)';
-        if (legendAgg) legendAgg.innerHTML = '<span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (' + data.aggressive.roiPercent + '%)';
+        const legendBase = document.getElementById('nwLegendBase');
+        const legendCons = document.getElementById('nwLegendConservative');
+        const legendAgg = document.getElementById('nwLegendAggressive');
+        if (legendBase) legendBase.innerHTML = `<span class="nw-legend-dot nw-dot-base"></span> Base (${data.base.roiPercent}%)`;
+        if (legendCons) legendCons.innerHTML = `<span class="nw-legend-dot nw-dot-conservative"></span> Conservative (${data.conservative.roiPercent}%)`;
+        if (legendAgg) legendAgg.innerHTML = `<span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (${data.aggressive.roiPercent}%)`;
     }
 
     /**
-     * Update scenario comparison cards
+     * Update scenario comparison cards.
+     * @param {Object} data - The projection data object.
      */
     function updateScenarioCards(data) {
-        // Base scenario
         setScenarioValues('nw-sc-base-', data.base);
-        // Conservative scenario
         setScenarioValues('nw-sc-cons-', data.conservative);
-        // Aggressive scenario
         setScenarioValues('nw-sc-agg-', data.aggressive);
     }
 
     /**
-     * Set scenario card values with a given prefix
+     * Set scenario card values with a given prefix.
+     * @param {string} prefix - CSS class prefix (e.g., 'nw-sc-base-').
+     * @param {Object} scenario - The scenario data object.
      */
     function setScenarioValues(prefix, scenario) {
-        var roiEl = document.querySelector('.' + prefix + 'roi');
-        var savingsEl = document.querySelector('.' + prefix + 'savings');
-        var finalEl = document.querySelector('.' + prefix + 'final');
-        var contribEl = document.querySelector('.' + prefix + 'contrib');
-        var interestEl = document.querySelector('.' + prefix + 'interest');
+        const roiEl = document.querySelector(`.${prefix}roi`);
+        const savingsEl = document.querySelector(`.${prefix}savings`);
+        const finalEl = document.querySelector(`.${prefix}final`);
+        const contribEl = document.querySelector(`.${prefix}contrib`);
+        const interestEl = document.querySelector(`.${prefix}interest`);
 
-        if (roiEl) roiEl.textContent = scenario.roiPercent + '%';
-        if (savingsEl) savingsEl.textContent = '$' + formatCompact(scenario.annualSavings);
-        if (finalEl) finalEl.textContent = '$' + formatCompact(scenario.finalNetWorth);
-        if (contribEl) contribEl.textContent = '$' + formatCompact(scenario.totalContributions);
-        if (interestEl) interestEl.textContent = '$' + formatCompact(scenario.totalInterestEarned);
+        if (roiEl) roiEl.textContent = `${scenario.roiPercent}%`;
+        if (savingsEl) savingsEl.textContent = `$${formatCompact(scenario.annualSavings)}`;
+        if (finalEl) finalEl.textContent = `$${formatCompact(scenario.finalNetWorth)}`;
+        if (contribEl) contribEl.textContent = `$${formatCompact(scenario.totalContributions)}`;
+        if (interestEl) interestEl.textContent = `$${formatCompact(scenario.totalInterestEarned)}`;
     }
 
     /**
-     * Update the projection table for the given scenario
+     * Determine CSS classes for a table row based on milestone thresholds.
+     * @param {number} endingBalance - The ending balance for the year.
+     * @param {number} fiTarget - The financial independence target amount.
+     * @param {number} annualIncome - The annual income amount.
+     * @returns {string} Space-separated CSS class names for the row.
+     */
+    function getRowHighlightClass(endingBalance, fiTarget, annualIncome) {
+        const classes = [];
+        const fiveMillion = 5000000;
+
+        if (endingBalance >= fiTarget) {
+            classes.push('nw-row-fi');
+        }
+        if (endingBalance >= annualIncome) {
+            classes.push('nw-row-income');
+        }
+        if (endingBalance >= fiveMillion) {
+            classes.push('nw-row-5m');
+        }
+
+        return classes.length > 0 ? ' class="' + classes.join(' ') + '"' : '';
+    }
+
+    /**
+     * Update the projection table for the given scenario.
+     * @param {string} scenarioName - The scenario key (e.g., 'Base').
      */
     function updateTable(scenarioName) {
         const data = window.nwProjectionData;
         if (!data) return;
 
-        let scenario;
-        if (scenarioName === 'Base') {
-            scenario = data.base;
-        } else if (scenarioName === 'Conservative') {
-            scenario = data.conservative;
-        } else {
-            scenario = data.aggressive;
-        }
+        const scenarioKey = scenarioMap[scenarioName] || 'base';
+        const scenario = data[scenarioKey];
+        if (!scenario) return;
 
         const tbody = document.getElementById('nwTableBody');
         if (!tbody) return;
 
-        let html = '';
-        scenario.years.forEach(function (year) {
-            html += '<tr>';
-            html += '<td>' + year.year + '</td>';
-            html += '<td>' + year.age + '</td>';
-            html += '<td class="text-end nw-currency">' + formatCurrency(year.startingBalance) + '</td>';
-            html += '<td class="text-end nw-currency">' + formatCurrency(year.savings) + '</td>';
-            html += '<td class="text-end nw-currency text-success">' + formatCurrency(year.roi) + '</td>';
-            html += '<td class="text-end nw-currency fw-semibold">' + formatCurrency(year.endingBalance) + '</td>';
-            html += '</tr>';
+        const fiTarget = data.fiTarget;
+        const annualIncome = data.annualIncome;
+
+        const rows = scenario.years.map(function (year) {
+            const rowClass = getRowHighlightClass(year.endingBalance, fiTarget, annualIncome);
+            return `<tr${rowClass}>
+                <td>${year.year}</td>
+                <td>${year.age}</td>
+                <td class="text-end nw-currency">${formatCurrency(year.startingBalance)}</td>
+                <td class="text-end nw-currency">${formatCurrency(year.savings)}</td>
+                <td class="text-end nw-currency text-success">${formatCurrency(year.roi)}</td>
+                <td class="text-end nw-currency fw-semibold">${formatCurrency(year.endingBalance)}</td>
+            </tr>`;
         });
 
-        tbody.innerHTML = html;
+        tbody.innerHTML = rows.join('');
     }
 
     /**
-     * Initialize scenario tab switching
+     * Initialize scenario tab switching.
      */
     function initScenarioTabs() {
         const buttons = document.querySelectorAll('.nw-tab-btn');
@@ -347,7 +389,7 @@
     }
 
     /**
-     * Initialize live recalculation on input change (debounced)
+     * Initialize live recalculation on input change (debounced).
      */
     function initLiveRecalculation() {
         let timeout;
@@ -358,13 +400,13 @@
                 clearTimeout(timeout);
                 timeout = setTimeout(function () {
                     recalculate();
-                }, 500);
+                }, DEBOUNCE_DELAY);
             });
         });
     }
 
     /**
-     * Recalculate projections via AJAX and update charts/table
+     * Recalculate projections via AJAX and update all UI elements.
      */
     function recalculate() {
         const params = {
@@ -372,21 +414,25 @@
             annualSavings: parseFloat(document.getElementById('nwAnnualSavings')?.value) || 0,
             annualIncome: parseFloat(document.getElementById('nwAnnualIncome')?.value) || 0,
             annualSpending: parseFloat(document.getElementById('nwAnnualSpending')?.value) || 0,
-            currentAge: parseInt(document.getElementById('nwCurrentAge')?.value) || 33,
-            retirementAge: parseInt(document.getElementById('nwRetirementAge')?.value) || 65,
+            currentAge: parseInt(document.getElementById('nwCurrentAge')?.value, 10) || 33,
+            retirementAge: parseInt(document.getElementById('nwRetirementAge')?.value, 10) || 65,
             baseRoi: parseFloat(document.getElementById('nwBaseRoi')?.value) || 7,
             conservativeRoi: parseFloat(document.getElementById('nwConservativeRoi')?.value) || 6,
             aggressiveRoi: parseFloat(document.getElementById('nwAggressiveRoi')?.value) || 10,
             aggressiveSavings: parseFloat(document.getElementById('nwAggressiveSavings')?.value) || 45000
         };
 
-        // Build query string
-        const qs = Object.keys(params).map(function (k) {
-            return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-        }).join('&');
+        // Build query string using URLSearchParams for safety
+        const urlParams = new URLSearchParams(params);
+        const url = `/Networth/Calculate?${urlParams.toString()}`;
 
-        fetch('/Networth/Calculate?' + qs)
-            .then(function (response) { return response.json(); })
+        fetch(url)
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(function (data) {
                 window.nwProjectionData = data;
                 renderGrowthChart(data);

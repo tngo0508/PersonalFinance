@@ -277,6 +277,24 @@
   background-color: var(--nw-bg) !important;
 }
 
+/* Row highlight: FI Target reached (green) */
+.nw-table tbody tr.nw-row-fi,
+.nw-table tbody tr.nw-row-fi:hover {
+  background-color: #c6f6d5 !important;
+}
+
+/* Row highlight: exceeds annual income (blue) */
+.nw-table tbody tr.nw-row-income,
+.nw-table tbody tr.nw-row-income:hover {
+  background-color: #bee3f8 !important;
+}
+
+/* Row highlight: exceeds $5 million (gold) — highest priority */
+.nw-table tbody tr.nw-row-5m,
+.nw-table tbody tr.nw-row-5m:hover {
+  background-color: #fefcbf !important;
+}
+
 .nw-currency {
   font-variant-numeric: tabular-nums;
 }
