@@ -163,7 +163,8 @@ try
         {
             client.BaseAddress = new Uri(apiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(35);
-        });
+        })
+        .AddStandardResilienceHandler();
 
     var app = builder.Build();
 
