@@ -11,4 +11,8 @@
         <PackageReference Include="Refit"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <EmbeddedResource Include="Resources\Templates\MonthlyBudgetTemplate.xlsx" />
+    </ItemGroup>
+
 </Project>

@@ -1562,6 +1562,38 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
     }
 
     /// <summary>
+    /// Gets the raw binary bytes of the embedded Monthly Budget Excel template (.xlsx).
+    /// </summary>
+    public static byte[] GetMonthlyBudgetTemplateBytes()
+    {
+        var assembly = typeof(GoogleDriveHelper).Assembly;
+        var resourceName = "PersonalFinance.Shared.Resources.Templates.MonthlyBudgetTemplate.xlsx";
+
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream != null)
+        {
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            return ms.ToArray();
+        }
+
+        // Fallback: search for resource name ending with MonthlyBudgetTemplate.xlsx
+        var matched = assembly.GetManifestResourceNames().FirstOrDefault(n => n.EndsWith("MonthlyBudgetTemplate.xlsx", StringComparison.OrdinalIgnoreCase));
+        if (matched != null)
+        {
+            using var matchedStream = assembly.GetManifestResourceStream(matched);
+            if (matchedStream != null)
+            {
+                using var ms = new MemoryStream();
+                matchedStream.CopyTo(ms);
+                return ms.ToArray();
+            }
+        }
+
+        return Array.Empty<byte>();
+    }
+
+    /// <summary>
     /// Provides standard sample CSV content matching Google Sheets / Excel Monthly Budget spreadsheets.
     /// </summary>
     public static string GetSampleMonthlyBudgetSpreadsheetCsv()

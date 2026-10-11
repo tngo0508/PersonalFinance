@@ -1,13 +1,17 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models;
+using PersonalFinance.Web.Services;
 using Xunit;
 
 namespace PersonalFinance.Tests;
@@ -40,7 +44,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -85,7 +89,7 @@ public class GoogleDriveWebControllerTests
             }
         };
 
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -109,7 +113,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -129,7 +133,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -149,7 +153,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -168,7 +172,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -192,7 +196,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -217,7 +221,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -234,7 +238,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -250,20 +254,169 @@ public class GoogleDriveWebControllerTests
     }
 
     [Fact]
-    public async Task SpreadsheetTransactions_WithEmptyFileId_ReturnsBadRequest()
+    public async Task CreateMonthlyBudget_WithValidRequest_ReturnsSuccessResponse()
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        var request = new CreateMonthlyBudgetTemplateRequestDto
+        {
+            ConnectionId = 1,
+            Year = 2026,
+            Month = 10,
+            StartingBalance = 1500m
+        };
+
+        // Act
+        var result = await controller.CreateMonthlyBudget(request);
+
+        // Assert
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var response = Assert.IsType<CreateMonthlyBudgetTemplateResponseDto>(jsonResult.Value);
+        Assert.True(response.Success);
+        Assert.NotNull(response.FileId);
+        Assert.NotNull(response.WebUrl);
+    }
+
+    [Fact]
+    public async Task CreateMonthlyBudget_WithInvalidConnectionId_ReturnsErrorResponse()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi();
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        var request = new CreateMonthlyBudgetTemplateRequestDto
+        {
+            ConnectionId = 0
+        };
+
+        // Act
+        var result = await controller.CreateMonthlyBudget(request);
+
+        // Assert
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var response = Assert.IsType<CreateMonthlyBudgetTemplateResponseDto>(jsonResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Valid ConnectionId is required.", response.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task CreateMonthlyBudget_WhenApiReturnsFailure_ReturnsJsonFailure()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi
+        {
+            CreateTemplateResponse = new CreateMonthlyBudgetTemplateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "Google Drive authorization failed (HTTP 401 Unauthorized)."
+            }
+        };
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        var request = new CreateMonthlyBudgetTemplateRequestDto
+        {
+            ConnectionId = 1,
+            Year = 2026,
+            Month = 10
+        };
+
+        // Act
+        var result = await controller.CreateMonthlyBudget(request);
+
+        // Assert
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var response = Assert.IsType<CreateMonthlyBudgetTemplateResponseDto>(jsonResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Google Drive authorization failed (HTTP 401 Unauthorized).", response.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task CreateMonthlyBudget_UsesServerSideAccessToken_NotClientSupplied()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi();
+        var fakeAuth = new FakeGoogleDriveAuthorizationService { AccessToken = "server-token" };
+        var controller = new GoogleDriveController(fakeApi, fakeAuth, NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123")
+        };
+
+        var request = new CreateMonthlyBudgetTemplateRequestDto
+        {
+            ConnectionId = 1,
+            AccessToken = "client-supplied-token"
+        };
+
+        // Act
+        await controller.CreateMonthlyBudget(request);
+
+        // Assert
+        Assert.Equal("server-token", fakeApi.LastCreateTemplateRequest?.AccessToken);
+        Assert.Equal("test-user-123", fakeApi.LastCreateTemplateRequest?.UserId);
+    }
+
+    [Fact]
+    public async Task CreateMonthlyBudget_WhenAuthorizationRequired_ReturnsAuthorizationUrlAndClearsRejectedToken()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi
+        {
+            CreateTemplateResponse = new CreateMonthlyBudgetTemplateResponseDto
+            {
+                Success = false,
+                RequiresAuthorization = true,
+                ErrorMessage = "Your Google Drive authorization has expired or was revoked."
+            }
+        };
+        var fakeAuth = new FakeGoogleDriveAuthorizationService { AccessToken = "revoked-token" };
+        var controller = new GoogleDriveController(fakeApi, fakeAuth, NullLogger<GoogleDriveController>.Instance)
+        {
+            ControllerContext = CreateControllerContext("test-user-123"),
+            Url = new FakeUrlHelper()
+        };
+
+        // Act
+        var result = await controller.CreateMonthlyBudget(new CreateMonthlyBudgetTemplateRequestDto { ConnectionId = 7 });
+
+        // Assert
+        var jsonResult = Assert.IsType<JsonResult>(result);
+        var response = Assert.IsType<CreateMonthlyBudgetTemplateResponseDto>(jsonResult.Value);
+        Assert.False(response.Success);
+        Assert.True(response.RequiresAuthorization);
+        Assert.Equal("/GoogleDrive/AuthorizeDrive?connectionId=7", response.AuthorizationUrl);
+        Assert.True(fakeAuth.TokensCleared);
+    }
+
+    [Fact]
+    public void DownloadMonthlyBudgetTemplate_ReturnsFileResultWithValidXlsx()
+    {
+        // Arrange
+        var fakeApi = new FakeGoogleDriveApi();
+        var controller = new GoogleDriveController(fakeApi, new FakeGoogleDriveAuthorizationService(), NullLogger<GoogleDriveController>.Instance)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
 
         // Act
-        var result = await controller.SpreadsheetTransactions("");
+        var result = controller.DownloadMonthlyBudgetTemplate();
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result);
+        var fileResult = Assert.IsType<FileContentResult>(result);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileResult.ContentType);
+        Assert.Equal("Monthly budget.xlsx", fileResult.FileDownloadName);
+        Assert.NotEmpty(fileResult.FileContents);
+        Assert.Equal(0x50, fileResult.FileContents[0]);
     }
 }
 
@@ -271,6 +424,8 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
 {
     public List<GoogleDriveConnectionDto> SavedConnections { get; set; } = new();
     public GoogleDriveFolderResponseDto ConnectionFilesResponse { get; set; } = new() { Success = true };
+    public CreateMonthlyBudgetTemplateResponseDto? CreateTemplateResponse { get; set; }
+    public CreateMonthlyBudgetTemplateRequestDto? LastCreateTemplateRequest { get; private set; }
 
     public Task<GoogleDriveFolderResponseDto> ExploreFolderAsync(GoogleDriveRequestDto request, CancellationToken cancellationToken = default)
     {
@@ -316,6 +471,65 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
     {
         return Task.FromResult(GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleTransactionsCsv(), fileName, fileId));
     }
+
+    public Task<CreateMonthlyBudgetTemplateResponseDto> CreateMonthlyBudgetTemplateAsync(CreateMonthlyBudgetTemplateRequestDto request, CancellationToken cancellationToken = default)
+    {
+        LastCreateTemplateRequest = request;
+        if (CreateTemplateResponse != null)
+        {
+            return Task.FromResult(CreateTemplateResponse);
+        }
+
+        return Task.FromResult(new CreateMonthlyBudgetTemplateResponseDto
+        {
+            Success = true,
+            FileId = $"test_file_{Guid.NewGuid():N}",
+            FileName = request.CustomFileName ?? $"Monthly budget - {request.Year}-{request.Month:D2}",
+            WebUrl = "https://docs.google.com/spreadsheets/d/test_file/edit",
+            FolderId = "test_folder"
+        });
+    }
+}
+
+public class FakeGoogleDriveAuthorizationService : IGoogleDriveAuthorizationService
+{
+    public string? AccessToken { get; set; }
+    public bool IsConfigured { get; set; } = true;
+    public bool TokensCleared { get; private set; }
+
+    public Task<bool> IsConfiguredAsync() => Task.FromResult(IsConfigured);
+
+    public Task StoreTokensAsync(string userId, IEnumerable<AuthenticationToken> tokens, CancellationToken cancellationToken = default)
+    {
+        AccessToken = tokens.FirstOrDefault(t => t.Name == "access_token")?.Value;
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> GetValidAccessTokenAsync(string userId, CancellationToken cancellationToken = default) => Task.FromResult(AccessToken);
+
+    public Task ClearTokensAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        TokensCleared = true;
+        AccessToken = null;
+        return Task.CompletedTask;
+    }
+}
+
+public class FakeUrlHelper : IUrlHelper
+{
+    public ActionContext ActionContext { get; } = new();
+
+    public string? Action(UrlActionContext actionContext)
+    {
+        var values = new RouteValueDictionary(actionContext.Values);
+        var query = string.Join("&", values.Where(v => v.Value != null).Select(v => $"{v.Key}={v.Value}"));
+        return $"/GoogleDrive/{actionContext.Action}" + (query.Length > 0 ? "?" + query : string.Empty);
+    }
+
+    public string? Content(string? contentPath) => contentPath;
+    public bool IsLocalUrl(string? url) => true;
+    public string? Link(string? routeName, object? values) => null;
+    public string? RouteUrl(UrlRouteContext routeContext) => null;
 }
 
 public class FakeTempDataProvider : ITempDataProvider

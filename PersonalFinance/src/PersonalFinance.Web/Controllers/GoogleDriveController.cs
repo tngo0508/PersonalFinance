@@ -1,10 +1,15 @@
 using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Models;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -17,13 +22,16 @@ namespace PersonalFinance.Web.Controllers;
 public class GoogleDriveController : Controller
 {
     private readonly IGoogleDriveApi _googleDriveApi;
+    private readonly IGoogleDriveAuthorizationService _driveAuthorizationService;
     private readonly ILogger<GoogleDriveController> _logger;
 
     public GoogleDriveController(
         IGoogleDriveApi googleDriveApi,
+        IGoogleDriveAuthorizationService driveAuthorizationService,
         ILogger<GoogleDriveController> logger)
     {
         _googleDriveApi = googleDriveApi;
+        _driveAuthorizationService = driveAuthorizationService;
         _logger = logger;
     }
 
@@ -282,6 +290,176 @@ public class GoogleDriveController : Controller
         {
             _logger.LogError(ex, "Failed to read transactions from spreadsheet '{FileId}'.", fileId);
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "The spreadsheet could not be read. Please try again." });
+        }
+    }
+
+    /// <summary>
+    /// Downloads the raw Monthly Budget Excel template (.xlsx) file directly to the user's browser.
+    /// </summary>
+    [HttpGet]
+    [Route("api/GoogleDrive/templates/monthly-budget/download")]
+    [Route("[controller]/DownloadMonthlyBudgetTemplate")]
+    public IActionResult DownloadMonthlyBudgetTemplate()
+    {
+        var bytes = GoogleDriveHelper.GetMonthlyBudgetTemplateBytes();
+        if (bytes == null || bytes.Length == 0)
+        {
+            return NotFound("Monthly budget template asset not found.");
+        }
+
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Monthly budget.xlsx");
+    }
+
+    /// <summary>
+    /// Starts the Google OAuth consent flow that grants the app write access (drive.file scope) to the user's Google Drive.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> AuthorizeDrive([FromQuery] int? connectionId)
+    {
+        if (!await _driveAuthorizationService.IsConfiguredAsync())
+        {
+            TempData["ErrorMessage"] = "Google sign-in is not configured for this app, so Google Drive write access can't be authorized.";
+            return RedirectToAction(nameof(Index), new { connectionId });
+        }
+
+        var properties = new GoogleChallengeProperties
+        {
+            RedirectUri = Url.Action(nameof(AuthorizeDriveCallback), new { connectionId }),
+            Scope = new List<string> { "openid", "profile", "email", GoogleDriveAuthorizationService.DriveFileScope },
+            AccessType = "offline",
+            Prompt = "consent",
+            IncludeGrantedScopes = true,
+            LoginHint = User.FindFirstValue(ClaimTypes.Email)
+        };
+
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    /// <summary>
+    /// Completes the Google Drive consent flow and stores the granted tokens for the current user.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> AuthorizeDriveCallback([FromQuery] int? connectionId, CancellationToken cancellationToken = default)
+    {
+        // The Google handler signs the OAuth result into Identity's temporary external cookie, not the app session
+        var result = await HttpContext.AuthenticateAsync(IdentityConstants.ExternalScheme);
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        var tokens = result.Succeeded ? result.Properties?.GetTokens() : null;
+        if (tokens == null || !tokens.Any())
+        {
+            TempData["ErrorMessage"] = "Google Drive authorization was cancelled or failed. Please try again.";
+            return RedirectToAction(nameof(Index), new { connectionId });
+        }
+
+        try
+        {
+            await _driveAuthorizationService.StoreTokensAsync(GetCurrentUserId(), tokens, cancellationToken);
+            TempData["StatusMessage"] = "Google Drive access authorized. You can now create budget spreadsheets in your Drive.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to store Google Drive tokens.");
+            TempData["ErrorMessage"] = "Google Drive authorization failed. Please try again.";
+        }
+
+        return RedirectToAction(nameof(Index), new { connectionId });
+    }
+
+    /// <summary>
+    /// Creates a new Monthly Budget template spreadsheet in the user's connected Google Drive folder.
+    /// </summary>
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    [Route("api/GoogleDrive/templates/monthly-budget")]
+    [Route("[controller]/CreateMonthlyBudget")]
+    public async Task<IActionResult> CreateMonthlyBudget(
+        [FromBody] CreateMonthlyBudgetTemplateRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request == null || request.ConnectionId <= 0)
+        {
+            return Json(new CreateMonthlyBudgetTemplateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "Valid ConnectionId is required."
+            });
+        }
+
+        var userId = GetCurrentUserId();
+        request.UserId = userId;
+
+        try
+        {
+            // The Drive access token always comes from the server-side token store, never from the browser
+            request.AccessToken = await _driveAuthorizationService.GetValidAccessTokenAsync(userId, cancellationToken);
+
+            var result = await _googleDriveApi.CreateMonthlyBudgetTemplateAsync(request, cancellationToken);
+            if (result.RequiresAuthorization)
+            {
+                if (request.AccessToken != null)
+                {
+                    // Google rejected the stored token (revoked or missing scope); force a fresh consent
+                    await _driveAuthorizationService.ClearTokensAsync(userId, cancellationToken);
+                }
+
+                if (await _driveAuthorizationService.IsConfiguredAsync())
+                {
+                    result.AuthorizationUrl = Url.Action(nameof(AuthorizeDrive), new { connectionId = request.ConnectionId });
+                }
+                else
+                {
+                    result.ErrorMessage = "Google sign-in is not configured for this app, so Google Drive write access can't be authorized. Download the template as an Excel (.xlsx) file instead.";
+                }
+            }
+
+            return Json(result);
+        }
+        catch (Refit.ApiException apiEx)
+        {
+            _logger.LogError(apiEx, "ApiService error HTTP {StatusCode} creating Monthly Budget template.", apiEx.StatusCode);
+
+            string? errorMessage = null;
+            if (!string.IsNullOrWhiteSpace(apiEx.Content))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(apiEx.Content);
+                    if (doc.RootElement.TryGetProperty("errorMessage", out var errProp) && !string.IsNullOrWhiteSpace(errProp.GetString()))
+                    {
+                        errorMessage = errProp.GetString();
+                    }
+                    else if (doc.RootElement.TryGetProperty("detail", out var detailProp) && !string.IsNullOrWhiteSpace(detailProp.GetString()))
+                    {
+                        errorMessage = detailProp.GetString();
+                    }
+                    else if (doc.RootElement.TryGetProperty("title", out var titleProp) && !string.IsNullOrWhiteSpace(titleProp.GetString()))
+                    {
+                        errorMessage = titleProp.GetString();
+                    }
+                }
+                catch
+                {
+                    errorMessage = apiEx.Content.Trim();
+                }
+            }
+
+            return Json(new CreateMonthlyBudgetTemplateResponseDto
+            {
+                Success = false,
+                ErrorMessage = !string.IsNullOrWhiteSpace(errorMessage)
+                    ? errorMessage
+                    : $"Backend service error (HTTP {(int)apiEx.StatusCode} {apiEx.StatusCode})"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error creating Monthly Budget template.");
+            return Json(new CreateMonthlyBudgetTemplateResponseDto
+            {
+                Success = false,
+                ErrorMessage = "An unexpected error occurred while creating the budget spreadsheet."
+            });
         }
     }
 

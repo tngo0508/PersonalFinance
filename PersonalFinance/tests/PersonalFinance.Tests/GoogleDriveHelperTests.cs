@@ -917,6 +917,255 @@ Total Expenses,3500.00,4000.00,-500.00";
         Assert.Equal(3, month.Categories.Count);
         Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Decrease", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void GetMonthlyBudgetTemplateBytes_ReturnsValidSpreadsheetBytes()
+    {
+        var bytes = GoogleDriveHelper.GetMonthlyBudgetTemplateBytes();
+        Assert.NotNull(bytes);
+        Assert.True(bytes.Length > 0, "Template bytes should not be empty.");
+        // XLSX is a ZIP package starting with PK (0x50, 0x4B)
+        Assert.Equal(0x50, bytes[0]);
+        Assert.Equal(0x4B, bytes[1]);
+    }
+
+    [Fact]
+    public async Task GoogleDriveService_CreateMonthlyBudgetTemplateAsync_CreatesCachedFileAndReturnsSuccess()
+    {
+        using var dbContext = CreateTestDbContext();
+        var connection = new PersonalFinance.Data.Entities.GoogleDriveConnection
+        {
+            Id = 1,
+            UserId = "user-abc",
+            Name = "Household Drive",
+            FolderId = "folder-123",
+            FolderUrl = "https://drive.google.com/drive/folders/folder-123"
+        };
+        dbContext.GoogleDriveConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var httpClient = new HttpClient();
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+
+        var request = new CreateMonthlyBudgetTemplateRequestDto
+        {
+            UserId = "user-abc",
+            ConnectionId = 1,
+            Year = 2026,
+            Month = 10,
+            StartingBalance = 2000m
+        };
+
+        var response = await service.CreateMonthlyBudgetTemplateAsync(request);
+
+        Assert.NotNull(response);
+        Assert.True(response.Success);
+        Assert.NotEmpty(response.FileId!);
+        Assert.Contains("Monthly budget", response.FileName!);
+        Assert.NotNull(response.WebUrl);
+
+        var cached = await dbContext.GoogleDriveCachedFiles.FirstOrDefaultAsync(f => f.ConnectionId == 1);
+        Assert.NotNull(cached);
+        Assert.Equal(response.FileId, cached.DriveFileId);
+        Assert.Equal("Spreadsheet", cached.FileType);
+    }
+
+    [Fact]
+    public async Task GoogleDriveService_CreateMonthlyBudgetTemplateAsync_WithLiveMockHandler_SendsMultipartRelatedAndCreatesSheet()
+    {
+        using var dbContext = CreateTestDbContext();
+        var connection = new PersonalFinance.Data.Entities.GoogleDriveConnection
+        {
+            Id = 2,
+            UserId = "user-live",
+            Name = "Live Drive",
+            FolderId = "real-folder-456",
+            FolderUrl = "https://drive.google.com/drive/folders/real-folder-456",
+            EncryptedApiKey = PersonalFinance.Data.Helpers.CredentialProtector.Encrypt("AIzaSy-read-only-key")
+        };
+        dbContext.GoogleDriveConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        string? receivedContentType = null;
+        string? receivedAuth = null;
+        var mockHandler = new DelegatingTestHandler((req, ct) =>
+        {
+            receivedContentType = req.Content?.Headers.ContentType?.MediaType;
+            receivedAuth = req.Headers.Authorization?.ToString();
+
+            var responseJson = "{\"id\":\"real_drive_file_999\",\"name\":\"Monthly budget - October 2026\",\"webViewLink\":\"https://docs.google.com/spreadsheets/d/real_drive_file_999/edit\"}";
+            var httpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(responseJson, System.Text.Encoding.UTF8, "application/json")
+            };
+            return Task.FromResult(httpResponse);
+        });
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var httpClient = new HttpClient(mockHandler);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+
+        var request = new CreateMonthlyBudgetTemplateRequestDto
+        {
+            UserId = "user-live",
+            ConnectionId = 2,
+            Year = 2026,
+            Month = 10,
+            AccessToken = "ya29.live-token-abc"
+        };
+
+        var response = await service.CreateMonthlyBudgetTemplateAsync(request);
+
+        Assert.NotNull(response);
+        Assert.True(response.Success);
+        Assert.Equal("real_drive_file_999", response.FileId);
+        Assert.Equal("https://docs.google.com/spreadsheets/d/real_drive_file_999/edit", response.WebUrl);
+        Assert.Equal("multipart/related", receivedContentType);
+        Assert.Equal("Bearer ya29.live-token-abc", receivedAuth);
+
+        var cached = await dbContext.GoogleDriveCachedFiles.FirstOrDefaultAsync(f => f.DriveFileId == "real_drive_file_999");
+        Assert.NotNull(cached);
+        Assert.Equal("https://docs.google.com/spreadsheets/d/real_drive_file_999/edit", cached.WebViewLink);
+    }
+
+    [Fact]
+    public async Task GoogleDriveService_CreateMonthlyBudgetTemplateAsync_WhenUnauthorized_ReturnsClearErrorWithoutFakeFile()
+    {
+        using var dbContext = CreateTestDbContext();
+        var connection = new PersonalFinance.Data.Entities.GoogleDriveConnection
+        {
+            Id = 3,
+            UserId = "user-unauth",
+            Name = "Unauth Drive",
+            FolderId = "folder-unauth-789",
+            FolderUrl = "https://drive.google.com/drive/folders/folder-unauth-789",
+            EncryptedApiKey = PersonalFinance.Data.Helpers.CredentialProtector.Encrypt("AIzaSy-invalid-api-key")
+        };
+        dbContext.GoogleDriveConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var mockHandler = new DelegatingTestHandler((req, ct) =>
+        {
+            var httpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized)
+            {
+                Content = new StringContent("{\"error\":{\"code\":401,\"message\":\"Request had invalid authentication credentials.\"}}", System.Text.Encoding.UTF8, "application/json")
+            };
+            return Task.FromResult(httpResponse);
+        });
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var httpClient = new HttpClient(mockHandler);
+        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+
+        var request = new CreateMonthlyBudgetTemplateRequestDto
+        {
+            UserId = "user-unauth",
+            ConnectionId = 3,
+            Year = 2026,
+            Month = 10,
+            AccessToken = "ya29.revoked-token"
+        };
+
+        var response = await service.CreateMonthlyBudgetTemplateAsync(request);
+
+        Assert.NotNull(response);
+        Assert.False(response.Success);
+        Assert.True(response.RequiresAuthorization);
+        Assert.Contains("authoriz", response.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+
+        // Crucial: ensure no fake file was cached in the database!
+        var cached = await dbContext.GoogleDriveCachedFiles.Where(f => f.ConnectionId == 3).ToListAsync();
+        Assert.Empty(cached);
+    }
+
+    [Fact]
+    public async Task GoogleDriveService_CreateMonthlyBudgetTemplateAsync_WithOnlyApiKey_RequiresAuthorizationWithoutCallingDrive()
+    {
+        using var dbContext = CreateTestDbContext();
+        dbContext.GoogleDriveConnections.Add(new PersonalFinance.Data.Entities.GoogleDriveConnection
+        {
+            Id = 4,
+            UserId = "user-apikey",
+            Name = "API Key Drive",
+            FolderId = "folder-apikey-321",
+            FolderUrl = "https://drive.google.com/drive/folders/folder-apikey-321",
+            EncryptedApiKey = PersonalFinance.Data.Helpers.CredentialProtector.Encrypt("AIzaSy-read-only-key")
+        });
+        await dbContext.SaveChangesAsync();
+
+        var driveCalled = false;
+        var mockHandler = new DelegatingTestHandler((req, ct) =>
+        {
+            driveCalled = true;
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized));
+        });
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var service = new GoogleDriveService(new HttpClient(mockHandler), configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+
+        var response = await service.CreateMonthlyBudgetTemplateAsync(new CreateMonthlyBudgetTemplateRequestDto
+        {
+            UserId = "user-apikey",
+            ConnectionId = 4
+        });
+
+        Assert.False(response.Success);
+        Assert.True(response.RequiresAuthorization);
+        Assert.False(driveCalled);
+    }
+
+    [Fact]
+    public async Task GoogleDriveService_CreateMonthlyBudgetTemplateAsync_WhenFolderNotWritable_FallsBackToMyDriveRoot()
+    {
+        using var dbContext = CreateTestDbContext();
+        dbContext.GoogleDriveConnections.Add(new PersonalFinance.Data.Entities.GoogleDriveConnection
+        {
+            Id = 5,
+            UserId = "user-root",
+            Name = "Shared Folder",
+            FolderId = "not-app-created-folder",
+            FolderUrl = "https://drive.google.com/drive/folders/not-app-created-folder"
+        });
+        await dbContext.SaveChangesAsync();
+
+        var uploadBodies = new List<string>();
+        var mockHandler = new DelegatingTestHandler(async (req, ct) =>
+        {
+            var body = await req.Content!.ReadAsStringAsync(ct);
+            uploadBodies.Add(body);
+
+            return body.Contains("not-app-created-folder")
+                ? new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
+                {
+                    Content = new StringContent("{\"error\":{\"code\":404,\"message\":\"File not found: not-app-created-folder.\"}}")
+                }
+                : new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"id\":\"root_file_1\",\"webViewLink\":\"https://docs.google.com/spreadsheets/d/root_file_1/edit\"}")
+                };
+        });
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var service = new GoogleDriveService(new HttpClient(mockHandler), configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+
+        var response = await service.CreateMonthlyBudgetTemplateAsync(new CreateMonthlyBudgetTemplateRequestDto
+        {
+            UserId = "user-root",
+            ConnectionId = 5,
+            AccessToken = "ya29.valid-token"
+        });
+
+        Assert.True(response.Success);
+        Assert.Equal("root_file_1", response.FileId);
+        Assert.Null(response.FolderId);
+        Assert.NotNull(response.Notice);
+        Assert.Equal(2, uploadBodies.Count);
+        Assert.DoesNotContain("parents", uploadBodies[1]);
+
+        // The file isn't in the connected folder, so it must not be cached as part of it
+        Assert.Empty(await dbContext.GoogleDriveCachedFiles.Where(f => f.ConnectionId == 5).ToListAsync());
+    }
 }
 
 /// <summary>

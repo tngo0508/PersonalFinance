@@ -61,4 +61,11 @@ public interface IGoogleDriveService
         int? connectionId = null,
         string? userId = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a new Monthly Budget template Google Sheet programmatically in the user's connected Google Drive.
+    /// </summary>
+    Task<CreateMonthlyBudgetTemplateResponseDto> CreateMonthlyBudgetTemplateAsync(
+        CreateMonthlyBudgetTemplateRequestDto request,
+        CancellationToken cancellationToken = default);
 }
