@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-11
+
+### Added
+- **Net Worth Parameter Persistence**:
+  - Added support for saving and retrieving Net Worth projection parameters so user settings persist across sessions.
+  - Integrated parameter persistence with the API service (`PersonalFinance.ApiService`) for server-side storage and retrieval.
+
+### Changed
+- **Net Worth UI Improvements**:
+  - Updated Net Worth UI with ROI badge updates and synchronized input controls for a more cohesive user experience.
+  - Standardized currency symbol styling across the Net Worth UI for consistent formatting.
+  - Refactored Net Worth scripts and adjusted layout script links for better code organization.
+
+- **Code Quality**:
+  - Enforced consistent function spacing and added ESLint configuration with shared utilities for improved JavaScript code quality.
+
+- **Documentation**:
+  - Updated `README.md` with refined formatting, removed emojis, and clarified contributing steps.
+  - Updated `DEVELOPMENT.md` and `deployment.md` with comprehensive documentation improvements.
+
 ## [1.2.0] - 2026-10-11
 
 ### Added
