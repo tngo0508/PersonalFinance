@@ -1,5 +1,6 @@
 # Multi-stage Dockerfile for PersonalFinance.Web (.NET 10)
 # Uses Ubuntu Noble chiseled runtime image for minimal attack surface & distroless non-root security.
+# Optimized for fast cold starts on Azure Container Apps (ACA) Consumption tier.
 
 ARG DOTNET_VERSION=10.0
 ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0-noble
@@ -12,7 +13,11 @@ FROM ${RUNTIME_IMAGE} AS base
 WORKDIR /app
 EXPOSE 8080
 ENV ASPNETCORE_HTTP_PORTS=8080 \
-    DOTNET_RUNNING_IN_CONTAINER=true
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    # Enable Tiered Compilation for faster first-request JIT
+    DOTNET_TieredCompilation=1 \
+    # Profile-Guided Optimization for faster Tiered Compilation
+    DOTNET_TieredPGO=1
 USER $APP_UID
 
 # ---------------------------------------------------------
@@ -47,7 +52,17 @@ WORKDIR "/src/PersonalFinance/src/PersonalFinance.Web"
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 # publish compiles the project itself, so there is no separate `dotnet build` step (saves a full compile per image)
-RUN dotnet publish "PersonalFinance.Web.csproj" -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
+# ReadyToRun (R2R) pre-compiles IL to native code, reducing cold-start JIT by ~30-50%
+# NOTE: Trimming is DISABLED because EF Core uses reflection-heavy patterns (Include, ThenInclude,
+# migrations) that are incompatible with aggressive trimming at TrimMode=link.
+RUN dotnet publish "PersonalFinance.Web.csproj" \
+    -c $BUILD_CONFIGURATION \
+    -o /app/publish \
+    --no-restore \
+    /p:UseAppHost=false \
+    /p:PublishReadyToRun=true \
+    /p:PublishReadyToRunComposite=true \
+    /p:IlcOptimization=speed
 
 # ---------------------------------------------------------
 # Stage 4: Production Final Runtime
@@ -55,4 +70,6 @@ RUN dotnet publish "PersonalFinance.Web.csproj" -c $BUILD_CONFIGURATION -o /app/
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+# NOTE: HEALTHCHECK is omitted because chiseled images have no shell (sh/bash).
+# ACA uses its own probe configuration (liveness/readiness/startup) defined in Bicep.
 ENTRYPOINT ["dotnet", "PersonalFinance.Web.dll"]

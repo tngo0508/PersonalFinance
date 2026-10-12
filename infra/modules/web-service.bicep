@@ -44,15 +44,22 @@ param cpu string = '0.25'
 @description('Memory allocation for the container (Consumption tier minimum: 0.5Gi)')
 param memory string = '0.5Gi'
 
-@description('Minimum replicas for autoscaling (0 enables scale-to-zero for zero cost)')
-@minValue(0)
-@maxValue(10)
-param minReplicas int = 0
-
 @description('Maximum replicas for autoscaling')
 @minValue(1)
 @maxValue(10)
 param maxReplicas int = 1
+
+@description('Enable scheduled scaling: keep 1 replica warm during business hours, scale to 0 at night')
+param enableScheduledScaling bool = false
+
+@description('Business hours start time in UTC (cron minute)')
+param businessHoursStartMinute int = 0
+
+@description('Business hours start hour in UTC (0-23)')
+param businessHoursStartHour int = 6
+
+@description('Business hours end hour in UTC (0-23, scales to 0 at this hour)')
+param businessHoursEndHour int = 23
 
 @description('Optional custom domain name (e.g. app.mydomain.com)')
 param customDomainName string = ''
@@ -225,7 +232,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
         }
       ]
       scale: {
-        minReplicas: minReplicas
+        minReplicas: 0
         maxReplicas: maxReplicas
         rules: [
           {
@@ -233,6 +240,21 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
             http: {
               metadata: {
                 concurrentRequests: '100'
+              }
+            }
+          }
+          // Scheduled scaling: keep 1 replica during business hours, scale to 0 at night
+          // Uses KEDA cron scaler: during the start-end window, scales to desiredReplicas;
+          // outside the window, falls back to minReplicas (0).
+          if (enableScheduledScaling) {
+            name: 'cron-business-hours'
+            custom: {
+              type: 'cron'
+              metadata: {
+                timezone: 'UTC'
+                start: '${string(businessHoursStartMinute)} ${string(businessHoursStartHour)} * * *'
+                end: '0 ${string(businessHoursEndHour)} * * *'
+                desiredReplicas: '1'
               }
             }
           }

@@ -53,25 +53,21 @@ resource allowClientIps 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview'
   }
 }]
 
-// Azure SQL Database configured for Lifetime Free Tier (Serverless GP_S_Gen5_1, AutoPause, 32GB)
+// Azure SQL Database — Basic tier (DTU model) for predictable ~$4.90/month cost
+// This keeps total Azure costs (SQL + ACA) within a $10/month budget
+// Basic tier includes 2 GB storage and 5 DTUs — sufficient for low-traffic personal finance apps
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
   name: databaseName
   location: location
   tags: tags
   sku: {
-    name: 'GP_S_Gen5_1'
-    tier: 'GeneralPurpose'
-    family: 'Gen5'
-    capacity: 1
+    name: 'Basic'
+    tier: 'Basic'
   }
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
-    maxSizeBytes: 34359738368 // 32 GB Free Grant
-    autoPauseDelay: 60
-    minCapacity: json('0.5')
-    useFreeLimit: true
-    freeLimitExhaustionBehavior: 'AutoPause'
+    maxSizeBytes: 2147483648 // 2 GB included in Basic tier
   }
 }
 

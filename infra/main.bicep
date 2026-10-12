@@ -39,7 +39,7 @@ param brevoSenderName string = 'PersonalFinance'
 @secure()
 param googleDriveApiKey string = ''
 
-@description('Whether to provision Azure SQL Database Serverless Free Tier ($0.00 with 100k vCore-s + 32GB free lifetime)')
+@description('Whether to provision Azure SQL Database Basic tier (~$4.90/month, 2 GB storage, 5 DTUs)')
 param deploySqlDatabase bool = true
 
 @description('Number of days of log retention in the Log Analytics Workspace (30 days included in free tier)')
@@ -67,12 +67,39 @@ param certificateId string = ''
 @description('Expose the API service publicly with the Scalar UI enabled. The API has no authentication; use for testing only.')
 param exposeApiPublicly bool = false
 
+@description('Enable scheduled scaling: keep 1 replica warm during business hours, scale to 0 at night')
+param enableScheduledScaling bool = false
+
+@description('Business hours start hour in UTC (0-23, default 06:00 UTC)')
+param businessHoursStartHour int = 6
+
+@description('Business hours start minute in UTC (0-59, default 00)')
+param businessHoursStartMinute int = 0
+
+@description('Business hours end hour in UTC (0-23, scales to 0 at this hour, default 23:00 UTC)')
+param businessHoursEndHour int = 23
+
+// =============================================================================
+// BUDGET ESTIMATE (~$10/month total)
+// =============================================================================
+// Azure SQL Database (Basic tier):       ~$4.90/month  (2 GB storage, 5 DTUs)
+// ACA Consumption (scheduled scaling):   ~$3-5/month   (1 replica during business hours, 0 at night)
+// ACA Managed Environment:               ~$1.75/month  (Consumption tier base cost)
+// Log Analytics:                         ~$0/month     (5 GB/month free ingestion, 30-day retention)
+// ---------------------------------------------------------------------------
+// Total estimated cost:                  ~$10/month
+// =============================================================================
+// NOTE: To stay within budget, enable scheduled scaling when deploying:
+//   azd deploy --param enableScheduledScaling=true
+// Without scheduled scaling, ACA replicas running 24/7 will exceed the budget.
+// =============================================================================
+
 @description('Tags to apply to all resources')
 param tags object = {
   Application: 'PersonalFinance'
   Environment: environmentName
   ManagedBy: 'Bicep'
-  CostTier: 'ZeroCost-Consumption'
+  CostTier: 'Budget10USD-Monthly'
 }
 
 var locationSuffix = uniqueString(resourceGroup().id, location)
@@ -135,6 +162,10 @@ module apiService 'modules/api-service.bicep' = {
     googleDriveApiKey: googleDriveApiKey
     dbConnectionString: effectiveConnectionString
     exposePublicly: exposeApiPublicly
+    enableScheduledScaling: enableScheduledScaling
+    businessHoursStartHour: businessHoursStartHour
+    businessHoursStartMinute: businessHoursStartMinute
+    businessHoursEndHour: businessHoursEndHour
     tags: tags
   }
 }
@@ -155,6 +186,10 @@ module webService 'modules/web-service.bicep' = {
     brevoSenderEmail: brevoSenderEmail
     brevoSenderName: brevoSenderName
     dbConnectionString: effectiveConnectionString
+    enableScheduledScaling: enableScheduledScaling
+    businessHoursStartHour: businessHoursStartHour
+    businessHoursStartMinute: businessHoursStartMinute
+    businessHoursEndHour: businessHoursEndHour
     customDomainName: customDomainName
     certificateId: certificateId
     tags: tags
