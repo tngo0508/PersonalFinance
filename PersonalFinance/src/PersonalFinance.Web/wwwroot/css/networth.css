@@ -1840,7 +1840,6 @@
 .nw-split-layout__sidebar {
   position: sticky;
   top: 1rem;
-  max-height: calc(100vh - 2rem);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1852,30 +1851,11 @@
   flex-shrink: 0;
 }
 
-/* Scrollable middle area */
+/* Sidebar content area — no longer scrollable independently */
 .nw-sidebar-scroll {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  overflow-x: visible;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--nw-border-hover) transparent;
-}
-
-.nw-sidebar-scroll::-webkit-scrollbar {
-  width: 5px;
-}
-
-.nw-sidebar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.nw-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: var(--nw-border-hover);
-  border-radius: 10px;
 }
 
 /* Sticky bottom section (actions) */
