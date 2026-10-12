@@ -53,7 +53,9 @@ resource allowClientIps 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview'
   }
 }]
 
-// Azure SQL Database configured for Lifetime Free Tier (Serverless GP_S_Gen5_1, AutoPause, 32GB)
+// Azure SQL Database — Serverless General Purpose tier with free limit
+// Uses the free tier credits ($200/month for Azure SQL) for $0 cost
+// Auto-pauses when free limit is exhausted to prevent unexpected charges
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
   name: databaseName
@@ -62,16 +64,13 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   sku: {
     name: 'GP_S_Gen5_1'
     tier: 'GeneralPurpose'
-    family: 'Gen5'
-    capacity: 1
   }
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
-    maxSizeBytes: 34359738368 // 32 GB Free Grant
-    autoPauseDelay: 60
-    minCapacity: json('0.5')
+    maxSizeBytes: 34603008000 // 32 GB for serverless tier
     useFreeLimit: true
     freeLimitExhaustionBehavior: 'AutoPause'
+    minCapacity: json('0.5')
   }
 }
 

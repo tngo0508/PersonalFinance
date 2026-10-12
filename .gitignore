@@ -245,6 +245,9 @@ DocProject/Help/html
 # Click-Once directory
 publish/
 
+# Local publish test artifacts
+publish-test/
+
 # Publish Web Output
 *.[Pp]ublish.xml
 *.azurePubxml
