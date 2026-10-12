@@ -1,12 +1,15 @@
 /**
  * Net Worth Projection page JavaScript
- * Handles chart rendering, scenario tab switching, and AJAX recalculation.
+ * Handles chart rendering, scenario tab switching, AJAX recalculation, and data persistence.
  */
 (function () {
     'use strict';
 
     // Debounce delay in milliseconds for live recalculation
     const DEBOUNCE_DELAY = 500;
+
+    // API endpoint base path for net worth controller actions
+    var apiBase = '/Networth';
 
     // Chart instances
     let growthChart = null;
@@ -561,6 +564,31 @@
     }
 
     /**
+     * Sync hidden save inputs with current slider values for form model binding.
+     */
+    function syncSaveInputs() {
+        var fields = [
+            { rangeId: 'nwStartingBalanceRange', saveId: 'nwSaveStartingBalance' },
+            { rangeId: 'nwAnnualSavingsRange', saveId: 'nwSaveAnnualSavings' },
+            { rangeId: 'nwAnnualIncomeRange', saveId: 'nwSaveAnnualIncome' },
+            { rangeId: 'nwAnnualSpendingRange', saveId: 'nwSaveAnnualSpending' },
+            { rangeId: 'nwCurrentAgeRange', saveId: 'nwSaveCurrentAge' },
+            { rangeId: 'nwRetirementAgeRange', saveId: 'nwSaveRetirementAge' },
+            { rangeId: 'nwBaseRoiRange', saveId: 'nwSaveBaseRoi' },
+            { rangeId: 'nwConservativeRoiRange', saveId: 'nwSaveConservativeRoi' },
+            { rangeId: 'nwAggressiveRoiRange', saveId: 'nwSaveAggressiveRoi' },
+            { rangeId: 'nwAggressiveSavingsRange', saveId: 'nwSaveAggressiveSavings' }
+        ];
+        fields.forEach(function (field) {
+            var rangeEl = document.getElementById(field.rangeId);
+            var saveEl = document.getElementById(field.saveId);
+            if (rangeEl && saveEl) {
+                saveEl.value = rangeEl.value;
+            }
+        });
+    }
+
+    /**
      * Sync a range slider with its paired text input.
      * @param {string} rangeId - The range input ID.
      * @param {string} inputId - The text input ID.
@@ -578,6 +606,7 @@
         rangeEl.addEventListener('input', function () {
             inputEl.value = formatSliderValue(rangeEl.value, formatType);
             updateSavingsIndicator();
+            syncSaveInputs();
             triggerRecalculation();
         });
 
@@ -604,6 +633,7 @@
                 rangeEl.value = num;
                 inputEl.value = formatSliderValue(num, formatType);
             }
+            syncSaveInputs();
             triggerRecalculation();
         });
 
@@ -721,6 +751,7 @@
         });
 
         updateSavingsIndicator();
+        syncSaveInputs();
         recalculate();
     }
 
@@ -1046,6 +1077,9 @@
         const data = window.nwProjectionData;
         if (!data) return;
 
+        // Parameters are already loaded server-side via the Index action.
+        // The sliders reflect saved values from the database on page render.
+
         // Initialize tooltips for parameter hints
         initTooltips();
 
@@ -1068,11 +1102,21 @@
             randomBtn.addEventListener('click', randomizeParameters);
         }
 
-        // Initialize reset button
-        const resetBtn = document.getElementById('nwResetBtn');
+        // Initialize reset button — reset sliders to defaults and clear saved data
+        const resetBtn = document.querySelector('#nwResetForm button[type="submit"]');
         if (resetBtn) {
-            resetBtn.addEventListener('click', resetToDefaults);
+            resetBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                resetToDefaults();
+                document.getElementById('nwResetForm').submit();
+            });
         }
+
+        // Sync hidden save inputs with initial slider values
+        syncSaveInputs();
+
+        // Trigger initial recalculation to sync charts with current slider values
+        recalculate();
     }
 
     // Run on DOM ready

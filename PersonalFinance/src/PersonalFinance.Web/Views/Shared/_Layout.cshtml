@@ -1,15 +1,19 @@
 <!DOCTYPE html>
+@using Microsoft.AspNetCore.Antiforgery
 @using PersonalFinance.Shared.Constants
+@inject IAntiforgery Antiforgery
 @{
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var currentController = ViewContext.RouteData.Values["controller"] as string;
     var pageTitle = ViewData["Title"] as string;
+    var tokens = Antiforgery.GetAndStoreTokens(Context);
 }
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="theme-color" content="#ffffff"/>
+    <meta name="__RequestVerificationToken" content="@tokens.RequestToken" />
     <title>@(string.IsNullOrEmpty(pageTitle) ? AppVersion.ApplicationName : $"{pageTitle} · {AppVersion.ApplicationName}")</title>
     <link rel="icon" href="~/favicon.ico"/>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>

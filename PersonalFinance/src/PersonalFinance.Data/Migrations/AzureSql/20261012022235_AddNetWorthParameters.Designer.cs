@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PersonalFinance.Data;
 
 #nullable disable
 
-namespace PersonalFinance.Data.Migrations.SqlServer
+namespace PersonalFinance.Data.Migrations.AzureSql
 {
-    [DbContext(typeof(SqlServerAppDbContext))]
-    partial class SqlServerAppDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(AzureSqlAppDbContext))]
+    [Migration("20261012022235_AddNetWorthParameters")]
+    partial class AddNetWorthParameters
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -422,6 +425,60 @@ namespace PersonalFinance.Data.Migrations.SqlServer
                     b.HasIndex("CreatedAtUtc");
 
                     b.ToTable("Items");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.NetWorthParameters", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AggressiveRoi")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AggressiveSavings")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AnnualIncome")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AnnualSavings")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AnnualSpending")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BaseRoi")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ConservativeRoi")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CurrentAge")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RetirementAge")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("StartingBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("NetWorthParameters");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

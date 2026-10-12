@@ -11,9 +11,9 @@ namespace PersonalFinance.Data;
 public enum DatabaseProviderType
 {
     /// <summary>
-    /// Microsoft Azure SQL Database (Serverless Free Tier / General Purpose) or on-prem SQL Server.
+    /// Microsoft Azure SQL Database (Serverless Free Tier / General Purpose).
     /// </summary>
-    SqlServer,
+    AzureSql,
 
     /// <summary>
     /// In-memory database for lightweight fast test execution.
@@ -40,7 +40,7 @@ public static class DatabaseProviderHelper
 
     /// <summary>
     /// Determines the database provider based on explicit configuration/env vars or connection string heuristics.
-    /// Defaults to <see cref="DatabaseProviderType.SqlServer"/>.
+    /// Defaults to <see cref="DatabaseProviderType.AzureSql"/>.
     /// </summary>
     public static DatabaseProviderType DetermineProvider(IConfiguration? configuration, string? connectionString)
     {
@@ -78,7 +78,7 @@ public static class DatabaseProviderHelper
             }
         }
 
-        return DatabaseProviderType.SqlServer;
+        return DatabaseProviderType.AzureSql;
     }
 
     /// <summary>
@@ -100,7 +100,7 @@ public static class DatabaseProviderHelper
     public static DbContextOptionsBuilder ConfigureAppDbContext(
         this DbContextOptionsBuilder options,
         string connectionString,
-        DatabaseProviderType providerType = DatabaseProviderType.SqlServer,
+        DatabaseProviderType providerType = DatabaseProviderType.AzureSql,
         Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null)
     {
         if (providerType == DatabaseProviderType.InMemory)
@@ -126,7 +126,7 @@ public static class DatabaseProviderHelper
     }
 
     /// <summary>
-    /// Registers <see cref="AppDbContext"/> and <see cref="SqlServerAppDbContext"/> with SQL Server database provider.
+    /// Registers <see cref="AppDbContext"/> and <see cref="AzureSqlAppDbContext"/> with Azure SQL database provider.
     /// </summary>
     public static IServiceCollection AddAppDbContext(
         this IServiceCollection services,
@@ -143,7 +143,7 @@ public static class DatabaseProviderHelper
         var providerType = DetermineProvider(configuration, rawConnectionString);
         var resolvedConnectionString = ResolveConnectionString(rawConnectionString);
 
-        services.AddDbContext<AppDbContext, SqlServerAppDbContext>(options =>
+        services.AddDbContext<AppDbContext, AzureSqlAppDbContext>(options =>
         {
             options.ConfigureAppDbContext(resolvedConnectionString, providerType, sqlServerOptionsAction);
         });
@@ -157,12 +157,12 @@ public static class DatabaseProviderHelper
     public static IServiceCollection AddAppDbContext(
         this IServiceCollection services,
         string connectionString,
-        DatabaseProviderType providerType = DatabaseProviderType.SqlServer,
+        DatabaseProviderType providerType = DatabaseProviderType.AzureSql,
         Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null)
     {
         var resolvedConnectionString = ResolveConnectionString(connectionString);
 
-        services.AddDbContext<AppDbContext, SqlServerAppDbContext>(options =>
+        services.AddDbContext<AppDbContext, AzureSqlAppDbContext>(options =>
         {
             options.ConfigureAppDbContext(resolvedConnectionString, providerType, sqlServerOptionsAction);
         });

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace PersonalFinance.Data.Migrations.SqlServer
+namespace PersonalFinance.Data.Migrations.AzureSql
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
