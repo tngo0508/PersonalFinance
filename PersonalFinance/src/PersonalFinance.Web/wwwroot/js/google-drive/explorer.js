@@ -36,6 +36,12 @@
             $('#btnSyncDrive').prop('disabled', true);
         });
 
+        // Fallback sync form spinner (error state)
+        $('#syncFormFallback').on('submit', function () {
+            $('#syncSpinnerFallback').removeClass('d-none');
+            $('#btnSyncDriveFallback').prop('disabled', true);
+        });
+
         // Copy folder ID
         $('.btn-copy-id').on('click', function () {
             const folderId = $(this).data('id');
@@ -83,7 +89,7 @@
                 },
                 // Search lives in the shared toolbar above, so only table, info, length and paging here
                 dom: "<'row'<'col-12'tr>>" +
-                     "<'row align-items-center mt-3 small text-muted'<'col-sm-12 col-md-4'i><'col-sm-12 col-md-3'l><'col-sm-12 col-md-5'p>>"
+                     "<'row dt-layout-row mt-3'<'col-sm-12 col-md-4 d-flex align-items-center gap-2'i><'col-sm-12 col-md-2 d-flex align-items-center'l><'col-sm-12 col-md-6 d-flex justify-content-md-end align-items-center'p>>"
             });
         }
 

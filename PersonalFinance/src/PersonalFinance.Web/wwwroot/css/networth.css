@@ -525,7 +525,7 @@
 }
 
 .nw-metric-card--aggressive::before {
-  background: var(--nw-surface);
+  background: var(--nw-danger);
 }
 
 .nw-metric-card .card-body {
@@ -681,11 +681,11 @@
 }
 
 .nw-scenario-conservative::before {
-  background: var(--nw-surface);
+  background: var(--nw-conservative);
 }
 
 .nw-scenario-aggressive::before {
-  background: var(--nw-success);
+  background: var(--nw-aggressive);
 }
 
 .nw-scenario-card:hover {
@@ -721,8 +721,9 @@
 }
 
 .nw-scenario-icon--conservative {
-  background: var(--nw-surface);
-  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+  background: var(--nw-conservative);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(92, 45, 145, 0.25);
 }
 
 .nw-scenario-icon--aggressive {
@@ -874,10 +875,12 @@
 /* Chart card icons */
 .nw-card--chart .nw-card__icon--green {
   background: rgba(16, 124, 16, 0.08);
+  color: var(--nw-success);
 }
 
 .nw-card--chart .nw-card__icon--purple {
   background: rgba(117, 106, 232, 0.08);
+  color: var(--nw-secondary);
 }
 
 /* Chart container */
@@ -1822,14 +1825,17 @@
 /* Colored icon variants */
 .nw-sidebar-card__icon--green {
   background: var(--nw-surface);
+  color: var(--nw-success);
 }
 
 .nw-sidebar-card__icon--blue {
   background: var(--nw-surface);
+  color: var(--nw-primary);
 }
 
 .nw-sidebar-card__icon--orange {
   background: var(--nw-surface);
+  color: var(--nw-warning);
 }
 
 .nw-sidebar-card__body {
