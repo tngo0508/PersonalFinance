@@ -25,6 +25,7 @@ USER $APP_UID
 # ---------------------------------------------------------
 FROM ${SDK_IMAGE} AS build
 ARG BUILD_CONFIGURATION=Release
+ARG RUNTIME_IDENTIFIER=linux-x64
 WORKDIR /src
 
 # Copy Directory.Packages.props for Central Package Management (CPM) caching
@@ -36,7 +37,10 @@ COPY ["PersonalFinance/src/PersonalFinance.Data/PersonalFinance.Data.csproj", "P
 COPY ["PersonalFinance/src/PersonalFinance.ServiceDefaults/PersonalFinance.ServiceDefaults.csproj", "PersonalFinance/src/PersonalFinance.ServiceDefaults/"]
 COPY ["PersonalFinance/src/PersonalFinance.ApiService/PersonalFinance.ApiService.csproj", "PersonalFinance/src/PersonalFinance.ApiService/"]
 
-RUN dotnet restore "PersonalFinance/src/PersonalFinance.ApiService/PersonalFinance.ApiService.csproj"
+# Restore with RuntimeIdentifier and PublishReadyToRun so the crossgen2 runtime packages are available
+RUN dotnet restore "PersonalFinance/src/PersonalFinance.ApiService/PersonalFinance.ApiService.csproj" \
+    -r $RUNTIME_IDENTIFIER \
+    /p:PublishReadyToRun=true
 
 # Copy source code
 COPY ["PersonalFinance/src/PersonalFinance.Shared/", "PersonalFinance/src/PersonalFinance.Shared/"]
@@ -51,12 +55,14 @@ WORKDIR "/src/PersonalFinance/src/PersonalFinance.ApiService"
 # ---------------------------------------------------------
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
+ARG RUNTIME_IDENTIFIER=linux-x64
 # publish compiles the project itself, so there is no separate `dotnet build` step (saves a full compile per image)
 # ReadyToRun (R2R) pre-compiles IL to native code, reducing cold-start JIT by ~30-50%
 # NOTE: Trimming is DISABLED because EF Core uses reflection-heavy patterns (Include, ThenInclude,
 # migrations) that are incompatible with aggressive trimming at TrimMode=link.
 RUN dotnet publish "PersonalFinance.ApiService.csproj" \
     -c $BUILD_CONFIGURATION \
+    -r $RUNTIME_IDENTIFIER \
     -o /app/publish \
     --no-restore \
     /p:UseAppHost=false \
