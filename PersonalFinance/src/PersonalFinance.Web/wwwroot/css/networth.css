@@ -600,6 +600,14 @@
 }
 
 .nw-metric-fi-value {
+  color: var(--nw-text-main);
+}
+
+.nw-metric-fi-value .nw-currency-symbol {
+  color: var(--nw-primary);
+}
+
+.nw-metric-fi-value .nw-currency-amount {
   background: var(--nw-gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

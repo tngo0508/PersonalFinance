@@ -406,7 +406,12 @@
         // FI Target card
         const fiValue = document.querySelector('.nw-metric-fi-value');
         const fiSub = document.querySelector('.nw-metric-fi-sub');
-        if (fiValue) fiValue.textContent = formatCurrency(data.fiTarget);
+        if (fiValue) {
+            const symbolEl = fiValue.querySelector('.nw-currency-symbol');
+            const amountEl = fiValue.querySelector('.nw-currency-amount');
+            if (symbolEl) symbolEl.textContent = '$';
+            if (amountEl) amountEl.textContent = Math.round(data.fiTarget).toLocaleString('en-US');
+        }
         if (fiSub) fiSub.textContent = `Based on $${formatCompact(data.annualSpending)}/yr spending`;
 
         // Current Net Worth card
