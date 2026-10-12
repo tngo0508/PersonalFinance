@@ -50,14 +50,14 @@
             backgroundColor: colors.tooltipBg,
             borderColor: colors.tooltipBorder,
             borderWidth: 1,
-            titleColor: '#e2e8f0',
-            bodyColor: '#cbd5e1',
-            titleFont: { size: 13, weight: '700', family: '"Inter", system-ui, sans-serif' },
-            bodyFont: { size: 12, family: '"Inter", system-ui, sans-serif' },
-            padding: 14,
-            cornerRadius: 10,
+            titleColor: '#201913',
+            bodyColor: '#605e5c',
+            titleFont: { size: 13, weight: '600', family: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif' },
+            bodyFont: { size: 12, family: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif' },
+            padding: 12,
+            cornerRadius: 4,
             displayColors: true,
-            boxPadding: 6,
+            boxPadding: 4,
             usePointStyle: true
         };
     }
@@ -75,7 +75,7 @@
      * @returns {Object} Tick options
      */
     function tickConfig () {
-        return { font: { size: 11, weight: '500' }, color: colors.tickColor };
+        return { font: { size: 11, weight: '400', family: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif' }, color: colors.tickColor };
     }
 
     /**
@@ -182,40 +182,7 @@
                     duration: 1200,
                     easing: 'easeOutQuart'
                 }
-            },
-            plugins: [{
-                // Glow effect plugin for lines
-                id: 'lineGlow',
-                afterDraw: function (chart) {
-                    const ctx = chart.ctx;
-                    chart.data.datasets.forEach(function (dataset, i) {
-                        if (i === 3) { return; } // skip FI target
-                        const meta = chart.getDatasetMeta(i);
-                        if (meta.hidden || !meta.dataset) { return; }
-
-                        ctx.save();
-                        ctx.shadowColor = dataset.borderColor;
-                        ctx.shadowBlur = 12;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 0;
-                        ctx.strokeStyle = dataset.borderColor;
-                        ctx.lineWidth = dataset.borderWidth;
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-
-                        // Draw the glow line by iterating over points
-                        if (meta.data.length > 1) {
-                            ctx.beginPath();
-                            ctx.moveTo(meta.data[0].x, meta.data[0].y);
-                            for (let j = 1; j < meta.data.length; j++) {
-                                ctx.lineTo(meta.data[j].x, meta.data[j].y);
-                            }
-                            ctx.stroke();
-                        }
-                        ctx.restore();
-                    });
-                }
-            }]
+            }
         });
     }
 
@@ -286,7 +253,7 @@
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { font: { size: 12, weight: '600' }, color: colors.tickColor },
+                        ticks: { font: { size: 12, weight: '600', family: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif' }, color: colors.tickColor },
                         border: { display: false }
                     },
                     y: {

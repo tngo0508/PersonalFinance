@@ -185,8 +185,8 @@ html {
 
 /* Enhanced form controls for Google Drive page */
 .gd-page .form-control {
-  border-radius: 12px;
-  border: 1.5px solid var(--gdrive-border);
+  border-radius: var(--app-radius-m);
+  border: 1px solid var(--gdrive-border);
   padding: 10px 14px;
   font-size: 0.9rem;
   transition: all 0.25s ease;
@@ -206,34 +206,34 @@ html {
   border-radius: 10px;
   font-weight: 500;
   transition: all 0.2s ease;
-  border: 1.5px solid var(--gdrive-border);
+  border: 1px solid var(--gdrive-border);
 }
 .gd-page .btn-light:hover {
   background: var(--gdrive-surface-soft);
   border-color: var(--gdrive-border-hover);
-  transform: translateY(-1px);
+  /* hover effect removed */;
   box-shadow: var(--gdrive-shadow-sm);
 }
 .gd-page .btn-outline-secondary {
   border-radius: 10px;
   font-weight: 500;
-  border: 1.5px solid var(--gdrive-border);
+  border: 1px solid var(--gdrive-border);
   transition: all 0.2s ease;
 }
 .gd-page .btn-outline-secondary:hover {
   background: var(--gdrive-surface-soft);
   border-color: var(--gdrive-border-hover);
-  transform: translateY(-1px);
+  /* hover effect removed */;
 }
 .btn-success {
   border-radius: 10px;
   font-weight: 600;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s ease;
   box-shadow: 0 2px 6px rgba(5, 150, 105, 0.15);
 }
 .gd-page .btn-success:hover {
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
-  transform: translateY(-1px);
+  /* hover effect removed */;
 }
 .gd-page .btn-warning {
   border-radius: 10px;
@@ -241,7 +241,7 @@ html {
   transition: all 0.2s ease;
 }
 .gd-page .btn-warning:hover {
-  transform: translateY(-1px);
+  /* hover effect removed */;
 }
 .gd-page .btn-danger {
   border-radius: 10px;
@@ -960,11 +960,7 @@ hr {
   --gdrive-shadow-glow: 0 0 0 4px var(--gdrive-primary-glow);
   --gdrive-radius: var(--app-radius-m);
   --gdrive-radius-lg: var(--app-radius-l);
-  --gdrive-radius-xl: 16px;
-  --gdrive-gradient-primary: linear-gradient(135deg, #0078d4 0%, #5c2d91 50%, #8764b8 100%);
-  --gdrive-gradient-soft: linear-gradient(135deg, #deecf9 0%, #f3f2f1 100%);
-  --gdrive-gradient-card: linear-gradient(180deg, #ffffff 0%, #faf9f8 100%);
-  --gdrive-gradient-header: linear-gradient(135deg, #0078d4 0%, #5c2d91 60%, #8764b8 100%);
+  --gdrive-radius-xl: var(--app-radius-l);
 }
 
 /* --- Page Header --- */
@@ -972,22 +968,9 @@ hr {
   background: transparent;
 }
 .gd-page-header {
-  position: relative;
   margin-bottom: 2rem;
-  padding: 0;
-}
-.gd-page-header::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--gdrive-gradient-header);
-  border-radius: var(--gdrive-radius-xl);
-  z-index: 0;
-  opacity: 0.06;
 }
 .gd-page-header__content {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -997,21 +980,16 @@ hr {
   background: var(--gdrive-surface);
   border: 1px solid var(--gdrive-border);
   border-radius: var(--gdrive-radius-xl);
-  box-shadow: var(--gdrive-shadow-lg);
+  box-shadow: var(--gdrive-shadow-md);
 }
 .gd-page-header__title {
   display: flex;
   align-items: center;
   gap: 0.85rem;
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: var(--app-font-weight-semibold);
   margin: 0;
   color: var(--gdrive-text-main);
-  letter-spacing: -0.03em;
-  background: var(--gdrive-gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 .gd-page-header__icon {
   display: inline-flex;
@@ -1019,10 +997,9 @@ hr {
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 14px;
-  background: var(--gdrive-gradient-primary);
+  border-radius: var(--app-radius-m);
+  background: var(--gdrive-primary);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
 }
 .gd-page-header__subtitle {
   color: var(--gdrive-text-muted);
@@ -1034,24 +1011,21 @@ hr {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 20px;
-  border-radius: 12px;
-  border: 1.5px solid var(--gdrive-border);
+  padding: 6px 16px;
+  border-radius: var(--app-radius-s);
+  border: 1px solid var(--gdrive-border);
   background: var(--gdrive-surface);
   color: var(--gdrive-text-muted);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.1s ease, border-color 0.1s ease;
   white-space: nowrap;
-  box-shadow: var(--gdrive-shadow-sm);
 }
 .gd-page-header__help-btn:hover {
-  background: var(--gdrive-primary);
-  color: #fff;
-  border-color: var(--gdrive-primary);
-  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.25);
-  transform: translateY(-2px);
+  background: var(--gdrive-surface-soft);
+  border-color: var(--gdrive-border-hover);
+  color: var(--gdrive-text-main);
 }
 
 /* --- Sidebar --- */
@@ -1062,29 +1036,29 @@ hr {
 .gd-sidebar-card {
   background: var(--gdrive-surface);
   border: 1px solid var(--gdrive-border);
-  border-radius: var(--gdrive-radius-lg);
+  border-radius: var(--app-radius-m);
   padding: 8px;
-  box-shadow: var(--gdrive-shadow-md);
+  box-shadow: var(--gdrive-shadow-sm);
 }
 .gd-sidebar-title {
-  font-size: 0.6875rem;
-  font-weight: 800;
+  font-size: 0.75rem;
+  font-weight: var(--app-font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--gdrive-text-faint);
+  letter-spacing: 0.02em;
+  color: var(--gdrive-text-muted);
   padding: 8px 12px 12px;
 }
 .gd-drive-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: var(--app-radius-s);
   color: var(--gdrive-text-main);
   text-decoration: none;
   font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-weight: var(--app-font-weight-regular);
+  transition: background-color 0.1s ease;
   position: relative;
   margin-bottom: 2px;
 }
@@ -1092,7 +1066,7 @@ hr {
   display: inline-flex;
   flex-shrink: 0;
   color: var(--gdrive-text-faint);
-  transition: all 0.25s ease;
+  transition: color 0.1s ease;
 }
 .gd-drive-link__name {
   flex: 1 1 0;
@@ -1100,16 +1074,14 @@ hr {
 .gd-drive-link:hover {
   background: var(--gdrive-surface-soft);
   color: var(--gdrive-text-main);
-  transform: translateX(2px);
 }
 .gd-drive-link:hover .gd-drive-link__icon {
   color: var(--gdrive-text-muted);
 }
 .gd-drive-link.active {
-  background: var(--gdrive-gradient-soft);
+  background: var(--gdrive-primary-light);
   color: var(--gdrive-primary);
-  font-weight: 700;
-  box-shadow: inset 3px 0 0 var(--gdrive-primary), 0 2px 8px rgba(0, 120, 212, 0.1);
+  font-weight: var(--app-font-weight-semibold);
 }
 .gd-drive-link.active .gd-drive-link__icon {
   color: var(--gdrive-primary);
@@ -1120,12 +1092,12 @@ hr {
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-s);
   background: var(--gdrive-surface-soft);
 }
 .gd-drive-link.active .gd-drive-count {
   color: var(--gdrive-primary);
-  background: rgba(0, 120, 212, 0.12);
+  background: var(--gdrive-primary-light);
 }
 .gd-status-dot {
   width: 8px;
@@ -1148,30 +1120,28 @@ hr {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 12px 14px;
+  padding: 8px 12px;
   margin-top: 8px;
-  border-radius: 12px;
-  border: 2px dashed var(--gdrive-border);
+  border-radius: var(--app-radius-s);
+  border: 1px dashed var(--gdrive-border);
   background: transparent;
   color: var(--gdrive-text-muted);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   text-decoration: none;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.1s ease, border-color 0.1s ease;
 }
 .gd-connect-drive-btn:hover {
   background: var(--gdrive-surface-soft);
   border-color: var(--gdrive-primary);
   color: var(--gdrive-primary);
-  transform: translateY(-1px);
 }
 .gd-connect-drive-btn.active {
-  background: var(--gdrive-gradient-soft);
+  background: var(--gdrive-primary-light);
   border-color: var(--gdrive-primary);
   border-style: solid;
   color: var(--gdrive-primary);
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.12);
+  font-weight: var(--app-font-weight-semibold);
 }
 
 /* --- Mobile Picker --- */
@@ -1180,32 +1150,30 @@ hr {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 12px 16px;
-  border-radius: var(--gdrive-radius);
-  border: 1.5px solid var(--gdrive-border);
+  padding: 8px 12px;
+  border-radius: var(--app-radius-s);
+  border: 1px solid var(--gdrive-border);
   background: var(--gdrive-surface);
   color: var(--gdrive-text-main);
   font-size: 0.875rem;
-  font-weight: 600;
-  transition: all 0.25s ease;
-  box-shadow: var(--gdrive-shadow-md);
+  font-weight: var(--app-font-weight-semibold);
+  transition: background-color 0.1s ease, border-color 0.1s ease;
 }
 .gd-mobile-picker__btn:hover {
   border-color: var(--gdrive-primary);
-  box-shadow: var(--gdrive-shadow-lg);
+  background: var(--gdrive-surface-soft);
 }
 
 /* --- Alert --- */
 .gd-alert {
-  padding: 18px 20px;
-  border-radius: var(--gdrive-radius-lg);
+  padding: 12px 16px;
+  border-radius: var(--app-radius-m);
   margin-bottom: 1.25rem;
 }
 .gd-alert--danger {
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
-  border: 1.5px solid #fecaca;
-  color: #7f1d1d;
-  box-shadow: 0 2px 8px rgba(180, 17, 17, 0.08);
+  background: #fde7e9;
+  border: 1px solid #d13438;
+  color: #a02020;
 }
 .gd-alert__icon {
   color: #b91c1c;
@@ -1217,22 +1185,11 @@ hr {
 /* --- Connect Card --- */
 .gd-connect-card {
   max-width: 720px;
-  background: var(--gdrive-gradient-card);
+  background: var(--gdrive-surface);
   border: 1px solid var(--gdrive-border);
-  border-radius: var(--gdrive-radius-xl);
-  padding: 2.5rem 3rem;
-  box-shadow: var(--gdrive-shadow-xl);
-  position: relative;
-  overflow: hidden;
-}
-.gd-connect-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--gdrive-gradient-primary);
+  border-radius: var(--app-radius-m);
+  padding: 2rem 2.5rem;
+  box-shadow: var(--gdrive-shadow-md);
 }
 .gd-connect-card__header {
   display: flex;
@@ -1244,20 +1201,18 @@ hr {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: var(--gdrive-gradient-primary);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--app-radius-m);
+  background: var(--gdrive-primary);
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 6px 16px rgba(0, 120, 212, 0.3);
 }
 .gd-connect-card__title {
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: var(--app-font-weight-semibold);
   margin: 0 0 0.4rem;
   color: var(--gdrive-text-main);
-  letter-spacing: -0.02em;
 }
 .gd-connect-card__subtitle {
   color: var(--gdrive-text-muted);
@@ -1266,9 +1221,9 @@ hr {
   line-height: 1.6;
 }
 .gd-advanced-panel {
-  padding: 18px 20px;
+  padding: 12px 16px;
   background: var(--gdrive-surface-soft);
-  border-radius: var(--gdrive-radius);
+  border-radius: var(--app-radius-s);
   border: 1px solid var(--gdrive-border);
   margin-bottom: 1rem;
 }
@@ -1286,15 +1241,14 @@ hr {
 /* --- Omnibox --- */
 .gdrive-omnibox {
   background: #ffffff;
-  border: 2px solid var(--gdrive-border);
-  border-radius: var(--gdrive-radius);
-  box-shadow: var(--gdrive-shadow-sm);
-  transition: all 0.25s ease;
+  border: 1px solid var(--gdrive-border);
+  border-radius: var(--app-radius-m);
+  transition: border-color 0.1s ease;
   overflow: hidden;
 }
 .gdrive-omnibox:focus-within {
   border-color: var(--gdrive-primary);
-  box-shadow: var(--gdrive-shadow-glow), 0 4px 12px rgba(0, 120, 212, 0.1);
+  box-shadow: 0 0 0 2px var(--gdrive-primary-light);
 }
 
 /* --- Steps --- */
@@ -1318,36 +1272,23 @@ hr {
   top: 2px;
   width: 2rem;
   height: 2rem;
-  border-radius: 12px;
-  background: var(--gdrive-gradient-primary);
+  border-radius: var(--app-radius-s);
+  background: var(--gdrive-primary);
   color: #fff;
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: var(--app-font-weight-semibold);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 8px rgba(0, 120, 212, 0.25);
 }
 
 /* --- Drive Header --- */
 .gd-drive-header {
-  background: var(--gdrive-gradient-card);
+  background: var(--gdrive-surface);
   border: 1px solid var(--gdrive-border);
-  border-radius: var(--gdrive-radius-xl);
-  padding: 2rem 2.25rem;
-  box-shadow: var(--gdrive-shadow-lg);
-  position: relative;
-  overflow: hidden;
-}
-.gd-drive-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--gdrive-gradient-primary);
-  opacity: 0.6;
+  border-radius: var(--app-radius-m);
+  padding: 1.5rem 2rem;
+  box-shadow: var(--gdrive-shadow-sm);
 }
 .gd-drive-header__top {
   display: flex;
@@ -1358,10 +1299,9 @@ hr {
 }
 .gd-drive-header__title {
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: var(--app-font-weight-semibold);
   margin: 0 0 0.6rem;
   color: var(--gdrive-text-main);
-  letter-spacing: -0.02em;
 }
 .gd-drive-header__meta {
   display: flex;
@@ -1375,12 +1315,12 @@ hr {
   gap: 5px;
   font-size: 0.8125rem;
   color: var(--gdrive-text-muted);
-  padding: 5px 12px;
-  border-radius: 10px;
+  padding: 4px 10px;
+  border-radius: var(--app-radius-s);
   background: var(--gdrive-surface-soft);
-  font-weight: 500;
+  font-weight: var(--app-font-weight-regular);
   border: 1px solid transparent;
-  transition: all 0.2s ease;
+  transition: background-color 0.1s ease;
 }
 .gd-meta-badge:hover {
   border-color: var(--gdrive-border);
@@ -1406,17 +1346,15 @@ hr {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
-  border-radius: var(--gdrive-radius);
-  background: var(--gdrive-gradient-soft);
+  padding: 12px 16px;
+  border-radius: var(--app-radius-m);
+  background: var(--gdrive-primary-light);
   color: var(--gdrive-text-main);
-  border: 1.5px solid rgba(0, 120, 212, 0.15);
-  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.06);
+  border: 1px solid var(--gdrive-primary);
 }
 .gd-notice--warning {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border-color: rgba(217, 119, 6, 0.3);
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.08);
+  background: #fff4ce;
+  border-color: #d89b26;
 }
 
 /* --- Section Headers --- */
@@ -1427,14 +1365,13 @@ hr {
   align-items: baseline;
   gap: 0.25rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid var(--gdrive-surface-soft);
+  border-bottom: 1px solid var(--gdrive-border);
   margin-bottom: 1rem;
 }
 .gd-section-header__title {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--gdrive-text-main);
-  letter-spacing: -0.02em;
 }
 .gd-section-header__icon {
   display: inline-flex;
@@ -1447,12 +1384,11 @@ hr {
   min-width: 26px;
   height: 26px;
   padding: 0 8px;
-  border-radius: 10px;
-  background: var(--gdrive-gradient-primary);
+  border-radius: var(--app-radius-s);
+  background: var(--gdrive-primary);
   color: #fff;
   font-size: 0.75rem;
-  font-weight: 800;
-  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.25);
+  font-weight: var(--app-font-weight-semibold);
 }
 .gd-section-header__subtitle {
   font-size: 0.875rem;
@@ -1462,55 +1398,34 @@ hr {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border: 1.5px solid var(--gdrive-border);
+  padding: 5px 14px;
+  border: 1px solid var(--gdrive-border);
   background: var(--gdrive-surface);
   color: var(--gdrive-primary);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  border-radius: 12px;
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+  border-radius: var(--app-radius-s);
 }
 .gd-show-all-btn:hover {
-  background: var(--gdrive-primary);
-  color: #fff;
-  border-color: var(--gdrive-primary);
-  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2);
-  transform: translateY(-1px);
+  background: var(--gdrive-surface-soft);
+  border-color: var(--gdrive-border-hover);
 }
 
 /* --- Sheet Cards --- */
 .gd-sheet-card {
   display: flex;
   flex-direction: column;
-  background: var(--gdrive-gradient-card);
+  background: var(--gdrive-surface);
   border: 1px solid var(--gdrive-border);
-  border-radius: var(--gdrive-radius-lg);
-  padding: 20px;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
+  border-radius: var(--app-radius-m);
+  padding: 16px;
+  transition: box-shadow 0.15s ease;
   box-shadow: var(--gdrive-shadow-sm);
 }
-.gd-sheet-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--gdrive-sheet-color), #34d399);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
 .gd-sheet-card:hover {
-  border-color: var(--gdrive-primary);
-  box-shadow: var(--gdrive-shadow-xl);
-  transform: translateY(-4px);
-}
-.gd-sheet-card:hover::before {
-  opacity: 1;
+  box-shadow: var(--gdrive-shadow-md);
 }
 .gd-sheet-card__header {
   display: flex;
@@ -1519,7 +1434,7 @@ hr {
   margin-bottom: 1rem;
 }
 .gd-sheet-card__name {
-  font-weight: 700;
+  font-weight: var(--app-font-weight-semibold);
   font-size: 0.95rem;
   line-height: 1.4;
   color: var(--gdrive-text-main);
@@ -1535,16 +1450,16 @@ hr {
   gap: 0.5rem;
   margin-top: auto;
   padding-top: 0.75rem;
-  border-top: 1.5px solid var(--gdrive-surface-soft);
+  border-top: 1px solid var(--gdrive-border);
 }
 
 /* --- Files Section --- */
 .gd-files-section {
-  background: var(--gdrive-gradient-card);
+  background: var(--gdrive-surface);
   border: 1px solid var(--gdrive-border);
-  border-radius: var(--gdrive-radius-xl);
-  padding: 2rem 2.25rem;
-  box-shadow: var(--gdrive-shadow-lg);
+  border-radius: var(--app-radius-m);
+  padding: 1.5rem 2rem;
+  box-shadow: var(--gdrive-shadow-sm);
 }
 .gd-files-section__header {
   display: flex;
@@ -1556,9 +1471,8 @@ hr {
 }
 .gd-files-section__title {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--gdrive-text-main);
-  letter-spacing: -0.02em;
 }
 .gd-files-section__icon {
   display: inline-flex;
@@ -1572,12 +1486,11 @@ hr {
   min-width: 26px;
   height: 26px;
   padding: 0 8px;
-  border-radius: 10px;
-  background: var(--gdrive-gradient-primary);
+  border-radius: var(--app-radius-s);
+  background: var(--gdrive-primary);
   color: #fff;
   font-size: 0.75rem;
-  font-weight: 800;
-  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.25);
+  font-weight: var(--app-font-weight-semibold);
 }
 .gd-files-section__toolbar {
   display: flex;
@@ -1588,9 +1501,9 @@ hr {
 }
 .gd-view-toggle {
   flex-shrink: 0;
-  border-radius: 12px;
+  border-radius: var(--app-radius-s);
   overflow: hidden;
-  border: 1.5px solid var(--gdrive-border);
+  border: 1px solid var(--gdrive-border);
 }
 .gd-view-toggle .btn {
   border-radius: 0;
@@ -1598,13 +1511,13 @@ hr {
   border-right: 1px solid var(--gdrive-border);
   background: var(--gdrive-surface);
   padding: 6px 10px;
-  transition: all 0.2s ease;
+  transition: background-color 0.1s ease;
 }
 .gd-view-toggle .btn:last-child {
   border-right: none;
 }
 .gd-view-toggle .btn.active {
-  background: var(--gdrive-gradient-primary);
+  background: var(--gdrive-primary);
   color: #fff;
 }
 .gd-view-toggle .btn:hover:not(.active) {
@@ -1616,15 +1529,15 @@ hr {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: 12px;
+  padding: 5px 14px;
+  border-radius: var(--app-radius-s);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: var(--app-font-weight-regular);
   color: var(--gdrive-text-muted);
   background: var(--gdrive-surface-soft);
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.1s ease, color 0.1s ease;
   user-select: none;
   white-space: nowrap;
 }
@@ -1635,24 +1548,20 @@ hr {
   background: var(--gdrive-surface);
   color: var(--gdrive-text-main);
   border-color: var(--gdrive-border);
-  box-shadow: var(--gdrive-shadow-sm);
-  transform: translateY(-1px);
 }
 .gdrive-filter-chip.active {
-  background: var(--gdrive-gradient-primary);
+  background: var(--gdrive-primary);
   color: #fff;
   border-color: transparent;
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
-  transform: translateY(-1px);
+  font-weight: var(--app-font-weight-semibold);
 }
 .gdrive-filter-chip .chip-count {
   font-size: 0.6875rem;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-s);
   background: rgba(0, 0, 0, 0.06);
   line-height: 1.6;
-  font-weight: 700;
+  font-weight: var(--app-font-weight-semibold);
 }
 .gdrive-filter-chip.active .chip-count {
   background: rgba(255, 255, 255, 0.25);
@@ -1661,44 +1570,39 @@ hr {
 
 /* --- File Grid Cards --- */
 .gdrive-grid-card {
-  background: var(--gdrive-gradient-card);
+  background: var(--gdrive-surface);
   border: 1px solid var(--gdrive-border);
-  border-radius: var(--gdrive-radius-lg);
-  padding: 20px;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: var(--app-radius-m);
+  padding: 16px;
+  transition: box-shadow 0.15s ease;
   display: flex;
   flex-direction: column;
   height: 100%;
-  position: relative;
-  overflow: hidden;
   box-shadow: var(--gdrive-shadow-sm);
 }
 .gdrive-grid-card:hover {
-  border-color: var(--gdrive-primary);
-  transform: translateY(-4px);
-  box-shadow: var(--gdrive-shadow-xl);
+  box-shadow: var(--gdrive-shadow-md);
 }
 .gdrive-grid-preview {
   height: 120px;
-  border-radius: var(--gdrive-radius);
-  background: var(--gdrive-gradient-soft);
+  border-radius: var(--app-radius-s);
+  background: var(--gdrive-surface-soft);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
-  border: 2px dashed var(--gdrive-border);
-  transition: all 0.25s ease;
+  border: 1px dashed var(--gdrive-border);
+  transition: border-color 0.1s ease;
 }
 .gdrive-grid-card:hover .gdrive-grid-preview {
   border-color: var(--gdrive-primary);
-  background: var(--gdrive-gradient-soft);
   border-style: solid;
 }
 .gdrive-grid-preview img {
   max-height: 108px;
   max-width: 100%;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--app-radius-s);
 }
 
 /* --- File Table --- */
@@ -1707,55 +1611,33 @@ hr {
   border-spacing: 0;
 }
 .gdrive-table th {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--gdrive-text-faint);
-  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--gdrive-text-muted);
+  font-weight: var(--app-font-weight-semibold);
   border-bottom: 2px solid var(--gdrive-border) !important;
-  padding: 14px 16px !important;
+  padding: 10px 16px !important;
   background: var(--gdrive-surface-soft);
   position: sticky;
   top: 0;
   z-index: 1;
 }
-.gdrive-table thead th:first-child {
-  border-radius: 12px 0 0 0;
-}
-.gdrive-table thead th:last-child {
-  border-radius: 0 12px 0 0;
-}
 .gdrive-table td {
-  padding: 16px 16px !important;
+  padding: 10px 16px !important;
   vertical-align: middle;
-  border-bottom: 1px solid var(--gdrive-surface-soft);
-  transition: background-color 0.15s ease;
-}
-.gdrive-table tbody tr {
-  transition: all 0.15s ease;
+  border-bottom: 1px solid var(--gdrive-border);
 }
 .gdrive-table tbody tr:hover {
   background-color: var(--gdrive-primary-light) !important;
-}
-.gdrive-table tbody tr:hover td {
-  color: var(--gdrive-text-main);
-}
-.gdrive-table tbody tr:last-child td {
-  border-bottom: none;
-}
-.gdrive-table tbody tr:last-child td:first-child {
-  border-radius: 0 0 0 12px;
-}
-.gdrive-table tbody tr:last-child td:last-child {
-  border-radius: 0 0 12px 0;
 }
 
 /* --- Badges --- */
 .gdrive-badge-soft {
   font-size: 0.75rem;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 8px;
+  font-weight: var(--app-font-weight-semibold);
+  padding: 2px 8px;
+  border-radius: var(--app-radius-s);
 }
 .gdrive-badge-folder { background-color: #fef3c7; color: #92400e; }
 .gdrive-badge-doc { background-color: #dbeafe; color: #1d4ed8; }
@@ -1774,30 +1656,28 @@ hr {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 5rem 3rem;
-  background: var(--gdrive-gradient-card);
+  padding: 3rem 2rem;
+  background: var(--gdrive-surface);
   border: 1px solid var(--gdrive-border);
-  border-radius: var(--gdrive-radius-xl);
-  box-shadow: var(--gdrive-shadow-lg);
+  border-radius: var(--app-radius-m);
+  box-shadow: var(--gdrive-shadow-sm);
 }
 .gd-empty-state__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #b45309;
+  background: var(--gdrive-surface-soft);
+  color: var(--gdrive-text-muted);
   margin-bottom: 1.5rem;
-  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.2);
 }
 .gd-empty-state__title {
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: var(--app-font-weight-semibold);
   margin: 0 0 0.75rem;
   color: var(--gdrive-text-main);
-  letter-spacing: -0.02em;
 }
 .gd-empty-state__text {
   color: var(--gdrive-text-muted);
@@ -1822,24 +1702,22 @@ hr {
   position: absolute;
   left: 14px;
   top: 50%;
-  transform: translateY(-50%);
+  /* hover effect removed */;
   color: var(--gdrive-text-faint);
   pointer-events: none;
-  transition: color 0.25s ease;
+  transition: color 0.1s ease;
 }
 .gd-search .form-control {
   padding-left: 40px;
-  border-radius: 12px;
-  border: 2px solid var(--gdrive-border);
+  border-radius: var(--app-radius-m);
+  border: 1px solid var(--gdrive-border);
   background: var(--gdrive-surface);
-  transition: all 0.25s ease;
+  transition: border-color 0.1s ease;
   font-size: 0.875rem;
-  height: 38px;
 }
 .gd-search .form-control:focus {
   border-color: var(--gdrive-primary);
-  box-shadow: var(--gdrive-shadow-glow);
-  height: 40px;
+  box-shadow: 0 0 0 2px var(--gdrive-primary-light);
 }
 .gd-search .form-control:focus + svg,
 .gd-search:focus-within svg {
@@ -1876,7 +1754,7 @@ hr {
   align-items: center;
   justify-content: center;
   min-width: 36px;
-  transition: all 0.2s ease;
+  transition: background-color 0.1s ease;
 }
 .gd-icon-btn:hover {
   background: var(--gdrive-surface-soft);
@@ -1887,27 +1765,26 @@ hr {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  color: #166534;
-  font-size: 0.7rem;
-  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--app-radius-s);
+  background: #dff6dd;
+  color: #006300;
+  font-size: 0.75rem;
+  font-weight: var(--app-font-weight-semibold);
   flex-shrink: 0;
-  border: 1px solid rgba(5, 150, 105, 0.25);
-  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.1);
+  border: 1px solid #107c10;
 }
 
 /* --- Sync Status Badges --- */
 .gd-meta-badge--fresh {
-  color: #166534;
-  background: #dcfce7;
-  border-color: rgba(5, 150, 105, 0.15);
+  color: #006300;
+  background: #dff6dd;
+  border-color: #107c10;
 }
 .gd-meta-badge--stale {
-  color: #92400e;
-  background: #fef3c7;
-  border-color: rgba(245, 158, 11, 0.15);
+  color: #8a5a00;
+  background: #fff4ce;
+  border-color: #d89b26;
 }
 
 /* --- URL Hint --- */
@@ -1927,7 +1804,7 @@ hr {
 /* --- Help Modal Sections --- */
 .gd-help-section {
   padding: 16px 0;
-  border-bottom: 1.5px solid var(--gdrive-surface-soft);
+  border-bottom: 1px solid var(--gdrive-border);
 }
 .gd-help-section:last-child {
   border-bottom: none;
@@ -1938,12 +1815,12 @@ hr {
   align-items: center;
   gap: 10px;
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--gdrive-text-main);
   margin: 0 0 0;
   cursor: pointer;
   user-select: none;
-  transition: all 0.2s ease;
+  transition: color 0.1s ease;
   padding: 4px 0;
 }
 .gd-help-section__title:hover {
@@ -1953,7 +1830,7 @@ hr {
   flex-shrink: 0;
   color: var(--gdrive-text-muted);
   opacity: 0.6;
-  transition: all 0.2s ease;
+  transition: color 0.1s ease, opacity 0.1s ease;
 }
 .gd-help-section__title:hover svg {
   color: var(--gdrive-primary);
@@ -1998,7 +1875,7 @@ hr {
   .gd-page-header__icon {
     width: 36px;
     height: 36px;
-    border-radius: 10px;
+    border-radius: var(--app-radius-s);
   }
   .gd-page-header__help-btn span {
     display: none;
@@ -2128,7 +2005,7 @@ hr {
   padding: 6px;
   background: var(--bgt-surface);
   border: 1px solid var(--bgt-border);
-  border-radius: 12px;
+  border-radius: var(--app-radius-m);
 }
 .bgt-period-scroll {
   display: flex;
@@ -2203,7 +2080,7 @@ hr {
   padding: 18px 20px 18px 24px;
   background: var(--bgt-surface);
   border: 1px solid var(--bgt-border);
-  border-radius: 14px;
+  border-radius: var(--app-radius-m);
   overflow: hidden;
 }
 .bgt-hero::before {
@@ -2295,7 +2172,7 @@ hr {
 /* Hatched so "overspent" doesn't rely on color alone next to the orange segment */
 .bgt-alloc-seg--over,
 .bgt-swatch--over {
-  background: repeating-linear-gradient(135deg, var(--bgt-negative) 0 6px, #f19c9b 6px 9px);
+  background: var(--bgt-negative);
 }
 .bgt-alloc-seg--over { color: var(--bgt-ink); }
 
@@ -2314,7 +2191,7 @@ hr {
   padding: 10px 14px;
   background: var(--bgt-surface);
   border: 1px solid var(--bgt-border);
-  border-radius: 12px;
+  border-radius: var(--app-radius-m);
   min-width: 0;
 }
 .bgt-facts-label {
@@ -2338,7 +2215,7 @@ hr {
     gap: 0;
     background: var(--bgt-surface);
     border: 1px solid var(--bgt-border);
-    border-radius: 12px;
+    border-radius: var(--app-radius-m);
   }
   .bgt-facts li {
     flex-basis: 100%;
@@ -2447,7 +2324,7 @@ button.bgt-rank-row:hover { background: var(--bgt-hover); }
 .bgt-card {
   background: var(--bgt-surface);
   border: 1px solid var(--bgt-border);
-  border-radius: 12px;
+  border-radius: var(--app-radius-m);
   padding: 16px;
 }
 .bgt-tile-label {
