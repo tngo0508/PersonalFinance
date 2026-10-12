@@ -148,7 +148,8 @@ try
     // 4. Add MVC Controllers and Views
     // Validate antiforgery tokens on every unsafe (POST/PUT/PATCH/DELETE) MVC action by default
     builder.Services.AddControllersWithViews(options =>
-        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
+        .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase);
     builder.Services.AddProblemDetails();
 
     // 5. Register Health Checks
@@ -162,7 +163,16 @@ try
         {
             client.BaseAddress = new Uri(apiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(35);
-        });
+        })
+        .AddStandardResilienceHandler();
+
+    builder.Services.AddRefitClient<INetWorthApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddStandardResilienceHandler();
 
     var app = builder.Build();
 

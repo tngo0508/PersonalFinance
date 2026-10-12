@@ -87,10 +87,20 @@ public class GoogleDriveController : Controller
                 }
             }
         }
+        catch (Refit.ApiException apiEx)
+        {
+            _logger.LogError(apiEx, "ApiService returned HTTP {StatusCode} while loading Google Drive connections for user {UserId}", apiEx.StatusCode, userId);
+            model.ErrorMessage = "Unable to load your Google Drive connections. Please try again in a moment.";
+        }
+        catch (HttpRequestException httpEx)
+        {
+            _logger.LogWarning(httpEx, "Unable to reach ApiService while loading Google Drive connections for user {UserId}", userId);
+            model.ErrorMessage = "The service is temporarily unavailable. Please try again in a moment.";
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading Google Drive connections for user {UserId}", userId);
-            model.ErrorMessage = "An error occurred while loading your Google Drive connections.";
+            model.ErrorMessage = "An error occurred while loading your Google Drive connections. Please try again.";
         }
 
         return View(model);

@@ -1,0 +1,73 @@
+@model PersonalFinance.Web.Models.NetWorthViewModel
+@using System.Text.Json
+@using PersonalFinance.Shared.DTOs
+
+@{
+    ViewData["Title"] = "Net Worth Projection";
+    var projection = Model.Projection;
+}
+
+@functions {
+    private static string FormatCurrency(decimal value)
+    {
+        return value.ToString("C0");
+    }
+
+    private static string FormatCompact(decimal value)
+    {
+        if (value >= 1_000_000m)
+        {
+            return $"{value / 1_000_000m:F1}M";
+        }
+        if (value >= 1_000m)
+        {
+            return $"{value / 1_000m:F0}K";
+        }
+        return value.ToString("F0");
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/networth.css" asp-append-version="true"/>
+}
+
+<div class="nw-page">
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show nw-alert" role="alert">
+            @Model.StatusMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show nw-alert" role="alert">
+            @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (projection == null)
+    {
+        <div class="text-center py-5">
+            <p class="text-muted">Unable to load projection data.</p>
+        </div>
+    }
+    else
+    {
+        <partial name="_NetWorthContent" model="Model" />
+    }
+</div>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <script src="~/js/networth.js" asp-append-version="true"></script>
+    @if (projection != null)
+    {
+        <script>
+            window.nwProjectionData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(projection, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+            window.nwSelectedScenario = '@Model.SelectedScenario';
+        </script>
+    }
+}
