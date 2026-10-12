@@ -58,6 +58,59 @@
             </div>
         </div>
         <div class="nw-form">
+            <!-- Preset Scenarios -->
+            <div class="nw-presets">
+                <div class="nw-presets__header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 6.82 21.02 8 14.14 3 9.27 9.91 8.26 12 2"/></svg>
+                    Quick Presets — Try a scenario
+                </div>
+                <div class="nw-presets__grid">
+                    <button type="button" class="nw-preset-card" data-preset="fire" id="nwPresetFire">
+                        <div class="nw-preset-card__icon">🔥</div>
+                        <div class="nw-preset-card__title">FIRE Movement</div>
+                        <div class="nw-preset-card__desc">Aggressive savings, retire early</div>
+                    </button>
+                    <button type="button" class="nw-preset-card" data-preset="coast" id="nwPresetCoast">
+                        <div class="nw-preset-card__icon">🏖️</div>
+                        <div class="nw-preset-card__title">Coast FI</div>
+                        <div class="nw-preset-card__desc">Save now, coast later</div>
+                    </button>
+                    <button type="button" class="nw-preset-card" data-preset="traditional" id="nwPresetTraditional">
+                        <div class="nw-preset-card__icon">🏠</div>
+                        <div class="nw-preset-card__title">Traditional</div>
+                        <div class="nw-preset-card__desc">Steady path to 65</div>
+                    </button>
+                    <button type="button" class="nw-preset-card" data-preset="ultra" id="nwPresetUltra">
+                        <div class="nw-preset-card__icon">🚀</div>
+                        <div class="nw-preset-card__title">Ultra Aggressive</div>
+                        <div class="nw-preset-card__desc">Max everything, moonshot</div>
+                    </button>
+                    <button type="button" class="nw-preset-card" data-preset="conservative" id="nwPresetConservative">
+                        <div class="nw-preset-card__icon">🛡️</div>
+                        <div class="nw-preset-card__title">Safe &amp; Steady</div>
+                        <div class="nw-preset-card__desc">Low risk, slow growth</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Savings Rate Indicator -->
+            <div class="nw-savings-indicator" id="nwSavingsIndicator">
+                <div class="nw-savings-indicator__header">
+                    <span>Savings Rate</span>
+                    <span class="nw-savings-indicator__value" id="nwSavingsRateValue">29.5%</span>
+                </div>
+                <div class="nw-savings-indicator__bar">
+                    <div class="nw-savings-indicator__fill" id="nwSavingsRateFill" style="width: 29.5%"></div>
+                </div>
+                <div class="nw-savings-indicator__labels">
+                    <span>0%</span>
+                    <span>10%</span>
+                    <span>20%</span>
+                    <span>30%</span>
+                    <span>50%+</span>
+                </div>
+            </div>
+
             <div class="nw-form__group">
                 <div class="nw-form__group-title">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/><path d="M17 13a1 1 0 0 0 1 1v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-1a1 1 0 0 0 1-1"/><path d="M15 21V13h-6v8"/></svg>
@@ -69,10 +122,13 @@
                             Starting Balance
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current total investable assets (brokerage accounts, retirement accounts, cash, etc.)"></i>
                         </label>
-                        <div class="input-group nw-input-group">
-                            <span class="input-group-text">$</span>
-                            <input asp-for="StartingBalance" type="number" step="1000" min="0" max="1000000000" required
-                                   class="form-control nw-input" id="nwStartingBalance"/>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <span class="nw-slider-field__prefix">$</span>
+                                <input asp-for="StartingBalance" type="text" inputmode="numeric" required
+                                       class="form-control nw-slider-field__input" id="nwStartingBalance" />
+                            </div>
+                            <input type="range" class="nw-range" id="nwStartingBalanceRange" min="0" max="1000000" step="1000" value="@Model.StartingBalance" />
                         </div>
                         <span asp-validation-for="StartingBalance" class="text-danger small"></span>
                     </div>
@@ -81,10 +137,13 @@
                             Annual Savings
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="How much you plan to save and invest each year from your income"></i>
                         </label>
-                        <div class="input-group nw-input-group">
-                            <span class="input-group-text">$</span>
-                            <input asp-for="AnnualSavings" type="number" step="1000" min="0" max="10000000" required
-                                   class="form-control nw-input" id="nwAnnualSavings"/>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <span class="nw-slider-field__prefix">$</span>
+                                <input asp-for="AnnualSavings" type="text" inputmode="numeric" required
+                                       class="form-control nw-slider-field__input" id="nwAnnualSavings" />
+                            </div>
+                            <input type="range" class="nw-range" id="nwAnnualSavingsRange" min="0" max="200000" step="1000" value="@Model.AnnualSavings" />
                         </div>
                         <span asp-validation-for="AnnualSavings" class="text-danger small"></span>
                     </div>
@@ -93,10 +152,13 @@
                             Annual Income
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your total yearly gross income before taxes"></i>
                         </label>
-                        <div class="input-group nw-input-group">
-                            <span class="input-group-text">$</span>
-                            <input asp-for="AnnualIncome" type="number" step="1000" min="0" max="100000000" required
-                                   class="form-control nw-input" id="nwAnnualIncome"/>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <span class="nw-slider-field__prefix">$</span>
+                                <input asp-for="AnnualIncome" type="text" inputmode="numeric" required
+                                       class="form-control nw-slider-field__input" id="nwAnnualIncome" />
+                            </div>
+                            <input type="range" class="nw-range" id="nwAnnualIncomeRange" min="0" max="500000" step="1000" value="@Model.AnnualIncome" />
                         </div>
                         <span asp-validation-for="AnnualIncome" class="text-danger small"></span>
                     </div>
@@ -105,10 +167,13 @@
                             Annual Spending
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="How much you spend each year after taxes — used to calculate your FI Target (Annual Spending × 25)"></i>
                         </label>
-                        <div class="input-group nw-input-group">
-                            <span class="input-group-text">$</span>
-                            <input asp-for="AnnualSpending" type="number" step="1000" min="0" max="10000000" required
-                                   class="form-control nw-input" id="nwAnnualSpending"/>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <span class="nw-slider-field__prefix">$</span>
+                                <input asp-for="AnnualSpending" type="text" inputmode="numeric" required
+                                       class="form-control nw-slider-field__input" id="nwAnnualSpending" />
+                            </div>
+                            <input type="range" class="nw-range" id="nwAnnualSpendingRange" min="0" max="200000" step="1000" value="@Model.AnnualSpending" />
                         </div>
                         <span asp-validation-for="AnnualSpending" class="text-danger small"></span>
                     </div>
@@ -125,8 +190,14 @@
                             Current Age
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Your current age in years"></i>
                         </label>
-                        <input asp-for="CurrentAge" type="number" min="18" max="100" required
-                               class="form-control nw-input" id="nwCurrentAge"/>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <input asp-for="CurrentAge" type="text" inputmode="numeric" required
+                                       class="form-control nw-slider-field__input" id="nwCurrentAge" />
+                                <span class="nw-slider-field__suffix">years</span>
+                            </div>
+                            <input type="range" class="nw-range" id="nwCurrentAgeRange" min="18" max="80" step="1" value="@Model.CurrentAge" />
+                        </div>
                         <span asp-validation-for="CurrentAge" class="text-danger small"></span>
                     </div>
                     <div class="col-md-3">
@@ -134,8 +205,14 @@
                             Retirement Age
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="The age you plan to stop working and begin withdrawing from your portfolio"></i>
                         </label>
-                        <input asp-for="RetirementAge" type="number" min="18" max="120" required
-                               class="form-control nw-input" id="nwRetirementAge"/>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <input asp-for="RetirementAge" type="text" inputmode="numeric" required
+                                       class="form-control nw-slider-field__input" id="nwRetirementAge" />
+                                <span class="nw-slider-field__suffix">years</span>
+                            </div>
+                            <input type="range" class="nw-range" id="nwRetirementAgeRange" min="30" max="100" step="1" value="@Model.RetirementAge" />
+                        </div>
                         <span asp-validation-for="RetirementAge" class="text-danger small"></span>
                     </div>
                 </div>
@@ -151,10 +228,13 @@
                             Base ROI (%)
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Expected annual return on investment for the base scenario (e.g., 7% for a balanced portfolio)"></i>
                         </label>
-                        <div class="input-group nw-input-group">
-                            <input asp-for="BaseRoi" type="number" step="0.1" min="0" max="50" required
-                                   class="form-control nw-input" id="nwBaseRoi"/>
-                            <span class="input-group-text">%</span>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <input asp-for="BaseRoi" type="text" inputmode="decimal" required
+                                       class="form-control nw-slider-field__input" id="nwBaseRoi" />
+                                <span class="nw-slider-field__suffix">%</span>
+                            </div>
+                            <input type="range" class="nw-range nw-range--roi" id="nwBaseRoiRange" min="0" max="20" step="0.1" value="@Model.BaseRoi" />
                         </div>
                         <span asp-validation-for="BaseRoi" class="text-danger small"></span>
                     </div>
@@ -163,10 +243,13 @@
                             Conservative ROI (%)
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Lower expected annual return for a more cautious, bond-heavy portfolio"></i>
                         </label>
-                        <div class="input-group nw-input-group">
-                            <input asp-for="ConservativeRoi" type="number" step="0.1" min="0" max="50" required
-                                   class="form-control nw-input" id="nwConservativeRoi"/>
-                            <span class="input-group-text">%</span>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <input asp-for="ConservativeRoi" type="text" inputmode="decimal" required
+                                       class="form-control nw-slider-field__input" id="nwConservativeRoi" />
+                                <span class="nw-slider-field__suffix">%</span>
+                            </div>
+                            <input type="range" class="nw-range nw-range--roi" id="nwConservativeRoiRange" min="0" max="20" step="0.1" value="@Model.ConservativeRoi" />
                         </div>
                         <span asp-validation-for="ConservativeRoi" class="text-danger small"></span>
                     </div>
@@ -175,10 +258,13 @@
                             Aggressive ROI (%)
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher expected annual return for a growth-oriented, stock-heavy portfolio"></i>
                         </label>
-                        <div class="input-group nw-input-group">
-                            <input asp-for="AggressiveRoi" type="number" step="0.1" min="0" max="50" required
-                                   class="form-control nw-input" id="nwAggressiveRoi"/>
-                            <span class="input-group-text">%</span>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <input asp-for="AggressiveRoi" type="text" inputmode="decimal" required
+                                       class="form-control nw-slider-field__input" id="nwAggressiveRoi" />
+                                <span class="nw-slider-field__suffix">%</span>
+                            </div>
+                            <input type="range" class="nw-range nw-range--roi" id="nwAggressiveRoiRange" min="0" max="20" step="0.1" value="@Model.AggressiveRoi" />
                         </div>
                         <span asp-validation-for="AggressiveRoi" class="text-danger small"></span>
                     </div>
@@ -187,10 +273,13 @@
                             Aggressive Savings
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Higher annual savings amount for the aggressive scenario, assuming increased income or reduced spending"></i>
                         </label>
-                        <div class="input-group nw-input-group">
-                            <span class="input-group-text">$</span>
-                            <input asp-for="AggressiveSavings" type="number" step="1000" min="0" max="10000000" required
-                                   class="form-control nw-input" id="nwAggressiveSavings"/>
+                        <div class="nw-slider-field">
+                            <div class="nw-slider-field__display">
+                                <span class="nw-slider-field__prefix">$</span>
+                                <input asp-for="AggressiveSavings" type="text" inputmode="numeric" required
+                                       class="form-control nw-slider-field__input" id="nwAggressiveSavings" />
+                            </div>
+                            <input type="range" class="nw-range" id="nwAggressiveSavingsRange" min="0" max="200000" step="1000" value="@Model.AggressiveSavings" />
                         </div>
                         <span asp-validation-for="AggressiveSavings" class="text-danger small"></span>
                     </div>

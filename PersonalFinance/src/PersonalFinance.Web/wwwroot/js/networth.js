@@ -538,19 +538,261 @@
     }
 
     /**
+     * Format a number for display in a slider field input.
+     * @param {number} value - The numeric value.
+     * @param {string} type - 'currency', 'percent', or 'number'.
+     * @returns {string} Formatted string.
+     */
+    function formatSliderValue(value, type) {
+        var num = parseFloat(value);
+        if (isNaN(num)) return '';
+        if (type === 'currency') {
+            return Math.round(num).toLocaleString('en-US');
+        }
+        if (type === 'percent') {
+            return num.toFixed(1);
+        }
+        return Math.round(num).toString();
+    }
+
+    /**
+     * Sync a range slider with its paired text input.
+     * @param {string} rangeId - The range input ID.
+     * @param {string} inputId - The text input ID.
+     * @param {string} formatType - 'currency', 'percent', or 'number'.
+     */
+    function syncSlider(rangeId, inputId, formatType) {
+        var rangeEl = document.getElementById(rangeId);
+        var inputEl = document.getElementById(inputId);
+        if (!rangeEl || !inputEl) return;
+
+        // Initialize display from range value
+        inputEl.value = formatSliderValue(rangeEl.value, formatType);
+
+        // Range → Input
+        rangeEl.addEventListener('input', function () {
+            inputEl.value = formatSliderValue(rangeEl.value, formatType);
+            updateSavingsIndicator();
+            triggerRecalculation();
+        });
+
+        // Input → Range (on blur and Enter key)
+        inputEl.addEventListener('input', function () {
+            var raw = inputEl.value.replace(/[^0-9.]/g, '');
+            var num = parseFloat(raw);
+            if (!isNaN(num)) {
+                var min = parseFloat(rangeEl.min);
+                var max = parseFloat(rangeEl.max);
+                num = Math.max(min, Math.min(max, num));
+                rangeEl.value = num;
+            }
+            updateSavingsIndicator();
+        });
+
+        inputEl.addEventListener('blur', function () {
+            var raw = inputEl.value.replace(/[^0-9.]/g, '');
+            var num = parseFloat(raw);
+            if (!isNaN(num)) {
+                var min = parseFloat(rangeEl.min);
+                var max = parseFloat(rangeEl.max);
+                num = Math.max(min, Math.min(max, num));
+                rangeEl.value = num;
+                inputEl.value = formatSliderValue(num, formatType);
+            }
+            triggerRecalculation();
+        });
+
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                inputEl.blur();
+            }
+        });
+    }
+
+    /**
+     * Debounced recalculation trigger shared by sliders and inputs.
+     */
+    var recalcTimeout;
+    function triggerRecalculation() {
+        clearTimeout(recalcTimeout);
+        recalcTimeout = setTimeout(function () {
+            recalculate();
+        }, DEBOUNCE_DELAY);
+    }
+
+    /**
+     * Update the savings rate indicator bar.
+     */
+    function updateSavingsIndicator() {
+        var savingsEl = document.getElementById('nwAnnualSavings');
+        var incomeEl = document.getElementById('nwAnnualIncome');
+        var rateValueEl = document.getElementById('nwSavingsRateValue');
+        var rateFillEl = document.getElementById('nwSavingsRateFill');
+
+        if (!savingsEl || !incomeEl || !rateValueEl || !rateFillEl) return;
+
+        var savings = parseFloat(savingsEl.value.replace(/[^0-9.]/g, '')) || 0;
+        var income = parseFloat(incomeEl.value.replace(/[^0-9.]/g, '')) || 0;
+
+        if (income <= 0) {
+            rateValueEl.textContent = '0%';
+            rateFillEl.style.width = '0%';
+            rateFillEl.className = 'nw-savings-indicator__fill';
+            return;
+        }
+
+        var rate = (savings / income) * 100;
+        var displayRate = Math.min(rate, 100);
+        rateValueEl.textContent = rate.toFixed(1) + '%';
+        rateFillEl.style.width = displayRate + '%';
+
+        // Color coding
+        rateFillEl.className = 'nw-savings-indicator__fill';
+        if (rate >= 30) {
+            rateFillEl.classList.add('nw-savings-great');
+        } else if (rate >= 20) {
+            rateFillEl.classList.add('nw-savings-good');
+        }
+    }
+
+    /**
      * Initialize live recalculation on input change (debounced).
      */
     function initLiveRecalculation() {
-        let timeout;
-        const inputs = document.querySelectorAll('.nw-input');
+        // Sync all slider pairs
+        syncSlider('nwStartingBalanceRange', 'nwStartingBalance', 'currency');
+        syncSlider('nwAnnualSavingsRange', 'nwAnnualSavings', 'currency');
+        syncSlider('nwAnnualIncomeRange', 'nwAnnualIncome', 'currency');
+        syncSlider('nwAnnualSpendingRange', 'nwAnnualSpending', 'currency');
+        syncSlider('nwCurrentAgeRange', 'nwCurrentAge', 'number');
+        syncSlider('nwRetirementAgeRange', 'nwRetirementAge', 'number');
+        syncSlider('nwBaseRoiRange', 'nwBaseRoi', 'percent');
+        syncSlider('nwConservativeRoiRange', 'nwConservativeRoi', 'percent');
+        syncSlider('nwAggressiveRoiRange', 'nwAggressiveRoi', 'percent');
+        syncSlider('nwAggressiveSavingsRange', 'nwAggressiveSavings', 'currency');
 
-        inputs.forEach(function (input) {
-            input.addEventListener('input', function () {
-                clearTimeout(timeout);
-                timeout = setTimeout(function () {
-                    recalculate();
-                }, DEBOUNCE_DELAY);
-            });
+        // Initial savings indicator
+        updateSavingsIndicator();
+    }
+
+    /**
+     * Apply a preset scenario by setting all slider values.
+     * @param {Object} preset - Key-value pairs of field IDs to values.
+     */
+    function applyPreset(preset) {
+        // Map of field IDs to their format types
+        var fields = [
+            { id: 'nwStartingBalance', type: 'currency' },
+            { id: 'nwAnnualSavings', type: 'currency' },
+            { id: 'nwAnnualIncome', type: 'currency' },
+            { id: 'nwAnnualSpending', type: 'currency' },
+            { id: 'nwCurrentAge', type: 'number' },
+            { id: 'nwRetirementAge', type: 'number' },
+            { id: 'nwBaseRoi', type: 'percent' },
+            { id: 'nwConservativeRoi', type: 'percent' },
+            { id: 'nwAggressiveRoi', type: 'percent' },
+            { id: 'nwAggressiveSavings', type: 'currency' }
+        ];
+
+        fields.forEach(function (field) {
+            if (preset[field.id] !== undefined) {
+                var rangeId = field.id + 'Range';
+                var rangeEl = document.getElementById(rangeId);
+                var inputEl = document.getElementById(field.id);
+                if (rangeEl) {
+                    rangeEl.value = preset[field.id];
+                }
+                if (inputEl) {
+                    inputEl.value = formatSliderValue(preset[field.id], field.type);
+                }
+            }
+        });
+
+        // Clear validation
+        clearValidationMessage();
+        document.querySelectorAll('.nw-input-invalid').forEach(function (el) {
+            el.classList.remove('nw-input-invalid');
+        });
+
+        updateSavingsIndicator();
+        recalculate();
+    }
+
+    /**
+     * Initialize preset scenario buttons.
+     */
+    function initPresets() {
+        var presets = {
+            fire: {
+                nwStartingBalance: 50000,
+                nwAnnualSavings: 85000,
+                nwAnnualIncome: 150000,
+                nwAnnualSpending: 35000,
+                nwCurrentAge: 28,
+                nwRetirementAge: 45,
+                nwBaseRoi: 8.0,
+                nwConservativeRoi: 5.0,
+                nwAggressiveRoi: 12.0,
+                nwAggressiveSavings: 120000
+            },
+            coast: {
+                nwStartingBalance: 350000,
+                nwAnnualSavings: 20000,
+                nwAnnualIncome: 120000,
+                nwAnnualSpending: 55000,
+                nwCurrentAge: 35,
+                nwRetirementAge: 65,
+                nwBaseRoi: 7.0,
+                nwConservativeRoi: 5.0,
+                nwAggressiveRoi: 10.0,
+                nwAggressiveSavings: 35000
+            },
+            traditional: {
+                nwStartingBalance: 100000,
+                nwAnnualSavings: 15000,
+                nwAnnualIncome: 95000,
+                nwAnnualSpending: 60000,
+                nwCurrentAge: 30,
+                nwRetirementAge: 65,
+                nwBaseRoi: 7.0,
+                nwConservativeRoi: 5.0,
+                nwAggressiveRoi: 9.0,
+                nwAggressiveSavings: 25000
+            },
+            ultra: {
+                nwStartingBalance: 200000,
+                nwAnnualSavings: 150000,
+                nwAnnualIncome: 350000,
+                nwAnnualSpending: 80000,
+                nwCurrentAge: 25,
+                nwRetirementAge: 40,
+                nwBaseRoi: 10.0,
+                nwConservativeRoi: 6.0,
+                nwAggressiveRoi: 15.0,
+                nwAggressiveSavings: 200000
+            },
+            conservative: {
+                nwStartingBalance: 150000,
+                nwAnnualSavings: 12000,
+                nwAnnualIncome: 80000,
+                nwAnnualSpending: 45000,
+                nwCurrentAge: 40,
+                nwRetirementAge: 67,
+                nwBaseRoi: 5.0,
+                nwConservativeRoi: 3.0,
+                nwAggressiveRoi: 7.0,
+                nwAggressiveSavings: 18000
+            }
+        };
+
+        Object.keys(presets).forEach(function (key) {
+            var btn = document.getElementById('nwPreset' + key.charAt(0).toUpperCase() + key.slice(1));
+            if (btn) {
+                btn.addEventListener('click', function () {
+                    applyPreset(presets[key]);
+                });
+            }
         });
     }
 
@@ -575,27 +817,31 @@
 
         // Clear previous validation states
         validators.forEach(function (v) {
-            const el = document.getElementById(v.id);
-            if (el) {
-                el.classList.remove('nw-input-invalid');
-            }
+            var el = document.getElementById(v.id);
+            var rangeEl = document.getElementById(v.id + 'Range');
+            if (el) el.classList.remove('nw-input-invalid');
+            if (rangeEl) rangeEl.classList.remove('nw-input-invalid');
         });
 
         validators.forEach(function (v) {
-            const el = document.getElementById(v.id);
-            if (!el) return;
-            const val = parseFloat(el.value);
+            var val = getSliderValue(v.id);
+            var el = document.getElementById(v.id);
+            var rangeEl = document.getElementById(v.id + 'Range');
             if (isNaN(val) || val < v.min || val > v.max) {
-                el.classList.add('nw-input-invalid');
+                if (el) el.classList.add('nw-input-invalid');
+                if (rangeEl) rangeEl.classList.add('nw-input-invalid');
                 isValid = false;
             }
         });
 
         // Check retirement age > current age
-        const currentAge = parseInt(document.getElementById('nwCurrentAge')?.value, 10);
-        const retirementAge = parseInt(document.getElementById('nwRetirementAge')?.value, 10);
+        var currentAge = Math.round(getSliderValue('nwCurrentAge'));
+        var retirementAge = Math.round(getSliderValue('nwRetirementAge'));
         if (!isNaN(currentAge) && !isNaN(retirementAge) && retirementAge <= currentAge) {
-            document.getElementById('nwRetirementAge')?.classList.add('nw-input-invalid');
+            var retEl = document.getElementById('nwRetirementAge');
+            var retRange = document.getElementById('nwRetirementAgeRange');
+            if (retEl) retEl.classList.add('nw-input-invalid');
+            if (retRange) retRange.classList.add('nw-input-invalid');
             isValid = false;
         }
 
@@ -648,50 +894,48 @@
         var aggressiveRoi = baseRoi + randomFloat(1.0, 5.0, 1);
         var aggressiveSavings = annualSavings + randomInt(5000, 50000);
 
-        document.getElementById('nwStartingBalance').value = startingBalance;
-        document.getElementById('nwAnnualSavings').value = annualSavings;
-        document.getElementById('nwAnnualIncome').value = annualIncome;
-        document.getElementById('nwAnnualSpending').value = annualSpending;
-        document.getElementById('nwCurrentAge').value = currentAge;
-        document.getElementById('nwRetirementAge').value = retirementAge;
-        document.getElementById('nwBaseRoi').value = baseRoi;
-        document.getElementById('nwConservativeRoi').value = conservativeRoi;
-        document.getElementById('nwAggressiveRoi').value = aggressiveRoi;
-        document.getElementById('nwAggressiveSavings').value = aggressiveSavings;
-
-        // Clear any validation errors
-        clearValidationMessage();
-        document.querySelectorAll('.nw-input-invalid').forEach(function (el) {
-            el.classList.remove('nw-input-invalid');
+        applyPreset({
+            nwStartingBalance: startingBalance,
+            nwAnnualSavings: annualSavings,
+            nwAnnualIncome: annualIncome,
+            nwAnnualSpending: annualSpending,
+            nwCurrentAge: currentAge,
+            nwRetirementAge: retirementAge,
+            nwBaseRoi: baseRoi,
+            nwConservativeRoi: conservativeRoi,
+            nwAggressiveRoi: aggressiveRoi,
+            nwAggressiveSavings: aggressiveSavings
         });
-
-        // Recalculate with randomized values
-        recalculate();
     }
 
     /**
      * Reset all input fields to their default values and recalculate.
      */
     function resetToDefaults() {
-        document.getElementById('nwStartingBalance').value = 195033.14;
-        document.getElementById('nwAnnualSavings').value = 32000;
-        document.getElementById('nwAnnualIncome').value = 108409.60;
-        document.getElementById('nwAnnualSpending').value = 50000;
-        document.getElementById('nwCurrentAge').value = 33;
-        document.getElementById('nwRetirementAge').value = 65;
-        document.getElementById('nwBaseRoi').value = 7.0;
-        document.getElementById('nwConservativeRoi').value = 6.0;
-        document.getElementById('nwAggressiveRoi').value = 10.0;
-        document.getElementById('nwAggressiveSavings').value = 45000;
-
-        // Clear any validation errors
-        clearValidationMessage();
-        document.querySelectorAll('.nw-input-invalid').forEach(function (el) {
-            el.classList.remove('nw-input-invalid');
+        applyPreset({
+            nwStartingBalance: 195033,
+            nwAnnualSavings: 32000,
+            nwAnnualIncome: 108410,
+            nwAnnualSpending: 50000,
+            nwCurrentAge: 33,
+            nwRetirementAge: 65,
+            nwBaseRoi: 7.0,
+            nwConservativeRoi: 6.0,
+            nwAggressiveRoi: 10.0,
+            nwAggressiveSavings: 45000
         });
+    }
 
-        // Recalculate with default values
-        recalculate();
+    /**
+     * Get the raw numeric value from a slider field (strips formatting).
+     * @param {string} inputId - The text input ID.
+     * @returns {number} The parsed numeric value.
+     */
+    function getSliderValue(inputId) {
+        var el = document.getElementById(inputId);
+        if (!el) return 0;
+        var raw = el.value.replace(/[^0-9.]/g, '');
+        return parseFloat(raw) || 0;
     }
 
     /**
@@ -704,16 +948,16 @@
         }
 
         const params = {
-            startingBalance: parseFloat(document.getElementById('nwStartingBalance')?.value) || 0,
-            annualSavings: parseFloat(document.getElementById('nwAnnualSavings')?.value) || 0,
-            annualIncome: parseFloat(document.getElementById('nwAnnualIncome')?.value) || 0,
-            annualSpending: parseFloat(document.getElementById('nwAnnualSpending')?.value) || 0,
-            currentAge: parseInt(document.getElementById('nwCurrentAge')?.value, 10) || 33,
-            retirementAge: parseInt(document.getElementById('nwRetirementAge')?.value, 10) || 65,
-            baseRoi: parseFloat(document.getElementById('nwBaseRoi')?.value) || 7,
-            conservativeRoi: parseFloat(document.getElementById('nwConservativeRoi')?.value) || 6,
-            aggressiveRoi: parseFloat(document.getElementById('nwAggressiveRoi')?.value) || 10,
-            aggressiveSavings: parseFloat(document.getElementById('nwAggressiveSavings')?.value) || 45000
+            startingBalance: getSliderValue('nwStartingBalance'),
+            annualSavings: getSliderValue('nwAnnualSavings'),
+            annualIncome: getSliderValue('nwAnnualIncome'),
+            annualSpending: getSliderValue('nwAnnualSpending'),
+            currentAge: Math.round(getSliderValue('nwCurrentAge')) || 33,
+            retirementAge: Math.round(getSliderValue('nwRetirementAge')) || 65,
+            baseRoi: getSliderValue('nwBaseRoi') || 7,
+            conservativeRoi: getSliderValue('nwConservativeRoi') || 6,
+            aggressiveRoi: getSliderValue('nwAggressiveRoi') || 10,
+            aggressiveSavings: getSliderValue('nwAggressiveSavings') || 45000
         };
 
         // Build query string using URLSearchParams for safety
@@ -809,6 +1053,9 @@
 
         // Initialize live recalculation
         initLiveRecalculation();
+
+        // Initialize preset scenario buttons
+        initPresets();
 
         // Initialize randomize button
         const randomBtn = document.getElementById('nwRandomBtn');
