@@ -415,7 +415,7 @@
             if (symbolEl) symbolEl.textContent = '$';
             if (amountEl) amountEl.textContent = Math.round(data.fiTarget).toLocaleString('en-US');
         }
-        if (fiSub) fiSub.textContent = `Based on $${formatCompact(data.annualSpending)}/yr spending`;
+        if (fiSub) fiSub.innerHTML = `Based on <span class="nw-currency-symbol">$</span>${formatCompact(data.annualSpending)}/yr spending`;
 
         // Current Net Worth card
         const currentValue = document.querySelector('.nw-metric-current-value');
@@ -433,7 +433,7 @@
         const aggValue = document.querySelector('.nw-metric-aggressive-value');
         const aggSub = document.querySelector('.nw-metric-aggressive-sub');
         if (aggValue) aggValue.textContent = formatCurrency(data.aggressive.finalNetWorth);
-        if (aggSub) aggSub.textContent = `${data.aggressive.roiPercent}% ROI · $${formatCompact(data.aggressive.annualSavings)}/yr savings`;
+        if (aggSub) aggSub.innerHTML = `${data.aggressive.roiPercent}% ROI · <span class="nw-currency-symbol">$</span>${formatCompact(data.aggressive.annualSavings)}/yr savings`;
 
         // Update legend
         const legendBase = document.getElementById('nwLegendBase');
@@ -465,10 +465,10 @@
         const contribEl = document.querySelector(`.${prefix}contrib`);
         const interestEl = document.querySelector(`.${prefix}interest`);
 
-        if (savingsEl) savingsEl.textContent = `$${formatCompact(scenario.annualSavings)}`;
-        if (finalEl) finalEl.textContent = `$${formatCompact(scenario.finalNetWorth)}`;
-        if (contribEl) contribEl.textContent = `$${formatCompact(scenario.totalContributions)}`;
-        if (interestEl) interestEl.textContent = `$${formatCompact(scenario.totalInterestEarned)}`;
+        if (savingsEl) savingsEl.innerHTML = `<span class="nw-currency-symbol">$</span>${formatCompact(scenario.annualSavings)}`;
+        if (finalEl) finalEl.innerHTML = `<span class="nw-currency-symbol">$</span>${formatCompact(scenario.finalNetWorth)}`;
+        if (contribEl) contribEl.innerHTML = `<span class="nw-currency-symbol">$</span>${formatCompact(scenario.totalContributions)}`;
+        if (interestEl) interestEl.innerHTML = `<span class="nw-currency-symbol">$</span>${formatCompact(scenario.totalInterestEarned)}`;
     }
 
     /**

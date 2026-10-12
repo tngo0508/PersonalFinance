@@ -655,8 +655,22 @@
   color: var(--nw-text-main);
 }
 
-.nw-metric-fi-value .nw-currency-symbol {
+.nw-currency-symbol {
   color: var(--nw-primary);
+  font-weight: 600;
+}
+
+.nw-metric-sub .nw-currency-symbol {
+  color: var(--nw-text-muted);
+  font-weight: 500;
+}
+
+.nw-scenario-row strong .nw-currency-symbol {
+  color: var(--nw-text-main);
+}
+
+.nw-scenario-row--highlight strong .nw-currency-symbol {
+  color: #166534;
 }
 
 .nw-metric-fi-value .nw-currency-amount {

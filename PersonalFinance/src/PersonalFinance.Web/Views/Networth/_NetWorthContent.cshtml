@@ -340,7 +340,7 @@
                 <div class="nw-metric-value nw-metric-fi-value">
                     <span class="nw-currency-symbol">$</span><span class="nw-currency-amount">@projection.FiTarget.ToString("N0")</span>
                 </div>
-                <div class="nw-metric-sub nw-metric-fi-sub">Based on $@FormatCompact(projection.AnnualSpending)/yr spending</div>
+                <div class="nw-metric-sub nw-metric-fi-sub">Based on <span class="nw-currency-symbol">$</span>@FormatCompact(projection.AnnualSpending)/yr spending</div>
             </div>
         </div>
     </div>
@@ -382,7 +382,7 @@
                 <div class="nw-metric-value nw-metric-aggressive-value">
                     @FormatCurrency(projection.Aggressive.FinalNetWorth)
                 </div>
-                <div class="nw-metric-sub nw-metric-aggressive-sub">@projection.Aggressive.RoiPercent% ROI · $@FormatCompact(projection.Aggressive.AnnualSavings)/yr savings</div>
+                <div class="nw-metric-sub nw-metric-aggressive-sub">@projection.Aggressive.RoiPercent% ROI · <span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.AnnualSavings)/yr savings</div>
             </div>
         </div>
     </div>
@@ -405,19 +405,19 @@
                 <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
-                    <strong class="nw-sc-base-savings">$@FormatCompact(projection.Base.AnnualSavings)</strong>
+                    <strong class="nw-sc-base-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-sc-base-final">$@FormatCompact(projection.Base.FinalNetWorth)</strong>
+                    <strong class="nw-sc-base-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
-                    <strong class="nw-sc-base-contrib">$@FormatCompact(projection.Base.TotalContributions)</strong>
+                    <strong class="nw-sc-base-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.TotalContributions)</strong>
                 </div>
                 <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="nw-sc-base-interest">$@FormatCompact(projection.Base.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-base-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
@@ -437,19 +437,19 @@
                 <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
-                    <strong class="nw-sc-cons-savings">$@FormatCompact(projection.Conservative.AnnualSavings)</strong>
+                    <strong class="nw-sc-cons-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-sc-cons-final">$@FormatCompact(projection.Conservative.FinalNetWorth)</strong>
+                    <strong class="nw-sc-cons-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
-                    <strong class="nw-sc-cons-contrib">$@FormatCompact(projection.Conservative.TotalContributions)</strong>
+                    <strong class="nw-sc-cons-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.TotalContributions)</strong>
                 </div>
                 <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="nw-sc-cons-interest">$@FormatCompact(projection.Conservative.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-cons-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
@@ -469,19 +469,19 @@
                 <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
-                    <strong class="nw-sc-agg-savings">$@FormatCompact(projection.Aggressive.AnnualSavings)</strong>
+                    <strong class="nw-sc-agg-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-sc-agg-final">$@FormatCompact(projection.Aggressive.FinalNetWorth)</strong>
+                    <strong class="nw-sc-agg-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
-                    <strong class="nw-sc-agg-contrib">$@FormatCompact(projection.Aggressive.TotalContributions)</strong>
+                    <strong class="nw-sc-agg-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.TotalContributions)</strong>
                 </div>
                 <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="nw-sc-agg-interest">$@FormatCompact(projection.Aggressive.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-agg-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
