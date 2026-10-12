@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-11
+
+### Added
+- **Net Worth Projection & Financial Independence Planning**:
+  - Added a Net Worth planning page with interactive projections for Financial Independence (FI) goals.
+  - Parameters include current net worth, annual income, savings rate, investment return rate, inflation rate, and FI target.
+  - Year-by-year projection table showing net worth growth, annual contributions, investment returns, inflation-adjusted values, and cumulative ROI.
+  - Added preset scenarios (Conservative, Moderate, Aggressive) for quick setup.
+  - Interactive slider controls for all input parameters with live preview updates.
+  - Randomization functionality to explore Monte Carlo–style parameter variations.
+  - Tooltips and a 4% rule explanation to guide users in setting realistic FI targets.
+  - Input validation with reset functionality to restore default values.
+  - Highlighted rows where cumulative ROI surpasses annual income, marking a key FI milestone.
+  - Dark futuristic chart theme with enhanced interactions for Net Worth visualizations.
+  - Refactored the feature to use the API service (`PersonalFinance.ApiService`) with shared DTOs (`NetWorthProjectionDto`) and server-side validation.
+  - Added dedicated styling in `wwwroot/css/networth.css` and client-side logic in `wwwroot/js/networth.js`.
+- **Enhanced FI Target Display**: Separate currency symbol and styled amount for improved readability of the FI target figure.
+- **Google Drive Resilience & Error Handling**:
+  - Added HTTP resilience handler for Google Drive connections, improving reliability under transient network failures.
+  - Improved error handling for expired or invalid Google Drive credentials with clearer user-facing messages.
+- **Google Drive UI Revamp**:
+  - Improved accessibility, icons, and layout across the Google Drive explorer page.
+  - Enhanced visual hierarchy and navigation for connected drives and file browsing.
+
+### Changed
+- **Dockerfile & Bicep Optimizations for Cost Efficiency and Performance**:
+  - Optimized Dockerfiles for reduced image size and faster cold-start performance.
+  - Updated Bicep configurations for enhanced scalability and resource efficiency.
+  - Upgraded Azure SQL Database from Serverless Free Tier to Basic tier for predictable ~$5/month costs and consistent performance.
+  - Updated Bicep tests and configuration to reflect the new Azure SQL Basic tier settings.
+- **Monthly Budget Template Creation**:
+  - Added support for creating Monthly Budget templates directly in Google Drive (PR #19).
+  - Later removed the template creation feature in favor of the existing spreadsheet detection and parsing workflow, keeping the focus on analyzing user-provided budgets.
+
+### Fixed
+- **Net Worth Chart Rendering**: Removed custom glow effect plugin from Net Worth charts for streamlined and more performant rendering.
+- **Net Worth Table Styling**: Simplified table row styling and hover effects for improved readability.
+
+---
+
 ## [1.1.0] - 2026-10-10
 
 ### Added
