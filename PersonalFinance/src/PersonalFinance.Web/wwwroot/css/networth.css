@@ -1894,8 +1894,7 @@
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  overflow-x: hidden;
-  overflow-y: visible;
+  overflow: visible;
 }
 
 .nw-sidebar-card__header {
@@ -1942,6 +1941,8 @@
 .nw-sidebar-card__body {
   padding: 0.85rem 1rem 1rem;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   overflow: visible;
 }
 
@@ -2031,6 +2032,8 @@
 .nw-sidebar-card .nw-slider-field {
   margin-bottom: 0.75rem;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   overflow: visible;
 }
 
@@ -2042,6 +2045,8 @@
   font-size: 0.75rem;
   margin-bottom: 4px;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -2049,6 +2054,8 @@
 .nw-sidebar-card .nw-slider-field__display {
   margin-bottom: 4px;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
   overflow: visible;
 }
 
@@ -2058,6 +2065,8 @@
   height: 30px;
   min-width: 60px;
   flex: 1 1 auto;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .nw-sidebar-card .nw-range {
@@ -2065,6 +2074,7 @@
   cursor: pointer;
   margin-top: 6px;
   margin-bottom: 4px;
+  width: 100%;
 }
 
 /* --- Compact Savings Indicator --- */
