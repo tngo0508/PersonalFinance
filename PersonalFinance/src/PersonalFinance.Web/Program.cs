@@ -155,7 +155,11 @@ try
     // 5. Register Health Checks
     builder.Services.AddHealthChecks();
 
-    // 6. Register Refit Clients with Service Discovery
+    // 6. Register IHttpContextAccessor for identity forwarding to API service
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddTransient<UserIdForwardingHandler>();
+
+    // 7. Register Refit Clients with Service Discovery
     var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https+http://apiservice";
 
     builder.Services.AddRefitClient<IGoogleDriveApi>()
@@ -172,6 +176,7 @@ try
             client.BaseAddress = new Uri(apiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(15);
         })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
         .AddStandardResilienceHandler();
 
     var app = builder.Build();

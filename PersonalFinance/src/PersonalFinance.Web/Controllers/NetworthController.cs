@@ -1,9 +1,5 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PersonalFinance.Data;
-using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs;
 using PersonalFinance.Web.Models;
@@ -12,57 +8,50 @@ namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Net Worth projection and Financial Independence planning feature.
-/// Delegates projection computation to the ApiService via the INetWorthApi Refit client.
-/// Provides save/load/delete endpoints for persisting user parameters to Azure SQL.
+/// Acts as a thin presentation layer — all business logic and data persistence are delegated
+/// to the ApiService via the INetWorthApi Refit client.
 /// </summary>
 [Authorize]
 public class NetworthController : Controller
 {
     private readonly INetWorthApi _netWorthApi;
-    private readonly AppDbContext _dbContext;
 
-    public NetworthController(INetWorthApi netWorthApi, AppDbContext dbContext)
+    public NetworthController(INetWorthApi netWorthApi)
     {
         _netWorthApi = netWorthApi;
-        _dbContext = dbContext;
-    }
-
-    /// <summary>
-    /// Gets the current authenticated user's ID from claims.
-    /// </summary>
-    private string GetCurrentUserId()
-    {
-        return User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.Identity?.Name
-               ?? "default-user";
     }
 
     /// <summary>
     /// Displays the Net Worth projection dashboard with scenario comparison and charts.
-    /// Loads saved parameters from Azure SQL if available, otherwise uses defaults.
+    /// Loads saved parameters from the ApiService if available, otherwise uses defaults.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
         var model = new NetWorthViewModel();
 
-        // Try to load saved parameters from the database
-        var userId = GetCurrentUserId();
-        var saved = await _dbContext.NetWorthParameters
-            .FirstOrDefaultAsync(e => e.UserId == userId);
-
-        if (saved != null)
+        // Try to load saved parameters from the API service
+        try
         {
-            model.StartingBalance = saved.StartingBalance;
-            model.AnnualSavings = saved.AnnualSavings;
-            model.AnnualIncome = saved.AnnualIncome;
-            model.AnnualSpending = saved.AnnualSpending;
-            model.CurrentAge = saved.CurrentAge;
-            model.RetirementAge = saved.RetirementAge;
-            model.BaseRoi = saved.BaseRoi;
-            model.ConservativeRoi = saved.ConservativeRoi;
-            model.AggressiveRoi = saved.AggressiveRoi;
-            model.AggressiveSavings = saved.AggressiveSavings;
+            var saved = await _netWorthApi.LoadParametersAsync(cancellationToken);
+
+            if (saved != null)
+            {
+                model.StartingBalance = saved.StartingBalance;
+                model.AnnualSavings = saved.AnnualSavings;
+                model.AnnualIncome = saved.AnnualIncome;
+                model.AnnualSpending = saved.AnnualSpending;
+                model.CurrentAge = saved.CurrentAge;
+                model.RetirementAge = saved.RetirementAge;
+                model.BaseRoi = saved.BaseRoi;
+                model.ConservativeRoi = saved.ConservativeRoi;
+                model.AggressiveRoi = saved.AggressiveRoi;
+                model.AggressiveSavings = saved.AggressiveSavings;
+            }
+        }
+        catch
+        {
+            // If the API is unavailable, fall back to default values
         }
 
         var request = BuildRequest(model);
@@ -126,114 +115,50 @@ public class NetworthController : Controller
     }
 
     /// <summary>
-    /// Saves the current net worth projection parameters for the authenticated user to Azure SQL.
-    /// Creates or updates the user's single parameters record, then redirects back to Index.
+    /// Saves the current net worth projection parameters via the ApiService.
+    /// Validates the model, delegates to the API, and redirects back to Index with a success message.
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveParameters(NetWorthViewModel model)
     {
+        var request = BuildRequest(model);
+
         if (!ModelState.IsValid)
         {
-            var request = BuildRequest(model);
             model.Projection = await _netWorthApi.CalculateProjectionAsync(request, CancellationToken.None);
             return View("Index", model);
         }
 
-        var userId = GetCurrentUserId();
-
-        var existing = await _dbContext.NetWorthParameters
-            .FirstOrDefaultAsync(e => e.UserId == userId);
-
-        if (existing != null)
+        try
         {
-            existing.StartingBalance = model.StartingBalance;
-            existing.AnnualSavings = model.AnnualSavings;
-            existing.AnnualIncome = model.AnnualIncome;
-            existing.AnnualSpending = model.AnnualSpending;
-            existing.CurrentAge = model.CurrentAge;
-            existing.RetirementAge = model.RetirementAge;
-            existing.BaseRoi = model.BaseRoi;
-            existing.ConservativeRoi = model.ConservativeRoi;
-            existing.AggressiveRoi = model.AggressiveRoi;
-            existing.AggressiveSavings = model.AggressiveSavings;
-            existing.UpdatedAtUtc = DateTime.UtcNow;
+            await _netWorthApi.SaveParametersAsync(request, HttpContext.RequestAborted);
+            TempData["SaveSuccess"] = "Parameters saved to cloud.";
         }
-        else
+        catch (Exception ex)
         {
-            await _dbContext.NetWorthParameters.AddAsync(new NetWorthParameters
-            {
-                UserId = userId,
-                StartingBalance = model.StartingBalance,
-                AnnualSavings = model.AnnualSavings,
-                AnnualIncome = model.AnnualIncome,
-                AnnualSpending = model.AnnualSpending,
-                CurrentAge = model.CurrentAge,
-                RetirementAge = model.RetirementAge,
-                BaseRoi = model.BaseRoi,
-                ConservativeRoi = model.ConservativeRoi,
-                AggressiveRoi = model.AggressiveRoi,
-                AggressiveSavings = model.AggressiveSavings,
-                UpdatedAtUtc = DateTime.UtcNow
-            });
+            ModelState.AddModelError("", $"Failed to save parameters: {ex.Message}");
+            model.Projection = await _netWorthApi.CalculateProjectionAsync(request, CancellationToken.None);
+            return View("Index", model);
         }
 
-        await _dbContext.SaveChangesAsync();
-        TempData["SaveSuccess"] = "Parameters saved to cloud.";
         return RedirectToAction(nameof(Index));
     }
 
     /// <summary>
-    /// Loads the saved net worth projection parameters for the authenticated user.
-    /// Returns 204 No Content if no saved parameters exist.
-    /// </summary>
-    [HttpGet]
-    public async Task<IActionResult> LoadParameters()
-    {
-        var userId = GetCurrentUserId();
-
-        var parameters = await _dbContext.NetWorthParameters
-            .FirstOrDefaultAsync(e => e.UserId == userId);
-
-        if (parameters == null)
-        {
-            return NoContent();
-        }
-
-        var dto = new NetWorthParametersDto
-        {
-            StartingBalance = parameters.StartingBalance,
-            AnnualSavings = parameters.AnnualSavings,
-            AnnualIncome = parameters.AnnualIncome,
-            AnnualSpending = parameters.AnnualSpending,
-            CurrentAge = parameters.CurrentAge,
-            RetirementAge = parameters.RetirementAge,
-            BaseRoi = parameters.BaseRoi,
-            ConservativeRoi = parameters.ConservativeRoi,
-            AggressiveRoi = parameters.AggressiveRoi,
-            AggressiveSavings = parameters.AggressiveSavings,
-            UpdatedAtUtc = parameters.UpdatedAtUtc
-        };
-
-        return Json(dto);
-    }
-
-    /// <summary>
-    /// Deletes the saved net worth projection parameters for the authenticated user.
+    /// Deletes the saved net worth projection parameters via the ApiService.
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteParameters()
     {
-        var userId = GetCurrentUserId();
-
-        var parameters = await _dbContext.NetWorthParameters
-            .FirstOrDefaultAsync(e => e.UserId == userId);
-
-        if (parameters != null)
+        try
         {
-            _dbContext.NetWorthParameters.Remove(parameters);
-            await _dbContext.SaveChangesAsync();
+            await _netWorthApi.DeleteParametersAsync(HttpContext.RequestAborted);
+        }
+        catch
+        {
+            // Silently ignore — parameters may not exist
         }
 
         return RedirectToAction(nameof(Index));
