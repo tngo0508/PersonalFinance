@@ -53,24 +53,19 @@ resource allowClientIps 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview'
   }
 }]
 
-// Azure SQL Database — Serverless General Purpose tier with free limit
-// Uses the free tier credits ($200/month for Azure SQL) for $0 cost
-// Auto-pauses when free limit is exhausted to prevent unexpected charges
+// Azure SQL Database — Basic tier (~$5/month)
+// Most budget-friendly option: always-on, 2 GB storage, 5 DTUs
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
   name: databaseName
   location: location
   tags: tags
   sku: {
-    name: 'GP_S_Gen5_1'
-    tier: 'GeneralPurpose'
+    name: 'Basic'
+    tier: 'Basic'
   }
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
-    maxSizeBytes: 34603008000 // 32 GB for serverless tier
-    useFreeLimit: true
-    freeLimitExhaustionBehavior: 'AutoPause'
-    minCapacity: json('0.5')
   }
 }
 
