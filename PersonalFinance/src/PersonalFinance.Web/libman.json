@@ -80,6 +80,19 @@
         "jquery.validate.unobtrusive.js",
         "jquery.validate.unobtrusive.min.js"
       ]
+    },
+    {
+      "library": "@fluentui/web-components@3.0.0",
+      "provider": "jsdelivr",
+      "destination": "wwwroot/lib/@fluentui/web-components",
+      "files": [
+        "dist/web-components.min.js"
+      ]
+    },
+    {
+      "library": "@fluentui/tokens@1.0.0-alpha.23",
+      "provider": "jsdelivr",
+      "destination": "wwwroot/lib/@fluentui/tokens"
     }
   ]
 }

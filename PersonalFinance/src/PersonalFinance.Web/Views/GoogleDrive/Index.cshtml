@@ -754,11 +754,11 @@
                         <li>Check that the folder still exists and hasn't been moved or deleted.</li>
                     </ul>
                     <div class="gd-empty-state__actions">
-                        <form asp-action="Sync" method="post" id="syncForm">
+                        <form asp-action="Sync" method="post" id="syncFormFallback">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@currentConn.Id" />
-                            <button type="submit" class="btn btn-primary d-flex align-items-center gap-2" id="btnSyncDrive">
-                                <span id="syncSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            <button type="submit" class="btn btn-primary d-flex align-items-center gap-2" id="btnSyncDriveFallback">
+                                <span id="syncSpinnerFallback" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                 Try again
                             </button>
                         </form>
@@ -1347,6 +1347,31 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/lib/datatables-bs5/dataTables.bootstrap5.min.css"/>
+    <style>
+        /* DataTables pagination layout */
+        .dt-layout-row .dataTables_info {
+            color: #6c757d;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        .dt-layout-row .dataTables_length {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        .dt-layout-row .dataTables_length label {
+            margin: 0;
+        }
+        .dt-layout-row .dataTables_paginate {
+            margin: 0;
+        }
+        .dt-layout-row .dataTables_paginate .pagination {
+            margin: 0;
+        }
+        .dt-layout-row .dataTables_paginate .pagination .page-item .page-link {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.6rem;
+        }
+    </style>
 }
 
 @section Scripts {

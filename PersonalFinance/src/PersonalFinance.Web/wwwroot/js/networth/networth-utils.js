@@ -17,20 +17,20 @@
     // Canvas height for comparison bar chart gradient
     const COMPARISON_CHART_HEIGHT = 280;
 
-    // Color palette — Dark futuristic neon theme
+    // Color palette — Fluent UI light theme
     const colors = {
-        base: '#818cf8',
-        conservative: '#a78bfa',
-        aggressive: '#34d399',
-        fi: '#38bdf8',
-        baseAlpha: 'rgba(129, 140, 248, 0.15)',
-        conservativeAlpha: 'rgba(167, 139, 250, 0.1)',
-        aggressiveAlpha: 'rgba(52, 211, 153, 0.15)',
-        gridColor: 'rgba(148, 163, 184, 0.08)',
-        gridColorStrong: 'rgba(148, 163, 184, 0.15)',
-        tickColor: '#64748b',
-        tooltipBg: 'rgba(15, 23, 42, 0.96)',
-        tooltipBorder: 'rgba(99, 102, 241, 0.3)'
+        base: '#0078d4',
+        conservative: '#756ae8',
+        aggressive: '#107c10',
+        fi: '#00b7c3',
+        baseAlpha: 'rgba(0, 120, 212, 0.12)',
+        conservativeAlpha: 'rgba(117, 106, 232, 0.08)',
+        aggressiveAlpha: 'rgba(16, 124, 16, 0.12)',
+        gridColor: 'rgba(0, 0, 0, 0.06)',
+        gridColorStrong: 'rgba(0, 0, 0, 0.12)',
+        tickColor: '#605e5c',
+        tooltipBg: 'rgba(255, 255, 255, 0.96)',
+        tooltipBorder: 'rgba(0, 0, 0, 0.1)'
     };
 
     // Scenario name mapping for safe property access

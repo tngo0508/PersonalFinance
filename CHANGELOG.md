@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-11
+
+### Changed
+- **Net Worth UI Refinements**:
+  - Refactored Net Worth UI layout to a responsive two-column structure with sticky sidebar inputs for improved usability.
+  - Reorganized sidebar into sticky top, scrollable middle, and sticky bottom sections with optimized compact mode and mobile-friendly behaviors.
+  - Standardized CSS box-sizing and width across sidebar elements for consistent layout.
+  - Removed independent scrolling and height constraints from sidebar content for a cleaner experience.
+  - Simplified scenario row highlight styles and removed redundant currency symbols in metric outputs.
+  - Improved code readability in Net Worth UI scripts by streamlining HTML content updates.
+
+- **Fluent UI Design System Integration**:
+  - Updated palettes, typography, and spacing to align with Fluent UI design guidelines.
+  - Integrated modular design tokens for consistent theming across the application.
+  - Reworked components (buttons, cards, modals, tables) with Fluent UI-inspired styling.
+  - Added support for `Segoe UI` font and responsive typography.
+
+- **Google Drive Sync**:
+  - Enhanced Google Drive sync form with fallback spinner styling and improved error handling.
+  - Refined DataTables pagination layout for better readability.
+
+- **Navigation**:
+  - Updated default route to use the Net Worth controller as the landing page.
+
 ## [1.3.0] - 2026-10-11
 
 ### Added

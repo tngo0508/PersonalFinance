@@ -52,7 +52,7 @@
             if (symbolEl) { symbolEl.textContent = '$'; }
             if (amountEl) { amountEl.textContent = Math.round(data.fiTarget).toLocaleString('en-US'); }
         }
-        setHtml('.nw-metric-fi-sub', 'Based on <span class="nw-currency-symbol">$</span>' + PF.escapeHtml(NW.formatCompact(data.annualSpending)) + '/yr spending');
+        setHtml('.nw-metric-fi-sub', 'Based on ' + PF.escapeHtml(NW.formatCompact(data.annualSpending)) + '/yr spending');
 
         // Current Net Worth card
         setText('.nw-metric-current-value', NW.formatCurrency(data.base.startingBalance));
@@ -64,7 +64,7 @@
 
         // Aggressive Final card
         setText('.nw-metric-aggressive-value', NW.formatCurrency(data.aggressive.finalNetWorth));
-        setHtml('.nw-metric-aggressive-sub', PF.escapeHtml(String(data.aggressive.roiPercent)) + '% ROI · <span class="nw-currency-symbol">$</span>' + PF.escapeHtml(NW.formatCompact(data.aggressive.annualSavings)) + '/yr savings');
+        setHtml('.nw-metric-aggressive-sub', PF.escapeHtml(String(data.aggressive.roiPercent)) + '% ROI · ' + PF.escapeHtml(NW.formatCompact(data.aggressive.annualSavings)) + '/yr savings');
 
         // Legend
         setHtmlById('nwLegendBase', '<span class="nw-legend-dot nw-dot-base"></span> Base (' + PF.escapeHtml(String(data.base.roiPercent)) + '%)');
@@ -93,10 +93,10 @@
         const contribEl = document.querySelector('.' + prefix + 'contrib');
         const interestEl = document.querySelector('.' + prefix + 'interest');
 
-        if (savingsEl) { savingsEl.innerHTML = '<span class="nw-currency-symbol">$</span>' + PF.escapeHtml(NW.formatCompact(scenario.annualSavings)); }
-        if (finalEl) { finalEl.innerHTML = '<span class="nw-currency-symbol">$</span>' + PF.escapeHtml(NW.formatCompact(scenario.finalNetWorth)); }
-        if (contribEl) { contribEl.innerHTML = '<span class="nw-currency-symbol">$</span>' + PF.escapeHtml(NW.formatCompact(scenario.totalContributions)); }
-        if (interestEl) { interestEl.innerHTML = '<span class="nw-currency-symbol">$</span>' + PF.escapeHtml(NW.formatCompact(scenario.totalInterestEarned)); }
+        if (savingsEl) { savingsEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.annualSavings)); }
+        if (finalEl) { finalEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.finalNetWorth)); }
+        if (contribEl) { contribEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.totalContributions)); }
+        if (interestEl) { interestEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.totalInterestEarned)); }
     }
 
     /**

@@ -203,7 +203,7 @@ try
 
     app.MapControllerRoute(
             name: "default",
-            pattern: "{controller=GoogleDrive}/{action=Index}/{id?}")
+            pattern: "{controller=Networth}/{action=Index}/{id?}")
         .WithStaticAssets();
 
     app.MapRazorPages();
