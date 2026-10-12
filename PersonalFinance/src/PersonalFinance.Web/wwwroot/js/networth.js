@@ -460,17 +460,29 @@
      * @param {Object} scenario - The scenario data object.
      */
     function setScenarioValues(prefix, scenario) {
-        const roiEl = document.querySelector(`.${prefix}roi`);
         const savingsEl = document.querySelector(`.${prefix}savings`);
         const finalEl = document.querySelector(`.${prefix}final`);
         const contribEl = document.querySelector(`.${prefix}contrib`);
         const interestEl = document.querySelector(`.${prefix}interest`);
 
-        if (roiEl) roiEl.textContent = `${scenario.roiPercent}%`;
         if (savingsEl) savingsEl.textContent = `$${formatCompact(scenario.annualSavings)}`;
         if (finalEl) finalEl.textContent = `$${formatCompact(scenario.finalNetWorth)}`;
         if (contribEl) contribEl.textContent = `$${formatCompact(scenario.totalContributions)}`;
         if (interestEl) interestEl.textContent = `$${formatCompact(scenario.totalInterestEarned)}`;
+    }
+
+    /**
+     * Update scenario card ROI badges.
+     * @param {Object} data - The projection data object.
+     */
+    function updateScenarioBadges(data) {
+        const badges = document.querySelectorAll('.nw-scenario-badge');
+        const roiValues = [data.base.roiPercent, data.conservative.roiPercent, data.aggressive.roiPercent];
+        badges.forEach(function (badge, index) {
+            if (index < roiValues.length) {
+                badge.textContent = `${roiValues[index]}% ROI`;
+            }
+        });
     }
 
     /**
@@ -621,6 +633,8 @@
                 rangeEl.value = num;
             }
             updateSavingsIndicator();
+            syncSaveInputs();
+            triggerRecalculation();
         });
 
         inputEl.addEventListener('blur', function () {
@@ -1020,6 +1034,7 @@
                 renderComparisonChart(data);
                 updateMetrics(data);
                 updateScenarioCards(data);
+                updateScenarioBadges(data);
                 // Re-render the active scenario table
                 const activeBtn = document.querySelector('.nw-tab-btn.active');
                 if (activeBtn) {
