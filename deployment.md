@@ -1,6 +1,6 @@
 # Personal Finance Application - Deployment Guide
 
-This guide provides deterministic, step-by-step instructions for deploying the **Personal Finance** application across multiple environments. The architecture is engineered for **zero operating cost** using Microsoft Azure's lifetime free tiers (Azure Container Apps Consumption, GitHub Container Registry, Log Analytics free 5GB/mo, and optional Azure SQL Database Serverless Free Tier) alongside local containerized options.
+This guide provides deterministic, step-by-step instructions for deploying the **Personal Finance** application across multiple environments. The architecture targets **low operating cost** (~$5–10/month) using Azure Container Apps Consumption (scale-to-zero), GitHub Container Registry (free), Log Analytics free 5GB/mo, and Azure SQL Database Basic tier (~$5/month) alongside local containerized options.
 
 ---
 
@@ -34,7 +34,7 @@ flowchart LR
                 api["Container App: api-pf-prod-*<br/>PersonalFinance.ApiService<br/>REST API (controllers)<br/>ingress: see 1.10"]
             end
             subgraph SQLS["Azure SQL logical server: sql-pf-prod-* (westus2)"]
-                sqldb[("Database: PersonalFinance<br/>Serverless GP_S_Gen5_1<br/>free offer, auto-pause")]
+                sqldb[("Database: PersonalFinance<br/>Basic tier (~$5/mo)<br/>2 GB storage, 5 DTUs")]
             end
         end
     end
@@ -91,8 +91,8 @@ flowchart TB
 
 | Project | Runs in Azure? | Role |
 |---|---|---|
-| `PersonalFinance.Web` | ✅ Container App `web-*` | The only public entry point. Server-rendered MVC + Razor Pages (Identity), cookie authentication, Google sign-in, Brevo email, and a typed **Refit** client (`IGoogleDriveApi`) that calls the API. |
-| `PersonalFinance.ApiService` | ✅ Container App `api-*` | Business logic for Google Drive: explore folders, persist connections and cached file metadata, export spreadsheets and build budget reports. Serves OpenAPI/Scalar when `ApiDocs__Enabled=true`. |
+| `PersonalFinance.Web` | ✅ Container App `web-*` | The only public entry point. Server-rendered MVC + Razor Pages (Identity), cookie authentication, Google sign-in, Brevo email, Google Drive explorer, budget reports, transactions viewer, net worth projections, and typed **Refit** clients (`IGoogleDriveApi`, `INetWorthApi`) that call the API. |
+| `PersonalFinance.ApiService` | ✅ Container App `api-*` | Business logic: Google Drive (explore folders, persist connections, cached file metadata), spreadsheet export (budget reports + transactions), and net worth projections. Serves OpenAPI/Scalar when `ApiDocs__Enabled=true`. |
 | `PersonalFinance.Data` | Inside both images | EF Core `AppDbContext` (Identity tables + Drive tables), SQL Server migrations, and the startup migration/seed routine both apps call. |
 | `PersonalFinance.Shared` | Inside both images | Contracts shared by both sides: DTOs and the Refit interface, so the client and server cannot drift apart silently. |
 | `PersonalFinance.ServiceDefaults` | Inside both images | Aspire "service defaults": OpenTelemetry, `/health` + `/alive` endpoints used by the Container Apps probes, HTTP resilience. |
@@ -111,7 +111,7 @@ flowchart TD
             bt["checkout → setup .NET 10 →<br/>NuGet cache → restore → build (Release) →<br/>dotnet test"]
         end
         subgraph job1b["validate-infra (≤5 min)"]
-            vi["az bicep build<br/>main.bicep + local-dev.bicep"]
+            vi["az bicep build<br/>main.bicep + local-dev.bicep<br/>(validates Bicep syntax)"]
         end
         subgraph job2["build-and-push-containers (≤20 min) · matrix"]
             imgapi["api image<br/>(cache scope: api)"]
@@ -205,9 +205,10 @@ The Bicep modules and their dependencies (ARM works out the order from these ref
 ```mermaid
 flowchart LR
     main["infra/main.bicep"]
+    local["infra/local-dev.bicep<br/>Local dev SQL only"]
     la["log-analytics.bicep<br/>PerGB2018, 30-day retention"]
     env["container-env.bicep<br/>Consumption workload profile"]
-    sql["sql-database.bicep<br/>server + firewall + DB<br/>(optional)"]
+    sql["sql-database.bicep<br/>server + firewall + DB<br/>Basic tier (optional)"]
     apim["api-service.bicep<br/>0.25 vCPU / 0.5 Gi, 0–1 replicas"]
     webm["web-service.bicep<br/>0.25 vCPU / 0.5 Gi, 0–1 replicas"]
 
@@ -224,7 +225,7 @@ flowchart LR
 | Container Apps environment | `container-env.bicep` | `cae-<env>-<hash>` | No charge itself (Consumption profile) |
 | Container App (API) | `api-service.bicep` | `api-<env>-<hash>` | Consumption; scales to zero; monthly free grant |
 | Container App (Web) | `web-service.bicep` | `web-<env>-<hash>` | Consumption; scales to zero; monthly free grant |
-| Azure SQL server + database | `sql-database.bicep` | `sql-<env>-<hash>` / `PersonalFinance` | Serverless `GP_S_Gen5_1` with the free offer (auto-pause) |
+| Azure SQL server + database | `sql-database.bicep` | `sql-<env>-<hash>` / `PersonalFinance` | Basic tier (~$5/month, 2 GB, 5 DTUs) |
 | Container images | *(GitHub)* | `ghcr.io/<owner>/personalfinance-{api,web}` | Free for public packages |
 
 `<hash>` is `uniqueString(resourceGroup().id, location)`, which gives names that are stable across redeploys and unique per resource group. The SQL server hashes `sqlLocation` instead, because SQL server names are tied to their region.
@@ -312,16 +313,16 @@ stateDiagram-v2
 |---|---|---|---|---|
 | **Local (Aspire)** | `dotnet run --project PersonalFinance/src/PersonalFinance.AppHost` | .NET Aspire AppHost + dashboard | Dev Azure SQL from `infra/deploy-local-sql.ps1` (`rg-personalfinance-dev`) or a local SQL Server | .NET User Secrets |
 | **Local (Docker)** | Section 6 | `docker network` with two containers | Any SQL Server reachable from Docker, passed via `ConnectionStrings__DefaultConnection` | `-e` environment variables |
-| **Azure (production)** | Push to `main` (Section 3), `deploy.ps1` (Section 4) or `azd up` (Section 5) | Azure Container Apps | Serverless Azure SQL, or `CUSTOM_CONNECTION_STRING` | GitHub secrets → Container App secrets |
+| **Azure (production)** | Push to `main` (Section 3), `deploy.ps1` (Section 4) or `azd up` (Section 5) | Azure Container Apps | Azure SQL Basic tier (~$5/month), or `CUSTOM_CONNECTION_STRING` | GitHub secrets → Container App secrets |
 | **Tests** | `dotnet test` | — | EF Core InMemory provider | — |
 
 ### 1.9 Deployment Modality Selection Matrix
 
 | Deployment Method | Target Environment | Best For | Ingress & Networking | Database Tier |
 |---|---|---|---|---|
-| **Option 1: GitHub Actions CI/CD (Recommended)** | Azure Container Apps | Automated production deployments, continuous delivery on push to `main` or manual trigger. | Web: External<br/>API: see 1.10 | Azure SQL Serverless Free, or custom connection string |
-| **Option 2: PowerShell / Azure CLI (`deploy.ps1`)** | Azure Container Apps | Direct terminal control, parameter tweaking, dry-run validation (`-ValidateOnly`, `-WhatIf`). | Web: External<br/>API: Internal | Azure SQL Serverless Free (`-DeploySqlDatabase`), or custom connection string |
-| **Option 3: Azure Developer CLI (`azd`)** | Azure Container Apps | Standardized developer workflows and single-command provisioning (`azd up`). | Web: External<br/>API: Internal | Azure SQL Serverless Free, or custom connection string |
+| **Option 1: GitHub Actions CI/CD (Recommended)** | Azure Container Apps | Automated production deployments, continuous delivery on push to `main` or manual trigger. | Web: External<br/>API: see 1.10 | Azure SQL Basic tier (~$5/month), or custom connection string |
+| **Option 2: PowerShell / Azure CLI (`deploy.ps1`)** | Azure Container Apps | Direct terminal control, parameter tweaking, dry-run validation (`-ValidateOnly`, `-WhatIf`). | Web: External<br/>API: Internal | Azure SQL Basic tier (`-DeploySqlDatabase`), or custom connection string |
+| **Option 3: Azure Developer CLI (`azd`)** | Azure Container Apps | Standardized developer workflows and single-command provisioning (`azd up`). | Web: External<br/>API: Internal | Azure SQL Basic tier, or custom connection string |
 | **Option 4: Local Multi-Stage Docker** | Local machine (Docker) | Pre-commit validation and isolated local integration testing. | Localhost ports `8080` (Web) & `8081` (API) | Any reachable SQL Server (e.g. the dev Azure SQL database) |
 
 ### 1.10 Security Posture and Known Gaps
@@ -566,12 +567,12 @@ Navigate to your GitHub repository **Settings** &rarr; **Secrets and variables**
 
 | Secret Name | Value | When Required | Security & Secret Flow |
 |---|---|---|---|
-| `SQL_ADMIN_PASSWORD` | Strong password for Azure SQL admin account (`sqladmin`) | When `deploy_sql` input is `true` (Option A: Serverless Free Tier) | Passed to Bicep `@secure() param sqlAdministratorLoginPassword`. The connection string is generated dynamically by Bicep and stored securely in Container Apps secrets (`db-connection-string`). |
+| `SQL_ADMIN_PASSWORD` | Strong password for Azure SQL admin account (`sqladmin`) | When `deploy_sql` input is `true` (Option A: Azure SQL Basic tier) | Passed to Bicep `@secure() param sqlAdministratorLoginPassword`. The connection string is generated dynamically by Bicep and stored securely in Container Apps secrets (`db-connection-string`). |
 | `CUSTOM_CONNECTION_STRING` | Full connection string to existing/external SQL Server or mounted database | When `deploy_sql` input is `false` (Option B: Custom DB) | Passed to Bicep `@secure() param customConnectionString` and registered in Container Apps secrets (`db-connection-string`). |
 
 ##### Database Configuration Scenarios
 
-- **Option A: Automated Azure SQL Serverless Free Tier ($0.00)**
+- **Option A: Automated Azure SQL Database Basic Tier (~$5/month)**
   1. Generate a strong password meeting Azure SQL requirements (minimum 8 characters with uppercase, lowercase, numbers, and symbols).
   2. Add `SQL_ADMIN_PASSWORD` to GitHub Secrets.
   3. When running CI/CD, keep `deploy_sql: true`. Bicep provisions the SQL server, builds the encrypted connection string (`Encrypt=True;TrustServerCertificate=False;`), and mounts it via `secretRef: 'db-connection-string'` to environment variable `ConnectionStrings__DefaultConnection`.
@@ -639,7 +640,7 @@ For controlled deployments or testing, manually trigger the workflow:
 3. Click the **Run workflow** button (top right).
 4. Configure the optional inputs:
    - **`environment`** (string, default: `pf-prod`): Azure environment name prefix for resource naming.
-   - **`deploy_sql`** (boolean, default: `true`): Set to `true` to provision Azure SQL Database Serverless Free Tier ($0.00). When enabled, you **must** provide `SQL_ADMIN_PASSWORD` secret.
+   - **`deploy_sql`** (boolean, default: `true`): Set to `true` to provision Azure SQL Database Basic tier (~$5/month). When enabled, you **must** provide `SQL_ADMIN_PASSWORD` secret.
    - **`dry_run`** (boolean, default: `false`): Set to `true` to validate infrastructure without deploying (skips container push and Azure deployment).
 5. Click **Run workflow**.
 
@@ -685,10 +686,13 @@ The workflow automatically tests the following endpoints on the deployed web app
 **Test Application Features**:
 1. Navigate to the deployed web application URL (shown in the workflow output or Azure Portal).
 2. Test the following:
-   - **Home page loads**: Verify the dashboard and UI render correctly.
+   - **Home page loads**: Verify the Google Drive explorer page renders correctly.
    - **Google OAuth sign-in** (if configured): Click the "Sign in with Google" button and verify the OAuth flow completes.
    - **Account registration**: Create a new account and verify the confirmation email is sent (check your email inbox or Brevo dashboard logs).
-   - **Budget reports** (if Google Drive API is configured): Verify the Google Drive integration works.
+   - **Google Drive Explorer**: Connect a Google Drive folder and verify file browsing works.
+   - **Budget reports** (if Google Drive API is configured): Open a spreadsheet's budget report and verify parsing and charts.
+   - **Transactions Viewer**: Open a spreadsheet's transactions view and verify table rendering.
+   - **Net Worth Projections**: Navigate to `/Networth` and verify the projection page loads with preset scenarios.
 
 #### 5.6 Troubleshooting Common Issues
 
@@ -699,7 +703,7 @@ The workflow automatically tests the following endpoints on the deployed web app
 
 **Deployment Fails with `MANIFEST_UNKNOWN` (Container Image Pull Error)**:
 - **Image Tag Prefix**: Ensure the image tag generated by Docker Buildx matches the parameter passed to Bicep. `docker/metadata-action` defaults to prefix `sha-` unless overridden with `prefix=`.
-- **GHCR Package Visibility**: By default, newly pushed packages in GitHub Container Registry are set to **Private**. For Azure Container Apps to pull zero-cost container images anonymously without credentials:
+- **GHCR Package Visibility**: By default, newly pushed packages in GitHub Container Registry are set to **Private**. For Azure Container Apps to pull container images anonymously without credentials:
   1. In GitHub, go to your profile &rarr; **Packages** (or repository &rarr; **Packages**).
   2. Click on `personalfinance-api` and `personalfinance-web`.
   3. Go to **Package settings** &rarr; scroll to **Danger Zone** &rarr; **Change visibility** &rarr; select **Public** &rarr; confirm.
@@ -708,7 +712,7 @@ The workflow automatically tests the following endpoints on the deployed web app
 - **Root Cause**: The application container inside Azure Container Apps attempted to connect to `[::1]:1433` (`localhost:1433`) because the database connection string was missing or empty in the Container App environment secrets.
 - **Resolution**:
   1. Ensure the secret is added under **Repository secrets** (not Environment secrets): Navigate to **Settings** &rarr; **Secrets and variables** &rarr; **Actions** &rarr; **New repository secret**.
-  2. For Option A (Azure SQL Serverless Free Tier): Add `SQL_ADMIN_PASSWORD` with a strong password (minimum 8 characters with uppercase, lowercase, numbers, and symbols).
+  2. For Option A (Azure SQL Basic tier): Add `SQL_ADMIN_PASSWORD` with a strong password (minimum 8 characters with uppercase, lowercase, numbers, and symbols).
   3. For Option B (Existing or External Database): Add `CUSTOM_CONNECTION_STRING` with your full encrypted connection string.
   4. Trigger a new workflow run in GitHub Actions.
 
@@ -749,7 +753,7 @@ For direct command-line provisioning or customized parameter testing, the reposi
 | `-BrevoSenderEmail` | `string` | `tngo0508@gmail.com` | Verified Brevo sender email. |
 | `-BrevoSenderName` | `string` | `PersonalFinance` | Sender display name. |
 | `-GoogleDriveApiKey` | `string` | `""` | Google Drive v3 API Key. |
-| `-DeploySqlDatabase` | `switch` | `false` | Provision Azure SQL Database Serverless Free Tier ($0.00). |
+| `-DeploySqlDatabase` | `switch` | `false` | Provision Azure SQL Database Basic tier (~$5/month). |
 | `-SqlAdminPassword` | `string` | `""` | Admin password for Azure SQL (required if `-DeploySqlDatabase` is enabled). |
 | `-CustomConnectionString`| `string` | `""` | Custom SQL Server or storage connection string. |
 | `-CustomDomainName` | `string` | `""` | Custom domain name (e.g. `finance.mydomain.com`). |
@@ -805,7 +809,7 @@ Preview the resource graph additions and modifications:
 
 > **Important**: pass `-DeploySqlDatabase` explicitly when you want Azure SQL provisioned (Option B). The script sends `$DeploySqlDatabase.IsPresent`, so the `= $true` default in its `param()` block has no effect: omitting the switch deploys **without** a database, and the apps then need `-CustomConnectionString`.
 
-##### Option B: Azure SQL Database Serverless Free Tier Stack ($0.00)
+##### Option B: Azure SQL Database Basic Tier Stack (~$5/month)
 ```powershell
 .\infra\deploy.ps1 `
   -ResourceGroupName "rg-personalfinance-prod" `
@@ -966,6 +970,8 @@ The repository includes an automated verification script that tests readiness, l
 | `/alive` | Liveness Probe | `200 OK` | Verifies process responsiveness and runtime availability. |
 | `/` | Landing / UI | `200 OK` or `302 Found` | Verifies MVC pipeline routing, layout rendering, and static assets. |
 | `/Identity/Account/Login` | Identity UI | `200 OK` | Verifies ASP.NET Core Identity Razor Pages and external provider button discovery. |
+| `/GoogleDrive` | Google Drive Explorer | `200 OK` (authenticated) | Verifies the main application page loads with Drive connections. |
+| `/Networth` | Net Worth Projections | `200 OK` (authenticated) | Verifies the Net Worth projection page loads. |
 | `/scalar/v1` *(ApiService)* | OpenAPI / Docs | `200 OK` | API documentation; reachable only when the API is exposed (`exposeApiPublicly=true`) or locally. |
 
 ### Manual Terminal Verification (cURL / PowerShell)
@@ -999,7 +1005,7 @@ Use the following runbook to diagnose and remediate common operational and deplo
 
 ### 2. Container Cold-Start & Readiness Timeout
 - **Symptom**: `smoke-test.ps1` returns HTTP 503 or connection timeout on the first few attempts immediately after deployment.
-- **Root Cause**: Azure Container Apps Consumption profile scales instances to zero when idle. Waking from zero or resuming Azure SQL Database Serverless Free Tier takes ~15–30 seconds.
+- **Root Cause**: Azure Container Apps Consumption profile scales instances to zero when idle. Waking from zero replicas takes ~15–30 seconds.
 - **Remediation**:
   - The application includes built-in retry backoff (5 retries with exponential backoff) during startup database migration.
   - Run `smoke-test.ps1` with `-MaxRetries 45` to allow the initial container revision to finish warming up and completing migrations.

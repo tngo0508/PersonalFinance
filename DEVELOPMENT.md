@@ -54,10 +54,10 @@ PersonalFinanceApp/
 |---|---|---|
 | `PersonalFinance.AppHost` | Orchestrates multi-project startup, service discovery, and Aspire dashboard. | .NET Aspire 13.x |
 | `PersonalFinance.ServiceDefaults` | Shared OpenTelemetry metrics, distributed tracing, health endpoints (`/health`, `/alive`), and HTTP resilience. | OpenTelemetry, Polly |
-| `PersonalFinance.Web` | Frontend web UI, Identity user authentication, file explorer, Chart.js financial analytics. | MVC, Razor Pages, Identity, Bootstrap 5, Chart.js, Refit |
-| `PersonalFinance.ApiService` | Backend REST API, Google Drive API v3 integration, OpenAPI & Scalar docs (`/scalar/v1`). | ASP.NET Core Minimal APIs / Controllers, Scalar |
+| `PersonalFinance.Web` | Frontend web UI, Identity, file explorer, budget reports, transactions viewer, net worth projections. | MVC, Razor Pages, Identity, Bootstrap 5, Chart.js, Refit |
+| `PersonalFinance.ApiService` | Backend REST API: Google Drive integration, budget reports, transactions, net worth projections, OpenAPI & Scalar docs (`/scalar/v1`). | ASP.NET Core Controllers, Scalar |
 | `PersonalFinance.Data` | EF Core persistence with provider-specific migrations (SQLite + SQL Server/Azure SQL), Identity stores, Data Protection keys. | EF Core 10, SQLite, SQL Server |
-| `PersonalFinance.Shared` | Shared DTOs, API interfaces (`IGoogleDriveApi`), parsing algorithms (`GoogleDriveHelper`), AES-256 helpers. | Refit, System.Security.Cryptography |
+| `PersonalFinance.Shared` | Shared DTOs, API interfaces (`IGoogleDriveApi`, `INetWorthApi`), parsing algorithms (`GoogleDriveHelper`), AES-256 helpers. | Refit, System.Security.Cryptography |
 | `PersonalFinance.Tests` | Automated unit and integration test suite (104+ tests). | xUnit, Moq, FluentAssertions |
 
 ---
@@ -371,7 +371,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetRoleClaims`, `AspNetUserLogins`, `AspNetUserTokens`), foreign key relationships, and integration with application tables (`GoogleDriveConnections`, `GoogleDriveCachedFiles`, `DataProtectionKeys`), see [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md).
 
 ### Environment-Driven Database Provider Switching
-The application supports both **Microsoft Azure SQL Database (Serverless Free Tier)** (primary production path) and **SQLite** (local dev or Azure Files mounted volume fallback):
+The application supports both **Microsoft Azure SQL Database (Basic tier, ~$5/month)** (primary production path) and **SQLite** (local dev or Azure Files mounted volume fallback):
 - **Automatic Detection**: If the connection string contains SQL Server indicators (`Server=`, `database.windows.net`, `Data Source=tcp:`, `Initial Catalog=`, etc.), `DatabaseProviderHelper` automatically selects the `SqlServer` provider with exponential backoff connection resilience (`EnableRetryOnFailure`). Otherwise, it defaults to `Sqlite`.
 - **Explicit Override**: Specify `"Database:Provider": "SqlServer"` or `"Database:Provider": "Sqlite"` in configuration or set the `DATABASE_PROVIDER` environment variable.
 - **DI wiring**: `AddAppDbContext` registers `AppDbContext` with a provider-specific implementation (`SqlServerAppDbContext` or `SqliteAppDbContext`) so EF Core discovers the matching migration set at runtime.
@@ -444,10 +444,12 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 - `ExternalAuthenticationTests`: Tests Google OAuth scheme registration, option configuration, custom claim extraction (`urn:google:picture`, `urn:google:locale`), API-aware 401/403 status code redirects, user auto-provisioning with confirmed emails, and secure account linking.
 - `BrevoEmailSenderTests`: Tests Brevo REST API dispatch, payload serialization, error responses, and HTML email assembly.
 - `EmailTemplateHelperTests`: Tests custom HTML email templates, parameter escaping, CTA button styling, and fallback URL rendering.
-- `GoogleDriveHelperTests`: Tests URL parsing, multi-sheet OpenXML budget parsing, balance extraction, and category categorization.
+- `GoogleDriveHelperTests`: Tests URL parsing, multi-sheet OpenXML budget parsing, balance extraction, category categorization, transaction parsing (`ParseXlsxTransactions`, `ParseCsvTransactions`), side-by-side table detection, Excel serial date conversion, and total row filtering.
 - `GoogleDrivePersistenceTests`: Tests SQLite connection storage, file caching, incremental sync, and AES encryption.
+- `GoogleDriveWebControllerTests`: Tests controller actions for budget reports, transactions, error handling, and spreadsheet source resolution.
 - `DatabasePersistenceAndMigrationTests`: Provider switching, provider-specific migration sets, SQLite migrate/seed pipeline, SQL Server migration script inspection (`nvarchar(450)` keys), and Data Protection key persistence.
 - `ServiceDefaultsTests`: Validates OpenTelemetry providers, health check registration, and Aspire defaults.
+- `GitHubActionsDeploymentWorkflowTests`: Validates CI/CD workflow configuration including job timeouts, concurrency settings, `paths-ignore`, per-image cache scopes, deploy gating, and `promote-latest` behavior.
 
 ---
 
@@ -614,7 +616,7 @@ Health check endpoints `/health` and `/alive` are available on port 8080 for bot
 
 ## 8. Azure Deployment & Infrastructure as Code (Bicep)
 
-The application provides zero-cost Azure Infrastructure as Code (IaC) using modular Bicep templates targeting **Azure Container Apps (ACA) Consumption Profiles** with scale-to-zero autoscaling (0 to 1 replica), Log Analytics 5 GB/mo free grant, and Azure SQL Serverless Free Tier.
+The application provides Azure Infrastructure as Code (IaC) using modular Bicep templates targeting **Azure Container Apps (ACA) Consumption Profiles** with scale-to-zero autoscaling (0 to 1 replica), Log Analytics 5 GB/mo free grant, and Azure SQL Database Basic tier (~$5/month).
 
 ### Infrastructure Structure
 
@@ -622,10 +624,12 @@ The application provides zero-cost Azure Infrastructure as Code (IaC) using modu
 infra/
 ├── main.bicep                  # Orchestrates ACA Environment, Log Analytics, Database, and Container Apps
 ├── main.parameters.json        # Parameter mapping for environment
+├── local-dev.bicep             # Standalone template for local dev Azure SQL provisioning
+├── deploy-local-sql.ps1        # Script to provision local dev Azure SQL and store connection string
 ├── modules/
 │   ├── log-analytics.bicep     # Free 5GB/mo workspace (PerGB2018 SKU, 30 days retention)
 │   ├── container-env.bicep     # Container Apps Managed Environment (Consumption profile)
-│   ├── sql-database.bicep      # Azure SQL Serverless Free Tier (GP_S_Gen5_1, AutoPause, 32GB)
+│   ├── sql-database.bicep      # Azure SQL Database Basic tier (~$5/month, 2 GB, 5 DTUs)
 │   ├── api-service.bicep       # ApiService Container App (Internal ingress, scale-to-zero)
 │   └── web-service.bicep       # Web App Container App (External HTTPS ingress, scale-to-zero)
 └── deploy.ps1                  # Single-command local deployment and validation script
@@ -715,7 +719,7 @@ Configure the following secrets in GitHub Repository Settings &rarr; **Secrets a
 | `BREVO_API_KEY` | Brevo REST API Key for email verification | `xkeysib-...` |
 | `GOOGLE_DRIVE_API_KEY` | Google Drive API v3 Key | `AIzaSy...` |
 | `CUSTOM_CONNECTION_STRING` | *(Optional)* Connection string for external DB / mounted SQLite | `Data Source=tcp:sqlserver...` |
-| `SQL_ADMIN_PASSWORD` | *(Optional)* Password for Azure SQL Serverless Free Tier | `P@ssw0rd12345!` |
+| `SQL_ADMIN_PASSWORD` | *(Optional)* Password for Azure SQL Basic tier | `P@ssw0rd12345!` |
 
 #### Repository Variables (`vars.*`)
 | Variable Name | Description | Default Value |
@@ -791,3 +795,304 @@ Endpoints validated:
 
 > **Microservice Network Isolation & `/scalar/v1`:**
 > `PersonalFinance.ApiService` is provisioned with internal-only ingress (`external: false`) in Azure Container Apps to prevent unauthorized public exposure of backend endpoints. Consequently, internal endpoints such as `/scalar/v1` and `/openapi/v1.json` are not exposed to public internet smoke tests; they are verified during development and CI pipeline test executions.
+
+---
+
+## Appendix: Content Archived from README
+
+> The following sections were previously in `README.md` and have been moved here for reference. They contain detailed, step-by-step instructions that are more appropriate for a developer guide than a project landing page.
+
+---
+
+### Data Flow & System Interactions
+
+#### 1. Google Drive Folder Exploration & Caching Flow
+1. **User Connection**: Authenticated user submits a Google Drive folder link or ID and API key on `/GoogleDrive`.
+2. **Security & Persistence**: The connection configuration is encrypted via `CredentialProtector` (AES-256) and saved in SQLite (`GoogleDriveConnection`).
+3. **Fetching & Caching**: `PersonalFinance.ApiService` queries Google Drive API v3, normalizes metadata (size, MIME category, timestamps), and persists records to `GoogleDriveCachedFile`.
+4. **Subsequent Access**: On repeat visits, metadata is served immediately from the local SQLite cache without triggering external API calls, providing near-instant page loads.
+5. **Incremental Sync**: The manual "Sync / Refresh" button detects new, updated, or removed files, updating only changed records.
+
+#### 2. Monthly Budget Report & Analytics Flow
+1. **Spreadsheet Discovery**: User clicks "View Budget Report" on any Google Sheet or spreadsheet CSV in their Drive.
+2. **Fetch & Conversion**: `ApiService` exports the spreadsheet via Google Drive API (or uses cached CSV data) and passes the raw content to `GoogleDriveHelper`.
+3. **Parsing Engine**: `GoogleDriveHelper` automatically detects single-month and full-year multi-month budget formats, parses planned vs. actual income/expenses, extracts category allocations, and computes starting/ending balances.
+4. **Analytics Delivery**: A structured `MonthlyBudgetReportDto` is returned through the typed Refit client to the frontend.
+5. **Interactive Visualization**: The web client renders KPI summary cards (Total Income, Total Expenses, Net Surplus/Deficit, Savings Rate), Chart.js comparison charts, and category variance progress bars with print support.
+
+#### 3. Spreadsheet Transactions Viewer Flow
+1. **Transaction Discovery**: User clicks "Transactions" on any Google Sheet or spreadsheet in their Drive.
+2. **Fetch & Export**: `ApiService` exports the spreadsheet as XLSX (all sheets available) via Google Drive API, with CSV fallback.
+3. **Parsing Engine**: `GoogleDriveHelper.ParseXlsxTransactions` scans sheets for tables with `Date` and `Amount` headers. It supports side-by-side tables (e.g., Google's Monthly budget template with Expenses and Income), section labels that set transaction type, `Type` columns, signed amounts, Excel serial date conversion, and skips "Total…" rows. Sheets named "Transactions" are prioritized.
+4. **Analytics Delivery**: A structured `SpreadsheetTransactionsDto` is returned through the `IGoogleDriveApi.GetSpreadsheetTransactionsAsync` Refit method to the frontend.
+5. **Interactive Visualization**: The web client renders a searchable, sortable table with category chips, income marked with green "+", spending-over-time charts (daily or monthly), top category rankings, live filtered totals, and CSV export.
+
+#### 4. Net Worth Projection & Financial Independence Flow
+1. **User Input**: User enters current net worth, annual income, savings rate, investment return rate, inflation rate, and FI target on the Net Worth page (`/Networth`). Preset scenarios (Conservative, Moderate, Aggressive) can auto-fill parameters.
+2. **Server-Side Calculation**: The `NetWorthProjectionRequestDto` is sent via the `INetWorthApi` Refit client to `PersonalFinance.ApiService/NetWorthController`. The `NetWorthProjectionService` computes year-by-year projections including net worth growth, annual contributions, investment returns, inflation-adjusted values, and cumulative ROI.
+3. **Randomization**: Optionally, the randomization feature generates Monte Carlo–style parameter variations to explore different outcomes.
+4. **Projection Delivery**: A structured `NetWorthProjectionDto` is returned to the frontend.
+5. **Interactive Visualization**: The web client renders a year-by-year projection table (highlighting rows where cumulative ROI surpasses annual income — the FI milestone), interactive Chart.js visualizations with a dark futuristic theme, and slider controls for live parameter adjustments. A 4% rule calculator helps users set realistic FI targets.
+
+---
+
+### Detailed Feature Descriptions
+
+#### Google Drive Folder Explorer & Persistent Caching
+Allows users to connect, manage, and cache Google Drive folders with persistent SQLite storage so they only need to connect a folder once and avoid repeated API requests (`/GoogleDrive`).
+- **Persistent SQLite Storage**: Google Drive folder connections (`GoogleDriveConnection`) and file metadata (`GoogleDriveCachedFile`) are saved in SQLite.
+- **Subsequent Login Auto-Loading**: Saved configurations load automatically upon login, skipping setup flows and serving cached data with zero external API calls.
+- **Multiple Drives Support**: Users can connect multiple Google Drive folders simultaneously, switch between them seamlessly, and add new drives without overwriting existing ones.
+- **Incremental Synchronization & Manual Refresh**: Smart synchronization updates modified files, inserts new items, and removes deleted files without re-downloading unchanged metadata. Users can trigger manual sync via the "Sync / Refresh" button.
+- **Credential Security & Re-authentication**: API credentials and tokens are AES-encrypted in SQLite, masked in UI outputs (`AIza...8xY2`), never logged in plaintext, and isolated by authenticated user. Expired credentials prompt an in-place re-authentication modal.
+- **Universal URL Parsing**: Supports standard folder URLs, shortened/view URLs, and raw folder IDs via `GoogleDriveHelper`.
+- **Interactive DataTables & Grid Views**: Real-time category filtering (Sheets, Docs, PDFs, Images, Slides, Folders), sorting by name, size (raw byte sorting), creation/modification dates, and pagination.
+- **Direct Access**: Clickable links to open files/folders directly in Google Drive, plus quick clipboard copy actions.
+
+#### Google Drive Monthly Budget Report & Financial Analytics
+Transforms raw budget spreadsheets stored in Google Drive into structured, actionable financial insights directly from the web interface.
+- **Automatic Layout Detection**: Seamlessly identifies and parses both single-month budget sheets and 12-month full-year overview spreadsheets.
+- **Income & Expense Analytics**: Computes planned vs. actual totals, net surplus/deficit, net savings rate (%), and budget variance across all categories.
+- **Starting & Ending Balances**: Tracks beginning and ending cash balances across months for cash flow visibility.
+- **Visual Analytics**: Interactive Chart.js visualizations including income vs. expense bar/line charts and category spending doughnut charts.
+- **Category Progress & Variance**: Visual progress bars highlighting under-budget and over-budget category allocations.
+- **Export & Print**: Dedicated clean printable report view for physical archiving and financial reviews.
+- **Enhanced Features** (v1.1.0+): Summary card with period, status badge, and plain-language takeaway; plan meters on Income and Spending tiles; savings rate measured against a 20% goal; "Where your income went" bar; category sorting (largest, most over budget, A–Z); "Only over budget" filter; CSV export.
+
+#### Spreadsheet Transactions Viewer
+View, search, and filter transaction data extracted from Google Sheets spreadsheets (`/GoogleDrive` → Transactions action).
+- **Smart Table Detection**: `GoogleDriveHelper.ParseXlsxTransactions` automatically finds tables with `Date` and `Amount` headers across all sheets. Sheets named "Transactions" are read first.
+- **Side-by-Side Tables**: Supports Google's Monthly budget template format where Expenses and Income tables appear side by side.
+- **Type Resolution**: Uses section labels above tables, `Type` columns, or signed amounts to determine income vs. expense.
+- **Excel Date Conversion**: Handles Excel serial dates (e.g., 45292 → 2024-01-15).
+- **Total Row Filtering**: Automatically skips "Total…" summary rows.
+- **Interactive UI**: Searchable, sortable table with category chips, income marked with green "+", spending-over-time charts (daily or monthly for ranges over two months), top category rankings with "Other" folding, live filtered totals, and CSV export.
+- **Transactions Insights**: Highlights largest expense, top category share, and most frequent category.
+
+#### Net Worth Projection & Financial Independence Planning
+Interactive tool for planning Financial Independence (FI) goals (`/Networth`).
+- **Input Parameters**: Current net worth, annual income, savings rate, investment return rate, inflation rate, and FI target amount.
+- **Preset Scenarios**: Conservative, Moderate, and Aggressive presets for quick setup.
+- **Year-by-Year Projections**: Table showing net worth growth, annual contributions, investment returns, inflation-adjusted values, and cumulative ROI.
+- **FI Milestone Highlighting**: Rows where cumulative ROI surpasses annual income are highlighted, marking a key FI milestone.
+- **Monte Carlo Randomization**: Explore parameter variations to understand range of possible outcomes.
+- **4% Rule Calculator**: Tooltips and explanations help users set realistic FI targets based on the 4% withdrawal rule.
+- **Interactive Controls**: Slider controls for all parameters with live preview updates, input validation, and reset functionality.
+- **Server-Side Validation**: Projections computed by `NetWorthProjectionService` in `ApiService` with shared DTOs (`NetWorthProjectionDto`, `NetWorthProjectionRequestDto`).
+- **Dark Futuristic Chart Theme**: Enhanced Chart.js visualizations for net worth growth over time.
+
+---
+
+### How to Get a Free Google Cloud API Key (Step-by-Step for Non-Technical Users)
+
+To query live Google Drive folders, you can obtain a free API key from Google in about 2 minutes:
+
+1. **Open Google Cloud Console**:
+   - Go to [console.cloud.google.com](https://console.cloud.google.com/) and sign in with any standard Google/Gmail account.
+2. **Create a Project**:
+   - Click the **Project dropdown** at the top of the page (next to the Google Cloud logo) and click **"New Project"**.
+   - Enter a name (e.g., `PersonalFinance-DriveExplorer`) and click **"Create"**.
+3. **Enable the Google Drive API**:
+   - In the left sidebar navigation, click **APIs & Services** &rarr; **Library** (or search for *"Google Drive API"* in the top search bar).
+   - Select **Google Drive API** and click the blue **"Enable"** button.
+4. **Generate Your API Key**:
+   - In the left sidebar, click **APIs & Services** &rarr; **Credentials**.
+   - Click **"+ CREATE CREDENTIALS"** at the top of the page and choose **"API key"**.
+5. **Copy and Use Your Key**:
+   - A dialog will show your generated API key (starts with `AIzaSy...`).
+   - Copy the key and paste it into the **Google API Key** field on the `/GoogleDrive` web page, or configure it securely in local User Secrets:
+     ```bash
+     dotnet user-secrets set "GoogleDrive:ApiKey" "YOUR_API_KEY_HERE" --project PersonalFinance/src/PersonalFinance.ApiService
+     ```
+
+> **Note**:
+> - **Cost**: The Google Drive API is **free** for personal use (Google provides thousands of free queries per day).
+> - **Folder Sharing Requirement**: The Google Drive folder's General access must be set to **"Anyone with the link"** (Role: Viewer). API keys operate without user login credentials and can only query public/link-shared folders. If left as *"Restricted"*, Google Drive returns an HTTP 404 (Not Found) or HTTP 403 (Forbidden) access error.
+
+#### Troubleshooting File Listing Issues
+1. **HTTP 404 / Cannot See Files**: Google masks private folders with HTTP 404. In Google Drive, right-click the folder &rarr; click **Share** &rarr; **Share** &rarr; change General access to **"Anyone with the link"** (Viewer).
+2. **HTTP 403 Forbidden**: Ensure the **Google Drive API** is enabled in your Google Cloud Console under *APIs & Services > Library*, and that your API key has no restricting IP/HTTP referrers preventing requests.
+3. **0 Files Returned**: If files exist in the folder but are not listed, confirm both the folder and nested items are accessible to "Anyone with the link".
+
+---
+
+### Configuration & User Secrets Management (Brevo)
+
+To prevent accidental credential leaks into public Git repositories, private keys are managed via [.NET User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) during local development.
+
+#### Brevo Transactional Email Sender
+ASP.NET Core Identity is configured with `RequireConfirmedAccount = true`, requiring user verification upon registration. Transactional emails are dispatched via the **Brevo REST API** (`https://api.brevo.com/v3/smtp/email`) with responsive HTML templates.
+
+Configure the Brevo API key in your local secret store:
+
+```bash
+# Set Brevo API Key for Web Frontend
+dotnet user-secrets set "Brevo:ApiKey" "<YOUR_BREVO_API_KEY>" --project PersonalFinance/src/PersonalFinance.Web
+```
+
+Verify secrets stored for `PersonalFinance.Web`:
+```bash
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web
+```
+
+---
+
+### Database Configuration (SQLite)
+
+The application uses **SQLite** as its lightweight, zero-configuration database engine.
+
+- **Unified Solution Database**: During local development, all projects (`ApiService`, `Web`, and EF Core CLI tooling) dynamically resolve the database file to the **solution root** (`PersonalFinance.db`) via `DatabasePathHelper.ResolveConnectionString()`. This prevents fragmented, duplicate databases from forming inside individual project subfolders.
+- **Connection String**: `"Data Source=PersonalFinance.db"` configured in `appsettings.json`.
+- **Automatic Migration**: When running in `Development` mode, both `ApiService` and `Web` automatically apply pending migrations on startup via `db.Database.Migrate()`.
+
+#### Git & Database File Exclusions
+
+SQLite database instances (`*.db`, `*.sqlite`, `*.db-wal`, `*.db-shm`) are excluded from Git version control via `.gitignore`.
+- **Reasoning**: SQLite database files are binary, causing repository bloat and merge conflicts. Additionally, committing database files risks exposing sensitive authentication credentials or user data.
+- **Workflow**: Schema definitions and migrations are tracked in source code (`PersonalFinance.Data/Migrations/`), enabling reproducible database instances across environments.
+
+---
+
+### Entity Framework Core Code-First Workflow (Legacy SQLite-Only)
+
+> **Note**: This section documents the original SQLite-only Code-First workflow. The current project uses provider-specific migrations (SQLite + SQL Server). See Section 5 above for the current workflow.
+
+The project follows the **Code-First** approach: database schemas are defined in C# models and evolved using EF Core Migrations.
+
+#### 1. Prerequisites (One-Time Setup)
+
+Install or update the EF Core command-line global tool:
+
+```bash
+dotnet tool install --global dotnet-ef
+# Or update if already installed:
+dotnet tool update --global dotnet-ef
+```
+
+#### 2. Design-Time DbContext Factory
+
+To streamline CLI operations across multi-project architectures, `PersonalFinance.Data` includes an `IDesignTimeDbContextFactory<AppDbContext>` (`AppDbContextFactory.cs`). This allows running EF Core commands directly against the data project without having to specify `--startup-project`.
+
+#### 3. Step-by-Step Code-First Workflow
+
+##### Step A: Define or Update Entity Models
+Create or modify entity classes under `PersonalFinance/src/PersonalFinance.Data/Entities/`:
+
+```csharp
+namespace PersonalFinance.Data.Entities;
+
+public class Transaction
+{
+    public int Id { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public DateTime DateUtc { get; set; }
+    public string Category { get; set; } = string.Empty;
+}
+```
+
+##### Step B: Register Entities in `AppDbContext`
+Add the corresponding `DbSet<T>` and configure constraints inside `PersonalFinance/src/PersonalFinance.Data/AppDbContext.cs`:
+
+```csharp
+public DbSet<Transaction> Transactions => Set<Transaction>();
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+
+    modelBuilder.Entity<Transaction>(entity =>
+    {
+        entity.HasKey(t => t.Id);
+        entity.Property(t => t.Description).IsRequired().HasMaxLength(250);
+        entity.Property(t => t.Amount).HasPrecision(18, 2);
+        entity.HasIndex(t => t.DateUtc);
+    });
+}
+```
+
+##### Step C: Add a Migration
+Generate a new migration by running the following command from the repository root:
+
+```bash
+dotnet ef migrations add <DescriptiveMigrationName> --project PersonalFinance/src/PersonalFinance.Data
+```
+
+*Example:*
+```bash
+dotnet ef migrations add AddTransactionEntity --project PersonalFinance/src/PersonalFinance.Data
+```
+
+This generates C# migration files under `PersonalFinance/src/PersonalFinance.Data/Migrations/`.
+
+##### Step D: Apply Migration to Database
+Apply pending migrations to the SQLite database:
+
+```bash
+dotnet ef database update --project PersonalFinance/src/PersonalFinance.Data
+```
+
+Alternatively, launching `PersonalFinance.ApiService` or `PersonalFinance.Web` in `Development` mode will automatically apply migrations via `db.Database.Migrate()`.
+
+#### 4. Working with JetBrains Rider EF Core Tools
+
+If using JetBrains Rider:
+1. Open the **Entity Framework Core** tool window.
+2. Set **Migrations project**: `PersonalFinance.Data`.
+3. Set **Startup project**: `PersonalFinance.ApiService` (or `PersonalFinance.Web`).
+4. Set **DbContext class**: `AppDbContext`.
+5. Execute **Add Migration** or **Update Database** directly from the IDE UI.
+
+#### 5. Common EF Core CLI Commands Reference
+
+| Action | Command |
+|---|---|
+| **Add New Migration** | `dotnet ef migrations add <Name> --project PersonalFinance/src/PersonalFinance.Data` |
+| **Apply All Migrations** | `dotnet ef database update --project PersonalFinance/src/PersonalFinance.Data` |
+| **Rollback to Specific Migration** | `dotnet ef database update <TargetMigrationName> --project PersonalFinance/src/PersonalFinance.Data` |
+| **Remove Last Unapplied Migration** | `dotnet ef migrations remove --project PersonalFinance/src/PersonalFinance.Data` |
+| **Generate SQL Script** | `dotnet ef migrations script --project PersonalFinance/src/PersonalFinance.Data -o migration.sql` |
+| **List Migrations** | `dotnet ef migrations list --project PersonalFinance/src/PersonalFinance.Data` |
+
+---
+
+### Running the Application (Detailed)
+
+#### Run via .NET Aspire AppHost (Recommended)
+Launch the entire solution with the Aspire dashboard, service discovery, metrics, and trace observability:
+```bash
+dotnet run --project PersonalFinance/src/PersonalFinance.AppHost
+```
+- **Aspire Dashboard**: Accessible at the URL output in terminal (e.g., `https://localhost:17227`)
+- **Web Frontend**: Automatically launched and configured to discover `ApiService`
+- **API Service**: Automatically launched with health and OpenAPI/Scalar endpoints
+
+#### Run Standalone Projects
+
+**ApiService**
+```bash
+dotnet run --project PersonalFinance/src/PersonalFinance.ApiService
+```
+- **Scalar API UI**: `https://localhost:7100/scalar/v1`
+- **OpenAPI Document**: `https://localhost:7100/openapi/v1.json`
+- **Health Check**: `https://localhost:7100/health`
+
+**Web Frontend**
+```bash
+dotnet run --project PersonalFinance/src/PersonalFinance.Web
+```
+- **Web App**: `https://localhost:7200`
+- **Health Check**: `https://localhost:7200/health`
+
+---
+
+### Security, Resilience & Observability (Detailed)
+
+- **Secrets Management**: Sensitive credentials (such as Brevo email API keys and Google Drive API keys) are kept out of source control using `.NET User Secrets` during development.
+- **Credential Encryption**: User-submitted Google API keys are encrypted using AES-256 (`CredentialProtector`) prior to SQLite persistence and masked (`AIza...8xY2`) in UI outputs.
+- **Identity & Email Verification**: User authentication is enforced via ASP.NET Core Identity with mandatory email verification (`RequireConfirmedAccount = true`) delivered via Brevo REST API and responsive HTML templates.
+- **Resilience Pipelines**: Outgoing HTTP calls to `ApiService` and external Google APIs leverage `Microsoft.Extensions.Http.Resilience` for automatic exponential backoff, retry handling, and circuit breakers.
+- **Logging**: Structured, high-contrast logging configured across all services via Serilog and `AnsiConsoleTheme.Code`.
+- **Health Checks & Telemetry**: Built-in `/health` and `/alive` uptime endpoints with full OpenTelemetry tracing and metrics integrated into the .NET Aspire dashboard.
+- **API Documentation**: Interactive OpenAPI documentation served via Scalar at `/scalar/v1`.
+- **Zero-Cost Azure Deployment & CI/CD**: Fully automated GitHub Actions workflow (`deploy-azure.yml`) using GitHub Container Registry (`ghcr.io`), Azure OIDC federated passwordless credentials, Bicep IaC, and Azure Container Apps Consumption (scale-to-zero) for a $0.00 to <$0.20/month operating cost.
