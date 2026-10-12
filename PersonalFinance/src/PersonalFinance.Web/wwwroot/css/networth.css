@@ -794,22 +794,21 @@
 }
 
 .nw-scenario-row--highlight {
-  background: var(--nw-surface);
-  margin: 0.25rem -1.5rem;
-  padding: 0.6rem 1.5rem !important;
-  border-radius: 10px;
-  border-left: 3px solid var(--nw-success);
   border-bottom: none;
 }
 
 .nw-scenario-row--highlight span {
-  color: #166534;
-  font-weight: 600;
+  color: var(--nw-text-muted);
+  font-weight: 500;
 }
 
 .nw-scenario-row--highlight strong {
   color: #166534;
   font-weight: 700;
+  background: var(--nw-success-light);
+  padding: 4px 12px;
+  border-radius: 6px;
+  border-left: 3px solid var(--nw-success);
 }
 
 /* ==========================================================================
