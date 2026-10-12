@@ -14,10 +14,9 @@ namespace PersonalFinance.Tests;
 public class DatabasePersistenceAndMigrationTests
 {
     [Theory]
-    [InlineData("SqlServer", DatabaseProviderType.SqlServer)]
-    [InlineData("MSSQL", DatabaseProviderType.SqlServer)]
-    [InlineData("AzureSql", DatabaseProviderType.SqlServer)]
-    [InlineData("SqlAzure", DatabaseProviderType.SqlServer)]
+    [InlineData("AzureSql", DatabaseProviderType.AzureSql)]
+    [InlineData("MSSQL", DatabaseProviderType.AzureSql)]
+    [InlineData("SqlAzure", DatabaseProviderType.AzureSql)]
     [InlineData("InMemory", DatabaseProviderType.InMemory)]
     public void DetermineProvider_ExplicitConfigurationKey_ReturnsExpectedProvider(string providerName, DatabaseProviderType expected)
     {
@@ -33,7 +32,7 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void ResolveConnectionString_SqlServer_PreservesNativeConnectionString()
+    public void ResolveConnectionString_AzureSql_PreservesNativeConnectionString()
     {
         const string sqlServerConn = "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=myDb;User ID=admin;";
         var resolved = DatabaseProviderHelper.ResolveConnectionString(sqlServerConn);
@@ -48,7 +47,7 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void AddAppDbContext_RegistersSqlServerImplementation_WhenProviderIsSqlServer()
+    public void AddAppDbContext_RegistersAzureSqlImplementation_WhenProviderIsAzureSql()
     {
         var services = new ServiceCollection();
         var config = new ConfigurationBuilder()
@@ -58,7 +57,7 @@ public class DatabasePersistenceAndMigrationTests
                     "ConnectionStrings:DefaultConnection",
                     "Server=localhost;Database=PersonalFinance;Trusted_Connection=True;TrustServerCertificate=True;"
                 },
-                { "Database:Provider", "SqlServer" }
+                { "Database:Provider", "AzureSql" }
             })
             .Build();
 
@@ -69,12 +68,12 @@ public class DatabasePersistenceAndMigrationTests
         var dbContext = scope.ServiceProvider.GetService<AppDbContext>();
 
         Assert.NotNull(dbContext);
-        Assert.IsType<SqlServerAppDbContext>(dbContext);
+        Assert.IsType<AzureSqlAppDbContext>(dbContext);
         Assert.True(dbContext.Database.IsSqlServer());
     }
 
     [Fact]
-    public void AppDbContextFactory_CreateDbContext_ConfiguresSqlServerProvider()
+    public void AppDbContextFactory_CreateDbContext_ConfiguresAzureSqlProvider()
     {
         var factory = new AppDbContextFactory();
         var context = factory.CreateDbContext([
@@ -87,9 +86,9 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void SqlServerAppDbContextFactory_CreateDbContext_ConfiguresSqlServerProvider()
+    public void AzureSqlAppDbContextFactory_CreateDbContext_ConfiguresAzureSqlProvider()
     {
-        var factory = new SqlServerAppDbContextFactory();
+        var factory = new AzureSqlAppDbContextFactory();
         var context = factory.CreateDbContext([
             "--connection-string",
             "Server=localhost;Database=PersonalFinance;Trusted_Connection=True;TrustServerCertificate=True;"
@@ -148,18 +147,18 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void SqlServer_MigrationScript_UsesBoundedKeyTypes_NotNvarcharMax()
+    public void AzureSql_MigrationScript_UsesBoundedKeyTypes_NotNvarcharMax()
     {
-        // Generate SQL Server migration SQL without a live server. This is the strongest in-repo
+        // Generate Azure SQL migration SQL without a live server. This is the strongest in-repo
         // verification that Azure SQL migrations are production-safe.
         const string connectionString =
             "Server=localhost;Database=PersonalFinance_ScriptCheck;Trusted_Connection=True;TrustServerCertificate=True;";
 
-        var options = new DbContextOptionsBuilder<SqlServerAppDbContext>()
+        var options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
             .UseSqlServer(connectionString)
             .Options;
 
-        using var context = new SqlServerAppDbContext(options);
+        using var context = new AzureSqlAppDbContext(options);
         var migrator = context.GetService<IMigrator>();
         var script = migrator.GenerateScript(fromMigration: null, toMigration: null, MigrationsSqlGenerationOptions.Idempotent);
 
@@ -170,7 +169,7 @@ public class DatabasePersistenceAndMigrationTests
         Assert.Contains("CREATE TABLE [GoogleDriveConnections]", script, StringComparison.Ordinal);
         Assert.Contains("CREATE TABLE [Items]", script, StringComparison.Ordinal);
 
-        // Identity / FK key columns must be bounded for SQL Server PK/FK/index support
+        // Identity / FK key columns must be bounded for Azure SQL PK/FK/index support
         Assert.Contains("[Id] nvarchar(450)", script, StringComparison.Ordinal);
         Assert.Contains("[UserId] nvarchar(450)", script, StringComparison.Ordinal);
         Assert.Contains("[RoleId] nvarchar(450)", script, StringComparison.Ordinal);
@@ -184,22 +183,22 @@ public class DatabasePersistenceAndMigrationTests
         Assert.DoesNotContain("[LoginProvider] nvarchar(max)", script, StringComparison.Ordinal);
         Assert.DoesNotContain("[ProviderKey] nvarchar(max)", script, StringComparison.Ordinal);
 
-        // Must not leak SQLite store types into SQL Server scripts
+        // Must not leak SQLite store types into Azure SQL scripts
         Assert.DoesNotContain("[Id] TEXT", script, StringComparison.Ordinal);
         Assert.DoesNotContain("INTEGER NOT NULL", script, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void SqlServer_Model_IdentityKeysHaveMaxLength450()
+    public void AzureSql_Model_IdentityKeysHaveMaxLength450()
     {
         const string connectionString =
             "Server=localhost;Database=PersonalFinance_ModelCheck;Trusted_Connection=True;TrustServerCertificate=True;";
 
-        var options = new DbContextOptionsBuilder<SqlServerAppDbContext>()
+        var options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
             .UseSqlServer(connectionString)
             .Options;
 
-        using var context = new SqlServerAppDbContext(options);
+        using var context = new AzureSqlAppDbContext(options);
         var model = context.Model;
 
         var userId = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUser))!
@@ -258,7 +257,7 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void SqlServer_DefaultFallbackConnectionString_MatchesDefaultSqlConnectionString()
+    public void AzureSql_DefaultFallbackConnectionString_MatchesDefaultSqlConnectionString()
     {
         var services = new ServiceCollection();
         var config = new ConfigurationBuilder().Build();
@@ -275,7 +274,7 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public void SqlServer_MigrationSourceFiles_Exist()
+    public void AzureSql_MigrationSourceFiles_Exist()
     {
         var migrationsDir = Path.Combine(
             DatabasePathHelper.GetSolutionRoot(),
@@ -283,7 +282,7 @@ public class DatabasePersistenceAndMigrationTests
             "src",
             "PersonalFinance.Data",
             "Migrations",
-            "SqlServer");
+            "AzureSql");
 
         Assert.True(Directory.Exists(migrationsDir));
         Assert.NotEmpty(Directory.GetFiles(migrationsDir, "*.cs"));

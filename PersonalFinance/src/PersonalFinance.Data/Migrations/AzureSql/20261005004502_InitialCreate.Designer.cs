@@ -9,9 +9,9 @@ using PersonalFinance.Data;
 
 #nullable disable
 
-namespace PersonalFinance.Data.Migrations.SqlServer
+namespace PersonalFinance.Data.Migrations.AzureSql
 {
-    [DbContext(typeof(SqlServerAppDbContext))]
+    [DbContext(typeof(AzureSqlAppDbContext))]
     [Migration("20261005004502_InitialCreate")]
     partial class InitialCreate
     {

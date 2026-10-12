@@ -5,7 +5,7 @@
 
     $(function () {
         const $modal = $('#transactionsModal');
-        if ($modal.length === 0) return;
+        if ($modal.length === 0) { return; }
 
         // Same series colors as the budget report (validated pair: slot 1 blue, slot 2 orange)
         const TX_COLORS = { spend: '#eb6834', grid: '#e1e0d9', axis: '#c3c2b7', muted: '#898781' };
@@ -19,66 +19,62 @@
         let txRequestSeq = 0;
         const filters = { type: '', category: '', search: '' };
 
-        function formatCurrency(num) {
-            const n = Number(num) || 0;
-            const formatted = '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            return n < 0 ? '-' + formatted : formatted;
+        // Reference to shared utilities
+        const PF = window.PFUtils;
+
+        function formatCurrency (num) {
+            return PF.formatCurrencyCents(num);
         }
 
         // Whole dollars for tiles and prose where cents are noise
-        function formatMoney(num) {
+        function formatMoney (num) {
             const n = Number(num) || 0;
             const formatted = '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
             return n < 0 ? '-' + formatted : formatted;
         }
 
-        function formatCompactCurrency(val) {
-            const abs = Math.abs(val);
-            if (abs >= 1000000) return '$' + (abs / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-            if (abs >= 1000) return '$' + (abs / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-            return '$' + abs.toLocaleString('en-US');
+        function formatCompactCurrency (val) {
+            return PF.formatCompactCurrencySigned(val);
         }
 
-        function escapeHtml(value) {
-            return String(value === null || value === undefined ? '' : value)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        function escapeHtml (value) {
+            return PF.escapeHtml(value);
         }
 
-        function toDate(iso) {
-            if (!iso) return null;
+        function toDate (iso) {
+            if (!iso) { return null; }
             const d = new Date(iso);
             return isNaN(d) ? null : d;
         }
 
-        function formatDate(iso, withYear) {
+        function formatDate (iso, withYear) {
             const d = toDate(iso);
-            if (!d) return '';
+            if (!d) { return ''; }
             return d.toLocaleDateString('en-US', withYear === false
                 ? { month: 'short', day: 'numeric' }
                 : { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
-        function dayKey(d) {
+        function dayKey (d) {
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
 
-        function isIncome(tx) {
+        function isIncome (tx) {
             return tx.type === 'Income';
         }
 
-        function plural(n, word) {
+        function plural (n, word) {
             return n + ' ' + word + (n === 1 ? '' : 's');
         }
 
-        function showTxState(state) {
+        function showTxState (state) {
             $('#txLoadingState').toggleClass('d-none', state !== 'loading');
             $('#txErrorState').toggleClass('d-none', state !== 'error');
             $('#txContent').toggleClass('d-none', state !== 'content');
             $('#btnExportTx').prop('disabled', state !== 'content');
         }
 
-        function destroyTxViews() {
+        function destroyTxViews () {
             if (txTable) {
                 txTable.destroy();
                 txTable = null;
@@ -92,18 +88,18 @@
 
         // ---------- Summary ----------
 
-        function categoryTotals(expenses) {
+        function categoryTotals (expenses) {
             const map = {};
             expenses.forEach(function (t) {
                 const key = t.category || 'Uncategorized';
-                if (!map[key]) map[key] = { name: key, total: 0, count: 0 };
+                if (!map[key]) { map[key] = { name: key, total: 0, count: 0 }; }
                 map[key].total += t.amount;
                 map[key].count += 1;
             });
             return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.total - a.total; });
         }
 
-        function renderSummary(data) {
+        function renderSummary (data) {
             const txs = data.transactions;
             const expenses = txs.filter(function (t) { return !isIncome(t); });
             const incomes = txs.filter(isIncome);
@@ -156,7 +152,7 @@
         }
 
         // Ranked list of spending categories; the tail folds into "Other" so the list stays scannable
-        function renderCategoryRank(cats, totalExpenses) {
+        function renderCategoryRank (cats, totalExpenses) {
             const $list = $('#txCategoryBars');
             if (cats.length === 0 || !(totalExpenses > 0)) {
                 $list.html('<div class="text-muted small">No spending recorded.</div>');
@@ -187,7 +183,7 @@
         }
 
         // Spending per day for ranges up to two months, otherwise per month
-        function renderTimeline(expenses, first, last) {
+        function renderTimeline (expenses, first, last) {
             const dated = expenses.filter(function (t) { return toDate(t.date); });
             const $box = $('#txTimelineChart').closest('.bgt-chart-box');
             $box.find('.bgt-chart-empty').remove();
@@ -276,12 +272,12 @@
 
         // ---------- Table & filters ----------
 
-        function exactPattern(value) {
+        function exactPattern (value) {
             return value ? '^' + DataTable.util.escapeRegex(value) + '$' : '';
         }
 
-        function applyFilters() {
-            if (!txTable) return;
+        function applyFilters () {
+            if (!txTable) { return; }
             txTable.column(3).search(exactPattern(filters.type), true, false);
             txTable.column(2).search(exactPattern(filters.category), true, false);
             txTable.search(filters.search).draw();
@@ -299,8 +295,8 @@
         }
 
         // Totals for whatever the filters currently show
-        function renderFilterSummary() {
-            if (!txTable || !currentTx) return;
+        function renderFilterSummary () {
+            if (!txTable || !currentTx) { return; }
             const rows = txTable.rows({ search: 'applied' }).data().toArray();
             const spent = rows.filter(function (t) { return !isIncome(t); }).reduce(function (s, t) { return s + t.amount; }, 0);
             const earned = rows.filter(isIncome).reduce(function (s, t) { return s + t.amount; }, 0);
@@ -309,11 +305,11 @@
                 rows.length === total ? 'Showing all ' + plural(total, 'transaction') : 'Showing ' + rows.length + ' of ' + total,
                 'Spending <strong>' + formatCurrency(spent) + '</strong>'
             ];
-            if (earned > 0) parts.push('Income <strong>' + formatCurrency(earned) + '</strong>');
+            if (earned > 0) { parts.push('Income <strong>' + formatCurrency(earned) + '</strong>'); }
             $('#txFilterSummary').html(parts.join('<span aria-hidden="true"> · </span>'));
         }
 
-        function renderTable(transactions) {
+        function renderTable (transactions) {
             txTable = $('#txTable').DataTable({
                 data: transactions,
                 pageLength: 25,
@@ -325,14 +321,14 @@
                         data: 'date',
                         className: 'text-nowrap text-muted text-start',
                         render: function (value, type, row) {
-                            if (type === 'sort' || type === 'type') return value || '';
+                            if (type === 'sort' || type === 'type') { return value || ''; }
                             return escapeHtml(formatDate(value) || row.dateText || '—');
                         }
                     },
                     {
                         data: 'description',
                         render: function (value, type, row) {
-                            if (type !== 'display') return value || '';
+                            if (type !== 'display') { return value || ''; }
                             // Category repeats under the description on narrow screens, where its column is hidden
                             return '<div class="fw-semibold">' + escapeHtml(value || '—') + '</div>' +
                                 '<div class="small text-muted d-md-none">' + escapeHtml(row.category || 'Uncategorized') + '</div>';
@@ -342,7 +338,7 @@
                         data: 'category',
                         className: 'd-none d-md-table-cell',
                         render: function (value, type) {
-                            if (type !== 'display') return value || '';
+                            if (type !== 'display') { return value || ''; }
                             return '<span class="bgt-chip">' + escapeHtml(value || 'Uncategorized') + '</span>';
                         }
                     },
@@ -351,7 +347,7 @@
                         data: 'amount',
                         className: 'text-end text-nowrap fw-semibold',
                         render: function (value, type, row) {
-                            if (type !== 'display') return value;
+                            if (type !== 'display') { return value; }
                             return isIncome(row)
                                 ? '<span class="bgt-amount-in">+' + formatCurrency(value) + '</span>'
                                 : formatCurrency(value);
@@ -373,7 +369,7 @@
             });
         }
 
-        function resetFilters() {
+        function resetFilters () {
             filters.type = '';
             filters.category = '';
             filters.search = '';
@@ -382,7 +378,7 @@
 
         // ---------- Loading ----------
 
-        function loadTransactions(request) {
+        function loadTransactions (request) {
             lastTxRequest = request;
             const seq = ++txRequestSeq;
             destroyTxViews();
@@ -403,7 +399,7 @@
                 method: 'GET',
                 data: { fileId: request.fileId, fileName: request.fileName, connectionId: request.connectionId },
                 success: function (data) {
-                    if (seq !== txRequestSeq) return; // a newer request superseded this one
+                    if (seq !== txRequestSeq) { return; } // a newer request superseded this one
 
                     if (!data || !data.transactions || data.transactions.length === 0) {
                         $('#txErrorMessage').text((data && data.errorMessage) || 'Make sure the spreadsheet has a sheet with Date and Amount column headers.');
@@ -422,7 +418,7 @@
                     applyFilters();
                 },
                 error: function (xhr) {
-                    if (seq !== txRequestSeq) return;
+                    if (seq !== txRequestSeq) { return; }
                     const message = xhr.responseJSON && xhr.responseJSON.error;
                     $('#txErrorMessage').text(message || 'Check that the drive is still shared, then try again.');
                     showTxState('error');
@@ -442,7 +438,7 @@
         });
 
         $('#btnTxRetry').on('click', function () {
-            if (lastTxRequest) loadTransactions(lastTxRequest);
+            if (lastTxRequest) { loadTransactions(lastTxRequest); }
         });
 
         $(document).on('click', '.tx-type-filter', function () {
@@ -479,7 +475,7 @@
 
         // Export the rows the current filters show
         $('#btnExportTx').on('click', function () {
-            if (!txTable || !currentTx) return;
+            if (!txTable || !currentTx) { return; }
             const rows = [['Date', 'Description', 'Category', 'Type', 'Amount']];
             txTable.rows({ search: 'applied', order: 'applied' }).data().toArray().forEach(function (t) {
                 const d = toDate(t.date);
@@ -504,8 +500,8 @@
 
         // Tables and charts built during the open animation measure zero width; re-measure once visible
         $modal.on('shown.bs.modal', function () {
-            if (txTable) txTable.columns.adjust();
-            if (txChart) txChart.resize();
+            if (txTable) { txTable.columns.adjust(); }
+            if (txChart) { txChart.resize(); }
         });
 
         $modal.on('hidden.bs.modal', function () {

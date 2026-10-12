@@ -35,6 +35,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<GoogleDriveCachedFile> GoogleDriveCachedFiles => Set<GoogleDriveCachedFile>();
 
     /// <summary>
+    /// User-saved net worth projection parameters table set (one record per user).
+    /// </summary>
+    public DbSet<NetWorthParameters> NetWorthParameters => Set<NetWorthParameters>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -136,16 +141,24 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.HasIndex(e => e.ConnectionId);
             entity.HasIndex(e => new { e.ConnectionId, e.DriveFileId });
         });
+
+        // Configure NetWorthParameters entity — one record per user
+        modelBuilder.Entity<NetWorthParameters>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => e.UserId).IsUnique();
+        });
     }
 }
 
 /// <summary>
-/// SQL Server / Azure SQL-specific AppDbContext used for EF Core migrations under <c>Migrations/SqlServer</c>
-/// and as the DI implementation when the active provider is SQL Server.
+/// Azure SQL-specific AppDbContext used for EF Core migrations under <c>Migrations/AzureSql</c>
+/// and as the DI implementation when the active provider is Azure SQL.
 /// </summary>
-public sealed class SqlServerAppDbContext : AppDbContext
+public sealed class AzureSqlAppDbContext : AppDbContext
 {
-    public SqlServerAppDbContext(DbContextOptions<SqlServerAppDbContext> options) : base(options)
+    public AzureSqlAppDbContext(DbContextOptions<AzureSqlAppDbContext> options) : base(options)
     {
     }
 }

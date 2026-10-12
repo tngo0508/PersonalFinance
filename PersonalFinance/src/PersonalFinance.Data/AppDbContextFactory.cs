@@ -36,16 +36,16 @@ internal static class DesignTimeDbContextFactoryHelper
 }
 
 /// <summary>
-/// Design-time factory for SQL Server / Azure SQL migrations (<c>Migrations/SqlServer</c>).
+/// Design-time factory for Azure SQL migrations (<c>Migrations/AzureSql</c>).
 /// </summary>
-public sealed class SqlServerAppDbContextFactory : IDesignTimeDbContextFactory<SqlServerAppDbContext>
+public sealed class AzureSqlAppDbContextFactory : IDesignTimeDbContextFactory<AzureSqlAppDbContext>
 {
-    public SqlServerAppDbContext CreateDbContext(string[] args)
+    public AzureSqlAppDbContext CreateDbContext(string[] args)
     {
         var connectionString = DesignTimeDbContextFactoryHelper.ResolveConnectionString(args);
-        var optionsBuilder = new DbContextOptionsBuilder<SqlServerAppDbContext>();
-        optionsBuilder.ConfigureAppDbContext(connectionString, DatabaseProviderType.SqlServer);
-        return new SqlServerAppDbContext(optionsBuilder.Options);
+        var optionsBuilder = new DbContextOptionsBuilder<AzureSqlAppDbContext>();
+        optionsBuilder.ConfigureAppDbContext(connectionString, DatabaseProviderType.AzureSql);
+        return new AzureSqlAppDbContext(optionsBuilder.Options);
     }
 }
 
@@ -57,8 +57,8 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
     public AppDbContext CreateDbContext(string[] args)
     {
         var connectionString = DesignTimeDbContextFactoryHelper.ResolveConnectionString(args);
-        var optionsBuilder = new DbContextOptionsBuilder<SqlServerAppDbContext>();
-        optionsBuilder.ConfigureAppDbContext(connectionString, DatabaseProviderType.SqlServer);
-        return new SqlServerAppDbContext(optionsBuilder.Options);
+        var optionsBuilder = new DbContextOptionsBuilder<AzureSqlAppDbContext>();
+        optionsBuilder.ConfigureAppDbContext(connectionString, DatabaseProviderType.AzureSql);
+        return new AzureSqlAppDbContext(optionsBuilder.Options);
     }
 }

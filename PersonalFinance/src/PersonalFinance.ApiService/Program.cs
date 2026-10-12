@@ -47,6 +47,9 @@ try
         client.Timeout = TimeSpan.FromSeconds(15);
     });
 
+    // 5a. Register Net Worth parameters persistence service
+    builder.Services.AddScoped<INetWorthParametersService, NetWorthParametersService>();
+
     builder.Services.AddControllers();
 
     // 6. OpenAPI generator in .NET 10 with synchronized application metadata

@@ -8,7 +8,8 @@ namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Net Worth projection and Financial Independence planning feature.
-/// Delegates projection computation to the ApiService via the INetWorthApi Refit client.
+/// Acts as a thin presentation layer — all business logic and data persistence are delegated
+/// to the ApiService via the INetWorthApi Refit client.
 /// </summary>
 [Authorize]
 public class NetworthController : Controller
@@ -22,11 +23,37 @@ public class NetworthController : Controller
 
     /// <summary>
     /// Displays the Net Worth projection dashboard with scenario comparison and charts.
+    /// Loads saved parameters from the ApiService if available, otherwise uses defaults.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
         var model = new NetWorthViewModel();
+
+        // Try to load saved parameters from the API service
+        try
+        {
+            var saved = await _netWorthApi.LoadParametersAsync(cancellationToken);
+
+            if (saved != null)
+            {
+                model.StartingBalance = saved.StartingBalance;
+                model.AnnualSavings = saved.AnnualSavings;
+                model.AnnualIncome = saved.AnnualIncome;
+                model.AnnualSpending = saved.AnnualSpending;
+                model.CurrentAge = saved.CurrentAge;
+                model.RetirementAge = saved.RetirementAge;
+                model.BaseRoi = saved.BaseRoi;
+                model.ConservativeRoi = saved.ConservativeRoi;
+                model.AggressiveRoi = saved.AggressiveRoi;
+                model.AggressiveSavings = saved.AggressiveSavings;
+            }
+        }
+        catch
+        {
+            // If the API is unavailable, fall back to default values
+        }
+
         var request = BuildRequest(model);
         model.Projection = await _netWorthApi.CalculateProjectionAsync(request, cancellationToken);
         return View(model);
@@ -85,5 +112,55 @@ public class NetworthController : Controller
             AggressiveRoi = model.AggressiveRoi,
             AggressiveSavings = model.AggressiveSavings
         };
+    }
+
+    /// <summary>
+    /// Saves the current net worth projection parameters via the ApiService.
+    /// Validates the model, delegates to the API, and redirects back to Index with a success message.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveParameters(NetWorthViewModel model)
+    {
+        var request = BuildRequest(model);
+
+        if (!ModelState.IsValid)
+        {
+            model.Projection = await _netWorthApi.CalculateProjectionAsync(request, CancellationToken.None);
+            return View("Index", model);
+        }
+
+        try
+        {
+            await _netWorthApi.SaveParametersAsync(request, HttpContext.RequestAborted);
+            TempData["SaveSuccess"] = "Parameters saved to cloud.";
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError("", $"Failed to save parameters: {ex.Message}");
+            model.Projection = await _netWorthApi.CalculateProjectionAsync(request, CancellationToken.None);
+            return View("Index", model);
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Deletes the saved net worth projection parameters via the ApiService.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteParameters()
+    {
+        try
+        {
+            await _netWorthApi.DeleteParametersAsync(HttpContext.RequestAborted);
+        }
+        catch
+        {
+            // Silently ignore — parameters may not exist
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 }

@@ -45,6 +45,16 @@
     </div>
 </div>
 
+<!-- Save Success Message -->
+@if (!string.IsNullOrEmpty(TempData["SaveSuccess"] as string))
+{
+    <div class="alert alert-success alert-dismissible fade show nw-alert mt-3" role="alert">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        @TempData["SaveSuccess"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <!-- Input Parameters Panel -->
 <div class="card nw-card mb-4 nw-card--parameters">
     <div class="card-body">
@@ -286,14 +296,33 @@
                 </div>
             </div>
             <div class="nw-form__actions">
+                <form asp-action="SaveParameters" method="post" class="d-inline" id="nwSaveForm">
+                    <!-- Hidden inputs for save form model binding — synced by JS from range sliders -->
+                    <input type="hidden" asp-for="StartingBalance" id="nwSaveStartingBalance" />
+                    <input type="hidden" asp-for="AnnualSavings" id="nwSaveAnnualSavings" />
+                    <input type="hidden" asp-for="AnnualIncome" id="nwSaveAnnualIncome" />
+                    <input type="hidden" asp-for="AnnualSpending" id="nwSaveAnnualSpending" />
+                    <input type="hidden" asp-for="CurrentAge" id="nwSaveCurrentAge" />
+                    <input type="hidden" asp-for="RetirementAge" id="nwSaveRetirementAge" />
+                    <input type="hidden" asp-for="BaseRoi" id="nwSaveBaseRoi" />
+                    <input type="hidden" asp-for="ConservativeRoi" id="nwSaveConservativeRoi" />
+                    <input type="hidden" asp-for="AggressiveRoi" id="nwSaveAggressiveRoi" />
+                    <input type="hidden" asp-for="AggressiveSavings" id="nwSaveAggressiveSavings" />
+                    <button type="submit" class="btn nw-btn-save">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Save
+                    </button>
+                </form>
                 <button type="button" class="btn nw-btn-random" id="nwRandomBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l5 5"/><path d="M4 4l5 5"/></svg>
                     Randomize
                 </button>
-                <button type="button" class="btn nw-btn-reset" id="nwResetBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
-                    Reset to Defaults
-                </button>
+                <form asp-action="DeleteParameters" method="post" class="d-inline" id="nwResetForm">
+                    <button type="submit" class="btn nw-btn-reset">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
+                        Reset to Defaults
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -311,7 +340,7 @@
                 <div class="nw-metric-value nw-metric-fi-value">
                     <span class="nw-currency-symbol">$</span><span class="nw-currency-amount">@projection.FiTarget.ToString("N0")</span>
                 </div>
-                <div class="nw-metric-sub nw-metric-fi-sub">Based on $@FormatCompact(projection.AnnualSpending)/yr spending</div>
+                <div class="nw-metric-sub nw-metric-fi-sub">Based on <span class="nw-currency-symbol">$</span>@FormatCompact(projection.AnnualSpending)/yr spending</div>
             </div>
         </div>
     </div>
@@ -353,7 +382,7 @@
                 <div class="nw-metric-value nw-metric-aggressive-value">
                     @FormatCurrency(projection.Aggressive.FinalNetWorth)
                 </div>
-                <div class="nw-metric-sub nw-metric-aggressive-sub">@projection.Aggressive.RoiPercent% ROI · $@FormatCompact(projection.Aggressive.AnnualSavings)/yr savings</div>
+                <div class="nw-metric-sub nw-metric-aggressive-sub">@projection.Aggressive.RoiPercent% ROI · <span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.AnnualSavings)/yr savings</div>
             </div>
         </div>
     </div>
@@ -376,19 +405,19 @@
                 <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
-                    <strong class="nw-sc-base-savings">$@FormatCompact(projection.Base.AnnualSavings)</strong>
+                    <strong class="nw-sc-base-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-sc-base-final">$@FormatCompact(projection.Base.FinalNetWorth)</strong>
+                    <strong class="nw-sc-base-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
-                    <strong class="nw-sc-base-contrib">$@FormatCompact(projection.Base.TotalContributions)</strong>
+                    <strong class="nw-sc-base-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.TotalContributions)</strong>
                 </div>
                 <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="nw-sc-base-interest">$@FormatCompact(projection.Base.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-base-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
@@ -408,19 +437,19 @@
                 <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
-                    <strong class="nw-sc-cons-savings">$@FormatCompact(projection.Conservative.AnnualSavings)</strong>
+                    <strong class="nw-sc-cons-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-sc-cons-final">$@FormatCompact(projection.Conservative.FinalNetWorth)</strong>
+                    <strong class="nw-sc-cons-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
-                    <strong class="nw-sc-cons-contrib">$@FormatCompact(projection.Conservative.TotalContributions)</strong>
+                    <strong class="nw-sc-cons-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.TotalContributions)</strong>
                 </div>
                 <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="nw-sc-cons-interest">$@FormatCompact(projection.Conservative.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-cons-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
@@ -440,19 +469,19 @@
                 <div class="nw-scenario-divider"></div>
                 <div class="nw-scenario-row">
                     <span>Annual Savings</span>
-                    <strong class="nw-sc-agg-savings">$@FormatCompact(projection.Aggressive.AnnualSavings)</strong>
+                    <strong class="nw-sc-agg-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.AnnualSavings)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Final Net Worth</span>
-                    <strong class="nw-sc-agg-final">$@FormatCompact(projection.Aggressive.FinalNetWorth)</strong>
+                    <strong class="nw-sc-agg-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.FinalNetWorth)</strong>
                 </div>
                 <div class="nw-scenario-row">
                     <span>Total Contributions</span>
-                    <strong class="nw-sc-agg-contrib">$@FormatCompact(projection.Aggressive.TotalContributions)</strong>
+                    <strong class="nw-sc-agg-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.TotalContributions)</strong>
                 </div>
                 <div class="nw-scenario-row nw-scenario-row--highlight">
                     <span>Interest Earned</span>
-                    <strong class="nw-sc-agg-interest">$@FormatCompact(projection.Aggressive.TotalInterestEarned)</strong>
+                    <strong class="nw-sc-agg-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.TotalInterestEarned)</strong>
                 </div>
             </div>
         </div>
