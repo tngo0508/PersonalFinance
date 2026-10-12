@@ -6,9 +6,9 @@
 
 A modular, multi-tier personal finance management application built on **.NET 10** with **Clean Architecture** and **.NET Aspire**. Connect Google Drive folders, analyze budget spreadsheets, and plan for financial independence — all from a responsive, self-hosted web interface.
 
-> 📖 **Developer Guide**: Local setup, secrets management, EF Core migrations, OAuth configuration, and troubleshooting — see [**DEVELOPMENT.md**](DEVELOPMENT.md).  
-> 🚀 **Deployment Guide**: Azure Container Apps, Docker, CI/CD pipelines, and Infrastructure as Code — see [**deployment.md**](deployment.md).  
-> 📋 **Changelog**: Version history and release notes — see [**CHANGELOG.md**](CHANGELOG.md).
+> **Developer Guide**: Local setup, secrets management, EF Core migrations, OAuth configuration, and troubleshooting — see [DEVELOPMENT.md](DEVELOPMENT.md).  
+> **Deployment Guide**: Azure Container Apps, Docker, CI/CD pipelines, and Infrastructure as Code — see [deployment.md](deployment.md).  
+> **Changelog**: Version history and release notes — see [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -28,19 +28,19 @@ A modular, multi-tier personal finance management application built on **.NET 10
 
 ## Features
 
-### 📂 Google Drive Folder Explorer
+### Google Drive Folder Explorer
 Connect and browse Google Drive folders with persistent caching, incremental sync, and interactive DataTables views. Supports multiple drives, AES-256 encrypted credentials, and universal URL parsing.
 
-### 📊 Budget Report & Financial Analytics
+### Budget Report & Financial Analytics
 Transform Google Sheets budget spreadsheets into structured financial insights: planned vs. actual income/expenses, savings rate, category variance, and interactive Chart.js visualizations.
 
-### 💰 Net Worth Projection & Financial Independence Planning
+### Net Worth Projection & Financial Independence Planning
 Interactive projections for Financial Independence (FI) goals with year-by-year net worth growth, preset scenarios (Conservative, Moderate, Aggressive), Monte Carlo–style randomization, and a 4% rule calculator.
 
-### 📋 Spreadsheet Transactions Viewer
+### Spreadsheet Transactions Viewer
 View, search, and filter transaction data from Google Sheets with category chips, spending-over-time charts, top category rankings, and CSV export.
 
-### 🔐 Authentication & Identity
+### Authentication & Identity
 ASP.NET Core Identity with email verification (Brevo), Google OAuth 2.0 social sign-in, and secure account linking with pre-account-takeover defense.
 
 ---
@@ -177,13 +177,13 @@ The test suite covers URL parsing, MIME type resolution, budget CSV analytics, p
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. For significant changes, open an issue first to discuss what you would like to change.
+Contributions are welcome. For significant changes, open an issue first to discuss the proposed approach.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Commit your changes (`git commit -m "Add my feature"`)
-4. Push to the branch (`git push origin feature/my-feature`)
-5. Open a Pull Request
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m "Add my feature"`
+4. Push to the branch: `git push origin feature/my-feature`
+5. Open a Pull Request against the `main` branch.
 
 ---
 
