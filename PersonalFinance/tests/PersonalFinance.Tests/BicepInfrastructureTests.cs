@@ -162,22 +162,16 @@ public class BicepInfrastructureTests
     }
 
     [Fact]
-    public void SqlDatabaseBicep_ConfiguresServerlessLifetimeFreeTier()
+    public void SqlDatabaseBicep_ConfiguresBasicTier()
     {
         var root = FindProjectRoot();
         var sqlBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "sql-database.bicep"));
 
         Assert.Contains("Microsoft.Sql/servers", sqlBicep);
         Assert.Contains("Microsoft.Sql/servers/databases", sqlBicep);
-        Assert.Contains("name: 'GP_S_Gen5_1'", sqlBicep);
-        Assert.Contains("tier: 'GeneralPurpose'", sqlBicep);
-        Assert.Contains("useFreeLimit: true", sqlBicep);
-        Assert.Contains("freeLimitExhaustionBehavior: 'AutoPause'", sqlBicep);
+        Assert.Contains("name: 'Basic'", sqlBicep);
+        Assert.Contains("tier: 'Basic'", sqlBicep);
         Assert.Contains("AllowAllWindowsAzureIps", sqlBicep);
-
-        // Numeric minCapacity using json('0.5') instead of string any('0.5')
-        Assert.Contains("minCapacity: json('0.5')", sqlBicep);
-        Assert.DoesNotContain("any('0.5')", sqlBicep);
     }
 
     [Fact]

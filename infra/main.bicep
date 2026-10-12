@@ -134,7 +134,7 @@ module containerEnv 'modules/container-env.bicep' = {
   }
 }
 
-// 3. Optional Azure SQL Database Lifetime Free Tier
+// 3. Optional Azure SQL Database Basic tier (~$4.90/month)
 module sqlDatabase 'modules/sql-database.bicep' = if (deploySqlDatabase) {
   name: 'sqlDatabaseDeployment'
   params: {
