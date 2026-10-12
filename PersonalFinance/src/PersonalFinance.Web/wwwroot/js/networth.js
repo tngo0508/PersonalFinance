@@ -9,7 +9,7 @@
     const DEBOUNCE_DELAY = 500;
 
     // API endpoint base path for net worth controller actions
-    var apiBase = '/Networth';
+    const _apiBase = '/Networth';
 
     // Chart instances
     let growthChart = null;
@@ -38,29 +38,32 @@
         Aggressive: 'aggressive'
     };
 
+    // Reference to shared utilities
+    const PF = window.PFUtils;
+
     /**
-     * Format a numeric value as a currency string.
+     * Format a numeric value as a currency string (delegates to shared utils).
      * @param {number} value - The numeric value to format.
      * @returns {string} Formatted currency string (e.g., "$1,234,567").
      */
-    function formatCurrency(value) {
-        return '$' + Math.round(value).toLocaleString('en-US');
+    function formatCurrency (value) {
+        return PF.formatCurrency(value);
     }
 
     /**
-     * Format a numeric value as a compact currency string.
+     * Format a numeric value as a compact currency string (delegates to shared utils).
      * @param {number} value - The numeric value to format.
      * @returns {string} Compact currency string (e.g., "$1.2M", "$50K").
      */
-    function formatCompact(value) {
-        if (value >= 1_000_000) {
-            return '$' + (value / 1_000_000).toFixed(1) + 'M';
-        }
-        if (value >= 1_000) {
-            return '$' + (value / 1_000).toFixed(0) + 'K';
-        }
-        return '$' + Math.round(value).toLocaleString('en-US');
+    function formatCompact (value) {
+        return PF.formatCompactCurrency(value);
     }
+
+    // Canvas height for growth line chart gradient
+    const GROWTH_CHART_HEIGHT = 350;
+
+    // Canvas height for comparison bar chart gradient
+    const COMPARISON_CHART_HEIGHT = 280;
 
     /**
      * Create a gradient fill for a chart line
@@ -68,8 +71,8 @@
      * @param {string} colorHex - Hex color for the gradient
      * @returns {CanvasGradient} The gradient object
      */
-    function createLineGradient(ctx, colorHex) {
-        var gradient = ctx.createLinearGradient(0, 0, 0, 350);
+    function createLineGradient (ctx, colorHex) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, GROWTH_CHART_HEIGHT);
         gradient.addColorStop(0, hexToRgba(colorHex, 0.35));
         gradient.addColorStop(0.5, hexToRgba(colorHex, 0.12));
         gradient.addColorStop(1, hexToRgba(colorHex, 0.0));
@@ -82,34 +85,34 @@
      * @param {number} alpha - Alpha value 0-1
      * @returns {string} RGBA string
      */
-    function hexToRgba(hex, alpha) {
-        var r = parseInt(hex.slice(1, 3), 16);
-        var g = parseInt(hex.slice(3, 5), 16);
-        var b = parseInt(hex.slice(5, 7), 16);
+    function hexToRgba (hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
         return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
     }
 
     /**
      * Render the growth chart showing all three scenarios over time
      */
-    function renderGrowthChart(data) {
-        var ctxEl = document.getElementById('nwGrowthChart');
-        if (!ctxEl) return;
+    function renderGrowthChart (data) {
+        const ctxEl = document.getElementById('nwGrowthChart');
+        if (!ctxEl) { return; }
 
         if (growthChart) {
             growthChart.destroy();
         }
 
-        var ctx = ctxEl.getContext('2d');
-        var labels = data.base.years.map(function (y) { return y.year; });
-        var fiTarget = data.fiTarget;
+        const ctx = ctxEl.getContext('2d');
+        const labels = data.base.years.map(function (y) { return y.year; });
+        const fiTarget = data.fiTarget;
 
         // Build gradient fills
-        var baseGrad = createLineGradient(ctx, colors.base);
-        var consGrad = createLineGradient(ctx, colors.conservative);
-        var aggGrad = createLineGradient(ctx, colors.aggressive);
+        const baseGrad = createLineGradient(ctx, colors.base);
+        const consGrad = createLineGradient(ctx, colors.conservative);
+        const aggGrad = createLineGradient(ctx, colors.aggressive);
 
-        var datasets = [
+        const datasets = [
             {
                 label: 'Base (' + data.base.roiPercent + '%)',
                 data: data.base.years.map(function (y) { return y.endingBalance; }),
@@ -199,7 +202,7 @@
                                 return '📅 ' + items[0].label;
                             },
                             label: function (context) {
-                                var val = formatCurrency(context.parsed.y);
+                                const val = formatCurrency(context.parsed.y);
                                 return ' ' + context.dataset.label + ':  ' + val;
                             }
                         }
@@ -246,11 +249,11 @@
                 // Glow effect plugin for lines
                 id: 'lineGlow',
                 afterDraw: function (chart) {
-                    var ctx = chart.ctx;
+                    const ctx = chart.ctx;
                     chart.data.datasets.forEach(function (dataset, i) {
-                        if (i === 3) return; // skip FI target
-                        var meta = chart.getDatasetMeta(i);
-                        if (meta.hidden || !meta.dataset) return;
+                        if (i === 3) { return; } // skip FI target
+                        const meta = chart.getDatasetMeta(i);
+                        if (meta.hidden || !meta.dataset) { return; }
 
                         ctx.save();
                         ctx.shadowColor = dataset.borderColor;
@@ -266,7 +269,7 @@
                         if (meta.data.length > 1) {
                             ctx.beginPath();
                             ctx.moveTo(meta.data[0].x, meta.data[0].y);
-                            for (var j = 1; j < meta.data.length; j++) {
+                            for (let j = 1; j < meta.data.length; j++) {
                                 ctx.lineTo(meta.data[j].x, meta.data[j].y);
                             }
                             ctx.stroke();
@@ -281,31 +284,31 @@
     /**
      * Render the comparison bar chart showing final net worth across scenarios
      */
-    function renderComparisonChart(data) {
-        var ctxEl = document.getElementById('nwComparisonChart');
-        if (!ctxEl) return;
+    function renderComparisonChart (data) {
+        const ctxEl = document.getElementById('nwComparisonChart');
+        if (!ctxEl) { return; }
 
         if (comparisonChart) {
             comparisonChart.destroy();
         }
 
-        var ctx = ctxEl.getContext('2d');
+        const ctx = ctxEl.getContext('2d');
 
         // Use ending balance from the last year of each scenario for comparison
-        var baseLastYear = data.base.years[data.base.years.length - 1];
-        var conservativeLastYear = data.conservative.years[data.conservative.years.length - 1];
-        var aggressiveLastYear = data.aggressive.years[data.aggressive.years.length - 1];
+        const baseLastYear = data.base.years[data.base.years.length - 1];
+        const conservativeLastYear = data.conservative.years[data.conservative.years.length - 1];
+        const aggressiveLastYear = data.aggressive.years[data.aggressive.years.length - 1];
 
         // Create gradient backgrounds for bars
-        var baseBarGrad = ctx.createLinearGradient(0, 0, 0, 280);
+        const baseBarGrad = ctx.createLinearGradient(0, 0, 0, COMPARISON_CHART_HEIGHT);
         baseBarGrad.addColorStop(0, colors.base);
         baseBarGrad.addColorStop(1, hexToRgba(colors.base, 0.4));
 
-        var consBarGrad = ctx.createLinearGradient(0, 0, 0, 280);
+        const consBarGrad = ctx.createLinearGradient(0, 0, 0, COMPARISON_CHART_HEIGHT);
         consBarGrad.addColorStop(0, colors.conservative);
         consBarGrad.addColorStop(1, hexToRgba(colors.conservative, 0.4));
 
-        var aggBarGrad = ctx.createLinearGradient(0, 0, 0, 280);
+        const aggBarGrad = ctx.createLinearGradient(0, 0, 0, COMPARISON_CHART_HEIGHT);
         aggBarGrad.addColorStop(0, colors.aggressive);
         aggBarGrad.addColorStop(1, hexToRgba(colors.aggressive, 0.4));
 
@@ -405,50 +408,54 @@
      * Update summary metric cards and legend.
      * @param {Object} data - The projection data object.
      */
-    function updateMetrics(data) {
+    function updateMetrics (data) {
         // FI Target card
         const fiValue = document.querySelector('.nw-metric-fi-value');
         const fiSub = document.querySelector('.nw-metric-fi-sub');
         if (fiValue) {
             const symbolEl = fiValue.querySelector('.nw-currency-symbol');
             const amountEl = fiValue.querySelector('.nw-currency-amount');
-            if (symbolEl) symbolEl.textContent = '$';
-            if (amountEl) amountEl.textContent = Math.round(data.fiTarget).toLocaleString('en-US');
+            if (symbolEl) { symbolEl.textContent = '$'; }
+            if (amountEl) { amountEl.textContent = Math.round(data.fiTarget).toLocaleString('en-US'); }
         }
-        if (fiSub) fiSub.innerHTML = `Based on <span class="nw-currency-symbol">$</span>${formatCompact(data.annualSpending)}/yr spending`;
+        if (fiSub) {
+            fiSub.innerHTML = 'Based on <span class="nw-currency-symbol">$</span>' + PF.escapeHtml(formatCompact(data.annualSpending)) + '/yr spending';
+        }
 
         // Current Net Worth card
         const currentValue = document.querySelector('.nw-metric-current-value');
         const currentSub = document.querySelector('.nw-metric-current-sub');
-        if (currentValue) currentValue.textContent = formatCurrency(data.base.startingBalance);
-        if (currentSub) currentSub.textContent = `Age ${data.currentAge}, Year ${data.currentYear}`;
+        if (currentValue) { currentValue.textContent = formatCurrency(data.base.startingBalance); }
+        if (currentSub) { currentSub.textContent = `Age ${data.currentAge}, Year ${data.currentYear}`; }
 
         // Base Final card
         const baseValue = document.querySelector('.nw-metric-base-value');
         const baseSub = document.querySelector('.nw-metric-base-sub');
-        if (baseValue) baseValue.textContent = formatCurrency(data.base.finalNetWorth);
-        if (baseSub) baseSub.textContent = `${data.base.roiPercent}% ROI`;
+        if (baseValue) { baseValue.textContent = formatCurrency(data.base.finalNetWorth); }
+        if (baseSub) { baseSub.textContent = `${data.base.roiPercent}% ROI`; }
 
         // Aggressive Final card
         const aggValue = document.querySelector('.nw-metric-aggressive-value');
         const aggSub = document.querySelector('.nw-metric-aggressive-sub');
-        if (aggValue) aggValue.textContent = formatCurrency(data.aggressive.finalNetWorth);
-        if (aggSub) aggSub.innerHTML = `${data.aggressive.roiPercent}% ROI · <span class="nw-currency-symbol">$</span>${formatCompact(data.aggressive.annualSavings)}/yr savings`;
+        if (aggValue) { aggValue.textContent = formatCurrency(data.aggressive.finalNetWorth); }
+        if (aggSub) {
+            aggSub.innerHTML = PF.escapeHtml(String(data.aggressive.roiPercent)) + '% ROI · <span class="nw-currency-symbol">$</span>' + PF.escapeHtml(formatCompact(data.aggressive.annualSavings)) + '/yr savings';
+        }
 
         // Update legend
         const legendBase = document.getElementById('nwLegendBase');
         const legendCons = document.getElementById('nwLegendConservative');
         const legendAgg = document.getElementById('nwLegendAggressive');
-        if (legendBase) legendBase.innerHTML = `<span class="nw-legend-dot nw-dot-base"></span> Base (${data.base.roiPercent}%)`;
-        if (legendCons) legendCons.innerHTML = `<span class="nw-legend-dot nw-dot-conservative"></span> Conservative (${data.conservative.roiPercent}%)`;
-        if (legendAgg) legendAgg.innerHTML = `<span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (${data.aggressive.roiPercent}%)`;
+        if (legendBase) { legendBase.innerHTML = '<span class="nw-legend-dot nw-dot-base"></span> Base (' + PF.escapeHtml(String(data.base.roiPercent)) + '%)'; }
+        if (legendCons) { legendCons.innerHTML = '<span class="nw-legend-dot nw-dot-conservative"></span> Conservative (' + PF.escapeHtml(String(data.conservative.roiPercent)) + '%)'; }
+        if (legendAgg) { legendAgg.innerHTML = '<span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (' + PF.escapeHtml(String(data.aggressive.roiPercent)) + '%)'; }
     }
 
     /**
      * Update scenario comparison cards.
      * @param {Object} data - The projection data object.
      */
-    function updateScenarioCards(data) {
+    function updateScenarioCards (data) {
         setScenarioValues('nw-sc-base-', data.base);
         setScenarioValues('nw-sc-cons-', data.conservative);
         setScenarioValues('nw-sc-agg-', data.aggressive);
@@ -459,23 +466,23 @@
      * @param {string} prefix - CSS class prefix (e.g., 'nw-sc-base-').
      * @param {Object} scenario - The scenario data object.
      */
-    function setScenarioValues(prefix, scenario) {
+    function setScenarioValues (prefix, scenario) {
         const savingsEl = document.querySelector(`.${prefix}savings`);
         const finalEl = document.querySelector(`.${prefix}final`);
         const contribEl = document.querySelector(`.${prefix}contrib`);
         const interestEl = document.querySelector(`.${prefix}interest`);
 
-        if (savingsEl) savingsEl.innerHTML = `<span class="nw-currency-symbol">$</span>${formatCompact(scenario.annualSavings)}`;
-        if (finalEl) finalEl.innerHTML = `<span class="nw-currency-symbol">$</span>${formatCompact(scenario.finalNetWorth)}`;
-        if (contribEl) contribEl.innerHTML = `<span class="nw-currency-symbol">$</span>${formatCompact(scenario.totalContributions)}`;
-        if (interestEl) interestEl.innerHTML = `<span class="nw-currency-symbol">$</span>${formatCompact(scenario.totalInterestEarned)}`;
+        if (savingsEl) { savingsEl.innerHTML = '<span class="nw-currency-symbol">$</span>' + PF.escapeHtml(formatCompact(scenario.annualSavings)); }
+        if (finalEl) { finalEl.innerHTML = '<span class="nw-currency-symbol">$</span>' + PF.escapeHtml(formatCompact(scenario.finalNetWorth)); }
+        if (contribEl) { contribEl.innerHTML = '<span class="nw-currency-symbol">$</span>' + PF.escapeHtml(formatCompact(scenario.totalContributions)); }
+        if (interestEl) { interestEl.innerHTML = '<span class="nw-currency-symbol">$</span>' + PF.escapeHtml(formatCompact(scenario.totalInterestEarned)); }
     }
 
     /**
      * Update scenario card ROI badges.
      * @param {Object} data - The projection data object.
      */
-    function updateScenarioBadges(data) {
+    function updateScenarioBadges (data) {
         const badges = document.querySelectorAll('.nw-scenario-badge');
         const roiValues = [data.base.roiPercent, data.conservative.roiPercent, data.aggressive.roiPercent];
         badges.forEach(function (badge, index) {
@@ -492,7 +499,7 @@
      * @param {number} annualIncome - The annual income amount.
      * @returns {string} Space-separated CSS class names for the row.
      */
-    function getRowHighlightClass(endingBalance, fiTarget, annualIncome) {
+    function getRowHighlightClass (endingBalance, fiTarget, _annualIncome) {
         const fiveMillion = 5000000;
 
         if (endingBalance >= fiveMillion) {
@@ -509,16 +516,16 @@
      * Update the projection table for the given scenario.
      * @param {string} scenarioName - The scenario key (e.g., 'Base').
      */
-    function updateTable(scenarioName) {
+    function updateTable (scenarioName) {
         const data = window.nwProjectionData;
-        if (!data) return;
+        if (!data) { return; }
 
         const scenarioKey = scenarioMap[scenarioName] || 'base';
         const scenario = data[scenarioKey];
-        if (!scenario) return;
+        if (!scenario) { return; }
 
         const tbody = document.getElementById('nwTableBody');
-        if (!tbody) return;
+        if (!tbody) { return; }
 
         const fiTarget = data.fiTarget;
         const annualIncome = data.annualIncome;
@@ -526,14 +533,15 @@
         const rows = scenario.years.map(function (year) {
             const rowClass = getRowHighlightClass(year.endingBalance, fiTarget, annualIncome);
             const roiClass = year.roi >= annualIncome ? ' nw-roi-highlight' : '';
-            return `<tr${rowClass}>
-                <td>${year.year}</td>
-                <td>${year.age}</td>
-                <td class="text-end nw-currency">${formatCurrency(year.startingBalance)}</td>
-                <td class="text-end nw-currency">${formatCurrency(year.savings)}</td>
-                <td class="text-end nw-currency text-success${roiClass}">${formatCurrency(year.roi)}</td>
-                <td class="text-end nw-currency fw-semibold">${formatCurrency(year.endingBalance)}</td>
-            </tr>`;
+            const esc = PF.escapeHtml;
+            return '<tr' + rowClass + '>' +
+                '<td>' + esc(year.year) + '</td>' +
+                '<td>' + esc(year.age) + '</td>' +
+                '<td class="text-end nw-currency">' + esc(formatCurrency(year.startingBalance)) + '</td>' +
+                '<td class="text-end nw-currency">' + esc(formatCurrency(year.savings)) + '</td>' +
+                '<td class="text-end nw-currency text-success' + roiClass + '">' + esc(formatCurrency(year.roi)) + '</td>' +
+                '<td class="text-end nw-currency fw-semibold">' + esc(formatCurrency(year.endingBalance)) + '</td>' +
+            '</tr>';
         });
 
         tbody.innerHTML = rows.join('');
@@ -541,8 +549,9 @@
 
     /**
      * Initialize scenario tab switching.
+     * Switches the projection table between Base, Conservative, and Aggressive scenarios.
      */
-    function initScenarioTabs() {
+    function initScenarioTabs () {
         const buttons = document.querySelectorAll('.nw-tab-btn');
         buttons.forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -563,9 +572,9 @@
      * @param {string} type - 'currency', 'percent', or 'number'.
      * @returns {string} Formatted string.
      */
-    function formatSliderValue(value, type) {
-        var num = parseFloat(value);
-        if (isNaN(num)) return '';
+    function formatSliderValue (value, type) {
+        const num = PF.safeParseFloat(value, NaN);
+        if (isNaN(num)) { return ''; }
         if (type === 'currency') {
             return Math.round(num).toLocaleString('en-US');
         }
@@ -577,9 +586,10 @@
 
     /**
      * Sync hidden save inputs with current slider values for form model binding.
+     * Ensures that when the form is submitted, the server receives the current slider values.
      */
-    function syncSaveInputs() {
-        var fields = [
+    function syncSaveInputs () {
+        const fields = [
             { rangeId: 'nwStartingBalanceRange', saveId: 'nwSaveStartingBalance' },
             { rangeId: 'nwAnnualSavingsRange', saveId: 'nwSaveAnnualSavings' },
             { rangeId: 'nwAnnualIncomeRange', saveId: 'nwSaveAnnualIncome' },
@@ -592,8 +602,8 @@
             { rangeId: 'nwAggressiveSavingsRange', saveId: 'nwSaveAggressiveSavings' }
         ];
         fields.forEach(function (field) {
-            var rangeEl = document.getElementById(field.rangeId);
-            var saveEl = document.getElementById(field.saveId);
+            const rangeEl = document.getElementById(field.rangeId);
+            const saveEl = document.getElementById(field.saveId);
             if (rangeEl && saveEl) {
                 saveEl.value = rangeEl.value;
             }
@@ -606,10 +616,10 @@
      * @param {string} inputId - The text input ID.
      * @param {string} formatType - 'currency', 'percent', or 'number'.
      */
-    function syncSlider(rangeId, inputId, formatType) {
-        var rangeEl = document.getElementById(rangeId);
-        var inputEl = document.getElementById(inputId);
-        if (!rangeEl || !inputEl) return;
+    function syncSlider (rangeId, inputId, formatType) {
+        const rangeEl = document.getElementById(rangeId);
+        const inputEl = document.getElementById(inputId);
+        if (!rangeEl || !inputEl) { return; }
 
         // Initialize display from range value
         inputEl.value = formatSliderValue(rangeEl.value, formatType);
@@ -624,13 +634,12 @@
 
         // Input → Range (on blur and Enter key)
         inputEl.addEventListener('input', function () {
-            var raw = inputEl.value.replace(/[^0-9.]/g, '');
-            var num = parseFloat(raw);
+            const raw = inputEl.value.replace(/[^0-9.]/g, '');
+            const num = PF.safeParseFloat(raw, NaN);
             if (!isNaN(num)) {
-                var min = parseFloat(rangeEl.min);
-                var max = parseFloat(rangeEl.max);
-                num = Math.max(min, Math.min(max, num));
-                rangeEl.value = num;
+                const min = PF.safeParseFloat(rangeEl.min, 0);
+                const max = PF.safeParseFloat(rangeEl.max, Infinity);
+                rangeEl.value = Math.max(min, Math.min(max, num));
             }
             updateSavingsIndicator();
             syncSaveInputs();
@@ -638,14 +647,14 @@
         });
 
         inputEl.addEventListener('blur', function () {
-            var raw = inputEl.value.replace(/[^0-9.]/g, '');
-            var num = parseFloat(raw);
+            const raw = inputEl.value.replace(/[^0-9.]/g, '');
+            const num = PF.safeParseFloat(raw, NaN);
             if (!isNaN(num)) {
-                var min = parseFloat(rangeEl.min);
-                var max = parseFloat(rangeEl.max);
-                num = Math.max(min, Math.min(max, num));
-                rangeEl.value = num;
-                inputEl.value = formatSliderValue(num, formatType);
+                const min = PF.safeParseFloat(rangeEl.min, 0);
+                const max = PF.safeParseFloat(rangeEl.max, Infinity);
+                const clamped = Math.max(min, Math.min(max, num));
+                rangeEl.value = clamped;
+                inputEl.value = formatSliderValue(clamped, formatType);
             }
             syncSaveInputs();
             triggerRecalculation();
@@ -661,9 +670,13 @@
 
     /**
      * Debounced recalculation trigger shared by sliders and inputs.
+     * Waits for the user to stop interacting before sending an AJAX request.
      */
-    var recalcTimeout;
-    function triggerRecalculation() {
+    let recalcTimeout;
+    /**
+     * Trigger a debounced recalculation of projections.
+     */
+    function triggerRecalculation () {
         clearTimeout(recalcTimeout);
         recalcTimeout = setTimeout(function () {
             recalculate();
@@ -672,17 +685,18 @@
 
     /**
      * Update the savings rate indicator bar.
+     * Calculates and displays the ratio of annual savings to annual income.
      */
-    function updateSavingsIndicator() {
-        var savingsEl = document.getElementById('nwAnnualSavings');
-        var incomeEl = document.getElementById('nwAnnualIncome');
-        var rateValueEl = document.getElementById('nwSavingsRateValue');
-        var rateFillEl = document.getElementById('nwSavingsRateFill');
+    function updateSavingsIndicator () {
+        const savingsEl = document.getElementById('nwAnnualSavings');
+        const incomeEl = document.getElementById('nwAnnualIncome');
+        const rateValueEl = document.getElementById('nwSavingsRateValue');
+        const rateFillEl = document.getElementById('nwSavingsRateFill');
 
-        if (!savingsEl || !incomeEl || !rateValueEl || !rateFillEl) return;
+        if (!savingsEl || !incomeEl || !rateValueEl || !rateFillEl) { return; }
 
-        var savings = parseFloat(savingsEl.value.replace(/[^0-9.]/g, '')) || 0;
-        var income = parseFloat(incomeEl.value.replace(/[^0-9.]/g, '')) || 0;
+        const savings = PF.safeParseFloat(savingsEl.value.replace(/[^0-9.]/g, ''), 0);
+        const income = PF.safeParseFloat(incomeEl.value.replace(/[^0-9.]/g, ''), 0);
 
         if (income <= 0) {
             rateValueEl.textContent = '0%';
@@ -691,8 +705,8 @@
             return;
         }
 
-        var rate = (savings / income) * 100;
-        var displayRate = Math.min(rate, 100);
+        const rate = (savings / income) * 100;
+        const displayRate = Math.min(rate, 100);
         rateValueEl.textContent = rate.toFixed(1) + '%';
         rateFillEl.style.width = displayRate + '%';
 
@@ -707,8 +721,9 @@
 
     /**
      * Initialize live recalculation on input change (debounced).
+     * Sets up all slider-input pairs and the initial savings indicator.
      */
-    function initLiveRecalculation() {
+    function initLiveRecalculation () {
         // Sync all slider pairs
         syncSlider('nwStartingBalanceRange', 'nwStartingBalance', 'currency');
         syncSlider('nwAnnualSavingsRange', 'nwAnnualSavings', 'currency');
@@ -729,9 +744,9 @@
      * Apply a preset scenario by setting all slider values.
      * @param {Object} preset - Key-value pairs of field IDs to values.
      */
-    function applyPreset(preset) {
+    function applyPreset (preset) {
         // Map of field IDs to their format types
-        var fields = [
+        const fields = [
             { id: 'nwStartingBalance', type: 'currency' },
             { id: 'nwAnnualSavings', type: 'currency' },
             { id: 'nwAnnualIncome', type: 'currency' },
@@ -746,9 +761,9 @@
 
         fields.forEach(function (field) {
             if (preset[field.id] !== undefined) {
-                var rangeId = field.id + 'Range';
-                var rangeEl = document.getElementById(rangeId);
-                var inputEl = document.getElementById(field.id);
+                const rangeId = field.id + 'Range';
+                const rangeEl = document.getElementById(rangeId);
+                const inputEl = document.getElementById(field.id);
                 if (rangeEl) {
                     rangeEl.value = preset[field.id];
                 }
@@ -771,9 +786,10 @@
 
     /**
      * Initialize preset scenario buttons.
+     * Wires up FIRE, Coast, Traditional, Ultra, and Conservative preset buttons.
      */
-    function initPresets() {
-        var presets = {
+    function initPresets () {
+        const presets = {
             fire: {
                 nwStartingBalance: 50000,
                 nwAnnualSavings: 85000,
@@ -837,7 +853,7 @@
         };
 
         Object.keys(presets).forEach(function (key) {
-            var btn = document.getElementById('nwPreset' + key.charAt(0).toUpperCase() + key.slice(1));
+            const btn = document.getElementById('nwPreset' + key.charAt(0).toUpperCase() + key.slice(1));
             if (btn) {
                 btn.addEventListener('click', function () {
                     applyPreset(presets[key]);
@@ -848,9 +864,10 @@
 
     /**
      * Validate input values client-side before sending to the server.
+     * Checks ranges and ensures retirement age is greater than current age.
      * @returns {boolean} True if all inputs are valid, false otherwise.
      */
-    function validateInputs() {
+    function validateInputs () {
         let isValid = true;
         const validators = [
             { id: 'nwStartingBalance', min: 0, max: 1000000000, label: 'Starting balance' },
@@ -867,31 +884,32 @@
 
         // Clear previous validation states
         validators.forEach(function (v) {
-            var el = document.getElementById(v.id);
-            var rangeEl = document.getElementById(v.id + 'Range');
-            if (el) el.classList.remove('nw-input-invalid');
-            if (rangeEl) rangeEl.classList.remove('nw-input-invalid');
+            const el = document.getElementById(v.id);
+            const rangeEl = document.getElementById(v.id + 'Range');
+            if (el) { el.classList.remove('nw-input-invalid'); }
+            if (rangeEl) { rangeEl.classList.remove('nw-input-invalid'); }
         });
 
         validators.forEach(function (v) {
-            var val = getSliderValue(v.id);
-            var el = document.getElementById(v.id);
-            var rangeEl = document.getElementById(v.id + 'Range');
-            if (isNaN(val) || val < v.min || val > v.max) {
-                if (el) el.classList.add('nw-input-invalid');
-                if (rangeEl) rangeEl.classList.add('nw-input-invalid');
+            const val = getSliderValue(v.id);
+            const el = document.getElementById(v.id);
+            const rangeEl = document.getElementById(v.id + 'Range');
+            const num = PF.safeParseFloat(val, NaN);
+            if (isNaN(num) || num < v.min || num > v.max) {
+                if (el) { el.classList.add('nw-input-invalid'); }
+                if (rangeEl) { rangeEl.classList.add('nw-input-invalid'); }
                 isValid = false;
             }
         });
 
         // Check retirement age > current age
-        var currentAge = Math.round(getSliderValue('nwCurrentAge'));
-        var retirementAge = Math.round(getSliderValue('nwRetirementAge'));
-        if (!isNaN(currentAge) && !isNaN(retirementAge) && retirementAge <= currentAge) {
-            var retEl = document.getElementById('nwRetirementAge');
-            var retRange = document.getElementById('nwRetirementAgeRange');
-            if (retEl) retEl.classList.add('nw-input-invalid');
-            if (retRange) retRange.classList.add('nw-input-invalid');
+        const currentAge = Math.round(getSliderValue('nwCurrentAge'));
+        const retirementAge = Math.round(getSliderValue('nwRetirementAge'));
+        if (currentAge && retirementAge && retirementAge <= currentAge) {
+            const retEl = document.getElementById('nwRetirementAge');
+            const retRange = document.getElementById('nwRetirementAgeRange');
+            if (retEl) { retEl.classList.add('nw-input-invalid'); }
+            if (retRange) { retRange.classList.add('nw-input-invalid'); }
             isValid = false;
         }
 
@@ -904,7 +922,7 @@
      * @param {number} max - Maximum value.
      * @returns {number} Random integer.
      */
-    function randomInt(min, max) {
+    function randomInt (min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
@@ -915,34 +933,35 @@
      * @param {number} decimals - Number of decimal places.
      * @returns {number} Random float.
      */
-    function randomFloat(min, max, decimals) {
-        var value = Math.random() * (max - min) + min;
-        var factor = Math.pow(10, decimals);
+    function randomFloat (min, max, decimals) {
+        const value = Math.random() * (max - min) + min;
+        const factor = Math.pow(10, decimals);
         return Math.round(value * factor) / factor;
     }
 
     /**
      * Randomize all input fields with realistic values and recalculate.
+     * Generates random but realistic financial parameters for exploration.
      */
-    function randomizeParameters() {
+    function randomizeParameters () {
         // Financial Overview - generate realistic but varied scenarios
-        var startingBalance = randomInt(10000, 500000);
-        var annualIncome = randomInt(40000, 250000);
-        var savingsRate = randomFloat(0.10, 0.50, 2); // 10% to 50% savings rate
-        var annualSavings = Math.round(annualIncome * savingsRate / 1000) * 1000;
-        var spendingRate = randomFloat(0.35, 0.70, 2); // 35% to 70% of income after taxes
-        var annualSpending = Math.round(annualIncome * spendingRate / 1000) * 1000;
+        const startingBalance = randomInt(10000, 500000);
+        const annualIncome = randomInt(40000, 250000);
+        const savingsRate = randomFloat(0.10, 0.50, 2); // 10% to 50% savings rate
+        const annualSavings = Math.round(annualIncome * savingsRate / 1000) * 1000;
+        const spendingRate = randomFloat(0.35, 0.70, 2); // 35% to 70% of income after taxes
+        const annualSpending = Math.round(annualIncome * spendingRate / 1000) * 1000;
 
         // Timeline - realistic ages
-        var currentAge = randomInt(22, 55);
-        var retirementAge = currentAge + randomInt(10, 35);
-        if (retirementAge > 80) retirementAge = 80;
+        const currentAge = randomInt(22, 55);
+        let retirementAge = currentAge + randomInt(10, 35);
+        if (retirementAge > 80) { retirementAge = 80; }
 
         // Return Assumptions - realistic ROI ranges
-        var conservativeRoi = randomFloat(3.0, 7.0, 1);
-        var baseRoi = conservativeRoi + randomFloat(0.5, 3.0, 1);
-        var aggressiveRoi = baseRoi + randomFloat(1.0, 5.0, 1);
-        var aggressiveSavings = annualSavings + randomInt(5000, 50000);
+        const conservativeRoi = randomFloat(3.0, 7.0, 1);
+        const baseRoi = conservativeRoi + randomFloat(0.5, 3.0, 1);
+        const aggressiveRoi = baseRoi + randomFloat(1.0, 5.0, 1);
+        const aggressiveSavings = annualSavings + randomInt(5000, 50000);
 
         applyPreset({
             nwStartingBalance: startingBalance,
@@ -960,8 +979,9 @@
 
     /**
      * Reset all input fields to their default values and recalculate.
+     * Also submits the reset form to clear any saved custom values.
      */
-    function resetToDefaults() {
+    function resetToDefaults () {
         applyPreset({
             nwStartingBalance: 195033,
             nwAnnualSavings: 32000,
@@ -981,17 +1001,17 @@
      * @param {string} inputId - The text input ID.
      * @returns {number} The parsed numeric value.
      */
-    function getSliderValue(inputId) {
-        var el = document.getElementById(inputId);
-        if (!el) return 0;
-        var raw = el.value.replace(/[^0-9.]/g, '');
-        return parseFloat(raw) || 0;
+    function getSliderValue (inputId) {
+        const el = document.getElementById(inputId);
+        if (!el) { return 0; }
+        const raw = el.value.replace(/[^0-9.]/g, '');
+        return PF.safeParseFloat(raw, 0);
     }
 
     /**
      * Recalculate projections via AJAX and update all UI elements.
      */
-    function recalculate() {
+    function recalculate () {
         // Validate inputs before sending
         if (!validateInputs()) {
             return;
@@ -1044,6 +1064,7 @@
             .catch(function (err) {
                 if (err.message !== 'Validation error') {
                     console.error('Failed to recalculate projection:', err);
+                    showValidationMessage('Failed to load projection data. Please check your connection and try again.');
                 }
             });
     }
@@ -1052,10 +1073,10 @@
      * Display a validation error message to the user.
      * @param {string} message - The error message from the server.
      */
-    function showValidationMessage(message) {
+    function showValidationMessage (message) {
         clearValidationMessage();
         const container = document.querySelector('.nw-header');
-        if (!container) return;
+        if (!container) { return; }
 
         const alert = document.createElement('div');
         alert.id = 'nwValidationAlert';
@@ -1068,7 +1089,7 @@
     /**
      * Clear any displayed validation error message.
      */
-    function clearValidationMessage() {
+    function clearValidationMessage () {
         const alert = document.getElementById('nwValidationAlert');
         if (alert) {
             alert.remove();
@@ -1077,8 +1098,9 @@
 
     /**
      * Initialize Bootstrap tooltips for parameter hints.
+     * Creates tooltip instances for all elements with data-bs-toggle="tooltip".
      */
-    function initTooltips() {
+    function initTooltips () {
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         tooltipTriggerList.forEach(function (el) {
             new bootstrap.Tooltip(el);
@@ -1086,11 +1108,12 @@
     }
 
     /**
-     * Initialize everything when DOM is ready
+     * Initialize everything when DOM is ready.
+     * Renders charts, sets up sliders, tabs, presets, and triggers initial recalculation.
      */
-    function init() {
+    function init () {
         const data = window.nwProjectionData;
-        if (!data) return;
+        if (!data) { return; }
 
         // Parameters are already loaded server-side via the Index action.
         // The sliders reflect saved values from the database on page render.

@@ -5,7 +5,7 @@
 
     $(function () {
         const $modal = $('#monthlyBudgetModal');
-        if ($modal.length === 0) return;
+        if ($modal.length === 0) { return; }
 
         // ==========================================
         // Monthly Budget Summary Report & Charts Logic
@@ -27,95 +27,89 @@
         let budgetRequestSeq = 0;
         let budgetTableUserToggled = false;
 
-        function formatCurrency(num) {
-            if (num === null || num === undefined || isNaN(num)) return '$0.00';
-            const n = Number(num);
-            const formatted = '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            return n < 0 ? '-' + formatted : formatted;
+        // Reference to shared utilities
+        const PF = window.PFUtils;
+
+        function formatCurrency (num) {
+            return PF.formatCurrencyCents(num);
         }
 
         // Whole-dollar format for prose and tiles where cents are noise
-        function formatMoney(num) {
+        function formatMoney (num) {
             const n = Number(num) || 0;
             const formatted = '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
             return n < 0 ? '-' + formatted : formatted;
         }
 
-        function formatCompactCurrency(val) {
-            const abs = Math.abs(val);
-            const sign = val < 0 ? '-' : '';
-            if (abs >= 1000000) return sign + '$' + (abs / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-            if (abs >= 1000) return sign + '$' + (abs / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-            return sign + '$' + abs.toLocaleString('en-US');
+        function formatCompactCurrency (val) {
+            return PF.formatCompactCurrencySigned(val);
         }
 
-        function escapeHtml(value) {
-            return String(value === null || value === undefined ? '' : value)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        function escapeHtml (value) {
+            return PF.escapeHtml(value);
         }
 
-        function hasValue(v) {
+        function hasValue (v) {
             return v !== null && v !== undefined;
         }
 
         // Status always ships as icon + label, never color alone
-        function statusPill(tone, label) {
+        function statusPill (tone, label) {
             const icon = tone === 'good' ? '&#10003;' : (tone === 'warning' ? '!' : '&#10005;');
             return '<span class="bgt-status bgt-status--' + tone + '"><span class="bgt-status-icon" aria-hidden="true">' + icon + '</span>' + escapeHtml(label) + '</span>';
         }
 
-        function monthStatusTone(status) {
-            if (status === 'Under Budget') return 'good';
-            if (status === 'On Track') return 'warning';
+        function monthStatusTone (status) {
+            if (status === 'Under Budget') { return 'good'; }
+            if (status === 'On Track') { return 'warning'; }
             return 'critical';
         }
 
-        function monthStatusLabel(status) {
-            if (status === 'Under Budget') return 'Under budget';
-            if (status === 'On Track') return 'On track (up to 5% over)';
+        function monthStatusLabel (status) {
+            if (status === 'Under Budget') { return 'Under budget'; }
+            if (status === 'On Track') { return 'On track (up to 5% over)'; }
             return 'Over budget';
         }
 
-        function yearStatus(data) {
+        function yearStatus (data) {
             const planned = data.totalAnnualBudgetedExpenses;
             if (planned > 0) {
-                if (data.totalAnnualExpenses <= planned) return 'Under Budget';
-                if (data.totalAnnualExpenses <= planned * 1.05) return 'On Track';
+                if (data.totalAnnualExpenses <= planned) { return 'Under Budget'; }
+                if (data.totalAnnualExpenses <= planned * 1.05) { return 'On Track'; }
                 return 'Over Budget';
             }
             return data.totalAnnualSavings >= 0 ? 'Under Budget' : 'Over Budget';
         }
 
-        function categoryTone(c) {
-            if (!(c.budgetedAmount > 0)) return 'none';
-            if (c.actualAmount <= c.budgetedAmount * 0.9) return 'good';
-            if (c.actualAmount <= c.budgetedAmount) return 'warning';
+        function categoryTone (c) {
+            if (!(c.budgetedAmount > 0)) { return 'none'; }
+            if (c.actualAmount <= c.budgetedAmount * 0.9) { return 'good'; }
+            if (c.actualAmount <= c.budgetedAmount) { return 'warning'; }
             return 'critical';
         }
 
-        function categoryStatusLabel(tone) {
-            if (tone === 'good') return 'Within budget';
-            if (tone === 'warning') return 'Near limit';
-            if (tone === 'critical') return 'Over budget';
+        function categoryStatusLabel (tone) {
+            if (tone === 'good') { return 'Within budget'; }
+            if (tone === 'warning') { return 'Near limit'; }
+            if (tone === 'critical') { return 'Over budget'; }
             return 'No budget set';
         }
 
-        function balanceText(start, end) {
-            if (!hasValue(start) || !hasValue(end)) return '';
+        function balanceText (start, end) {
+            if (!hasValue(start) || !hasValue(end)) { return ''; }
             const change = end - start;
             return 'Balance ' + formatMoney(start) + ' &rarr; ' + formatMoney(end) +
                 ' (' + (change >= 0 ? '+' : '') + formatMoney(change) + ')';
         }
 
-        function planDeltaText(actual, planned, aboveWord, belowWord) {
-            if (!(planned > 0)) return '';
+        function planDeltaText (actual, planned, aboveWord, belowWord) {
+            if (!(planned > 0)) { return ''; }
             const diff = actual - planned;
-            if (Math.abs(diff) < 0.005) return 'Exactly on plan (' + formatMoney(planned) + ')';
+            if (Math.abs(diff) < 0.005) { return 'Exactly on plan (' + formatMoney(planned) + ')'; }
             return formatMoney(Math.abs(diff)) + ' ' + (diff > 0 ? aboveWord : belowWord) + ' plan of ' + formatMoney(planned);
         }
 
-        function aggregateCategories(months) {
+        function aggregateCategories (months) {
             const map = {};
             const order = [];
             months.forEach(function (m) {
@@ -131,7 +125,7 @@
             return order.map(function (k) { return map[k]; });
         }
 
-        function setPeriodChips() {
+        function setPeriodChips () {
             let html = '';
             budgetPeriods.forEach(function (p) {
                 const isActive = p.month === currentSelectedMonth;
@@ -147,23 +141,23 @@
             $('#budgetKeyboardHint').toggleClass('d-md-block', budgetPeriods.length > 1);
 
             const activeEl = $('#budgetMonthButtonGroup .active')[0];
-            if (activeEl && activeEl.scrollIntoView) activeEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            if (activeEl && activeEl.scrollIntoView) { activeEl.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
         }
 
-        function setTableVisible(visible) {
+        function setTableVisible (visible) {
             $('#budgetReportTableContainer').toggleClass('d-none', !visible);
             $('#btnToggleBudgetTable').text(visible ? 'Hide table' : 'Show table').attr('aria-expanded', visible);
         }
 
         // Summary card: tone colors the accent stripe, status pill sits on the right
-        function renderInsight(tone, sentences, statusHtml) {
+        function renderInsight (tone, sentences, statusHtml) {
             $('#budgetHero').attr('data-tone', tone);
             $('#budgetInsight').html(sentences.filter(Boolean).join(' '));
             $('#budgetHeroStatus').html(statusHtml || '');
         }
 
         // Actual-vs-plan meter for a KPI tile; the tick marks the plan
-        function renderTileMeter(selector, actual, planned, kind, label) {
+        function renderTileMeter (selector, actual, planned, kind, label) {
             const $el = $(selector);
             if (!(planned > 0)) { $el.empty(); return; }
             const scale = Math.max(actual, planned) || 1;
@@ -178,7 +172,7 @@
 
         // Savings rate against the common "save 20% of income" guideline
         const SAVINGS_GOAL_PCT = 20;
-        function renderSavingsRate(rate) {
+        function renderSavingsRate (rate) {
             const scale = Math.max(SAVINGS_GOAL_PCT * 1.5, rate);
             const fill = Math.max(0, rate) / scale * 100;
             $('#kpiSavingsRate').text(rate.toFixed(1) + '%');
@@ -194,7 +188,7 @@
         }
 
         // Income split into spent vs. saved; spending beyond income shows as a hatched "overspent" segment
-        function renderAllocation(income, spending) {
+        function renderAllocation (income, spending) {
             const $bar = $('#budgetAllocation');
             const $legend = $('#budgetAllocationLegend');
             if (!(income > 0) && !(spending > 0)) {
@@ -217,7 +211,7 @@
             };
 
             $bar.html('<div class="bgt-alloc" role="img" aria-label="' + escapeHtml(
-                    'Income ' + formatMoney(income) + ': spent ' + formatMoney(spending) +
+                'Income ' + formatMoney(income) + ': spent ' + formatMoney(spending) +
                     (overspent > 0 ? ', overspent by ' + formatMoney(overspent) : ', saved ' + formatMoney(saved))) + '">' +
                 segment('spend', spentWithinIncome, 'Spent') +
                 segment('save', saved, 'Saved') +
@@ -243,21 +237,21 @@
         // Category list state, so the sort and "only over budget" controls can re-render without a reload
         let currentCategories = [];
 
-        function sortedVisibleCategories() {
+        function sortedVisibleCategories () {
             const sortBy = $('#budgetCategorySort').val();
             const overOnly = $('#budgetOverOnly').is(':checked');
             let items = currentCategories.filter(function (c) { return (c.actualAmount || 0) !== 0 || (c.budgetedAmount || 0) !== 0; });
-            if (overOnly) items = items.filter(function (c) { return categoryTone(c) === 'critical'; });
+            if (overOnly) { items = items.filter(function (c) { return categoryTone(c) === 'critical'; }); }
             items.sort(function (a, b) {
-                if (sortBy === 'name') return a.categoryName.localeCompare(b.categoryName);
-                if (sortBy === 'over') return (b.actualAmount - b.budgetedAmount) - (a.actualAmount - a.budgetedAmount);
+                if (sortBy === 'name') { return a.categoryName.localeCompare(b.categoryName); }
+                if (sortBy === 'over') { return (b.actualAmount - b.budgetedAmount) - (a.actualAmount - a.budgetedAmount); }
                 return b.actualAmount - a.actualAmount;
             });
             return items;
         }
 
-        function renderCategoryList(categories) {
-            if (categories) currentCategories = categories;
+        function renderCategoryList (categories) {
+            if (categories) { currentCategories = categories; }
             const items = sortedVisibleCategories();
             if (items.length === 0) {
                 $('#budgetCategoryList').html('<div class="text-muted small">' +
@@ -295,12 +289,12 @@
             $('#budgetCategoryList').html(html);
         }
 
-        function destroyYearCharts() {
+        function destroyYearCharts () {
             if (budgetMainChartInstance) { budgetMainChartInstance.destroy(); budgetMainChartInstance = null; }
             if (budgetNetChartInstance) { budgetNetChartInstance.destroy(); budgetNetChartInstance = null; }
         }
 
-        function baseChartOptions(months) {
+        function baseChartOptions (months) {
             return {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -312,7 +306,7 @@
                     }
                 },
                 onHover: function (evt, elements) {
-                    if (evt.native && evt.native.target) evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                    if (evt.native && evt.native.target) { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
                 },
                 plugins: {
                     legend: { display: false },
@@ -343,7 +337,7 @@
             };
         }
 
-        function renderYearCharts(months) {
+        function renderYearCharts (months) {
             destroyYearCharts();
             const labels = months.map(function (m) { return m.monthName.substring(0, 3); });
             const barStyle = { borderRadius: 4, borderSkipped: 'start', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.9 };
@@ -390,7 +384,7 @@
             });
         }
 
-        function renderYearView(data) {
+        function renderYearView (data) {
             const months = data.months;
             const status = yearStatus(data);
             const underCount = months.filter(function (m) { return m.status === 'Under Budget'; }).length;
@@ -466,10 +460,10 @@
             });
             tableHtml += '</tbody></table>';
             $('#budgetReportTableContainer').html(tableHtml);
-            if (!budgetTableUserToggled) setTableVisible(true);
+            if (!budgetTableUserToggled) { setTableVisible(true); }
         }
 
-        function renderMonthView(data, monthData) {
+        function renderMonthView (data, monthData) {
             const tone = monthStatusTone(monthData.status);
             const single = data.months.length === 1;
 
@@ -550,11 +544,11 @@
             });
             tableHtml += '</tbody></table>';
             $('#budgetReportTableContainer').html(tableHtml);
-            if (!budgetTableUserToggled) setTableVisible(single);
+            if (!budgetTableUserToggled) { setTableVisible(single); }
         }
 
-        function renderBudgetMonth(monthNum) {
-            if (!currentBudgetData || !currentBudgetData.months || currentBudgetData.months.length === 0) return;
+        function renderBudgetMonth (monthNum) {
+            if (!currentBudgetData || !currentBudgetData.months || currentBudgetData.months.length === 0) { return; }
             const isSingleMonth = currentBudgetData.months.length === 1;
 
             if (monthNum === 0 && !isSingleMonth) {
@@ -569,7 +563,7 @@
             }
         }
 
-        function stepBudgetPeriod(direction) {
+        function stepBudgetPeriod (direction) {
             const idx = budgetPeriods.findIndex(function (p) { return p.month === currentSelectedMonth; });
             const next = budgetPeriods[idx + direction];
             if (next) {
@@ -578,7 +572,7 @@
             }
         }
 
-        function showBudgetState(state) {
+        function showBudgetState (state) {
             $('#budgetLoadingState').toggleClass('d-none', state !== 'loading');
             $('#budgetErrorState').toggleClass('d-none', state !== 'error');
             $('#budgetReportContent').toggleClass('d-none', state !== 'report');
@@ -586,7 +580,7 @@
             $('#btnBudgetToTransactions').prop('disabled', state === 'loading');
         }
 
-        function loadBudgetReport(request) {
+        function loadBudgetReport (request) {
             lastBudgetRequest = request;
             const seq = ++budgetRequestSeq;
             currentBudgetData = null;
@@ -606,7 +600,7 @@
                 method: 'GET',
                 data: request,
                 success: function (data) {
-                    if (seq !== budgetRequestSeq) return; // a newer request superseded this one
+                    if (seq !== budgetRequestSeq) { return; } // a newer request superseded this one
 
                     if (!data || !data.months || data.months.length === 0) {
                         $('#budgetErrorMessage').text('No monthly budget data was found in this spreadsheet. Make sure it has income, expense, or transaction rows.');
@@ -635,7 +629,7 @@
                     renderBudgetMonth(data.months.length > 1 ? 0 : data.months[0].monthNumber);
                 },
                 error: function () {
-                    if (seq !== budgetRequestSeq) return;
+                    if (seq !== budgetRequestSeq) { return; }
                     $('#budgetErrorMessage').text('Check that the file is a monthly budget sheet and that the drive is still shared, then try again.');
                     showBudgetState('error');
                 }
@@ -652,7 +646,7 @@
         });
 
         $('#btnBudgetRetry').on('click', function () {
-            if (lastBudgetRequest) loadBudgetReport(lastBudgetRequest);
+            if (lastBudgetRequest) { loadBudgetReport(lastBudgetRequest); }
         });
 
         // Period selector, prev/next and keyboard navigation
@@ -662,7 +656,7 @@
         $('#btnBudgetPrev').on('click', function () { stepBudgetPeriod(-1); });
         $('#btnBudgetNext').on('click', function () { stepBudgetPeriod(1); });
         $('#monthlyBudgetModal').on('keydown', function (e) {
-            if (!currentBudgetData || $(e.target).is('input, select, textarea')) return;
+            if (!currentBudgetData || $(e.target).is('input, select, textarea')) { return; }
             if (e.key === 'ArrowLeft') { e.preventDefault(); stepBudgetPeriod(-1); }
             if (e.key === 'ArrowRight') { e.preventDefault(); stepBudgetPeriod(1); }
         });
@@ -679,12 +673,12 @@
         });
 
         // Export the table behind the current view: months for the full year, categories for a month
-        function csvCell(value) {
+        function csvCell (value) {
             const text = String(value === null || value === undefined ? '' : value);
             return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
         }
 
-        function downloadCsv(fileName, rows) {
+        function downloadCsv (fileName, rows) {
             const csv = rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
             // BOM so Excel opens the file as UTF-8
             const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
@@ -698,7 +692,7 @@
         }
 
         $('#btnExportBudget').on('click', function () {
-            if (!currentBudgetData) return;
+            if (!currentBudgetData) { return; }
             const baseName = String(lastBudgetRequest && lastBudgetRequest.fileName || 'budget').replace(/\.[^.]+$/, '');
             const isYear = currentSelectedMonth === 0 && currentBudgetData.months.length > 1;
             let rows;
@@ -727,8 +721,8 @@
 
         // Charts rendered during the open animation can measure a zero-size canvas; re-measure once visible
         $('#monthlyBudgetModal').on('shown.bs.modal', function () {
-            if (budgetMainChartInstance) budgetMainChartInstance.resize();
-            if (budgetNetChartInstance) budgetNetChartInstance.resize();
+            if (budgetMainChartInstance) { budgetMainChartInstance.resize(); }
+            if (budgetNetChartInstance) { budgetNetChartInstance.resize(); }
         });
 
         $('#monthlyBudgetModal').on('hidden.bs.modal', function () {

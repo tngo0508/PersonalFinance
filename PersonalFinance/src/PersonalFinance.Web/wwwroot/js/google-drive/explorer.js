@@ -5,9 +5,9 @@
     const KNOWN_TYPES = ['Folder', 'Spreadsheet', 'Document', 'PDF Document', 'Image', 'Presentation'];
 
     $(function () {
-        function showToast(message) {
+        function showToast (message) {
             const toastEl = document.getElementById('pageToast');
-            if (!toastEl || !message) return;
+            if (!toastEl || !message) { return; }
             $('#pageToastMessage').text(message);
             bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4000 }).show();
         }
@@ -42,6 +42,8 @@
             if (navigator.clipboard && folderId) {
                 navigator.clipboard.writeText(folderId).then(function () {
                     showToast('Folder ID copied to clipboard.');
+                }).catch(function () {
+                    showToast('Failed to copy folder ID. Please copy it manually.');
                 });
             }
         });
@@ -89,14 +91,14 @@
         let activeFilter = 'all';
         let searchTerm = '';
 
-        function matchesType(fileType) {
-            if (activeFilter === 'all') return true;
-            if (activeFilter === 'other') return KNOWN_TYPES.indexOf(fileType) === -1;
+        function matchesType (fileType) {
+            if (activeFilter === 'all') { return true; }
+            if (activeFilter === 'other') { return KNOWN_TYPES.indexOf(fileType) === -1; }
             return fileType === activeFilter;
         }
 
         // Update the results count indicator
-        function updateResultsCount(tableCount, gridCount) {
+        function updateResultsCount (tableCount, gridCount) {
             const $count = $('#fileResultsCount');
             const hasFilter = activeFilter !== 'all' || searchTerm.length > 0;
 
@@ -113,7 +115,7 @@
             }
         }
 
-        function applyFilters() {
+        function applyFilters () {
             if (dataTable) {
                 let typePattern = '';
                 if (activeFilter === 'other') {
@@ -134,7 +136,7 @@
                 const $card = $(this);
                 const visible = matchesType($card.data('file-type')) && String($card.data('file-name')).indexOf(term) !== -1;
                 $card.toggleClass('d-none', !visible);
-                if (visible) visibleCards++;
+                if (visible) { visibleCards++; }
             });
             $('#gridEmptyState').toggleClass('d-none', visibleCards > 0);
 
@@ -144,7 +146,7 @@
             }
         }
 
-        function setFilter(filter) {
+        function setFilter (filter) {
             activeFilter = filter;
             $('.gdrive-filter-chip').each(function () {
                 const isActive = $(this).data('filter') === filter;
@@ -169,13 +171,13 @@
         });
 
         // List / grid switcher
-        function setView(view) {
+        function setView (view) {
             const isTable = view === 'table';
             $('#tableViewSection').toggleClass('d-none', !isTable);
             $('#gridViewSection').toggleClass('d-none', isTable);
             $('#btnViewTable').toggleClass('active', isTable).attr('aria-pressed', String(isTable));
             $('#btnViewGrid').toggleClass('active', !isTable).attr('aria-pressed', String(!isTable));
-            if (isTable && dataTable) dataTable.columns.adjust();
+            if (isTable && dataTable) { dataTable.columns.adjust(); }
             // Recalculate results count for the active view
             applyFilters();
         }

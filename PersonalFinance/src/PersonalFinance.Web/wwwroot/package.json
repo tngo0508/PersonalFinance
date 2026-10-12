@@ -1,0 +1,13 @@
+{
+  "name": "personal-finance-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal Finance Web Application - Client-side JavaScript",
+  "scripts": {
+    "lint": "eslint \"js/**/*.js\"",
+    "lint:fix": "eslint \"js/**/*.js\" --fix"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  }
+}
