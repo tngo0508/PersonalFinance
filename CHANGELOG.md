@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-12
+
+### Changed
+- **Aspire AppHost SDK Upgrade**: Upgraded Aspire AppHost SDK from 9.1.0 to 13.6.1.
+
 ## [1.4.0] - 2026-10-11
 
 ### Changed
