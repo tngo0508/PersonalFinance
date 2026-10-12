@@ -603,6 +603,73 @@
     }
 
     /**
+     * Generate a random integer between min and max (inclusive).
+     * @param {number} min - Minimum value.
+     * @param {number} max - Maximum value.
+     * @returns {number} Random integer.
+     */
+    function randomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    /**
+     * Generate a random float between min and max, rounded to the given decimal places.
+     * @param {number} min - Minimum value.
+     * @param {number} max - Maximum value.
+     * @param {number} decimals - Number of decimal places.
+     * @returns {number} Random float.
+     */
+    function randomFloat(min, max, decimals) {
+        var value = Math.random() * (max - min) + min;
+        var factor = Math.pow(10, decimals);
+        return Math.round(value * factor) / factor;
+    }
+
+    /**
+     * Randomize all input fields with realistic values and recalculate.
+     */
+    function randomizeParameters() {
+        // Financial Overview - generate realistic but varied scenarios
+        var startingBalance = randomInt(10000, 500000);
+        var annualIncome = randomInt(40000, 250000);
+        var savingsRate = randomFloat(0.10, 0.50, 2); // 10% to 50% savings rate
+        var annualSavings = Math.round(annualIncome * savingsRate / 1000) * 1000;
+        var spendingRate = randomFloat(0.35, 0.70, 2); // 35% to 70% of income after taxes
+        var annualSpending = Math.round(annualIncome * spendingRate / 1000) * 1000;
+
+        // Timeline - realistic ages
+        var currentAge = randomInt(22, 55);
+        var retirementAge = currentAge + randomInt(10, 35);
+        if (retirementAge > 80) retirementAge = 80;
+
+        // Return Assumptions - realistic ROI ranges
+        var conservativeRoi = randomFloat(3.0, 7.0, 1);
+        var baseRoi = conservativeRoi + randomFloat(0.5, 3.0, 1);
+        var aggressiveRoi = baseRoi + randomFloat(1.0, 5.0, 1);
+        var aggressiveSavings = annualSavings + randomInt(5000, 50000);
+
+        document.getElementById('nwStartingBalance').value = startingBalance;
+        document.getElementById('nwAnnualSavings').value = annualSavings;
+        document.getElementById('nwAnnualIncome').value = annualIncome;
+        document.getElementById('nwAnnualSpending').value = annualSpending;
+        document.getElementById('nwCurrentAge').value = currentAge;
+        document.getElementById('nwRetirementAge').value = retirementAge;
+        document.getElementById('nwBaseRoi').value = baseRoi;
+        document.getElementById('nwConservativeRoi').value = conservativeRoi;
+        document.getElementById('nwAggressiveRoi').value = aggressiveRoi;
+        document.getElementById('nwAggressiveSavings').value = aggressiveSavings;
+
+        // Clear any validation errors
+        clearValidationMessage();
+        document.querySelectorAll('.nw-input-invalid').forEach(function (el) {
+            el.classList.remove('nw-input-invalid');
+        });
+
+        // Recalculate with randomized values
+        recalculate();
+    }
+
+    /**
      * Reset all input fields to their default values and recalculate.
      */
     function resetToDefaults() {
@@ -742,6 +809,12 @@
 
         // Initialize live recalculation
         initLiveRecalculation();
+
+        // Initialize randomize button
+        const randomBtn = document.getElementById('nwRandomBtn');
+        if (randomBtn) {
+            randomBtn.addEventListener('click', randomizeParameters);
+        }
 
         // Initialize reset button
         const resetBtn = document.getElementById('nwResetBtn');
