@@ -62,63 +62,67 @@
 
     <!-- LEFT PANEL: Input Controls (Sticky) -->
     <aside class="nw-split-layout__sidebar">
-        <div class="nw-sidebar-card">
-            <div class="nw-sidebar-card__header">
-                <div class="nw-sidebar-card__icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+
+        <!-- Card 1: Quick Presets (Sticky Top) -->
+        <div class="nw-sidebar-section nw-sidebar-section--sticky">
+            <div class="nw-sidebar-card">
+                <div class="nw-sidebar-card__header">
+                    <div class="nw-sidebar-card__icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 6.82 21.02 8 14.14 3 9.27 9.91 8.26 12 2"/></svg>
+                    </div>
+                    <span>Quick Presets</span>
                 </div>
-                <span>Parameters</span>
+                <div class="nw-sidebar-card__body">
+                    <div class="nw-presets nw-presets--compact">
+                        <div class="nw-presets__grid nw-presets__grid--compact">
+                            <button type="button" class="nw-preset-card" data-preset="fire" id="nwPresetFire">
+                                <div class="nw-preset-card__icon">🔥</div>
+                                <div class="nw-preset-card__title">FIRE</div>
+                            </button>
+                            <button type="button" class="nw-preset-card" data-preset="coast" id="nwPresetCoast">
+                                <div class="nw-preset-card__icon">🏖️</div>
+                                <div class="nw-preset-card__title">Coast FI</div>
+                            </button>
+                            <button type="button" class="nw-preset-card" data-preset="traditional" id="nwPresetTraditional">
+                                <div class="nw-preset-card__icon">🏠</div>
+                                <div class="nw-preset-card__title">Traditional</div>
+                            </button>
+                            <button type="button" class="nw-preset-card" data-preset="ultra" id="nwPresetUltra">
+                                <div class="nw-preset-card__icon">🚀</div>
+                                <div class="nw-preset-card__title">Ultra</div>
+                            </button>
+                            <button type="button" class="nw-preset-card" data-preset="conservative" id="nwPresetConservative">
+                                <div class="nw-preset-card__icon">🛡️</div>
+                                <div class="nw-preset-card__title">Safe</div>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Savings Rate Indicator -->
+                    <div class="nw-savings-indicator" id="nwSavingsIndicator">
+                        <div class="nw-savings-indicator__header">
+                            <span>Savings Rate</span>
+                            <span class="nw-savings-indicator__value" id="nwSavingsRateValue">29.5%</span>
+                        </div>
+                        <div class="nw-savings-indicator__bar">
+                            <div class="nw-savings-indicator__fill" id="nwSavingsRateFill" style="width: 29.5%"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <div class="nw-sidebar-scroll">
+        <!-- Scrollable Parameter Cards -->
+        <div class="nw-sidebar-scroll">
 
-                <!-- Preset Scenarios -->
-                <div class="nw-presets nw-presets--compact">
-                    <div class="nw-presets__header">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 6.82 21.02 8 14.14 3 9.27 9.91 8.26 12 2"/></svg>
-                        Quick Presets
+            <!-- Card 2: Financial Overview -->
+            <div class="nw-sidebar-card">
+                <div class="nw-sidebar-card__header">
+                    <div class="nw-sidebar-card__icon nw-sidebar-card__icon--green">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/><path d="M17 13a1 1 0 0 0 1 1v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-1a1 1 0 0 0 1-1"/><path d="M15 21V13h-6v8"/></svg>
                     </div>
-                    <div class="nw-presets__grid nw-presets__grid--compact">
-                        <button type="button" class="nw-preset-card" data-preset="fire" id="nwPresetFire">
-                            <div class="nw-preset-card__icon">🔥</div>
-                            <div class="nw-preset-card__title">FIRE</div>
-                        </button>
-                        <button type="button" class="nw-preset-card" data-preset="coast" id="nwPresetCoast">
-                            <div class="nw-preset-card__icon">🏖️</div>
-                            <div class="nw-preset-card__title">Coast FI</div>
-                        </button>
-                        <button type="button" class="nw-preset-card" data-preset="traditional" id="nwPresetTraditional">
-                            <div class="nw-preset-card__icon">🏠</div>
-                            <div class="nw-preset-card__title">Traditional</div>
-                        </button>
-                        <button type="button" class="nw-preset-card" data-preset="ultra" id="nwPresetUltra">
-                            <div class="nw-preset-card__icon">🚀</div>
-                            <div class="nw-preset-card__title">Ultra</div>
-                        </button>
-                        <button type="button" class="nw-preset-card" data-preset="conservative" id="nwPresetConservative">
-                            <div class="nw-preset-card__icon">🛡️</div>
-                            <div class="nw-preset-card__title">Safe</div>
-                        </button>
-                    </div>
+                    <span>Financial Overview</span>
                 </div>
-
-                <!-- Savings Rate Indicator -->
-                <div class="nw-savings-indicator" id="nwSavingsIndicator">
-                    <div class="nw-savings-indicator__header">
-                        <span>Savings Rate</span>
-                        <span class="nw-savings-indicator__value" id="nwSavingsRateValue">29.5%</span>
-                    </div>
-                    <div class="nw-savings-indicator__bar">
-                        <div class="nw-savings-indicator__fill" id="nwSavingsRateFill" style="width: 29.5%"></div>
-                    </div>
-                </div>
-
-                <!-- Financial Overview -->
-                <div class="nw-form__group">
-                    <div class="nw-form__group-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/><path d="M17 13a1 1 0 0 0 1 1v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-1a1 1 0 0 0 1-1"/><path d="M15 21V13h-6v8"/></svg>
-                        Financial Overview
-                    </div>
+                <div class="nw-sidebar-card__body">
                     <div class="nw-slider-field">
                         <label class="nw-label">
                             Starting Balance
@@ -168,13 +172,17 @@
                         <input type="range" class="nw-range" id="nwAnnualSpendingRange" min="0" max="200000" step="1000" value="@Model.AnnualSpending" />
                     </div>
                 </div>
+            </div>
 
-                <!-- Timeline -->
-                <div class="nw-form__group">
-                    <div class="nw-form__group-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                        Timeline
+            <!-- Card 3: Timeline -->
+            <div class="nw-sidebar-card">
+                <div class="nw-sidebar-card__header">
+                    <div class="nw-sidebar-card__icon nw-sidebar-card__icon--blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                     </div>
+                    <span>Timeline</span>
+                </div>
+                <div class="nw-sidebar-card__body">
                     <div class="nw-slider-field">
                         <label class="nw-label">
                             Current Age
@@ -200,13 +208,17 @@
                         <input type="range" class="nw-range" id="nwRetirementAgeRange" min="30" max="100" step="1" value="@Model.RetirementAge" />
                     </div>
                 </div>
+            </div>
 
-                <!-- Return Assumptions -->
-                <div class="nw-form__group">
-                    <div class="nw-form__group-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 12-3.5-3.5"/><path d="M4 16V10a2 2 0 0 1 2-2h3.5"/><path d="M20 8V4a2 2 0 0 0-2-2h-3.5"/><path d="M2 18v-4a2 2 0 0 1 2-2h3.5"/><path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/></svg>
-                        Return Assumptions
+            <!-- Card 4: Return Assumptions -->
+            <div class="nw-sidebar-card">
+                <div class="nw-sidebar-card__header">
+                    <div class="nw-sidebar-card__icon nw-sidebar-card__icon--orange">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 12-3.5-3.5"/><path d="M4 16V10a2 2 0 0 1 2-2h3.5"/><path d="M20 8V4a2 2 0 0 0-2-2h-3.5"/><path d="M2 18v-4a2 2 0 0 1 2-2h3.5"/><path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/></svg>
                     </div>
+                    <span>Return Assumptions</span>
+                </div>
+                <div class="nw-sidebar-card__body">
                     <div class="nw-slider-field">
                         <label class="nw-label">
                             Base ROI
@@ -256,39 +268,42 @@
                         <input type="range" class="nw-range" id="nwAggressiveSavingsRange" min="0" max="200000" step="1000" value="@Model.AggressiveSavings" />
                     </div>
                 </div>
+            </div>
 
-                <!-- Actions -->
-                <div class="nw-form__actions">
-                    <form asp-action="SaveParameters" method="post" class="d-inline" id="nwSaveForm">
-                        <input type="hidden" asp-for="StartingBalance" id="nwSaveStartingBalance" />
-                        <input type="hidden" asp-for="AnnualSavings" id="nwSaveAnnualSavings" />
-                        <input type="hidden" asp-for="AnnualIncome" id="nwSaveAnnualIncome" />
-                        <input type="hidden" asp-for="AnnualSpending" id="nwSaveAnnualSpending" />
-                        <input type="hidden" asp-for="CurrentAge" id="nwSaveCurrentAge" />
-                        <input type="hidden" asp-for="RetirementAge" id="nwSaveRetirementAge" />
-                        <input type="hidden" asp-for="BaseRoi" id="nwSaveBaseRoi" />
-                        <input type="hidden" asp-for="ConservativeRoi" id="nwSaveConservativeRoi" />
-                        <input type="hidden" asp-for="AggressiveRoi" id="nwSaveAggressiveRoi" />
-                        <input type="hidden" asp-for="AggressiveSavings" id="nwSaveAggressiveSavings" />
-                        <button type="submit" class="btn nw-btn-save">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                            Save
-                        </button>
-                    </form>
-                    <button type="button" class="btn nw-btn-random" id="nwRandomBtn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l5 5"/><path d="M4 4l5 5"/></svg>
-                        Randomize
+        </div>
+
+        <!-- Card 5: Actions (Sticky Bottom) -->
+        <div class="nw-sidebar-section nw-sidebar-section--sticky-bottom">
+            <div class="nw-form__actions">
+                <form asp-action="SaveParameters" method="post" class="d-inline" id="nwSaveForm">
+                    <input type="hidden" asp-for="StartingBalance" id="nwSaveStartingBalance" />
+                    <input type="hidden" asp-for="AnnualSavings" id="nwSaveAnnualSavings" />
+                    <input type="hidden" asp-for="AnnualIncome" id="nwSaveAnnualIncome" />
+                    <input type="hidden" asp-for="AnnualSpending" id="nwSaveAnnualSpending" />
+                    <input type="hidden" asp-for="CurrentAge" id="nwSaveCurrentAge" />
+                    <input type="hidden" asp-for="RetirementAge" id="nwSaveRetirementAge" />
+                    <input type="hidden" asp-for="BaseRoi" id="nwSaveBaseRoi" />
+                    <input type="hidden" asp-for="ConservativeRoi" id="nwSaveConservativeRoi" />
+                    <input type="hidden" asp-for="AggressiveRoi" id="nwSaveAggressiveRoi" />
+                    <input type="hidden" asp-for="AggressiveSavings" id="nwSaveAggressiveSavings" />
+                    <button type="submit" class="btn nw-btn-save">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Save
                     </button>
-                    <form asp-action="DeleteParameters" method="post" class="d-inline" id="nwResetForm">
-                        <button type="submit" class="btn nw-btn-reset">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
-                            Reset
-                        </button>
-                    </form>
-                </div>
-
+                </form>
+                <button type="button" class="btn nw-btn-random" id="nwRandomBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l5 5"/><path d="M4 4l5 5"/></svg>
+                    Randomize
+                </button>
+                <form asp-action="DeleteParameters" method="post" class="d-inline" id="nwResetForm">
+                    <button type="submit" class="btn nw-btn-reset">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
+                        Reset
+                    </button>
+                </form>
             </div>
         </div>
+
     </aside>
 
     <!-- RIGHT PANEL: Results (Scrollable) -->
