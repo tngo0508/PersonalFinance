@@ -505,12 +505,13 @@
 
         const rows = scenario.years.map(function (year) {
             const rowClass = getRowHighlightClass(year.endingBalance, fiTarget, annualIncome);
+            const roiClass = year.roi >= annualIncome ? ' nw-roi-highlight' : '';
             return `<tr${rowClass}>
                 <td>${year.year}</td>
                 <td>${year.age}</td>
                 <td class="text-end nw-currency">${formatCurrency(year.startingBalance)}</td>
                 <td class="text-end nw-currency">${formatCurrency(year.savings)}</td>
-                <td class="text-end nw-currency text-success">${formatCurrency(year.roi)}</td>
+                <td class="text-end nw-currency text-success${roiClass}">${formatCurrency(year.roi)}</td>
                 <td class="text-end nw-currency fw-semibold">${formatCurrency(year.endingBalance)}</td>
             </tr>`;
         });

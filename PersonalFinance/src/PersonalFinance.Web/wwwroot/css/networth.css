@@ -1007,9 +1007,45 @@
   background-color: #bbf7d0;
 }
 
+.nw-swatch-roi {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+}
+
+/* ROI Earned cell highlight — ROI >= annual income */
+.nw-roi-highlight {
+  position: relative;
+  cursor: help;
+}
+
+.nw-roi-highlight::after {
+  content: '\2605';
+  margin-left: 6px;
+  font-size: 0.85em;
+  color: #f59e0b;
+  vertical-align: middle;
+}
+
+.nw-roi-highlight:hover::before {
+  content: 'Your investment returns equal or exceed your annual income';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #1f2937;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  pointer-events: none;
+}
+
 /* ==========================================================================
-   Alert
-   ========================================================================== */
+  Alert
+  ========================================================================== */
 
 .nw-alert {
   border-radius: var(--nw-radius);
