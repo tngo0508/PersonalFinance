@@ -135,7 +135,13 @@ try
         client.Timeout = TimeSpan.FromSeconds(15);
     });
 
-    // 3e. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
+    // 3e. Register Finance News Service for RSS feed aggregation
+    builder.Services.AddHttpClient<INewsService, NewsService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(10);
+    });
+
+    // 3f. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;

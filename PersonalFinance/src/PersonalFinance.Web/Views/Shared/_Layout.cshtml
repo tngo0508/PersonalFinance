@@ -64,6 +64,13 @@
                                 Net Worth
                             </a>
                         </li>
+                        <li class="nav-item">
+                            @{ var isNewsActive = currentController == "News"; }
+                            <a class="nav-link @(isNewsActive ? "active" : "")" aria-current="@(isNewsActive ? "page" : null)"
+                               asp-area="" asp-controller="News" asp-action="Index">
+                                Finance News
+                            </a>
+                        </li>
                     </ul>
                 }
                 else

@@ -1,0 +1,284 @@
+@model PersonalFinance.Web.Models.NewsViewModel
+
+@{
+    ViewData["Title"] = "Finance News";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/news.css" asp-append-version="true"/>
+}
+
+<div class="news-page">
+    <!-- Page Header -->
+    <div class="news-header">
+        <div class="news-header-content">
+            <div class="news-header-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/>
+                    <path d="M18 14v6"/>
+                    <path d="M15 15h6"/>
+                    <path d="M10 17v-2"/>
+                    <path d="M8 17h4"/>
+                    <path d="M8 13h10"/>
+                    <path d="M14 8h.01"/>
+                    <path d="M10 8h.01"/>
+                    <path d="M10 11h.01"/>
+                    <path d="M14 11h.01"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="news-title">Finance News</h1>
+                <p class="news-subtitle">Stay informed with the latest financial news from trusted sources to make smarter money decisions.</p>
+            </div>
+        </div>
+        @if (Model.LastRefreshed.HasValue)
+        {
+            <div class="news-refresh-info">
+                <span class="news-refresh-time" aria-label="Last refreshed time">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    @TimeAgo(Model.LastRefreshed.Value.ToUniversalTime())
+                </span>
+                <button type="button" class="btn news-refresh-btn" id="refreshBtn" title="Refresh news" aria-label="Refresh news articles">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                        <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- Error Message -->
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="news-alert alert-danger" role="alert">
+            <div class="news-alert-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </div>
+            <div class="news-alert-content">
+                <strong>Unable to load news</strong>
+                <p>@Model.ErrorMessage</p>
+            </div>
+            <button type="button" class="news-alert-close" aria-label="Dismiss alert">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+    }
+
+    <!-- Search and Filters -->
+    <div class="news-filters card">
+        <form method="get" class="news-filter-form" id="newsFilterForm">
+            <!-- Search -->
+            <div class="news-search-box">
+                <svg class="news-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" name="search" class="form-control news-search-input" 
+                       value="@Model.SearchQuery" placeholder="Search articles..." aria-label="Search news articles"/>
+            </div>
+
+            <!-- Category Filter -->
+            @if (Model.Categories.Count > 1)
+            {
+                <div class="news-filter-group">
+                    <select name="category" id="categoryFilter" class="form-select news-filter-select" onchange="this.form.submit()" aria-label="Filter by category">
+                        <option value="">All Categories</option>
+                        @foreach (var cat in Model.Categories)
+                        {
+                            <option value="@cat" selected="@(Model.SelectedCategory == cat)">@cat</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            <!-- Source Filter -->
+            @if (Model.Sources.Count > 0)
+            {
+                <div class="news-filter-group">
+                    <select name="source" id="sourceFilter" class="form-select news-filter-select" onchange="this.form.submit()" aria-label="Filter by source">
+                        <option value="">All Sources</option>
+                        @foreach (var src in Model.Sources)
+                        {
+                            <option value="@src.Name" selected="@(Model.SelectedSource == src.Name)">@src.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            <div class="news-filter-actions">
+                <button type="submit" class="btn btn-primary news-search-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    Search
+                </button>
+                
+                @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory) || !string.IsNullOrEmpty(Model.SelectedSource))
+                {
+                    <a href="@Url.Action("Index", "News")" class="btn news-clear-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        Clear
+                    </a>
+                }
+            </div>
+        </form>
+    </div>
+
+    <!-- Active Filters -->
+    @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory) || !string.IsNullOrEmpty(Model.SelectedSource))
+    {
+        <div class="news-active-filters">
+            <span class="news-active-filters-label">Active filters:</span>
+            @if (!string.IsNullOrEmpty(Model.SearchQuery))
+            {
+                <a href="@Url.Action("Index", "News", new { category = Model.SelectedCategory, source = Model.SelectedSource })" 
+                   class="news-filter-tag">
+                    Search: "@Model.SearchQuery"
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </a>
+            }
+            @if (!string.IsNullOrEmpty(Model.SelectedCategory))
+            {
+                <a href="@Url.Action("Index", "News", new { search = Model.SearchQuery, source = Model.SelectedSource })" 
+                   class="news-filter-tag">
+                    @Model.SelectedCategory
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </a>
+            }
+            @if (!string.IsNullOrEmpty(Model.SelectedSource))
+            {
+                <a href="@Url.Action("Index", "News", new { search = Model.SearchQuery, category = Model.SelectedCategory })" 
+                   class="news-filter-tag">
+                    @Model.SelectedSource
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </a>
+            }
+        </div>
+    }
+
+    @* Loading State *@
+    @if (Model.IsLoading)
+    {
+        <div class="news-loading">
+            <div class="news-loading-spinner" role="status" aria-label="Loading news articles">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="news-loading-text">Loading finance news...</p>
+        </div>
+    }
+    @* Articles Grid *@
+    else if (Model?.Articles?.Any() == true)
+    {
+        <div class="news-results-info">
+            <span class="news-results-count">
+                <strong>@Model.Articles.Count</strong> @(Model.Articles.Count == 1 ? "article" : "articles") found
+            </span>
+            <span class="news-results-sort">
+                Sorted by newest
+            </span>
+        </div>
+
+        <div class="news-grid">
+            @foreach (var article in Model.Articles)
+            {
+                <article class="news-card">
+                    @if (!string.IsNullOrEmpty(article.ImageUrl))
+                    {
+                        <a href="@article.Url" class="news-card-image-link" target="_blank" rel="noopener noreferrer">
+                            <div class="news-card-image">
+                                <img src="@article.ImageUrl" alt="" loading="lazy" 
+                                     onerror="this.parentElement.parentElement.style.display='none'"/>
+                            </div>
+                        </a>
+                    }
+                    <div class="news-card-body">
+                        <div class="news-card-header">
+                            <span class="news-source-badge" title="@article.Source">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/>
+                                </svg>
+                                @article.Source
+                            </span>
+                            <span class="news-category-badge">@article.Category</span>
+                        </div>
+                        <h3 class="news-card-title">
+                            <a href="@article.Url" target="_blank" rel="noopener noreferrer">
+                                @article.Title
+                            </a>
+                        </h3>
+                        @if (!string.IsNullOrEmpty(article.Description))
+                        {
+                            <p class="news-card-description">@article.Description</p>
+                        }
+                        <div class="news-card-footer">
+                            <time class="news-card-time" datetime="@article.PublishedAt.ToString("o")" title="@article.PublishedAt.ToString("MMM dd, yyyy 'at' hh:mm tt")">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                @TimeAgo(article.PublishedAt)
+                            </time>
+                            <a href="@article.Url" target="_blank" rel="noopener noreferrer" class="news-read-more" aria-label="Read full article: @article.Title">
+                                Read full article
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+    @* Empty State *@
+    else
+    {
+        <div class="news-empty">
+            <div class="news-empty-icon" aria-hidden="true">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/>
+                </svg>
+            </div>
+            <h3 class="news-empty-title">No articles found</h3>
+            <p class="news-empty-text">Try adjusting your search or filter criteria to find what you're looking for.</p>
+            <a href="@Url.Action("Index", "News")" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 9 9 9 9 0 0 1-9 9 9 9 0 0 1-9-9z"/>
+                    <path d="M3 3v9h9"/>
+                    <path d="M12 12l9 9"/>
+                </svg>
+                View All News
+            </a>
+        </div>
+    }
+</div>
+
+@functions {
+    private static string TimeAgo(DateTime dateTime)
+    {
+        var span = DateTime.UtcNow - dateTime;
+        if (span.TotalMinutes < 1) return "Just now";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays}d ago";
+        return dateTime.ToString("MMM dd, yyyy");
+    }
+}
+
+@section Scripts {
+    <script src="~/js/news/news.js" asp-append-version="true"></script>
+}
