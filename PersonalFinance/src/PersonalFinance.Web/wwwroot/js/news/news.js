@@ -6,6 +6,11 @@
   'use strict';
 
   // =========================================================================
+  // Saved Articles Set — tracks which article URLs are already saved
+  // =========================================================================
+  const savedArticleUrls = new Set();
+
+  // =========================================================================
   // Tab Navigation
   // =========================================================================
   const tabButtons = document.querySelectorAll('.finance-hub-tab-btn');
@@ -23,7 +28,7 @@
 
       // Lazy-load data when switching to a tab
       if (tabId === 'savings' && !window._savingsLoaded) loadSavingsGoals();
-      if (tabId === 'watchlist' && !window._watchlistLoaded) loadWatchlist();
+      if (tabId === 'watchlist') refreshWatchlist();
       if (tabId === 'budget' && !window._budgetInitialized) initBudgetPlanner();
       if (tabId === 'calculator' && !window._calcInitialized) initCalculator();
     });
@@ -131,10 +136,15 @@
   function renderArticleCard(article) {
     const desc = (article.description || '').length > 250 ? (article.description || '').slice(0, 250) + '...' : article.description || '';
     const timeLabel = timeAgo(article.publishedAt);
+    const isSaved = savedArticleUrls.has(article.url);
     let imgHtml = '';
     if (article.imageUrl) {
       imgHtml = '<a href="' + escapeHtml(article.url) + '" class="finance-hub-card-img-link" target="_blank" rel="noopener noreferrer"><div class="finance-hub-card-img"><img src="' + escapeHtml(article.imageUrl) + '" alt="" loading="lazy" onerror="this.parentElement.parentElement.style.display=\'none\'"/></div></a>';
     }
+    const saveBtnClass = 'btn btn-sm finance-hub-save-btn' + (isSaved ? ' saved' : '');
+    const saveBtnSvg = isSaved
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved'
+      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save';
     return '<article class="finance-hub-card" data-article-url="' + escapeHtml(article.url) + '">' +
       imgHtml +
       '<div class="finance-hub-card-body">' +
@@ -146,8 +156,8 @@
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
       '<span class="article-time-label">' + timeLabel + '</span></time>' +
       '<div class="finance-hub-card-actions">' +
-      '<button type="button" class="btn btn-sm finance-hub-save-btn" data-title="' + escapeHtml(article.title) + '" data-url="' + escapeHtml(article.url) + '" data-source="' + escapeHtml(article.source) + '" data-category="' + escapeHtml(article.category) + '" data-image-url="' + escapeHtml(article.imageUrl || '') + '" title="Save to watchlist">' +
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save</button>' +
+      '<button type="button" class="' + saveBtnClass + '" data-title="' + escapeHtml(article.title) + '" data-url="' + escapeHtml(article.url) + '" data-source="' + escapeHtml(article.source) + '" data-category="' + escapeHtml(article.category) + '" data-image-url="' + escapeHtml(article.imageUrl || '') + '" title="Save to watchlist">' +
+      saveBtnSvg + '</button>' +
       '<a href="' + escapeHtml(article.url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline finance-hub-read-more">Read <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>' +
       '</div></div></div></article>';
   }
@@ -160,10 +170,35 @@
   // =========================================================================
   // Save to Watchlist
   // =========================================================================
+
+  /**
+   * Mark a save button as saved or unsaved based on the article URL.
+   * @param {HTMLElement} btn - The save button element.
+   * @param {boolean} isSaved - Whether the article is saved.
+   * @returns {void}
+   */
+  function setSaveButtonState(btn, isSaved) {
+    if (isSaved) {
+      btn.classList.add('saved');
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved';
+    } else {
+      btn.classList.remove('saved');
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save';
+    }
+  }
+
   function bindSaveButton(btn) {
+    // Set initial state from savedArticleUrls
+    const url = btn.dataset.url;
+    if (url && savedArticleUrls.has(url)) {
+      setSaveButtonState(btn, true);
+    }
+
     btn.addEventListener('click', async () => {
+      // If already saved, do nothing
+      if (savedArticleUrls.has(url)) return;
+
       const title = btn.dataset.title;
-      const url = btn.dataset.url;
       const source = btn.dataset.source;
       const category = btn.dataset.category;
       const imageUrl = btn.dataset.imageUrl;
@@ -175,8 +210,22 @@
         });
 
         if (data.success) {
-          btn.classList.add('saved');
-          btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved';
+          savedArticleUrls.add(url);
+          setSaveButtonState(btn, true);
+          // Update watchlist in-memory so the tab shows the new item
+          if (data.id) {
+            watchlistItems.unshift({
+              id: data.id,
+              title,
+              url,
+              source,
+              category,
+              imageUrl: imageUrl || null,
+              notes: null,
+              savedAtUtc: new Date().toISOString()
+            });
+            if (window._watchlistLoaded) renderWatchlist();
+          }
         }
       } catch (err) {
         console.error('Save article failed:', err);
@@ -727,13 +776,47 @@
   // =========================================================================
   let watchlistItems = [];
 
-  async function loadWatchlist() {
-    window._watchlistLoaded = true;
+  /**
+   * Load the watchlist from the server and populate the savedArticleUrls set.
+   * Called once on page init (silently) to know which articles are already saved.
+   * @returns {Promise<void>}
+   */
+  async function loadWatchlistUrls() {
+    try {
+      const items = await apiFetch('/api/PersonalFinance/watchlist');
+      watchlistItems = items;
+      items.forEach(item => {
+        if (item.url) savedArticleUrls.add(item.url);
+      });
+      // Now that we know saved URLs, update the initial save buttons
+      document.querySelectorAll('.finance-hub-save-btn').forEach(btn => {
+        if (btn.dataset.url && savedArticleUrls.has(btn.dataset.url)) {
+          setSaveButtonState(btn, true);
+        }
+      });
+    } catch (err) {
+      console.error('Load watchlist URLs failed:', err);
+    }
+  }
+
+  /**
+   * Refresh the watchlist data from the server when the user switches to the tab.
+   * @returns {Promise<void>}
+   */
+  async function refreshWatchlist() {
+    if (!window._watchlistLoaded) {
+      window._watchlistLoaded = true;
+    }
     const container = document.getElementById('watchlistGrid');
     if (!container) return;
 
     try {
       watchlistItems = await apiFetch('/api/PersonalFinance/watchlist');
+      // Sync savedArticleUrls with latest server data
+      savedArticleUrls.clear();
+      watchlistItems.forEach(item => {
+        if (item.url) savedArticleUrls.add(item.url);
+      });
       renderWatchlist();
     } catch (err) {
       console.error('Load watchlist failed:', err);
@@ -755,7 +838,7 @@
       if (item.imageUrl) {
         imgHtml = '<div class="watchlist-item-img"><img src="' + escapeHtml(item.imageUrl) + '" alt="" onerror="this.parentElement.style.display=\'none\'"/></div>';
       }
-      return '<div class="watchlist-item" data-id="' + item.id + '">' +
+      return '<div class="watchlist-item" data-id="' + item.id + '" data-url="' + escapeHtml(item.url) + '">' +
         imgHtml +
         '<div class="watchlist-item-body">' +
         '<h4 class="watchlist-item-title"><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(item.title) + '</a></h4>' +
@@ -773,16 +856,27 @@
       btn.addEventListener('click', async () => {
         const item = btn.closest('.watchlist-item');
         const id = parseInt(item.dataset.id, 10);
+        const articleUrl = item.dataset.url;
         try {
           await apiFetch('/api/PersonalFinance/watchlist/' + id, { method: 'DELETE' });
           watchlistItems = watchlistItems.filter(a => a.id !== id);
+          savedArticleUrls.delete(articleUrl);
           renderWatchlist();
+          // Reset the corresponding save button on the news tab
+          document.querySelectorAll('.finance-hub-save-btn').forEach(btn => {
+            if (btn.dataset.url === articleUrl) {
+              setSaveButtonState(btn, false);
+            }
+          });
         } catch (err) {
           console.error('Remove article failed:', err);
         }
       });
     });
   }
+
+  // Load watchlist URLs on page init to populate savedArticleUrls
+  loadWatchlistUrls();
 
   // =========================================================================
   // Enter key on search
