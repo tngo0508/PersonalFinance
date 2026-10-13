@@ -1,30 +1,27 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PersonalFinance.Data;
+using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs;
 using PersonalFinance.Web.Models;
-using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
-/// MVC Controller for the Community page featuring polls, statistics, and case studies.
-/// All data operations are delegated to <see cref="ICommunityService"/>.
+/// MVC Controller for the Community page featuring polls, statistics, and stories.
+/// All data operations are delegated to the ApiService via the ICommunityApi Refit client.
 /// </summary>
 [Authorize]
 public sealed class CommunityController : Controller
 {
-    private readonly ICommunityService _communityService;
-    private readonly AppDbContext _dbContext;
+    private readonly ICommunityApi _communityApi;
     private readonly ILogger<CommunityController> _logger;
 
     public CommunityController(
-        ICommunityService communityService,
-        AppDbContext dbContext,
+        ICommunityApi communityApi,
         ILogger<CommunityController> logger)
     {
-        _communityService = communityService;
-        _dbContext = dbContext;
+        _communityApi = communityApi;
         _logger = logger;
     }
 
@@ -35,9 +32,19 @@ public sealed class CommunityController : Controller
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var model = await _communityService.GetCommunityViewModelAsync(userId, cancellationToken);
-
-        return View(model);
+        try
+        {
+            var response = await _communityApi.GetCommunityAsync(userId, cancellationToken);
+            var model = MapToViewModel(response);
+            return View(model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading community data for user {UserId}", userId);
+            var model = new CommunityViewModel();
+            model.ErrorMessage = "Unable to load community data at this time.";
+            return View(model);
+        }
     }
 
     /// <summary>
@@ -63,32 +70,29 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = "Option ID is required." });
         }
 
-        // Look up the poll by its code
-        var poll = await _dbContext.CommunityPolls
-            .FirstOrDefaultAsync(p => p.PollCode == request.PollCode, cancellationToken);
-
-        if (poll == null)
+        try
         {
-            return NotFound(new { success = false, error = "Poll not found." });
+            var voteRequest = new CommunityVoteRequestDto
+            {
+                PollCode = request.PollCode,
+                OptionId = request.OptionId
+            };
+
+            var response = await _communityApi.VoteAsync(voteRequest, userId, cancellationToken);
+            var updatedPoll = response.ActivePolls.FirstOrDefault(p => p.Id == request.PollCode);
+
+            return Json(new
+            {
+                success = true,
+                message = "Thanks for voting!",
+                poll = MapPollToViewModel(updatedPoll),
+            });
         }
-
-        var success = await _communityService.VoteAsync(userId, poll.Id, request.OptionId, cancellationToken);
-
-        if (!success)
+        catch (Exception ex)
         {
-            return BadRequest(new { success = false, error = "Failed to record vote." });
+            _logger.LogError(ex, "Error voting on poll {PollCode} for user {UserId}", request.PollCode, userId);
+            return StatusCode(502, new { success = false, error = "Failed to record vote." });
         }
-
-        // Return updated poll data for the client
-        var updatedModel = await _communityService.GetCommunityViewModelAsync(userId, cancellationToken);
-        var updatedPoll = updatedModel.ActivePolls.FirstOrDefault(p => p.Id == request.PollCode);
-
-        return Json(new
-        {
-            success = true,
-            message = "Thanks for voting!",
-            poll = updatedPoll,
-        });
     }
 
     /// <summary>
@@ -115,28 +119,19 @@ public sealed class CommunityController : Controller
         }
 
         var authorName = User.Identity?.Name ?? "Anonymous";
+        var topic = request.Topic ?? "General";
 
-        int? pollId = null;
-        int? storyId = null;
-
-        if (!string.IsNullOrEmpty(request.PollCode))
+        var commentRequest = new CommunityCommentRequestDto
         {
-            var poll = await _dbContext.CommunityPolls
-                .FirstOrDefaultAsync(p => p.PollCode == request.PollCode, cancellationToken);
-            pollId = poll?.Id;
-        }
-
-        if (request.StoryId.HasValue && request.StoryId.Value > 0)
-        {
-            storyId = request.StoryId.Value;
-        }
-
-        var topic = request.Topic ?? (pollId.HasValue ? "Poll" : "Story");
+            Topic = topic,
+            Text = request.Text!,
+            PollCode = request.PollCode,
+            StoryId = request.StoryId
+        };
 
         try
         {
-            var comment = await _communityService.AddCommentAsync(
-                userId, authorName, topic, request.Text!, pollId, storyId, cancellationToken);
+            var comment = await _communityApi.AddCommentAsync(commentRequest, userId, authorName, cancellationToken);
 
             return Json(new
             {
@@ -154,9 +149,10 @@ public sealed class CommunityController : Controller
                 }
             });
         }
-        catch (ArgumentException ex)
+        catch (Exception ex)
         {
-            return BadRequest(new { success = false, error = ex.Message });
+            _logger.LogError(ex, "Error adding comment for user {UserId}", userId);
+            return StatusCode(502, new { success = false, error = "Failed to add comment." });
         }
     }
 
@@ -178,14 +174,22 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = "Comment ID is required." });
         }
 
-        var result = await _communityService.ToggleLikeAsync(userId, request.CommentId, cancellationToken);
-
-        return Json(new
+        try
         {
-            success = result.Success,
-            likes = result.NewLikeCount,
-            isLiked = result.IsLiked,
-        });
+            var result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, userId, cancellationToken);
+
+            return Json(new
+            {
+                success = result.Success,
+                likes = result.NewLikeCount,
+                isLiked = result.IsLiked,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error toggling like on comment {CommentId} for user {UserId}", request.CommentId, userId);
+            return StatusCode(502, new { success = false, error = "Failed to toggle like." });
+        }
     }
 
     /// <summary>
@@ -195,29 +199,29 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> GetPollComments([FromQuery] string pollCode, CancellationToken cancellationToken = default)
     {
-        var poll = await _dbContext.CommunityPolls
-            .FirstOrDefaultAsync(p => p.PollCode == pollCode, cancellationToken);
-
-        if (poll == null)
+        try
         {
-            return NotFound(new { success = false, error = "Poll not found." });
-        }
+            var comments = await _communityApi.GetPollCommentsAsync(pollCode, cancellationToken);
 
-        var comments = await _communityService.GetPollCommentsAsync(poll.Id, cancellationToken);
-
-        return Json(new
-        {
-            success = true,
-            comments = comments.Select(c => new
+            return Json(new
             {
-                id = c.Id,
-                author = c.AuthorName,
-                text = c.Text,
-                topic = c.Topic,
-                createdAt = c.CreatedAtUtc,
-                likes = c.Likes,
-            }),
-        });
+                success = true,
+                comments = comments.Select(c => new
+                {
+                    id = c.Id,
+                    author = c.AuthorName,
+                    text = c.Text,
+                    topic = c.Topic,
+                    createdAt = c.CreatedAtUtc,
+                    likes = c.Likes,
+                }),
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting poll comments for poll {PollCode}", pollCode);
+            return StatusCode(502, new { success = false, error = "Failed to load comments." });
+        }
     }
 
     /// <summary>
@@ -235,10 +239,17 @@ public sealed class CommunityController : Controller
 
         var authorName = User.Identity?.Name ?? "Anonymous";
 
+        var storyRequest = new CommunityStoryRequestDto
+        {
+            Title = request.Title!,
+            Summary = request.Summary!,
+            Body = request.Body!,
+            Category = request.Category!
+        };
+
         try
         {
-            var story = await _communityService.SubmitStoryAsync(
-                userId, authorName, request.Title!, request.Summary!, request.Body!, request.Category!, cancellationToken);
+            var story = await _communityApi.SubmitStoryAsync(storyRequest, userId, authorName, cancellationToken);
 
             return Json(new
             {
@@ -252,9 +263,10 @@ public sealed class CommunityController : Controller
                 },
             });
         }
-        catch (ArgumentException ex)
+        catch (Exception ex)
         {
-            return BadRequest(new { success = false, error = ex.Message });
+            _logger.LogError(ex, "Error submitting story for user {UserId}", userId);
+            return StatusCode(502, new { success = false, error = "Failed to submit story." });
         }
     }
 
@@ -276,21 +288,101 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = "Story ID is required." });
         }
 
-        var result = await _communityService.ToggleStoryLikeAsync(userId, request.StoryId, cancellationToken);
-
-        return Json(new
+        try
         {
-            success = result.Success,
-            likes = result.NewLikeCount,
-            isLiked = result.IsLiked,
-        });
+            var result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, userId, cancellationToken);
+
+            return Json(new
+            {
+                success = result.Success,
+                likes = result.NewLikeCount,
+                isLiked = result.IsLiked,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error toggling story like for story {StoryId} by user {UserId}", request.StoryId, userId);
+            return StatusCode(502, new { success = false, error = "Failed to toggle like." });
+        }
     }
 
     private string? GetUserId()
     {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        return userIdClaim;
+        return User.FindFirstValue(ClaimTypes.NameIdentifier);
     }
+
+    // =========================================================================
+    // Mapping helpers: API DTOs → View Models
+    // =========================================================================
+
+    private static CommunityViewModel MapToViewModel(CommunityResponseDto response)
+    {
+        return new CommunityViewModel
+        {
+            ActivePolls = response.ActivePolls.Select(MapPollToViewModel).ToList(),
+            QuickStats = response.QuickStats.Select(s => new CommunityStat
+            {
+                Title = s.Title,
+                Value = s.Value,
+                Description = s.Description,
+                Icon = s.Icon,
+                ThemeColor = s.ThemeColor,
+            }).ToList(),
+            Stories = response.Stories.Select(s => new CommunityStory
+            {
+                Id = s.Id,
+                Title = s.Title,
+                Summary = s.Summary,
+                Body = s.Body,
+                Author = s.AuthorName,
+                PublishedDate = s.PublishedAtUtc,
+                CommentCount = s.CommentCount,
+                Category = s.Category,
+                ReadTimeMinutes = s.ReadTimeMinutes,
+                Likes = s.Likes,
+                IsFeatured = s.IsFeatured,
+                IsLikedByUser = s.IsLikedByUser,
+            }).ToList(),
+            RecentComments = response.RecentComments.Select(c => new CommunityComment
+            {
+                Id = c.Id,
+                Author = c.AuthorName,
+                Text = c.Text,
+                CreatedAt = c.CreatedAtUtc,
+                Topic = c.Topic,
+                Likes = c.Likes,
+                IsLikedByUser = c.IsLikedByUser,
+                PollId = c.PollId,
+                StoryId = c.StoryId,
+            }).ToList(),
+        };
+    }
+
+    private static CommunityPoll MapPollToViewModel(CommunityPollDto dto)
+    {
+        return new CommunityPoll
+        {
+            Id = dto.Id,
+            Question = dto.Question,
+            Description = dto.Description,
+            Category = dto.Category,
+            TotalVotes = dto.TotalVotes,
+            IsActive = dto.IsActive,
+            HasVoted = dto.HasVoted,
+            VotedOptionId = dto.VotedOptionId,
+            Options = dto.Options.Select(o => new PollOption
+            {
+                Id = o.Id,
+                Text = o.Text,
+                Votes = o.Votes,
+                Percentage = o.Percentage,
+            }).ToList(),
+        };
+    }
+
+    // =========================================================================
+    // Request models (local to this controller)
+    // =========================================================================
 
     /// <summary>
     /// Request model for poll voting.

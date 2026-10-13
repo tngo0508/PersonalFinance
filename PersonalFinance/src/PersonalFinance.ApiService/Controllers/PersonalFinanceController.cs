@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 
-namespace PersonalFinance.Web.Controllers;
+namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// API controller for personal finance features: budget planner, savings goals, and article watchlist.
@@ -14,6 +14,7 @@ namespace PersonalFinance.Web.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
+[Produces("application/json")]
 public class PersonalFinanceController : ControllerBase
 {
     private readonly AppDbContext _dbContext;
@@ -47,6 +48,8 @@ public class PersonalFinanceController : ControllerBase
     /// Gets the current user's budget allocation for the specified period.
     /// </summary>
     [HttpGet("budget/{period}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetBudget(string period)
     {
         var userId = await GetUserIdAsync();
@@ -83,6 +86,8 @@ public class PersonalFinanceController : ControllerBase
     /// Saves or updates the current user's budget allocation for a period.
     /// </summary>
     [HttpPost("budget")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveBudget([FromBody] SaveBudgetRequest request)
     {
         var userId = await GetUserIdAsync();
@@ -130,6 +135,8 @@ public class PersonalFinanceController : ControllerBase
     /// Gets all savings goals for the current user.
     /// </summary>
     [HttpGet("savings-goals")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetSavingsGoals()
     {
         var userId = await GetUserIdAsync();
@@ -160,6 +167,8 @@ public class PersonalFinanceController : ControllerBase
     /// Creates a new savings goal for the current user.
     /// </summary>
     [HttpPost("savings-goals")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CreateSavingsGoal([FromBody] CreateSavingsGoalRequest request)
     {
         var userId = await GetUserIdAsync();
@@ -185,6 +194,9 @@ public class PersonalFinanceController : ControllerBase
     /// Updates an existing savings goal.
     /// </summary>
     [HttpPut("savings-goals/{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateSavingsGoal(int id, [FromBody] UpdateSavingsGoalRequest request)
     {
         var userId = await GetUserIdAsync();
@@ -211,6 +223,9 @@ public class PersonalFinanceController : ControllerBase
     /// Deletes a savings goal.
     /// </summary>
     [HttpDelete("savings-goals/{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSavingsGoal(int id)
     {
         var userId = await GetUserIdAsync();
@@ -234,6 +249,8 @@ public class PersonalFinanceController : ControllerBase
     /// Gets all saved articles for the current user.
     /// </summary>
     [HttpGet("watchlist")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetWatchlist()
     {
         var userId = await GetUserIdAsync();
@@ -262,6 +279,8 @@ public class PersonalFinanceController : ControllerBase
     /// Saves an article to the user's watchlist.
     /// </summary>
     [HttpPost("watchlist")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveArticle([FromBody] SaveArticleRequest request)
     {
         var userId = await GetUserIdAsync();
@@ -298,6 +317,9 @@ public class PersonalFinanceController : ControllerBase
     /// Removes an article from the user's watchlist.
     /// </summary>
     [HttpDelete("watchlist/{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveArticle(int id)
     {
         var userId = await GetUserIdAsync();
@@ -317,6 +339,8 @@ public class PersonalFinanceController : ControllerBase
     /// Checks whether the current user has saved a specific article URL.
     /// </summary>
     [HttpGet("watchlist/check")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CheckArticleSaved([FromQuery] string url)
     {
         var userId = await GetUserIdAsync();

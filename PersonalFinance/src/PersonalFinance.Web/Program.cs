@@ -141,10 +141,7 @@ try
         client.Timeout = TimeSpan.FromSeconds(5);
     });
 
-    // 3f. Register Community Service for polls, comments, and likes
-    builder.Services.AddScoped<ICommunityService, CommunityService>();
-
-    // 3f. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
+    // 3g. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -180,6 +177,16 @@ try
         .AddStandardResilienceHandler();
 
     builder.Services.AddRefitClient<INetWorthApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
+    // 7b. Register Community API client for polls, comments, and stories
+    builder.Services.AddRefitClient<ICommunityApi>()
         .ConfigureHttpClient(client =>
         {
             client.BaseAddress = new Uri(apiBaseUrl);

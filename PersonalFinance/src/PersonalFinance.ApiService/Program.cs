@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
@@ -34,6 +36,14 @@ try
 
     // 3. Register EF Core DbContext with environment-driven provider (Azure SQL Serverless / SQLite)
     builder.Services.AddAppDbContext(builder.Configuration);
+
+    // 3a. Register ASP.NET Core Identity for user management in API controllers
+    builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = true;
+        options.User.RequireUniqueEmail = true;
+    })
+    .AddEntityFrameworkStores<AppDbContext>();
 
     // 4. Standard RFC 7807 ProblemDetails for standardized error responses
     builder.Services.AddProblemDetails();
