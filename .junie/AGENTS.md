@@ -6,6 +6,7 @@ This document provides guidelines for AI agents working on this .NET Core MVC pr
 - [Project Architecture](#project-architecture)
 - [Backend/Frontend Code Separation](#backendfrontend-code-separation)
 - [Feature Implementation Protocol](#feature-implementation-protocol)
+- [Version Management](#version-management)
 - [Naming Conventions](#naming-conventions)
 - [JavaScript / ESLint](#javascript--eslint)
 - [References](#references)
@@ -382,6 +383,58 @@ After completing the work, provide a concise report containing:
 6. **Outstanding issues:** Any incomplete work, environmental blockers, or manual deployment steps.
 
 Be direct and factual. Distinguish implemented functionality from functionality that has only been planned or partially verified.
+
+## Version Management
+
+### Update Version After Task Completion
+
+After completing a feature, bug fix, or significant change, **always update the application version** in `PersonalFinance.Shared/Constants/AppVersion.cs` before declaring the task complete.
+
+### Version File Location
+The version is defined in:
+```
+PersonalFinance.Shared/Constants/AppVersion.cs
+```
+
+### Semantic Versioning Rules (SemVer 2.0.0)
+The file uses semantic versioning with these components:
+- **Major**: Breaking changes that are not backwards-compatible
+- **Minor**: New features or functionality that are backwards-compatible
+- **Patch**: Bug fixes that are backwards-compatible
+- **Suffix**: Optional pre-release tag (e.g., "preview.1", "alpha", "beta", "rc.1")
+
+### When to Bump Each Version Component
+- **Bump Patch** for bug fixes, small improvements, or minor UI tweaks
+- **Bump Minor** for new features, new endpoints, or significant enhancements
+- **Bump Major** for breaking changes, API changes, or database schema changes that require migration
+- **Set Suffix** when working on pre-release features; remove it for stable releases
+
+### Version Update Procedure
+1. Open `PersonalFinance.Shared/Constants/AppVersion.cs`
+2. Increment the appropriate version component (`Major`, `Minor`, or `Patch`)
+3. Update the `Current` const string to match the new version (e.g., `"1.4.2"`)
+4. If bumping Minor, reset Patch to 0
+5. If bumping Major, reset Minor and Patch to 0
+6. Update or remove the `Suffix` as needed
+
+### Example
+After adding a new feature to version `1.4.1`:
+```csharp
+public const string Current = "1.5.0";
+public const int Major = 1;
+public const int Minor = 5;  // Bumped from 4
+public const int Patch = 0;  // Reset to 0
+public const string? Suffix = null;
+```
+
+After fixing a bug in version `1.4.1`:
+```csharp
+public const string Current = "1.4.2";
+public const int Major = 1;
+public const int Minor = 4;
+public const int Patch = 2;  // Bumped from 1
+public const string? Suffix = null;
+```
 
 ## Naming Conventions
 
