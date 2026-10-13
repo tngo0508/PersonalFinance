@@ -51,10 +51,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Navigation Updates**: Added News and Community links to the main navigation in `_Layout.cshtml`.
 - **Time Display**: Added `TimeAgoTagHelper` for relative time display across the application.
 
+### Commits
+- `1c01938` feat: add finance news aggregation feature
+- `54bcc71` feat: add community features for polls, comments, and stories
+- `a2ff9fe` feat: add new entities for savings goals, budget allocations, and saved articles
+- `d8cffb8` feat: add community endpoints and identity integration
+- `e218e02` refactor: remove identity dependency and streamline user scoping
+- `1407da3` doc: add `.NET Core MVC` best practices guidelines
+- `db7ff0d` chore: upgrade OpenTelemetry packages and add security-related dependencies
+- `763680c` docs: reorganize project documentation under `docs` directory
+- `73ebff5` docs: add version management guidelines to `AGENTS.md`
+- `348b02a` chore: release version 1.5.0 with new features and updates
+- [PR #23](https://github.com/tngo0508/PersonalFinanceApp/pull/23) — Redesign page
+- [PR #24](https://github.com/tngo0508/PersonalFinanceApp/pull/24) — Update Aspire version
+
 ## [1.4.1] - 2026-10-12
 
 ### Changed
 - **Aspire AppHost SDK Upgrade**: Upgraded Aspire AppHost SDK from 9.1.0 to 13.6.1.
+
+### Commits
+- `c4f6d14` Upgrade Aspire AppHost SDK from 9.1.0 to 13.6.1
+- `2908c7e` chore: bump version to 1.4.1 and add changelog entry for Aspire SDK upgrade
 
 ## [1.4.0] - 2026-10-11
 
@@ -80,6 +98,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Navigation**:
   - Updated default route to use the Net Worth controller as the landing page.
 
+### Commits
+- `c952631` Refactor Net Worth UI layout and optimize input components
+- `2d37e92` Refactor Net Worth sidebar layout and styles
+- `80ed116` Standardize CSS box-sizing and width for Net Worth sidebar elements
+- `2c1c240` Remove independent scrolling and height constraints from Net Worth sidebar content
+- `505fc0d` Update styles to align with Fluent UI design system
+- `7531917` update
+- `ac8de80` Update default route to use Networth controller
+- `34cb0ae` Enhance UI styles and improve Google Drive sync fallback behavior
+- `7d33bff` Refine Net Worth UI styles and clarify metric outputs
+- `da70916` Bump app version to 1.4.0 and update changelog for new features and improvements
+- [PR #23](https://github.com/tngo0508/PersonalFinanceApp/pull/23) — Redesign page
+
 ## [1.3.0] - 2026-10-11
 
 ### Added
@@ -99,6 +130,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation**:
   - Updated `README.md` with refined formatting, removed emojis, and clarified contributing steps.
   - Updated `DEVELOPMENT.md` and `deployment.md` with comprehensive documentation improvements.
+
+### Commits
+- `2d086b5` Add support for saving and retrieving Net Worth projection parameters
+- `ec6e5c7` Add net worth parameter persistence and API integration
+- `930be05` Update net worth UI: add ROI badge updates and sync inputs
+- `f6f0863` Standardize currency symbol styling across Net Worth UI
+- `34885c2` Enforce consistent function spacing, add ESLint configuration, and integrate shared utilities
+- `07bc3ba` Refactor Net Worth scripts and adjust layout script links
+- `f99e62d` Update documentation: professional README, comprehensive DEVELOPMENT.md, and deployment.md
+- `ec0313e` Update README.md: refine formatting, remove emojis, and clarify contributing steps
+- `f847467` Bump version to 1.3.0 and update changelog
+- [PR #22](https://github.com/tngo0508/PersonalFinanceApp/pull/22) — Persist Net Worth data
 
 ## [1.2.0] - 2026-10-11
 
@@ -138,7 +181,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Net Worth Chart Rendering**: Removed custom glow effect plugin from Net Worth charts for streamlined and more performant rendering.
 - **Net Worth Table Styling**: Simplified table row styling and hover effects for improved readability.
 
----
+### Commits
+- `c8aa286` Add non-blocking logging with Serilog.Async and configure log retention
+- `8f13ab5` Add support for creating Monthly Budget templates in Google Drive
+- `f582f26` Remove support for Monthly Budget template creation in Google Drive
+- `4f7f808` Add Net Worth projection feature with FI planning
+- `d64ee7d` Simplify Net Worth table row styling and hover effects
+- `65a0eb6` Add tooltips and 4% rule explanation to Net Worth planning UI
+- `bebeed4` Add input validation and reset functionality to Net Worth planning
+- `254b9b0` Revamp Google Drive UI with improved accessibility, icons, and layout
+- `d64b50f` Revamp Net Worth visualizations with dark futuristic theme and enhanced interactions
+- `6eeac91` Remove custom glow effect plugin from Net Worth charts for streamlined rendering
+- `40c8768` Add resilience handler and improve error handling for Google Drive connections
+- `fa77938` Refactor Net Worth projection feature to use API service with validation and shared DTOs
+- `97f5ae8` Highlight ROI surpassing annual income in Net Worth table
+- `35c0d2c` Add randomization functionality for Net Worth planning parameters
+- `ee0c01e` Add preset scenarios and slider controls to Net Worth planning UI
+- `133fd08` Optimize Dockerfiles and Bicep configurations for cost efficiency and cold-start performance
+- `b6fa7e2` Enhance FI Target display with separate currency symbol and styled amount
+- `b9b86a7` Optimize Dockerfiles and Bicep configurations for enhanced scalability and performance
+- `d6885de` Update Azure SQL Database to Basic tier for predictable ~$5/month costs
+- `12df147` Update Bicep tests and configuration for Azure SQL Database Basic tier
+- `f357a87` Bump version to 1.2.0 and update changelog
+- [PR #18](https://github.com/tngo0508/PersonalFinanceApp/pull/18) — Log capabilities
+- [PR #19](https://github.com/tngo0508/PersonalFinanceApp/pull/19) — Add monthly budget template
+- [PR #20](https://github.com/tngo0508/PersonalFinanceApp/pull/20) — Net Worth page
+- [PR #21](https://github.com/tngo0508/PersonalFinanceApp/pull/21) — Improve performance
 
 ## [1.1.0] - 2026-10-10
 
@@ -346,6 +414,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Global Antiforgery Validation**: Registered `AutoValidateAntiforgeryTokenAttribute` as a global MVC filter in `PersonalFinance.Web/Program.cs` so every unsafe (POST/PUT/PATCH/DELETE) action validates antiforgery tokens by default.
 - **HTML Escaping of Spreadsheet Content**: Budget report category names, month names and data-source labels read from Google Sheets are now HTML-escaped before rendering, preventing script/HTML injection from spreadsheet content.
 
+### Commits
+- `ee90f48` Release v1.1.0: Add spreadsheet transactions viewer, budget report enhancements, and UI redesign
+- `fcd6322` Refactor budget and transactions modals for usability and consistency
+- `9e95faa` Revamp layout and styling for a modernized UI/UX
+- `f2503dd` Streamline Google Drive Manager UI and enhance folder connection workflow
+- `2614c81` Add support for reading spreadsheet transactions from Google Drive
+- `7f5d50f` Optimize CI/CD pipeline for speed and parallelism, add `promote-latest` job, and refine Docker builds
+- `0b00771` Comprehensive documentation of architecture, deployment strategy, CI/CD pipelines, and Azure infrastructure setup
+- `5b5dc3b` Update changelog: redesign budget analytics, improve Google Drive UI, and enhance security
+- `ab29c58` Enable global anti-forgery validation and improve modal functionality
+- `5b4841f` Redesign budget modal with improved layout and user guidance
+- `2445956` Switch Google Drive storage from SQLite to Azure SQL
+- `fb48353` Fix `deploy-local-sql.ps1` parameter quoting issue on Windows PowerShell
+- `59296c2` Add local development provisioning for Azure SQL Serverless DB
+- [PR #14](https://github.com/tngo0508/PersonalFinanceApp/pull/14) — Local dev provisioning
+- [PR #15](https://github.com/tngo0508/PersonalFinanceApp/pull/15) — Update verbiage
+- [PR #16](https://github.com/tngo0508/PersonalFinanceApp/pull/16) — Update deployment doc
+- [PR #17](https://github.com/tngo0508/PersonalFinanceApp/pull/17) — Display transaction details
+
 ---
 
 ## [1.0.0] - 2026-09-20
@@ -371,3 +458,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Migrated database provider and connection strings from SQL Server (`(localdb)\mssqllocaldb`) to SQLite (`PersonalFinance.db`).
 - Updated startup lifecycle in `PersonalFinance.ApiService` and `PersonalFinance.Web` from `Database.EnsureCreated()` to `Database.Migrate()` to support schema evolution via EF Core migrations.
+
+### Commits
+- `1d23a35` Switch database provider from SQL Server to SQLite.
+- `3cffe38` Switch database structure to support SQLite with EF Core migrations. Add shared `DatabasePathHelper` for consistent solution-wide database paths.
+- `72b6346` initial commit
+- `e8c061a` Initial commit
+
+---
+
+## Links
+
+- [Unreleased]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.5.0...HEAD
+- [1.5.0]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.4.1...v1.5.0
+- [1.4.1]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.4.0...v1.4.1
+- [1.4.0]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.3.0...v1.4.0
+- [1.3.0]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.2.0...v1.3.0
+- [1.2.0]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.1.0...v1.2.0
+- [1.1.0]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.0.0...v1.1.0
+- [1.0.0]: https://github.com/tngo0508/PersonalFinanceApp/releases/tag/v1.0.0
