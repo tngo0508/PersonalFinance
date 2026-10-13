@@ -6,8 +6,8 @@
 
 A modular, multi-tier personal finance management application built on **.NET 10** with **Clean Architecture** and **.NET Aspire**. Connect Google Drive folders, analyze budget spreadsheets, and plan for financial independence — all from a responsive, self-hosted web interface.
 
-> **Developer Guide**: Local setup, secrets management, EF Core migrations, OAuth configuration, and troubleshooting — see [DEVELOPMENT.md](DEVELOPMENT.md).  
-> **Deployment Guide**: Azure Container Apps, Docker, CI/CD pipelines, and Infrastructure as Code — see [deployment.md](deployment.md).  
+> **Developer Guide**: Local setup, secrets management, EF Core migrations, OAuth configuration, and troubleshooting — see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).  
+> **Deployment Guide**: Azure Container Apps, Docker, CI/CD pipelines, and Infrastructure as Code — see [docs/deployment.md](docs/deployment.md).  
 > **Changelog**: Version history and release notes — see [CHANGELOG.md](CHANGELOG.md).
 
 ---
@@ -82,7 +82,7 @@ The solution follows a **Clean Architecture** pattern with .NET Aspire orchestra
 | `PersonalFinance.ServiceDefaults` | Shared defaults — OpenTelemetry, health checks, HTTP resilience |
 | `PersonalFinance.Tests` | Verification — xUnit unit and integration tests (104+ tests) |
 
-For detailed data flow diagrams and system interaction sequences, see [**DEVELOPMENT.md**](DEVELOPMENT.md).
+For detailed data flow diagrams and system interaction sequences, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
 
 ---
 
@@ -109,7 +109,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.AppHost
 - **Scalar API Docs**: `https://localhost:7100/scalar/v1`
 - **Aspire Dashboard**: URL shown in terminal output
 
-For first-time setup including secrets configuration and database initialization, see [**DEVELOPMENT.md**](DEVELOPMENT.md).
+For first-time setup including secrets configuration and database initialization, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
 
 ---
 
@@ -157,7 +157,7 @@ The application supports multiple deployment targets, all engineered for **zero 
 | **Azure Developer CLI** | Azure Container Apps | Single-command provisioning with `azd up`. |
 | **Local Docker** | Local machine | Multi-container setup for pre-commit validation and integration testing. |
 
-For complete deployment instructions, see [**deployment.md**](deployment.md).
+For complete deployment instructions, see [**docs/deployment.md**](docs/deployment.md).
 
 ---
 

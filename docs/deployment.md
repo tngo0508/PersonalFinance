@@ -430,7 +430,7 @@ Configure passwordless GitHub Actions authentication to eliminate the need for l
 7.  **Name**: `main-branch-deploy`.
 8.  Click **Add**.
 
-*Note: For advanced users, equivalent CLI commands are available in `DEVELOPMENT.md`.*
+*Note: For advanced users, equivalent CLI commands are available in `docs/DEVELOPMENT.md`.*
 
 You will also need your **Subscription ID** (found on the Azure Portal Subscriptions blade) as `AZURE_SUBSCRIPTION_ID` in GitHub.
 
