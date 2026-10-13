@@ -1,3 +1,5 @@
+using FluentValidation;
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.EntityFrameworkCore;
@@ -59,6 +61,18 @@ try
 
     // 5a. Register Net Worth parameters persistence service
     builder.Services.AddScoped<INetWorthParametersService, NetWorthParametersService>();
+
+    // 5b. Register Personal Finance services
+    builder.Services.AddScoped<IBudgetService, BudgetService>();
+    builder.Services.AddScoped<ISavingsGoalService, SavingsGoalService>();
+    builder.Services.AddScoped<IWatchlistService, WatchlistService>();
+    builder.Services.AddScoped<ICommunityService, CommunityService>();
+
+    // 5c. Register MediatR for CQRS pattern - scans the assembly for handlers
+    builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
+
+    // 5d. Register FluentValidation - scans the assembly for validators
+    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
     builder.Services.AddControllers();
 
