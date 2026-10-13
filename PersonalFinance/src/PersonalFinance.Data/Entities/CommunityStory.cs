@@ -1,0 +1,77 @@
+namespace PersonalFinance.Data.Entities;
+
+/// <summary>
+/// Database entity representing a user-submitted community story or case study.
+/// </summary>
+public class CommunityStory
+{
+    /// <summary>
+    /// Gets or sets the unique identifier.
+    /// </summary>
+    public int Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ID of the user who submitted the story.
+    /// </summary>
+    public string UserId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the display name of the author at the time of submission.
+    /// </summary>
+    public string AuthorName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the title of the story.
+    /// </summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a brief summary shown in the card preview.
+    /// </summary>
+    public string Summary { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the full body text of the story.
+    /// </summary>
+    public string Body { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the category tag (e.g., "Budgeting", "Debt", "Investing").
+    /// </summary>
+    public string Category { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the number of likes on the story.
+    /// </summary>
+    public int Likes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of comments on the story.
+    /// </summary>
+    public int CommentCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the story is approved and publicly visible.
+    /// </summary>
+    public bool IsVisible { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the story is featured/pinned.
+    /// </summary>
+    public bool IsFeatured { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the date and time the story was published.
+    /// </summary>
+    public DateTime PublishedAtUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the estimated reading time in minutes.
+    /// </summary>
+    public int ReadTimeMinutes { get; set; }
+
+    /// <summary>
+    /// Navigation: all likes on this story.
+    /// </summary>
+    public ICollection<CommunityStoryLike> LikesList { get; set; } = new List<CommunityStoryLike>();
+}

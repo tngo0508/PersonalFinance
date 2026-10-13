@@ -135,7 +135,13 @@ try
         client.Timeout = TimeSpan.FromSeconds(15);
     });
 
-    // 3e. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
+    // 3e. Register Finance News Service for RSS feed aggregation
+    builder.Services.AddHttpClient<INewsService, NewsService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(5);
+    });
+
+    // 3g. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -171,6 +177,26 @@ try
         .AddStandardResilienceHandler();
 
     builder.Services.AddRefitClient<INetWorthApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
+    // 7b. Register Community API client for polls, comments, and stories
+    builder.Services.AddRefitClient<ICommunityApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
+    // 7c. Register Personal Finance API client for savings goals, watchlist, and budget
+    builder.Services.AddRefitClient<IPersonalFinanceApi>()
         .ConfigureHttpClient(client =>
         {
             client.BaseAddress = new Uri(apiBaseUrl);

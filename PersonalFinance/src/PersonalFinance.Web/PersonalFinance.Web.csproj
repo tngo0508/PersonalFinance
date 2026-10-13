@@ -39,6 +39,8 @@
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
+        <PackageReference Include="NuGet.Packaging" />
+        <PackageReference Include="NuGet.Protocol" />
     </ItemGroup>
 
     <ItemGroup>

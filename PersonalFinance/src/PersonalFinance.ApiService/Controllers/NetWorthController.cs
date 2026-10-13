@@ -200,9 +200,13 @@ public class NetWorthController : ControllerBase
     {
         // In a real deployment, the API would authenticate via JWT bearer tokens.
         // For now, accept the user ID from a header set by the Web frontend (forwarded identity).
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId) && !string.IsNullOrEmpty(userId))
+        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
         {
-            return userId;
+            var value = userId.First();
+            if (!string.IsNullOrEmpty(value))
+            {
+                return value;
+            }
         }
 
         return "anonymous";

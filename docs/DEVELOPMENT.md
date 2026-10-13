@@ -34,8 +34,11 @@ PersonalFinanceApp/
 ├── PersonalFinance.sln                      # Solution configuration
 ├── PersonalFinance.db                       # Shared SQLite database (git-ignored)
 ├── CHANGELOG.md                             # Release changelog
-├── DEVELOPMENT.md                           # Developer guidelines (this document)
 ├── README.md                                # General project documentation
+├── docs/
+│   ├── DEVELOPMENT.md                       # Developer guidelines (this document)
+│   ├── deployment.md                        # Deployment guide
+│   └── IDENTITY_SCHEMA.md                   # Identity schema documentation
 └── PersonalFinance/
     ├── src/
     │   ├── PersonalFinance.AppHost/         # .NET Aspire orchestrator & dashboard

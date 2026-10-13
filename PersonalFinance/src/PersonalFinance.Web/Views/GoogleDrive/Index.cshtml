@@ -1,6 +1,7 @@
 @model PersonalFinance.Web.Models.GoogleDriveViewModel
 @using PersonalFinance.Shared.DTOs
 @using PersonalFinance.Shared.Helpers
+@using PersonalFinance.Web.TagHelpers
 
 @{
     ViewData["Title"] = "Google Drive";
@@ -33,17 +34,6 @@
 
     private static bool NeedsAttention(GoogleDriveConnectionDto conn) =>
         !conn.IsValid || conn.SyncStatus == "NeedsReauth";
-
-    private static string TimeAgo(DateTime utc)
-    {
-        var span = DateTime.UtcNow - utc;
-        if (span.TotalMinutes < 1) return "just now";
-        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} min ago";
-        if (span.TotalHours < 24) return $"{(int)span.TotalHours} hr ago";
-        if (span.TotalDays < 2) return "yesterday";
-        if (span.TotalDays < 7) return $"{(int)span.TotalDays} days ago";
-        return utc.ToString("MMM d, yyyy");
-    }
 
     private void RenderFileIcon(GoogleDriveFileDto file, int size)
     {
@@ -373,7 +363,7 @@
                                             <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
                                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
                                         </svg>
-                                        Synced @TimeAgo(currentConn.LastSyncedAtUtc.Value)
+                                        Synced @TimeAgoTagHelper.TimeAgoText(currentConn.LastSyncedAtUtc.Value)
                                     </span>
                                 }
                             </div>
