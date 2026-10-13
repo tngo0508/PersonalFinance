@@ -1,52 +1,52 @@
 namespace PersonalFinance.Web.Models;
 
 /// <summary>
-/// View model for the Finance News page.
+/// View model for the Finance News page, passed from <c>NewsController</c> to the view.
 /// </summary>
-public class NewsViewModel
+public sealed class NewsViewModel
 {
     /// <summary>
-    /// List of news articles from all sources.
+    /// Gets or sets the list of news articles to display, after filtering is applied.
     /// </summary>
     public List<Services.NewsArticle> Articles { get; set; } = new();
 
     /// <summary>
-    /// Available news sources for filtering.
+    /// Gets or sets the available news sources for the source filter dropdown.
     /// </summary>
     public List<Services.NewsSource> Sources { get; set; } = new();
 
     /// <summary>
-    /// Available categories for filtering.
+    /// Gets or sets the available categories derived from the fetched articles.
     /// </summary>
     public List<string> Categories { get; set; } = new();
 
     /// <summary>
-    /// Currently selected category filter.
+    /// Gets or sets the currently selected category filter value.
     /// </summary>
     public string? SelectedCategory { get; set; }
 
     /// <summary>
-    /// Currently selected source filter.
+    /// Gets or sets the currently selected source filter value.
     /// </summary>
     public string? SelectedSource { get; set; }
 
     /// <summary>
-    /// Search query for filtering articles by title/description.
+    /// Gets or sets the free-text search query entered by the user.
     /// </summary>
     public string? SearchQuery { get; set; }
 
     /// <summary>
-    /// User-facing error message if feeds fail to load.
+    /// Gets or sets the user-facing error message displayed when feeds fail to load.
     /// </summary>
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Whether the data is still loading.
+    /// Gets or sets a value indicating whether the data is still loading.
     /// </summary>
     public bool IsLoading { get; set; } = true;
 
     /// <summary>
-    /// Last refresh timestamp.
+    /// Gets or sets the timestamp of the last successful data refresh.
     /// </summary>
     public DateTime? LastRefreshed { get; set; }
 }

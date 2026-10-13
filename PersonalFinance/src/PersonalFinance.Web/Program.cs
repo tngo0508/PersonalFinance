@@ -138,8 +138,11 @@ try
     // 3e. Register Finance News Service for RSS feed aggregation
     builder.Services.AddHttpClient<INewsService, NewsService>(client =>
     {
-        client.Timeout = TimeSpan.FromSeconds(10);
+        client.Timeout = TimeSpan.FromSeconds(5);
     });
+
+    // 3f. Register Community Service for polls, comments, and likes
+    builder.Services.AddScoped<ICommunityService, CommunityService>();
 
     // 3f. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
     builder.Services.Configure<ForwardedHeadersOptions>(options =>

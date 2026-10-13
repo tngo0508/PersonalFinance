@@ -34,12 +34,11 @@
         @if (Model.LastRefreshed.HasValue)
         {
             <div class="news-refresh-info">
-                <span class="news-refresh-time" aria-label="Last refreshed time">
+                <time class="news-refresh-time" datetime="@Model.LastRefreshed.Value.ToString("o")" aria-label="Last refreshed time">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                     </svg>
-                    @TimeAgo(Model.LastRefreshed.Value.ToUniversalTime())
-                </span>
+                </time>
                 <button type="button" class="btn news-refresh-btn" id="refreshBtn" title="Refresh news" aria-label="Refresh news articles">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -230,7 +229,6 @@
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                                 </svg>
-                                @TimeAgo(article.PublishedAt)
                             </time>
                             <a href="@article.Url" target="_blank" rel="noopener noreferrer" class="news-read-more" aria-label="Read full article: @article.Title">
                                 Read full article
@@ -266,18 +264,6 @@
         </div>
     }
 </div>
-
-@functions {
-    private static string TimeAgo(DateTime dateTime)
-    {
-        var span = DateTime.UtcNow - dateTime;
-        if (span.TotalMinutes < 1) return "Just now";
-        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
-        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
-        if (span.TotalDays < 7) return $"{(int)span.TotalDays}d ago";
-        return dateTime.ToString("MMM dd, yyyy");
-    }
-}
 
 @section Scripts {
     <script src="~/js/news/news.js" asp-append-version="true"></script>

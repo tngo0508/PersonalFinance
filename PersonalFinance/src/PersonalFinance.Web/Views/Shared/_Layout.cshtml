@@ -71,6 +71,13 @@
                                 Finance News
                             </a>
                         </li>
+                        <li class="nav-item">
+                            @{ var isCommunityActive = currentController == "Community"; }
+                            <a class="nav-link @(isCommunityActive ? "active" : "")" aria-current="@(isCommunityActive ? "page" : null)"
+                               asp-area="" asp-controller="Community" asp-action="Index">
+                                Community
+                            </a>
+                        </li>
                     </ul>
                 }
                 else

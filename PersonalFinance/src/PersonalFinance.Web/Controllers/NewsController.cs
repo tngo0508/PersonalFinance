@@ -7,14 +7,19 @@ namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Finance News page.
-/// Aggregates finance news from multiple RSS sources and displays them in a card-based layout.
+/// Delegates all business logic to <see cref="INewsService"/> and prepares view models.
 /// </summary>
 [Authorize]
-public class NewsController : Controller
+public sealed class NewsController : Controller
 {
     private readonly INewsService _newsService;
     private readonly ILogger<NewsController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NewsController"/> class.
+    /// </summary>
+    /// <param name="newsService">Service for fetching and filtering finance news.</param>
+    /// <param name="logger">Logger for this controller.</param>
     public NewsController(INewsService newsService, ILogger<NewsController> logger)
     {
         _newsService = newsService;
@@ -32,42 +37,32 @@ public class NewsController : Controller
         [FromQuery] string? search,
         CancellationToken cancellationToken = default)
     {
+        var options = new NewsQueryOptions
+        {
+            Category = category,
+            Source = source,
+            Search = search,
+        };
+
         var model = new NewsViewModel
         {
             SelectedCategory = category,
             SelectedSource = source,
             SearchQuery = search,
-            IsLoading = true
+            IsLoading = true,
         };
 
         try
         {
-            var articles = await _newsService.GetFinanceNewsAsync(cancellationToken);
+            // Fetch all articles (unfiltered) to populate categories list
+            var allArticles = await _newsService.GetFinanceNewsAsync(cancellationToken: cancellationToken);
+
+            // Fetch filtered articles via the service
+            var filteredArticles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
+
             model.Sources = _newsService.GetAvailableSources();
-            model.Categories = articles.Select(a => a.Category).Distinct().OrderBy(c => c).ToList();
-
-            // Apply filters
-            if (!string.IsNullOrEmpty(category))
-            {
-                articles = articles.Where(a => a.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
-            }
-
-            if (!string.IsNullOrEmpty(source))
-            {
-                articles = articles.Where(a => a.Source.Equals(source, StringComparison.OrdinalIgnoreCase)).ToList();
-            }
-
-            if (!string.IsNullOrEmpty(search))
-            {
-                var query = search.ToLowerInvariant();
-                articles = articles.Where(a =>
-                    a.Title.ToLowerInvariant().Contains(query) ||
-                    a.Description.ToLowerInvariant().Contains(query) ||
-                    a.Source.ToLowerInvariant().Contains(query)
-                ).ToList();
-            }
-
-            model.Articles = articles;
+            model.Categories = allArticles.Select(a => a.Category).Distinct().OrderBy(c => c).ToList();
+            model.Articles = filteredArticles;
             model.LastRefreshed = DateTime.UtcNow;
             model.IsLoading = false;
         }
@@ -82,7 +77,7 @@ public class NewsController : Controller
     }
 
     /// <summary>
-    /// Returns JSON article data for AJAX-based refresh.
+    /// Returns JSON article data for AJAX-based page refresh.
     /// </summary>
     [HttpGet]
     [Produces("application/json")]
@@ -92,41 +87,33 @@ public class NewsController : Controller
         [FromQuery] string? search,
         CancellationToken cancellationToken = default)
     {
+        var options = new NewsQueryOptions
+        {
+            Category = category,
+            Source = source,
+            Search = search,
+        };
+
         try
         {
-            var articles = await _newsService.GetFinanceNewsAsync(cancellationToken);
+            var articles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
 
-            if (!string.IsNullOrEmpty(category))
+            return Json(new NewsRefreshResponse
             {
-                articles = articles.Where(a => a.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
-            }
-
-            if (!string.IsNullOrEmpty(source))
-            {
-                articles = articles.Where(a => a.Source.Equals(source, StringComparison.OrdinalIgnoreCase)).ToList();
-            }
-
-            if (!string.IsNullOrEmpty(search))
-            {
-                var query = search.ToLowerInvariant();
-                articles = articles.Where(a =>
-                    a.Title.ToLowerInvariant().Contains(query) ||
-                    a.Description.ToLowerInvariant().Contains(query) ||
-                    a.Source.ToLowerInvariant().Contains(query)
-                ).ToList();
-            }
-
-            return Json(new
-            {
-                success = true,
-                articles = articles,
-                lastRefreshed = DateTime.UtcNow
+                Success = true,
+                Articles = articles,
+                LastRefreshed = DateTime.UtcNow,
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error refreshing finance news via API");
-            return Json(new { success = false, error = "Failed to refresh news." });
+
+            return Json(new NewsRefreshResponse
+            {
+                Success = false,
+                Error = "Failed to refresh news.",
+            });
         }
     }
 }
