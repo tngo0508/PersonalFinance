@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
@@ -9,8 +8,8 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// RESTful API controller for community features: polls, comments, stories, and likes.
+/// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
 /// </summary>
-[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -28,14 +27,27 @@ public class CommunityController : ControllerBase
     }
 
     /// <summary>
+    /// Returns the current user's ID from the X-User-Id header forwarded by the Web proxy.
+    /// </summary>
+    private string GetUserId()
+    {
+        if (Request.Headers.TryGetValue("X-User-Id", out var userId) && !string.IsNullOrEmpty(userId))
+        {
+            return userId;
+        }
+
+        return "anonymous";
+    }
+
+    /// <summary>
     /// Gets the full community data (polls, stats, stories, comments) for a user.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<CommunityResponseDto>> GetCommunity(
-        [FromQuery] string? userId,
         CancellationToken cancellationToken = default)
     {
+        var userId = GetUserId();
         var response = new CommunityResponseDto();
 
         // Fetch active polls with options and vote counts
@@ -92,9 +104,9 @@ public class CommunityController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CommunityResponseDto>> Vote(
         [FromBody] CommunityVoteRequestDto request,
-        [FromQuery] string userId,
         CancellationToken cancellationToken = default)
     {
+        var userId = GetUserId();
         if (string.IsNullOrEmpty(request.PollCode))
         {
             return BadRequest("Poll code is required.");
@@ -200,10 +212,10 @@ public class CommunityController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CommunityCommentDto>> AddComment(
         [FromBody] CommunityCommentRequestDto request,
-        [FromQuery] string userId,
         [FromQuery] string authorName,
         CancellationToken cancellationToken = default)
     {
+        var userId = GetUserId();
         var trimmedText = request.Text.Trim();
         if (string.IsNullOrEmpty(trimmedText))
         {
@@ -280,9 +292,9 @@ public class CommunityController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<CommentLikeResult>> ToggleCommentLike(
         int commentId,
-        [FromQuery] string userId,
         CancellationToken cancellationToken = default)
     {
+        var userId = GetUserId();
         var comment = await _dbContext.CommunityComments
             .FirstOrDefaultAsync(c => c.Id == commentId && c.IsVisible, cancellationToken);
 
@@ -365,10 +377,10 @@ public class CommunityController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CommunityStoryDto>> SubmitStory(
         [FromBody] CommunityStoryRequestDto request,
-        [FromQuery] string userId,
         [FromQuery] string authorName,
         CancellationToken cancellationToken = default)
     {
+        var userId = GetUserId();
         var trimmedTitle = request.Title.Trim();
         var trimmedSummary = request.Summary.Trim();
         var trimmedBody = request.Body.Trim();
@@ -446,9 +458,9 @@ public class CommunityController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<StoryLikeResult>> ToggleStoryLike(
         int storyId,
-        [FromQuery] string userId,
         CancellationToken cancellationToken = default)
     {
+        var userId = GetUserId();
         var story = await _dbContext.CommunityStories
             .FirstOrDefaultAsync(s => s.Id == storyId && s.IsVisible, cancellationToken);
 
@@ -495,9 +507,9 @@ public class CommunityController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<CommunityStoryDto>> GetStoryById(
         int storyId,
-        [FromQuery] string? userId,
         CancellationToken cancellationToken = default)
     {
+        var userId = GetUserId();
         var story = await _dbContext.CommunityStories
             .FirstOrDefaultAsync(s => s.Id == storyId && s.IsVisible, cancellationToken);
 

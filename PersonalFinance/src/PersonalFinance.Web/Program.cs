@@ -195,6 +195,16 @@ try
         .AddHttpMessageHandler<UserIdForwardingHandler>()
         .AddStandardResilienceHandler();
 
+    // 7c. Register Personal Finance API client for savings goals, watchlist, and budget
+    builder.Services.AddRefitClient<IPersonalFinanceApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
     var app = builder.Build();
 
     // 7. Enable Serilog HTTP request logging

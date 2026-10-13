@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
@@ -9,35 +7,35 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// API controller for personal finance features: budget planner, savings goals, and article watchlist.
-/// All endpoints require authentication and are scoped to the current user.
+/// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
 /// </summary>
-[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class PersonalFinanceController : ControllerBase
 {
     private readonly AppDbContext _dbContext;
-    private readonly UserManager<IdentityUser> _userManager;
     private readonly ILogger<PersonalFinanceController> _logger;
 
     public PersonalFinanceController(
         AppDbContext dbContext,
-        UserManager<IdentityUser> userManager,
         ILogger<PersonalFinanceController> logger)
     {
         _dbContext = dbContext;
-        _userManager = userManager;
         _logger = logger;
     }
 
     /// <summary>
-    /// Returns the current user's ID, or null if not found.
+    /// Returns the current user's ID from the X-User-Id header forwarded by the Web proxy.
     /// </summary>
-    private async Task<string?> GetUserIdAsync()
+    private string GetUserId()
     {
-        var user = await _userManager.GetUserAsync(User);
-        return user?.Id;
+        if (Request.Headers.TryGetValue("X-User-Id", out var userId) && !string.IsNullOrEmpty(userId))
+        {
+            return userId;
+        }
+
+        return "anonymous";
     }
 
     // =========================================================================
@@ -52,8 +50,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetBudget(string period)
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var budget = await _dbContext.UserBudgetAllocations
             .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == period);
@@ -90,8 +87,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveBudget([FromBody] SaveBudgetRequest request)
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var period = request.Period ?? DateTime.UtcNow.ToString("yyyy-MM");
 
@@ -139,8 +135,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetSavingsGoals()
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var goals = await _dbContext.SavingsGoals
             .Where(g => g.UserId == userId)
@@ -171,8 +166,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CreateSavingsGoal([FromBody] CreateSavingsGoalRequest request)
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var goal = new SavingsGoal
         {
@@ -199,8 +193,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateSavingsGoal(int id, [FromBody] UpdateSavingsGoalRequest request)
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var goal = await _dbContext.SavingsGoals
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
@@ -228,8 +221,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSavingsGoal(int id)
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var goal = await _dbContext.SavingsGoals
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
@@ -253,8 +245,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetWatchlist()
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var articles = await _dbContext.SavedArticles
             .Where(a => a.UserId == userId)
@@ -283,8 +274,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveArticle([FromBody] SaveArticleRequest request)
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var existing = await _dbContext.SavedArticles
             .FirstOrDefaultAsync(a => a.UserId == userId && a.Url == request.Url);
@@ -322,8 +312,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveArticle(int id)
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var article = await _dbContext.SavedArticles
             .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId);
@@ -343,8 +332,7 @@ public class PersonalFinanceController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CheckArticleSaved([FromQuery] string url)
     {
-        var userId = await GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        var userId = GetUserId();
 
         var exists = await _dbContext.SavedArticles
             .AnyAsync(a => a.UserId == userId && a.Url == url);

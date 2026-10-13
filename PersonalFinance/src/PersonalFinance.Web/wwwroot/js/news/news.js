@@ -221,7 +221,7 @@
     container.innerHTML = budgetCategories.map(cat =>
       '<div class="budget-category-item">' +
       '<div class="budget-category-label"><span class="budget-category-dot" style="background:' + cat.color + '"></span>' + cat.label + '</div>' +
-      '<input type="range" class="form-range budget-category-slider" data-key="' + cat.key + '" min="0" max="100" value="' + cat.default + '/>' +
+      '<input type="range" class="form-range budget-category-slider" data-key="' + cat.key + '" min="0" max="100" value="' + cat.default + '" />' +
       '<div class="budget-category-value" id="budgetVal_' + cat.key + '">' + cat.default + '%</div>' +
       '</div>'
     ).join('');

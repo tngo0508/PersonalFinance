@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -12,6 +13,7 @@ namespace PersonalFinance.Web.Controllers;
 /// All data operations are delegated to the ApiService via the ICommunityApi Refit client.
 /// </summary>
 [Authorize]
+[IgnoreAntiforgeryToken]
 public sealed class CommunityController : Controller
 {
     private readonly ICommunityApi _communityApi;
@@ -34,7 +36,7 @@ public sealed class CommunityController : Controller
         var userId = GetUserId();
         try
         {
-            var response = await _communityApi.GetCommunityAsync(userId, cancellationToken);
+            var response = await _communityApi.GetCommunityAsync(cancellationToken);
             var model = MapToViewModel(response);
             return View(model);
         }
@@ -78,7 +80,7 @@ public sealed class CommunityController : Controller
                 OptionId = request.OptionId
             };
 
-            var response = await _communityApi.VoteAsync(voteRequest, userId, cancellationToken);
+            var response = await _communityApi.VoteAsync(voteRequest, cancellationToken);
             var updatedPoll = response.ActivePolls.FirstOrDefault(p => p.Id == request.PollCode);
 
             return Json(new
@@ -131,7 +133,7 @@ public sealed class CommunityController : Controller
 
         try
         {
-            var comment = await _communityApi.AddCommentAsync(commentRequest, userId, authorName, cancellationToken);
+            var comment = await _communityApi.AddCommentAsync(commentRequest, authorName, cancellationToken);
 
             return Json(new
             {
@@ -176,7 +178,7 @@ public sealed class CommunityController : Controller
 
         try
         {
-            var result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, userId, cancellationToken);
+            var result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, cancellationToken);
 
             return Json(new
             {
@@ -249,7 +251,7 @@ public sealed class CommunityController : Controller
 
         try
         {
-            var story = await _communityApi.SubmitStoryAsync(storyRequest, userId, authorName, cancellationToken);
+            var story = await _communityApi.SubmitStoryAsync(storyRequest, authorName, cancellationToken);
 
             return Json(new
             {
@@ -290,7 +292,7 @@ public sealed class CommunityController : Controller
 
         try
         {
-            var result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, userId, cancellationToken);
+            var result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, cancellationToken);
 
             return Json(new
             {
