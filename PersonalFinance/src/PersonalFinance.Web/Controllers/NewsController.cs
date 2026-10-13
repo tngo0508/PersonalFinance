@@ -62,6 +62,7 @@ public sealed class NewsController : Controller
 
             model.Sources = _newsService.GetAvailableSources();
             model.Categories = allArticles.Select(a => a.Category).Distinct().OrderBy(c => c).ToList();
+            model.PersonalFinanceCategories = _newsService.GetPersonalFinanceCategories();
             model.Articles = filteredArticles;
             model.LastRefreshed = DateTime.UtcNow;
             model.IsLoading = false;

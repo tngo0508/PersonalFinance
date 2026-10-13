@@ -1,268 +1,401 @@
 @model PersonalFinance.Web.Models.NewsViewModel
 
 @{
-    ViewData["Title"] = "Finance News";
+    ViewData["Title"] = "Personal Finance Hub";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/news.css" asp-append-version="true"/>
 }
 
-<div class="news-page">
+<div class="finance-hub">
     <!-- Page Header -->
-    <div class="news-header">
-        <div class="news-header-content">
-            <div class="news-header-icon" aria-hidden="true">
+    <div class="finance-hub-header">
+        <div class="finance-hub-header-content">
+            <div class="finance-hub-icon" aria-hidden="true">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/>
-                    <path d="M18 14v6"/>
-                    <path d="M15 15h6"/>
-                    <path d="M10 17v-2"/>
-                    <path d="M8 17h4"/>
-                    <path d="M8 13h10"/>
-                    <path d="M14 8h.01"/>
-                    <path d="M10 8h.01"/>
-                    <path d="M10 11h.01"/>
-                    <path d="M14 11h.01"/>
+                    <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                 </svg>
             </div>
             <div>
-                <h1 class="news-title">Finance News</h1>
-                <p class="news-subtitle">Stay informed with the latest financial news from trusted sources to make smarter money decisions.</p>
+                <h1 class="finance-hub-title">Personal Finance Hub</h1>
+                <p class="finance-hub-subtitle">Budget, save, invest, and stay informed — all in one place.</p>
             </div>
         </div>
-        @if (Model.LastRefreshed.HasValue)
-        {
-            <div class="news-refresh-info">
-                <time class="news-refresh-time" datetime="@Model.LastRefreshed.Value.ToString("o")" aria-label="Last refreshed time">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                </time>
-                <button type="button" class="btn news-refresh-btn" id="refreshBtn" title="Refresh news" aria-label="Refresh news articles">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-                        <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                    </svg>
-                    <span>Refresh</span>
-                </button>
-            </div>
-        }
     </div>
+
+    <!-- Tab Navigation -->
+    <ul class="finance-hub-tabs" role="tablist" aria-label="Finance hub sections">
+        <li class="finance-hub-tab" role="presentation">
+            <button class="finance-hub-tab-btn active" id="tab-news" role="tab" aria-controls="panel-news" aria-selected="true" data-tab="news">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/></svg>
+                News
+            </button>
+        </li>
+        <li class="finance-hub-tab" role="presentation">
+            <button class="finance-hub-tab-btn" id="tab-budget" role="tab" aria-controls="panel-budget" aria-selected="false" data-tab="budget">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                Budget Planner
+            </button>
+        </li>
+        <li class="finance-hub-tab" role="presentation">
+            <button class="finance-hub-tab-btn" id="tab-savings" role="tab" aria-controls="panel-savings" aria-selected="false" data-tab="savings">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.6 3.7 2 5"/><path d="M5 9a3 3 0 0 0 3 3 3 3 0 0 0 3-3"/><circle cx="12" cy="12" r="10"/></svg>
+                Savings Goals
+            </button>
+        </li>
+        <li class="finance-hub-tab" role="presentation">
+            <button class="finance-hub-tab-btn" id="tab-calculator" role="tab" aria-controls="panel-calculator" aria-selected="false" data-tab="calculator">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+                Investment Calculator
+            </button>
+        </li>
+        <li class="finance-hub-tab" role="presentation">
+            <button class="finance-hub-tab-btn" id="tab-watchlist" role="tab" aria-controls="panel-watchlist" aria-selected="false" data-tab="watchlist">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                Watchlist
+            </button>
+        </li>
+    </ul>
 
     <!-- Error Message -->
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="news-alert alert-danger" role="alert">
-            <div class="news-alert-icon" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-            </div>
-            <div class="news-alert-content">
-                <strong>Unable to load news</strong>
-                <p>@Model.ErrorMessage</p>
-            </div>
-            <button type="button" class="news-alert-close" aria-label="Dismiss alert">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-            </button>
+        <div class="finance-hub-alert alert-danger" role="alert">
+            <strong>Unable to load data</strong>
+            <p>@Model.ErrorMessage</p>
         </div>
     }
 
-    <!-- Search and Filters -->
-    <div class="news-filters card">
-        <form method="get" class="news-filter-form" id="newsFilterForm">
-            <!-- Search -->
-            <div class="news-search-box">
-                <svg class="news-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                </svg>
-                <input type="text" name="search" class="form-control news-search-input" 
-                       value="@Model.SearchQuery" placeholder="Search articles..." aria-label="Search news articles"/>
-            </div>
+    <!-- ==================== NEWS PANEL ==================== -->
+    <div class="finance-hub-panel active" id="panel-news" role="tabpanel" aria-labelledby="tab-news">
+        <!-- Search and Filters -->
+        <div class="finance-hub-filters card">
+            <form method="get" class="finance-hub-filter-form" id="newsFilterForm">
+                <div class="finance-hub-search-box">
+                    <svg class="finance-hub-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <input type="text" name="search" class="form-control finance-hub-search-input"
+                           value="@Model.SearchQuery" placeholder="Search articles..." aria-label="Search news articles"/>
+                </div>
 
-            <!-- Category Filter -->
-            @if (Model.Categories.Count > 1)
-            {
-                <div class="news-filter-group">
-                    <select name="category" id="categoryFilter" class="form-select news-filter-select" onchange="this.form.submit()" aria-label="Filter by category">
-                        <option value="">All Categories</option>
-                        @foreach (var cat in Model.Categories)
+                <!-- Personal Finance Category Filter -->
+                <div class="finance-hub-filter-group">
+                    <select name="category" id="categoryFilter" class="form-select finance-hub-filter-select" onchange="this.form.submit()" aria-label="Filter by topic">
+                        <option value="">All Topics</option>
+                        @foreach (var cat in Model.PersonalFinanceCategories)
                         {
                             <option value="@cat" selected="@(Model.SelectedCategory == cat)">@cat</option>
                         }
                     </select>
                 </div>
-            }
 
-            <!-- Source Filter -->
-            @if (Model.Sources.Count > 0)
-            {
-                <div class="news-filter-group">
-                    <select name="source" id="sourceFilter" class="form-select news-filter-select" onchange="this.form.submit()" aria-label="Filter by source">
-                        <option value="">All Sources</option>
-                        @foreach (var src in Model.Sources)
-                        {
-                            <option value="@src.Name" selected="@(Model.SelectedSource == src.Name)">@src.Name</option>
-                        }
-                    </select>
-                </div>
-            }
-
-            <div class="news-filter-actions">
-                <button type="submit" class="btn btn-primary news-search-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                    </svg>
-                    Search
-                </button>
-                
-                @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory) || !string.IsNullOrEmpty(Model.SelectedSource))
+                <!-- Source Filter -->
+                @if (Model.Sources.Count > 0)
                 {
-                    <a href="@Url.Action("Index", "News")" class="btn news-clear-btn">
+                    <div class="finance-hub-filter-group">
+                        <select name="source" id="sourceFilter" class="form-select finance-hub-filter-select" onchange="this.form.submit()" aria-label="Filter by source">
+                            <option value="">All Sources</option>
+                            @foreach (var src in Model.Sources)
+                            {
+                                <option value="@src.Name" selected="@(Model.SelectedSource == src.Name)">@src.Name</option>
+                            }
+                        </select>
+                    </div>
+                }
+
+                <div class="finance-hub-filter-actions">
+                    <button type="submit" class="btn btn-primary finance-hub-search-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                         </svg>
-                        Clear
-                    </a>
+                        Search
+                    </button>
+                    @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory) || !string.IsNullOrEmpty(Model.SelectedSource))
+                    {
+                        <a href="@Url.Action("Index", "News")" class="btn finance-hub-clear-btn">Clear</a>
+                    }
+                </div>
+            </form>
+        </div>
+
+        @if (Model.LastRefreshed.HasValue)
+        {
+            <div class="finance-hub-refresh-bar">
+                <time class="finance-hub-refresh-time" datetime="@Model.LastRefreshed.Value.ToString("o")">
+                    Last updated: @Model.LastRefreshed.Value.ToString("MMM dd, yyyy 'at' hh:mm tt")
+                </time>
+                <button type="button" class="btn finance-hub-refresh-btn" id="refreshBtn" title="Refresh news">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                        <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        }
+
+        @if (Model.IsLoading)
+        {
+            <div class="finance-hub-loading">
+                <div class="finance-hub-spinner"></div>
+                <p>Loading articles...</p>
+            </div>
+        }
+        else if (Model?.Articles?.Any() == true)
+        {
+            <div class="finance-hub-results-info">
+                <span><strong>@Model.Articles.Count</strong> @(Model.Articles.Count == 1 ? "article" : "articles")</span>
+            </div>
+            <div class="finance-hub-grid" id="newsGrid">
+                @foreach (var article in Model.Articles)
+                {
+                    <article class="finance-hub-card" data-article-url="@article.Url">
+                        @if (!string.IsNullOrEmpty(article.ImageUrl))
+                        {
+                            <a href="@article.Url" class="finance-hub-card-img-link" target="_blank" rel="noopener noreferrer">
+                                <div class="finance-hub-card-img">
+                                    <img src="@article.ImageUrl" alt="" loading="lazy" onerror="this.parentElement.parentElement.style.display='none'"/>
+                                </div>
+                            </a>
+                        }
+                        <div class="finance-hub-card-body">
+                            <div class="finance-hub-card-meta">
+                                <span class="finance-hub-badge source-badge" title="@article.Source">@article.Source</span>
+                                <span class="finance-hub-badge category-badge">@article.Category</span>
+                            </div>
+                            <h3 class="finance-hub-card-title">
+                                <a href="@article.Url" target="_blank" rel="noopener noreferrer">@article.Title</a>
+                            </h3>
+                            @if (!string.IsNullOrEmpty(article.Description))
+                            {
+                                <p class="finance-hub-card-desc">@article.Description</p>
+                            }
+                            <div class="finance-hub-card-footer">
+                                <time class="finance-hub-card-time" datetime="@article.PublishedAt.ToString("o")" title="@article.PublishedAt.ToString("MMM dd, yyyy 'at' hh:mm tt")">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                    </svg>
+                                    <span class="article-time-label"></span>
+                                </time>
+                                <div class="finance-hub-card-actions">
+                                    <button type="button" class="btn btn-sm finance-hub-save-btn"
+                                            data-title="@article.Title"
+                                            data-url="@article.Url"
+                                            data-source="@article.Source"
+                                            data-category="@article.Category"
+                                            data-image-url="@article.ImageUrl"
+                                            title="Save to watchlist" aria-label="Save article to watchlist">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                                        </svg>
+                                        Save
+                                    </button>
+                                    <a href="@article.Url" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline finance-hub-read-more">
+                                        Read
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
                 }
             </div>
-        </form>
+        }
+        else
+        {
+            <div class="finance-hub-empty">
+                <div class="finance-hub-empty-icon" aria-hidden="true">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Z"/>
+                    </svg>
+                </div>
+                <h3>No articles found</h3>
+                <p>Try adjusting your search or filter criteria.</p>
+                <a href="@Url.Action("Index", "News")" class="btn btn-primary">View All News</a>
+            </div>
+        }
     </div>
 
-    <!-- Active Filters -->
-    @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory) || !string.IsNullOrEmpty(Model.SelectedSource))
-    {
-        <div class="news-active-filters">
-            <span class="news-active-filters-label">Active filters:</span>
-            @if (!string.IsNullOrEmpty(Model.SearchQuery))
-            {
-                <a href="@Url.Action("Index", "News", new { category = Model.SelectedCategory, source = Model.SelectedSource })" 
-                   class="news-filter-tag">
-                    Search: "@Model.SearchQuery"
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </a>
-            }
-            @if (!string.IsNullOrEmpty(Model.SelectedCategory))
-            {
-                <a href="@Url.Action("Index", "News", new { search = Model.SearchQuery, source = Model.SelectedSource })" 
-                   class="news-filter-tag">
-                    @Model.SelectedCategory
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </a>
-            }
-            @if (!string.IsNullOrEmpty(Model.SelectedSource))
-            {
-                <a href="@Url.Action("Index", "News", new { search = Model.SearchQuery, category = Model.SelectedCategory })" 
-                   class="news-filter-tag">
-                    @Model.SelectedSource
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </a>
-            }
-        </div>
-    }
-
-    @* Loading State *@
-    @if (Model.IsLoading)
-    {
-        <div class="news-loading">
-            <div class="news-loading-spinner" role="status" aria-label="Loading news articles">
-                <span class="visually-hidden">Loading...</span>
+    <!-- ==================== BUDGET PLANNER PANEL ==================== -->
+    <div class="finance-hub-panel" id="panel-budget" role="tabpanel" aria-labelledby="tab-budget">
+        <div class="budget-planner">
+            <div class="budget-planner-header">
+                <h2>Budget Planner</h2>
+                <p>Allocate your monthly income across spending categories. Adjust the sliders and see your budget break down in real time.</p>
             </div>
-            <p class="news-loading-text">Loading finance news...</p>
-        </div>
-    }
-    @* Articles Grid *@
-    else if (Model?.Articles?.Any() == true)
-    {
-        <div class="news-results-info">
-            <span class="news-results-count">
-                <strong>@Model.Articles.Count</strong> @(Model.Articles.Count == 1 ? "article" : "articles") found
-            </span>
-            <span class="news-results-sort">
-                Sorted by newest
-            </span>
-        </div>
 
-        <div class="news-grid">
-            @foreach (var article in Model.Articles)
-            {
-                <article class="news-card">
-                    @if (!string.IsNullOrEmpty(article.ImageUrl))
-                    {
-                        <a href="@article.Url" class="news-card-image-link" target="_blank" rel="noopener noreferrer">
-                            <div class="news-card-image">
-                                <img src="@article.ImageUrl" alt="" loading="lazy" 
-                                     onerror="this.parentElement.parentElement.style.display='none'"/>
-                            </div>
-                        </a>
-                    }
-                    <div class="news-card-body">
-                        <div class="news-card-header">
-                            <span class="news-source-badge" title="@article.Source">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/>
-                                </svg>
-                                @article.Source
-                            </span>
-                            <span class="news-category-badge">@article.Category</span>
+            <div class="budget-planner-layout">
+                <!-- Left: Sliders -->
+                <div class="budget-sliders-panel">
+                    <div class="budget-income-section">
+                        <label for="monthlyIncome" class="budget-income-label">Monthly Income ($)</label>
+                        <input type="number" id="monthlyIncome" class="form-control budget-income-input" value="5000" min="0" step="100"/>
+                    </div>
+
+                    <div class="budget-categories" id="budgetCategories">
+                        <!-- Sliders will be generated by JS -->
+                    </div>
+
+                    <div class="budget-total-bar">
+                        <div class="budget-total-label">
+                            <span>Total Allocated</span>
+                            <span id="budgetTotalPercent">0%</span>
                         </div>
-                        <h3 class="news-card-title">
-                            <a href="@article.Url" target="_blank" rel="noopener noreferrer">
-                                @article.Title
-                            </a>
-                        </h3>
-                        @if (!string.IsNullOrEmpty(article.Description))
-                        {
-                            <p class="news-card-description">@article.Description</p>
-                        }
-                        <div class="news-card-footer">
-                            <time class="news-card-time" datetime="@article.PublishedAt.ToString("o")" title="@article.PublishedAt.ToString("MMM dd, yyyy 'at' hh:mm tt")">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                                </svg>
-                            </time>
-                            <a href="@article.Url" target="_blank" rel="noopener noreferrer" class="news-read-more" aria-label="Read full article: @article.Title">
-                                Read full article
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-                                </svg>
-                            </a>
+                        <div class="budget-total-track">
+                            <div class="budget-total-fill" id="budgetTotalFill" style="width: 0%"></div>
+                        </div>
+                        <div class="budget-total-amount" id="budgetTotalAmount">$0 of $5,000</div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary budget-save-btn" id="budgetSaveBtn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        Save Budget
+                    </button>
+                    <span class="budget-save-status" id="budgetSaveStatus"></span>
+                </div>
+
+                <!-- Right: Donut Chart -->
+                <div class="budget-chart-panel">
+                    <canvas id="budgetChart" width="320" height="320"></canvas>
+                    <div class="budget-chart-legend" id="budgetChartLegend"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SAVINGS GOALS PANEL ==================== -->
+    <div class="finance-hub-panel" id="panel-savings" role="tabpanel" aria-labelledby="tab-savings">
+        <div class="savings-goals-section">
+            <div class="savings-goals-header">
+                <h2>Savings Goals</h2>
+                <p>Track your progress toward financial milestones.</p>
+                <button type="button" class="btn btn-primary" id="addGoalBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add Goal
+                </button>
+            </div>
+
+            <div id="savingsGoalsList" class="savings-goals-grid">
+                <!-- Goals loaded via JS -->
+            </div>
+
+            <!-- Add Goal Modal -->
+            <div class="modal fade" id="addGoalModal" tabindex="-1" aria-labelledby="addGoalModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addGoalModalLabel">New Savings Goal</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="goalName" class="form-label">Goal Name</label>
+                                <input type="text" class="form-control" id="goalName" placeholder="e.g., Emergency Fund"/>
+                            </div>
+                            <div class="mb-3">
+                                <label for="goalTarget" class="form-label">Target Amount ($)</label>
+                                <input type="number" class="form-control" id="goalTarget" value="10000" min="1" step="100"/>
+                            </div>
+                            <div class="mb-3">
+                                <label for="goalCurrent" class="form-label">Current Amount ($)</label>
+                                <input type="number" class="form-control" id="goalCurrent" value="0" min="0" step="50"/>
+                            </div>
+                            <div class="mb-3">
+                                <label for="goalDescription" class="form-label">Description (optional)</label>
+                                <textarea class="form-control" id="goalDescription" rows="2" placeholder="What's this goal for?"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="goalTargetDate" class="form-label">Target Date (optional)</label>
+                                <input type="date" class="form-control" id="goalTargetDate"/>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="createGoalBtn">Create Goal</button>
                         </div>
                     </div>
-                </article>
-            }
-        </div>
-    }
-    @* Empty State *@
-    else
-    {
-        <div class="news-empty">
-            <div class="news-empty-icon" aria-hidden="true">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/>
-                </svg>
+                </div>
             </div>
-            <h3 class="news-empty-title">No articles found</h3>
-            <p class="news-empty-text">Try adjusting your search or filter criteria to find what you're looking for.</p>
-            <a href="@Url.Action("Index", "News")" class="btn btn-primary">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 9 9 9 9 0 0 1-9 9 9 9 0 0 1-9-9z"/>
-                    <path d="M3 3v9h9"/>
-                    <path d="M12 12l9 9"/>
-                </svg>
-                View All News
-            </a>
         </div>
-    }
+    </div>
+
+    <!-- ==================== INVESTMENT CALCULATOR PANEL ==================== -->
+    <div class="finance-hub-panel" id="panel-calculator" role="tabpanel" aria-labelledby="tab-calculator">
+        <div class="investment-calculator">
+            <div class="investment-calc-header">
+                <h2>Compound Growth Calculator</h2>
+                <p>See how your investments can grow over time with compound interest.</p>
+            </div>
+
+            <div class="investment-calc-layout">
+                <div class="investment-calc-inputs">
+                    <div class="mb-3">
+                        <label for="calcInitial" class="form-label">Initial Investment ($)</label>
+                        <input type="range" class="form-range" id="calcInitialRange" min="0" max="500000" step="1000" value="10000"/>
+                        <div class="investment-calc-value" id="calcInitialValue">$10,000</div>
+                        <input type="number" class="form-control mt-1" id="calcInitial" value="10000" min="0" step="1000"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="calcMonthly" class="form-label">Monthly Contribution ($)</label>
+                        <input type="range" class="form-range" id="calcMonthlyRange" min="0" max="10000" step="50" value="500"/>
+                        <div class="investment-calc-value" id="calcMonthlyValue">$500</div>
+                        <input type="number" class="form-control mt-1" id="calcMonthly" value="500" min="0" step="50"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="calcRate" class="form-label">Annual Return Rate (%)</label>
+                        <input type="range" class="form-range" id="calcRateRange" min="1" max="15" step="0.5" value="7"/>
+                        <div class="investment-calc-value" id="calcRateValue">7%</div>
+                        <input type="number" class="form-control mt-1" id="calcRate" value="7" min="1" max="15" step="0.5"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="calcYears" class="form-label">Time Period (years)</label>
+                        <input type="range" class="form-range" id="calcYearsRange" min="1" max="50" step="1" value="20"/>
+                        <div class="investment-calc-value" id="calcYearsValue">20 years</div>
+                        <input type="number" class="form-control mt-1" id="calcYears" value="20" min="1" max="50" step="1"/>
+                    </div>
+                </div>
+
+                <div class="investment-calc-results">
+                    <div class="investment-calc-result-card">
+                        <div class="investment-calc-result-label">Future Value</div>
+                        <div class="investment-calc-result-value" id="calcFutureValue">$0</div>
+                    </div>
+                    <div class="investment-calc-result-card">
+                        <div class="investment-calc-result-label">Total Contributions</div>
+                        <div class="investment-calc-result-value" id="calcTotalContributions">$0</div>
+                    </div>
+                    <div class="investment-calc-result-card">
+                        <div class="investment-calc-result-label">Total Interest Earned</div>
+                        <div class="investment-calc-result-value" id="calcTotalInterest">$0</div>
+                    </div>
+                    <div class="investment-calc-chart-container">
+                        <canvas id="calcChart" width="400" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== WATCHLIST PANEL ==================== -->
+    <div class="finance-hub-panel" id="panel-watchlist" role="tabpanel" aria-labelledby="tab-watchlist">
+        <div class="watchlist-section">
+            <div class="watchlist-header">
+                <h2>My Watchlist</h2>
+                <p>Articles you've saved for later reading.</p>
+            </div>
+            <div id="watchlistGrid" class="watchlist-grid">
+                <!-- Loaded via JS -->
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {

@@ -75,6 +75,21 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<CommunityStoryLike> CommunityStoryLikes => Set<CommunityStoryLike>();
 
     /// <summary>
+    /// User budget allocations table set.
+    /// </summary>
+    public DbSet<UserBudgetAllocation> UserBudgetAllocations => Set<UserBudgetAllocation>();
+
+    /// <summary>
+    /// User savings goals table set.
+    /// </summary>
+    public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
+
+    /// <summary>
+    /// User saved articles (watchlist) table set.
+    /// </summary>
+    public DbSet<SavedArticle> SavedArticles => Set<SavedArticle>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -303,6 +318,59 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
             entity.HasIndex(e => new { e.UserId, e.StoryId }).IsUnique();
             entity.HasIndex(e => e.StoryId);
+        });
+
+        // --- Personal Finance entities ---
+
+        // Configure UserBudgetAllocation entity
+        modelBuilder.Entity<UserBudgetAllocation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Period).IsRequired().HasMaxLength(10);
+            entity.HasIndex(e => new { e.UserId, e.Period }).IsUnique();
+            const int decPrec = 18;
+            const int decScale = 2;
+            entity.Property(e => e.MonthlyIncome).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.HousingPercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.FoodPercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.TransportationPercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.UtilitiesPercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.InsurancePercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.HealthcarePercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.SavingsPercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.DebtRepaymentPercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.EntertainmentPercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.MiscellaneousPercent).HasPrecision(decPrec, decScale);
+        });
+
+        // Configure SavingsGoal entity
+        modelBuilder.Entity<SavingsGoal>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => e.UserId);
+            const int decPrec2 = 18;
+            const int decScale2 = 2;
+            entity.Property(e => e.TargetAmount).HasPrecision(decPrec2, decScale2);
+            entity.Property(e => e.CurrentAmount).HasPrecision(decPrec2, decScale2);
+        });
+
+        // Configure SavedArticle entity
+        modelBuilder.Entity<SavedArticle>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Url).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Source).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.Property(e => e.ImageUrl).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.UserId, e.Url }).IsUnique();
+            entity.HasIndex(e => e.UserId);
         });
     }
 }

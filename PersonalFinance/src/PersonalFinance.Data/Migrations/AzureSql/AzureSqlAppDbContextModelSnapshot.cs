@@ -38,7 +38,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasKey("Id");
 
-                    b.ToTable("DataProtectionKeys");
+                    b.ToTable("DataProtectionKeys", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -301,7 +301,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("PollId");
 
-                    b.ToTable("CommunityComments");
+                    b.ToTable("CommunityComments", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityCommentLike", b =>
@@ -330,7 +330,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("UserId", "CommentId")
                         .IsUnique();
 
-                    b.ToTable("CommunityCommentLikes");
+                    b.ToTable("CommunityCommentLikes", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPoll", b =>
@@ -373,7 +373,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("PollCode")
                         .IsUnique();
 
-                    b.ToTable("CommunityPolls");
+                    b.ToTable("CommunityPolls", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPollOption", b =>
@@ -399,7 +399,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("PollId");
 
-                    b.ToTable("CommunityPollOptions");
+                    b.ToTable("CommunityPollOptions", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPollVote", b =>
@@ -434,7 +434,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .IsUnique()
                         .HasFilter("[PollId] IS NOT NULL");
 
-                    b.ToTable("CommunityPollVotes");
+                    b.ToTable("CommunityPollVotes", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStory", b =>
@@ -501,7 +501,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("PublishedAtUtc");
 
-                    b.ToTable("CommunityStories");
+                    b.ToTable("CommunityStories", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStoryLike", b =>
@@ -530,7 +530,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("UserId", "StoryId")
                         .IsUnique();
 
-                    b.ToTable("CommunityStoryLikes");
+                    b.ToTable("CommunityStoryLikes", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveCachedFile", b =>
@@ -610,7 +610,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("ConnectionId", "DriveFileId");
 
-                    b.ToTable("GoogleDriveCachedFiles");
+                    b.ToTable("GoogleDriveCachedFiles", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveConnection", b =>
@@ -673,7 +673,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("UserId", "FolderId");
 
-                    b.ToTable("GoogleDriveConnections");
+                    b.ToTable("GoogleDriveConnections", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.Item", b =>
@@ -703,7 +703,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("CreatedAtUtc");
 
-                    b.ToTable("Items");
+                    b.ToTable("Items", (string)null);
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.NetWorthParameters", b =>
@@ -765,7 +765,183 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("NetWorthParameters");
+                    b.ToTable("NetWorthParameters", (string)null);
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.SavedArticle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("SavedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Url")
+                        .IsUnique();
+
+                    b.ToTable("SavedArticles");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.SavingsGoal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("CurrentAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("TargetAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("TargetDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SavingsGoals");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.UserBudgetAllocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("DebtRepaymentPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("EntertainmentPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("FoodPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("HealthcarePercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("HousingPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("InsurancePercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MiscellaneousPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MonthlyIncome")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal>("SavingsPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TransportationPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("UtilitiesPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Period")
+                        .IsUnique();
+
+                    b.ToTable("UserBudgetAllocations");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

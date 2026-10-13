@@ -21,6 +21,11 @@ public sealed class NewsViewModel
     public List<string> Categories { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the personal finance categories for filtering (Budgeting, Saving, Investing, Debt, Retirement).
+    /// </summary>
+    public List<string> PersonalFinanceCategories { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the currently selected category filter value.
     /// </summary>
     public string? SelectedCategory { get; set; }

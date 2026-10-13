@@ -77,6 +77,11 @@ public interface INewsService
     /// Returns a defensive copy of the configured news sources.
     /// </summary>
     List<NewsSource> GetAvailableSources();
+
+    /// <summary>
+    /// Returns the list of personal finance categories for filtering.
+    /// </summary>
+    List<string> GetPersonalFinanceCategories();
 }
 
 /// <summary>
@@ -95,6 +100,9 @@ public sealed class NewsService : INewsService
     private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
     private readonly object _cacheLock = new();
 
+    // Personal finance categories for filtering
+    private readonly List<string> _personalFinanceCategories;
+
     // Pre-compiled regex for HTML stripping — avoids recompilation on every call
     private static readonly Regex HtmlStripRegex = new("<.*?>", RegexOptions.Compiled);
 
@@ -104,15 +112,25 @@ public sealed class NewsService : INewsService
         _logger = logger;
         _httpClient.Timeout = TimeSpan.FromSeconds(5);
 
-        // Configure free finance news RSS sources — reduced to fastest/most reliable sources
+        // Configure personal finance RSS sources — focused on budgeting, saving, investing, debt, retirement
         _sources = new List<NewsSource>
         {
-            new() { Name = "CNN Business", Url = "https://rss.cnn.com/rss/money_latest.rss", Category = "General", Type = "rss" },
-            new() { Name = "MarketWatch", Url = "https://feeds.content.dowjones.io/public/rss/mw_topstories", Category = "Markets", Type = "rss" },
-            new() { Name = "NPR Business", Url = "https://feeds.npr.org/1001/business/rss", Category = "General", Type = "rss" },
+            // Budgeting & Saving
+            new() { Name = "NPR Personal Finance", Url = "https://feeds.npr.org/510305/podcast.xml", Category = "Budgeting", Type = "rss" },
+            new() { Name = "CNN Business", Url = "https://rss.cnn.com/rss/money_latest.rss", Category = "Budgeting", Type = "rss" },
+            // Investing
+            new() { Name = "Investopedia", Url = "https://www.investopedia.com/news/rssFeedType.latest/rss", Category = "Investing", Type = "rss" },
+            new() { Name = "MarketWatch", Url = "https://feeds.content.dowjones.io/public/rss/mw_topstories", Category = "Investing", Type = "rss" },
+            // Retirement & Planning
+            new() { Name = "Forbes Finance", Url = "https://feeds.feedburner.com/Forbes/finance-wires", Category = "Retirement", Type = "rss" },
+            // General Finance
             new() { Name = "BBC Business", Url = "http://feeds.bbci.co.uk/news/business/rss.xml", Category = "General", Type = "rss" },
-            new() { Name = "Investopedia", Url = "https://www.investopedia.com/news/rssFeedType.latest/rss", Category = "Education", Type = "rss" },
-            new() { Name = "Forbes Finance", Url = "https://feeds.feedburner.com/Forbes/finance-wires", Category = "Finance", Type = "rss" }
+        };
+
+        // Personal finance categories for filtering
+        _personalFinanceCategories = new List<string>
+        {
+            "Budgeting", "Saving", "Investing", "Debt", "Retirement"
         };
     }
 
@@ -155,6 +173,12 @@ public sealed class NewsService : INewsService
     public List<NewsSource> GetAvailableSources()
     {
         return new List<NewsSource>(_sources);
+    }
+
+    /// <inheritdoc />
+    public List<string> GetPersonalFinanceCategories()
+    {
+        return new List<string>(_personalFinanceCategories);
     }
 
     /// <summary>
