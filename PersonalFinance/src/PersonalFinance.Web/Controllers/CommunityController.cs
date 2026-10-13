@@ -87,7 +87,7 @@ public sealed class CommunityController : Controller
             {
                 success = true,
                 message = "Thanks for voting!",
-                poll = MapPollToViewModel(updatedPoll),
+                poll = updatedPoll != null ? MapPollToViewModel(updatedPoll) : null,
             });
         }
         catch (Exception ex)

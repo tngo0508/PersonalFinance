@@ -26,6 +26,8 @@
         <!-- ASP.NET Core Identity EF Core Store & Data Protection -->
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore"/>
         <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore"/>
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection"/>
+        <PackageReference Include="System.Security.Cryptography.Xml"/>
     </ItemGroup>
 
 </Project>

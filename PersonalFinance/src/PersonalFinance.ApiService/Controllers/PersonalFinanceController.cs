@@ -30,9 +30,13 @@ public class PersonalFinanceController : ControllerBase
     /// </summary>
     private string GetUserId()
     {
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId) && !string.IsNullOrEmpty(userId))
+        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
         {
-            return userId;
+            var value = userId.First();
+            if (!string.IsNullOrEmpty(value))
+            {
+                return value;
+            }
         }
 
         return "anonymous";

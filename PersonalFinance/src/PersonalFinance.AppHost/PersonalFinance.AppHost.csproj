@@ -9,6 +9,7 @@
         <Nullable>enable</Nullable>
         <IsAspireHost>true</IsAspireHost>
         <UserSecretsId>personalfinance-apphost-secrets</UserSecretsId>
+        <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
