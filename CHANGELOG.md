@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-12
+
+### Added
+- **Finance News Aggregation**:
+  - Added a News page with interactive finance news aggregation and display.
+  - Implemented `NewsService` in `PersonalFinance.Web` for fetching and caching finance news articles.
+  - Added `NewsController` with MVC actions and API integration.
+  - Created `NewsViewModel` and supporting models (`NewsQueryOptions`, `NewsRefreshResponse`) for structured news data.
+  - Added dedicated styling in `wwwroot/css/news.css` and client-side logic in `wwwroot/js/news/news.js`.
+
+- **Community Features**:
+  - Added community page with polls, comments, and stories for user engagement.
+  - Implemented `CommunityController` in both `PersonalFinance.ApiService` (backend API) and `PersonalFinance.Web` (MVC frontend).
+  - Added community data entities: `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote`, `CommunityComment`, `CommunityCommentLike`, `CommunityStory`, and `CommunityStoryLike`.
+  - Added `ICommunityApi` Refit client contract and `CommunityDto` for cross-layer communication.
+  - Created `CommunityViewModel` for structured community data presentation.
+  - Added dedicated styling in `wwwroot/css/community.css` and client-side logic in `wwwroot/js/community.js`.
+
+- **Personal Finance Planning Entities**:
+  - Added `SavingsGoal` entity for tracking user savings targets and progress.
+  - Added `UserBudgetAllocation` entity for managing budget category allocations.
+  - Added `SavedArticle` entity for bookmarking and saving articles.
+  - Implemented `IPersonalFinanceApi` Refit client contract with comprehensive DTOs.
+  - Added `PersonalFinanceController` in both ApiService and Web layers.
+
+- **Database Migrations**:
+  - Added migration `AddCommunityEntities` for community polls, comments, and related tables.
+  - Added migration `UpdateNetWorthParametersDecimalPrecision` for improved financial calculation precision.
+  - Added migration `AddCommunityStories` for community story entities.
+  - Added migration `AddPersonalFinanceEntities` for savings goals, budget allocations, and saved articles.
+
+- **Documentation**:
+  - Added comprehensive `.NET Core MVC` best practices guidelines to `AGENTS.md` covering architecture, naming conventions, JavaScript/ESLint rules, and feature implementation protocol.
+  - Added version management guidelines to `AGENTS.md` for consistent semantic versioning.
+  - Reorganized project documentation under `docs/` directory with centralized `README.md`.
+
+### Changed
+- **Identity Dependency Refactoring**: Removed identity dependency and streamlined user scoping for simplified architecture.
+- **OpenTelemetry & Security Dependencies**: Upgraded OpenTelemetry packages and added security-related dependencies in `Directory.Packages.props`.
+- **Navigation Updates**: Added News and Community links to the main navigation in `_Layout.cshtml`.
+- **Time Display**: Added `TimeAgoTagHelper` for relative time display across the application.
+
 ## [1.4.1] - 2026-10-12
 
 ### Changed
