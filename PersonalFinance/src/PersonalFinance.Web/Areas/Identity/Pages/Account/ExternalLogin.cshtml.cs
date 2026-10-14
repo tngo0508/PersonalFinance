@@ -84,7 +84,7 @@ public class ExternalLoginModel : PageModel
             if (user != null)
             {
                 await SynchronizeCustomClaimsAsync(user, info.Principal);
-                await _signInManager.RefreshSignInAsync(user);
+                await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
             }
             return LocalRedirect(returnUrl);
         }
