@@ -23,7 +23,7 @@
         chatButton.className = 'ai-chat-button';
         chatButton.setAttribute('aria-label', 'Open AI Assistant');
         chatButton.setAttribute('title', 'AI Assistant');
-        chatButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16"><path d="M2.937 5.624a3 3 0 1 1 5.875 0A3 3 0 0 1 2.937 5.624zm7.5 0a3 3 0 1 1 5.875 0 3 3 0 0 1-5.875 0zM2.937 13a3 3 0 1 1 5.875 0 3 3 0 0 1-5.875 0zm7.5 0a3 3 0 1 1 5.875 0 3 3 0 0 1-5.875 0z"/><path d="M8 1a7 7 0 0 0-7 7v1a2 2 0 0 0 2 2h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-1a2 2 0 0 0-2-2V8a7 7 0 0 1 14 0v1a2 2 0 0 0 2 2h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1a2 2 0 0 0 2-2V8a7 7 0 0 0-7-7z"/></svg>';
+        chatButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414a1 1 0 0 0-.707.293L1.586 13.293A1 1 0 0 1 .293 13H0V2a1 1 0 0 1 1-1h13zm-1-1H1a2 2 0 0 0-2 2v10a2 2 0 0 0 .586 1.414l2.707 2.707A2 2 0 0 0 5.293 16H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H13z"/><path d="M3 4.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/></svg>';
 
         // Create the chat panel
         const chatPanel = document.createElement('div');
@@ -48,7 +48,7 @@
                     '<div class="input-group">' +
                         '<input type="text" class="form-control" id="ai-chat-input" placeholder="Ask me anything about your finances..." aria-label="Chat message" />' +
                         '<button type="submit" class="btn btn-primary" id="ai-chat-send" disabled>' +
-                            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.5.5 0 0 1-.888.022L9.5 12.5l-4.5 2.5a.5.5 0 0 1-.722-.447l1.433-7.166L.146 1.854a.5.5 0 0 1 .54-.11l7.166 1.433 2.5-4.5a.5.5 0 0 1 .447-.227l7.166-1.433z"/></svg>' +
+                            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15zm-1.833 1.89L6.637 10.07l-.295-.06a.76.76 0 0 0-.155 0H5.29L.42.924l13.68.752z"/></svg>' +
                         '</button>' +
                     '</div>' +
                 '</form>' +
