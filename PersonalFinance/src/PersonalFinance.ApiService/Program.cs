@@ -68,6 +68,9 @@ try
     builder.Services.AddScoped<IWatchlistService, WatchlistService>();
     builder.Services.AddScoped<ICommunityService, CommunityService>();
 
+    // 5c. Register AI Assistant service for OpenAI chat integration
+    builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
+
     // 5c. Register MediatR for CQRS pattern - scans the assembly for handlers
     builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
 

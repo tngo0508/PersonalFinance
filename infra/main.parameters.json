@@ -32,6 +32,9 @@
     "googleDriveApiKey": {
       "value": ""
     },
+    "openAiApiKey": {
+      "value": ""
+    },
     "deploySqlDatabase": {
       "value": true
     },

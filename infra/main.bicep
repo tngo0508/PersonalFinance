@@ -39,6 +39,10 @@ param brevoSenderName string = 'PersonalFinance'
 @secure()
 param googleDriveApiKey string = ''
 
+@description('OpenAI API key for the AI Assistant feature')
+@secure()
+param openAiApiKey string = ''
+
 @description('Whether to provision Azure SQL Database Basic tier (~$4.90/month, 2 GB storage, 5 DTUs)')
 param deploySqlDatabase bool = true
 
@@ -161,6 +165,7 @@ module apiService 'modules/api-service.bicep' = {
     containerImage: apiImage
     googleDriveApiKey: googleDriveApiKey
     dbConnectionString: effectiveConnectionString
+    openAiApiKey: openAiApiKey
     exposePublicly: exposeApiPublicly
     enableScheduledScaling: enableScheduledScaling
     businessHoursStartHour: businessHoursStartHour

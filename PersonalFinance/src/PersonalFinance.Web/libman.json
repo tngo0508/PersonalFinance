@@ -92,7 +92,10 @@
     {
       "library": "@fluentui/tokens@1.0.0-alpha.23",
       "provider": "jsdelivr",
-      "destination": "wwwroot/lib/@fluentui/tokens"
+      "destination": "wwwroot/lib/@fluentui/tokens",
+      "files": [
+        "lib/themes/web/lightTheme.js"
+      ]
     }
   ]
 }

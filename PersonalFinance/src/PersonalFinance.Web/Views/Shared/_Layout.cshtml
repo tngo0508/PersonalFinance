@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/ai-chat-widget.css" asp-append-version="true"/>
     <script type="module">
         import { setTheme } from '/lib/@@fluentui/web-components/dist/web-components.min.js';
         import { webLightTheme } from '/lib/@@fluentui/tokens/lib/themes/web/lightTheme.js';
@@ -107,6 +108,10 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/core/utils.js" asp-append-version="true"></script>
     <script src="~/js/core/site.js" asp-append-version="true"></script>
+    @if (isSignedIn)
+    {
+        <script src="~/js/core/ai-chat-widget.js" asp-append-version="true"></script>
+    }
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

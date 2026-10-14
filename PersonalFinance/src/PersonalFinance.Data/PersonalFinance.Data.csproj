@@ -28,6 +28,7 @@
         <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore"/>
         <PackageReference Include="Microsoft.AspNetCore.DataProtection"/>
         <PackageReference Include="System.Security.Cryptography.Xml"/>
+        <PackageReference Include="System.Security.Cryptography.Pkcs"/>
     </ItemGroup>
 
 </Project>
