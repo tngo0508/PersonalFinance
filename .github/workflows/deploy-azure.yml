@@ -314,6 +314,7 @@ jobs:
             brevoSenderEmail=${{ vars.BREVO_SENDER_EMAIL || 'tngo0508@gmail.com' }}
             brevoSenderName=${{ vars.BREVO_SENDER_NAME || 'PersonalFinance' }}
             googleDriveApiKey=${{ secrets.GOOGLE_DRIVE_API_KEY }}
+            openAiApiKey=${{ secrets.OPENAI_API_KEY }}
             deploySqlDatabase=${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}
             sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
             customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}

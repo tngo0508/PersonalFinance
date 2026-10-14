@@ -88,19 +88,53 @@ By default, the AI assistant uses `gpt-4o-mini`. You can customize the model and
 
 ### Production Environment (Azure)
 
-For production deployment on Azure, configure the API key as an **environment variable** or through **Azure Key Vault**:
+For production deployment on Azure, configure the API key using one of the following methods:
 
-#### Option 1: Environment Variable
+#### Option 1: GitHub Actions Pipeline (Recommended)
 
-Set the environment variable in your Azure Container Apps configuration:
+The project's GitHub Actions deployment pipeline automatically passes the OpenAI API key from GitHub Secrets to Azure during deployment. To configure it:
+
+1. Go to your GitHub repository **Settings** → **Secrets and variables** → **Actions**.
+2. Click **New repository secret**.
+3. Enter the name: **`OPENAI_API_KEY`**.
+4. Paste your OpenAI API key as the value.
+5. Click **Add secret**.
+
+The pipeline will automatically pass the key to the Bicep deployment as a secure parameter. The key is stored as a **Container Apps managed secret** and exposed to the API service container as the `OpenAI__ApiKey` environment variable. The double underscore (`__`) is the .NET configuration convention for nested keys, mapping to `OpenAI:ApiKey` in the application.
+
+#### Option 2: Bicep Deployment (Manual)
+
+If deploying manually (not via GitHub Actions), pass your API key as a parameter:
 
 ```bash
-OpenAI__ApiKey=sk-proj-your-api-key-here
+# Using azd (Azure Developer CLI)
+azd deploy --param openAiApiKey="sk-proj-your-api-key-here"
+
+# Using Azure CLI directly
+az deployment group create `
+  --resource-group <your-resource-group> `
+  --template-file infra/main.bicep `
+  --parameters infra/main.parameters.json `
+  --parameters openAiApiKey="sk-proj-your-api-key-here"
 ```
 
-Note the double underscore (`__`) which is the .NET configuration convention for nested keys.
+The key is stored as a **Container Apps managed secret** and exposed to the API service container as the `OpenAI__ApiKey` environment variable.
 
-#### Option 2: Azure Key Vault (Recommended)
+#### Option 3: Azure Portal Manual Configuration
+
+If you've already deployed and want to add the key without redeploying:
+
+1. Go to the [Azure Portal](https://portal.azure.com).
+2. Navigate to your **Container Apps** resource group.
+3. Open the **API Service** Container App (named `api-pf-prod-...`).
+4. Go to **Settings** > **Environment variables**.
+5. Click **Add** and create a new secret-linked environment variable:
+   - **Name:** `OpenAI__ApiKey`
+   - **Value:** Your OpenAI API key
+   - Alternatively, use the **Secrets** tab to add the secret first, then reference it.
+6. Click **Apply** and **Restart** the Container App.
+
+#### Option 4: Azure Key Vault (Enterprise)
 
 1. Store the API key in Azure Key Vault as a secret (e.g., `openai-api-key`).
 2. Reference the secret in your Azure Container Apps environment variables using Key Vault references.

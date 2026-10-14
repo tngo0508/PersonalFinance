@@ -18,6 +18,10 @@ param googleDriveApiKey string = ''
 @secure()
 param dbConnectionString string = ''
 
+@description('OpenAI API key for the AI Assistant feature')
+@secure()
+param openAiApiKey string = ''
+
 @description('CPU core allocation for the container (Consumption tier minimum: 0.25)')
 param cpu string = '0.25'
 
@@ -63,6 +67,12 @@ var secrets = concat(
       name: 'db-connection-string'
       value: dbConnectionString
     }
+  ] : [],
+  !empty(openAiApiKey) ? [
+    {
+      name: 'openai-api-key'
+      value: openAiApiKey
+    }
   ] : []
 )
 
@@ -95,7 +105,14 @@ var dbEnv = !empty(dbConnectionString) ? [
   }
 ] : []
 
-var containerEnvVars = concat(baseEnv, googleDriveEnv, dbEnv)
+var openAiEnv = !empty(openAiApiKey) ? [
+  {
+    name: 'OpenAI__ApiKey'
+    secretRef: 'openai-api-key'
+  }
+] : []
+
+var containerEnvVars = concat(baseEnv, googleDriveEnv, dbEnv, openAiEnv)
 
 resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
