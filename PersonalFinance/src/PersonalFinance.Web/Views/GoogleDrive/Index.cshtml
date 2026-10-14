@@ -1338,28 +1338,92 @@
 @section Styles {
     <link rel="stylesheet" href="~/lib/datatables-bs5/dataTables.bootstrap5.min.css"/>
     <style>
-        /* DataTables pagination layout */
+        /* DataTables footer layout */
+        .dt-layout-row {
+            display: flex !important;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
         .dt-layout-row .dataTables_info {
             color: #6c757d;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             white-space: nowrap;
+            line-height: 1.5;
         }
         .dt-layout-row .dataTables_length {
             color: #6c757d;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
         }
         .dt-layout-row .dataTables_length label {
             margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        /* DataTables length dropdown - match DataTables' actual DOM structure */
+        div.dt-container div.dt-length select {
+            width: auto;
+            display: inline-block;
+            margin-right: 0.5em;
+            font-size: 0.85rem;
+            padding: 0.25rem 1.75rem 0.25rem 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            background-color: #fff;
+            color: #495057;
+            min-width: 65px;
+            height: auto;
+            line-height: 1.5;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 16px 12px;
+            overflow: visible;
+            white-space: nowrap;
         }
         .dt-layout-row .dataTables_paginate {
             margin: 0;
         }
         .dt-layout-row .dataTables_paginate .pagination {
             margin: 0;
+            gap: 0.125rem;
+        }
+        .dt-layout-row .dataTables_paginate .pagination .page-item {
+            margin: 0;
         }
         .dt-layout-row .dataTables_paginate .pagination .page-item .page-link {
-            font-size: 0.875rem;
-            padding: 0.25rem 0.6rem;
+            font-size: 0.85rem;
+            padding: 0.35rem 0.6rem;
+            line-height: 1.5;
+            min-width: 2rem;
+            text-align: center;
+            color: #6c757d;
+            border-color: #dee2e6;
+            background-color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+        }
+        .dt-layout-row .dataTables_paginate .pagination .page-item .page-link svg,
+        .dt-layout-row .dataTables_paginate .pagination .page-item .page-link span {
+            vertical-align: middle;
+            line-height: 1.5;
+        }
+        .dt-layout-row .dataTables_paginate .pagination .page-item.active .page-link {
+            color: #fff;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .dt-layout-row .dataTables_paginate .pagination .page-item.disabled .page-link {
+            color: #adb5bd;
+            background-color: #fff;
         }
     </style>
 }
