@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-10-14
+
+### Fixed
+- **External Login Authentication Error**: Replaced `RefreshSignInAsync` with `SignInAsync` in `ExternalLogin.cshtml.cs` to resolve the "RefreshSignInAsync prevented because the user is not currently authenticated" error during Google OAuth login callback.
+
 ## [1.5.0] - 2026-10-12
 
 ### Added
