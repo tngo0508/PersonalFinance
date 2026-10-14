@@ -27,10 +27,12 @@
   padding: 0;
 }
 
-.ai-chat-button svg {
+.ai-chat-button svg,
+.ai-chat-icon {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  display: block;
 }
 
 .ai-chat-button:hover {
@@ -254,9 +256,11 @@
   justify-content: center;
 }
 
-.ai-chat-input .btn-primary svg {
+.ai-chat-input .btn-primary svg,
+.ai-chat-send-icon {
   width: 16px;
   height: 16px;
+  display: block;
 }
 
 .ai-chat-input .btn-primary:disabled {
@@ -282,7 +286,8 @@
     height: 52px;
   }
 
-  .ai-chat-button svg {
+  .ai-chat-button svg,
+  .ai-chat-icon {
     width: 20px;
     height: 20px;
   }
