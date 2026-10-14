@@ -39,6 +39,9 @@
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
         <PackageReference Include="Microsoft.OpenApi" />
+
+        <!-- OpenAI SDK for AI Assistant -->
+        <PackageReference Include="OpenAI" />
     </ItemGroup>
 
 </Project>

@@ -205,6 +205,16 @@ try
         .AddHttpMessageHandler<UserIdForwardingHandler>()
         .AddStandardResilienceHandler();
 
+    // 7d. Register AI Assistant API client for chat integration
+    builder.Services.AddRefitClient<IAiAssistantApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
     var app = builder.Build();
 
     // 7. Enable Serilog HTTP request logging

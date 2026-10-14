@@ -1,0 +1,299 @@
+/* ==========================================================================
+   AI Assistant Chat Widget Styles (ai-chat-*)
+   Fluent UI Design System
+   ========================================================================== */
+
+/* ==========================================================================
+   Floating Chat Button
+   ========================================================================== */
+
+.ai-chat-button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: 50%;
+  background: var(--app-brand, #0078d4);
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: var(--app-shadow-8, 0 0.5rem 1rem rgba(0, 0, 0, 0.1));
+  transition: all 0.2s ease;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-chat-button:hover {
+  background: var(--app-brand-hover, #106ebe);
+  transform: scale(1.05);
+  box-shadow: var(--app-shadow-16, 0 1rem 2rem rgba(0, 0, 0, 0.11));
+}
+
+.ai-chat-button:active {
+  background: var(--app-brand-pressed, #005a9e);
+  transform: scale(0.95);
+}
+
+.ai-chat-button-active {
+  background: var(--app-brand-pressed, #005a9e);
+  transform: rotate(90deg);
+}
+
+/* ==========================================================================
+   Chat Panel
+   ========================================================================== */
+
+.ai-chat-panel {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  height: 520px;
+  max-height: calc(100vh - 140px);
+  background: var(--app-surface, #ffffff);
+  border: 1px solid var(--app-border, #e1dfdd);
+  border-radius: var(--app-radius-l, 12px);
+  box-shadow: var(--app-shadow-32, 0 2rem 4rem rgba(0, 0, 0, 0.12));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1050;
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.ai-chat-panel-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* ==========================================================================
+   Chat Header
+   ========================================================================== */
+
+.ai-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--app-brand, #0078d4);
+  color: #fff;
+  border-bottom: none;
+}
+
+.ai-chat-header h5 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: var(--app-font-weight-semibold, 600);
+  color: #fff;
+}
+
+.ai-chat-header .btn-close {
+  filter: invert(1);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.ai-chat-header .btn-close:hover {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   Chat Messages Area
+   ========================================================================== */
+
+.ai-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--app-surface-secondary, #faf9f8);
+}
+
+.ai-chat-message {
+  display: flex;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-chat-message-user {
+  justify-content: flex-end;
+}
+
+.ai-chat-message-assistant {
+  justify-content: flex-start;
+}
+
+.ai-chat-bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: var(--app-radius-m, 8px);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.ai-chat-message-user .ai-chat-bubble {
+  background: var(--app-brand, #0078d4);
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.ai-chat-message-assistant .ai-chat-bubble {
+  background: var(--app-surface, #ffffff);
+  color: var(--app-text, #201f1e);
+  border: 1px solid var(--app-border, #e1dfdd);
+  border-bottom-left-radius: 2px;
+}
+
+/* ==========================================================================
+   Typing Indicator
+   ========================================================================== */
+
+.ai-chat-typing-bubble {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+}
+
+.ai-chat-typing-bubble span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--app-text-muted, #605e5c);
+  animation: typing 1.4s infinite;
+}
+
+.ai-chat-typing-bubble span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ai-chat-typing-bubble span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   Quick Actions
+   ========================================================================== */
+
+.ai-chat-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--app-surface, #ffffff);
+  border-top: 1px solid var(--app-border, #e1dfdd);
+}
+
+.ai-chat-quick-actions .quick-action {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: var(--app-radius-s, 4px);
+}
+
+/* ==========================================================================
+   Chat Input Area
+   ========================================================================== */
+
+.ai-chat-input {
+  padding: 12px 16px;
+  background: var(--app-surface, #ffffff);
+  border-top: 1px solid var(--app-border, #e1dfdd);
+}
+
+.ai-chat-input .form-control {
+  font-size: 0.875rem;
+  border-radius: var(--app-radius-s, 4px) 0 0 var(--app-radius-s, 4px);
+}
+
+.ai-chat-input .btn-primary {
+  border-radius: 0 var(--app-radius-s, 4px) var(--app-radius-s, 4px) 0;
+  padding: 8px 12px;
+}
+
+.ai-chat-input .btn-primary:disabled {
+  opacity: 0.65;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 480px) {
+  .ai-chat-panel {
+    width: calc(100vw - 16px);
+    right: 8px;
+    bottom: 90px;
+    height: calc(100vh - 110px);
+  }
+
+  .ai-chat-button {
+    bottom: 16px;
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    font-size: 1.25rem;
+  }
+
+  .ai-chat-quick-actions {
+    padding: 8px 12px;
+  }
+
+  .ai-chat-quick-actions .quick-action {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
+}
+
+/* ==========================================================================
+   Scrollbar Styling
+   ========================================================================== */
+
+.ai-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-chat-messages::-webkit-scrollbar-thumb {
+  background: var(--app-border, #e1dfdd);
+  border-radius: 3px;
+}
+
+.ai-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: var(--app-border-hover, #c8c6c4);
+}
