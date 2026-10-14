@@ -62,6 +62,23 @@
     }
 
     /**
+     * Convert markdown text to safe HTML for assistant messages.
+     * @param {string} markdown - The markdown text to convert.
+     * @returns {string} - The sanitized HTML string.
+     */
+    function renderMarkdown(markdown) {
+        if (typeof marked !== 'undefined') {
+            try {
+                return marked.parse(markdown, { async: false });
+            } catch (e) {
+                // Fall back to plain text if parsing fails
+            }
+        }
+        // Fallback: convert newlines to <br> for basic formatting
+        return markdown.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+    }
+
+    /**
      * Add a message to the chat panel.
      * @param {string} role - The role of the message ("user" or "assistant").
      * @param {string} content - The message content.
@@ -76,7 +93,12 @@
 
         const bubbleDiv = document.createElement('div');
         bubbleDiv.className = 'ai-chat-bubble';
-        bubbleDiv.textContent = content;
+
+        if (role === 'assistant') {
+            bubbleDiv.innerHTML = renderMarkdown(content);
+        } else {
+            bubbleDiv.textContent = content;
+        }
 
         messageDiv.appendChild(bubbleDiv);
         messagesContainer.appendChild(messageDiv);

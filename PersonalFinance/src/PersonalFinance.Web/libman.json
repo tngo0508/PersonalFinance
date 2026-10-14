@@ -96,6 +96,13 @@
       "files": [
         "lib/themes/web/lightTheme.js"
       ]
+    },
+    {
+      "library": "marked@15.0.6",
+      "destination": "wwwroot/lib/marked",
+      "files": [
+        "marked.min.js"
+      ]
     }
   ]
 }
