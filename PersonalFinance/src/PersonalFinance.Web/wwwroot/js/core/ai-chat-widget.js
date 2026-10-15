@@ -1,304 +1,426 @@
 /**
- * Floating AI Assistant Chat Widget.
- * Provides a chat bubble button that opens a chat panel for interacting with the AI assistant.
+ * AI Assistant Chat Widget.
+ * A floating chat panel that provides AI-powered personal finance insights
+ * with contextual quick actions and a clean, modern interface.
  */
 (function () {
     'use strict';
 
-    const chatState = {
+    const API_ENDPOINT = '/api/AiAssistant/chat';
+    const MAX_HISTORY = 20;
+    const MAX_HISTORY_SENT = 10;
+
+    const state = {
         isOpen: false,
         isLoading: false,
-        conversationHistory: [],
-        messageCount: 0
+        history: [],
+        hasInteracted: false
     };
 
     /**
-     * Create the chat widget HTML elements and append them to the body.
-     * @returns {void}
+     * Quick action suggestions grouped by context.
+     * @type {Array<{icon: string, label: string, message: string}>}
      */
-    function createWidget() {
-        // Create the floating button
-        const chatButton = document.createElement('button');
-        chatButton.id = 'ai-chat-button';
-        chatButton.className = 'ai-chat-button';
-        chatButton.setAttribute('aria-label', 'Open AI Assistant');
-        chatButton.setAttribute('title', 'AI Assistant');
-        chatButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="ai-chat-icon bi bi-robot" viewBox="0 0 16 16" fill="currentColor"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"/><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"/></svg>';
+    const QUICK_ACTIONS = [
+        {
+            icon: '📊',
+            label: 'Analyze my budget',
+            message: 'Analyze my budget allocations and show me spending patterns.'
+        },
+        {icon: '💰', label: 'Savings tips', message: 'Suggest areas where I can reduce spending to save more money.'},
+        {
+            icon: '📈',
+            label: 'Net worth outlook',
+            message: 'Based on my current finances, project my net worth over the next 5 years.'
+        },
+        {icon: '🎯', label: 'Budget planning', message: 'Help me apply the 50/30/20 budgeting rule to my finances.'},
+        {icon: '🔍', label: 'Spending patterns', message: 'Review my recent transactions and identify spending trends.'},
+        {icon: '🏦', label: 'Retirement check', message: 'Help me understand if I\'m on track for retirement.'}
+    ];
 
-        // Create the chat panel
-        const chatPanel = document.createElement('div');
-        chatPanel.id = 'ai-chat-panel';
-        chatPanel.className = 'ai-chat-panel';
-        chatPanel.setAttribute('role', 'dialog');
-        chatPanel.setAttribute('aria-label', 'AI Assistant Chat');
+    /**
+     * Context-aware greeting messages per page.
+     */
+    const PAGE_GREETINGS = {
+        GoogleDrive: 'I can help analyze your budget, review transactions, and plan your finances.',
+        Networth: 'I can help project your future net worth, break down assets, and track progress.',
+        News: 'I can help analyze your budget, review transactions, and plan your finances.',
+        Community: 'I can help analyze your budget, review transactions, and plan your finances.',
+        Home: 'I can help you analyze your budget, review transactions, create a budget plan, and project your net worth.'
+    };
 
-        chatPanel.innerHTML =
-            '<div class="ai-chat-header">' +
-                '<h5 class="mb-0">AI Assistant</h5>' +
-                '<button type="button" class="btn-close" id="ai-chat-close" aria-label="Close"></button>' +
-            '</div>' +
-            '<div class="ai-chat-messages" id="ai-chat-messages"></div>' +
-            '<div class="ai-chat-quick-actions" id="ai-chat-quick-actions">' +
-                '<button type="button" class="btn btn-sm btn-outline-primary quick-action" data-message="Analyze my budget allocations">Analyze my budget</button>' +
-                '<button type="button" class="btn btn-sm btn-outline-primary quick-action" data-message="Review my net worth progress">Review net worth</button>' +
-                '<button type="button" class="btn btn-sm btn-outline-primary quick-action" data-message="Give me savings tips">Savings tips</button>' +
-            '</div>' +
-            '<div class="ai-chat-input">' +
-                '<form id="ai-chat-form">' +
-                    '<div class="input-group">' +
-                        '<input type="text" class="form-control" id="ai-chat-input" placeholder="Ask me anything about your finances..." aria-label="Chat message" />' +
-                        '<button type="submit" class="btn btn-primary" id="ai-chat-send" disabled>' +
-                            '<svg xmlns="http://www.w3.org/2000/svg" class="ai-chat-send-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15zm-1.833 1.89L6.637 10.07l-.295-.06a.76.76 0 0 0-.155 0H5.29L.42.924l13.68.752z"/></svg>' +
-                        '</button>' +
-                    '</div>' +
-                '</form>' +
-            '</div>';
+    /**
+     * Detect the current page context from the URL path.
+     * @returns {string}
+     */
+    function detectPageContext() {
+        const path = window.location.pathname;
+        if (path.indexOf('/GoogleDrive') >= 0) return 'GoogleDrive';
+        if (path.indexOf('/Networth') >= 0) return 'Networth';
+        if (path.indexOf('/News') >= 0) return 'News';
+        if (path.indexOf('/Community') >= 0) return 'Community';
+        return 'Home';
+    }
 
-        document.body.appendChild(chatButton);
-        document.body.appendChild(chatPanel);
+    /**
+     * Get a contextual greeting based on the current page.
+     * @returns {string}
+     */
+    function getGreeting() {
+        return PAGE_GREETINGS[detectPageContext()] || PAGE_GREETINGS.Home;
+    }
 
-        // Add welcome message
-        addMessage('assistant', 'Hello! I\'m your personal finance assistant. How can I help you today?');
+    /**
+     * Escape HTML special characters for safe insertion.
+     * @param {string} text
+     * @returns {string}
+     */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Escape special characters for HTML attribute values.
+     * @param {string} text
+     * @returns {string}
+     */
+    function escapeAttr(text) {
+        return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     /**
      * Convert markdown text to safe HTML for assistant messages.
-     * @param {string} markdown - The markdown text to convert.
-     * @returns {string} - The sanitized HTML string.
+     * @param {string} markdown
+     * @returns {string}
      */
     function renderMarkdown(markdown) {
         if (typeof marked !== 'undefined') {
             try {
                 return marked.parse(markdown, { async: false });
-            } catch (e) {
-                // Fall back to plain text if parsing fails
+            } catch (_e) {
+                // Fall through to plain-text fallback
             }
         }
-        // Fallback: convert newlines to <br> for basic formatting
         return markdown.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     }
 
     /**
-     * Add a message to the chat panel.
-     * @param {string} role - The role of the message ("user" or "assistant").
-     * @param {string} content - The message content.
-     * @returns {void}
+     * Build the complete widget DOM and append it to the body.
+     */
+    function createWidget() {
+        // Floating action button
+        const button = document.createElement('button');
+        button.id = 'ai-chat-button';
+        button.className = 'ai-chat-button';
+        button.setAttribute('aria-label', 'Open AI Assistant');
+        button.setAttribute('title', 'AI Assistant');
+        button.innerHTML =
+            '<svg class="ai-chat-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">'
+            + '<path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.472a.235.235 0 0 0-.42.022A4.357 4.357 0 0 1 6 8.529v.061a.236.236 0 0 0 .18.228 3.52 3.52 0 0 1 .952.24c.26.138.483.3.592.516.233.457.271.982.096 1.438A.236.236 0 0 0 7.64 11h.088a.236.236 0 0 0 .225-.168.236.236 0 0 0 .236-.202c.039-.315.014-.626-.059-.919a.236.236 0 0 0-.164-.184.236.236 0 0 0-.184.157c-.053.173-.086.353-.11.527a.236.236 0 0 0 .134.936.236.236 0 0 0 .225.168h.088z"/>'
+            + '<path d="M8 1.5c-.253 0-.497.1-.68.28L7.5 2v1.5l-.12.12A1.5 1.5 0 0 0 6 5v1a1.5 1.5 0 0 0 1.5 1.5h1A1.5 1.5 0 0 0 10 6V5a1.5 1.5 0 0 0-.38-1.38L9.5 3.5V2l-.12-.12A1.5 1.5 0 0 0 8 1.5z"/>'
+            + '</svg>'
+            + '<span class="ai-chat-button-close" aria-hidden="true">&times;</span>';
+
+        // Chat panel
+        const panel = document.createElement('div');
+        panel.id = 'ai-chat-panel';
+        panel.className = 'ai-chat-panel';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-label', 'AI Assistant Chat');
+        panel.setAttribute('aria-hidden', 'true');
+
+        panel.innerHTML =
+            '<div class="ai-chat-header">'
+            + '  <div class="ai-chat-header-info">'
+            + '    <span class="ai-chat-header-dot" aria-hidden="true"></span>'
+            + '    <span class="ai-chat-header-title">AI Assistant</span>'
+            + '  </div>'
+            + '  <div class="ai-chat-header-actions">'
+            + '    <button type="button" class="ai-chat-btn-icon" id="ai-chat-reset" title="New chat" aria-label="Start new chat">'
+            + '      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">'
+            + '        <path d="M11.534 7h3.932a.235.235 0 0 1 .193.383l-1.932 2.222A1.162 1.162 0 0 1 12.866 10H11.5a2.5 2.5 0 0 1-2.5-2.5V4.5a.5.5 0 0 1 1 0v3A1.5 1.5 0 0 0 11.5 9z"/>'
+            + '        <path d="M3.717 11H2.5a.5.5 0 0 1 0-1h1.217A11.974 11.974 0 0 1 1 8c0-2.507.956-4.794 2.517-6.432a.473.473 0 0 1 .692.647A10.974 10.974 0 0 0 2 8a10.974 10.974 0 0 0 2.217 6.783z"/>'
+            + '      </svg>'
+            + '    </button>'
+            + '    <button type="button" class="ai-chat-btn-icon" id="ai-chat-close" title="Close" aria-label="Close">'
+            + '      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">'
+            + '        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>'
+            + '      </svg>'
+            + '    </button>'
+            + '  </div>'
+            + '</div>'
+            + '<div class="ai-chat-body" id="ai-chat-messages"></div>'
+            + '<div class="ai-chat-footer">'
+            + '  <form id="ai-chat-form" class="ai-chat-form">'
+            + '    <input type="text" class="ai-chat-input" id="ai-chat-input" placeholder="Ask about your finances..." aria-label="Chat message" autocomplete="off" />'
+            + '    <button type="submit" class="ai-chat-send-btn" id="ai-chat-send" disabled aria-label="Send message">'
+            + '      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">'
+            + '        <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15zm-1.833 1.89L6.637 10.07l-.295-.06a.76.76 0 0 0-.155 0H5.29L.42.924l13.68.752z"/>'
+            + '      </svg>'
+            + '    </button>'
+            + '  </form>'
+            + '</div>';
+
+        document.body.appendChild(button);
+        document.body.appendChild(panel);
+    }
+
+    /**
+     * Render the welcome screen with quick action chips.
+     */
+    function renderWelcome() {
+        const container = document.getElementById('ai-chat-messages');
+        if (!container) return;
+
+        const greeting = getGreeting();
+        let html =
+            '<div class="ai-chat-welcome">'
+            + '  <div class="ai-chat-welcome-icon" aria-hidden="true">💡</div>'
+            + '  <p class="ai-chat-welcome-text">' + escapeHtml(greeting) + '</p>'
+            + '  <p class="ai-chat-welcome-hint">Pick a topic or type your own question</p>'
+            + '</div>';
+
+        html += '<div class="ai-chat-quick-actions">';
+        QUICK_ACTIONS.forEach(function (action, index) {
+            html += '<button type="button" class="ai-chat-chip" data-index="' + index + '">'
+                + '<span class="ai-chat-chip-icon" aria-hidden="true">' + action.icon + '</span>'
+                + '<span>' + escapeHtml(action.label) + '</span>'
+                + '</button>';
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
+        container.scrollTop = 0;
+    }
+
+    /**
+     * Add a chat message bubble to the conversation.
+     * @param {string} role - "user" or "assistant"
+     * @param {string} content
      */
     function addMessage(role, content) {
-        const messagesContainer = document.getElementById('ai-chat-messages');
-        if (!messagesContainer) return;
+        const container = document.getElementById('ai-chat-messages');
+        if (!container) return;
 
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'ai-chat-message ai-chat-message-' + role;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'ai-chat-message ai-chat-message-' + role;
 
-        const bubbleDiv = document.createElement('div');
-        bubbleDiv.className = 'ai-chat-bubble';
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-chat-bubble';
 
         if (role === 'assistant') {
-            bubbleDiv.innerHTML = renderMarkdown(content);
+            bubble.innerHTML = renderMarkdown(content);
         } else {
-            bubbleDiv.textContent = content;
+            bubble.textContent = content;
         }
 
-        messageDiv.appendChild(bubbleDiv);
-        messagesContainer.appendChild(messageDiv);
+        wrapper.appendChild(bubble);
+        container.appendChild(wrapper);
+        container.scrollTop = container.scrollHeight;
 
-        // Scroll to bottom
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        // Add to conversation history (limit to last 20 messages)
-        chatState.conversationHistory.push({ role: role, content: content });
-        if (chatState.conversationHistory.length > 20) {
-            chatState.conversationHistory = chatState.conversationHistory.slice(-20);
+        // Keep conversation history bounded
+        state.history.push({role: role, content: content});
+        if (state.history.length > MAX_HISTORY) {
+            state.history = state.history.slice(-MAX_HISTORY);
         }
-
-        chatState.messageCount++;
     }
 
     /**
-     * Show a typing indicator in the chat panel.
-     * @returns {void}
+     * Show the animated typing indicator.
      */
-    function showTypingIndicator() {
-        const messagesContainer = document.getElementById('ai-chat-messages');
-        if (!messagesContainer) return;
+    function showTyping() {
+        const container = document.getElementById('ai-chat-messages');
+        if (!container) return;
 
-        const typingDiv = document.createElement('div');
-        typingDiv.className = 'ai-chat-message ai-chat-message-assistant';
-        typingDiv.id = 'ai-chat-typing';
-
-        const bubbleDiv = document.createElement('div');
-        bubbleDiv.className = 'ai-chat-bubble ai-chat-typing-bubble';
-        bubbleDiv.innerHTML = '<span></span><span></span><span></span>';
-
-        typingDiv.appendChild(bubbleDiv);
-        messagesContainer.appendChild(typingDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        const el = document.createElement('div');
+        el.className = 'ai-chat-message ai-chat-message-assistant';
+        el.id = 'ai-chat-typing';
+        el.innerHTML = '<div class="ai-chat-bubble ai-chat-typing"><span></span><span></span><span></span></div>';
+        container.appendChild(el);
+        container.scrollTop = container.scrollHeight;
     }
 
     /**
-     * Remove the typing indicator from the chat panel.
-     * @returns {void}
+     * Remove the typing indicator.
      */
-    function removeTypingIndicator() {
-        const typingIndicator = document.getElementById('ai-chat-typing');
-        if (typingIndicator) {
-            typingIndicator.remove();
-        }
+    function hideTyping() {
+        const el = document.getElementById('ai-chat-typing');
+        if (el) el.remove();
     }
 
     /**
-     * Send a message to the AI assistant.
-     * @param {string} message - The user's message.
-     * @returns {void}
+     * Send a message to the AI backend.
+     * @param {string} message
      */
     async function sendMessage(message) {
-        if (chatState.isLoading || !message.trim()) return;
+        if (state.isLoading || !message.trim()) return;
+        state.isLoading = true;
 
-        chatState.isLoading = true;
-
-        // Disable input and button
         const input = document.getElementById('ai-chat-input');
-        const sendButton = document.getElementById('ai-chat-send');
+        const sendBtn = document.getElementById('ai-chat-send');
         if (input) input.disabled = true;
-        if (sendButton) sendButton.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
 
-        // Add user message to chat
+        // Clear welcome and show conversation
+        const container = document.getElementById('ai-chat-messages');
+        if (container) container.innerHTML = '';
+        state.hasInteracted = true;
+
         addMessage('user', message);
-
-        // Clear input
         if (input) input.value = '';
-
-        // Show typing indicator
-        showTypingIndicator();
+        showTyping();
 
         try {
-            const response = await fetch('/api/AiAssistant/chat', {
+            const historyToSend = state.history.slice(-MAX_HISTORY_SENT);
+            const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     message: message,
-                    conversationHistory: chatState.conversationHistory
+                    conversationHistory: historyToSend
                 })
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to get response from AI assistant');
-            }
+            if (!response.ok) throw new Error('API request failed');
 
             const data = await response.json();
-            removeTypingIndicator();
+            hideTyping();
             addMessage('assistant', data.response);
-        } catch (error) {
-            removeTypingIndicator();
+        } catch (_error) {
+            hideTyping();
             addMessage('assistant', 'I\'m sorry, I encountered an error. Please try again later.');
         } finally {
-            chatState.isLoading = false;
+            state.isLoading = false;
             if (input) input.disabled = false;
-            if (sendButton) sendButton.disabled = !input.value.trim();
+            if (sendBtn) sendBtn.disabled = !input || !input.value.trim();
         }
     }
 
     /**
-     * Toggle the chat panel open/closed.
-     * @returns {void}
+     * Open the chat panel.
      */
-    function toggleChat() {
+    function openChat() {
         const panel = document.getElementById('ai-chat-panel');
         const button = document.getElementById('ai-chat-button');
         if (!panel || !button) return;
 
-        chatState.isOpen = !chatState.isOpen;
+        state.isOpen = true;
+        panel.classList.add('ai-chat-panel-open');
+        panel.setAttribute('aria-hidden', 'false');
+        button.classList.add('ai-chat-button-active');
 
-        if (chatState.isOpen) {
-            panel.classList.add('ai-chat-panel-open');
-            button.classList.add('ai-chat-button-active');
-            const input = document.getElementById('ai-chat-input');
-            if (input) input.focus();
-        } else {
-            panel.classList.remove('ai-chat-panel-open');
-            button.classList.remove('ai-chat-button-active');
+        if (!state.hasInteracted) {
+            requestAnimationFrame(renderWelcome);
         }
+
+        const input = document.getElementById('ai-chat-input');
+        if (input) input.focus();
     }
 
     /**
-     * Initialize event listeners for the chat widget.
-     * @returns {void}
+     * Close the chat panel.
      */
-    function initEventListeners() {
-        // Chat button click
-        const chatButton = document.getElementById('ai-chat-button');
-        if (chatButton) {
-            chatButton.addEventListener('click', toggleChat);
-        }
+    function closeChat() {
+        const panel = document.getElementById('ai-chat-panel');
+        const button = document.getElementById('ai-chat-button');
+        if (!panel || !button) return;
 
-        // Close button click
-        const closeButton = document.getElementById('ai-chat-close');
-        if (closeButton) {
-            closeButton.addEventListener('click', toggleChat);
-        }
+        state.isOpen = false;
+        panel.classList.remove('ai-chat-panel-open');
+        panel.setAttribute('aria-hidden', 'true');
+        button.classList.remove('ai-chat-button-active');
+    }
 
-        // Form submission
+    /**
+     * Toggle the chat panel.
+     */
+    function toggleChat() {
+        state.isOpen ? closeChat() : openChat();
+    }
+
+    /**
+     * Reset the chat to the welcome state.
+     */
+    function resetChat() {
+        state.history = [];
+        state.hasInteracted = false;
+        renderWelcome();
+    }
+
+    /**
+     * Wire up all event listeners.
+     */
+    function initEvents() {
+        const button = document.getElementById('ai-chat-button');
+        const closeBtn = document.getElementById('ai-chat-close');
+        const resetBtn = document.getElementById('ai-chat-reset');
         const form = document.getElementById('ai-chat-form');
+        const input = document.getElementById('ai-chat-input');
+
+        if (button) button.addEventListener('click', toggleChat);
+
+        if (closeBtn) closeBtn.addEventListener('click', closeChat);
+
+        if (resetBtn) resetBtn.addEventListener('click', resetChat);
+
         if (form) {
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                const input = document.getElementById('ai-chat-input');
                 if (input && input.value.trim()) {
                     sendMessage(input.value.trim());
                 }
             });
         }
 
-        // Input field - enable/disable send button
-        const input = document.getElementById('ai-chat-input');
         if (input) {
             input.addEventListener('input', function () {
-                const sendButton = document.getElementById('ai-chat-send');
-                if (sendButton) {
-                    sendButton.disabled = !this.value.trim();
+                const sendBtn = document.getElementById('ai-chat-send');
+                if (sendBtn) sendBtn.disabled = !this.value.trim();
+            });
+        }
+
+        // Delegate chip clicks
+        const messagesContainer = document.getElementById('ai-chat-messages');
+        if (messagesContainer) {
+            messagesContainer.addEventListener('click', function (e) {
+                const chip = e.target.closest('.ai-chat-chip');
+                if (!chip) return;
+                const index = parseInt(chip.getAttribute('data-index'), 10);
+                if (!isNaN(index) && QUICK_ACTIONS[index]) {
+                    sendMessage(QUICK_ACTIONS[index].message);
                 }
             });
         }
 
-        // Quick action buttons
-        const quickActionsContainer = document.getElementById('ai-chat-quick-actions');
-        if (quickActionsContainer) {
-            const quickButtons = quickActionsContainer.querySelectorAll('.quick-action');
-            quickButtons.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    const message = this.getAttribute('data-message');
-                    if (message) {
-                        sendMessage(message);
-                    }
-                });
-            });
-        }
-
-        // Close on Escape key
+        // Escape key closes panel
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && chatState.isOpen) {
-                toggleChat();
-            }
+            if (e.key === 'Escape' && state.isOpen) closeChat();
         });
+
+        // Close on outside click (use capture phase so it runs before inner handlers that may mutate the DOM)
+        document.addEventListener('click', function (e) {
+            if (!state.isOpen) return;
+            const panel = document.getElementById('ai-chat-panel');
+            const button = document.getElementById('ai-chat-button');
+            if (panel && button && !panel.contains(e.target) && !button.contains(e.target)) {
+                closeChat();
+            }
+        }, true);
     }
 
     /**
-     * Initialize the AI chat widget.
-     * @returns {void}
+     * Initialize the widget.
      */
     function init() {
         createWidget();
-        initEventListeners();
+        initEvents();
     }
 
-    // Wait for DOM readiness
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
-
 })();
