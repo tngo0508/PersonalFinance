@@ -1,0 +1,18 @@
+{
+  "name": "personalfinanceapp",
+  "version": "1.0.0",
+  "description": "[![Build, Test, and Deploy to Azure Container Apps](https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml/badge.svg)](https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml)\r [![.NET 10](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)\r [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.64.1"
+  }
+}
