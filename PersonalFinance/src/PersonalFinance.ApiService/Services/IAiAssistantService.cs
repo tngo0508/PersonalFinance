@@ -14,5 +14,16 @@ public interface IAiAssistantService
     /// <param name="request">The chat request containing the message and optional conversation history.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The AI assistant's response.</returns>
-    Task<AiChatResponseDto> SendChatMessageAsync(string userId, AiChatRequestDto request, CancellationToken cancellationToken = default);
+    Task<AiChatResponseDto> SendChatMessageAsync(string userId, AiChatRequestDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Summarizes a news article using the AI assistant.
+    /// </summary>
+    /// <param name="userId">The user's ID for rate limiting.</param>
+    /// <param name="request">The summary request containing the article title and description.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The AI-generated summary response.</returns>
+    Task<NewsArticleSummaryResponseDto> SummarizeArticleAsync(string userId, NewsArticleSummaryRequestDto request,
+        CancellationToken cancellationToken = default);
 }

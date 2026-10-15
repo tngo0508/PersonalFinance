@@ -1,14 +1,11 @@
 using FluentValidation;
-using MediatR;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI;
-using Microsoft.EntityFrameworkCore;
-using Scalar.AspNetCore;
-using Serilog;
-using Serilog.Sinks.SystemConsole.Themes;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
+using Scalar.AspNetCore;
+using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
 
 // 1. Bootstrap early logging to capture any startup or DI registration failures
 Log.Logger = new LoggerConfiguration()
@@ -28,12 +25,12 @@ try
 
     // 3. Configure Serilog full logging pipeline with non-blocking async console sink and OpenTelemetry forwarding
     builder.Host.UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .WriteTo.Async(a => a.Console(
-            theme: AnsiConsoleTheme.Code,
-            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .WriteTo.Async(a => a.Console(
+                theme: AnsiConsoleTheme.Code,
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
         writeToProviders: true);
 
     // 3. Register EF Core DbContext with environment-driven provider (Azure SQL Serverless / SQLite)
@@ -41,11 +38,11 @@ try
 
     // 3a. Register ASP.NET Core Identity for user management in API controllers
     builder.Services.AddDefaultIdentity<IdentityUser>(options =>
-    {
-        options.SignIn.RequireConfirmedAccount = true;
-        options.User.RequireUniqueEmail = true;
-    })
-    .AddEntityFrameworkStores<AppDbContext>();
+        {
+            options.SignIn.RequireConfirmedAccount = true;
+            options.User.RequireUniqueEmail = true;
+        })
+        .AddEntityFrameworkStores<AppDbContext>();
 
     // 4. Standard RFC 7807 ProblemDetails for standardized error responses
     builder.Services.AddProblemDetails();
@@ -70,6 +67,9 @@ try
 
     // 5c. Register AI Assistant service for OpenAI chat integration
     builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
+
+    // 5d. Register Rate Limiter service for per-user request throttling
+    builder.Services.AddSingleton<IRateLimiterService, RateLimiterService>();
 
     // 5c. Register MediatR for CQRS pattern - scans the assembly for handlers
     builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());

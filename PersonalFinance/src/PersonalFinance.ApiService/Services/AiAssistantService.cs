@@ -17,15 +17,18 @@ public class AiAssistantService : IAiAssistantService
     private readonly IGoogleDriveService _googleDriveService;
     private readonly ILogger<AiAssistantService> _logger;
     private readonly string _modelName;
+    private readonly IRateLimiterService _rateLimiterService;
 
     public AiAssistantService(
         AppDbContext dbContext,
         IGoogleDriveService googleDriveService,
+        IRateLimiterService rateLimiterService,
         ILogger<AiAssistantService> logger,
         IConfiguration configuration)
     {
         _dbContext = dbContext;
         _googleDriveService = googleDriveService;
+        _rateLimiterService = rateLimiterService;
         _logger = logger;
         _configuration = configuration;
         _modelName = configuration.GetValue<string>("OpenAI:Model") ?? "gpt-4o-mini";
@@ -106,6 +109,82 @@ public class AiAssistantService : IAiAssistantService
             return new AiChatResponseDto
             {
                 Response = "I'm sorry, I encountered an error processing your request. Please try again later.",
+                Model = _modelName,
+                TimestampUtc = DateTime.UtcNow
+            };
+        }
+    }
+
+    public async Task<NewsArticleSummaryResponseDto> SummarizeArticleAsync(string userId,
+        NewsArticleSummaryRequestDto request, CancellationToken cancellationToken = default)
+    {
+        // Check rate limit
+        if (!_rateLimiterService.TryAllow(userId))
+        {
+            _logger.LogWarning("Rate limit exceeded for user {UserId} on summarize endpoint.", userId);
+            throw new InvalidOperationException("Rate limit exceeded. Please try again later.");
+        }
+
+        var apiKey = _configuration.GetValue<string>("OpenAI:ApiKey");
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            _logger.LogWarning("OpenAI API key is not configured. Returning a fallback summary.");
+            return new NewsArticleSummaryResponseDto
+            {
+                Summary =
+                    "AI summarization is currently unavailable. Please configure the OpenAI API key to enable this feature.",
+                Model = _modelName,
+                TimestampUtc = DateTime.UtcNow
+            };
+        }
+
+        try
+        {
+            // Truncate description to avoid excessive token usage
+            var description = string.IsNullOrEmpty(request.Description)
+                ? string.Empty
+                : request.Description.Length > 4000
+                    ? request.Description.Substring(0, 4000) + "..."
+                    : request.Description;
+
+            // Build the system prompt — news only, no financial advice
+            var systemPrompt =
+                "You are a helpful news summarizer. Summarize the following news article in 2-3 concise sentences in plain English. " +
+                "Focus on the key facts and main points. Do not provide financial advice or recommendations.";
+
+            // Create the OpenAI client
+            var client = new OpenAIClient(apiKey);
+            var chatClient = client.GetChatClient(_modelName);
+
+            // Build the user message with title and description
+            var userMessage = $"Title: {request.Title}\n\nDescription: {description}";
+
+            var messages = new List<ChatMessage>
+            {
+                new SystemChatMessage(systemPrompt),
+                new UserChatMessage(userMessage)
+            };
+
+            // Send the request to OpenAI
+            var response = await chatClient.CompleteChatAsync(messages, cancellationToken: cancellationToken);
+
+            var summaryText = response.Value.Content[0]?.Text ?? "Unable to generate a summary at this time.";
+
+            _logger.LogInformation("User {UserId} summarized a news article. Model: {Model}", userId, _modelName);
+
+            return new NewsArticleSummaryResponseDto
+            {
+                Summary = summaryText,
+                Model = _modelName,
+                TimestampUtc = DateTime.UtcNow
+            };
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException)
+        {
+            _logger.LogError(ex, "Error summarizing news article for user {UserId}", userId);
+            return new NewsArticleSummaryResponseDto
+            {
+                Summary = "I'm sorry, I encountered an error generating the summary. Please try again later.",
                 Model = _modelName,
                 TimestampUtc = DateTime.UtcNow
             };

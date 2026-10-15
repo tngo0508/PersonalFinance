@@ -44,7 +44,8 @@ public class AiAssistantController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Chat([FromBody] AiChatRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Chat([FromBody] AiChatRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request?.Message))
         {
@@ -55,5 +56,32 @@ public class AiAssistantController : ControllerBase
         var response = await _aiAssistantService.SendChatMessageAsync(userId, request, cancellationToken);
 
         return Ok(response);
+    }
+
+    /// <summary>
+    ///     Summarizes a news article using the AI assistant.
+    /// </summary>
+    [HttpPost("summarize")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Summarize([FromBody] NewsArticleSummaryRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Title)) return BadRequest(new { error = "Title is required." });
+
+        var userId = GetUserId();
+
+        try
+        {
+            var response = await _aiAssistantService.SummarizeArticleAsync(userId, request, cancellationToken);
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests,
+                new { error = "Rate limit exceeded. Please try again later." });
+        }
     }
 }

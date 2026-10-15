@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -55,7 +54,28 @@ public class AiAssistantController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending chat message to AI assistant for user {UserId}", GetCurrentUserId());
-            return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to get response from AI assistant." });
+            return StatusCode(StatusCodes.Status502BadGateway,
+                new { error = "Failed to get response from AI assistant." });
+        }
+    }
+
+    /// <summary>
+    ///     Summarizes a news article using the AI assistant.
+    /// </summary>
+    [HttpPost("summarize")]
+    public async Task<IActionResult> Summarize([FromBody] NewsArticleSummaryRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Title)) return BadRequest(new { error = "Title is required." });
+
+        try
+        {
+            var response = await _aiAssistantApi.SummarizeArticleAsync(request);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error summarizing news article for user {UserId}", GetCurrentUserId());
+            return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to generate summary." });
         }
     }
 }
