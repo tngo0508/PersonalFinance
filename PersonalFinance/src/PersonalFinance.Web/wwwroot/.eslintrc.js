@@ -14,7 +14,8 @@ module.exports = {
         $: 'readonly',
         Chart: 'readonly',
         DataTable: 'readonly',
-        bootstrap: 'readonly'
+        bootstrap: 'readonly',
+        marked: 'readonly'
     },
     parserOptions: {
         ecmaVersion: 2022

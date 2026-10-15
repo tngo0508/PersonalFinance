@@ -9,6 +9,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.8] - 2026-10-14
+
+### Fixed
+
+- **AI Assistant Workflow Options Unclickable**: Fixed the AI Assistant guided workflow options not responding to
+  clicks.
+  - Increased the chat panel and button z-index from 1060 to 1100 to ensure the panel renders above all page content.
+  - Removed `isolation: isolate` from the chat panel that was interfering with the stacking context.
+  - Cleaned up redundant `pointer-events: auto` declarations that were masking the underlying z-index conflict.
+
+## [1.8.7] - 2026-10-14
+
+### Fixed
+
+- **AI Assistant Workflow Options Unclickable**: Fixed the AI Assistant guided workflow options not responding to
+  clicks.
+  - Added `isolation: isolate` to the chat panel to create a proper stacking context.
+  - Added explicit `pointer-events: auto` to the messages container, workflow categories, and workflow item buttons.
+  - Increased workflow item z-index to 2 to ensure they receive click events above all sibling elements.
+
+## [1.8.6] - 2026-10-14
+
+### Fixed
+
+- **AI Assistant Chat Panel Layout**: Reverted the AI Assistant chat panel from unstable auto-height layout back to a
+  stable fixed height of 520px.
+  - Removed `height: auto` with min/max constraints that were causing layout instability.
+  - Removed the tablet responsive breakpoint (768px) that was adding unnecessary complexity.
+  - Simplified mobile breakpoint to use `height: calc(100vh - 100px)` for full-screen adaptation on small devices.
+
+## [1.8.5] - 2026-10-14
+
+### Fixed
+
+- **AI Assistant Responsive UI**: Fixed the AI Assistant chat panel height and width to be fully responsive across all
+  screen sizes.
+  - Replaced fixed panel height (580px) with auto height using viewport-relative min/max constraints (min-height:
+    400px, max-height: calc (100vh - 110px)).
+  - Added tablet breakpoint (768px) with adjusted panel width and height for medium screens.
+  - Improved mobile breakpoint (480px) with proper min-height and max-height for small screens.
+  - Panel now adapts to available viewport space instead of using rigid fixed dimensions.
+
+## [1.8.4] - 2026-10-14
+
+### Fixed
+
+- **AI Assistant Workflow Options Unclickable**: Fixed the AI Assistant guided workflow options being cut off and
+  unclickable in the chat panel.
+  - Increased the chat panel height from 460px to 580px to provide enough space for all workflow category cards.
+  - Raised the panel and button z-index from 1050 to 1060 to ensure the panel stays above page content.
+
+## [1.8.3] - 2026-10-14
+
+### Fixed
+
+- **AI Assistant Workflow Categories Cut Off**: Fixed the AI Assistant guided workflow categories being clipped and not
+  fully visible in the chat panel.
+  - Changed the chat messages container flex property from `flex: 1` to `flex: 1 1 0` to properly constrain the
+    scrollable area within the fixed-height panel.
+  - Hidden the unused `ai-chat-workflow` and `ai-chat-quick-actions` DOM elements that were consuming flex space and
+    reducing the available height for the scrollable messages area.
+  - Added `overflow-x: hidden` to prevent horizontal overflow.
+
+## [1.8.2] - 2026-10-14
+
+### Fixed
+
+- **AI Assistant Clickability**: Fixed the AI Assistant guided workflow cards not being clickable.
+  - Added `min-height: 0` to the chat messages container to fix flexbox overflow scrolling.
+  - Added `position: relative` and `z-index: 1` to workflow item buttons to ensure they receive click events.
+  - Added box-shadow to workflow category cards for better visual distinction.
+  - Ensured scroll position resets to top when workflow cards are rendered.
+
+## [1.8.1] - 2026-10-14
+
+### Changed
+
+- **AI Assistant Workflow Options**: Updated the AI Assistant guided workflow to include the options users need: Budget
+  Analysis, Transaction Analysis, Budget Planner, and Net Worth Projection.
+  - Replaced "Finance News" and "Financial Planning" categories with "Transaction Analysis" and "Budget Planner".
+  - Added Transaction Analysis options: analyze transactions, find unusual spending, and category breakdown.
+  - Added Budget Planner options: create a budget, apply 50/30/20 rule, and monthly budget review.
+  - Renamed "Net Worth" category to "Net Worth Projection" with options: project net worth, retirement projection, and
+    asset breakdown.
+  - Updated contextual greetings to reflect the new workflow options.
+
+## [1.8.0] - 2026-10-14
+
+### Added
+
+- **AI Assistant Guided Workflow**: Redesigned the AI Assistant chat widget with a guided workflow interface that helps
+  users discover what the AI can do.
+  - Added categorized workflow cards: Budget Analysis, Net Worth, Finance News, and Financial Planning.
+  - Each category contains actionable options with descriptions (e.g., "Analyze my budget" → "Review spending patterns
+    from Google Drive").
+  - Contextual greetings adapt to the current page (Google Drive, Net Worth, News, Community).
+  - Navigation indicators on options that link to specific pages (e.g., budget analysis links to Google Drive).
+  - Chat resets to the guided workflow view when closed, so users always see the options on reopen.
+  - Updated header with subtitle "Your personal finance guide" for clearer purpose.
+
+### Changed
+
+- **AI Assistant UI**: Replaced the generic welcome message and flat quick-action buttons with structured, categorized
+  workflow cards featuring icons, labels, and descriptions.
+- **AI Assistant CSS**: Added new styles for greeting bubbles, workflow category headers, clickable option items,
+  hover/active states, focus-visible accessibility, and responsive mobile adjustments.
+
 ## [1.6.1] - 2026-10-14
 
 ### Fixed
