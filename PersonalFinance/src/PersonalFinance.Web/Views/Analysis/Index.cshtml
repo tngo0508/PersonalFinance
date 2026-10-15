@@ -321,6 +321,22 @@
 
 @section Styles {
     <style>
+        /* Fix dropdown arrow overlap: restore Bootstrap's default right padding for form-select */
+        .analysis-period-selector .form-select {
+            padding-right: 2.25rem;
+        }
+
+        /* Chart container needs explicit height for maintainAspectRatio: false */
+        .analysis-chart-card__canvas {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Canvas fills the container */
+        .analysis-chart-card__canvas canvas {
+            width: 100%;
+        }
+
         .analysis-page-header {
             border-bottom: 1px solid #e9ecef;
             padding-bottom: 1rem;
@@ -467,10 +483,6 @@
             margin-bottom: 1rem;
         }
 
-        .analysis-chart-card__canvas {
-            position: relative;
-        }
-
         .analysis-table th {
             font-size: 0.8rem;
             text-transform: uppercase;
@@ -499,14 +511,21 @@
 }
 
 @section Scripts {
+    @{
+        var jsonOptions = new JsonSerializerOptions
+        {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+    }
     <script src="~/lib/chartjs/chart.umd.min.js"></script>
-    <script src="~/js/analysis/dashboard.js" asp-append-version="true"></script>
     <script>
-        // Pass data to JavaScript for chart rendering
+        // Pass data to JavaScript for chart rendering — must be set before dashboard.js loads
+        // Use camelCase naming policy to match JavaScript property access in dashboard.js
         window.__analysisData = {
-            weeklyTrend: @JsonSerializer.Serialize(Model.WeeklyTrend),
-            trendPoints: @JsonSerializer.Serialize(Model.TrendPoints),
-            categories: @JsonSerializer.Serialize(Model.Categories)
+            weeklyTrend: @Html.Raw(JsonSerializer.Serialize(Model.WeeklyTrend, jsonOptions)),
+            trendPoints: @Html.Raw(JsonSerializer.Serialize(Model.TrendPoints, jsonOptions)),
+            categories: @Html.Raw(JsonSerializer.Serialize(Model.Categories, jsonOptions))
         };
     </script>
+    <script src="~/js/analysis/dashboard.js" asp-append-version="true"></script>
 }

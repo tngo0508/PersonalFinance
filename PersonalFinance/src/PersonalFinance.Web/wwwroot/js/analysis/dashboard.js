@@ -6,7 +6,7 @@
      * @returns {void}
      */
     function init() {
-        var data = window.__analysisData;
+        const data = window.__analysisData;
         if (!data) {
             return;
         }
@@ -22,12 +22,12 @@
      * @returns {void}
      */
     function renderWeeklyTrendChart(weeklyTrend) {
-        var canvas = document.getElementById('weeklyTrendChart');
+        const canvas = document.getElementById('weeklyTrendChart');
         if (!canvas || !weeklyTrend || weeklyTrend.length === 0) {
             return;
         }
 
-        var ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
@@ -46,7 +46,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {display: false},
                     tooltip: {
@@ -80,12 +80,12 @@
      * @returns {void}
      */
     function renderTrendChart(trendPoints) {
-        var canvas = document.getElementById('trendChart');
+        const canvas = document.getElementById('trendChart');
         if (!canvas || !trendPoints || trendPoints.length === 0) {
             return;
         }
 
-        var ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -128,7 +128,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -174,13 +174,13 @@
      * @returns {void}
      */
     function renderCategoryPieChart(categories) {
-        var canvas = document.getElementById('categoryPieChart');
+        const canvas = document.getElementById('categoryPieChart');
         if (!canvas) {
             return;
         }
 
-        var ctx = canvas.getContext('2d');
-        var colors = [
+        const ctx = canvas.getContext('2d');
+        const colors = [
             '#0d6efd', '#198754', '#dc3545', '#ffc107', '#0dcaf0',
             '#6610f2', '#20c997', '#fd7e14', '#6c757d', '#e83e8c',
             '#20c997', '#6f42c1'
@@ -201,7 +201,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -210,12 +210,12 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                var label = context.label || '';
-                                var value = context.parsed;
-                                var total = context.dataset.data.reduce(function (a, b) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce(function (a, b) {
                                     return a + b;
                                 }, 0);
-                                var percentage = ((value / total) * 100).toFixed(1);
+                                const percentage = ((value / total) * 100).toFixed(1);
                                 return label + ': $' + value.toLocaleString() + ' (' + percentage + '%)';
                             }
                         }
@@ -231,12 +231,12 @@
      * @returns {void}
      */
     function renderCategoryBarChart(categories) {
-        var canvas = document.getElementById('categoryBarChart');
+        const canvas = document.getElementById('categoryBarChart');
         if (!canvas) {
             return;
         }
 
-        var ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
@@ -266,7 +266,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: {
                     tooltip: {
