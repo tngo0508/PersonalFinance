@@ -1,0 +1,50 @@
+@model SyncConfirmationViewModel
+
+@{
+    ViewData["Title"] = "Sync Conflict";
+}
+
+<div class="modal fade show" id="syncConflictModal" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">Overwrite existing data?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    The following months from <strong>@Model.FileName</strong> already exist in your analysis database:
+                </p>
+                <ul class="list-group mb-3">
+                    @foreach (var conflict in Model.Conflicts)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>@conflict.MonthName @conflict.Year</span>
+                            <small class="text-muted">Synced @conflict.SyncedAtUtc.ToString("MMM d, yyyy")</small>
+                        </li>
+                    }
+                </ul>
+                <p class="small text-muted mb-0">
+                    Syncing again will replace the existing data with the latest data from your spreadsheet.
+                </p>
+            </div>
+            <div class="modal-footer border-top">
+                <a asp-controller="Analysis" asp-action="Index" class="btn btn-light border">Cancel</a>
+                <form asp-action="ConfirmOverwrite" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="connectionId" value="@Model.ConnectionId"/>
+                    <input type="hidden" name="fileId" value="@Model.FileId"/>
+                    <input type="hidden" name="fileName" value="@Model.FileName"/>
+                    <button type="submit" class="btn btn-warning fw-semibold">Overwrite &amp; Sync</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var modal = new bootstrap.Modal(document.getElementById('syncConflictModal'));
+        modal.show();
+    });
+</script>

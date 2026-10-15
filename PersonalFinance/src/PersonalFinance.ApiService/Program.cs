@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
@@ -44,6 +45,11 @@ try
         })
         .AddEntityFrameworkStores<AppDbContext>();
 
+    // 3b. Register X-User-Id header-based authentication for internal service-to-service calls
+    builder.Services.AddAuthentication(XUserIdAuthenticationDefaults.Scheme)
+        .AddScheme<AuthenticationSchemeOptions, XUserIdAuthenticationHandler>(XUserIdAuthenticationDefaults.Scheme,
+            options => { });
+
     // 4. Standard RFC 7807 ProblemDetails for standardized error responses
     builder.Services.AddProblemDetails();
 
@@ -64,6 +70,7 @@ try
     builder.Services.AddScoped<ISavingsGoalService, SavingsGoalService>();
     builder.Services.AddScoped<IWatchlistService, WatchlistService>();
     builder.Services.AddScoped<ICommunityService, CommunityService>();
+    builder.Services.AddScoped<ISpreadsheetAnalysisService, SpreadsheetAnalysisService>();
 
     // 5c. Register AI Assistant service for OpenAI chat integration
     builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();

@@ -90,6 +90,16 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<SavedArticle> SavedArticles => Set<SavedArticle>();
 
     /// <summary>
+    ///     Spreadsheet budget snapshots table set — stores parsed monthly budget report data for analysis.
+    /// </summary>
+    public DbSet<SpreadsheetBudgetSnapshot> SpreadsheetBudgetSnapshots => Set<SpreadsheetBudgetSnapshot>();
+
+    /// <summary>
+    ///     Spreadsheet transaction records table set — stores individual transactions for analysis.
+    /// </summary>
+    public DbSet<SpreadsheetTransactionRecord> SpreadsheetTransactionRecords => Set<SpreadsheetTransactionRecord>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -103,15 +113,9 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         const int identityKeyMaxLength = 450;
         const int identityLoginTokenMaxLength = 128;
 
-        modelBuilder.Entity<IdentityUser>(entity =>
-        {
-            entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength);
-        });
+        modelBuilder.Entity<IdentityUser>(entity => { entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength); });
 
-        modelBuilder.Entity<IdentityRole>(entity =>
-        {
-            entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength);
-        });
+        modelBuilder.Entity<IdentityRole>(entity => { entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength); });
 
         modelBuilder.Entity<IdentityUserLogin<string>>(entity =>
         {
@@ -371,6 +375,70 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.ImageUrl).HasMaxLength(2000);
             entity.HasIndex(e => new { e.UserId, e.Url }).IsUnique();
             entity.HasIndex(e => e.UserId);
+        });
+
+        // --- Spreadsheet Analysis entities ---
+
+        // Configure SpreadsheetBudgetSnapshot entity
+        modelBuilder.Entity<SpreadsheetBudgetSnapshot>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.FileId).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.MonthName).IsRequired().HasMaxLength(20);
+            const int decPrec = 18;
+            const int decScale = 4;
+            entity.Property(e => e.BudgetedIncome).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.ActualIncome).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.BudgetedExpenses).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.ActualExpenses).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.StartingBalance).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.EndingBalance).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.CategoryBreakdownJson).HasMaxLength(10000);
+
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ConnectionId);
+            entity.HasIndex(e => new { e.UserId, e.Year, e.MonthNumber });
+
+            entity.HasOne(e => e.Connection)
+                .WithMany()
+                .HasForeignKey(e => e.ConnectionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.Transactions)
+                .WithOne(e => e.Snapshot)
+                .HasForeignKey(e => e.SnapshotId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure SpreadsheetTransactionRecord entity
+        modelBuilder.Entity<SpreadsheetTransactionRecord>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(20);
+            const int decPrec = 18;
+            const int decScale = 4;
+            entity.Property(e => e.Amount).HasPrecision(decPrec, decScale);
+
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.SnapshotId);
+            entity.HasIndex(e => e.ConnectionId);
+            entity.HasIndex(e => new { e.UserId, e.Date });
+            entity.HasIndex(e => new { e.UserId, e.Category, e.Date });
+
+            entity.HasOne(e => e.Snapshot)
+                .WithMany(e => e.Transactions)
+                .HasForeignKey(e => e.SnapshotId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Connection)
+                .WithMany()
+                .HasForeignKey(e => e.ConnectionId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

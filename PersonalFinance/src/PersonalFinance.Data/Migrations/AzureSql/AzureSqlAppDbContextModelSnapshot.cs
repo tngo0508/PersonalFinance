@@ -38,7 +38,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasKey("Id");
 
-                    b.ToTable("DataProtectionKeys", (string)null);
+                    b.ToTable("DataProtectionKeys");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -301,7 +301,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("PollId");
 
-                    b.ToTable("CommunityComments", (string)null);
+                    b.ToTable("CommunityComments");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityCommentLike", b =>
@@ -330,7 +330,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("UserId", "CommentId")
                         .IsUnique();
 
-                    b.ToTable("CommunityCommentLikes", (string)null);
+                    b.ToTable("CommunityCommentLikes");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPoll", b =>
@@ -373,7 +373,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("PollCode")
                         .IsUnique();
 
-                    b.ToTable("CommunityPolls", (string)null);
+                    b.ToTable("CommunityPolls");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPollOption", b =>
@@ -399,7 +399,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("PollId");
 
-                    b.ToTable("CommunityPollOptions", (string)null);
+                    b.ToTable("CommunityPollOptions");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPollVote", b =>
@@ -434,7 +434,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .IsUnique()
                         .HasFilter("[PollId] IS NOT NULL");
 
-                    b.ToTable("CommunityPollVotes", (string)null);
+                    b.ToTable("CommunityPollVotes");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStory", b =>
@@ -501,7 +501,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("PublishedAtUtc");
 
-                    b.ToTable("CommunityStories", (string)null);
+                    b.ToTable("CommunityStories");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStoryLike", b =>
@@ -530,7 +530,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("UserId", "StoryId")
                         .IsUnique();
 
-                    b.ToTable("CommunityStoryLikes", (string)null);
+                    b.ToTable("CommunityStoryLikes");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveCachedFile", b =>
@@ -610,7 +610,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("ConnectionId", "DriveFileId");
 
-                    b.ToTable("GoogleDriveCachedFiles", (string)null);
+                    b.ToTable("GoogleDriveCachedFiles");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveConnection", b =>
@@ -673,7 +673,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("UserId", "FolderId");
 
-                    b.ToTable("GoogleDriveConnections", (string)null);
+                    b.ToTable("GoogleDriveConnections");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.Item", b =>
@@ -703,7 +703,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("CreatedAtUtc");
 
-                    b.ToTable("Items", (string)null);
+                    b.ToTable("Items");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.NetWorthParameters", b =>
@@ -765,7 +765,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("NetWorthParameters", (string)null);
+                    b.ToTable("NetWorthParameters");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.SavedArticle", b =>
@@ -830,12 +830,12 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("CurrentAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
@@ -856,19 +856,165 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<DateTime?>("TargetDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("SavingsGoals");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.SpreadsheetBudgetSnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("ActualExpenses")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("ActualIncome")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("BudgetedExpenses")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("BudgetedIncome")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("CategoryBreakdownJson")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("EndingBalance")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("FileId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("GoogleDriveConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MonthName")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("MonthNumber")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("StartingBalance")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("SyncedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId");
+
+                    b.HasIndex("GoogleDriveConnectionId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Year", "MonthNumber");
+
+                    b.ToTable("SpreadsheetBudgetSnapshots");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.SpreadsheetTransactionRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("GoogleDriveConnectionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SnapshotId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId");
+
+                    b.HasIndex("GoogleDriveConnectionId");
+
+                    b.HasIndex("SnapshotId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Date");
+
+                    b.HasIndex("UserId", "Category", "Date");
+
+                    b.ToTable("SpreadsheetTransactionRecords");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.UserBudgetAllocation", b =>
@@ -924,13 +1070,13 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("UtilitiesPercent")
                         .HasPrecision(18, 2)
@@ -1065,6 +1211,44 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Navigation("Connection");
                 });
 
+            modelBuilder.Entity("PersonalFinance.Data.Entities.SpreadsheetBudgetSnapshot", b =>
+                {
+                    b.HasOne("PersonalFinance.Data.Entities.GoogleDriveConnection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PersonalFinance.Data.Entities.GoogleDriveConnection", null)
+                        .WithMany("BudgetSnapshots")
+                        .HasForeignKey("GoogleDriveConnectionId");
+
+                    b.Navigation("Connection");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.SpreadsheetTransactionRecord", b =>
+                {
+                    b.HasOne("PersonalFinance.Data.Entities.GoogleDriveConnection", "Connection")
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PersonalFinance.Data.Entities.GoogleDriveConnection", null)
+                        .WithMany("TransactionRecords")
+                        .HasForeignKey("GoogleDriveConnectionId");
+
+                    b.HasOne("PersonalFinance.Data.Entities.SpreadsheetBudgetSnapshot", "Snapshot")
+                        .WithMany("Transactions")
+                        .HasForeignKey("SnapshotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Connection");
+
+                    b.Navigation("Snapshot");
+                });
+
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityComment", b =>
                 {
                     b.Navigation("LikesList");
@@ -1089,7 +1273,16 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveConnection", b =>
                 {
+                    b.Navigation("BudgetSnapshots");
+
                     b.Navigation("CachedFiles");
+
+                    b.Navigation("TransactionRecords");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.SpreadsheetBudgetSnapshot", b =>
+                {
+                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }
