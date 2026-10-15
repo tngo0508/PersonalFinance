@@ -11,6 +11,8 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their
 findings.
 
+The issue tracker should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
+
 ## Process
 
 ### 1. Pin the fixed point
@@ -28,7 +30,8 @@ ref or empty diff should fail here, not inside two parallel sub-agents.
 
 Look for the originating spec, in this order:
 
-1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.).
+1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.), fetched via the workflow in the
+   tracker doc.
 2. A path the user passed as an argument.
 3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
 4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip
@@ -36,8 +39,8 @@ Look for the originating spec, in this order:
 
 ### 3. Identify the standards sources
 
-Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `AGENTS.md`
-exists, it must be on the list.
+Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or
+`CONTRIBUTING.md` exists, it must be on the list.
 
 On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of
 Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
@@ -45,6 +48,7 @@ Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents
 - **The repo overrides.** A documented repo standard always wins; where it endorses something the baseline would flag,
   suppress the smell.
 - **Always a judgement call.** Each smell is a labelled heuristic ("possible Feature Envy"), never a hard violation.
+  Like any standard here, skip anything tooling already enforces.
 
 Each smell reads *what it is* → *how to fix*; match it against the diff:
 
@@ -79,10 +83,12 @@ Issue both sub-agent calls together, in the foreground, and aggregate the report
 **Standards sub-agent prompt** should include:
 
 - The full diff command and commit list.
-- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full.
+- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the
+  sub-agent has no other access to it).
 - The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the
   standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard
-  violations from judgement calls. Under 400 words."
+  violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement
+  calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
 **Spec sub-agent prompt** should include:
 
@@ -97,10 +103,10 @@ If the spec is missing, skip the Spec sub-agent and note this in the final repor
 ### 5. Aggregate
 
 Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or
-rerank findings, because the two axes are deliberately separate.
+rerank findings, because the two axes are deliberately separate (see _Why two axes_).
 
 End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a
-single winner across axes.
+single winner across axes: that's the reranking the separation exists to prevent.
 
 ## Why two axes
 
