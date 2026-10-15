@@ -1,6 +1,6 @@
-<!DOCTYPE html>
 @using Microsoft.AspNetCore.Antiforgery
 @using PersonalFinance.Shared.Constants
+<!DOCTYPE html>
 @inject IAntiforgery Antiforgery
 @{
     var isSignedIn = User.Identity?.IsAuthenticated == true;
@@ -21,8 +21,9 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/ai-chat-widget.css" asp-append-version="true"/>
     <script type="module">
-        import { setTheme } from '/lib/@@fluentui/web-components/dist/web-components.min.js';
-        import { webLightTheme } from '/lib/@@fluentui/tokens/lib/themes/web/lightTheme.js';
+        import {setTheme} from '/lib/@@fluentui/web-components/dist/web-components.min.js';
+        import {webLightTheme} from '/lib/@@fluentui/tokens/lib/themes/web/lightTheme.js';
+
         setTheme(webLightTheme);
     </script>
 </head>
@@ -56,6 +57,14 @@
                             <a class="nav-link @(isDriveActive ? "active" : "")" aria-current="@(isDriveActive ? "page" : null)"
                                asp-area="" asp-controller="GoogleDrive" asp-action="Index">
                                 Google Drive
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            @{ var isAnalysisActive = currentController == "Analysis"; }
+                            <a class="nav-link @(isAnalysisActive ? "active" : "")"
+                               aria-current="@(isAnalysisActive ? "page" : null)"
+                               asp-area="" asp-controller="Analysis" asp-action="Index">
+                                Analysis
                             </a>
                         </li>
                         <li class="nav-item">

@@ -1,7 +1,7 @@
-@model PersonalFinance.Web.Models.GoogleDriveViewModel
 @using PersonalFinance.Shared.DTOs
 @using PersonalFinance.Shared.Helpers
 @using PersonalFinance.Web.TagHelpers
+@model GoogleDriveViewModel
 
 @{
     ViewData["Title"] = "Google Drive";
@@ -71,7 +71,7 @@
     }
 
     // Visible buttons for a spreadsheet's finance views (used by the featured cards and grid cards)
-    private void RenderSheetButtons(GoogleDriveFileDto file)
+    private async Task RenderSheetButtons(GoogleDriveFileDto file, int? connectionId = null)
     {
         if (IsMonthlyBudget(file))
         {
@@ -92,6 +92,23 @@
             </svg>
             Transactions
         </button>
+        @if (connectionId.HasValue)
+        {
+            <form asp-controller="Analysis" asp-action="Sync" method="post" class="d-inline"
+                  id="syncAnalysisForm_@file.Id">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="connectionId" value="@connectionId.Value"/>
+                <input type="hidden" name="fileId" value="@file.Id"/>
+                <input type="hidden" name="fileName" value="@file.Name"/>
+                <button type="submit" class="btn btn-sm btn-outline-primary" title="Sync this spreadsheet for analysis">
+                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                    Sync for analysis
+                </button>
+            </form>
+        }
     }
 
     private void RenderOpenLink(GoogleDriveFileDto file)
@@ -491,7 +508,7 @@
                                             </div>
                                         </div>
                                         <div class="gd-sheet-card__actions">
-                                            @{ RenderSheetButtons(sheet); }
+                                            @{ await RenderSheetButtons(sheet, currentConn?.Id); }
                                             <span class="ms-auto">@{ RenderOpenLink(sheet); }</span>
                                         </div>
                                     </div>
@@ -715,7 +732,7 @@
                                         <div class="d-flex flex-wrap align-items-center gap-2 mt-auto">
                                             @if (IsSpreadsheet(file))
                                             {
-                                                RenderSheetButtons(file);
+                                                await RenderSheetButtons(file, currentConn?.Id);
                                             }
                                             <span class="ms-auto">@{ RenderOpenLink(file); }</span>
                                         </div>

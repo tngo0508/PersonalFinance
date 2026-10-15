@@ -67,4 +67,15 @@ public class GoogleDriveConnection
     /// Locally cached files and folders associated with this Drive connection.
     /// </summary>
     public ICollection<GoogleDriveCachedFile> CachedFiles { get; set; } = new List<GoogleDriveCachedFile>();
+
+    /// <summary>
+    ///     Budget snapshots parsed from spreadsheets in this Drive connection.
+    /// </summary>
+    public ICollection<SpreadsheetBudgetSnapshot> BudgetSnapshots { get; set; } = new List<SpreadsheetBudgetSnapshot>();
+
+    /// <summary>
+    ///     Transaction records parsed from spreadsheets in this Drive connection.
+    /// </summary>
+    public ICollection<SpreadsheetTransactionRecord> TransactionRecords { get; set; } =
+        new List<SpreadsheetTransactionRecord>();
 }
