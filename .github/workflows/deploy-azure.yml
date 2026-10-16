@@ -200,6 +200,7 @@ jobs:
           DATABASE_PROVIDER: InMemory
           ConnectionStrings__DefaultConnection: InMemory:E2ETestWeb
           ApiSettings__BaseUrl: http://localhost:${{ steps.ports.outputs.api_port }}
+          E2E_DISABLE_EMAIL_CONFIRMATION: "true"
         run: |
           echo "Starting Web on port ${{ steps.ports.outputs.web_port }} (logs -> .web.log)"
           dotnet run --project PersonalFinance/src/PersonalFinance.Web \

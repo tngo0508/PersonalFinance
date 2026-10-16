@@ -50,9 +50,12 @@ try
     // 3a. Register EF Core DbContext & ASP.NET Core Identity (Azure SQL Serverless / SQLite)
     builder.Services.AddAppDbContext(builder.Configuration);
 
+    // Disable email confirmation requirement for CI/E2E runs to allow immediate login after registration
+    var disableEmailConfirmationForE2E = Environment.GetEnvironmentVariable("E2E_DISABLE_EMAIL_CONFIRMATION") == "true";
+
     builder.Services.AddDefaultIdentity<IdentityUser>(options =>
     {
-        options.SignIn.RequireConfirmedAccount = true;
+        options.SignIn.RequireConfirmedAccount = !disableEmailConfirmationForE2E;
         options.User.RequireUniqueEmail = true;
         options.Password.RequireDigit = true;
         options.Password.RequireLowercase = true;
