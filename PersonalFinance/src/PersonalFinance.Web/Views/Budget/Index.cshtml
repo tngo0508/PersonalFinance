@@ -104,6 +104,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-house"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="0"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="Housing">Housing</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Housing">
@@ -137,6 +139,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-egg-fried"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="1"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="Food">Food</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Food">
@@ -170,6 +174,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-car-front"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="2"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label"
                                                for="Transportation">Transportation</label>
                                     </div>
@@ -205,6 +211,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-lightning"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="3"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="Utilities">Utilities</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Utilities">
@@ -239,6 +247,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-shield-check"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="4"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="Insurance">Insurance</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Insurance">
@@ -273,6 +283,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-heart-pulse"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="5"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="Healthcare">Healthcare</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Healthcare">
@@ -307,6 +319,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-piggy-bank"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="6"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="Savings">Savings</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Savings">
@@ -340,6 +354,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-credit-card"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="7"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="DebtRepayment">Debt Repayment</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="DebtRepayment">
@@ -374,6 +390,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-controller"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="8"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="Entertainment">Entertainment</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Entertainment">
@@ -408,6 +426,8 @@
                                         <span class="budget-category-card__icon" aria-hidden="true">
                                             <i class="bi bi-three-dots"></i>
                                         </span>
+                                        <span class="budget-category-color-box" data-color-index="9"
+                                              aria-hidden="true"></span>
                                         <label class="budget-category__label" for="Miscellaneous">Miscellaneous</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Miscellaneous">
@@ -476,9 +496,6 @@
                     <div class="budget-card__body">
                         <div class="budget-chart-container">
                             <canvas id="budgetPieChart" aria-label="Budget allocation pie chart" role="img"></canvas>
-                        </div>
-                        <div class="budget-chart-legend" id="budgetChartLegend">
-                            <!-- Populated by JS -->
                         </div>
                         <div class="budget-summary-list-container">
                             <div class="budget-summary-list" id="budgetSummaryList">

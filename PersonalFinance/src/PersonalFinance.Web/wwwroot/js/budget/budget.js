@@ -58,6 +58,9 @@
         // Sync initial slider values from data
         syncSlidersFromData();
 
+        // Set color box backgrounds
+        setColorBoxes();
+
         // Bind events
         bindEvents();
 
@@ -67,6 +70,19 @@
         // Initial update
         updateAll();
     };
+
+    /**
+     * Set background colors on category color boxes to match chart slice colors.
+     */
+    function setColorBoxes() {
+        var colorBoxes = document.querySelectorAll('.budget-category-color-box');
+        colorBoxes.forEach(function (box) {
+            var index = parseInt(box.getAttribute('data-color-index'), 10);
+            if (index >= 0 && index < categoryColors.length) {
+                box.style.backgroundColor = categoryColors[index];
+            }
+        });
+    }
 
     /**
      * Sync slider and input values from currentData.
@@ -234,13 +250,12 @@
     }
 
     /**
-     * Update all UI components: chart, amounts, summary, legend, remaining.
+     * Update all UI components: chart, amounts, summary, remaining.
      */
     function updateAll() {
         updateAmounts();
         updateRemaining();
         updateTotalBadge();
-        updateLegend();
         updateSummaryTable();
         updateChart();
     }
@@ -386,9 +401,158 @@
     }
 
     /**
+     * Custom Chart.js plugin that draws labels with leader lines around the doughnut chart.
+     * Scales label positions and adjusts layout padding based on chart size for responsiveness.
+     */
+    var leaderLinePlugin = {
+        id: 'leaderLines',
+        beforeUpdate: function (chart) {
+            // Dynamically adjust layout padding based on chart canvas size
+            var canvasWidth = chart.width;
+            if (canvasWidth > 0) {
+                var sidePad, topPad;
+                if (canvasWidth >= 340) {
+                    sidePad = 55;
+                    topPad = 20;
+                } else if (canvasWidth >= 260) {
+                    sidePad = 40;
+                    topPad = 15;
+                } else if (canvasWidth >= 180) {
+                    sidePad = 30;
+                    topPad = 10;
+                } else {
+                    sidePad = 20;
+                    topPad = 5;
+                }
+                chart.options.layout.padding.top = topPad;
+                chart.options.layout.padding.bottom = topPad;
+                chart.options.layout.padding.left = sidePad;
+                chart.options.layout.padding.right = sidePad;
+            }
+        },
+        afterDatasetsDraw: function (chart) {
+            var ctx = chart.ctx;
+            var dataset = chart.data.datasets[0];
+            var meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data) return;
+
+            var total = dataset.data.reduce(function (sum, val) {
+                return sum + val;
+            }, 0);
+            if (total === 0) return;
+
+            var centerX = (meta.data[0].x + meta.data[meta.data.length - 1].x) / 2;
+            var centerY = (meta.data[0].y + meta.data[meta.data.length - 1].y) / 2;
+            var outerRadius = meta.data[0].outerRadius;
+
+            // Scale label offsets based on chart size for responsiveness
+            var scale = outerRadius / 140; // 140 is the approximate radius at max chart size
+            scale = Math.max(0.5, Math.min(scale, 1.2)); // Clamp scale to reasonable range
+
+            // Hide labels on very small charts where they won't fit
+            if (outerRadius < 60) return;
+
+            // Label positioning constants (scaled)
+            var labelGap = 18 * scale;
+            var lineMidGap = 8 * scale;
+            var labelRadius = outerRadius + labelGap;
+            var lineMidRadius = outerRadius + lineMidGap;
+            var minLabelDist = 22 * scale;
+            var minAngleGap = 0.15; // Minimum radians between labels to avoid overlap
+
+            ctx.save();
+            var fontSize = Math.max(9, Math.round(11 * scale));
+            ctx.font = fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillStyle = '#505050';
+            ctx.textBaseline = 'middle';
+
+            var placedLabels = [];
+
+            dataset.data.forEach(function (value, index) {
+                if (value === 0) return;
+
+                var arc = meta.data[index];
+                var startAngle = arc.startAngle;
+                var endAngle = arc.endAngle;
+                var midAngle = (startAngle + endAngle) / 2;
+
+                // Point on outer edge of the slice
+                var outerX = centerX + Math.cos(midAngle) * outerRadius;
+                var outerY = centerY + Math.sin(midAngle) * outerRadius;
+
+                // Mid point for the leader line (perpendicular to the angle)
+                var midX = centerX + Math.cos(midAngle) * lineMidRadius;
+                var midY = centerY + Math.sin(midAngle) * lineMidRadius;
+
+                // Label position
+                var labelX = centerX + Math.cos(midAngle) * labelRadius;
+                var labelY = centerY + Math.sin(midAngle) * labelRadius;
+
+                // Check for overlap with already placed labels
+                var tooClose = false;
+                for (var i = 0; i < placedLabels.length; i++) {
+                    var dx = labelX - placedLabels[i].x;
+                    var dy = labelY - placedLabels[i].y;
+                    var dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minLabelDist) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+
+                // Only draw if slice is significant enough and not overlapping
+                var sliceAngle = endAngle - startAngle;
+                if (sliceAngle < minAngleGap || tooClose) return;
+
+                // Draw leader line
+                ctx.beginPath();
+                ctx.moveTo(outerX, outerY);
+                ctx.lineTo(midX, midY);
+                ctx.lineTo(labelX, labelY);
+                ctx.strokeStyle = dataset.backgroundColor[index];
+                ctx.lineWidth = 1.5 * scale;
+                ctx.globalAlpha = 0.6;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+
+                // Draw dot at the outer edge
+                ctx.beginPath();
+                ctx.arc(outerX, outerY, 2 * scale, 0, Math.PI * 2);
+                ctx.fillStyle = dataset.backgroundColor[index];
+                ctx.fill();
+
+                // Draw label text — percentage only
+                var percent = ((value / total) * 100).toFixed(1) + '%';
+                var displayText = percent;
+
+                // Determine text alignment based on angle
+                var textX = labelX;
+                var textAlign = 'left';
+                var textOffset = 4 * scale;
+                if (midAngle > Math.PI / 2 && midAngle < Math.PI * 1.5) {
+                    textAlign = 'right';
+                    textX = labelX - textOffset;
+                } else {
+                    textX = labelX + textOffset;
+                }
+
+                ctx.textAlign = textAlign;
+                ctx.fillStyle = '#505050';
+                ctx.fillText(displayText, textX, labelY);
+
+                placedLabels.push({x: labelX, y: labelY});
+            });
+
+            ctx.restore();
+        }
+    };
+
+    /**
      * Initialize the pie chart.
      */
     function initChart() {
+        Chart.register(leaderLinePlugin);
+
         const canvas = document.getElementById('budgetPieChart');
         if (!canvas || typeof Chart === 'undefined') return;
 
@@ -412,6 +576,14 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                layout: {
+                    padding: {
+                        top: 20,
+                        right: 45,
+                        bottom: 20,
+                        left: 45
+                    }
+                },
                 plugins: {
                     legend: {
                         display: false
@@ -433,31 +605,6 @@
         });
     }
 
-    /**
-     * Update the chart legend with current data.
-     */
-    function updateLegend() {
-        const legend = document.getElementById('budgetChartLegend');
-        if (!legend) return;
-
-        const income = currentData.monthlyIncome || 0;
-        let html = '';
-
-        categories.forEach(function (cat, index) {
-            const percent = currentData[cat] || 0;
-            const amount = (income * percent) / 100;
-            const color = categoryColors[index];
-            const label = categoryLabels[cat];
-
-            html += '<div class="budget-chart-legend__item">';
-            html += '<span class="budget-chart-legend__color" style="background:' + color + ';" aria-hidden="true"></span>';
-            html += '<span class="budget-chart-legend__label" title="' + label + '">' + label + '</span>';
-            html += '<span class="budget-chart-legend__value">' + percent.toFixed(1) + '%</span>';
-            html += '</div>';
-        });
-
-        legend.innerHTML = html;
-    }
 
     /**
      * Update the pie chart with current data.

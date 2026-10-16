@@ -11,13 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Budget Chart Legend**: Added a visible color-coded legend below the Budget Breakdown pie chart.
-  - Each legend item displays a colored square, category name, and percentage value in a 2-column grid.
-  - The legend updates in real-time as users adjust allocations, eliminating the need to hover over chart slices.
-  - Responsive layout collapses to a single column on mobile devices.
+- **Budget Chart Leader Lines**: Replaced the grid-based legend with labels drawn directly on the pie chart canvas.
+  - Each label is connected to its corresponding chart slice by a colored leader line with a dot marker.
+  - Labels show percentage only, keeping the chart area clean and uncluttered.
+  - Overlapping labels are automatically suppressed to maintain clarity on smaller slices.
+
+### Fixed
+
+- **Budget Chart Leader Line Labels**: Fixed labels not being visible because they were clipped by the canvas edges.
+  - Added layout padding to the Chart.js configuration so the chart draws smaller, leaving room for labels around the
+    edges.
+  - Increased the chart container canvas height to accommodate the extra space for labels.
+- **Budget Chart Responsiveness**: Fixed leader line labels overflowing the chart container on smaller screens.
+  - Label positions, font sizes, line widths, and dot sizes now scale proportionally with the chart's actual size.
+  - Labels are hidden automatically when the chart is too small (radius < 80px) to prevent visual clutter.
+  - CSS breakpoints now shrink the chart container consistently: 340px → 280px → 260px → 220px across screen sizes.
+- **Budget Chart Mobile Sizing**: Fixed leader line labels still being cut off on small screens due to the chart card
+  being too small.
+  - Layout padding now adjusts dynamically based on the chart's actual width, reducing from 55px to 20px on smaller
+    screens.
+  - The chart container now uses full width on mobile instead of being constrained to 220px.
+  - Increased canvas max-height across all breakpoints to give labels more vertical space.
 
 ### Changed
 
+- **Budget Category Color Boxes**: Added small colored squares next to each category allocation label.
+  - Each color box matches the corresponding pie chart slice color, linking inputs to the visual breakdown.
+  - Colors are set dynamically via JavaScript to stay consistent with the chart's color palette.
 - **Budget Summary List**: Replaced the plain budget summary table with a visual list featuring mini progress bars.
   - Each category now displays a colored progress bar proportional to its allocation, making comparisons at a glance.
   - The list is more compact and visually connected to the pie chart above it.
