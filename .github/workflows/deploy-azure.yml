@@ -154,19 +154,23 @@ jobs:
 
       - name: Start ApiService with InMemory DB
         env:
-          ASPNETCORE_URLS: http://localhost:${{ steps.ports.outputs.api_port }}
           ASPNETCORE_ENVIRONMENT: Development
           DATABASE_PROVIDER: InMemory
           ConnectionStrings__DefaultConnection: InMemory:E2ETestApi
         run: |
-          cd PersonalFinance/src/PersonalFinance.ApiService
-          dotnet run --environment Development &
-          cd ../../..
+          echo "Starting ApiService on port ${{ steps.ports.outputs.api_port }} (logs -> .api.log)"
+          dotnet run --project PersonalFinance/src/PersonalFinance.ApiService \
+            --environment Development \
+            --urls "http://0.0.0.0:${{ steps.ports.outputs.api_port }}" \
+            > .api.log 2>&1 &
+          sleep 1
+          ps aux | grep -E "dotnet.*PersonalFinance.ApiService" || true
+          echo "ApiService backgrounded; continuing to health check."
 
       - name: Wait for ApiService health
         run: |
-          echo "Waiting for ApiService to start..."
-          MAX_RETRIES=30
+          echo "Waiting for ApiService to start (port ${{ steps.ports.outputs.api_port }})..."
+          MAX_RETRIES=40
           for i in $(seq 1 $MAX_RETRIES); do
             HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "http://localhost:${{ steps.ports.outputs.api_port }}/health" 2>/dev/null || echo "000")
             echo "Attempt $i/$MAX_RETRIES: ApiService /health returned HTTP ${HTTP_CODE}"
@@ -176,25 +180,40 @@ jobs:
             fi
             sleep 2
           done
-          echo "::error::ApiService failed to start within timeout."
+
+          echo "::error::ApiService failed to start within timeout. Dumping diagnostics..."
+
+          echo "----- ApiService process list -----"
+          ps aux | grep -E "dotnet.*PersonalFinance.ApiService" || true
+
+          echo "----- Tail 200 lines of .api.log -----"
+          tail -n 200 .api.log || true
+
+          echo "----- Listening sockets -----"
+          ss -lntp || netstat -lntp || true
+
           exit 1
 
       - name: Start Web with InMemory DB
         env:
-          ASPNETCORE_URLS: http://localhost:${{ steps.ports.outputs.web_port }}
           ASPNETCORE_ENVIRONMENT: Development
           DATABASE_PROVIDER: InMemory
           ConnectionStrings__DefaultConnection: InMemory:E2ETestWeb
           ApiSettings__BaseUrl: http://localhost:${{ steps.ports.outputs.api_port }}
         run: |
-          cd PersonalFinance/src/PersonalFinance.Web
-          dotnet run --environment Development &
-          cd ../../..
+          echo "Starting Web on port ${{ steps.ports.outputs.web_port }} (logs -> .web.log)"
+          dotnet run --project PersonalFinance/src/PersonalFinance.Web \
+            --environment Development \
+            --urls "http://0.0.0.0:${{ steps.ports.outputs.web_port }}" \
+            > .web.log 2>&1 &
+          sleep 1
+          ps aux | grep -E "dotnet.*PersonalFinance.Web" || true
+          echo "Web backgrounded; continuing to health check."
 
       - name: Wait for Web health
         run: |
-          echo "Waiting for Web to start..."
-          MAX_RETRIES=30
+          echo "Waiting for Web to start (port ${{ steps.ports.outputs.web_port }})..."
+          MAX_RETRIES=40
           for i in $(seq 1 $MAX_RETRIES); do
             HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "http://localhost:${{ steps.ports.outputs.web_port }}/health" 2>/dev/null || echo "000")
             echo "Attempt $i/$MAX_RETRIES: Web /health returned HTTP ${HTTP_CODE}"
@@ -204,7 +223,18 @@ jobs:
             fi
             sleep 2
           done
-          echo "::error::Web failed to start within timeout."
+
+          echo "::error::Web failed to start within timeout. Dumping diagnostics..."
+
+          echo "----- Web process list -----"
+          ps aux | grep -E "dotnet.*PersonalFinance.Web" || true
+
+          echo "----- Tail 200 lines of .web.log -----"
+          tail -n 200 .web.log || true
+
+          echo "----- Listening sockets -----"
+          ss -lntp || netstat -lntp || true
+
           exit 1
 
       - name: Run Playwright UI E2E tests
