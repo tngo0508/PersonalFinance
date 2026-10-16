@@ -2,7 +2,8 @@ const {chromium} = require('playwright');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
-    const base = 'https://localhost:7200';
+    const base = process.env.WEB_URL || 'http://localhost:5000';
+    const apiBase = process.env.API_URL || 'http://localhost:5001';
 
     function pass(message) {
         results.passed++;
@@ -32,6 +33,8 @@ const {chromium} = require('playwright');
     let browser;
     try {
         console.log('Launching browser...');
+        console.log(`  Web URL: ${base}`);
+        console.log(`  API URL: ${apiBase}`);
         browser = await chromium.launch({headless: true});
         const context = await browser.newContext({
             ignoreHTTPSErrors: true,
@@ -53,30 +56,9 @@ const {chromium} = require('playwright');
         });
 
         // =========================================================
-        // Test 1: HTTPS redirect enforcement
+        // Test 1: Default route (home page)
         // =========================================================
-        console.log('\n--- Test 1: HTTPS Redirect ---');
-        try {
-            const httpPage = await context.newPage();
-            await httpPage.goto('http://localhost:5200/', {
-                waitUntil: 'networkidle',
-                timeout: 10000
-            });
-            const finalUrl = httpPage.url();
-            if (finalUrl.startsWith('https://')) {
-                pass('HTTP correctly redirects to HTTPS');
-            } else {
-                fail(`HTTP did not redirect to HTTPS: ${finalUrl}`);
-            }
-            await httpPage.close();
-        } catch (error) {
-            fail(`HTTPS redirect check failed: ${error.message}`);
-        }
-
-        // =========================================================
-        // Test 2: Default route (home page)
-        // =========================================================
-        console.log('\n--- Test 2: Default Route (Home) ---');
+        console.log('\n--- Test 1: Default Route (Home) ---');
         try {
             await page.goto(`${base}/`, {
                 waitUntil: 'networkidle',
@@ -100,9 +82,9 @@ const {chromium} = require('playwright');
         }
 
         // =========================================================
-        // Test 3: Authenticated pages redirect to login
+        // Test 2: Authenticated pages redirect to login
         // =========================================================
-        console.log('\n--- Test 3: Auth Pages Redirect to Login ---');
+        console.log('\n--- Test 2: Auth Pages Redirect to Login ---');
         for (const ap of authPages) {
             try {
                 const errorsBefore = consoleErrors.length;
@@ -134,9 +116,9 @@ const {chromium} = require('playwright');
         }
 
         // =========================================================
-        // Test 4: Login page detailed verification
+        // Test 3: Login page detailed verification
         // =========================================================
-        console.log('\n--- Test 4: Login Page ---');
+        console.log('\n--- Test 3: Login Page ---');
         try {
             await page.goto(`${base}/Identity/Account/Login`, {
                 waitUntil: 'networkidle',
@@ -214,9 +196,9 @@ const {chromium} = require('playwright');
         }
 
         // =========================================================
-        // Test 5: Register page
+        // Test 4: Register page
         // =========================================================
-        console.log('\n--- Test 5: Register Page ---');
+        console.log('\n--- Test 4: Register Page ---');
         try {
             await page.goto(`${base}/Identity/Account/Register`, {
                 waitUntil: 'networkidle',
@@ -276,9 +258,9 @@ const {chromium} = require('playwright');
         }
 
         // =========================================================
-        // Test 6: Layout and common elements
+        // Test 5: Layout and common elements
         // =========================================================
-        console.log('\n--- Test 6: Layout and Common Elements ---');
+        console.log('\n--- Test 5: Layout and Common Elements ---');
         try {
             // Navigate to login page to check layout
             await page.goto(`${base}/Identity/Account/Login`, {
@@ -349,9 +331,9 @@ const {chromium} = require('playwright');
         }
 
         // =========================================================
-        // Test 7: Health and alive endpoints
+        // Test 6: Health and alive endpoints
         // =========================================================
-        console.log('\n--- Test 7: Health Endpoints ---');
+        console.log('\n--- Test 6: Health Endpoints ---');
         try {
             const healthResp = await page.goto(`${base}/health`, {
                 waitUntil: 'networkidle',
@@ -385,9 +367,9 @@ const {chromium} = require('playwright');
         }
 
         // =========================================================
-        // Test 8: Responsive viewport test
+        // Test 7: Responsive viewport test
         // =========================================================
-        console.log('\n--- Test 8: Responsive Viewport ---');
+        console.log('\n--- Test 7: Responsive Viewport ---');
         try {
             const mobilePage = await context.newPage();
             await mobilePage.setViewportSize({width: 375, height: 667});
@@ -422,9 +404,9 @@ const {chromium} = require('playwright');
         }
 
         // =========================================================
-        // Test 9: 404 handling for unknown routes
+        // Test 8: 404 handling for unknown routes
         // =========================================================
-        console.log('\n--- Test 9: 404 Handling ---');
+        console.log('\n--- Test 8: 404 Handling ---');
         try {
             const notFoundResp = await page.goto(`${base}/NonExistentPage`, {
                 waitUntil: 'networkidle',
@@ -447,6 +429,96 @@ const {chromium} = require('playwright');
             }
         } catch (error) {
             fail(`404 handling test failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9: Register and login flow, then visit authenticated pages
+        // =========================================================
+        console.log('\n--- Test 9: Register + Login + Authenticated Pages ---');
+        try {
+            const testEmail = `e2etest_${Date.now()}@example.com`;
+            const testPassword = 'TestPass1!';
+
+            // Step 1: Register a new user
+            console.log('  Registering test user...');
+            await page.goto(`${base}/Identity/Account/Register`, {
+                waitUntil: 'networkidle',
+                timeout: 15000
+            });
+
+            // Fill in the registration form
+            await page.fill('input[type="email"]', testEmail);
+            const passwordInputs = await page.locator('input[type="password"]').all();
+            if (passwordInputs.length >= 2) {
+                await passwordInputs[0].fill(testPassword);
+                await passwordInputs[1].fill(testPassword);
+            }
+
+            // Submit the form
+            await page.click('button[type="submit"]');
+            await page.waitForLoadState('networkidle', {timeout: 15000});
+
+            const afterRegisterUrl = page.url();
+            console.log(`  After register: ${afterRegisterUrl}`);
+
+            // If we're on a success page or already logged in, proceed to login
+            // Some configs redirect to login after register
+            if (!afterRegisterUrl.includes('/Networth') && !afterRegisterUrl.includes('/Dashboard')) {
+                // Step 2: Login with the new credentials
+                console.log('  Logging in with test user...');
+                await page.goto(`${base}/Identity/Account/Login`, {
+                    waitUntil: 'networkidle',
+                    timeout: 15000
+                });
+
+                await page.fill('input[type="email"]', testEmail);
+                await page.fill('input[type="password"]', testPassword);
+                await page.click('button[type="submit"]');
+                await page.waitForLoadState('networkidle', {timeout: 15000});
+            }
+
+            const afterLoginUrl = page.url();
+            console.log(`  After login: ${afterLoginUrl}`);
+
+            // Check if we're logged in
+            const isLoggedIn = afterLoginUrl.includes('/Networth') ||
+                               afterLoginUrl.includes('/Dashboard') ||
+                               !(afterLoginUrl.includes('/Identity/Account/Login'));
+
+            if (isLoggedIn) {
+                pass('Successfully registered and logged in');
+
+                // Step 3: Visit authenticated feature pages
+                const featurePages = [
+                    {path: '/Networth', name: 'Net Worth'},
+                    {path: '/Budget', name: 'Budget'},
+                    {path: '/SavingsGoals', name: 'Savings Goals'},
+                    {path: '/Watchlist', name: 'Watchlist'},
+                    {path: '/News', name: 'Finance News'},
+                    {path: '/Community', name: 'Community'},
+                ];
+
+                for (const fp of featurePages) {
+                    try {
+                        await page.goto(`${base}${fp.path}`, {
+                            waitUntil: 'networkidle',
+                            timeout: 15000
+                        });
+                        const pageUrl = page.url();
+                        if (pageUrl.includes(fp.path) || pageUrl.includes(fp.path.replace('/', ''))) {
+                            pass(`${fp.name} page loaded after login`);
+                        } else {
+                            fail(`${fp.name} page did not load: ${pageUrl}`);
+                        }
+                    } catch (error) {
+                        fail(`${fp.name} page navigation failed: ${error.message}`);
+                    }
+                }
+            } else {
+                fail('Failed to log in after registration');
+            }
+        } catch (error) {
+            fail(`Register + Login flow failed: ${error.message}`);
         }
 
         // =========================================================

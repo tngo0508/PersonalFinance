@@ -93,6 +93,140 @@ jobs:
         run: dotnet test PersonalFinance.sln --configuration Release --no-build --verbosity normal
 
   # ============================================================================
+  # 1c. E2E BROWSER TESTS — Playwright UI + API endpoint tests (runs in parallel)
+  # Starts both ApiService and Web locally with InMemory DB, runs browser-based
+  # E2E tests against the Web URL and curl-based tests against the API URL.
+  # ============================================================================
+  e2e-browser-tests:
+    name: E2E Browser Tests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }} SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore and build solution
+        run: |
+          dotnet restore PersonalFinance.sln
+          dotnet build PersonalFinance.sln --configuration Release --no-restore
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Assign random ports
+        id: ports
+        run: |
+          API_PORT=$((RANDOM % 10000 + 10000))
+          WEB_PORT=$((RANDOM % 10000 + 10000))
+          echo "api_port=$API_PORT" >> $GITHUB_OUTPUT
+          echo "web_port=$WEB_PORT" >> $GITHUB_OUTPUT
+
+      - name: Start ApiService with InMemory DB
+        env:
+          ASPNETCORE_URLS: http://localhost:${{ steps.ports.outputs.api_port }}
+          ASPNETCORE_ENVIRONMENT: Development
+          DATABASE_PROVIDER: InMemory
+          ConnectionStrings__DefaultConnection: InMemory:E2ETestApi
+        run: |
+          cd PersonalFinance/src/PersonalFinance.ApiService
+          dotnet run --environment Development &
+          cd ../../..
+
+      - name: Wait for ApiService health
+        run: |
+          echo "Waiting for ApiService to start..."
+          MAX_RETRIES=30
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "http://localhost:${{ steps.ports.outputs.api_port }}/health" 2>/dev/null || echo "000")
+            echo "Attempt $i/$MAX_RETRIES: ApiService /health returned HTTP ${HTTP_CODE}"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "ApiService is healthy."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::ApiService failed to start within timeout."
+          exit 1
+
+      - name: Start Web with InMemory DB
+        env:
+          ASPNETCORE_URLS: http://localhost:${{ steps.ports.outputs.web_port }}
+          ASPNETCORE_ENVIRONMENT: Development
+          DATABASE_PROVIDER: InMemory
+          ConnectionStrings__DefaultConnection: InMemory:E2ETestWeb
+          ApiSettings__BaseUrl: http://localhost:${{ steps.ports.outputs.api_port }}
+        run: |
+          cd PersonalFinance/src/PersonalFinance.Web
+          dotnet run --environment Development &
+          cd ../../..
+
+      - name: Wait for Web health
+        run: |
+          echo "Waiting for Web to start..."
+          MAX_RETRIES=30
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "http://localhost:${{ steps.ports.outputs.web_port }}/health" 2>/dev/null || echo "000")
+            echo "Attempt $i/$MAX_RETRIES: Web /health returned HTTP ${HTTP_CODE}"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Web is healthy."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Web failed to start within timeout."
+          exit 1
+
+      - name: Run Playwright UI E2E tests
+        env:
+          WEB_URL: http://localhost:${{ steps.ports.outputs.web_port }}
+          API_URL: http://localhost:${{ steps.ports.outputs.api_port }}
+        run: npm run test:e2e
+
+      - name: Run API endpoint E2E tests
+        env:
+          API_URL: http://localhost:${{ steps.ports.outputs.api_port }}
+        run: npm run test:api
+
+      - name: Stop services
+        if: always()
+        run: |
+          echo "Stopping services..."
+          pkill -f "dotnet.*PersonalFinance.ApiService" || true
+          pkill -f "dotnet.*PersonalFinance.Web" || true
+          sleep 2
+
+  # ============================================================================
   # 1b. VALIDATE INFRASTRUCTURE TEMPLATES (runs in parallel with build-and-test)
   # ============================================================================
   validate-infra:
@@ -370,6 +504,69 @@ jobs:
             exit 1
           fi
 
+          PASSED=0
+          FAILED=0
+
+          check_endpoint() {
+            local label="$1"
+            local path="$2"
+            local expected_status="$3"
+            local description="$4"
+
+            echo ""
+            echo "[${label}] Probing ${path}..."
+            HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
+            echo "  -> ${path} returned HTTP ${HTTP_CODE}"
+
+            if [ "$HTTP_CODE" = "$expected_status" ]; then
+              echo "  -> ✓ ${description}"
+              PASSED=$((PASSED + 1))
+            else
+              echo "  -> ✗ Expected HTTP ${expected_status}, got ${HTTP_CODE}"
+              FAILED=$((FAILED + 1))
+            fi
+          }
+
+          check_endpoint_redirect() {
+            local label="$1"
+            local path="$2"
+            local description="$3"
+
+            echo ""
+            echo "[${label}] Probing ${path} (expect redirect)..."
+            HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
+            echo "  -> ${path} returned HTTP ${HTTP_CODE}"
+
+            if [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "301" ]; then
+              echo "  -> ✓ ${description}"
+              PASSED=$((PASSED + 1))
+            else
+              echo "  -> ✗ Expected redirect (301/302), got HTTP ${HTTP_CODE}"
+              FAILED=$((FAILED + 1))
+            fi
+          }
+
+          check_content() {
+            local label="$1"
+            local path="$2"
+            local expected_content="$3"
+            local description="$4"
+
+            echo ""
+            echo "[${label}] Checking ${path} for content..."
+            RESPONSE_BODY=$(curl -s -S --connect-timeout 5 --max-time 10 "${WEB_URL}${path}" 2>/dev/null || echo "")
+            HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
+            echo "  -> ${path} returned HTTP ${HTTP_CODE}"
+
+            if echo "$RESPONSE_BODY" | grep -qi "$expected_content"; then
+              echo "  -> ✓ ${description}"
+              PASSED=$((PASSED + 1))
+            else
+              echo "  -> ✗ Expected content '${expected_content}' not found"
+              FAILED=$((FAILED + 1))
+            fi
+          }
+
           echo "================================================================"
           echo " Commencing smoke tests against target: ${WEB_URL}"
           echo " Note: ApiService (/scalar/v1, /openapi/v1.json) is internal-only"
@@ -378,7 +575,7 @@ jobs:
 
           # 1. Probe readiness endpoint (/health) with retry loop for cold-start
           echo ""
-          echo "[1/4] Probing readiness health endpoint (/health)..."
+          echo "[1/12] Probing readiness health endpoint (/health)..."
           MAX_RETRIES=30
           HEALTH_OK=false
 
@@ -387,6 +584,7 @@ jobs:
             echo "Attempt $i/$MAX_RETRIES: /health returned HTTP ${HTTP_CODE}"
             if [ "$HTTP_CODE" = "200" ]; then
               echo "  -> Readiness probe passed (HTTP 200 OK)."
+              PASSED=$((PASSED + 1))
               HEALTH_OK=true
               break
             fi
@@ -395,45 +593,66 @@ jobs:
 
           if [ "$HEALTH_OK" != "true" ]; then
             echo "::error::Readiness health probe timed out after ${MAX_RETRIES} attempts."
-            exit 1
+            FAILED=$((FAILED + 1))
           fi
 
           # 2. Probe liveness endpoint (/alive)
-          echo ""
-          echo "[2/4] Probing liveness health endpoint (/alive)..."
-          ALIVE_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/alive" 2>/dev/null || echo "000")
-          echo "  -> /alive returned HTTP ${ALIVE_CODE}"
-          if [ "$ALIVE_CODE" != "200" ]; then
-            echo "::error::Liveness health probe failed with HTTP ${ALIVE_CODE}."
-            exit 1
-          fi
-          echo "  -> Liveness probe passed (HTTP 200 OK)."
+          check_endpoint "2/12" "/alive" "200" "Liveness probe passed"
 
           # 3. Probe root UI page (/)
           echo ""
-          echo "[3/4] Probing Web home page (/)..."
+          echo "[3/12] Probing Web home page (/)..."
           ROOT_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/" 2>/dev/null || echo "000")
           echo "  -> / returned HTTP ${ROOT_CODE}"
-          if [ "$ROOT_CODE" != "200" ] && [ "$ROOT_CODE" != "302" ]; then
-            echo "::error::Home page probe failed with HTTP ${ROOT_CODE}."
-            exit 1
+          if [ "$ROOT_CODE" = "200" ] || [ "$ROOT_CODE" = "302" ]; then
+            echo "  -> ✓ Home page probe passed (HTTP ${ROOT_CODE})."
+            PASSED=$((PASSED + 1))
+          else
+            echo "  -> ✗ Home page probe failed with HTTP ${ROOT_CODE}."
+            FAILED=$((FAILED + 1))
           fi
-          echo "  -> Home page probe passed (HTTP ${ROOT_CODE})."
 
           # 4. Probe Identity login page (/Identity/Account/Login)
+          check_endpoint "4/12" "/Identity/Account/Login" "200" "Identity login page loaded"
+
+          # 5. Check login page content (form elements)
+          check_content "5/12" "/Identity/Account/Login" "Email" "Login page contains email field"
+
+          # 6. Check login page content (password field)
+          check_content "6/12" "/Identity/Account/Login" "password" "Login page contains password field"
+
+          # 7. Probe Register page
+          check_endpoint "7/12" "/Identity/Account/Register" "200" "Register page loaded"
+
+          # 8. Check Register page content
+          check_content "8/12" "/Identity/Account/Register" "Register" "Register page contains registration form"
+
+          # 9. Check Networth page redirects to login (auth required)
+          check_endpoint_redirect "9/12" "/Networth" "Networth redirects to login (auth required)"
+
+          # 10. Check News page redirects to login (auth required)
+          check_endpoint_redirect "10/12" "/News" "News redirects to login (auth required)"
+
+          # 11. Check Community page redirects to login (auth required)
+          check_endpoint_redirect "11/12" "/Community" "Community redirects to login (auth required)"
+
+          # 12. Check Budget page redirects to login (auth required)
+          check_endpoint_redirect "12/12" "/Budget" "Budget redirects to login (auth required)"
+
           echo ""
-          echo "[4/4] Probing Identity login page (/Identity/Account/Login)..."
-          LOGIN_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/Identity/Account/Login" 2>/dev/null || echo "000")
-          echo "  -> /Identity/Account/Login returned HTTP ${LOGIN_CODE}"
-          if [ "$LOGIN_CODE" != "200" ]; then
-            echo "::error::Identity login page probe failed with HTTP ${LOGIN_CODE}."
+          echo "================================================================"
+          echo " Smoke Test Results"
+          echo "================================================================"
+          echo "  Passed: ${PASSED}"
+          echo "  Failed: ${FAILED}"
+          echo "================================================================"
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::${FAILED} smoke test(s) failed."
             exit 1
           fi
-          echo "  -> Identity login probe passed (HTTP 200 OK)."
 
-          echo "================================================================"
           echo " All post-deployment smoke tests passed successfully!"
-          echo "================================================================"
 
   # ============================================================================
   # 5. PROMOTE DEPLOYED IMAGES TO `latest` (only after deploy + smoke tests pass)
