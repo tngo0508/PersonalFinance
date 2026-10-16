@@ -35,7 +35,8 @@ public class NetworthController : Controller
         {
             var saved = await _netWorthApi.LoadParametersAsync(cancellationToken);
 
-            if (saved != null)
+            // Only apply saved values if they represent real data (not a blank DTO with all zeros)
+            if (saved != null && saved.CurrentAge > 0 && saved.RetirementAge > 0)
             {
                 model.StartingBalance = saved.StartingBalance;
                 model.AnnualSavings = saved.AnnualSavings;
