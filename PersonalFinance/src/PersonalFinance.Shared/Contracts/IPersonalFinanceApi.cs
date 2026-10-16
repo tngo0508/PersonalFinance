@@ -212,7 +212,7 @@ public class CheckArticleSavedResponseDto
 
 public class BudgetResponseDto
 {
-    public object? Allocations { get; set; }
+    public BudgetAllocationsDto? Allocations { get; set; }
     public decimal MonthlyIncome { get; set; }
 }
 

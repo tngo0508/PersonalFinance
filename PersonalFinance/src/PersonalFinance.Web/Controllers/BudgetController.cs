@@ -1,4 +1,3 @@
-using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -38,30 +37,16 @@ public class BudgetController : Controller
             if (saved != null && saved.Allocations != null)
             {
                 model.MonthlyIncome = saved.MonthlyIncome;
-
-                // Map the dynamic allocations object to view model properties.
-                // The API returns lowercase property names (e.g., "housing"), so we need
-                // to match them case-insensitively to the PascalCase view model properties.
-                var alloc = saved.Allocations;
-                if (alloc is not null)
-                {
-                    var ps = alloc.GetType().GetProperties();
-                    foreach (var p in ps)
-                    {
-                        if (p.PropertyType == typeof(decimal))
-                        {
-                            var rawValue = p.GetValue(alloc);
-                            if (rawValue is decimal value)
-                            {
-                                // API returns lowercase names (e.g. "housing"), view model uses PascalCase (e.g. "Housing")
-                                var prop = model.GetType().GetProperty(
-                                    p.Name,
-                                    BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-                                prop?.SetValue(model, value);
-                            }
-                        }
-                    }
-                }
+                model.Housing = saved.Allocations.Housing;
+                model.Food = saved.Allocations.Food;
+                model.Transportation = saved.Allocations.Transportation;
+                model.Utilities = saved.Allocations.Utilities;
+                model.Insurance = saved.Allocations.Insurance;
+                model.Healthcare = saved.Allocations.Healthcare;
+                model.Savings = saved.Allocations.Savings;
+                model.DebtRepayment = saved.Allocations.DebtRepayment;
+                model.Entertainment = saved.Allocations.Entertainment;
+                model.Miscellaneous = saved.Allocations.Miscellaneous;
             }
         }
         catch
@@ -130,30 +115,23 @@ public class BudgetController : Controller
             }
 
             var alloc = saved.Allocations;
-            var labels = new List<string>();
-            var values = new List<decimal>();
-
-            if (alloc is not null)
+            var labels = new[]
             {
-                var ps = alloc.GetType().GetProperties();
-                foreach (var p in ps)
-                {
-                    if (p.PropertyType == typeof(decimal))
-                    {
-                        labels.Add(FriendlyCategoryName(p.Name));
-                        if (p.GetValue(alloc) is decimal decValue)
-                        {
-                            values.Add(decValue);
-                        }
-                    }
-                }
-            }
+                "Housing", "Food", "Transportation", "Utilities", "Insurance",
+                "Healthcare", "Savings", "Debt Repayment", "Entertainment", "Miscellaneous"
+            };
+            var values = new[]
+            {
+                alloc.Housing, alloc.Food, alloc.Transportation, alloc.Utilities,
+                alloc.Insurance, alloc.Healthcare, alloc.Savings, alloc.DebtRepayment,
+                alloc.Entertainment, alloc.Miscellaneous
+            };
 
             return Json(new
             {
                 monthlyIncome = saved.MonthlyIncome,
-                allocations = values.ToArray(),
-                labels = labels.ToArray()
+                allocations = values,
+                labels = labels
             });
         }
         catch
@@ -189,28 +167,6 @@ public class BudgetController : Controller
                 Entertainment = model.Entertainment,
                 Miscellaneous = model.Miscellaneous
             }
-        };
-    }
-
-    /// <summary>
-    /// Returns a user-friendly name for a budget category.
-    /// Handles both PascalCase (e.g. "Housing") and lowercase (e.g. "housing") names.
-    /// </summary>
-    private static string FriendlyCategoryName(string propertyName)
-    {
-        return propertyName switch
-        {
-            "Housing" or "housing" => "Housing",
-            "Food" or "food" => "Food",
-            "Transportation" or "transportation" => "Transportation",
-            "Utilities" or "utilities" => "Utilities",
-            "Insurance" or "insurance" => "Insurance",
-            "Healthcare" or "healthcare" => "Healthcare",
-            "Savings" or "savings" => "Savings",
-            "DebtRepayment" or "debtRepayment" => "Debt Repayment",
-            "Entertainment" or "entertainment" => "Entertainment",
-            "Miscellaneous" or "miscellaneous" => "Miscellaneous",
-            _ => propertyName
         };
     }
 }

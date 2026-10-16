@@ -40,11 +40,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Budget Planner Form Validation**: Fixed browser validation error preventing budget save when dollar amount inputs
   produce non-half-step percentages.
   - Changed percentage input `step` attribute from `0.5` to `any` to allow any decimal value.
-- **Budget Planner Data Persistence**: Fixed budget data not loading after page refresh due to case-sensitivity mismatch
-  between API response and view model property mapping.
-  - API returns lowercase property names (e.g., "housing") but view model uses PascalCase (e.g., "Housing").
-  - Fixed reflection-based property mapping in `BudgetController.Index` to use case-insensitive binding.
-  - Added form submit handler to sync JavaScript state to form inputs before POST submission.
+- **Budget Planner Data Persistence**: Fixed budget values resetting to $0 after saving due to broken API response
+  deserialization.
+  - `BudgetResponseDto.Allocations` was typed as `object?`, causing System.Text.Json to deserialize the API response
+    as a generic dictionary instead of a typed object with decimal properties.
+  - The reflection-based property mapping in `BudgetController.Index` checked for `decimal` property types, which
+    never matched the deserialized dictionary, so all values remained at 0.
+  - Changed `BudgetResponseDto.Allocations` to `BudgetAllocationsDto?` for strong typing.
+  - Replaced reflection-based mapping with direct property assignment in both `Index` and `GetBudgetData` methods.
+  - Refit's default JSON serializer already uses case-insensitive property matching, so lowercase API properties (e.g.,
+    "housing") map correctly to PascalCase DTO properties (e.g., "Housing").
 - **Budget Planner Dollar Amount Input**: Users can now enter dollar amounts directly in addition to using sliders and
   percentage inputs.
   - Added editable dollar amount input field next to each category's percentage input.
