@@ -80,6 +80,30 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            @{ var isBudgetActive = currentController == "Budget"; }
+                            <a class="nav-link @(isBudgetActive ? "active" : "")"
+                               aria-current="@(isBudgetActive ? "page" : null)"
+                               asp-area="" asp-controller="Budget" asp-action="Index">
+                                Budget Planner
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            @{ var isSavingsActive = currentController == "SavingsGoals"; }
+                            <a class="nav-link @(isSavingsActive ? "active" : "")"
+                               aria-current="@(isSavingsActive ? "page" : null)"
+                               asp-area="" asp-controller="SavingsGoals" asp-action="Index">
+                                Savings Goals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            @{ var isCalculatorActive = currentController == "InvestmentCalculator"; }
+                            <a class="nav-link @(isCalculatorActive ? "active" : "")"
+                               aria-current="@(isCalculatorActive ? "page" : null)"
+                               asp-area="" asp-controller="InvestmentCalculator" asp-action="Index">
+                                Investment Calculator
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             @{ var isCommunityActive = currentController == "Community"; }
                             <a class="nav-link @(isCommunityActive ? "active" : "")" aria-current="@(isCommunityActive ? "page" : null)"
                                asp-area="" asp-controller="Community" asp-action="Index">

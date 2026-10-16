@@ -11,343 +11,492 @@
 <div class="budget-page">
     @if (TempData["SaveSuccess"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <div class="alert alert-success alert-dismissible fade show budget-alert" role="alert">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+                <path d="M20 6 9 17l-5-5"/>
+            </svg>
             @TempData["SaveSuccess"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
-    <validation-summary asp-validation-summary="ModelOnly" class="alert alert-danger"/>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <validation-summary asp-validation-summary="ModelOnly" class="alert alert-danger"/>
+    }
+
+    <!-- Page Header -->
+    <div class="budget-header mb-4">
+        <div class="budget-header__content">
+            <div>
+                <h1 class="budget-title">
+                    <span class="budget-title__icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
+                                d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                    </span>
+                    Budget Planner
+                </h1>
+                <p class="budget-subtitle">Allocate your monthly income across spending categories. Percentages must add
+                    up to 100%.</p>
+            </div>
+        </div>
+    </div>
 
     <form asp-action="Save" method="post" id="budgetForm">
         @Html.AntiForgeryToken()
 
-        <!-- Page Header -->
-        <div class="budget-header">
-            <div class="budget-header__content">
-                <div>
-                    <h1 class="budget-title">
-                        <span class="budget-title__icon" aria-hidden="true">
-                            <i class="bi bi-pie-chart"></i>
+        <!-- Income Hero Card -->
+        <div class="card budget-income-card mb-4">
+            <div class="card-body">
+                <div class="budget-income-hero">
+                    <div class="budget-income-hero__icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1v22"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                    </div>
+                    <div class="budget-income-hero__content">
+                        <label asp-for="MonthlyIncome" class="budget-income-hero__label"></label>
+                        <div class="budget-income-hero__input-wrapper">
+                            <span class="budget-income-hero__prefix">$</span>
+                            <input asp-for="MonthlyIncome" type="number" step="0.01" min="0"
+                                   class="form-control budget-income-input" aria-describedby="incomeHelp"/>
+                            <span class="budget-income-hero__suffix" id="incomeHelp">/month</span>
+                        </div>
+                        <span asp-validation-for="MonthlyIncome" class="invalid-feedback"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two-Column Layout: Categories + Chart Sidebar -->
+        <div class="row g-3">
+            <!-- Left Column: Category Allocations -->
+            <div class="col-lg-8">
+                <div class="card budget-card">
+                    <div class="budget-card__header">
+                        <div class="budget-card__header-left">
+                            <div class="budget-card__icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <rect width="7" height="7" x="3" y="3" rx="1"/>
+                                    <rect width="7" height="7" x="14" y="3" rx="1"/>
+                                    <rect width="7" height="7" x="14" y="14" rx="1"/>
+                                    <rect width="7" height="7" x="3" y="14" rx="1"/>
+                                </svg>
+                            </div>
+                            <h2 class="budget-card__title">Category Allocations</h2>
+                        </div>
+                        <span class="budget-total-badge" id="budgetTotalBadge">
+                            <span id="budgetTotalPercent">0</span>% / 100%
                         </span>
-                        Budget Planner
-                    </h1>
-                    <p class="budget-subtitle">
-                        Allocate your monthly income across spending categories. Percentages must add up to 100%.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Income Input -->
-        <div class="budget-card">
-            <div class="budget-card__header">
-                <h2 class="budget-card__title">Monthly Income</h2>
-            </div>
-            <div class="budget-card__body">
-                <div class="budget-income-field">
-                    <label asp-for="MonthlyIncome" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input asp-for="MonthlyIncome" type="number" step="0.01" min="0"
-                               class="form-control budget-income-input" aria-describedby="incomeHelp"/>
-                        <span class="input-group-text" id="incomeHelp">/month</span>
                     </div>
-                    <span asp-validation-for="MonthlyIncome" class="invalid-feedback"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Allocation Form and Chart -->
-        <div class="budget-row">
-            <!-- Allocation Sliders -->
-            <div class="budget-card budget-card--form">
-                <div class="budget-card__header">
-                    <h2 class="budget-card__title">Category Allocations</h2>
-                    <span class="budget-total-badge" id="budgetTotalBadge">
-                        <span id="budgetTotalPercent">0</span>% / 100%
-                    </span>
-                </div>
-                <div class="budget-card__body">
-                    <div class="budget-categories">
-                        <!-- Housing -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Housing">
-                                <i class="bi bi-house" aria-hidden="true"></i>
-                                Housing
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Housing" min="0" max="100" step="0.5"
-                                       data-category="Housing" value="@Model.Housing"
-                                       aria-label="Housing allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Housing" type="number" class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Housing"
-                                           aria-label="Housing percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
+                    <div class="budget-card__body">
+                        <div class="budget-categories">
+                            <!-- Housing -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-house"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="Housing">Housing</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Housing">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Housing" min="0" max="100" step="any"
+                                           data-category="Housing" value="@Model.Housing"
+                                           aria-label="Housing allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Housing" type="number" class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Housing"
+                                               aria-label="Housing percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Housing"
+                                               aria-label="Housing dollar amount"/>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="budget-category__amount" data-amount-for="Housing">
-                                $<span>0</span>
+
+                            <!-- Food -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-egg-fried"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="Food">Food</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Food">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Food" min="0" max="100" step="any"
+                                           data-category="Food" value="@Model.Food"
+                                           aria-label="Food allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Food" type="number" class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Food"
+                                               aria-label="Food percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Food"
+                                               aria-label="Food dollar amount"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transportation -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-car-front"></i>
+                                        </span>
+                                        <label class="budget-category__label"
+                                               for="Transportation">Transportation</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Transportation">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Transportation" min="0" max="100" step="any"
+                                           data-category="Transportation" value="@Model.Transportation"
+                                           aria-label="Transportation allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Transportation" type="number"
+                                               class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Transportation"
+                                               aria-label="Transportation percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Transportation"
+                                               aria-label="Transportation dollar amount"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Utilities -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-lightning"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="Utilities">Utilities</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Utilities">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Utilities" min="0" max="100" step="any"
+                                           data-category="Utilities" value="@Model.Utilities"
+                                           aria-label="Utilities allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Utilities" type="number"
+                                               class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Utilities"
+                                               aria-label="Utilities percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Utilities"
+                                               aria-label="Utilities dollar amount"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Insurance -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-shield-check"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="Insurance">Insurance</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Insurance">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Insurance" min="0" max="100" step="any"
+                                           data-category="Insurance" value="@Model.Insurance"
+                                           aria-label="Insurance allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Insurance" type="number"
+                                               class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Insurance"
+                                               aria-label="Insurance percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Insurance"
+                                               aria-label="Insurance dollar amount"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Healthcare -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-heart-pulse"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="Healthcare">Healthcare</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Healthcare">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Healthcare" min="0" max="100" step="any"
+                                           data-category="Healthcare" value="@Model.Healthcare"
+                                           aria-label="Healthcare allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Healthcare" type="number"
+                                               class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Healthcare"
+                                               aria-label="Healthcare percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Healthcare"
+                                               aria-label="Healthcare dollar amount"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Savings -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-piggy-bank"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="Savings">Savings</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Savings">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Savings" min="0" max="100" step="any"
+                                           data-category="Savings" value="@Model.Savings"
+                                           aria-label="Savings allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Savings" type="number" class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Savings"
+                                               aria-label="Savings percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Savings"
+                                               aria-label="Savings dollar amount"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Debt Repayment -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-credit-card"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="DebtRepayment">Debt Repayment</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="DebtRepayment">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-DebtRepayment" min="0" max="100" step="any"
+                                           data-category="DebtRepayment" value="@Model.DebtRepayment"
+                                           aria-label="Debt Repayment allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="DebtRepayment" type="number"
+                                               class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="DebtRepayment"
+                                               aria-label="Debt Repayment percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="DebtRepayment"
+                                               aria-label="Debt Repayment dollar amount"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Entertainment -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-controller"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="Entertainment">Entertainment</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Entertainment">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Entertainment" min="0" max="100" step="any"
+                                           data-category="Entertainment" value="@Model.Entertainment"
+                                           aria-label="Entertainment allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Entertainment" type="number"
+                                               class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Entertainment"
+                                               aria-label="Entertainment percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Entertainment"
+                                               aria-label="Entertainment dollar amount"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Miscellaneous -->
+                            <div class="budget-category-card">
+                                <div class="budget-category-card__header">
+                                    <div class="budget-category-card__info">
+                                        <span class="budget-category-card__icon" aria-hidden="true">
+                                            <i class="bi bi-three-dots"></i>
+                                        </span>
+                                        <label class="budget-category__label" for="Miscellaneous">Miscellaneous</label>
+                                    </div>
+                                    <div class="budget-category__amount" data-amount-for="Miscellaneous">
+                                        $<span>0</span>
+                                    </div>
+                                </div>
+                                <div class="budget-category-card__controls">
+                                    <input type="range" class="form-range budget-slider"
+                                           id="slider-Miscellaneous" min="0" max="100" step="any"
+                                           data-category="Miscellaneous" value="@Model.Miscellaneous"
+                                           aria-label="Miscellaneous allocation percentage"/>
+                                    <div class="budget-category__input-group">
+                                        <input asp-for="Miscellaneous" type="number"
+                                               class="form-control budget-percent-input"
+                                               min="0" max="100" step="any" data-category="Miscellaneous"
+                                               aria-label="Miscellaneous percentage"/>
+                                        <span class="budget-percent-input__suffix">%</span>
+                                    </div>
+                                    <div class="budget-category__input-group budget-amount-input-group">
+                                        <span class="budget-amount-input__prefix">$</span>
+                                        <input type="number" class="form-control budget-amount-input"
+                                               min="0" step="0.01" data-category="Miscellaneous"
+                                               aria-label="Miscellaneous dollar amount"/>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Food -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Food">
-                                <i class="bi bi-egg-fried" aria-hidden="true"></i>
-                                Food
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Food" min="0" max="100" step="0.5"
-                                       data-category="Food" value="@Model.Food"
-                                       aria-label="Food allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Food" type="number" class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Food"
-                                           aria-label="Food percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="Food">
-                                $<span>0</span>
-                            </div>
-                        </div>
-
-                        <!-- Transportation -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Transportation">
-                                <i class="bi bi-car-front" aria-hidden="true"></i>
-                                Transportation
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Transportation" min="0" max="100" step="0.5"
-                                       data-category="Transportation" value="@Model.Transportation"
-                                       aria-label="Transportation allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Transportation" type="number"
-                                           class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Transportation"
-                                           aria-label="Transportation percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="Transportation">
-                                $<span>0</span>
-                            </div>
-                        </div>
-
-                        <!-- Utilities -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Utilities">
-                                <i class="bi bi-lightning" aria-hidden="true"></i>
-                                Utilities
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Utilities" min="0" max="100" step="0.5"
-                                       data-category="Utilities" value="@Model.Utilities"
-                                       aria-label="Utilities allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Utilities" type="number" class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Utilities"
-                                           aria-label="Utilities percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="Utilities">
-                                $<span>0</span>
-                            </div>
-                        </div>
-
-                        <!-- Insurance -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Insurance">
-                                <i class="bi bi-shield-check" aria-hidden="true"></i>
-                                Insurance
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Insurance" min="0" max="100" step="0.5"
-                                       data-category="Insurance" value="@Model.Insurance"
-                                       aria-label="Insurance allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Insurance" type="number" class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Insurance"
-                                           aria-label="Insurance percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="Insurance">
-                                $<span>0</span>
-                            </div>
-                        </div>
-
-                        <!-- Healthcare -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Healthcare">
-                                <i class="bi bi-heart-pulse" aria-hidden="true"></i>
-                                Healthcare
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Healthcare" min="0" max="100" step="0.5"
-                                       data-category="Healthcare" value="@Model.Healthcare"
-                                       aria-label="Healthcare allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Healthcare" type="number" class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Healthcare"
-                                           aria-label="Healthcare percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="Healthcare">
-                                $<span>0</span>
-                            </div>
-                        </div>
-
-                        <!-- Savings -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Savings">
-                                <i class="bi bi-piggy-bank" aria-hidden="true"></i>
-                                Savings
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Savings" min="0" max="100" step="0.5"
-                                       data-category="Savings" value="@Model.Savings"
-                                       aria-label="Savings allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Savings" type="number" class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Savings"
-                                           aria-label="Savings percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="Savings">
-                                $<span>0</span>
-                            </div>
-                        </div>
-
-                        <!-- Debt Repayment -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="DebtRepayment">
-                                <i class="bi bi-credit-card" aria-hidden="true"></i>
-                                Debt Repayment
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-DebtRepayment" min="0" max="100" step="0.5"
-                                       data-category="DebtRepayment" value="@Model.DebtRepayment"
-                                       aria-label="Debt Repayment allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="DebtRepayment" type="number"
-                                           class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="DebtRepayment"
-                                           aria-label="Debt Repayment percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="DebtRepayment">
-                                $<span>0</span>
-                            </div>
-                        </div>
-
-                        <!-- Entertainment -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Entertainment">
-                                <i class="bi bi-controller" aria-hidden="true"></i>
-                                Entertainment
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Entertainment" min="0" max="100" step="0.5"
-                                       data-category="Entertainment" value="@Model.Entertainment"
-                                       aria-label="Entertainment allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Entertainment" type="number"
-                                           class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Entertainment"
-                                           aria-label="Entertainment percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="Entertainment">
-                                $<span>0</span>
-                            </div>
-                        </div>
-
-                        <!-- Miscellaneous -->
-                        <div class="budget-category">
-                            <label class="budget-category__label" for="Miscellaneous">
-                                <i class="bi bi-three-dots" aria-hidden="true"></i>
-                                Miscellaneous
-                            </label>
-                            <div class="budget-category__controls">
-                                <input type="range" class="form-range budget-slider"
-                                       id="slider-Miscellaneous" min="0" max="100" step="0.5"
-                                       data-category="Miscellaneous" value="@Model.Miscellaneous"
-                                       aria-label="Miscellaneous allocation percentage"/>
-                                <div class="budget-category__input-group">
-                                    <input asp-for="Miscellaneous" type="number"
-                                           class="form-control budget-percent-input"
-                                           min="0" max="100" step="0.5" data-category="Miscellaneous"
-                                           aria-label="Miscellaneous percentage"/>
-                                    <span class="budget-percent-input__suffix">%</span>
-                                </div>
-                            </div>
-                            <div class="budget-category__amount" data-amount-for="Miscellaneous">
-                                $<span>0</span>
-                            </div>
+                        <!-- Remaining Allocation Indicator -->
+                        <div class="budget-remaining" id="budgetRemaining">
+                            <span class="budget-remaining__label">Remaining to allocate:</span>
+                            <span class="budget-remaining__value" id="budgetRemainingValue">100%</span>
                         </div>
                     </div>
-
-                    <!-- Remaining Allocation Indicator -->
-                    <div class="budget-remaining" id="budgetRemaining">
-                        <span class="budget-remaining__label">Remaining:</span>
-                        <span class="budget-remaining__value" id="budgetRemainingValue">100%</span>
-                    </div>
-
-                    <!-- Save Button -->
-                    <div class="budget-actions">
-                        <button type="submit" class="btn btn-primary btn-lg budget-save-btn" id="budgetSaveBtn">
-                            <i class="bi bi-save me-2"></i>Save Budget
+                    <div class="budget-card__footer">
+                        <button type="submit" class="btn btn-primary budget-save-btn" id="budgetSaveBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                 stroke-linejoin="round" class="me-2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                <polyline points="17 21 17 13 7 13 7 21"/>
+                                <polyline points="7 3 7 8 15 8"/>
+                            </svg>
+                            Save Budget
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Chart and Summary -->
-            <div class="budget-card budget-card--chart">
-                <div class="budget-card__header">
-                    <h2 class="budget-card__title">Budget Breakdown</h2>
-                </div>
-                <div class="budget-card__body">
-                    <div class="budget-chart-container">
-                        <canvas id="budgetPieChart" aria-label="Budget allocation pie chart" role="img"></canvas>
+            <!-- Right Column: Chart and Summary Sidebar -->
+            <div class="col-lg-4">
+                <div class="card budget-card budget-card--sticky">
+                    <div class="budget-card__header">
+                        <div class="budget-card__header-left">
+                            <div class="budget-card__icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                                    <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                                </svg>
+                            </div>
+                            <h2 class="budget-card__title">Budget Breakdown</h2>
+                        </div>
                     </div>
-                    <div class="budget-summary-table-container">
-                        <table class="table budget-summary-table" id="budgetSummaryTable">
-                            <thead>
-                            <tr>
-                                <th>Category</th>
-                                <th class="text-end">%</th>
-                                <th class="text-end">Amount</th>
-                            </tr>
-                            </thead>
-                            <tbody id="budgetSummaryBody">
-                            </tbody>
-                            <tfoot>
-                            <tr class="budget-summary-total">
-                                <td><strong>Total</strong></td>
-                                <td class="text-end"><strong id="budgetSummaryTotalPercent">0%</strong></td>
-                                <td class="text-end"><strong id="budgetSummaryTotalAmount">$0</strong></td>
-                            </tr>
-                            </tfoot>
-                        </table>
+                    <div class="budget-card__body">
+                        <div class="budget-chart-container">
+                            <canvas id="budgetPieChart" aria-label="Budget allocation pie chart" role="img"></canvas>
+                        </div>
+                        <div class="budget-summary-table-container">
+                            <table class="table budget-summary-table" id="budgetSummaryTable">
+                                <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">%</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                                </thead>
+                                <tbody id="budgetSummaryBody">
+                                </tbody>
+                                <tfoot>
+                                <tr class="budget-summary-total">
+                                    <td><strong>Total</strong></td>
+                                    <td class="text-end"><strong id="budgetSummaryTotalPercent">0%</strong></td>
+                                    <td class="text-end"><strong id="budgetSummaryTotalAmount">$0</strong></td>
+                                </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

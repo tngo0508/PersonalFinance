@@ -1,44 +1,30 @@
 /* ==========================================================================
    Budget Planner Page Styles (budget-*)
-   "Indigo Ledger" design system
+   "Indigo Ledger" design system — responsive, professional UI
    ========================================================================== */
 
 :root {
-    --budget-primary: #4F46E5;
-    --budget-primary-hover: #4338CA;
-    --budget-primary-light: #E0E7FF;
+    --budget-primary: var(--app-brand);
+    --budget-primary-hover: var(--app-brand-hover);
+    --budget-primary-light: var(--app-brand-bg);
     --budget-primary-glow: rgba(79, 70, 229, 0.15);
     --budget-surface: #ffffff;
-    --budget-surface-soft: #F9FAFB;
-    --budget-bg: #FFFFFF;
-    --budget-border: #E5E7EB;
-    --budget-border-hover: #D1D5DB;
-    --budget-text-main: #111827;
-    --budget-text-muted: #6B7280;
-    --budget-text-faint: #9CA3AF;
-    --budget-success: #059669;
+    --budget-surface-soft: var(--app-surface-soft);
+    --budget-border: var(--app-border);
+    --budget-border-hover: var(--app-border-hover);
+    --budget-text-main: var(--app-text);
+    --budget-text-muted: var(--app-text-muted);
+    --budget-text-faint: var(--app-text-disabled);
+    --budget-success: var(--app-accent-positive);
     --budget-success-light: #D1FAE5;
-    --budget-warning: #D97706;
+    --budget-warning: var(--app-accent-warning);
     --budget-warning-light: #FEF3C7;
-    --budget-danger: #DC2626;
+    --budget-danger: var(--app-accent-negative);
     --budget-danger-light: #FEE2E2;
     --budget-shadow-sm: var(--app-shadow-2);
     --budget-shadow-md: var(--app-shadow-4);
-    --budget-shadow-lg: var(--app-shadow-8);
     --budget-radius: var(--app-radius-s);
     --budget-radius-lg: var(--app-radius-m);
-
-    /* Category colors for pie chart — indigo-based palette */
-    --budget-cat-housing: #4F46E5;
-    --budget-cat-food: #0891B2;
-    --budget-cat-transportation: #65A30D;
-    --budget-cat-utilities: #EA580C;
-    --budget-cat-insurance: #7C3AED;
-    --budget-cat-healthcare: #DB2777;
-    --budget-cat-savings: #059669;
-    --budget-cat-debt: #4D7C0F;
-    --budget-cat-entertainment: #4338CA;
-    --budget-cat-misc: #6B7280;
 }
 
 /* ==========================================================================
@@ -47,7 +33,7 @@
 
 .budget-page {
     background: transparent;
-    padding: 1rem 0;
+    padding: 0.5rem 0;
 }
 
 /* ==========================================================================
@@ -55,44 +41,168 @@
    ========================================================================== */
 
 .budget-header {
-    margin-bottom: 2rem;
+    margin-bottom: 0;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--app-border);
 }
 
 .budget-header__content {
-    padding: 1.5rem 2rem;
-    background: var(--budget-surface);
-    border: 1px solid var(--budget-border);
-    border-radius: var(--budget-radius-lg);
-    box-shadow: var(--budget-shadow-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .budget-title {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-    font-size: 1.75rem;
-    font-weight: var(--app-font-weight-semibold);
-    margin: 0;
-    color: var(--budget-text-main);
+    gap: 0.75rem;
+    font-size: 1.5rem;
+    font-weight: var(--app-font-weight-bold);
+    margin: 0 0 0.25rem;
+    line-height: 1.3;
+    color: var(--app-text);
 }
 
 .budget-title__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     border-radius: var(--app-radius-m);
-    background: var(--budget-primary);
+    background: var(--app-brand);
     color: #fff;
-    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.budget-title__icon svg {
+    width: 20px;
+    height: 20px;
 }
 
 .budget-subtitle {
-    color: var(--budget-text-muted);
-    font-size: 0.95rem;
-    margin: 0.3rem 0 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-base);
+    margin: 0;
     line-height: 1.5;
+}
+
+/* ==========================================================================
+   Alert
+   ========================================================================== */
+
+.budget-alert {
+    border-radius: var(--app-radius-m);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ==========================================================================
+   Income Hero Card
+   ========================================================================== */
+
+.budget-income-card {
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    box-shadow: var(--app-shadow-2);
+}
+
+.budget-income-hero {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.budget-income-hero__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--app-radius-m);
+    background: var(--app-accent-positive-bg);
+    color: var(--app-accent-positive);
+    flex-shrink: 0;
+}
+
+.budget-income-hero__icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.budget-income-hero__content {
+    flex: 1;
+    max-width: 400px;
+}
+
+.budget-income-hero__label {
+    display: block;
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.budget-income-hero__input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 2px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    background: var(--app-surface-soft);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    overflow: hidden;
+}
+
+.budget-income-hero__input-wrapper:focus-within {
+    border-color: var(--app-brand);
+    box-shadow: 0 0 0 3px var(--app-brand-bg);
+    background: #fff;
+}
+
+.budget-income-hero__prefix {
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem 0 0.85rem;
+    font-size: 1.1rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    border-right: 1px solid var(--app-border);
+    height: 44px;
+}
+
+.budget-income-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    font-weight: var(--app-font-weight-bold);
+    font-family: var(--app-font-mono);
+    color: var(--app-text);
+    padding: 0 0.5rem;
+    height: 44px;
+    box-shadow: none !important;
+}
+
+.budget-income-input:focus {
+    outline: none;
+}
+
+.budget-income-hero__suffix {
+    display: flex;
+    align-items: center;
+    padding: 0 0.85rem;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    border-left: 1px solid var(--app-border);
+    height: 44px;
+    white-space: nowrap;
 }
 
 /* ==========================================================================
@@ -100,11 +210,9 @@
    ========================================================================== */
 
 .budget-card {
-    background: var(--budget-surface);
-    border: 1px solid var(--budget-border);
-    border-radius: var(--budget-radius-lg);
-    box-shadow: var(--budget-shadow-sm);
-    margin-bottom: 1.5rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    box-shadow: var(--app-shadow-2);
     overflow: hidden;
 }
 
@@ -112,49 +220,58 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--budget-border);
-    background: var(--budget-surface-soft);
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-surface-soft);
+}
+
+.budget-card__header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.budget-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--app-radius-s);
+    background: var(--app-brand-bg);
+    color: var(--app-brand);
+    flex-shrink: 0;
+}
+
+.budget-card__icon svg {
+    width: 16px;
+    height: 16px;
 }
 
 .budget-card__title {
-    font-size: 1.1rem;
+    font-size: var(--app-font-size-base);
     font-weight: var(--app-font-weight-semibold);
     margin: 0;
-    color: var(--budget-text-main);
+    color: var(--app-text);
 }
 
 .budget-card__body {
-    padding: 1.5rem;
+    padding: 1.25rem;
 }
 
-/* ==========================================================================
-   Income Field
-   ========================================================================== */
-
-.budget-income-field {
-    max-width: 300px;
+.budget-card__footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--app-border);
+    background: var(--app-surface-soft);
+    display: flex;
+    justify-content: flex-end;
 }
 
-.budget-income-input {
-    font-size: 1.25rem;
-    font-weight: var(--app-font-weight-semibold);
-}
-
-/* ==========================================================================
-   Two-Column Row
-   ========================================================================== */
-
-.budget-row {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-}
-
-@media (min-width: 992px) {
-    .budget-row {
-        grid-template-columns: 1.2fr 0.8fr;
-    }
+/* Sticky sidebar card */
+.budget-card--sticky {
+    position: sticky;
+    top: 1rem;
+    align-self: flex-start;
 }
 
 /* ==========================================================================
@@ -166,11 +283,13 @@
     align-items: center;
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: var(--app-font-size-small);
     font-weight: var(--app-font-weight-semibold);
-    background: var(--budget-primary-light);
-    color: var(--budget-primary);
+    font-family: var(--app-font-mono);
+    background: var(--app-brand-bg);
+    color: var(--app-brand);
     transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
 }
 
 .budget-total-badge--over {
@@ -184,51 +303,78 @@
 }
 
 /* ==========================================================================
-   Categories
+   Categories — 2-Column Grid
    ========================================================================== */
 
 .budget-categories {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
 }
 
-.budget-category {
-    display: grid;
-    grid-template-columns: 140px 1fr 100px;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.75rem;
+/* ==========================================================================
+   Category Card
+   ========================================================================== */
+
+.budget-category-card {
+    background: var(--app-surface-soft);
+    border: 1px solid var(--app-border);
     border-radius: var(--app-radius-m);
-    background: var(--budget-surface-soft);
-    border: 1px solid transparent;
+    padding: 0.85rem;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.budget-category:hover {
-    border-color: var(--budget-border-hover);
-    box-shadow: var(--budget-shadow-sm);
+.budget-category-card:hover {
+    border-color: var(--app-border-hover);
+    box-shadow: var(--app-shadow-2);
 }
 
-.budget-category__label {
+.budget-category-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+}
+
+.budget-category-card__info {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.budget-category-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--app-radius-s);
+    background: var(--app-brand-bg);
+    color: var(--app-brand);
+    flex-shrink: 0;
     font-size: 0.9rem;
+}
+
+.budget-category__label {
+    font-size: var(--app-font-size-small);
     font-weight: var(--app-font-weight-semibold);
-    color: var(--budget-text-main);
+    color: var(--app-text);
     cursor: default;
+    margin: 0;
 }
 
-.budget-category__label .bi {
-    font-size: 1.1rem;
-    color: var(--budget-text-muted);
+.budget-category__amount {
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-bold);
+    font-family: var(--app-font-mono);
+    color: var(--app-text);
+    white-space: nowrap;
 }
 
-.budget-category__controls {
+.budget-category-card__controls {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.6rem;
 }
 
 .budget-slider {
@@ -236,38 +382,78 @@
     min-width: 0;
     height: 6px;
     cursor: pointer;
+    min-height: 44px;
+    margin: -9px 0;
 }
 
 .budget-category__input-group {
     position: relative;
-    width: 80px;
+    width: 70px;
     flex-shrink: 0;
 }
 
 .budget-percent-input {
     width: 100%;
-    padding-right: 1.5rem;
+    padding-right: 1.2rem;
     text-align: right;
-    font-size: 0.9rem;
+    font-size: var(--app-font-size-small);
+    font-family: var(--app-font-mono);
     height: 32px;
+    border-radius: var(--app-radius-s);
+    border: 1px solid var(--app-border);
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.budget-percent-input:focus {
+    border-color: var(--app-brand);
+    box-shadow: 0 0 0 2px var(--app-brand-bg);
+    outline: none;
 }
 
 .budget-percent-input__suffix {
     position: absolute;
-    right: 0.75rem;
+    right: 0.6rem;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 0.8rem;
-    color: var(--budget-text-muted);
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
     pointer-events: none;
 }
 
-.budget-category__amount {
+.budget-amount-input-group {
+    position: relative;
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.budget-amount-input {
+    width: 100%;
+    padding-left: 1.4rem;
     text-align: right;
-    font-size: 0.9rem;
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--budget-text-muted);
-    white-space: nowrap;
+    font-size: var(--app-font-size-small);
+    font-family: var(--app-font-mono);
+    height: 32px;
+    border-radius: var(--app-radius-s);
+    border: 1px solid var(--app-border);
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.budget-amount-input:focus {
+    border-color: var(--app-brand);
+    box-shadow: 0 0 0 2px var(--app-brand-bg);
+    outline: none;
+}
+
+.budget-amount-input__prefix {
+    position: absolute;
+    left: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    pointer-events: none;
 }
 
 /* ==========================================================================
@@ -279,21 +465,22 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    margin-top: 1.5rem;
-    padding: 0.75rem;
+    margin-top: 1rem;
+    padding: 0.6rem 0.75rem;
     border-radius: var(--app-radius-m);
-    background: var(--budget-surface-soft);
-    border: 1px solid var(--budget-border);
-    font-size: 0.95rem;
+    background: var(--app-surface-soft);
+    border: 1px solid var(--app-border);
+    font-size: var(--app-font-size-small);
 }
 
 .budget-remaining__label {
-    color: var(--budget-text-muted);
+    color: var(--app-text-muted);
 }
 
 .budget-remaining__value {
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--budget-primary);
+    font-weight: var(--app-font-weight-bold);
+    font-family: var(--app-font-mono);
+    color: var(--app-brand);
 }
 
 .budget-remaining--over {
@@ -315,23 +502,30 @@
 }
 
 /* ==========================================================================
-   Actions
+   Save Button
    ========================================================================== */
 
-.budget-actions {
-    margin-top: 1.5rem;
-    text-align: center;
+.budget-save-btn {
+    font-weight: var(--app-font-weight-semibold);
+    padding: 0.5rem 1.5rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
 }
 
-.budget-save-btn {
-    min-width: 200px;
-    font-weight: var(--app-font-weight-semibold);
-    box-shadow: var(--budget-shadow-sm);
+.budget-save-btn svg {
+    width: 14px;
+    height: 14px;
 }
 
 .budget-save-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.budget-save-btn:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
 }
 
 /* ==========================================================================
@@ -340,12 +534,14 @@
 
 .budget-chart-container {
     position: relative;
-    max-width: 320px;
-    margin: 0 auto 1.5rem;
+    max-width: 280px;
+    margin: 0 auto 1.25rem;
 }
 
 .budget-chart-container canvas {
-    max-height: 300px;
+    max-height: 260px;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* ==========================================================================
@@ -353,86 +549,160 @@
    ========================================================================== */
 
 .budget-summary-table-container {
-    max-height: 300px;
+    max-height: 260px;
     overflow-y: auto;
+    border-radius: var(--app-radius-s);
+    border: 1px solid var(--app-border);
 }
 
 .budget-summary-table {
     margin-bottom: 0;
-    font-size: 0.85rem;
+    font-size: var(--app-font-size-small);
 }
 
 .budget-summary-table thead th {
     position: sticky;
     top: 0;
-    background: var(--budget-surface-soft);
-    border-bottom: 2px solid var(--budget-border);
+    background: var(--app-surface-soft);
+    border-bottom: 2px solid var(--app-border);
     font-weight: var(--app-font-weight-semibold);
-    color: var(--budget-text-muted);
-    font-size: 0.8rem;
+    color: var(--app-text-muted);
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.6rem;
 }
 
 .budget-summary-table tbody td {
-    padding: 0.4rem 0.75rem;
+    padding: 0.35rem 0.6rem;
     vertical-align: middle;
-    color: var(--budget-text-main);
+    color: var(--app-text);
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-small);
 }
 
 .budget-summary-table tbody tr:hover {
-    background: var(--budget-primary-light);
+    background: var(--app-brand-bg);
 }
 
 .budget-summary-total {
-    background: var(--budget-surface-soft) !important;
-    border-top: 2px solid var(--budget-border);
+    background: var(--app-surface-soft) !important;
+    border-top: 2px solid var(--app-border);
 }
 
 .budget-summary-total td {
-    padding: 0.6rem 0.75rem;
-    font-size: 0.9rem;
+    padding: 0.5rem 0.6rem;
+    font-size: var(--app-font-size-small);
 }
 
 /* ==========================================================================
-   Alert overrides
+   Responsive Breakpoints
    ========================================================================== */
 
-.budget-page .alert {
-    border-radius: var(--app-radius-m);
-    margin-bottom: 1rem;
-}
-
-/* ==========================================================================
-   Responsive
-   ========================================================================== */
-
-@media (max-width: 576px) {
-    .budget-category {
+/* Tablet and below — single column categories */
+@media (max-width: 991px) {
+    .budget-categories {
         grid-template-columns: 1fr;
-        gap: 0.5rem;
     }
 
-    .budget-category__label {
-        padding-bottom: 0.25rem;
+    .budget-card--sticky {
+        position: static;
+        margin-top: 0.5rem;
     }
 
-    .budget-category__amount {
-        text-align: left;
-        padding-left: 0.5rem;
-        border-left: 3px solid var(--budget-border);
+    .budget-chart-container {
+        max-width: 260px;
     }
+}
 
-    .budget-header__content {
-        padding: 1rem;
-    }
-
+/* Mobile — smaller padding and font sizes */
+@media (max-width: 576px) {
     .budget-title {
-        font-size: 1.35rem;
+        font-size: 1.25rem;
+    }
+
+    .budget-title__icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .budget-title__icon svg {
+        width: 18px;
+        height: 18px;
     }
 
     .budget-card__body {
         padding: 1rem;
+    }
+
+    .budget-card__header {
+        padding: 0.75rem 1rem;
+    }
+
+    .budget-card__footer {
+        padding: 0.75rem 1rem;
+    }
+
+    .budget-income-hero {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .budget-income-hero__content {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .budget-income-hero__input-wrapper {
+        width: 100%;
+    }
+
+    .budget-income-hero__prefix {
+        padding: 0 0.5rem 0 0.6rem;
+    }
+
+    .budget-category-card {
+        padding: 0.75rem;
+    }
+
+    .budget-chart-container {
+        max-width: 220px;
+    }
+
+    .budget-chart-container canvas {
+        max-height: 220px;
+    }
+
+    .budget-summary-table-container {
+        max-height: 200px;
+    }
+
+    .budget-save-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .budget-category-card__controls {
+        flex-wrap: wrap;
+    }
+
+    .budget-amount-input-group {
+        width: 90px;
+    }
+
+    .budget-percent-input-group,
+    .budget-amount-input-group {
+        flex-shrink: 0;
+    }
+}
+
+/* Accessibility — reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .budget-category-card,
+    .budget-income-hero__input-wrapper,
+    .budget-percent-input,
+    .budget-amount-input,
+    .budget-total-badge {
+        transition: none;
     }
 }

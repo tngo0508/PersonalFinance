@@ -11,6 +11,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Removed MediatR Dependency**: Replaced MediatR CQRS mediator pattern with direct service calls across all API
+  features to avoid licensing requirements introduced in MediatR v13+.
+  - All API controllers now inject and call services directly instead of sending commands/queries through IMediator.
+  - Removed all command, query, and handler classes (NetWorth, Budget, Community, SavingsGoals, Watchlist, GoogleDrive,
+    SpreadsheetAnalysis, AiAssistant).
+  - Removed MediatR pipeline ValidationBehavior and FluentValidation validators that targeted command classes.
+  - Moved SpreadsheetAnalysis sync logic from command handler into SpreadsheetAnalysisService.
+  - Removed MediatR and MediatR.Extensions.Microsoft.DependencyInjection NuGet packages.
+
+### Fixed
+
+- **Budget Planner Save**: Fixed budget data being wiped after clicking Save — the DebtRepayment category value was
+  never submitted because the JavaScript `capitalize()` helper only uppercased the first character, producing
+  "Debtrepayment" instead of "DebtRepayment".
+  - Replaced the `capitalize()` function with an explicit lookup table mapping all 10 camelCase category keys to their
+    PascalCase C# property names.
+  - The form now correctly submits all category values, allowing the 100% validation to pass and the budget to persist.
+- **Savings Goals API Routes**: Fixed savings goals not persisting to the database due to incorrect API route templates.
+  - API controller routes used `[HttpPost("savings-goals")]` but the Refit contract expected
+    `[Post("/api/SavingsGoals")]`.
+  - Fixed all three action routes (Create, Update, Delete) to match the controller's base route `/api/SavingsGoals`.
+- **Budget Planner Form Validation**: Fixed browser validation error preventing budget save when dollar amount inputs
+  produce non-half-step percentages.
+  - Changed percentage input `step` attribute from `0.5` to `any` to allow any decimal value.
+- **Budget Planner Data Persistence**: Fixed budget data not loading after page refresh due to case-sensitivity mismatch
+  between API response and view model property mapping.
+  - API returns lowercase property names (e.g., "housing") but view model uses PascalCase (e.g., "Housing").
+  - Fixed reflection-based property mapping in `BudgetController.Index` to use case-insensitive binding.
+  - Added form submit handler to sync JavaScript state to form inputs before POST submission.
+- **Budget Planner Dollar Amount Input**: Users can now enter dollar amounts directly in addition to using sliders and
+  percentage inputs.
+  - Added editable dollar amount input field next to each category's percentage input.
+  - Dollar amounts sync bidirectionally with percentages based on monthly income.
+  - All three input methods (slider, percentage, dollar amount) stay synchronized in real-time.
+
+### Fixed
+
+- **Budget, Savings Goals, and Investment Calculator UI**: Fixed visual inconsistencies and layout issues across the
+  three standalone finance pages.
+  - Unified page header style across all three pages — removed card-style wrapper from Budget header to match Savings
+    and Calculator.
+  - Fixed pink rectangle rendering artifacts caused by malformed element structure.
+  - Improved Savings Goals card grid layout — wider minimum card width (340px), better spacing, and flex column layout.
+  - Enhanced Savings Goals progress bar visibility and styling with proper design system tokens.
+  - Replaced hardcoded green colors with design system CSS variables (`--app-brand`, `--app-accent-positive`) for
+    consistency.
+  - Added monospace font (`IBM Plex Mono`) to financial values in Savings Goals and Investment Calculator for better
+    readability.
+  - Removed unnecessary hover transform animation from Savings Goals cards.
+
+### Changed
+
+- **Finance News UI Redesign**: Separated the mixed "Personal Finance Hub" into focused, standalone features.
+  - Removed Budget Planner, Savings Goals, and Investment Calculator tabs from the Finance News page.
+  - Finance News now only contains news articles and Watchlist (saved articles) — naturally related features.
+  - Added Budget Planner, Savings Goals, and Investment Calculator as separate navigation menu items.
+  - Created standalone `SavingsGoalsController` with CRUD operations via Refit API.
+  - Created standalone `InvestmentCalculatorController` with client-side compound growth projection.
+  - Split the monolithic `news.js` (1,271 lines) — extracted calculator logic to `investment-calculator/calculator.js`.
+  - Split the monolithic `news.css` (1,362 lines) — created `savings-goals.css` and `investment-calculator.css`.
+  - Each feature now has its own dedicated page, CSS, and JavaScript for cleaner maintenance.
+
+### Changed
+
 - **Complete Visual Redesign**: Replaced the generic Fluent UI / Bootstrap card-based design with a distinctive "Indigo
   Ledger" design system.
   - Replaced Communication Blue (#0078d4) brand color with indigo (#4F46E5) — unexpected for finance, memorable.

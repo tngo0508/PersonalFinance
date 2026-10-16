@@ -76,12 +76,18 @@
             const value = currentData[cat] || 0;
             const slider = document.getElementById('slider-' + capitalize(cat));
             const input = document.querySelector('.budget-percent-input[data-category="' + capitalize(cat) + '"]');
+            const amountInput = document.querySelector('.budget-amount-input[data-category="' + capitalize(cat) + '"]');
 
             if (slider) {
                 slider.value = value;
             }
             if (input) {
                 input.value = value;
+            }
+            if (amountInput) {
+                const income = currentData.monthlyIncome || 0;
+                const amount = (income * value) / 100;
+                amountInput.value = amount > 0 ? amount.toFixed(2) : '';
             }
         });
 
@@ -114,17 +120,20 @@
                 const normalizedCat = normalizeCategory(cat);
                 currentData[normalizedCat] = value;
 
-                // Sync input
+                // Sync the percentage number input (this is the asp-for bound input)
                 const input = document.querySelector('.budget-percent-input[data-category="' + cat + '"]');
                 if (input) {
                     input.value = value;
                 }
 
+                // Sync dollar amount input
+                syncAmountInput(cat, value);
+
                 updateAll();
             });
         });
 
-        // Number inputs
+        // Number inputs (these are the asp-for bound inputs)
         const inputs = document.querySelectorAll('.budget-percent-input');
         inputs.forEach(function (input) {
             input.addEventListener('input', function () {
@@ -144,8 +153,83 @@
                     slider.value = value;
                 }
 
+                // Sync dollar amount input
+                syncAmountInput(cat, value);
+
                 updateAll();
             });
+        });
+
+        // Dollar amount inputs
+        const amountInputs = document.querySelectorAll('.budget-amount-input');
+        amountInputs.forEach(function (amountInput) {
+            amountInput.addEventListener('input', function () {
+                const cat = this.getAttribute('data-category');
+                const amount = parseFloat(this.value) || 0;
+                const income = currentData.monthlyIncome || 0;
+
+                // Convert amount to percentage
+                let percent = 0;
+                if (income > 0) {
+                    percent = (amount * 100) / income;
+                }
+
+                // Clamp percentage to 0-100
+                if (percent < 0) percent = 0;
+                if (percent > 100) percent = 100;
+
+                const normalizedCat = normalizeCategory(cat);
+                currentData[normalizedCat] = percent;
+
+                // Sync slider
+                const slider = document.getElementById('slider-' + cat);
+                if (slider) {
+                    slider.value = percent;
+                }
+
+                // Sync percentage input
+                const percentInput = document.querySelector('.budget-percent-input[data-category="' + cat + '"]');
+                if (percentInput) {
+                    percentInput.value = percent;
+                }
+
+                updateAll();
+            });
+        });
+
+        // Sync JS state to form inputs before form submission, so the POST carries current values
+        const form = document.getElementById('budgetForm');
+        if (form) {
+            form.addEventListener('submit', function () {
+                syncFormInputsFromData();
+            });
+        }
+    }
+
+    /**
+     * Sync all form input values from currentData so the form POST carries the latest values.
+     */
+    function syncFormInputsFromData() {
+        // Sync income
+        const incomeInput = document.querySelector('.budget-income-input');
+        if (incomeInput) {
+            incomeInput.value = currentData.monthlyIncome || 0;
+        }
+
+        // Sync each category percentage input
+        categories.forEach(function (cat) {
+            const value = currentData[cat] || 0;
+            // The asp-for input ID matches the PascalCase property name (e.g. "Housing")
+            const capitalized = capitalize(cat);
+            const input = document.getElementById(capitalized);
+            if (input) {
+                input.value = value;
+            }
+            // Also update the data-category input as fallback
+            const dataInput = document.querySelector('.budget-percent-input[data-category="' + capitalized + '"]');
+            if (dataInput) {
+                dataInput.value = value;
+            }
         });
     }
 
@@ -175,7 +259,27 @@
             if (amountEl) {
                 amountEl.textContent = formatCurrency(amount);
             }
+
+            // Sync the editable amount input (only if not currently focused, to avoid disrupting user typing)
+            const amountInput = document.querySelector('.budget-amount-input[data-category="' + capitalized + '"]');
+            if (amountInput && document.activeElement !== amountInput) {
+                amountInput.value = amount > 0 ? amount.toFixed(2) : '';
+            }
         });
+    }
+
+    /**
+     * Sync the dollar amount input for a category based on its percentage.
+     * @param {string} cat - Category name (PascalCase)
+     * @param {number} percent - Percentage value
+     */
+    function syncAmountInput(cat, percent) {
+        const income = currentData.monthlyIncome || 0;
+        const amount = (income * percent) / 100;
+        const amountInput = document.querySelector('.budget-amount-input[data-category="' + cat + '"]');
+        if (amountInput && document.activeElement !== amountInput) {
+            amountInput.value = amount > 0 ? amount.toFixed(2) : '';
+        }
     }
 
     /**
@@ -349,13 +453,26 @@
     }
 
     /**
-     * Capitalize first letter of a string.
-     * @param {string} str - The string to capitalize
-     * @returns {string} Capitalized string
+     * Map a camelCase category key to the PascalCase property name used by asp-for inputs.
+     * @param {string} str - The camelCase category key (e.g., "debtRepayment")
+     * @returns {string} PascalCase property name (e.g., "DebtRepayment")
      */
     function capitalize(str) {
         if (!str) return str;
-        return str.charAt(0).toUpperCase() + str.slice(1);
+        // Explicit mapping from camelCase JS keys to PascalCase C# property names
+        const map = {
+            housing: 'Housing',
+            food: 'Food',
+            transportation: 'Transportation',
+            utilities: 'Utilities',
+            insurance: 'Insurance',
+            healthcare: 'Healthcare',
+            savings: 'Savings',
+            debtRepayment: 'DebtRepayment',
+            entertainment: 'Entertainment',
+            miscellaneous: 'Miscellaneous'
+        };
+        return map[str] || str;
     }
 
     /**

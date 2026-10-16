@@ -1,7 +1,15 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using PersonalFinance.ApiService.AiAssistant.Services;
+using PersonalFinance.ApiService.Budget.Services;
+using PersonalFinance.ApiService.Community.Services;
+using PersonalFinance.ApiService.GoogleDrive.Services;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.ApiService.NetWorth.Services;
+using PersonalFinance.ApiService.SavingsGoals.Services;
+using PersonalFinance.ApiService.SpreadsheetAnalysis.Services;
+using PersonalFinance.ApiService.Watchlist.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using Scalar.AspNetCore;
@@ -36,7 +44,8 @@ try
                 path: Path.Combine("logs", "apiservice-.log"),
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30,
-                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
+                outputTemplate:
+                "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
         writeToProviders: true);
 
     // 3. Register EF Core DbContext with environment-driven provider (Azure SQL Serverless / SQLite)
@@ -62,35 +71,37 @@ try
     builder.Services.AddHealthChecks();
 
     // 5b. Register Google Drive connection management service with typed HttpClient
-    builder.Services.AddHttpClient<PersonalFinance.ApiService.GoogleDrive.Services.IDriveConnectionService, PersonalFinance.ApiService.GoogleDrive.Services.DriveConnectionService>(client =>
+    builder.Services.AddHttpClient<IDriveConnectionService, DriveConnectionService>(client =>
     {
         client.Timeout = TimeSpan.FromSeconds(15);
     });
 
     // 5c. Register Spreadsheet Reader service with typed HttpClient
-    builder.Services.AddHttpClient<PersonalFinance.ApiService.SpreadsheetAnalysis.Services.ISpreadsheetReader, PersonalFinance.ApiService.SpreadsheetAnalysis.Services.SpreadsheetReaderService>(client =>
+    builder.Services.AddHttpClient<ISpreadsheetReader, SpreadsheetReaderService>(client =>
     {
         client.Timeout = TimeSpan.FromSeconds(15);
     });
 
     // 5a. Register Net Worth parameters persistence service
-    builder.Services.AddScoped<PersonalFinance.ApiService.NetWorth.Services.INetWorthParametersService, PersonalFinance.ApiService.NetWorth.Services.NetWorthParametersService>();
+    builder.Services.AddScoped<INetWorthParametersService, NetWorthParametersService>();
 
     // 5b. Register Personal Finance services
-    builder.Services.AddScoped<PersonalFinance.ApiService.Budget.Services.IBudgetService, PersonalFinance.ApiService.Budget.Services.BudgetService>();
-    builder.Services.AddScoped<PersonalFinance.ApiService.SavingsGoals.Services.ISavingsGoalService, PersonalFinance.ApiService.SavingsGoals.Services.SavingsGoalService>();
-    builder.Services.AddScoped<PersonalFinance.ApiService.Watchlist.Services.IWatchlistService, PersonalFinance.ApiService.Watchlist.Services.WatchlistService>();
-    builder.Services.AddScoped<PersonalFinance.ApiService.Community.Services.ICommunityService, PersonalFinance.ApiService.Community.Services.CommunityService>();
-    builder.Services.AddScoped<PersonalFinance.ApiService.SpreadsheetAnalysis.Services.ISpreadsheetAnalysisService, PersonalFinance.ApiService.SpreadsheetAnalysis.Services.SpreadsheetAnalysisService>();
+    builder.Services.AddScoped<IBudgetService, BudgetService>();
+    builder.Services.AddScoped<ISavingsGoalService, SavingsGoalService>();
+    builder.Services.AddScoped<IWatchlistService, WatchlistService>();
+    builder.Services.AddScoped<ICommunityService, CommunityService>();
+    builder.Services.AddScoped<ISpreadsheetAnalysisService, SpreadsheetAnalysisService>(sp =>
+    {
+        var dbContext = sp.GetRequiredService<AppDbContext>();
+        var spreadsheetReader = sp.GetRequiredService<ISpreadsheetReader>();
+        return new SpreadsheetAnalysisService(dbContext, spreadsheetReader);
+    });
 
     // 5c. Register AI Assistant service for OpenAI chat integration
-    builder.Services.AddScoped<PersonalFinance.ApiService.AiAssistant.Services.IAiAssistantService, PersonalFinance.ApiService.AiAssistant.Services.AiAssistantService>();
+    builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
 
     // 5d. Register Rate Limiter service for per-user request throttling
     builder.Services.AddSingleton<IRateLimiterService, RateLimiterService>();
-
-    // 5c. Register MediatR for CQRS pattern - scans the assembly for handlers
-    builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
 
     // 5d. Register FluentValidation - scans the assembly for validators
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();

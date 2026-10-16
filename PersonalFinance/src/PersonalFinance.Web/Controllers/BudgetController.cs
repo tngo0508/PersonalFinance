@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -38,7 +39,9 @@ public class BudgetController : Controller
             {
                 model.MonthlyIncome = saved.MonthlyIncome;
 
-                // Map the dynamic allocations object to view model properties
+                // Map the dynamic allocations object to view model properties.
+                // The API returns lowercase property names (e.g., "housing"), so we need
+                // to match them case-insensitively to the PascalCase view model properties.
                 var alloc = saved.Allocations;
                 if (alloc is not null)
                 {
@@ -50,7 +53,10 @@ public class BudgetController : Controller
                             var rawValue = p.GetValue(alloc);
                             if (rawValue is decimal value)
                             {
-                                var prop = model.GetType().GetProperty(p.Name);
+                                // API returns lowercase names (e.g. "housing"), view model uses PascalCase (e.g. "Housing")
+                                var prop = model.GetType().GetProperty(
+                                    p.Name,
+                                    BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
                                 prop?.SetValue(model, value);
                             }
                         }
@@ -188,21 +194,22 @@ public class BudgetController : Controller
 
     /// <summary>
     /// Returns a user-friendly name for a budget category.
+    /// Handles both PascalCase (e.g. "Housing") and lowercase (e.g. "housing") names.
     /// </summary>
     private static string FriendlyCategoryName(string propertyName)
     {
         return propertyName switch
         {
-            "Housing" => "Housing",
-            "Food" => "Food",
-            "Transportation" => "Transportation",
-            "Utilities" => "Utilities",
-            "Insurance" => "Insurance",
-            "Healthcare" => "Healthcare",
-            "Savings" => "Savings",
-            "DebtRepayment" => "Debt Repayment",
-            "Entertainment" => "Entertainment",
-            "Miscellaneous" => "Miscellaneous",
+            "Housing" or "housing" => "Housing",
+            "Food" or "food" => "Food",
+            "Transportation" or "transportation" => "Transportation",
+            "Utilities" or "utilities" => "Utilities",
+            "Insurance" or "insurance" => "Insurance",
+            "Healthcare" or "healthcare" => "Healthcare",
+            "Savings" or "savings" => "Savings",
+            "DebtRepayment" or "debtRepayment" => "Debt Repayment",
+            "Entertainment" or "entertainment" => "Entertainment",
+            "Miscellaneous" or "miscellaneous" => "Miscellaneous",
             _ => propertyName
         };
     }

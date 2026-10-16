@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using MediatR;
-using PersonalFinance.ApiService.SavingsGoals;
+using PersonalFinance.ApiService.SavingsGoals.Services;
 using PersonalFinance.Shared.Contracts;
 
 namespace PersonalFinance.ApiService.SavingsGoals;
@@ -14,11 +13,11 @@ namespace PersonalFinance.ApiService.SavingsGoals;
 [Produces("application/json")]
 public class SavingsGoalsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly ISavingsGoalService _savingsGoalService;
 
-    public SavingsGoalsController(IMediator mediator)
+    public SavingsGoalsController(ISavingsGoalService savingsGoalService)
     {
-        _mediator = mediator;
+        _savingsGoalService = savingsGoalService;
     }
 
     /// <summary>
@@ -47,34 +46,36 @@ public class SavingsGoalsController : ControllerBase
     public async Task<IActionResult> GetSavingsGoals(CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var goals = await _mediator.Send(new GetSavingsGoalsQuery { UserId = userId }, cancellationToken);
+        var goals = await _savingsGoalService.GetSavingsGoalsAsync(userId, cancellationToken);
         return Ok(goals);
     }
 
     /// <summary>
     /// Creates a new savings goal for the current user.
     /// </summary>
-    [HttpPost("savings-goals")]
+    [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> CreateSavingsGoal([FromBody] CreateSavingsGoalRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> CreateSavingsGoal([FromBody] CreateSavingsGoalRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var id = await _mediator.Send(new CreateSavingsGoalCommand { UserId = userId, Request = request }, cancellationToken);
+        var id = await _savingsGoalService.CreateSavingsGoalAsync(userId, request, cancellationToken);
         return Ok(new { success = true, id });
     }
 
     /// <summary>
     /// Updates an existing savings goal.
     /// </summary>
-    [HttpPut("savings-goals/{id}")]
+    [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateSavingsGoal(int id, [FromBody] UpdateSavingsGoalRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> UpdateSavingsGoal(int id, [FromBody] UpdateSavingsGoalRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var updated = await _mediator.Send(new UpdateSavingsGoalCommand { UserId = userId, Id = id, Request = request }, cancellationToken);
+        var updated = await _savingsGoalService.UpdateSavingsGoalAsync(userId, id, request, cancellationToken);
         if (!updated) return NotFound();
         return Ok(new { success = true });
     }
@@ -82,14 +83,14 @@ public class SavingsGoalsController : ControllerBase
     /// <summary>
     /// Deletes a savings goal.
     /// </summary>
-    [HttpDelete("savings-goals/{id}")]
+    [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSavingsGoal(int id, CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var deleted = await _mediator.Send(new DeleteSavingsGoalCommand { UserId = userId, Id = id }, cancellationToken);
+        var deleted = await _savingsGoalService.DeleteSavingsGoalAsync(userId, id, cancellationToken);
         if (!deleted) return NotFound();
         return Ok(new { success = true });
     }

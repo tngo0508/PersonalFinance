@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using MediatR;
-using PersonalFinance.ApiService.Budget;
+using PersonalFinance.ApiService.Budget.Services;
 using PersonalFinance.Shared.Contracts;
 
 namespace PersonalFinance.ApiService.Budget;
@@ -14,11 +13,11 @@ namespace PersonalFinance.ApiService.Budget;
 [Produces("application/json")]
 public class BudgetController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IBudgetService _budgetService;
 
-    public BudgetController(IMediator mediator)
+    public BudgetController(IBudgetService budgetService)
     {
-        _mediator = mediator;
+        _budgetService = budgetService;
     }
 
     /// <summary>
@@ -47,7 +46,7 @@ public class BudgetController : ControllerBase
     public async Task<IActionResult> GetBudgetCurrent(CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var budget = await _mediator.Send(new GetBudgetQuery { UserId = userId, Period = "current" }, cancellationToken);
+        var budget = await _budgetService.GetBudgetAsync(userId, "current", cancellationToken);
 
         if (budget is null)
         {
@@ -83,7 +82,7 @@ public class BudgetController : ControllerBase
     {
         var userId = GetUserId();
 
-        var budget = await _mediator.Send(new GetBudgetQuery { UserId = userId, Period = period }, cancellationToken);
+        var budget = await _budgetService.GetBudgetAsync(userId, period, cancellationToken);
 
         if (budget is null)
         {
@@ -115,10 +114,11 @@ public class BudgetController : ControllerBase
     [HttpPost("budget")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> SaveBudget([FromBody] SaveBudgetRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> SaveBudget([FromBody] SaveBudgetRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        await _mediator.Send(new SaveBudgetCommand { UserId = userId, Request = request }, cancellationToken);
+        await _budgetService.SaveBudgetAsync(userId, request, cancellationToken);
         return Ok(new { success = true });
     }
 }
