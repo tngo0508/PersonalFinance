@@ -16,16 +16,14 @@
     <meta name="__RequestVerificationToken" content="@tokens.RequestToken" />
     <title>@(string.IsNullOrEmpty(pageTitle) ? AppVersion.ApplicationName : $"{pageTitle} · {AppVersion.ApplicationName}")</title>
     <link rel="icon" href="~/favicon.ico"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet"/>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/ai-chat-widget.css" asp-append-version="true"/>
-    <script type="module">
-        import {setTheme} from '/lib/@@fluentui/web-components/dist/web-components.min.js';
-        import {webLightTheme} from '/lib/@@fluentui/tokens/lib/themes/web/lightTheme.js';
-
-        setTheme(webLightTheme);
-    </script>
 </head>
 <body class="app-body">
 <a class="visually-hidden-focusable app-skip-link" href="#main-content">Skip to main content</a>

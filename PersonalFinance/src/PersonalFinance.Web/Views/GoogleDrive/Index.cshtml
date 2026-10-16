@@ -1344,10 +1344,12 @@
 
 <!-- Toast Feedback -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
-    <div id="pageToast" class="toast align-items-center text-white bg-dark border-0 rounded-3" role="status" aria-live="polite" aria-atomic="true">
+    <div id="pageToast" class="toast align-items-center border rounded-3" role="status" aria-live="polite"
+         aria-atomic="true"
+         style="background-color: var(--app-surface); color: var(--app-text); border-color: var(--app-border); box-shadow: var(--app-shadow-8);">
         <div class="d-flex">
             <div class="toast-body small" id="pageToastMessage"></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
 </div>

@@ -1,64 +1,75 @@
 /* ==========================================================================
    App shell: brand tokens, header, main, footer (app-*)
-   Fluent UI Design System tokens — Communication Blue brand, Segoe UI typography
+   "Indigo Ledger" design system — distinctive personal finance aesthetic
    ========================================================================== */
 
 :root {
-  /* Fluent UI Brand — Communication Blue */
-  --app-brand: #0078d4;
-  --app-brand-hover: #106ebe;
-  --app-brand-pressed: #005a9e;
-  --app-brand-soft: #deecf9;
-  --app-brand-bg-hover: #c7e0f4;
+    /* Brand — Indigo. Not Microsoft blue, not terracotta, not acid green. */
+    --app-brand: #4F46E5;
+    --app-brand-hover: #4338CA;
+    --app-brand-pressed: #3730A3;
+    --app-brand-soft: #E0E7FF;
+    --app-brand-bg-hover: #C7D2FE;
 
-  /* Fluent UI Neutral palette */
-  --app-bg: #f3f2f1;
-  --app-surface: #ffffff;
-  --app-surface-secondary: #faf9f8;
-  --app-border: #e1dfdd;
-  --app-border-hover: #c8c6c4;
-  --app-text: #201f1e;
-  --app-text-muted: #605e5c;
-  --app-text-disabled: #c8c6c4;
-  --app-header-height: 60px;
+    /* Domain-specific accents — green for growth, red for loss */
+    --app-accent-positive: #059669;
+    --app-accent-positive-soft: #D1FAE5;
+    --app-accent-negative: #DC2626;
+    --app-accent-negative-soft: #FEE2E2;
+    --app-accent-warning: #D97706;
+    --app-accent-warning-soft: #FEF3C7;
 
-  /* Fluent UI Elevation shadows */
-  --app-shadow-2: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.06);
-  --app-shadow-4: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
-  --app-shadow-8: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-  --app-shadow-16: 0 1rem 2rem rgba(0, 0, 0, 0.11);
-  --app-shadow-32: 0 2rem 4rem rgba(0, 0, 0, 0.12);
+    /* Neutral palette — paper white, not cream */
+    --app-bg: #FFFFFF;
+    --app-surface: #F9FAFB;
+    --app-surface-secondary: #F3F4F6;
+    --app-border: #E5E7EB;
+    --app-border-hover: #D1D5DB;
+    --app-text: #111827;
+    --app-text-muted: #6B7280;
+    --app-text-disabled: #D1D5DB;
+    --app-header-height: 56px;
 
-  /* Fluent UI Typography */
-  --app-font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, "Roboto", "Helvetica", "Arial", sans-serif;
-  --app-font-size-base: 0.875rem;
-  --app-font-size-small: 0.75rem;
-  --app-font-size-large: 1rem;
-  --app-font-size-xl: 1.25rem;
-  --app-font-size-xxl: 1.75rem;
+    /* Minimal shadows — rules over elevation */
+    --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.06);
+    --app-shadow-8: 0 4px 8px rgba(0, 0, 0, 0.08);
+    --app-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.1);
+    --app-shadow-32: 0 16px 32px rgba(0, 0, 0, 0.12);
+
+    /* Typography — Inter for UI, IBM Plex Mono for financial data */
+    --app-font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --app-font-mono: "IBM Plex Mono", "SF Mono", "Consolas", monospace;
+    --app-font-size-base: 0.96rem;
+    --app-font-size-small: 0.8rem;
+    --app-font-size-large: 1.1rem;
+    --app-font-size-xl: 1.35rem;
+    --app-font-size-xxl: 1.92rem;
   --app-font-weight-regular: 400;
+    --app-font-weight-medium: 500;
   --app-font-weight-semibold: 600;
   --app-font-weight-bold: 700;
 
-  /* Fluent UI Spacing */
+    /* Spacing */
   --app-spacing-xs: 4px;
   --app-spacing-s: 8px;
   --app-spacing-m: 16px;
   --app-spacing-l: 24px;
   --app-spacing-xl: 32px;
+    --app-spacing-2xl: 48px;
 
-  /* Fluent UI Border Radius */
-  --app-radius-s: 4px;
-  --app-radius-m: 8px;
-  --app-radius-l: 12px;
+    /* Border Radius — subtle, not uniform */
+    --app-radius-s: 3px;
+    --app-radius-m: 6px;
+    --app-radius-l: 8px;
 
-  /* Bootstrap overrides — map Fluent tokens to Bootstrap variables */
+    /* Bootstrap overrides — map Indigo Ledger tokens to Bootstrap variables */
   --bs-primary: var(--app-brand);
-  --bs-primary-rgb: 0, 120, 212;
+    --bs-primary-rgb: 79, 70, 229;
   --bs-link-color: var(--app-brand);
-  --bs-link-color-rgb: 0, 120, 212;
+    --bs-link-color-rgb: 79, 70, 229;
   --bs-link-hover-color: var(--app-brand-hover);
-  --bs-link-hover-color-rgb: 16, 110, 190;
+    --bs-link-hover-color-rgb: 67, 56, 202;
   --bs-body-color: var(--app-text);
   --bs-border-color: var(--app-border);
   --bs-body-font-family: var(--app-font-family);
@@ -94,6 +105,22 @@ html {
   }
 }
 
+/* ==========================================================================
+   Financial data values — monospace for alignment and scanning
+   ========================================================================== */
+
+.app-currency,
+.app-percent,
+.app-data-value,
+table .text-end,
+.nw-currency,
+.nw-currency-symbol,
+.nw-currency-amount {
+    font-family: var(--app-font-mono);
+    font-size: 0.9em;
+    letter-spacing: -0.01em;
+}
+
 /* Sticky footer: the body is a column and main takes the remaining height */
 .app-body {
   min-height: 100vh;
@@ -123,7 +150,7 @@ html {
   box-shadow: var(--app-shadow-8);
 }
 
-/* Fluent UI styled buttons */
+/* Buttons — clean, no shadows, indigo brand */
 .btn-primary {
   --bs-btn-bg: var(--app-brand);
   --bs-btn-border-color: var(--app-brand);
@@ -133,20 +160,11 @@ html {
   --bs-btn-active-border-color: var(--app-brand-pressed);
   --bs-btn-disabled-bg: var(--app-brand);
   --bs-btn-disabled-border-color: var(--app-brand);
-  border-radius: var(--app-radius-m);
-  font-weight: var(--app-font-weight-semibold);
-  padding: 6px 20px;
+    border-radius: var(--app-radius-s);
+    font-weight: var(--app-font-weight-medium);
+    padding: 8px 18px;
   font-size: var(--app-font-size-base);
-  transition: background-color 0.1s ease, border-color 0.1s ease;
-  box-shadow: var(--app-shadow-2);
-}
-.btn-primary:hover {
-  box-shadow: var(--app-shadow-4);
-}
-.btn-primary:active {
-  background: var(--app-brand-pressed);
-  border-color: var(--app-brand-pressed);
-  box-shadow: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .btn-outline-primary {
@@ -156,31 +174,29 @@ html {
   --bs-btn-hover-border-color: var(--app-brand);
   --bs-btn-active-bg: var(--app-brand-pressed);
   --bs-btn-active-border-color: var(--app-brand-pressed);
-  border-radius: var(--app-radius-m);
-  font-weight: var(--app-font-weight-semibold);
-  padding: 5px 18px;
+    border-radius: var(--app-radius-s);
+    font-weight: var(--app-font-weight-medium);
+    padding: 7px 16px;
   font-size: var(--app-font-size-base);
-  transition: background-color 0.1s ease, border-color 0.1s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 .btn-outline-primary:hover {
   color: #fff;
-  box-shadow: var(--app-shadow-2);
 }
 
-/* Fluent UI styled secondary buttons */
+/* Secondary buttons */
 .btn-secondary {
-  border-radius: var(--app-radius-m);
-  font-weight: var(--app-font-weight-semibold);
-  padding: 6px 20px;
-  transition: background-color 0.1s ease;
+    border-radius: var(--app-radius-s);
+    font-weight: var(--app-font-weight-medium);
+    padding: 8px 18px;
+    transition: background-color 0.15s ease;
 }
 
-/* Fluent UI styled success buttons */
+/* Success buttons */
 .btn-success {
-  border-radius: var(--app-radius-m);
-  font-weight: var(--app-font-weight-semibold);
-  transition: background-color 0.1s ease;
-  box-shadow: var(--app-shadow-2);
+    border-radius: var(--app-radius-s);
+    font-weight: var(--app-font-weight-medium);
+    transition: background-color 0.15s ease;
 }
 
 /* Enhanced form controls for Google Drive page */
@@ -288,25 +304,20 @@ html {
 }
 
 /* ==========================================================================
-   Fluent UI Bootstrap Component Overrides
-   Makes all Bootstrap components look like Azure DevOps / Fluent UI
+   Component Overrides — clean, rule-based, no decorative chrome
    ========================================================================== */
 
-/* --- Cards --- */
+/* --- Cards — borders only, no shadows --- */
 .card {
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-m);
+    border-radius: var(--app-radius-s);
   background: var(--app-surface);
-  box-shadow: var(--app-shadow-2);
-  transition: box-shadow 0.15s ease;
-}
-.card:hover {
-  box-shadow: var(--app-shadow-4);
+    box-shadow: none;
 }
 .card-header {
-  background: var(--app-surface-secondary);
+    background: transparent;
   border-bottom: 1px solid var(--app-border);
-  font-weight: var(--app-font-weight-semibold);
+    font-weight: var(--app-font-weight-medium);
   font-size: var(--app-font-size-base);
   color: var(--app-text);
 }
@@ -327,35 +338,40 @@ html {
   font-size: var(--app-font-size-base);
 }
 .card-footer {
-  background: var(--app-surface-secondary);
+    background: transparent;
   border-top: 1px solid var(--app-border);
 }
 
-/* --- Tables --- */
+/* --- Tables — sentence case headers, monospace data --- */
 .table {
   font-size: var(--app-font-size-base);
   color: var(--app-text);
 }
 .table thead th {
   font-size: var(--app-font-size-small);
-  font-weight: var(--app-font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+    font-weight: var(--app-font-weight-medium);
   color: var(--app-text-muted);
-  background: var(--app-surface-secondary);
+    background: transparent;
   border-bottom: 2px solid var(--app-border);
   padding: var(--app-spacing-s) var(--app-spacing-m);
+    text-transform: none;
+    letter-spacing: normal;
 }
 .table tbody td {
   border-bottom: 1px solid var(--app-border);
   padding: var(--app-spacing-s) var(--app-spacing-m);
   vertical-align: middle;
 }
+
+.table tbody td.text-end {
+    font-family: var(--app-font-mono);
+    font-size: 0.9em;
+}
 .table-hover tbody tr:hover {
   background: var(--app-brand-soft);
 }
 .table-striped tbody tr:nth-of-type(odd) {
-  background: var(--app-surface-secondary);
+    background: var(--app-surface);
 }
 
 /* --- Modals --- */
@@ -777,6 +793,81 @@ blockquote {
 /* --- Horizontal rule --- */
 hr {
   border-color: var(--app-border);
+}
+
+/* ==========================================================================
+   Auth pages (Login, Register) — clean, no card wrapper
+   ========================================================================== */
+
+.auth-page {
+    max-width: 420px;
+    margin: 4rem auto 0;
+    padding: 0 var(--app-spacing-m);
+}
+
+.auth-page__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: var(--app-font-weight-semibold);
+    font-size: var(--app-font-size-large);
+    color: var(--app-text);
+    text-decoration: none;
+}
+
+.auth-page__brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--app-radius-s);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--app-brand);
+    color: #fff;
+}
+
+.auth-page__title {
+    font-size: var(--app-font-size-xxl);
+    font-weight: var(--app-font-weight-bold);
+    margin: 0;
+    color: var(--app-text);
+    letter-spacing: -0.02em;
+}
+
+.auth-page__subtitle {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-base);
+    margin: 0;
+}
+
+.auth-page__form {
+    margin-top: 2rem;
+}
+
+.auth-page__form .form-label {
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text-muted);
+    margin-bottom: 6px;
+}
+
+.auth-page__form .form-control {
+    border-radius: var(--app-radius-s);
+    border: 1px solid var(--app-border);
+    padding: 10px 14px;
+    font-size: var(--app-font-size-base);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-page__form .form-control:focus {
+    border-color: var(--app-brand);
+    box-shadow: 0 0 0 3px var(--app-brand-soft);
+}
+
+@media (max-width: 576px) {
+    .auth-page {
+        margin-top: 2rem;
+    }
 }
 
 /* Header — Fluent UI styled */

@@ -1,41 +1,41 @@
 /* ==========================================================================
    Net Worth Projection Page Styles (nw-*)
-   Fluent UI Design System
+   "Indigo Ledger" design system
    ========================================================================== */
 
 :root {
-  /* Net Worth page — Fluent UI aligned palette (Communication Blue brand) */
-  --nw-primary: #0078d4;
-  --nw-primary-hover: #106ebe;
-  --nw-primary-light: #deecf9;
-  --nw-primary-glow: rgba(0, 120, 212, 0.15);
-  --nw-secondary: #5c2d91;
-  --nw-accent: #0078d4;
+    /* Net Worth page — Indigo brand palette */
+    --nw-primary: #4F46E5;
+    --nw-primary-hover: #4338CA;
+    --nw-primary-light: #E0E7FF;
+    --nw-primary-glow: rgba(79, 70, 229, 0.15);
+    --nw-secondary: #7C3AED;
+    --nw-accent: #4F46E5;
   --nw-surface: #ffffff;
-  --nw-surface-soft: #faf9f8;
-  --nw-bg: #f3f2f1;
-  --nw-border: #e1dfdd;
-  --nw-border-hover: #c8c6c4;
-  --nw-text-main: #201f1e;
-  --nw-text-muted: #605e5c;
-  --nw-text-faint: #8a8886;
-  --nw-success: #107c10;
-  --nw-success-light: #dff6dd;
-  --nw-warning: #d89b26;
-  --nw-warning-light: #fff4ce;
-  --nw-danger: #d13438;
-  --nw-conservative: #5c2d91;
-  --nw-conservative-light: #f3f2f1;
-  --nw-aggressive: #107c10;
-  --nw-aggressive-light: #dff6dd;
-  --nw-fi: #0078d4;
+    --nw-surface-soft: #F9FAFB;
+    --nw-bg: #FFFFFF;
+    --nw-border: #E5E7EB;
+    --nw-border-hover: #D1D5DB;
+    --nw-text-main: #111827;
+    --nw-text-muted: #6B7280;
+    --nw-text-faint: #9CA3AF;
+    --nw-success: #059669;
+    --nw-success-light: #D1FAE5;
+    --nw-warning: #D97706;
+    --nw-warning-light: #FEF3C7;
+    --nw-danger: #DC2626;
+    --nw-conservative: #7C3AED;
+    --nw-conservative-light: #F5F3FF;
+    --nw-aggressive: #059669;
+    --nw-aggressive-light: #D1FAE5;
+    --nw-fi: #4F46E5;
   --nw-shadow-sm: var(--app-shadow-2);
   --nw-shadow-md: var(--app-shadow-4);
   --nw-shadow-lg: var(--app-shadow-8);
   --nw-shadow-xl: var(--app-shadow-16);
   --nw-shadow-glow: 0 0 0 4px var(--nw-primary-glow);
-  --nw-radius: var(--app-radius-m);
-  --nw-radius-lg: var(--app-radius-l);
+    --nw-radius: var(--app-radius-s);
+    --nw-radius-lg: var(--app-radius-m);
   --nw-radius-xl: var(--app-radius-l);
 }
 

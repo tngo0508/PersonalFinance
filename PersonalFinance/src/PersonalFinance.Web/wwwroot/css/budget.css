@@ -1,44 +1,44 @@
 /* ==========================================================================
    Budget Planner Page Styles (budget-*)
-   Fluent UI Design System
+   "Indigo Ledger" design system
    ========================================================================== */
 
 :root {
-    --budget-primary: #0078d4;
-    --budget-primary-hover: #106ebe;
-    --budget-primary-light: #deecf9;
-    --budget-primary-glow: rgba(0, 120, 212, 0.15);
+    --budget-primary: #4F46E5;
+    --budget-primary-hover: #4338CA;
+    --budget-primary-light: #E0E7FF;
+    --budget-primary-glow: rgba(79, 70, 229, 0.15);
     --budget-surface: #ffffff;
-    --budget-surface-soft: #faf9f8;
-    --budget-bg: #f3f2f1;
-    --budget-border: #e1dfdd;
-    --budget-border-hover: #c8c6c4;
-    --budget-text-main: #201f1e;
-    --budget-text-muted: #605e5c;
-    --budget-text-faint: #8a8886;
-    --budget-success: #107c10;
-    --budget-success-light: #dff6dd;
-    --budget-warning: #d89b26;
-    --budget-warning-light: #fff4ce;
-    --budget-danger: #d13438;
-    --budget-danger-light: #fde7e9;
+    --budget-surface-soft: #F9FAFB;
+    --budget-bg: #FFFFFF;
+    --budget-border: #E5E7EB;
+    --budget-border-hover: #D1D5DB;
+    --budget-text-main: #111827;
+    --budget-text-muted: #6B7280;
+    --budget-text-faint: #9CA3AF;
+    --budget-success: #059669;
+    --budget-success-light: #D1FAE5;
+    --budget-warning: #D97706;
+    --budget-warning-light: #FEF3C7;
+    --budget-danger: #DC2626;
+    --budget-danger-light: #FEE2E2;
     --budget-shadow-sm: var(--app-shadow-2);
     --budget-shadow-md: var(--app-shadow-4);
     --budget-shadow-lg: var(--app-shadow-8);
-    --budget-radius: var(--app-radius-m);
-    --budget-radius-lg: var(--app-radius-l);
+    --budget-radius: var(--app-radius-s);
+    --budget-radius-lg: var(--app-radius-m);
 
-    /* Category colors for pie chart */
-    --budget-cat-housing: #0078d4;
-    --budget-cat-food: #00b7c3;
-    --budget-cat-transportation: #71b307;
-    --budget-cat-utilities: #d83b01;
-    --budget-cat-insurance: #8764b8;
-    --budget-cat-healthcare: #e4396c;
-    --budget-cat-savings: #107c10;
-    --budget-cat-debt: #498205;
-    --budget-cat-entertainment: #005a9e;
-    --budget-cat-misc: #605e5c;
+    /* Category colors for pie chart — indigo-based palette */
+    --budget-cat-housing: #4F46E5;
+    --budget-cat-food: #0891B2;
+    --budget-cat-transportation: #65A30D;
+    --budget-cat-utilities: #EA580C;
+    --budget-cat-insurance: #7C3AED;
+    --budget-cat-healthcare: #DB2777;
+    --budget-cat-savings: #059669;
+    --budget-cat-debt: #4D7C0F;
+    --budget-cat-entertainment: #4338CA;
+    --budget-cat-misc: #6B7280;
 }
 
 /* ==========================================================================

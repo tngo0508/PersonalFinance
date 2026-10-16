@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Complete Visual Redesign**: Replaced the generic Fluent UI / Bootstrap card-based design with a distinctive "Indigo
+  Ledger" design system.
+  - Replaced Communication Blue (#0078d4) brand color with indigo (#4F46E5) — unexpected for finance, memorable.
+  - Added Inter font for UI text and IBM Plex Mono for all financial data values (currency, percentages, table columns).
+  - Removed card shadows and decorative elevation — replaced with clean borders and horizontal rules.
+  - Removed ALL-CAPS table headers — switched to sentence case throughout.
+  - Redesigned Login and Register pages: removed centered card wrapper, replaced with clean left-aligned layout.
+  - Updated all feature CSS files (networth.css, budget.css) to use the new indigo palette.
+  - Reduced border radius from 8px to 3px for a sharper, more intentional aesthetic.
+  - Added domain-specific accent colors: emerald for positive values, red for losses.
+
 ### Added
 
 - **Budget Planner Page**: Full-featured budget allocation planner at `/Budget` with interactive pie chart, sliders,
@@ -21,8 +34,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CSS following Fluent UI design system with responsive layout for mobile and desktop.
   - JavaScript module for slider/input synchronization, chart updates, and remaining allocation indicator.
 
+### Improved
+
+- **Compound Growth Calculator Chart**: Completely redesigned the investment calculator chart for a polished,
+  professional appearance.
+  - Replaced jagged straight-line rendering with smooth Catmull-Rom spline curves.
+  - Added gradient area fills (green for total value, indigo for contributions) instead of flat colors.
+  - Added interactive hover tooltips that display year, projected value, and total contributions.
+  - Improved axis labels with compact formatting ($10k, $100M) and nice round-number scaling.
+  - Added endpoint indicator dots with glow effects and a clean inline legend.
+  - Updated chart container styling with subtle shadow and rounded corners.
+
 ### Fixed
 
+- **JavaScript Syntax Errors**: Fixed two JavaScript errors introduced by recent chart improvements.
+  - Removed duplicate `const canvas` declaration in the chart tooltip function (`news.js`).
+  - Removed broken Fluent UI `setTheme` import from `_Layout.cshtml` — the minified web-components bundle does not
+    export `setTheme` (known upstream issue).
+- **Compound Growth Calculator Chart Resolution**: Fixed the investment calculator chart rendering at fixed 400x280
+  pixels regardless of container size.
+  - Chart now dynamically sizes to fill its container width (300-800px range) with proportional height.
+  - Added ResizeObserver to automatically redraw when the container or window resizes.
+  - Tooltip bounds checking uses dynamic canvas width instead of hardcoded value.
+- **Google Drive Sync Toast Readability**: Fixed the sync success toast appearing on a black background, making it hard
+  to read after the Indigo Ledger redesign.
+  - Replaced `bg-dark text-white` dark toast with a light theme toast using the new design system's CSS tokens.
 - **CI/CD Smoke Test — /Budget 404**: Replaced placeholder Budget controller with full Budget Planner feature so the
   post-deployment smoke test probe for `/Budget` returns a redirect to login (auth required) instead of HTTP 404.
   - `BudgetController` with `[Authorize]` attribute serves the complete budget planner page.
