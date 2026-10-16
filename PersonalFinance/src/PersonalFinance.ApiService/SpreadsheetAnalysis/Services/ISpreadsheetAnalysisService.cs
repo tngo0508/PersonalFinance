@@ -180,4 +180,15 @@ public interface ISpreadsheetAnalysisService
     ///     Gets the most recent synced month for the user, or null if no data exists.
     /// </summary>
     Task<(int year, int month)?> GetMostRecentMonthAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Syncs budget data from a Google Drive spreadsheet to the database.
+    /// </summary>
+    Task<SyncSpreadsheetBudgetResult> SyncSpreadsheetBudgetAsync(
+        string userId,
+        int connectionId,
+        string fileId,
+        string fileName,
+        bool overwrite,
+        CancellationToken cancellationToken = default);
 }

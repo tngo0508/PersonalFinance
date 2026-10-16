@@ -1,8 +1,6 @@
 using System.Security.Claims;
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.ApiService.SpreadsheetAnalysis;
 using PersonalFinance.ApiService.SpreadsheetAnalysis.Services;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
@@ -19,17 +17,14 @@ public class SpreadsheetAnalysisController : ControllerBase
 {
     private readonly ISpreadsheetAnalysisService _analysisService;
     private readonly ILogger<SpreadsheetAnalysisController> _logger;
-    private readonly ISender _mediator;
     private readonly ISpreadsheetReader _spreadsheetReader;
 
     public SpreadsheetAnalysisController(
         ISpreadsheetAnalysisService analysisService,
-        ISender mediator,
         ISpreadsheetReader spreadsheetReader,
         ILogger<SpreadsheetAnalysisController> logger)
     {
         _analysisService = analysisService;
-        _mediator = mediator;
         _spreadsheetReader = spreadsheetReader;
         _logger = logger;
     }
@@ -44,15 +39,40 @@ public class SpreadsheetAnalysisController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
-        var query = new GetAnalysisDashboardQuery
-        {
-            UserId = userId,
-            Year = year ?? 0,
-            Month = month
-        };
+        var availableYears = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
 
-        var result = await _mediator.Send(query, cancellationToken);
-        return Ok(result);
+        if (!availableYears.Any())
+        {
+            return Ok(new AnalysisDashboardResult
+            {
+                HasData = false,
+                Year = year ?? 0,
+                AvailableYears = availableYears
+            });
+        }
+
+        var selectedYear = (year ?? 0) != 0 ? (year ?? 0) : availableYears.First();
+        var availableMonths = await _analysisService.GetAvailableMonthsAsync(userId, selectedYear, cancellationToken);
+        var summary = await _analysisService.GetSummaryStatisticsAsync(userId, selectedYear, month, cancellationToken);
+        var velocity = await _analysisService.GetSpendingVelocityAsync(userId, selectedYear, month, cancellationToken);
+        var trends = await _analysisService.GetTrendDataAsync(userId, selectedYear, cancellationToken);
+        var categories =
+            await _analysisService.GetCategoryInsightsAsync(userId, selectedYear, month, cancellationToken);
+        var variance = await _analysisService.GetBudgetVarianceAsync(userId, selectedYear, month, cancellationToken);
+
+        return Ok(new AnalysisDashboardResult
+        {
+            HasData = true,
+            Year = selectedYear,
+            Month = month,
+            AvailableYears = availableYears,
+            AvailableMonths = availableMonths,
+            Summary = summary,
+            Velocity = velocity,
+            Trends = trends,
+            Categories = categories,
+            Variance = variance
+        });
     }
 
     /// <summary>
@@ -66,16 +86,8 @@ public class SpreadsheetAnalysisController : ControllerBase
         var userId = GetCurrentUserId();
         _logger.LogInformation("User {UserId} requested sync for spreadsheet {FileId}", userId, request.FileId);
 
-        var command = new SyncSpreadsheetBudgetCommand
-        {
-            ConnectionId = request.ConnectionId,
-            UserId = userId,
-            FileId = request.FileId,
-            FileName = request.FileName,
-            Overwrite = request.Overwrite ?? false
-        };
-
-        var result = await _mediator.Send(command, cancellationToken);
+        var result = await _analysisService.SyncSpreadsheetBudgetAsync(userId, request.ConnectionId, request.FileId,
+            request.FileName, request.Overwrite ?? false, cancellationToken);
         return Ok(new SyncSpreadsheetResponseDto
         {
             Success = result.Success,

@@ -1,6 +1,5 @@
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.ApiService.AiAssistant.Commands;
+using PersonalFinance.ApiService.AiAssistant.Services;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
 
@@ -15,11 +14,11 @@ namespace PersonalFinance.ApiService.AiAssistant;
 [Produces("application/json")]
 public class AiAssistantController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IAiAssistantService _aiAssistantService;
 
-    public AiAssistantController(IMediator mediator)
+    public AiAssistantController(IAiAssistantService aiAssistantService)
     {
-        _mediator = mediator;
+        _aiAssistantService = aiAssistantService;
     }
 
     /// <summary>
@@ -55,7 +54,7 @@ public class AiAssistantController : ControllerBase
         }
 
         var userId = GetUserId();
-        var response = await _mediator.Send(new ChatCommand { UserId = userId, Request = request }, cancellationToken);
+        var response = await _aiAssistantService.SendChatMessageAsync(userId, request, cancellationToken);
 
         return Ok(response);
     }
@@ -77,7 +76,7 @@ public class AiAssistantController : ControllerBase
 
         try
         {
-            var response = await _mediator.Send(new SummarizeArticleCommand { UserId = userId, Request = request }, cancellationToken);
+            var response = await _aiAssistantService.SummarizeArticleAsync(userId, request, cancellationToken);
             return Ok(response);
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))

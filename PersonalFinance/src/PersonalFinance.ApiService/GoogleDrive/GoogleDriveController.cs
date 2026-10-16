@@ -1,7 +1,6 @@
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.ApiService.GoogleDrive.Commands;
-using PersonalFinance.ApiService.GoogleDrive.Queries;
+using PersonalFinance.ApiService.GoogleDrive.Services;
+using PersonalFinance.ApiService.SpreadsheetAnalysis.Services;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
@@ -16,14 +15,17 @@ namespace PersonalFinance.ApiService.GoogleDrive;
 [Produces("application/json")]
 public class GoogleDriveController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IDriveConnectionService _driveConnectionService;
     private readonly ILogger<GoogleDriveController> _logger;
+    private readonly ISpreadsheetReader _spreadsheetReader;
 
     public GoogleDriveController(
-        IMediator mediator,
+        IDriveConnectionService driveConnectionService,
+        ISpreadsheetReader spreadsheetReader,
         ILogger<GoogleDriveController> logger)
     {
-        _mediator = mediator;
+        _driveConnectionService = driveConnectionService;
+        _spreadsheetReader = spreadsheetReader;
         _logger = logger;
     }
 
@@ -48,7 +50,7 @@ public class GoogleDriveController : ControllerBase
 
         _logger.LogInformation("Processing Google Drive explore request for input '{Url}'", request.FolderUrl);
 
-        var result = await _mediator.Send(new ExploreCommand { Request = request }, cancellationToken);
+        var result = await _driveConnectionService.GetFolderFilesAsync(request, cancellationToken);
         if (!result.Success && string.IsNullOrEmpty(result.FolderId))
         {
             return BadRequest(result);
@@ -71,7 +73,7 @@ public class GoogleDriveController : ControllerBase
             return Ok(new List<GoogleDriveConnectionDto>());
         }
 
-        var connections = await _mediator.Send(new GetConnectionsQuery { UserId = userId }, cancellationToken);
+        var connections = await _driveConnectionService.GetUserConnectionsAsync(userId, cancellationToken);
         return Ok(connections);
     }
 
@@ -92,7 +94,9 @@ public class GoogleDriveController : ControllerBase
             return BadRequest("User identifier is required.");
         }
 
-        var result = await _mediator.Send(new GetConnectionFilesQuery { ConnectionId = connectionId, UserId = userId, ForceRefresh = forceRefresh }, cancellationToken);
+        var result =
+            await _driveConnectionService.GetConnectionFilesAsync(connectionId, userId, forceRefresh,
+                cancellationToken);
         if (!result.Success && result.ErrorMessage == "Google Drive connection not found.")
         {
             return NotFound(result);
@@ -118,7 +122,7 @@ public class GoogleDriveController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(new ConnectCommand { Request = request }, cancellationToken);
+            var result = await _driveConnectionService.ConnectDriveAsync(request, cancellationToken);
             return Ok(result);
         }
         catch (ArgumentException argEx)
@@ -143,7 +147,8 @@ public class GoogleDriveController : ControllerBase
             return BadRequest("UserId is required.");
         }
 
-        var result = await _mediator.Send(new SyncCommand { ConnectionId = connectionId, UserId = request.UserId, ForceRefresh = request.ForceRefresh }, cancellationToken);
+        var result = await _driveConnectionService.SyncConnectionAsync(connectionId, request.UserId,
+            request.ForceRefresh, cancellationToken);
         if (!result.Success && result.ErrorMessage == "Google Drive connection not found.")
         {
             return NotFound(result);
@@ -170,7 +175,8 @@ public class GoogleDriveController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(new ReauthCommand { ConnectionId = connectionId, UserId = request.UserId, ApiKey = request.ApiKey! }, cancellationToken);
+            var result = await _driveConnectionService.ReauthConnectionAsync(connectionId, request.UserId,
+                request.ApiKey!, cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException)
@@ -195,7 +201,7 @@ public class GoogleDriveController : ControllerBase
             return BadRequest("UserId is required.");
         }
 
-        var deleted = await _mediator.Send(new DeleteConnectionCommand { ConnectionId = connectionId, UserId = userId }, cancellationToken);
+        var deleted = await _driveConnectionService.DeleteConnectionAsync(connectionId, userId, cancellationToken);
         if (!deleted)
         {
             return NotFound(false);
@@ -222,13 +228,8 @@ public class GoogleDriveController : ControllerBase
             return BadRequest("fileId or fileName is required.");
         }
 
-        var report = await _mediator.Send(new GetSpreadsheetBudgetReportQuery
-        {
-            FileId = fileId,
-            FileName = fileName,
-            ConnectionId = connectionId,
-            UserId = userId
-        }, cancellationToken);
+        var report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
+            fileId, fileName, connectionId, userId, cancellationToken);
         return Ok(report);
     }
 
@@ -250,14 +251,8 @@ public class GoogleDriveController : ControllerBase
             return BadRequest("fileId is required.");
         }
 
-        var transactions = await _mediator.Send(new GetSpreadsheetTransactionsQuery
-        {
-            FileId = fileId,
-            FileName = fileName,
-            ConnectionId = connectionId,
-            UserId = userId
-        }, cancellationToken);
+        var transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
+            fileId, fileName, connectionId, userId, cancellationToken);
         return Ok(transactions);
     }
 }
-

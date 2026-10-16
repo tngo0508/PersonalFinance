@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using MediatR;
-using PersonalFinance.ApiService.Community;
+using PersonalFinance.ApiService.Community.Services;
 using PersonalFinance.Shared.DTOs.Community;
 
 namespace PersonalFinance.ApiService.Community;
@@ -14,11 +13,11 @@ namespace PersonalFinance.ApiService.Community;
 [Produces("application/json")]
 public class CommunityController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly ICommunityService _communityService;
 
-    public CommunityController(IMediator mediator)
+    public CommunityController(ICommunityService communityService)
     {
-        _mediator = mediator;
+        _communityService = communityService;
     }
 
     /// <summary>
@@ -47,7 +46,7 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var response = await _mediator.Send(new GetCommunityQuery { UserId = userId }, cancellationToken);
+        var response = await _communityService.GetCommunityAsync(userId, cancellationToken);
         return Ok(response);
     }
 
@@ -62,11 +61,12 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var result = await _mediator.Send(new VoteOnPollCommand { UserId = userId, Request = request }, cancellationToken);
+        var result = await _communityService.VoteAsync(userId, request, cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.ErrorMessage);
         }
+
         return Ok(result.Response);
     }
 
@@ -84,7 +84,8 @@ public class CommunityController : ControllerBase
         var userId = GetUserId();
         try
         {
-            var comment = await _mediator.Send(new AddCommentCommand { UserId = userId, Request = request, AuthorName = authorName ?? string.Empty }, cancellationToken);
+            var comment =
+                await _communityService.AddCommentAsync(userId, request, authorName ?? string.Empty, cancellationToken);
             return CreatedAtAction(nameof(GetCommunity), comment);
         }
         catch (ArgumentException ex)
@@ -105,7 +106,7 @@ public class CommunityController : ControllerBase
         var userId = GetUserId();
         try
         {
-            var result = await _mediator.Send(new ToggleCommentLikeCommand { UserId = userId, CommentId = commentId }, cancellationToken);
+            var result = await _communityService.ToggleCommentLikeAsync(userId, commentId, cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException)
@@ -125,7 +126,7 @@ public class CommunityController : ControllerBase
     {
         try
         {
-            var comments = await _mediator.Send(new GetPollCommentsQuery { PollCode = pollCode }, cancellationToken);
+            var comments = await _communityService.GetPollCommentsAsync(pollCode, cancellationToken);
             return Ok(comments);
         }
         catch (KeyNotFoundException)
@@ -148,7 +149,8 @@ public class CommunityController : ControllerBase
         var userId = GetUserId();
         try
         {
-            var story = await _mediator.Send(new SubmitStoryCommand { UserId = userId, Request = request, AuthorName = authorName ?? string.Empty }, cancellationToken);
+            var story = await _communityService.SubmitStoryAsync(userId, request, authorName ?? string.Empty,
+                cancellationToken);
             return CreatedAtAction(nameof(GetCommunity), story);
         }
         catch (ArgumentException ex)
@@ -169,7 +171,7 @@ public class CommunityController : ControllerBase
         var userId = GetUserId();
         try
         {
-            var result = await _mediator.Send(new ToggleStoryLikeCommand { UserId = userId, StoryId = storyId }, cancellationToken);
+            var result = await _communityService.ToggleStoryLikeAsync(userId, storyId, cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException)
@@ -187,7 +189,7 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var response = await _mediator.Send(new GetCommunityQuery { UserId = userId }, cancellationToken);
+        var response = await _communityService.GetCommunityAsync(userId, cancellationToken);
         return Ok(response.Stories ?? new List<CommunityStoryDto>());
     }
 
@@ -202,7 +204,7 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var userId = GetUserId();
-        var story = await _mediator.Send(new GetStoryByIdQuery { UserId = userId, StoryId = storyId }, cancellationToken);
+        var story = await _communityService.GetStoryByIdAsync(userId, storyId, cancellationToken);
         if (story == null)
             return NotFound();
         return Ok(story);

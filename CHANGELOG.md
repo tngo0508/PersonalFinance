@@ -9,6 +9,157 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Budget Chart Leader Lines**: Replaced the grid-based legend with labels drawn directly on the pie chart canvas.
+  - Each label is connected to its corresponding chart slice by a colored leader line with a dot marker.
+  - Labels show percentage only, keeping the chart area clean and uncluttered.
+  - Overlapping labels are automatically suppressed to maintain clarity on smaller slices.
+
+### Fixed
+
+- **Investment Calculator Chart**: Fixed the Growth Over Time chart not rendering at all after the recent rework.
+  - The interest earned area fill was missing a `moveTo` call to start the canvas path, causing the entire chart to fail
+    drawing.
+- **Budget Chart Leader Line Labels**: Fixed labels not being visible because they were clipped by the canvas edges.
+  - Added layout padding to the Chart.js configuration so the chart draws smaller, leaving room for labels around the
+    edges.
+  - Increased the chart container canvas height to accommodate the extra space for labels.
+- **Budget Chart Responsiveness**: Fixed leader line labels overflowing the chart container on smaller screens.
+  - Label positions, font sizes, line widths, and dot sizes now scale proportionally with the chart's actual size.
+  - Labels are hidden automatically when the chart is too small (radius < 80px) to prevent visual clutter.
+  - CSS breakpoints now shrink the chart container consistently: 340px → 280px → 260px → 220px across screen sizes.
+- **Budget Chart Mobile Sizing**: Fixed leader line labels still being cut off on small screens due to the chart card
+  being too small.
+  - Layout padding now adjusts dynamically based on the chart's actual width, reducing from 55px to 20px on smaller
+    screens.
+  - The chart container now uses full width on mobile instead of being constrained to 220px.
+  - Increased canvas max-height across all breakpoints to give labels more vertical space.
+
+### Changed
+
+- **Investment Calculator Growth Chart**: Reworked the Growth Over Time chart with a clearer visual design.
+  - Added a third area fill highlighting interest earned (the gap between contributions and total value).
+  - Replaced the tiny on-canvas legend with a styled HTML legend below the chart showing final values.
+  - The legend displays Total Value, Contributions, and Interest Earned with matching color indicators.
+  - Improved end-point dots with larger, more visible markers.
+- **Budget Category Color Boxes**: Added small colored squares next to each category allocation label.
+  - Each color box matches the corresponding pie chart slice color, linking inputs to the visual breakdown.
+  - Colors are set dynamically via JavaScript to stay consistent with the chart's color palette.
+- **Budget Summary List**: Replaced the plain budget summary table with a visual list featuring mini progress bars.
+  - Each category now displays a colored progress bar proportional to its allocation, making comparisons at a glance.
+  - The list is more compact and visually connected to the pie chart above it.
+  - Responsive breakpoints hide the percentage column on mobile to save space.
+
+- **Removed MediatR Dependency**: Replaced MediatR CQRS mediator pattern with direct service calls across all API
+  features to avoid licensing requirements introduced in MediatR v13+.
+  - All API controllers now inject and call services directly instead of sending commands/queries through IMediator.
+  - Removed all command, query, and handler classes (NetWorth, Budget, Community, SavingsGoals, Watchlist, GoogleDrive,
+    SpreadsheetAnalysis, AiAssistant).
+  - Removed MediatR pipeline ValidationBehavior and FluentValidation validators that targeted command classes.
+  - Moved SpreadsheetAnalysis sync logic from command handler into SpreadsheetAnalysisService.
+  - Removed MediatR and MediatR.Extensions.Microsoft.DependencyInjection NuGet packages.
+
+### Fixed
+
+- **Savings Goals Update Input Dollar Sign**: Fixed the dollar sign ($) overlapping the entered number in the Update
+  form.
+  - Bootstrap's `form-control` class was overriding the custom left padding on the input.
+  - Increased CSS specificity by scoping the input selector under its wrapper parent class.
+  - Increased left padding from 1.5rem to 1.75rem to give more room for the $ prefix.
+- **Savings Goal Progress Bar Percentage**: Fixed the percentage text not showing inside the progress bar.
+  - The progress track height was only 12px, which clipped the percentage label text.
+  - Increased track height to 24px with proper padding so the percentage is visible.
+- **Savings Goal Card Text Truncation**: Fixed text being shrunk or cut off in savings goal cards.
+  - Added proper overflow handling and text-ellipsis to goal names and descriptions.
+  - Increased line-height on amount display to prevent vertical clipping.
+  - Ensured the header info container properly constrains flex children.
+- **Savings Goals Create Modal**: Fixed the Create Goal button in the New Savings Goal modal rejecting valid dollar
+  amounts.
+  - The target amount input had `step="100"`, which only allowed values like 1, 101, 201, … — any other number was
+    rejected.
+  - The current amount input had `step="50"`, which only allowed multiples of 50.
+  - Changed both inputs to `step="any"` so any dollar amount including cents can be entered.
+- **Savings Goals Update Button**: Fixed the Update button on the Savings Goals page rejecting valid dollar amounts.
+  - The update form's amount input had `step="50"`, which only allowed multiples of 50 (0, 50, 100, 150, …).
+  - Changed `step` to `1` so any whole-dollar amount can be entered and saved.
+- **News Save to Watchlist**: Fixed save button on news articles not working — clicking Save did nothing because the API
+  controller routes no longer matched the Refit client endpoints.
+  - The Refit client was updated to use simplified routes (`/api/Watchlist`) but the controller still expected
+    `/api/Watchlist/watchlist`.
+  - Fixed all watchlist controller action routes (POST, DELETE, check) to match the simplified Refit contract.
+- **Budget Planner Save**: Fixed budget data being wiped after clicking Save — the DebtRepayment category value was
+  never submitted because the JavaScript `capitalize()` helper only uppercased the first character, producing
+  "Debtrepayment" instead of "DebtRepayment".
+  - Replaced the `capitalize()` function with an explicit lookup table mapping all 10 camelCase category keys to their
+    PascalCase C# property names.
+  - The form now correctly submits all category values, allowing the 100% validation to pass and the budget to persist.
+- **Savings Goals API Routes**: Fixed savings goals not persisting to the database due to incorrect API route templates.
+  - API controller routes used `[HttpPost("savings-goals")]` but the Refit contract expected
+    `[Post("/api/SavingsGoals")]`.
+  - Fixed all three action routes (Create, Update, Delete) to match the controller's base route `/api/SavingsGoals`.
+- **Budget Planner Form Validation**: Fixed browser validation error preventing budget save when dollar amount inputs
+  produce non-half-step percentages.
+  - Changed percentage input `step` attribute from `0.5` to `any` to allow any decimal value.
+- **Budget Planner Data Persistence**: Fixed budget values resetting to $0 after saving due to broken API response
+  deserialization.
+  - `BudgetResponseDto.Allocations` was typed as `object?`, causing System.Text.Json to deserialize the API response
+    as a generic dictionary instead of a typed object with decimal properties.
+  - The reflection-based property mapping in `BudgetController.Index` checked for `decimal` property types, which
+    never matched the deserialized dictionary, so all values remained at 0.
+  - Changed `BudgetResponseDto.Allocations` to `BudgetAllocationsDto?` for strong typing.
+  - Replaced reflection-based mapping with direct property assignment in both `Index` and `GetBudgetData` methods.
+  - Refit's default JSON serializer already uses case-insensitive property matching, so lowercase API properties (e.g.,
+    "housing") map correctly to PascalCase DTO properties (e.g., "Housing").
+- **Budget Planner Dollar Amount Input**: Users can now enter dollar amounts directly in addition to using sliders and
+  percentage inputs.
+  - Added editable dollar amount input field next to each category's percentage input.
+  - Dollar amounts sync bidirectionally with percentages based on monthly income.
+  - All three input methods (slider, percentage, dollar amount) stay synchronized in real-time.
+- **Budget Planner Responsive Layout**: Fixed the Budget Planner page layout breaking at medium screen widths.
+  - Added responsive breakpoint at 1199px to tighten category card padding and input field widths.
+  - Fixed summary table category labels overflowing and overlapping at narrow sidebar widths.
+  - Reduced chart container and summary table size proportionally at medium screen sizes.
+  - Category labels in the summary table now truncate with ellipsis when space is limited.
+- **Budget Planner Percentage Input**: Fixed the percentage sign (%) overlapping with longer number values (e.g.,
+  "11.6%")
+  in category allocation inputs.
+  - Increased the percentage input field width from 70px to 75px for more room.
+  - Increased right padding from 1.5rem to 2rem to ensure the number never touches the % suffix.
+  - Adjusted responsive breakpoints to maintain adequate input width at medium and tablet screen sizes.
+- **Budget Planner Summary Table**: Fixed category names and amounts overlapping in the summary table.
+  - Removed `display: flex` from the table cell, which broke the table layout model and caused content to overflow.
+  - Added a flex wrapper span inside the table cell for the colored dot and category name, keeping the cell as a proper
+    table element.
+  - Applied text truncation with ellipsis to the category name span, with a tooltip showing the full name on hover.
+
+### Fixed
+
+- **Budget, Savings Goals, and Investment Calculator UI**: Fixed visual inconsistencies and layout issues across the
+  three standalone finance pages.
+  - Unified page header style across all three pages — removed card-style wrapper from Budget header to match Savings
+    and Calculator.
+  - Fixed pink rectangle rendering artifacts caused by malformed element structure.
+  - Improved Savings Goals card grid layout — wider minimum card width (340px), better spacing, and flex column layout.
+  - Enhanced Savings Goals progress bar visibility and styling with proper design system tokens.
+  - Replaced hardcoded green colors with design system CSS variables (`--app-brand`, `--app-accent-positive`) for
+    consistency.
+  - Added monospace font (`IBM Plex Mono`) to financial values in Savings Goals and Investment Calculator for better
+    readability.
+  - Removed unnecessary hover transform animation from Savings Goals cards.
+
+### Changed
+
+- **Finance News UI Redesign**: Separated the mixed "Personal Finance Hub" into focused, standalone features.
+  - Removed Budget Planner, Savings Goals, and Investment Calculator tabs from the Finance News page.
+  - Finance News now only contains news articles and Watchlist (saved articles) — naturally related features.
+  - Added Budget Planner, Savings Goals, and Investment Calculator as separate navigation menu items.
+  - Created standalone `SavingsGoalsController` with CRUD operations via Refit API.
+  - Created standalone `InvestmentCalculatorController` with client-side compound growth projection.
+  - Split the monolithic `news.js` (1,271 lines) — extracted calculator logic to `investment-calculator/calculator.js`.
+  - Split the monolithic `news.css` (1,362 lines) — created `savings-goals.css` and `investment-calculator.css`.
+  - Each feature now has its own dedicated page, CSS, and JavaScript for cleaner maintenance.
+
 ### Changed
 
 - **Complete Visual Redesign**: Replaced the generic Fluent UI / Bootstrap card-based design with a distinctive "Indigo

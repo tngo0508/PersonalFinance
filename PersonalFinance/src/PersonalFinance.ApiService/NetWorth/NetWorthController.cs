@@ -1,7 +1,4 @@
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.ApiService.NetWorth.Commands;
-using PersonalFinance.ApiService.NetWorth.Queries;
 using PersonalFinance.ApiService.NetWorth.Services;
 using PersonalFinance.ApiService.NetWorth.Validators;
 using PersonalFinance.Shared.DTOs.NetWorth;
@@ -11,18 +8,18 @@ namespace PersonalFinance.ApiService.NetWorth;
 /// <summary>
 /// RESTful API controller for net worth projection calculations and parameter persistence.
 /// Delegates projection computation to <see cref="NetWorthProjectionService"/> and
-/// parameter CRUD to commands and queries via MediatR.
+/// parameter CRUD to <see cref="INetWorthParametersService"/>.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class NetWorthController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly INetWorthParametersService _parametersService;
 
-    public NetWorthController(IMediator mediator)
+    public NetWorthController(INetWorthParametersService parametersService)
     {
-        _mediator = mediator;
+        _parametersService = parametersService;
     }
 
     /// <summary>
@@ -58,7 +55,7 @@ public class NetWorthController : ControllerBase
         }
 
         var userId = GetUserId();
-        var result = await _mediator.Send(new SaveParametersCommand { UserId = userId, Parameters = request }, HttpContext.RequestAborted);
+        var result = await _parametersService.SaveAsync(userId, request, HttpContext.RequestAborted);
         return Ok(result);
     }
 
@@ -70,7 +67,7 @@ public class NetWorthController : ControllerBase
     public async Task<IActionResult> LoadParameters()
     {
         var userId = GetUserId();
-        var parameters = await _mediator.Send(new LoadParametersQuery { UserId = userId }, HttpContext.RequestAborted);
+        var parameters = await _parametersService.LoadAsync(userId, HttpContext.RequestAborted);
 
         if (parameters == null)
         {
@@ -88,7 +85,7 @@ public class NetWorthController : ControllerBase
     public async Task<IActionResult> DeleteParameters()
     {
         var userId = GetUserId();
-        await _mediator.Send(new DeleteParametersCommand { UserId = userId }, HttpContext.RequestAborted);
+        await _parametersService.DeleteAsync(userId, HttpContext.RequestAborted);
         return NoContent();
     }
 

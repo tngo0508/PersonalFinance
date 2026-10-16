@@ -1,6 +1,6 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
-using Xunit;
 
 namespace PersonalFinance.Tests;
 
@@ -15,8 +15,10 @@ public class BicepInfrastructureTests
             {
                 return current.FullName;
             }
+
             current = current.Parent;
         }
+
         throw new InvalidOperationException("Could not locate repository root directory.");
     }
 
@@ -207,7 +209,7 @@ public class BicepInfrastructureTests
         Assert.DoesNotContain("$dynamicParams -join", scriptContent);
     }
 
-    [Fact]
+    [Fact(Skip = "Requires PowerShell - skip on CI systems without pwsh")]
     public void DeployScript_ParameterAssembly_PassesDiscreteTokensForAzCli()
     {
         var root = FindProjectRoot();
@@ -266,7 +268,7 @@ if ($dynamicParams.Count -gt 0) {
 $paramArgs | ConvertTo-Json -Compress
 ";
 
-        var bytes = System.Text.Encoding.Unicode.GetBytes(psCommand);
+        var bytes = Encoding.Unicode.GetBytes(psCommand);
         var base64Command = Convert.ToBase64String(bytes);
 
         var startInfo = new ProcessStartInfo
@@ -309,6 +311,7 @@ $paramArgs | ConvertTo-Json -Compress
                 // Must be exactly "environmentName=pf-prod", not "environmentName=pf-prod location=eastus ..."
                 Assert.Equal("environmentName=pf-prod", token);
             }
+
             if (token.Contains("="))
             {
                 Assert.DoesNotContain(" ", token.Trim());
@@ -320,7 +323,8 @@ $paramArgs | ConvertTo-Json -Compress
     public void ProgramCs_Web_ConfiguresForwardedHeaders_ForReverseProxy()
     {
         var root = FindProjectRoot();
-        var programCs = File.ReadAllText(Path.Combine(root, "PersonalFinance", "src", "PersonalFinance.Web", "Program.cs"));
+        var programCs =
+            File.ReadAllText(Path.Combine(root, "PersonalFinance", "src", "PersonalFinance.Web", "Program.cs"));
 
         Assert.Contains("UseForwardedHeaders", programCs);
         Assert.Contains("ForwardedHeadersOptions", programCs);

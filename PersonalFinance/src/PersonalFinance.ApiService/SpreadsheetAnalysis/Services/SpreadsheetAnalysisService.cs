@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 namespace PersonalFinance.ApiService.SpreadsheetAnalysis.Services;
 
@@ -11,10 +13,12 @@ namespace PersonalFinance.ApiService.SpreadsheetAnalysis.Services;
 public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 {
     private readonly AppDbContext _dbContext;
+    private readonly ISpreadsheetReader _spreadsheetReader;
 
-    public SpreadsheetAnalysisService(AppDbContext dbContext)
+    public SpreadsheetAnalysisService(AppDbContext dbContext, ISpreadsheetReader spreadsheetReader)
     {
         _dbContext = dbContext;
+        _spreadsheetReader = spreadsheetReader;
     }
 
     public async Task<SummaryStatisticsDto?> GetSummaryStatisticsAsync(string userId, int year, int? month = null,
@@ -306,6 +310,194 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             .FirstOrDefaultAsync(cancellationToken);
 
         return snapshot != null ? (snapshot.Year, snapshot.MonthNumber) : null;
+    }
+
+    public async Task<SyncSpreadsheetBudgetResult> SyncSpreadsheetBudgetAsync(
+        string userId,
+        int connectionId,
+        string fileId,
+        string fileName,
+        bool overwrite,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var connection = await _dbContext.GoogleDriveConnections
+                .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
+
+            if (connection == null)
+                return new SyncSpreadsheetBudgetResult
+                {
+                    Success = false,
+                    ErrorMessage = "Google Drive connection not found or access denied."
+                };
+
+            MonthlyBudgetReportDto budgetReport;
+            try
+            {
+                budgetReport = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
+                    fileId, fileName, connectionId, userId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                return new SyncSpreadsheetBudgetResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Failed to read spreadsheet: {ex.Message}"
+                };
+            }
+
+            var conflicts = new List<MonthConflictInfo>();
+            foreach (var month in budgetReport.Months)
+            {
+                var existing = await _dbContext.SpreadsheetBudgetSnapshots
+                    .AnyAsync(s => s.ConnectionId == connectionId
+                                   && s.Year == budgetReport.Year
+                                   && s.MonthNumber == month.MonthNumber, cancellationToken);
+
+                if (existing)
+                {
+                    var existingSnapshot = await _dbContext.SpreadsheetBudgetSnapshots
+                        .FirstOrDefaultAsync(s => s.ConnectionId == connectionId
+                                                  && s.Year == budgetReport.Year
+                                                  && s.MonthNumber == month.MonthNumber, cancellationToken);
+
+                    if (existingSnapshot != null)
+                        conflicts.Add(new MonthConflictInfo
+                        {
+                            SnapshotId = existingSnapshot.Id,
+                            MonthNumber = month.MonthNumber,
+                            MonthName = month.MonthName,
+                            Year = budgetReport.Year,
+                            SyncedAtUtc = existingSnapshot.SyncedAtUtc
+                        });
+                }
+            }
+
+            if (conflicts.Any() && !overwrite)
+                return new SyncSpreadsheetBudgetResult
+                {
+                    Success = false,
+                    HasConflict = true,
+                    Conflicts = conflicts,
+                    ErrorMessage = "Some months already exist in the database. Confirm overwrite to proceed."
+                };
+
+            if (overwrite)
+            {
+                foreach (var conflict in conflicts)
+                {
+                    var existingSnapshot = await _dbContext.SpreadsheetBudgetSnapshots
+                        .FirstOrDefaultAsync(s => s.Id == conflict.SnapshotId, cancellationToken);
+
+                    if (existingSnapshot != null) _dbContext.SpreadsheetBudgetSnapshots.Remove(existingSnapshot);
+                }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            var snapshotsCreated = 0;
+            foreach (var month in budgetReport.Months)
+            {
+                var categoryJson = JsonSerializer.Serialize(
+                    month.Categories.Select(c => new
+                    {
+                        c.CategoryName,
+                        c.BudgetedAmount,
+                        c.ActualAmount
+                    }).ToList());
+
+                var snapshot = new SpreadsheetBudgetSnapshot
+                {
+                    ConnectionId = connectionId,
+                    UserId = userId,
+                    FileName = budgetReport.FileName,
+                    FileId = fileId,
+                    MonthNumber = month.MonthNumber,
+                    MonthName = month.MonthName,
+                    Year = budgetReport.Year,
+                    BudgetedIncome = month.BudgetedIncome,
+                    ActualIncome = month.ActualIncome,
+                    BudgetedExpenses = month.BudgetedExpenses,
+                    ActualExpenses = month.ActualExpenses,
+                    StartingBalance = month.StartingBalance,
+                    EndingBalance = month.EndingBalance,
+                    CategoryBreakdownJson = categoryJson,
+                    SyncedAtUtc = DateTime.UtcNow
+                };
+
+                _dbContext.SpreadsheetBudgetSnapshots.Add(snapshot);
+                snapshotsCreated++;
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            SpreadsheetTransactionsDto transactionsDto;
+            try
+            {
+                transactionsDto = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
+                    fileId, fileName, connectionId, userId, cancellationToken);
+            }
+            catch
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return new SyncSpreadsheetBudgetResult
+                {
+                    Success = true,
+                    SnapshotsCreated = snapshotsCreated,
+                    TransactionsCreated = 0
+                };
+            }
+
+            var transactionsCreated = 0;
+            var snapshots = await _dbContext.SpreadsheetBudgetSnapshots
+                .Where(s => s.ConnectionId == connectionId
+                            && s.FileId == fileId
+                            && s.Year == budgetReport.Year)
+                .ToDictionaryAsync(s => s.MonthNumber, cancellationToken);
+
+            foreach (var transaction in transactionsDto.Transactions)
+            {
+                if (!transaction.Date.HasValue) continue;
+
+                var date = transaction.Date.Value;
+                var monthNumber = date.Month;
+
+                if (!snapshots.TryGetValue(monthNumber, out var snapshot)) continue;
+
+                var record = new SpreadsheetTransactionRecord
+                {
+                    SnapshotId = snapshot.Id,
+                    ConnectionId = connectionId,
+                    UserId = userId,
+                    Date = date,
+                    Amount = transaction.Amount,
+                    Description = transaction.Description,
+                    Category = transaction.Category,
+                    Type = transaction.Type
+                };
+
+                _dbContext.SpreadsheetTransactionRecords.Add(record);
+                transactionsCreated++;
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            return new SyncSpreadsheetBudgetResult
+            {
+                Success = true,
+                SnapshotsCreated = snapshotsCreated,
+                TransactionsCreated = transactionsCreated
+            };
+        }
+        catch (Exception ex)
+        {
+            return new SyncSpreadsheetBudgetResult
+            {
+                Success = false,
+                ErrorMessage = $"Sync failed: {ex.Message}"
+            };
+        }
     }
 
     #region Private Helper Methods

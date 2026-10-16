@@ -1,20 +1,18 @@
-using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Web.Services;
 using Refit;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
-using PersonalFinance.Shared.Constants;
-using PersonalFinance.Shared.Contracts;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.EntityFrameworkCore;
-using PersonalFinance.Data;
-using PersonalFinance.Web.Services;
 
 // 1. Bootstrap early logging to catch startup errors
 Log.Logger = new LoggerConfiguration()
@@ -34,17 +32,18 @@ try
 
     // 3. Wire up Serilog with non-blocking async console sink, rolling file sink (30-day retention), and OpenTelemetry forwarding
     builder.Host.UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .WriteTo.Async(a => a.Console(
-            theme: AnsiConsoleTheme.Code,
-            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
-        .WriteTo.Async(a => a.File(
-            path: Path.Combine("logs", "web-.log"),
-            rollingInterval: RollingInterval.Day,
-            retainedFileCountLimit: 30,
-            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .WriteTo.Async(a => a.Console(
+                theme: AnsiConsoleTheme.Code,
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
+            .WriteTo.Async(a => a.File(
+                path: Path.Combine("logs", "web-.log"),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30,
+                outputTemplate:
+                "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
         writeToProviders: true);
 
     // 3a. Register EF Core DbContext & ASP.NET Core Identity (Azure SQL Serverless / SQLite)
@@ -54,16 +53,16 @@ try
     var disableEmailConfirmationForE2E = Environment.GetEnvironmentVariable("E2E_DISABLE_EMAIL_CONFIRMATION") == "true";
 
     builder.Services.AddDefaultIdentity<IdentityUser>(options =>
-    {
-        options.SignIn.RequireConfirmedAccount = !disableEmailConfirmationForE2E;
-        options.User.RequireUniqueEmail = true;
-        options.Password.RequireDigit = true;
-        options.Password.RequireLowercase = true;
-        options.Password.RequireUppercase = true;
-        options.Password.RequireNonAlphanumeric = true;
-        options.Password.RequiredLength = 8;
-    })
-    .AddEntityFrameworkStores<AppDbContext>();
+        {
+            options.SignIn.RequireConfirmedAccount = !disableEmailConfirmationForE2E;
+            options.User.RequireUniqueEmail = true;
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequiredLength = 8;
+        })
+        .AddEntityFrameworkStores<AppDbContext>();
 
     // Persist Data Protection keys to AppDbContext to preserve authentication sessions & antiforgery tokens across container restarts
     builder.Services.AddDataProtection()
@@ -144,10 +143,7 @@ try
     });
 
     // 3e. Register Finance News Service for RSS feed aggregation
-    builder.Services.AddHttpClient<INewsService, NewsService>(client =>
-    {
-        client.Timeout = TimeSpan.FromSeconds(5);
-    });
+    builder.Services.AddHttpClient<INewsService, NewsService>(client => { client.Timeout = TimeSpan.FromSeconds(5); });
 
     // 3g. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -162,8 +158,8 @@ try
     // 4. Add MVC Controllers and Views
     // Validate antiforgery tokens on every unsafe (POST/PUT/PATCH/DELETE) MVC action by default
     builder.Services.AddControllersWithViews(options =>
-        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
-        .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase);
+            options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
+        .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
     builder.Services.AddProblemDetails();
 
     // 5. Register Health Checks
@@ -204,6 +200,8 @@ try
         .AddStandardResilienceHandler();
 
     // 7c. Register Personal Finance API client for savings goals, watchlist, and budget
+    // Uses case-insensitive JSON property matching so lowercase API properties (e.g. "housing")
+    // map correctly to PascalCase DTO properties (e.g. "Housing").
     builder.Services.AddRefitClient<IPersonalFinanceApi>()
         .ConfigureHttpClient(client =>
         {

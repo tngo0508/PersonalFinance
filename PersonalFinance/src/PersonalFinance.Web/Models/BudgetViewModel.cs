@@ -124,4 +124,13 @@ public class BudgetViewModel
     {
         return (MonthlyIncome * percentage) / 100m;
     }
+
+    /// <summary>
+    /// Converts a dollar amount back to a percentage of monthly income.
+    /// </summary>
+    public decimal PercentageFor(decimal amount)
+    {
+        if (MonthlyIncome <= 0) return 0;
+        return (amount * 100m) / MonthlyIncome;
+    }
 }

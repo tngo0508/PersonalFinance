@@ -1,0 +1,285 @@
+@using PersonalFinance.Shared.Contracts
+@{
+    ViewData["Title"] = "Savings Goals";
+    var goals = ViewData["Goals"] as List<SavingsGoalDto> ?? new List<SavingsGoalDto>();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/savings-goals.css" asp-append-version="true"/>
+}
+
+<div class="savings-page">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show savings-alert" role="alert">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+                <path d="M20 6 9 17l-5-5"/>
+            </svg>
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <validation-summary asp-validation-summary="ModelOnly" class="alert alert-danger"/>
+    }
+
+    <!-- Page Header -->
+    <div class="savings-header mb-4">
+        <div class="savings-header__content">
+            <div>
+                <h1 class="savings-title">
+                    <span class="savings-title__icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
+                                    d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.6 3.7 2 5"/><path
+                                    d="M5 9a3 3 0 0 0 3 3 3 3 0 0 0 3-3"/><circle cx="12" cy="12" r="10"/></svg>
+                    </span>
+                    Savings Goals
+                </h1>
+                <p class="savings-subtitle">Track your progress toward financial milestones. Create goals and update
+                    them as you save.</p>
+            </div>
+            <button type="button" class="btn btn-primary savings-add-btn" id="addGoalBtn" data-bs-toggle="modal"
+                    data-bs-target="#addGoalModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Goal
+            </button>
+        </div>
+    </div>
+
+    <!-- Goals Grid -->
+    @if (goals.Any())
+    {
+        <div class="savings-goals-grid">
+            @foreach (var goal in goals)
+            {
+                var progress = goal.TargetAmount > 0 ? Math.Min(100, (goal.CurrentAmount / goal.TargetAmount) * 100) : 0;
+                var isComplete = goal.IsCompleted || progress >= 100;
+                var remaining = Math.Max(0, goal.TargetAmount - goal.CurrentAmount);
+
+                <div class="card savings-goal-card @(isComplete ? "savings-goal-card--completed" : "")">
+                    <div class="card-body">
+                        <!-- Header: Name + Delete -->
+                        <div class="savings-goal-header">
+                            <div class="savings-goal-header__info">
+                                <div class="savings-goal-header__icon @(isComplete ? "savings-goal-header__icon--complete" : "")">
+                                    @if (isComplete)
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M20 6 9 17l-5-5"/>
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.6 3.7 2 5"/>
+                                        </svg>
+                                    }
+                                </div>
+                                <div>
+                                    <h3 class="savings-goal-name">@goal.Name</h3>
+                                    @if (!string.IsNullOrEmpty(goal.Description))
+                                    {
+                                        <p class="savings-goal-description">@goal.Description</p>
+                                    }
+                                </div>
+                            </div>
+                            <form asp-action="Delete" asp-controller="SavingsGoals" method="post"
+                                  onsubmit="return confirm('Delete this savings goal?');"
+                                  class="savings-goal-delete-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@goal.Id"/>
+                                <button type="submit" class="savings-goal-delete-btn" title="Delete goal"
+                                        aria-label="Delete @goal.Name goal">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Amounts Display -->
+                        <div class="savings-goal-amounts">
+                            <span class="savings-goal-current">
+                                $@goal.CurrentAmount.ToString("N0")
+                            </span>
+                            <span class="savings-goal-separator">of</span>
+                            <span class="savings-goal-target">
+                                $@goal.TargetAmount.ToString("N0")
+                            </span>
+                        </div>
+
+                        <!-- Progress Bar with Percentage Overlay -->
+                        <div class="savings-goal-progress">
+                            <div class="savings-goal-progress-track">
+                                <div class="savings-goal-progress-fill @(isComplete ? "savings-goal-progress-fill--complete" : "")"
+                                     style="width:@progress%" role="progressbar" aria-valuenow="@progress"
+                                     aria-valuemin="0" aria-valuemax="100" aria-label="@Math.Round(progress)% complete">
+                                    <span class="savings-goal-progress-label">@Math.Round(progress)%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Remaining + Metadata -->
+                        <div class="savings-goal-footer-info">
+                            @if (isComplete)
+                            {
+                                <span class="savings-goal-remaining savings-goal-remaining--complete">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                    Goal reached!
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="savings-goal-remaining">
+                                    $@remaining.ToString("N0") left to goal
+                                </span>
+                            }
+                            @if (goal.TargetDate.HasValue)
+                            {
+                                <span class="savings-goal-target-date">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"
+                                                                       ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line
+                                                x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10"
+                                                                                   y2="10"/></svg>
+                                    @goal.TargetDate.Value.ToString("MMM dd, yyyy")
+                                </span>
+                            }
+                        </div>
+
+                        <!-- Update Form -->
+                        <form asp-action="Update" asp-controller="SavingsGoals" method="post"
+                              class="savings-goal-update-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@goal.Id"/>
+                            <input type="hidden" name="isCompleted" value="false"/>
+                            <div class="savings-goal-update-row">
+                                <div class="savings-goal-update-input-wrapper">
+                                    <span class="savings-goal-update-prefix">$</span>
+                                    <input type="number" name="currentAmount"
+                                           class="form-control savings-goal-update-input"
+                                           value="@goal.CurrentAmount" min="0" step="1"
+                                           placeholder="New amount" aria-label="Update current amount for @goal.Name"/>
+                                </div>
+                                <button type="submit" class="btn savings-goal-update-btn">
+                                    Update
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="savings-empty">
+            <div class="savings-empty__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.6 3.7 2 5"/>
+                    <circle cx="12" cy="12" r="10"/>
+                </svg>
+            </div>
+            <h3 class="savings-empty__title">No savings goals yet</h3>
+            <p class="savings-empty__text">Create your first savings goal to start tracking your progress toward
+                financial milestones.</p>
+            <button type="button" class="btn btn-primary savings-empty__btn" data-bs-toggle="modal"
+                    data-bs-target="#addGoalModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Your First Goal
+            </button>
+        </div>
+    }
+</div>
+
+<!-- Add Goal Modal -->
+<div class="modal fade" id="addGoalModal" tabindex="-1" aria-labelledby="addGoalModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content savings-modal-content">
+            <form asp-action="Create" asp-controller="SavingsGoals" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header savings-modal-header">
+                    <div class="savings-modal-header__content">
+                        <div class="savings-modal-header__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                 stroke-linejoin="round">
+                                <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.6 3.7 2 5"/>
+                                <path d="M5 9a3 3 0 0 0 3 3 3 3 0 0 0 3-3"/>
+                                <circle cx="12" cy="12" r="10"/>
+                            </svg>
+                        </div>
+                        <h5 class="modal-title" id="addGoalModalLabel">New Savings Goal</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body savings-modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="goalName" class="form-label">Goal Name *</label>
+                            <input type="text" name="name" class="form-control" id="goalName"
+                                   placeholder="e.g., Emergency Fund" required/>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="goalTarget" class="form-label">Target Amount ($) *</label>
+                            <input type="number" name="targetAmount" class="form-control" id="goalTarget"
+                                   value="10000" min="1" step="any" required/>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="goalCurrent" class="form-label">Current Amount ($)</label>
+                            <input type="number" name="currentAmount" class="form-control" id="goalCurrent"
+                                   value="0" min="0" step="any"/>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="goalTargetDate" class="form-label">Target Date</label>
+                            <input type="date" name="targetDate" class="form-control" id="goalTargetDate"/>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="goalDescription" class="form-label">Description (optional)</label>
+                        <textarea name="description" class="form-control" id="goalDescription" rows="2"
+                                  placeholder="What's this goal for?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer savings-modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                             class="me-1">
+                            <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.6 3.7 2 5"/>
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        Create Goal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

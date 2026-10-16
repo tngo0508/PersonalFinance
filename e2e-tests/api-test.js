@@ -2,7 +2,7 @@ const {execSync} = require('child_process');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
-    const apiBase = process.env.API_URL || 'http://localhost:5001';
+    const apiBase = process.env.API_URL || 'https://localhost:7100';
 
     function pass(message) {
         results.passed++;
@@ -17,7 +17,7 @@ const {execSync} = require('child_process');
 
     function curl(options = {}) {
         const {url, method = 'GET', headers = [], body = null, followRedirects = true} = options;
-        let cmd = `curl -s -S ${followRedirects ? '-L' : ''} --connect-timeout 10 --max-time 30 -w "\\n%{http_code}"`;
+        let cmd = `curl -s -S -k ${followRedirects ? '-L' : ''} --connect-timeout 10 --max-time 30 -w "\\n%{http_code}"`;
 
         if (method !== 'GET') {
             cmd += ` -X ${method}`;
