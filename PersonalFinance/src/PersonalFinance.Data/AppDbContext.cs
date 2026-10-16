@@ -176,7 +176,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.HasMany(e => e.CachedFiles)
                 .WithOne(e => e.Connection)
                 .HasForeignKey(e => e.ConnectionId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.ClientSetNull);
         });
 
         // Configure GoogleDriveCachedFile entity

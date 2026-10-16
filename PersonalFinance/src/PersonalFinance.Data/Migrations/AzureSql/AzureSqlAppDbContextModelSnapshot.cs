@@ -601,7 +601,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ConnectionId")
+                    b.Property<int?>("ConnectionId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("CreatedTime")
@@ -1312,9 +1312,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                 {
                     b.HasOne("PersonalFinance.Data.Entities.GoogleDriveConnection", "Connection")
                         .WithMany("CachedFiles")
-                        .HasForeignKey("ConnectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ConnectionId");
 
                     b.Navigation("Connection");
                 });

@@ -24,14 +24,19 @@ try
     // 2. Add Aspire service defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
     builder.AddServiceDefaults();
 
-    // 3. Configure Serilog full logging pipeline with non-blocking async console sink and OpenTelemetry forwarding
+    // 3. Configure Serilog full logging pipeline with non-blocking async console sink, rolling file sink (30-day retention), and OpenTelemetry forwarding
     builder.Host.UseSerilog((context, services, configuration) => configuration
             .ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
             .Enrich.FromLogContext()
             .WriteTo.Async(a => a.Console(
                 theme: AnsiConsoleTheme.Code,
-                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
+            .WriteTo.Async(a => a.File(
+                path: Path.Combine("logs", "apiservice-.log"),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30,
+                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
         writeToProviders: true);
 
     // 3. Register EF Core DbContext with environment-driven provider (Azure SQL Serverless / SQLite)

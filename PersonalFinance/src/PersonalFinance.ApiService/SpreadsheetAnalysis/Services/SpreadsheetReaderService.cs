@@ -188,6 +188,7 @@ public class SpreadsheetReaderService : ISpreadsheetReader
         var (actualFileName, mimeType, isGoogleSheet, apiKey) =
             await ResolveSpreadsheetSourceAsync(fileId, fileName, "Spreadsheet.xlsx", connectionId, userId, cancellationToken);
 
+        string? xlsxParseError = null;
         try
         {
             // Google Sheet: the XLSX export keeps every sheet; the CSV export only contains the first one
@@ -206,8 +207,32 @@ public class SpreadsheetReaderService : ISpreadsheetReader
                     {
                         return result;
                     }
+                    // XLSX export succeeded but no transactions found — preserve the parse error for diagnostics
+                    xlsxParseError = result.ErrorMessage;
+                    _logger.LogInformation("XLSX export of Google Sheet '{FileId}' succeeded but found no transactions. {ParseError}", fileId, xlsxParseError);
+                }
+                else
+                {
+                    _logger.LogWarning("XLSX export of Google Sheet '{FileId}' returned HTTP {StatusCode}.", fileId, (int)xlsxResponse.StatusCode);
                 }
 
+                // CSV export only contains the first sheet — it cannot find a Transactions sheet
+                // that lives on a different sheet, so skip it when XLSX already parsed without error.
+                if (string.IsNullOrEmpty(xlsxParseError))
+                {
+                    // XLSX parsed fine but found no matching sheet/headers — CSV won't help either
+                    // (it only has the first sheet). Return the XLSX parse error directly.
+                    return new SpreadsheetTransactionsDto
+                    {
+                        FileName = actualFileName,
+                        FileId = fileId,
+                        IsLiveSpreadsheetData = true,
+                        DataSource = "Google Drive Live Spreadsheet (Exported XLSX)",
+                        ErrorMessage = "No transactions table was found in any sheet. Ensure the spreadsheet has a sheet named 'Transactions' with Date and Amount column headers."
+                    };
+                }
+
+                // XLSX export failed — try CSV as a last resort
                 var csvExportUrl = !string.IsNullOrWhiteSpace(apiKey)
                     ? $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(fileId)}/export?mimeType=text%2Fcsv&key={Uri.EscapeDataString(apiKey)}"
                     : $"https://docs.google.com/spreadsheets/d/{Uri.EscapeDataString(fileId)}/export?format=csv";
@@ -216,7 +241,11 @@ public class SpreadsheetReaderService : ISpreadsheetReader
                 if (csvResponse.IsSuccessStatusCode)
                 {
                     var csvContent = await csvResponse.Content.ReadAsStringAsync(cancellationToken);
-                    return GoogleDriveHelper.ParseCsvTransactions(csvContent, actualFileName, fileId, "Google Drive Live Spreadsheet (Exported Data)");
+                    var csvResult = GoogleDriveHelper.ParseCsvTransactions(csvContent, actualFileName, fileId, "Google Drive Live Spreadsheet (Exported Data)");
+                    if (csvResult.Transactions.Count > 0)
+                    {
+                        return csvResult;
+                    }
                 }
             }
             else
@@ -248,13 +277,14 @@ public class SpreadsheetReaderService : ISpreadsheetReader
         }
 
         // No fabricated fallback here: made-up transactions would be indistinguishable from real ones
+        var baseError = "The spreadsheet could not be downloaded from Google Drive. Check that the drive is still shared and your API key is valid.";
         return new SpreadsheetTransactionsDto
         {
             FileName = actualFileName,
             FileId = fileId,
             IsLiveSpreadsheetData = false,
             DataSource = "Unavailable",
-            ErrorMessage = "The spreadsheet could not be downloaded from Google Drive. Check that the drive is still shared and your API key is valid."
+            ErrorMessage = baseError
         };
     }
 

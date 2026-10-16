@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.GoogleDrive.Commands;
 using PersonalFinance.ApiService.GoogleDrive.Queries;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
+using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 namespace PersonalFinance.ApiService.GoogleDrive;
 
@@ -201,6 +202,62 @@ public class GoogleDriveController : ControllerBase
         }
 
         return Ok(true);
+    }
+
+    /// <summary>
+    /// Reads and parses a spreadsheet from Google Drive into a monthly budget report with actual data.
+    /// </summary>
+    [HttpGet("spreadsheet-report")]
+    [ProducesResponseType(typeof(MonthlyBudgetReportDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<MonthlyBudgetReportDto>> GetSpreadsheetBudgetReport(
+        [FromQuery] string fileId,
+        [FromQuery] string? fileName = null,
+        [FromQuery] int? connectionId = null,
+        [FromQuery] string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileId) && string.IsNullOrWhiteSpace(fileName))
+        {
+            return BadRequest("fileId or fileName is required.");
+        }
+
+        var report = await _mediator.Send(new GetSpreadsheetBudgetReportQuery
+        {
+            FileId = fileId,
+            FileName = fileName,
+            ConnectionId = connectionId,
+            UserId = userId
+        }, cancellationToken);
+        return Ok(report);
+    }
+
+    /// <summary>
+    /// Reads the transaction log (e.g. the "Transactions" sheet) from a spreadsheet on Google Drive.
+    /// </summary>
+    [HttpGet("spreadsheet-transactions")]
+    [ProducesResponseType(typeof(SpreadsheetTransactionsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SpreadsheetTransactionsDto>> GetSpreadsheetTransactions(
+        [FromQuery] string fileId,
+        [FromQuery] string? fileName = null,
+        [FromQuery] int? connectionId = null,
+        [FromQuery] string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileId))
+        {
+            return BadRequest("fileId is required.");
+        }
+
+        var transactions = await _mediator.Send(new GetSpreadsheetTransactionsQuery
+        {
+            FileId = fileId,
+            FileName = fileName,
+            ConnectionId = connectionId,
+            UserId = userId
+        }, cancellationToken);
+        return Ok(transactions);
     }
 }
 

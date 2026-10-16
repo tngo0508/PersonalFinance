@@ -32,14 +32,19 @@ try
     // 2. Add Aspire service defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
     builder.AddServiceDefaults();
 
-    // 3. Wire up Serilog with non-blocking async console sink and OpenTelemetry forwarding
+    // 3. Wire up Serilog with non-blocking async console sink, rolling file sink (30-day retention), and OpenTelemetry forwarding
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         .WriteTo.Async(a => a.Console(
             theme: AnsiConsoleTheme.Code,
-            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
+        .WriteTo.Async(a => a.File(
+            path: Path.Combine("logs", "web-.log"),
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30,
+            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
         writeToProviders: true);
 
     // 3a. Register EF Core DbContext & ASP.NET Core Identity (Azure SQL Serverless / SQLite)
