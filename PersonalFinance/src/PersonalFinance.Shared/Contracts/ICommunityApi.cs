@@ -1,5 +1,5 @@
 using Refit;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.Community;
 
 namespace PersonalFinance.Shared.Contracts;
 

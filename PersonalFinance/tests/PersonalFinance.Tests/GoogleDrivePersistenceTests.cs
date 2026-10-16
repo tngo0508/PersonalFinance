@@ -3,11 +3,11 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
-using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.GoogleDrive.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Data.Helpers;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.GoogleDrive;
 using Xunit;
 
 namespace PersonalFinance.Tests;
@@ -39,7 +39,7 @@ public class GoogleDrivePersistenceTests
             });
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, config, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var request = new ConnectGoogleDriveRequestDto
         {
@@ -85,7 +85,7 @@ public class GoogleDrivePersistenceTests
         using var dbContext = CreateTestDbContext();
         var config = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
-        var service = new GoogleDriveService(httpClient, config, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // First setup
         var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
@@ -112,7 +112,7 @@ public class GoogleDrivePersistenceTests
         using var dbContext = CreateTestDbContext();
         var config = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
-        var service = new GoogleDriveService(httpClient, config, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Connect Drive 1
         var drive1 = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
@@ -158,7 +158,7 @@ public class GoogleDrivePersistenceTests
         });
 
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, config, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Initial setup calls API once to cache
         var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
@@ -210,7 +210,7 @@ public class GoogleDrivePersistenceTests
         });
 
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, config, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
         {
@@ -255,7 +255,7 @@ public class GoogleDrivePersistenceTests
         using var dbContext = CreateTestDbContext();
         var config = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
-        var service = new GoogleDriveService(httpClient, config, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
         {
@@ -271,7 +271,9 @@ public class GoogleDrivePersistenceTests
 
         // Assert
         Assert.True(deleted);
-        Assert.False(await dbContext.GoogleDriveConnections.AnyAsync(c => c.Id == conn.Id));
+        // Soft delete: connection is marked IsDeleted, EF Core filter excludes it from normal queries
+        Assert.True(await dbContext.GoogleDriveConnections.IgnoreQueryFilters().AnyAsync(c => c.Id == conn.Id && c.IsDeleted));
+        // Cached files are cascade-deleted by EF Core relationship (hard delete)
         Assert.False(await dbContext.GoogleDriveCachedFiles.AnyAsync(f => f.ConnectionId == conn.Id));
     }
 
@@ -301,7 +303,7 @@ public class GoogleDrivePersistenceTests
         });
 
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, config, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Connect with invalid credentials
         var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto

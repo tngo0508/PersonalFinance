@@ -402,7 +402,8 @@
                     if (seq !== txRequestSeq) { return; } // a newer request superseded this one
 
                     if (!data || !data.transactions || data.transactions.length === 0) {
-                        $('#txErrorMessage').text((data && data.errorMessage) || 'Make sure the spreadsheet has a sheet with Date and Amount column headers.');
+                        var message = (data && data.errorMessage) || 'No transactions were found. Make sure the spreadsheet has a sheet named "Transactions" with Date and Amount column headers.';
+                        $('#txErrorMessage').text(message);
                         showTxState('error');
                         return;
                     }
@@ -419,8 +420,15 @@
                 },
                 error: function (xhr) {
                     if (seq !== txRequestSeq) { return; }
-                    const message = xhr.responseJSON && xhr.responseJSON.error;
-                    $('#txErrorMessage').text(message || 'Check that the drive is still shared, then try again.');
+                    let message = 'The spreadsheet could not be read. Please check that the shared drive is still accessible and try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        message = xhr.responseJSON.error;
+                    } else if (xhr.status === 0) {
+                        message = 'The request was interrupted. Please check your connection and try again.';
+                    } else if (xhr.status >= 500) {
+                        message = 'The server encountered an error while reading the spreadsheet. Please try again later.';
+                    }
+                    $('#txErrorMessage').text(message);
                     showTxState('error');
                 }
             });

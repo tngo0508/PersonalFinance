@@ -4,10 +4,8 @@ namespace PersonalFinance.Data.Entities;
 ///     Database persistence entity representing an individual transaction record parsed from a Google Drive spreadsheet.
 ///     Stores transaction details for analysis without re-reading from Google Drive.
 /// </summary>
-public class SpreadsheetTransactionRecord
+public class SpreadsheetTransactionRecord : AuditableEntity
 {
-    public int Id { get; set; }
-
     /// <summary>
     ///     Foreign key to the budget snapshot this transaction belongs to.
     /// </summary>
@@ -17,11 +15,6 @@ public class SpreadsheetTransactionRecord
     ///     Foreign key to the Google Drive connection this transaction was parsed from.
     /// </summary>
     public int ConnectionId { get; set; }
-
-    /// <summary>
-    ///     The authenticated user who owns this data.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
 
     /// <summary>
     ///     Date of the transaction.

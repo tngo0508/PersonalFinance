@@ -3,18 +3,8 @@ namespace PersonalFinance.Data.Entities;
 /// <summary>
 /// Database entity representing a community comment on a poll or case study.
 /// </summary>
-public class CommunityComment
+public class CommunityComment : AuditableEntity
 {
-    /// <summary>
-    /// Gets or sets the unique identifier.
-    /// </summary>
-    public int Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the ID of the user who posted the comment.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets the display name of the author at the time of posting.
     /// </summary>

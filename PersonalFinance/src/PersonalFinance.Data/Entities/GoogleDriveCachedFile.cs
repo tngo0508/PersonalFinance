@@ -8,9 +8,9 @@ public class GoogleDriveCachedFile
     public int Id { get; set; }
 
     /// <summary>
-    /// Foreign key referencing the parent GoogleDriveConnection.
+    /// Foreign key referencing the parent GoogleDriveConnection (nullable when the connection is soft-deleted).
     /// </summary>
-    public int ConnectionId { get; set; }
+    public int? ConnectionId { get; set; }
 
     /// <summary>
     /// Google Drive unique file/folder ID.
@@ -90,5 +90,5 @@ public class GoogleDriveCachedFile
     /// <summary>
     /// Navigation property to parent connection.
     /// </summary>
-    public GoogleDriveConnection Connection { get; set; } = null!;
+    public GoogleDriveConnection? Connection { get; set; }
 }

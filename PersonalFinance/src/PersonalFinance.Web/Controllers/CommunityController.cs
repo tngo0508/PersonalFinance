@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.Community;
 using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Web.Controllers;

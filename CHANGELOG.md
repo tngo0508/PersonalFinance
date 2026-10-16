@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-10-16
+
+### Added
+
+- **Architecture Documentation**: Created `GLOSSARY.md` with canonical definitions for architecture terms (Feature, Command, Query, Handler, Service, DTO, Entity, AuditableEntity) and domain concepts.
+- **Architecture Decision Records**: Created `docs/adr/0001-standardize-cqrs-feature-organization.md` documenting the decision to standardize on CQRS with MediatR and feature-based organization.
+
+### Changed
+
+- **AGENTS.md Guidelines**: Updated with new architectural patterns:
+  - Added Quick Start section referencing GLOSSARY.md and ADRs.
+  - Documented CQRS requirement for all ApiService features (no exceptions).
+  - Added feature-based folder structure guidance with examples.
+  - Updated code placement table with feature-based paths.
+  - Added AuditableEntity and soft delete requirements for user-owned entities.
+  - Clarified that Web layer does NOT use CQRS (calls Refit APIs directly).
+  - Added handler responsibility guidelines (thin coordinators, services own logic).
+
 ## [1.8.8] - 2026-10-14
 
 ### Fixed

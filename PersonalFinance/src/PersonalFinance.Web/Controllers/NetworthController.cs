@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Web.Controllers;

@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.NetWorth;
 
 namespace PersonalFinance.Web.Models;
 

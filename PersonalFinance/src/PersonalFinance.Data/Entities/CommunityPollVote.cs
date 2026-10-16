@@ -3,18 +3,8 @@ namespace PersonalFinance.Data.Entities;
 /// <summary>
 /// Database entity representing a user's vote on a poll option.
 /// </summary>
-public class CommunityPollVote
+public class CommunityPollVote : AuditableEntity
 {
-    /// <summary>
-    /// Gets or sets the unique identifier.
-    /// </summary>
-    public int Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the ID of the user who cast the vote.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets the foreign key to the poll option (nullable for cascade safety).
     /// </summary>

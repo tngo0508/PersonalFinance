@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
 using Scalar.AspNetCore;
 using Xunit;

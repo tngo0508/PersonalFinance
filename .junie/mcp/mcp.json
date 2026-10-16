@@ -1,32 +1,32 @@
 {
-  "mcpServers": {
-    "Playwright": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest"
-      ]
-    },
-    "azure": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@azure/mcp-server"
-      ]
-    },
-    "github": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@github/mcp-server"
-      ]
-    },
-    "microsoft-learn": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@microsoft/learn-docs-mcp"
-      ]
+    "mcpServers": {
+        "Playwright": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@playwright/mcp@latest"
+            ]
+        },
+        "azure": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@azure/mcp-server"
+            ]
+        },
+        "github": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@github/mcp-server"
+            ]
+        },
+        "microsoft-learn": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@microsoft/learn-docs-mcp"
+            ]
+        }
     }
-  }
 }

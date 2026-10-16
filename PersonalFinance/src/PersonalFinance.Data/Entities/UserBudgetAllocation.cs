@@ -4,15 +4,8 @@ namespace PersonalFinance.Data.Entities;
 /// Database entity representing a user's budget allocation for a given month.
 /// Stores the percentage allocation for each spending category.
 /// </summary>
-public class UserBudgetAllocation
+public class UserBudgetAllocation : AuditableEntity
 {
-    public int Id { get; set; }
-
-    /// <summary>
-    /// Foreign key to the ASP.NET Identity user who owns this budget.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
-
     /// <summary>Monthly income amount in dollars.</summary>
     public decimal MonthlyIncome { get; set; }
 

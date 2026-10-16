@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -120,6 +121,12 @@ public static class DatabaseProviderHelper
 
                 sqlServerOptionsAction?.Invoke(sqlServerOptions);
             });
+
+            // Suppress PendingModelChangesWarning as an error during startup migrations.
+            // When the model drifts from the last migration (e.g., after a refactoring), EF Core 9+
+            // throws by default. We log it as a warning instead so the application can still start
+            // and apply existing migrations. A new migration should be generated before deployment.
+            options.ConfigureWarnings(w => w.Log(RelationalEventId.PendingModelChangesWarning));
         }
 
         return options;

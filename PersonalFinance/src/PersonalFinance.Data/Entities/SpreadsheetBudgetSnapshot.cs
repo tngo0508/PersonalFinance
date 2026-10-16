@@ -4,19 +4,12 @@ namespace PersonalFinance.Data.Entities;
 ///     Database persistence entity representing a parsed monthly budget report snapshot from a Google Drive spreadsheet.
 ///     Stores the summary data and category breakdowns for analysis without re-reading from Google Drive.
 /// </summary>
-public class SpreadsheetBudgetSnapshot
+public class SpreadsheetBudgetSnapshot : AuditableEntity
 {
-    public int Id { get; set; }
-
     /// <summary>
     ///     Foreign key to the Google Drive connection this snapshot was parsed from.
     /// </summary>
     public int ConnectionId { get; set; }
-
-    /// <summary>
-    ///     The authenticated user who owns this data.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
 
     /// <summary>
     ///     Human-readable name of the source spreadsheet file.

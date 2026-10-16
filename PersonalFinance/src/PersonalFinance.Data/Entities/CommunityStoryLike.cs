@@ -3,18 +3,8 @@ namespace PersonalFinance.Data.Entities;
 /// <summary>
 /// Database entity representing a user's like on a community story.
 /// </summary>
-public class CommunityStoryLike
+public class CommunityStoryLike : AuditableEntity
 {
-    /// <summary>
-    /// Gets or sets the unique identifier.
-    /// </summary>
-    public int Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the ID of the user who liked the story.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets the foreign key to the story.
     /// </summary>

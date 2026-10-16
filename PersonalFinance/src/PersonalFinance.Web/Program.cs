@@ -32,22 +32,30 @@ try
     // 2. Add Aspire service defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
     builder.AddServiceDefaults();
 
-    // 3. Wire up Serilog with non-blocking async console sink and OpenTelemetry forwarding
+    // 3. Wire up Serilog with non-blocking async console sink, rolling file sink (30-day retention), and OpenTelemetry forwarding
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         .WriteTo.Async(a => a.Console(
             theme: AnsiConsoleTheme.Code,
-            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
+        .WriteTo.Async(a => a.File(
+            path: Path.Combine("logs", "web-.log"),
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30,
+            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
         writeToProviders: true);
 
     // 3a. Register EF Core DbContext & ASP.NET Core Identity (Azure SQL Serverless / SQLite)
     builder.Services.AddAppDbContext(builder.Configuration);
 
+    // Disable email confirmation requirement for CI/E2E runs to allow immediate login after registration
+    var disableEmailConfirmationForE2E = Environment.GetEnvironmentVariable("E2E_DISABLE_EMAIL_CONFIRMATION") == "true";
+
     builder.Services.AddDefaultIdentity<IdentityUser>(options =>
     {
-        options.SignIn.RequireConfirmedAccount = true;
+        options.SignIn.RequireConfirmedAccount = !disableEmailConfirmationForE2E;
         options.User.RequireUniqueEmail = true;
         options.Password.RequireDigit = true;
         options.Password.RequireLowercase = true;

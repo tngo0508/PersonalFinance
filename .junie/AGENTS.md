@@ -3,6 +3,7 @@
 This document provides guidelines for AI agents working on this .NET Core MVC project, based on Microsoft's official best practices and architectural recommendations.
 
 ## Table of Contents
+- [Quick Start](#quick-start)
 - [Project Architecture](#project-architecture)
 - [Backend/Frontend Code Separation](#backendfrontend-code-separation)
 - [Git Worktrees](#git-worktrees)
@@ -12,6 +13,13 @@ This document provides guidelines for AI agents working on this .NET Core MVC pr
 - [Naming Conventions](#naming-conventions)
 - [JavaScript / ESLint](#javascript--eslint)
 - [References](#references)
+
+## Quick Start
+
+Before working on the project, read these reference documents:
+
+- **`GLOSSARY.md`** — Canonical definitions for architecture terms (Feature, Command, Query, Handler, Service, DTO, Entity) and domain concepts.
+- **`docs/adr/`** — Architecture Decision Records explaining why key design choices were made.
 
 ## Project Architecture
 
@@ -28,6 +36,9 @@ The project follows a layered architecture pattern with clear separation of conc
 - **Composition Root**: `Program.cs` is responsible for wiring up dependencies via DI
 - **No Direct Instantiation**: Use dependency injection instead of `new` keyword for services
 - **Interface Segregation**: Define interfaces in the layer that consumes them
+- **CQRS with MediatR**: All ApiService features use CQRS — commands for actions, queries for data. See `docs/adr/0001-standardize-cqrs-feature-organization.md`.
+- **Feature-Based Organization**: ApiService is organized by feature (e.g., `NetWorth/`, `Budget/`), not by type. Each feature is a vertical slice containing its controller, commands, queries, handlers, services, and validators.
+- **Soft Deletes**: All user-owned entities inherit from `AuditableEntity` with soft-delete support. EF Core global query filters automatically exclude deleted records.
 
 ## Backend/Frontend Code Separation
 
@@ -39,15 +50,18 @@ When creating or modifying code, always place it in the correct project:
 
 | Code Type | Project | Examples |
 |---|---|---|
-| Business logic services | `PersonalFinance.ApiService` | `INetWorthParametersService`, `NetWorthParametersService` |
-| Service interfaces | `PersonalFinance.ApiService` | `IEntityService` |
-| Entity configurations | `PersonalFinance.ApiService` | FluentValidation validators |
-| Controllers | `PersonalFinance.Web` | `NetWorthParametersController` |
+| Feature controllers (API) | `PersonalFinance.ApiService` | `NetWorth/NetWorthController.cs` |
+| CQRS commands & queries | `PersonalFinance.ApiService` | `NetWorth/Commands/SaveParametersCommand.cs` |
+| CQRS handlers | `PersonalFinance.ApiService` | `NetWorth/Commands/SaveParametersCommandHandler.cs` |
+| Business logic services | `PersonalFinance.ApiService` | `NetWorth/Services/NetWorthParametersService.cs` |
+| Validators | `PersonalFinance.ApiService` | `NetWorth/Validators/NetWorthValidators.cs` |
+| MVC controllers (Web) | `PersonalFinance.Web` | `NetworthController.cs` |
 | Views (Razor) | `PersonalFinance.Web` | `.cshtml` files |
 | UI-specific services | `PersonalFinance.Web` | `UserIdForwardingHandler`, view model factories |
 | Data entities | `PersonalFinance.Data` | `NetWorthParameters` entity |
 | DbContext | `PersonalFinance.Data` | `ApplicationDbContext` |
-| DTOs | `PersonalFinance.Shared` | `NetWorthParametersDto` |
+| DTOs (by feature) | `PersonalFinance.Shared` | `DTOs/NetWorth/NetWorthParametersDto.cs` |
+| API contracts | `PersonalFinance.Shared` | `Contracts/INetWorthApi.cs` |
 
 ### Rules for Code Placement
 - **Never put business logic in Web controllers** — Controllers in `PersonalFinance.Web` should only handle HTTP concerns (request parsing, status codes, view selection) and delegate to services in `PersonalFinance.ApiService`.
@@ -163,6 +177,9 @@ Implement and validate the data layer before building dependent application logi
 
 #### Entity and Schema Design
 
+- **User-owned entities inherit from `AuditableEntity`** — All entities with a `UserId` field inherit from `AuditableEntity`, which provides `Id`, `UserId`, `CreatedAt`, `UpdatedAt`, `IsDeleted`, and `DeletedAt`.
+- **Soft deletes are mandatory** — Never hard-delete user-owned entities. Set `IsDeleted = true` and `DeletedAt = DateTime.UtcNow`. EF Core global query filters automatically exclude soft-deleted records.
+- **System-defined entities** — Entities without `UserId` (e.g., `CommunityPoll`, `CommunityPollOption`) do NOT inherit from `AuditableEntity`.
 - Follow the existing EF Core Code-First or database-first approach. Do not introduce a conflicting database management strategy.
 - When Code-First migrations are used, create migrations for schema changes and inspect the generated migration before applying it.
 - Define appropriate primary keys, foreign keys, indexes, unique constraints, nullability, maximum string lengths, precision, and delete behaviors.
@@ -229,7 +246,28 @@ Implement and validate the data layer before building dependent application logi
 
 ### 3. Application Layer — CQRS and MediatR
 
-Follow the application's existing application-layer architecture. When CQRS and MediatR are established or explicitly required, implement the feature using isolated commands, queries, and handlers.
+**All ApiService features use CQRS with MediatR.** There is no exception — every feature follows the same pattern. See `docs/adr/0001-standardize-cqrs-feature-organization.md` for the rationale.
+
+#### Feature Folder Structure
+
+Each feature lives in its own folder under `PersonalFinance.ApiService/`:
+
+```
+ApiService/
+  NetWorth/
+    NetWorthController.cs          ← API controller, injects IMediator
+    Commands/
+      SaveParametersCommand.cs     ← Command + handler in same file
+      DeleteParametersCommand.cs
+    Queries/
+      LoadParametersQuery.cs       ← Query + handler in same file
+    Services/
+      NetWorthParametersService.cs ← Business logic and data access
+    Validators/
+      NetWorthValidators.cs        ← FluentValidation rules
+```
+
+Namespace convention: `PersonalFinance.ApiService.[Feature].Commands`, `PersonalFinance.ApiService.[Feature].Services`, etc.
 
 #### Commands and Queries
 
@@ -247,6 +285,8 @@ Create only the operations required by the feature.
 
 #### Handler Responsibilities
 
+- **Handlers are thin coordinators** — they receive the command/query, call the appropriate service(s), map the result, and return the response.
+- **Business logic lives in services** — handlers delegate to services; don't duplicate logic in handlers.
 - Keep business logic out of MVC controllers.
 - Inject required dependencies through constructors.
 - Inject `DbContext`, external API clients, and other dependencies into the component that actually requires them.
@@ -283,13 +323,20 @@ Create only the operations required by the feature.
 
 Keep controllers thin and consistent with the application's existing conventions.
 
-#### Controller Responsibilities
+#### ApiService Controllers (API endpoints)
 
+- **Inject `IMediator`** — Never inject services directly. Send commands and queries through MediatR.
 - Receive and bind HTTP input.
 - Perform appropriate request-level validation.
-- Dispatch commands and queries through MediatR when the application uses it.
-- Translate application results into appropriate HTTP responses or MVC actions.
+- Dispatch commands and queries through MediatR.
+- Translate application results into appropriate HTTP responses.
 - Avoid embedding database queries, complex business rules, or substantial calculation logic in controllers.
+
+#### Web Controllers (MVC views)
+
+- **Call Refit APIs directly** — The Web layer does NOT use CQRS. Controllers call Refit API clients (e.g., `INetWorthApi`) to communicate with the ApiService.
+- Keep Web controllers thin — they handle HTTP concerns, call APIs, prepare view models, and return views.
+- Never inject ApiService services directly into Web controllers.
 
 #### Input Validation
 
@@ -771,6 +818,11 @@ wwwroot/js/
 
 ## References
 
+### Project Documentation
+- **`GLOSSARY.md`** — Canonical definitions for architecture and domain terms.
+- **`docs/adr/`** — Architecture Decision Records explaining key design choices.
+
+### External Resources
 - [ASP.NET Core Best Practices](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/best-practices)
 - [ASP.NET Core MVC Overview](https://learn.microsoft.com/en-us/aspnet/core/mvc/overview)
 - [Common Web Application Architectures](https://learn.microsoft.com/en-us/dotnet/architecture/modern-web-apps-azure/common-web-application-architectures)

@@ -68,8 +68,8 @@ public static class DatabaseMigrationExtensions
                     }
                 }
 
-                // Seed initial sample data if items table is empty
-                await SeedInitialDataAsync(db, logger, cancellationToken);
+                // Seed initial community data if missing
+                await SeedCommunityDataAsync(db, logger, cancellationToken);
 
                 logger?.LogInformation("Database migration and initialization completed successfully.");
                 return;
@@ -100,57 +100,6 @@ public static class DatabaseMigrationExtensions
         await host.Services.MigrateAndSeedDatabaseAsync(logger, cancellationToken: cancellationToken);
     }
 
-    /// <summary>
-    /// Seeds initial default items if none exist in the database.
-    /// </summary>
-    private static async Task SeedInitialDataAsync(
-        AppDbContext db,
-        ILogger? logger,
-        CancellationToken cancellationToken)
-    {
-        // Seed items only if the table is empty (first run)
-        if (await db.Items.AnyAsync(cancellationToken))
-        {
-            // Still seed community polls if they don't exist
-            await SeedCommunityDataAsync(db, logger, cancellationToken);
-            return;
-        }
-
-        logger?.LogInformation("Seeding initial starter items...");
-
-        var defaultItems = new[]
-        {
-            new Item
-            {
-                Name = "Getting Started with Refit & OpenAPI",
-                Description = "Explore the type-safe Refit client in Web consuming ApiService endpoints.",
-                IsCompleted = true,
-                CreatedAtUtc = DateTime.UtcNow.AddHours(-2)
-            },
-            new Item
-            {
-                Name = "Configure Authentication Modes",
-                Description = "Test Individual Identity or Windows Negotiate authentication scheme across services.",
-                IsCompleted = false,
-                CreatedAtUtc = DateTime.UtcNow.AddMinutes(-45)
-            },
-            new Item
-            {
-                Name = "Verify Interactive Scalar UI & Health Checks",
-                Description = "Access /scalar/v1 and /health endpoints to validate runtime service health.",
-                IsCompleted = false,
-                CreatedAtUtc = DateTime.UtcNow.AddMinutes(-15)
-            }
-        };
-
-        await db.Items.AddRangeAsync(defaultItems, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
-
-        logger?.LogInformation("Seeded {Count} initial items into database.", defaultItems.Length);
-
-        // Seed community data
-        await SeedCommunityDataAsync(db, logger, cancellationToken);
-    }
 
     /// <summary>
     /// Seeds initial community polls and options if they don't exist.
