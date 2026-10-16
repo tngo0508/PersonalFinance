@@ -27,7 +27,7 @@
                         <label asp-for="Input.ConfirmPassword">Confirm Password</label>
                         <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
                     </div>
-                    <button id="registerSubmit" type="submit" class="w-100 btn btn-primary btn-lg">Register</button>
+                    <button id="registerSubmit" data-test-id="register-submit" type="submit" class="w-100 btn btn-primary btn-lg">Register</button>
                 </form>
 
                 @if ((Model.ExternalLogins?.Count ?? 0) > 0)

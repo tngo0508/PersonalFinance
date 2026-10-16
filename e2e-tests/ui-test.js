@@ -454,8 +454,9 @@ const {chromium} = require('playwright');
                 await passwordInputs[1].fill(testPassword);
             }
 
-            // Submit the form
-            await page.click('button[type="submit"]');
+            // Submit the registration form using the specific button ID to avoid
+            // matching other submit buttons on the page (e.g., the "Sign out" button)
+            await page.click('#registerSubmit');
             await page.waitForLoadState('networkidle', {timeout: 15000});
 
             const afterRegisterUrl = page.url();
@@ -473,7 +474,9 @@ const {chromium} = require('playwright');
 
                 await page.fill('input[type="email"]', testEmail);
                 await page.fill('input[type="password"]', testPassword);
-                await page.click('button[type="submit"]');
+                // Use the specific login submit button ID to avoid matching other
+                // submit buttons on the page (e.g., the "Sign out" button)
+                await page.click('#login-submit');
                 await page.waitForLoadState('networkidle', {timeout: 15000});
             }
 

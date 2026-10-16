@@ -170,7 +170,8 @@ jobs:
       - name: Wait for ApiService health
         run: |
           echo "Waiting for ApiService to start (port ${{ steps.ports.outputs.api_port }})..."
-          MAX_RETRIES=40
+          MAX_RETRIES=50
+          SLEEP_SECONDS=3
           for i in $(seq 1 $MAX_RETRIES); do
             HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "http://localhost:${{ steps.ports.outputs.api_port }}/health" 2>/dev/null || echo "000")
             echo "Attempt $i/$MAX_RETRIES: ApiService /health returned HTTP ${HTTP_CODE}"
@@ -178,7 +179,7 @@ jobs:
               echo "ApiService is healthy."
               exit 0
             fi
-            sleep 2
+            sleep $SLEEP_SECONDS
           done
 
           echo "::error::ApiService failed to start within timeout. Dumping diagnostics..."
@@ -214,7 +215,8 @@ jobs:
       - name: Wait for Web health
         run: |
           echo "Waiting for Web to start (port ${{ steps.ports.outputs.web_port }})..."
-          MAX_RETRIES=40
+          MAX_RETRIES=50
+          SLEEP_SECONDS=3
           for i in $(seq 1 $MAX_RETRIES); do
             HTTP_CODE=$(curl -s -S --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "http://localhost:${{ steps.ports.outputs.web_port }}/health" 2>/dev/null || echo "000")
             echo "Attempt $i/$MAX_RETRIES: Web /health returned HTTP ${HTTP_CODE}"
@@ -222,7 +224,7 @@ jobs:
               echo "Web is healthy."
               exit 0
             fi
-            sleep 2
+            sleep $SLEEP_SECONDS
           done
 
           echo "::error::Web failed to start within timeout. Dumping diagnostics..."
