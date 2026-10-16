@@ -179,6 +179,19 @@ public class CommunityController : ControllerBase
     }
 
     /// <summary>
+    /// Gets all community stories for the current user.
+    /// </summary>
+    [HttpGet("Stories")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<CommunityStoryDto>>> GetStories(
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetUserId();
+        var response = await _mediator.Send(new GetCommunityQuery { UserId = userId }, cancellationToken);
+        return Ok(response.Stories ?? new List<CommunityStoryDto>());
+    }
+
+    /// <summary>
     /// Gets a single story by ID.
     /// </summary>
     [HttpGet("story/{storyId}")]

@@ -251,6 +251,28 @@ jobs:
           API_URL: http://localhost:${{ steps.ports.outputs.api_port }}
         run: npm run test:api
 
+      - name: Dump API root & endpoints on failure
+        if: failure()
+        env:
+          API_PORT: ${{ steps.ports.outputs.api_port }}
+        run: |
+          echo "---- / ----"
+          curl -sS -v "http://localhost:${API_PORT}/" || true
+          echo "---- /openapi/v1.json ----"
+          curl -sS -v "http://localhost:${API_PORT}/openapi/v1.json" || true
+          echo "---- /api/NetWorth/Parameters ----"
+          curl -sS -v "http://localhost:${API_PORT}/api/NetWorth/Parameters" || true
+          echo "---- /api/Community/Stories ----"
+          curl -sS -v "http://localhost:${API_PORT}/api/Community/Stories" || true
+          echo "---- /api/Budget ----"
+          curl -sS -v "http://localhost:${API_PORT}/api/Budget" || true
+          echo "---- /api/SavingsGoals ----"
+          curl -sS -v "http://localhost:${API_PORT}/api/SavingsGoals" || true
+          echo "---- /api/Watchlist ----"
+          curl -sS -v "http://localhost:${API_PORT}/api/Watchlist" || true
+          echo "---- Tail .api.log ----"
+          tail -n 400 .api.log || true
+
       - name: Stop services
         if: always()
         run: |

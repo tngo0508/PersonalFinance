@@ -14,27 +14,27 @@ public interface IPersonalFinanceApi
     /// <summary>
     /// Gets all savings goals for the current user.
     /// </summary>
-    [Get("/api/SavingsGoals/savings-goals")]
+    [Get("/api/SavingsGoals")]
     Task<List<SavingsGoalDto>> GetSavingsGoalsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new savings goal for the current user.
     /// </summary>
-    [Post("/api/SavingsGoals/savings-goals")]
+    [Post("/api/SavingsGoals")]
     Task<CreateSavingsGoalResponseDto> CreateSavingsGoalAsync([Body] CreateSavingsGoalRequestDto request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates an existing savings goal.
     /// </summary>
-    [Put("/api/SavingsGoals/savings-goals/{id}")]
+    [Put("/api/SavingsGoals/{id}")]
     Task<UpdateSavingsGoalResponseDto> UpdateSavingsGoalAsync(int id, [Body] UpdateSavingsGoalRequestDto request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes a savings goal.
     /// </summary>
-    [Delete("/api/SavingsGoals/savings-goals/{id}")]
+    [Delete("/api/SavingsGoals/{id}")]
     Task<DeleteSavingsGoalResponseDto> DeleteSavingsGoalAsync(int id, CancellationToken cancellationToken = default);
 
     // =========================================================================
@@ -44,26 +44,26 @@ public interface IPersonalFinanceApi
     /// <summary>
     /// Gets all saved articles for the current user.
     /// </summary>
-    [Get("/api/Watchlist/watchlist")]
+    [Get("/api/Watchlist")]
     Task<List<SavedArticleDto>> GetWatchlistAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Saves an article to the user's watchlist.
     /// </summary>
-    [Post("/api/Watchlist/watchlist")]
+    [Post("/api/Watchlist")]
     Task<SaveArticleResponseDto> SaveArticleAsync([Body] SaveArticleRequestDto request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes an article from the user's watchlist.
     /// </summary>
-    [Delete("/api/Watchlist/watchlist/{id}")]
+    [Delete("/api/Watchlist/{id}")]
     Task<RemoveArticleResponseDto> RemoveArticleAsync(int id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks whether the current user has saved a specific article URL.
     /// </summary>
-    [Get("/api/Watchlist/watchlist/check")]
+    [Get("/api/Watchlist/check")]
     Task<CheckArticleSavedResponseDto> CheckArticleSavedAsync([Query] string url,
         CancellationToken cancellationToken = default);
 

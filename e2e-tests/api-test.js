@@ -55,20 +55,24 @@ const {execSync} = require('child_process');
             pass('API root returns 200');
             try {
                 const json = JSON.parse(resp.body);
-                if (json.Application) {
-                    pass(`API root returns application name: ${json.Application}`);
+                // Accept both PascalCase and camelCase property names
+                const app = json.Application || json.application;
+                const ver = json.Version || json.version;
+                const status = json.Status || json.status;
+                if (app) {
+                    pass(`API root returns application name: ${app}`);
                 } else {
                     fail('API root JSON missing Application field');
                 }
-                if (json.Version) {
-                    pass(`API root returns version: ${json.Version}`);
+                if (ver) {
+                    pass(`API root returns version: ${ver}`);
                 } else {
                     fail('API root JSON missing Version field');
                 }
-                if (json.Status === 'Online') {
+                if (status === 'Online') {
                     pass('API status is Online');
                 } else {
-                    fail(`API status is not Online: ${json.Status}`);
+                    fail(`API status is not Online: ${status}`);
                 }
             } catch (e) {
                 fail('API root response is not valid JSON');

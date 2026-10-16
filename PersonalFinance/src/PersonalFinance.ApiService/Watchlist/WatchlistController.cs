@@ -41,7 +41,7 @@ public class WatchlistController : ControllerBase
     /// <summary>
     /// Gets all saved articles for the current user.
     /// </summary>
-    [HttpGet("watchlist")]
+    [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetWatchlist(CancellationToken cancellationToken = default)

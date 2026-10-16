@@ -39,6 +39,41 @@ public class BudgetController : ControllerBase
     }
 
     /// <summary>
+    /// Gets the current user's budget allocation (defaults to current period).
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetBudgetCurrent(CancellationToken cancellationToken = default)
+    {
+        var userId = GetUserId();
+        var budget = await _mediator.Send(new GetBudgetQuery { UserId = userId, Period = "current" }, cancellationToken);
+
+        if (budget is null)
+        {
+            return Ok(new { allocations = (object?)null, monthlyIncome = 0m });
+        }
+
+        return Ok(new
+        {
+            allocations = new
+            {
+                housing = budget.Allocations!.Housing,
+                food = budget.Allocations.Food,
+                transportation = budget.Allocations.Transportation,
+                utilities = budget.Allocations.Utilities,
+                insurance = budget.Allocations.Insurance,
+                healthcare = budget.Allocations.Healthcare,
+                savings = budget.Allocations.Savings,
+                debtRepayment = budget.Allocations.DebtRepayment,
+                entertainment = budget.Allocations.Entertainment,
+                miscellaneous = budget.Allocations.Miscellaneous
+            },
+            monthlyIncome = budget.MonthlyIncome
+        });
+    }
+
+    /// <summary>
     /// Gets the current user's budget allocation for the specified period.
     /// </summary>
     [HttpGet("budget/{period}")]

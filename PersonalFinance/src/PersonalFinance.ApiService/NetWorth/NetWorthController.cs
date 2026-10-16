@@ -67,7 +67,6 @@ public class NetWorthController : ControllerBase
     /// </summary>
     [HttpGet("parameters")]
     [ProducesResponseType(typeof(NetWorthParametersDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> LoadParameters()
     {
         var userId = GetUserId();
@@ -75,7 +74,7 @@ public class NetWorthController : ControllerBase
 
         if (parameters == null)
         {
-            return NoContent();
+            return Ok(new NetWorthParametersDto());
         }
 
         return Ok(parameters);
