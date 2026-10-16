@@ -3,9 +3,11 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
-using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.GoogleDrive.Services;
+using PersonalFinance.ApiService.SpreadsheetAnalysis.Services;
 using PersonalFinance.Data;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.GoogleDrive;
+using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Helpers;
 using Xunit;
 
@@ -83,13 +85,13 @@ public class GoogleDriveHelperTests
     }
 
     [Fact]
-    public async Task GoogleDriveService_WithValidFolderAndNoKey_ReturnsPreviewResponse()
+    public async Task DriveConnectionService_WithValidFolderAndNoKey_ReturnsPreviewResponse()
     {
         using var dbContext = CreateTestDbContext();
         var inMemorySettings = new Dictionary<string, string?>();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
         var httpClient = new HttpClient();
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -106,12 +108,12 @@ public class GoogleDriveHelperTests
     }
 
     [Fact]
-    public async Task GoogleDriveService_WithInvalidUrl_ReturnsErrorResponse()
+    public async Task DriveConnectionService_WithInvalidUrl_ReturnsErrorResponse()
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -126,14 +128,14 @@ public class GoogleDriveHelperTests
     }
 
     [Fact]
-    public async Task GoogleDriveService_WhenHttpClientTimesOut_FallsBackToPreviewGracefully()
+    public async Task DriveConnectionService_WhenHttpClientTimesOut_FallsBackToPreviewGracefully()
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) =>
             throw new TaskCanceledException("A task was canceled.", new TimeoutException("The operation timed out.")));
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -149,7 +151,7 @@ public class GoogleDriveHelperTests
     }
 
     [Fact]
-    public async Task GoogleDriveService_WhenCallerCancels_ReturnsCanceledResult()
+    public async Task DriveConnectionService_WhenCallerCancels_ReturnsCanceledResult()
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
@@ -162,7 +164,7 @@ public class GoogleDriveHelperTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -177,7 +179,7 @@ public class GoogleDriveHelperTests
     }
 
     [Fact]
-    public async Task GoogleDriveService_WhenHttp403Forbidden_FallsBackToPreviewGracefully()
+    public async Task DriveConnectionService_WhenHttp403Forbidden_FallsBackToPreviewGracefully()
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
@@ -190,7 +192,7 @@ public class GoogleDriveHelperTests
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -207,7 +209,7 @@ public class GoogleDriveHelperTests
     }
 
     [Fact]
-    public async Task GoogleDriveService_WhenHttp404NotFound_ExplainsSharingPermissions()
+    public async Task DriveConnectionService_WhenHttp404NotFound_ExplainsSharingPermissions()
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
@@ -220,7 +222,7 @@ public class GoogleDriveHelperTests
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -237,7 +239,7 @@ public class GoogleDriveHelperTests
     }
 
     [Fact]
-    public async Task GoogleDriveService_WhenLiveQueryReturnsEmptyFiles_ProvidesSharingGuidance()
+    public async Task DriveConnectionService_WhenLiveQueryReturnsEmptyFiles_ProvidesSharingGuidance()
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
@@ -251,7 +253,7 @@ public class GoogleDriveHelperTests
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -396,13 +398,13 @@ Entertainment,400,450";
     }
 
     [Fact]
-    public async Task GoogleDriveService_GetSpreadsheetBudgetReportAsync_ForSampleFile_ReturnsParsedActualData()
+    public async Task SpreadsheetReaderService_GetSpreadsheetBudgetReportAsync_ForSampleFile_ReturnsParsedActualData()
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)));
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new SpreadsheetReaderService(httpClient, configuration, dbContext, NullLogger<SpreadsheetReaderService>.Instance);
 
         var report = await service.GetSpreadsheetBudgetReportAsync("sample-sheet-budget-1", "Monthly budget 2026.xlsx");
 
@@ -417,7 +419,7 @@ Entertainment,400,450";
     }
 
     [Fact]
-    public async Task GoogleDriveService_GetSpreadsheetBudgetReportAsync_WithLiveGoogleSheetExport_ParsesLiveCsv()
+    public async Task SpreadsheetReaderService_GetSpreadsheetBudgetReportAsync_WithLiveGoogleSheetExport_ParsesLiveCsv()
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
@@ -439,7 +441,7 @@ Food,800,750";
         });
 
         var httpClient = new HttpClient(handler);
-        var service = new GoogleDriveService(httpClient, configuration, dbContext, NullLogger<GoogleDriveService>.Instance);
+        var service = new SpreadsheetReaderService(httpClient, configuration, dbContext, NullLogger<SpreadsheetReaderService>.Instance);
 
         var report = await service.GetSpreadsheetBudgetReportAsync("live-sheet-123", "Monthly budget 2026.gsheet");
 

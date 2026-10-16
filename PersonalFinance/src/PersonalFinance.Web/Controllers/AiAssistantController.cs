@@ -2,7 +2,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.AiAssistant;
+using PersonalFinance.Shared.DTOs.News;
 
 namespace PersonalFinance.Web.Controllers;
 

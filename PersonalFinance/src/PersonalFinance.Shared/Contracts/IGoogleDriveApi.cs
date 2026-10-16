@@ -1,5 +1,6 @@
 using Refit;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.GoogleDrive;
+using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 namespace PersonalFinance.Shared.Contracts;
 

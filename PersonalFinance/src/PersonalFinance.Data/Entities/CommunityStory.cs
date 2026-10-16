@@ -3,18 +3,8 @@ namespace PersonalFinance.Data.Entities;
 /// <summary>
 /// Database entity representing a user-submitted community story or case study.
 /// </summary>
-public class CommunityStory
+public class CommunityStory : AuditableEntity
 {
-    /// <summary>
-    /// Gets or sets the unique identifier.
-    /// </summary>
-    public int Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the ID of the user who submitted the story.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets the display name of the author at the time of submission.
     /// </summary>

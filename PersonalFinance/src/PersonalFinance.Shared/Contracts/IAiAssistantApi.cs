@@ -1,4 +1,5 @@
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.AiAssistant;
+using PersonalFinance.Shared.DTOs.News;
 using Refit;
 
 namespace PersonalFinance.Shared.Contracts;

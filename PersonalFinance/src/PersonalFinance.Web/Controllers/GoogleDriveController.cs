@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Shared.DTOs;
+using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Models;
 

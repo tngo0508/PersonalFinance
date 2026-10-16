@@ -3,15 +3,8 @@ namespace PersonalFinance.Data.Entities;
 /// <summary>
 /// Database persistence entity representing a user's connected Google Drive folder/connection.
 /// </summary>
-public class GoogleDriveConnection
+public class GoogleDriveConnection : AuditableEntity
 {
-    public int Id { get; set; }
-
-    /// <summary>
-    /// Foreign key or identifier of the authenticated user who owns this connection.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
-
     /// <summary>
     /// Friendly display name for the connected Drive/Folder.
     /// </summary>

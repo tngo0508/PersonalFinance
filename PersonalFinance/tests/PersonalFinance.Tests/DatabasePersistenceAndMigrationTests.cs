@@ -127,7 +127,7 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public async Task MigrateAndSeedDatabaseAsync_InMemory_SeedsInitialItems()
+    public async Task MigrateAndSeedDatabaseAsync_InMemory_SeedsCommunityPolls()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -140,9 +140,9 @@ public class DatabasePersistenceAndMigrationTests
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var items = await db.Items.ToListAsync();
-            Assert.Equal(3, items.Count);
-            Assert.Contains(items, i => i.Name.Contains("Refit"));
+            var polls = await db.CommunityPolls.ToListAsync();
+            Assert.True(polls.Count >= 3);
+            Assert.Contains(polls, p => p.PollCode == "poll-budget-method");
         }
     }
 
@@ -167,7 +167,6 @@ public class DatabasePersistenceAndMigrationTests
         Assert.Contains("CREATE TABLE [AspNetUsers]", script, StringComparison.Ordinal);
         Assert.Contains("CREATE TABLE [DataProtectionKeys]", script, StringComparison.Ordinal);
         Assert.Contains("CREATE TABLE [GoogleDriveConnections]", script, StringComparison.Ordinal);
-        Assert.Contains("CREATE TABLE [Items]", script, StringComparison.Ordinal);
 
         // Identity / FK key columns must be bounded for Azure SQL PK/FK/index support
         Assert.Contains("[Id] nvarchar(450)", script, StringComparison.Ordinal);
@@ -216,45 +215,6 @@ public class DatabasePersistenceAndMigrationTests
         Assert.Equal(128, providerKey.GetMaxLength());
     }
 
-    [Fact]
-    public async Task AppDbContext_ItemsCRUD_PersistsAndUpdatesSuccessfully()
-    {
-        var dbName = $"InMemory_ItemsCRUD_{Guid.NewGuid():N}";
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(dbName)
-            .Options;
-
-        using (var db = new AppDbContext(options))
-        {
-            var item = new Item
-            {
-                Name = "Groceries",
-                Description = "Weekly supermarket shopping",
-                IsCompleted = false,
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            db.Items.Add(item);
-            await db.SaveChangesAsync();
-
-            Assert.True(item.Id > 0);
-        }
-
-        using (var db = new AppDbContext(options))
-        {
-            var item = await db.Items.FirstAsync(i => i.Name == "Groceries");
-            Assert.False(item.IsCompleted);
-
-            item.IsCompleted = true;
-            await db.SaveChangesAsync();
-        }
-
-        using (var db = new AppDbContext(options))
-        {
-            var item = await db.Items.FirstAsync(i => i.Name == "Groceries");
-            Assert.True(item.IsCompleted);
-        }
-    }
 
     [Fact]
     public void AzureSql_DefaultFallbackConnectionString_MatchesDefaultSqlConnectionString()

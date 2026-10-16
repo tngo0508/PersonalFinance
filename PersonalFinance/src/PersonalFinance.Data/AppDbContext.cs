@@ -20,11 +20,6 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     }
 
     /// <summary>
-    /// Items table set.
-    /// </summary>
-    public DbSet<Item> Items => Set<Item>();
-
-    /// <summary>
     /// User Google Drive connections configuration table set.
     /// </summary>
     public DbSet<GoogleDriveConnection> GoogleDriveConnections => Set<GoogleDriveConnection>();
@@ -108,6 +103,20 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     {
         base.OnModelCreating(modelBuilder);
 
+        // Global query filters for soft deletes — automatically exclude soft-deleted records
+        modelBuilder.Entity<NetWorthParameters>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<SavingsGoal>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<SavedArticle>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<UserBudgetAllocation>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<GoogleDriveConnection>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<SpreadsheetBudgetSnapshot>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<SpreadsheetTransactionRecord>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<CommunityStory>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<CommunityComment>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<CommunityCommentLike>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<CommunityStoryLike>().HasQueryFilter(e => !e.IsDeleted);
+
         // Explicit Identity key/FK lengths so both providers (and design-time scaffolding) produce
         // bounded string columns. SQL Server cannot index or key nvarchar(max).
         const int identityKeyMaxLength = 450;
@@ -147,14 +156,6 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.RoleId).HasMaxLength(identityKeyMaxLength);
         });
 
-        // Configure Item entity schema constraints
-        modelBuilder.Entity<Item>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Description).HasMaxLength(1000);
-            entity.HasIndex(e => e.CreatedAtUtc);
-        });
 
         // Configure GoogleDriveConnection entity
         modelBuilder.Entity<GoogleDriveConnection>(entity =>

@@ -4,15 +4,8 @@ namespace PersonalFinance.Data.Entities;
 /// Database persistence entity representing a user's saved net worth projection parameters.
 /// One record per user — each save overwrites the previous parameters.
 /// </summary>
-public class NetWorthParameters
+public class NetWorthParameters : AuditableEntity
 {
-    public int Id { get; set; }
-
-    /// <summary>
-    /// Foreign key to the ASP.NET Identity user who owns these parameters.
-    /// </summary>
-    public string UserId { get; set; } = string.Empty;
-
     /// <summary>Initial net worth balance.</summary>
     public decimal StartingBalance { get; set; }
 
