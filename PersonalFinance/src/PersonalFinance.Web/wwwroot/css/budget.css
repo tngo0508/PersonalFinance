@@ -388,17 +388,18 @@
 
 .budget-category__input-group {
     position: relative;
-    width: 70px;
+    width: 75px;
     flex-shrink: 0;
 }
 
 .budget-percent-input {
     width: 100%;
-    padding-right: 1.2rem;
+    padding: 0 2rem 0 0.5rem;
     text-align: right;
     font-size: var(--app-font-size-small);
     font-family: var(--app-font-mono);
     height: 32px;
+    box-sizing: border-box;
     border-radius: var(--app-radius-s);
     border: 1px solid var(--app-border);
     background: #fff;
@@ -413,12 +414,13 @@
 
 .budget-percent-input__suffix {
     position: absolute;
-    right: 0.6rem;
+    right: 0.5rem;
     top: 50%;
     transform: translateY(-50%);
     font-size: var(--app-font-size-small);
     color: var(--app-text-muted);
     pointer-events: none;
+    line-height: 1;
 }
 
 .budget-amount-input-group {
@@ -574,11 +576,40 @@
 }
 
 .budget-summary-table tbody td {
-    padding: 0.35rem 0.6rem;
+    padding: 0.4rem 0.6rem;
     vertical-align: middle;
     color: var(--app-text);
     font-family: var(--app-font-mono);
     font-size: var(--app-font-size-small);
+    line-height: 1.4;
+}
+
+.budget-summary-table tbody td:first-child {
+    font-family: var(--app-font-family);
+    overflow: hidden;
+    max-width: 110px;
+}
+
+.budget-summary-row-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.budget-summary-row-dot {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.budget-summary-row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
 }
 
 .budget-summary-table tbody tr:hover {
@@ -596,8 +627,48 @@
 }
 
 /* ==========================================================================
-   Responsive Breakpoints
-   ========================================================================== */
+  Responsive Breakpoints
+  ========================================================================== */
+
+/* Medium screens — tighten the two-column layout */
+@media (max-width: 1199px) {
+    .budget-categories {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .budget-category-card {
+        padding: 0.65rem;
+    }
+
+    .budget-category__input-group {
+        width: 65px;
+    }
+
+    .budget-amount-input-group {
+        width: 85px;
+    }
+
+    .budget-chart-container {
+        max-width: 240px;
+    }
+
+    .budget-summary-table-container {
+        max-height: 220px;
+    }
+
+    .budget-summary-table {
+        font-size: 0.7rem;
+    }
+
+    .budget-summary-table tbody td {
+        padding: 0.35rem 0.4rem;
+    }
+
+    .budget-summary-table thead th {
+        padding: 0.4rem 0.4rem;
+    }
+}
 
 /* Tablet and below — single column categories */
 @media (max-width: 991px) {
@@ -612,6 +683,18 @@
 
     .budget-chart-container {
         max-width: 260px;
+    }
+
+    .budget-summary-table-container {
+        max-height: 240px;
+    }
+
+    .budget-category__input-group {
+        width: 70px;
+    }
+
+    .budget-amount-input-group {
+        width: 90px;
     }
 }
 

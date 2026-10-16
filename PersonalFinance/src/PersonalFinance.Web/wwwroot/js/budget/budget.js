@@ -348,7 +348,7 @@
             totalAmount += amount;
 
             html += '<tr>';
-            html += '<td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + categoryColors[index] + ';margin-right:6px;"></span>' + categoryLabels[cat] + '</td>';
+            html += '<td><span class="budget-summary-row-label"><span class="budget-summary-row-dot" style="background:' + categoryColors[index] + ';"></span><span class="budget-summary-row-name" title="' + categoryLabels[cat] + '">' + categoryLabels[cat] + '</span></span></td>';
             html += '<td class="text-end">' + percent.toFixed(1) + '%</td>';
             html += '<td class="text-end">$' + formatCurrency(amount) + '</td>';
             html += '</tr>';

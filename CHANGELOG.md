@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Savings Goals Update Button**: Fixed the Update button on the Savings Goals page rejecting valid dollar amounts.
+  - The update form's amount input had `step="50"`, which only allowed multiples of 50 (0, 50, 100, 150, …).
+  - Changed `step` to `1` so any whole-dollar amount can be entered and saved.
 - **News Save to Watchlist**: Fixed save button on news articles not working — clicking Save did nothing because the API
   controller routes no longer matched the Refit client endpoints.
   - The Refit client was updated to use simplified routes (`/api/Watchlist`) but the controller still expected
@@ -55,6 +58,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added editable dollar amount input field next to each category's percentage input.
   - Dollar amounts sync bidirectionally with percentages based on monthly income.
   - All three input methods (slider, percentage, dollar amount) stay synchronized in real-time.
+- **Budget Planner Responsive Layout**: Fixed the Budget Planner page layout breaking at medium screen widths.
+  - Added responsive breakpoint at 1199px to tighten category card padding and input field widths.
+  - Fixed summary table category labels overflowing and overlapping at narrow sidebar widths.
+  - Reduced chart container and summary table size proportionally at medium screen sizes.
+  - Category labels in the summary table now truncate with ellipsis when space is limited.
+- **Budget Planner Percentage Input**: Fixed the percentage sign (%) overlapping with longer number values (e.g.,
+  "11.6%")
+  in category allocation inputs.
+  - Increased the percentage input field width from 70px to 75px for more room.
+  - Increased right padding from 1.5rem to 2rem to ensure the number never touches the % suffix.
+  - Adjusted responsive breakpoints to maintain adequate input width at medium and tablet screen sizes.
+- **Budget Planner Summary Table**: Fixed category names and amounts overlapping in the summary table.
+  - Removed `display: flex` from the table cell, which broke the table layout model and caused content to overflow.
+  - Added a flex wrapper span inside the table cell for the colored dot and category name, keeping the cell as a proper
+    table element.
+  - Applied text truncation with ellipsis to the category name span, with a tooltip showing the full name on hover.
 
 ### Fixed
 
