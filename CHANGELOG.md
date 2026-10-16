@@ -22,6 +22,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Savings Goals Update Input Dollar Sign**: Fixed the dollar sign ($) overlapping the entered number in the Update
+  form.
+  - Bootstrap's `form-control` class was overriding the custom left padding on the input.
+  - Increased CSS specificity by scoping the input selector under its wrapper parent class.
+  - Increased left padding from 1.5rem to 1.75rem to give more room for the $ prefix.
+- **Savings Goal Progress Bar Percentage**: Fixed the percentage text not showing inside the progress bar.
+  - The progress track height was only 12px, which clipped the percentage label text.
+  - Increased track height to 24px with proper padding so the percentage is visible.
+- **Savings Goal Card Text Truncation**: Fixed text being shrunk or cut off in savings goal cards.
+  - Added proper overflow handling and text-ellipsis to goal names and descriptions.
+  - Increased line-height on amount display to prevent vertical clipping.
+  - Ensured the header info container properly constrains flex children.
+- **Savings Goals Create Modal**: Fixed the Create Goal button in the New Savings Goal modal rejecting valid dollar
+  amounts.
+  - The target amount input had `step="100"`, which only allowed values like 1, 101, 201, … — any other number was
+    rejected.
+  - The current amount input had `step="50"`, which only allowed multiples of 50.
+  - Changed both inputs to `step="any"` so any dollar amount including cents can be entered.
 - **Savings Goals Update Button**: Fixed the Update button on the Savings Goals page rejecting valid dollar amounts.
   - The update form's amount input had `step="50"`, which only allowed multiples of 50 (0, 50, 100, 150, …).
   - Changed `step` to `1` so any whole-dollar amount can be entered and saved.
