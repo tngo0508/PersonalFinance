@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **News Save to Watchlist**: Fixed save button on news articles not working — clicking Save did nothing because the API
+  controller routes no longer matched the Refit client endpoints.
+  - The Refit client was updated to use simplified routes (`/api/Watchlist`) but the controller still expected
+    `/api/Watchlist/watchlist`.
+  - Fixed all watchlist controller action routes (POST, DELETE, check) to match the simplified Refit contract.
 - **Budget Planner Save**: Fixed budget data being wiped after clicking Save — the DebtRepayment category value was
   never submitted because the JavaScript `capitalize()` helper only uppercased the first character, producing
   "Debtrepayment" instead of "DebtRepayment".

@@ -53,7 +53,7 @@ public class WatchlistController : ControllerBase
     /// <summary>
     /// Saves an article to the user's watchlist.
     /// </summary>
-    [HttpPost("watchlist")]
+    [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveArticle([FromBody] SaveArticleRequestDto request,
@@ -67,7 +67,7 @@ public class WatchlistController : ControllerBase
     /// <summary>
     /// Removes an article from the user's watchlist.
     /// </summary>
-    [HttpDelete("watchlist/{id}")]
+    [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -82,7 +82,7 @@ public class WatchlistController : ControllerBase
     /// <summary>
     /// Checks whether the current user has saved a specific article URL.
     /// </summary>
-    [HttpGet("watchlist/check")]
+    [HttpGet("check")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CheckArticleSaved([FromQuery] string url,
