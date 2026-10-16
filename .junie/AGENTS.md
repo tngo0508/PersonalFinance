@@ -5,8 +5,10 @@ This document provides guidelines for AI agents working on this .NET Core MVC pr
 ## Table of Contents
 - [Project Architecture](#project-architecture)
 - [Backend/Frontend Code Separation](#backendfrontend-code-separation)
+- [Git Worktrees](#git-worktrees)
 - [Feature Implementation Protocol](#feature-implementation-protocol)
 - [Version Management](#version-management)
+- [Changelog Management](#changelog-management)
 - [Naming Conventions](#naming-conventions)
 - [JavaScript / ESLint](#javascript--eslint)
 - [References](#references)
@@ -60,6 +62,59 @@ PersonalFinance.Web  ──depends on──>  PersonalFinance.ApiService  ──
          │                                    │                                    ▲
          └──────── depends on ────────────────┘                                    │
               PersonalFinance.Shared  ──referenced by all layers───────────────────┘
+```
+
+## Git Worktrees
+
+### Worktree Structure
+
+The project uses git worktrees to enable parallel work on multiple branches simultaneously. All worktrees live in the
+`.worktrees/` directory inside the repository root:
+
+```
+C:\workdir\repos\PersonalFinanceApp\          ← Main repo (main branch)
+    .worktrees/
+        ├── dev/                              ← Active development
+        ├── release/                          ← Release preparation
+        └── hotfix/                           ← Emergency fixes
+```
+
+### Worktree Purposes
+
+| Worktree      | Branch    | Purpose                       | When to Use                                     |
+|---------------|-----------|-------------------------------|-------------------------------------------------|
+| **Main repo** | `main`    | Stable, production-ready code | Reference, PR reviews, stable baseline          |
+| **dev**       | `dev`     | Active development            | Day-to-day feature work, integration testing    |
+| **release**   | `release` | Release preparation           | Final testing, version bumping, deployment prep |
+| **hotfix**    | `hotfix`  | Emergency fixes               | Urgent bug fixes that need immediate deployment |
+
+### Rules for Working with Worktrees
+
+- **Work in the appropriate worktree** — Use `dev` for feature development, `release` for release prep, and `hotfix` for
+  urgent fixes.
+- **Keep main repo clean** — The main repository should stay on `main` branch as a stable reference.
+- **Never delete worktree directories manually** — Always use `git worktree remove` to clean up worktrees.
+- **One branch per worktree** — Each worktree checks out exactly one branch.
+- **Clean up after merging** — Remove worktrees that are no longer needed: `git worktree remove .worktrees/<name>`
+- **The `.worktrees/` directory is gitignored** — It will not be tracked or committed.
+
+### Quick Reference
+
+```powershell
+# List all worktrees
+git worktree list
+
+# Add a new worktree with a new branch
+git worktree add .worktrees/<name> -b <branch-name>
+
+# Remove a worktree (clean)
+git worktree remove .worktrees/<name>
+
+# Force remove (if dirty)
+git worktree remove --force .worktrees/<name>
+
+# Prune stale entries
+git worktree prune
 ```
 
 ## Feature Implementation Protocol
@@ -434,6 +489,79 @@ public const int Major = 1;
 public const int Minor = 4;
 public const int Patch = 2;  // Bumped from 1
 public const string? Suffix = null;
+```
+
+## Changelog Management
+
+### Update Changelog After Task Completion
+
+After completing a feature, bug fix, or significant change, **always update the CHANGELOG** in `CHANGELOG.md` before
+declaring the task complete. This ensures every change is documented and traceable.
+
+### Changelog File Location
+
+The changelog is located at:
+
+```
+CHANGELOG.md
+```
+
+### Format
+
+The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. All new entries go under the
+`## [Unreleased]` section using the following categories:
+
+- **Added** — New features
+- **Changed** — Changes in existing functionality
+- **Deprecated** — Features soon to be removed
+- **Removed** — Features removed in this version
+- **Fixed** — Bug fixes
+- **Security** — Security-related fixes
+
+### Changelog Entry Rules
+
+- **Always add an entry** — Every feature, bug fix, or significant change must have a changelog entry.
+- **Use the `[Unreleased]` section** — Add entries under `## [Unreleased]` until a release is made.
+- **Bold the feature or component name** — Start each entry with a bold label describing what changed, followed by a
+  colon and a brief description.
+- **Include implementation details as sub-bullets** — For complex changes, add sub-bullets explaining key implementation
+  details.
+- **Be concise but informative** — One sentence describing the change, with optional sub-bullets for details.
+- **Match the category to the change type** — Use "Added" for new features, "Fixed" for bugs, "Changed" for
+  modifications, etc.
+
+### Changelog Entry Procedure
+
+1. Open `CHANGELOG.md`
+2. Locate the `## [Unreleased]` section at the top
+3. Find or create the appropriate category (`### Added`, `### Fixed`, `### Changed`, etc.)
+4. Add a new bullet point describing the change
+5. Add sub-bullets if the change requires implementation details
+
+### Example
+
+After adding a new watchlist feature:
+
+```markdown
+## [Unreleased]
+
+### Added
+
+- **Watchlist Feature**: Users can now create and manage watchlists to track assets of interest.
+  - Added watchlist entity, service, controller, and UI views.
+  - Supports adding, removing, and reordering assets within a watchlist.
+```
+
+After fixing a bug:
+
+```markdown
+## [Unreleased]
+
+### Fixed
+
+- **Chart Rendering on Mobile**: Fixed charts not displaying correctly on small screen sizes.
+  - Replaced fixed panel dimensions with viewport-relative constraints.
+  - Added responsive breakpoints for tablet and mobile devices.
 ```
 
 ## Naming Conventions
