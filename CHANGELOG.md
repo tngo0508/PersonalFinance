@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI/CD Smoke Test Diagnostics**: Improved the post-deployment smoke-test script to emit richer diagnostics and be
+  more tolerant of transient cold-starts.
+  - Added deploy output logging (web_url, web_fqdn, api_fqdn) before running smoke tests so the target URL is visible in
+    logs.
+  - Each failed check now dumps response headers and the first 400 bytes of the response body to identify the root
+    cause.
+  - Increased the health endpoint readiness retry count from 30 to 60 (5-second intervals) to accommodate Azure
+    Container Apps cold-starts.
+  - Relaxed redirect checks to accept HTTP 200 (login page rendered) in addition to 301/302, as ASP.NET Core Identity
+    may render the login page instead of redirecting.
+  - Added failure detail dump for the health endpoint timeout case.
+
 ## [1.13.0] - 2026-10-16
 
 ### Added
