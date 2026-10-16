@@ -3,7 +3,7 @@ const {chromium} = require('playwright');
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
     const base = process.env.WEB_URL || 'http://localhost:5000';
-    const apiBase = process.env.API_URL || 'http://localhost:5001';
+    const apiBase = process.env.API_URL || 'https://localhost:7100';
 
     function pass(message) {
         results.passed++;
@@ -496,7 +496,7 @@ const {chromium} = require('playwright');
                     {path: '/Networth', name: 'Net Worth'},
                     {path: '/Budget', name: 'Budget'},
                     {path: '/SavingsGoals', name: 'Savings Goals'},
-                    {path: '/Watchlist', name: 'Watchlist'},
+                    {path: '/InvestmentCalculator', name: 'Investment Calculator'},
                     {path: '/News', name: 'Finance News'},
                     {path: '/Community', name: 'Community'},
                 ];
