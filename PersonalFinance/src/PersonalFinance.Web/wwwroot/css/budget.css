@@ -537,13 +537,63 @@
 .budget-chart-container {
     position: relative;
     max-width: 280px;
-    margin: 0 auto 1.25rem;
+    margin: 0 auto 1rem;
 }
 
 .budget-chart-container canvas {
     max-height: 260px;
     width: 100% !important;
     height: 100% !important;
+}
+
+/* ==========================================================================
+   Chart Legend
+   ========================================================================== */
+
+.budget-chart-legend {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.35rem 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--app-surface-soft);
+    border-radius: var(--app-radius-s);
+    border: 1px solid var(--app-border);
+}
+
+.budget-chart-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0;
+    cursor: default;
+}
+
+.budget-chart-legend__color {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.budget-chart-legend__label {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.budget-chart-legend__value {
+    flex-shrink: 0;
+    font-size: var(--app-font-size-small);
+    font-family: var(--app-font-mono);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    white-space: nowrap;
 }
 
 /* ==========================================================================
@@ -689,6 +739,12 @@
         max-width: 240px;
     }
 
+    .budget-chart-legend {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.25rem 0.5rem;
+        padding: 0.6rem;
+    }
+
     .budget-summary-list-container {
         max-height: 220px;
     }
@@ -715,6 +771,10 @@
 
     .budget-chart-container {
         max-width: 260px;
+    }
+
+    .budget-chart-legend {
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .budget-summary-list-container {
@@ -786,6 +846,12 @@
 
     .budget-chart-container canvas {
         max-height: 220px;
+    }
+
+    .budget-chart-legend {
+        grid-template-columns: 1fr;
+        gap: 0.2rem;
+        padding: 0.5rem;
     }
 
     .budget-summary-list-container {

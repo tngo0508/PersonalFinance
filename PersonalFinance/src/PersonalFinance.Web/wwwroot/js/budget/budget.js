@@ -234,12 +234,13 @@
     }
 
     /**
-     * Update all UI components: chart, amounts, summary, remaining.
+     * Update all UI components: chart, amounts, summary, legend, remaining.
      */
     function updateAll() {
         updateAmounts();
         updateRemaining();
         updateTotalBadge();
+        updateLegend();
         updateSummaryTable();
         updateChart();
     }
@@ -430,6 +431,32 @@
                 cutout: '55%'
             }
         });
+    }
+
+    /**
+     * Update the chart legend with current data.
+     */
+    function updateLegend() {
+        const legend = document.getElementById('budgetChartLegend');
+        if (!legend) return;
+
+        const income = currentData.monthlyIncome || 0;
+        let html = '';
+
+        categories.forEach(function (cat, index) {
+            const percent = currentData[cat] || 0;
+            const amount = (income * percent) / 100;
+            const color = categoryColors[index];
+            const label = categoryLabels[cat];
+
+            html += '<div class="budget-chart-legend__item">';
+            html += '<span class="budget-chart-legend__color" style="background:' + color + ';" aria-hidden="true"></span>';
+            html += '<span class="budget-chart-legend__label" title="' + label + '">' + label + '</span>';
+            html += '<span class="budget-chart-legend__value">' + percent.toFixed(1) + '%</span>';
+            html += '</div>';
+        });
+
+        legend.innerHTML = html;
     }
 
     /**

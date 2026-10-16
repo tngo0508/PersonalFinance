@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Budget Chart Legend**: Added a visible color-coded legend below the Budget Breakdown pie chart.
+  - Each legend item displays a colored square, category name, and percentage value in a 2-column grid.
+  - The legend updates in real-time as users adjust allocations, eliminating the need to hover over chart slices.
+  - Responsive layout collapses to a single column on mobile devices.
+
 ### Changed
 
 - **Budget Summary List**: Replaced the plain budget summary table with a visual list featuring mini progress bars.
