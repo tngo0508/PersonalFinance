@@ -1,0 +1,438 @@
+/* ==========================================================================
+   Budget Planner Page Styles (budget-*)
+   Fluent UI Design System
+   ========================================================================== */
+
+:root {
+    --budget-primary: #0078d4;
+    --budget-primary-hover: #106ebe;
+    --budget-primary-light: #deecf9;
+    --budget-primary-glow: rgba(0, 120, 212, 0.15);
+    --budget-surface: #ffffff;
+    --budget-surface-soft: #faf9f8;
+    --budget-bg: #f3f2f1;
+    --budget-border: #e1dfdd;
+    --budget-border-hover: #c8c6c4;
+    --budget-text-main: #201f1e;
+    --budget-text-muted: #605e5c;
+    --budget-text-faint: #8a8886;
+    --budget-success: #107c10;
+    --budget-success-light: #dff6dd;
+    --budget-warning: #d89b26;
+    --budget-warning-light: #fff4ce;
+    --budget-danger: #d13438;
+    --budget-danger-light: #fde7e9;
+    --budget-shadow-sm: var(--app-shadow-2);
+    --budget-shadow-md: var(--app-shadow-4);
+    --budget-shadow-lg: var(--app-shadow-8);
+    --budget-radius: var(--app-radius-m);
+    --budget-radius-lg: var(--app-radius-l);
+
+    /* Category colors for pie chart */
+    --budget-cat-housing: #0078d4;
+    --budget-cat-food: #00b7c3;
+    --budget-cat-transportation: #71b307;
+    --budget-cat-utilities: #d83b01;
+    --budget-cat-insurance: #8764b8;
+    --budget-cat-healthcare: #e4396c;
+    --budget-cat-savings: #107c10;
+    --budget-cat-debt: #498205;
+    --budget-cat-entertainment: #005a9e;
+    --budget-cat-misc: #605e5c;
+}
+
+/* ==========================================================================
+   Page Container
+   ========================================================================== */
+
+.budget-page {
+    background: transparent;
+    padding: 1rem 0;
+}
+
+/* ==========================================================================
+   Page Header
+   ========================================================================== */
+
+.budget-header {
+    margin-bottom: 2rem;
+}
+
+.budget-header__content {
+    padding: 1.5rem 2rem;
+    background: var(--budget-surface);
+    border: 1px solid var(--budget-border);
+    border-radius: var(--budget-radius-lg);
+    box-shadow: var(--budget-shadow-md);
+}
+
+.budget-title {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    font-size: 1.75rem;
+    font-weight: var(--app-font-weight-semibold);
+    margin: 0;
+    color: var(--budget-text-main);
+}
+
+.budget-title__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--app-radius-m);
+    background: var(--budget-primary);
+    color: #fff;
+    font-size: 1.25rem;
+}
+
+.budget-subtitle {
+    color: var(--budget-text-muted);
+    font-size: 0.95rem;
+    margin: 0.3rem 0 0;
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   Cards
+   ========================================================================== */
+
+.budget-card {
+    background: var(--budget-surface);
+    border: 1px solid var(--budget-border);
+    border-radius: var(--budget-radius-lg);
+    box-shadow: var(--budget-shadow-sm);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.budget-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--budget-border);
+    background: var(--budget-surface-soft);
+}
+
+.budget-card__title {
+    font-size: 1.1rem;
+    font-weight: var(--app-font-weight-semibold);
+    margin: 0;
+    color: var(--budget-text-main);
+}
+
+.budget-card__body {
+    padding: 1.5rem;
+}
+
+/* ==========================================================================
+   Income Field
+   ========================================================================== */
+
+.budget-income-field {
+    max-width: 300px;
+}
+
+.budget-income-input {
+    font-size: 1.25rem;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+/* ==========================================================================
+   Two-Column Row
+   ========================================================================== */
+
+.budget-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 992px) {
+    .budget-row {
+        grid-template-columns: 1.2fr 0.8fr;
+    }
+}
+
+/* ==========================================================================
+   Total Badge
+   ========================================================================== */
+
+.budget-total-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: var(--app-font-weight-semibold);
+    background: var(--budget-primary-light);
+    color: var(--budget-primary);
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.budget-total-badge--over {
+    background: var(--budget-danger-light);
+    color: var(--budget-danger);
+}
+
+.budget-total-badge--exact {
+    background: var(--budget-success-light);
+    color: var(--budget-success);
+}
+
+/* ==========================================================================
+   Categories
+   ========================================================================== */
+
+.budget-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.budget-category {
+    display: grid;
+    grid-template-columns: 140px 1fr 100px;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-radius: var(--app-radius-m);
+    background: var(--budget-surface-soft);
+    border: 1px solid transparent;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.budget-category:hover {
+    border-color: var(--budget-border-hover);
+    box-shadow: var(--budget-shadow-sm);
+}
+
+.budget-category__label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--budget-text-main);
+    cursor: default;
+}
+
+.budget-category__label .bi {
+    font-size: 1.1rem;
+    color: var(--budget-text-muted);
+}
+
+.budget-category__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.budget-slider {
+    flex: 1;
+    min-width: 0;
+    height: 6px;
+    cursor: pointer;
+}
+
+.budget-category__input-group {
+    position: relative;
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.budget-percent-input {
+    width: 100%;
+    padding-right: 1.5rem;
+    text-align: right;
+    font-size: 0.9rem;
+    height: 32px;
+}
+
+.budget-percent-input__suffix {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    color: var(--budget-text-muted);
+    pointer-events: none;
+}
+
+.budget-category__amount {
+    text-align: right;
+    font-size: 0.9rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--budget-text-muted);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   Remaining Allocation
+   ========================================================================== */
+
+.budget-remaining {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding: 0.75rem;
+    border-radius: var(--app-radius-m);
+    background: var(--budget-surface-soft);
+    border: 1px solid var(--budget-border);
+    font-size: 0.95rem;
+}
+
+.budget-remaining__label {
+    color: var(--budget-text-muted);
+}
+
+.budget-remaining__value {
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--budget-primary);
+}
+
+.budget-remaining--over {
+    background: var(--budget-danger-light);
+    border-color: var(--budget-danger);
+}
+
+.budget-remaining--over .budget-remaining__value {
+    color: var(--budget-danger);
+}
+
+.budget-remaining--exact {
+    background: var(--budget-success-light);
+    border-color: var(--budget-success);
+}
+
+.budget-remaining--exact .budget-remaining__value {
+    color: var(--budget-success);
+}
+
+/* ==========================================================================
+   Actions
+   ========================================================================== */
+
+.budget-actions {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.budget-save-btn {
+    min-width: 200px;
+    font-weight: var(--app-font-weight-semibold);
+    box-shadow: var(--budget-shadow-sm);
+}
+
+.budget-save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Chart
+   ========================================================================== */
+
+.budget-chart-container {
+    position: relative;
+    max-width: 320px;
+    margin: 0 auto 1.5rem;
+}
+
+.budget-chart-container canvas {
+    max-height: 300px;
+}
+
+/* ==========================================================================
+   Summary Table
+   ========================================================================== */
+
+.budget-summary-table-container {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.budget-summary-table {
+    margin-bottom: 0;
+    font-size: 0.85rem;
+}
+
+.budget-summary-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--budget-surface-soft);
+    border-bottom: 2px solid var(--budget-border);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--budget-text-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.5rem 0.75rem;
+}
+
+.budget-summary-table tbody td {
+    padding: 0.4rem 0.75rem;
+    vertical-align: middle;
+    color: var(--budget-text-main);
+}
+
+.budget-summary-table tbody tr:hover {
+    background: var(--budget-primary-light);
+}
+
+.budget-summary-total {
+    background: var(--budget-surface-soft) !important;
+    border-top: 2px solid var(--budget-border);
+}
+
+.budget-summary-total td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   Alert overrides
+   ========================================================================== */
+
+.budget-page .alert {
+    border-radius: var(--app-radius-m);
+    margin-bottom: 1rem;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 576px) {
+    .budget-category {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .budget-category__label {
+        padding-bottom: 0.25rem;
+    }
+
+    .budget-category__amount {
+        text-align: left;
+        padding-left: 0.5rem;
+        border-left: 3px solid var(--budget-border);
+    }
+
+    .budget-header__content {
+        padding: 1rem;
+    }
+
+    .budget-title {
+        font-size: 1.35rem;
+    }
+
+    .budget-card__body {
+        padding: 1rem;
+    }
+}

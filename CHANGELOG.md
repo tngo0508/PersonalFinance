@@ -9,8 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Budget Planner Page**: Full-featured budget allocation planner at `/Budget` with interactive pie chart, sliders,
+  and summary table.
+  - Created `BudgetViewModel` with 10 spending categories, validation, and computed allocation properties.
+  - Implemented `BudgetController` with Index (load saved budget), Save (persist allocations), and GetBudgetData (JSON
+    endpoint for AJAX updates).
+  - Razor view with income input, category sliders synced with percentage inputs, real-time dollar amount display,
+    doughnut chart powered by Chart.js, and a summary table.
+  - CSS following Fluent UI design system with responsive layout for mobile and desktop.
+  - JavaScript module for slider/input synchronization, chart updates, and remaining allocation indicator.
+
 ### Fixed
 
+- **CI/CD Smoke Test — /Budget 404**: Replaced placeholder Budget controller with full Budget Planner feature so the
+  post-deployment smoke test probe for `/Budget` returns a redirect to login (auth required) instead of HTTP 404.
+  - `BudgetController` with `[Authorize]` attribute serves the complete budget planner page.
+  - `Views/Budget/Index.cshtml` provides interactive budget allocation form with chart and summary.
 - **CI/CD Smoke Test Diagnostics**: Improved the post-deployment smoke-test script to emit richer diagnostics and be
   more tolerant of transient cold-starts.
   - Added deploy output logging (web_url, web_fqdn, api_fqdn) before running smoke tests so the target URL is visible in
