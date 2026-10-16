@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Budget Summary List**: Replaced the plain budget summary table with a visual list featuring mini progress bars.
+  - Each category now displays a colored progress bar proportional to its allocation, making comparisons at a glance.
+  - The list is more compact and visually connected to the pie chart above it.
+  - Responsive breakpoints hide the percentage column on mobile to save space.
+
 - **Removed MediatR Dependency**: Replaced MediatR CQRS mediator pattern with direct service calls across all API
   features to avoid licensing requirements introduced in MediatR v13+.
   - All API controllers now inject and call services directly instead of sending commands/queries through IMediator.

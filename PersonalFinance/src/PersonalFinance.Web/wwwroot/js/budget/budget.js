@@ -330,16 +330,23 @@
     }
 
     /**
-     * Update the summary table.
+     * Update the summary list.
      */
     function updateSummaryTable() {
         const income = currentData.monthlyIncome || 0;
-        const tbody = document.getElementById('budgetSummaryBody');
-        if (!tbody) return;
+        const list = document.getElementById('budgetSummaryList');
+        if (!list) return;
 
         let html = '';
         let totalPercent = 0;
         let totalAmount = 0;
+
+        // Find the max percent for scaling progress bars
+        let maxPercent = 0;
+        categories.forEach(function (cat) {
+            const p = currentData[cat] || 0;
+            if (p > maxPercent) maxPercent = p;
+        });
 
         categories.forEach(function (cat, index) {
             const percent = currentData[cat] || 0;
@@ -347,14 +354,23 @@
             totalPercent += percent;
             totalAmount += amount;
 
-            html += '<tr>';
-            html += '<td><span class="budget-summary-row-label"><span class="budget-summary-row-dot" style="background:' + categoryColors[index] + ';"></span><span class="budget-summary-row-name" title="' + categoryLabels[cat] + '">' + categoryLabels[cat] + '</span></span></td>';
-            html += '<td class="text-end">' + percent.toFixed(1) + '%</td>';
-            html += '<td class="text-end">$' + formatCurrency(amount) + '</td>';
-            html += '</tr>';
+            const barWidth = maxPercent > 0 ? (percent / maxPercent) * 100 : 0;
+            const color = categoryColors[index];
+
+            html += '<div class="budget-summary-item">';
+            html += '<span class="budget-summary-item__dot" style="background:' + color + ';" aria-hidden="true"></span>';
+            html += '<span class="budget-summary-item__name" title="' + categoryLabels[cat] + '">' + categoryLabels[cat] + '</span>';
+            html += '<div class="budget-summary-item__bar-wrapper">';
+            html += '<div class="budget-summary-item__bar" style="width:' + barWidth.toFixed(1) + '%;background:' + color + ';"></div>';
+            html += '</div>';
+            html += '<div class="budget-summary-item__values">';
+            html += '<span class="budget-summary-item__percent">' + percent.toFixed(1) + '%</span>';
+            html += '<span class="budget-summary-item__amount">$' + formatCurrency(amount) + '</span>';
+            html += '</div>';
+            html += '</div>';
         });
 
-        tbody.innerHTML = html;
+        list.innerHTML = html;
 
         // Update totals
         const totalPercentEl = document.getElementById('budgetSummaryTotalPercent');
