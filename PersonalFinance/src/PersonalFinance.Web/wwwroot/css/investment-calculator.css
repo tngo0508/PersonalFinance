@@ -262,6 +262,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-bottom: 1rem;
 }
 
 #calcChart {
@@ -269,6 +270,60 @@
     width: 100% !important;
     height: auto !important;
     max-height: 400px !important;
+}
+
+/* ==========================================================================
+   Chart Legend
+   ========================================================================== */
+
+.calculator-chart-legend {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--app-surface-soft, #f9fafb);
+    border-radius: var(--app-radius-m);
+    border: 1px solid var(--app-border);
+}
+
+.calculator-chart-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.calculator-chart-legend__dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.calculator-chart-legend__dot--value {
+    background: #10b981;
+}
+
+.calculator-chart-legend__dot--contrib {
+    background: #6366f1;
+}
+
+.calculator-chart-legend__dot--interest {
+    background: #f59e0b;
+}
+
+.calculator-chart-legend__label {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    font-weight: var(--app-font-weight-semibold);
+    flex: 1 1 auto;
+}
+
+.calculator-chart-legend__value {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text);
+    font-weight: var(--app-font-weight-bold);
+    font-family: var(--app-font-mono);
 }
 
 /* ==========================================================================
@@ -283,6 +338,12 @@
 
     #calcChart {
         max-height: 320px !important;
+    }
+
+    .calculator-chart-legend {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
     }
 }
 
@@ -320,6 +381,12 @@
 
     #calcChart {
         max-height: 280px !important;
+    }
+
+    .calculator-chart-legend {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding: 0.75rem;
     }
 
     .calculator-result-value {

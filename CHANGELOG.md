@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Investment Calculator Chart**: Fixed the Growth Over Time chart not rendering at all after the recent rework.
+  - The interest earned area fill was missing a `moveTo` call to start the canvas path, causing the entire chart to fail
+    drawing.
 - **Budget Chart Leader Line Labels**: Fixed labels not being visible because they were clipped by the canvas edges.
   - Added layout padding to the Chart.js configuration so the chart draws smaller, leaving room for labels around the
     edges.
@@ -35,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Investment Calculator Growth Chart**: Reworked the Growth Over Time chart with a clearer visual design.
+  - Added a third area fill highlighting interest earned (the gap between contributions and total value).
+  - Replaced the tiny on-canvas legend with a styled HTML legend below the chart showing final values.
+  - The legend displays Total Value, Contributions, and Interest Earned with matching color indicators.
+  - Improved end-point dots with larger, more visible markers.
 - **Budget Category Color Boxes**: Added small colored squares next to each category allocation label.
   - Each color box matches the corresponding pie chart slice color, linking inputs to the visual breakdown.
   - Colors are set dynamically via JavaScript to stay consistent with the chart's color palette.

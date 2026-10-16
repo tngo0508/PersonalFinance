@@ -257,31 +257,34 @@
             }
         }
 
-        // Gradient fills
-        const contribGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        contribGrad.addColorStop(0, 'rgba(99, 132, 255, 0.25)');
-        contribGrad.addColorStop(1, 'rgba(99, 132, 255, 0.02)');
+      // Interest earned area fill (between contributions and total value lines)
+      const interestGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+      interestGrad.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
+      interestGrad.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
         ctx.beginPath();
-        ctx.moveTo(toCanvasX(0), padding.top + chartH);
+      ctx.moveTo(toCanvasX(0), toCanvasY(contribPoints[0].y));
         contribPoints.forEach(p => {
             ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
         });
-        ctx.lineTo(toCanvasX(years), padding.top + chartH);
+      for (let i = points.length - 1; i >= 0; i--) {
+        ctx.lineTo(toCanvasX(points[i].x), toCanvasY(points[i].y));
+      }
         ctx.closePath();
-        ctx.fillStyle = contribGrad;
+      ctx.fillStyle = interestGrad;
         ctx.fill();
 
-        const valueGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        valueGrad.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
-        valueGrad.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+      // Contributions area fill
+      const contribGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+      contribGrad.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+      contribGrad.addColorStop(1, 'rgba(99, 102, 241, 0.02)');
         ctx.beginPath();
         ctx.moveTo(toCanvasX(0), padding.top + chartH);
-        points.forEach(p => {
+      contribPoints.forEach(p => {
             ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
         });
         ctx.lineTo(toCanvasX(years), padding.top + chartH);
         ctx.closePath();
-        ctx.fillStyle = valueGrad;
+      ctx.fillStyle = contribGrad;
         ctx.fill();
 
         // Smooth lines
@@ -294,7 +297,7 @@
 
         drawSmoothCurve(points);
         ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
         ctx.stroke();
 
         // End-point dots
@@ -303,54 +306,47 @@
             const cx = toCanvasX(last.x);
             const cy = toCanvasY(last.y);
             ctx.beginPath();
-            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-            ctx.fillStyle = color.replace(')', ', 0.2)').replace('rgb', 'rgba');
+          ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+          ctx.arc(cx, cy, 4, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1.5;
+          ctx.lineWidth = 2;
             ctx.stroke();
         }
 
         drawDot(contribPoints, '#6366f1');
         drawDot(points, '#10b981');
 
-        // Legend
-        const legendItems = [
-            {label: 'Total Value', color: '#10b981'},
-            {label: 'Contributions', color: '#6366f1'}
-        ];
-        const legendY = 8;
-        const legendGap = 20;
-        ctx.font = '600 10px system-ui, -apple-system, sans-serif';
-        let totalLegendW = 0;
-        const legendMeasures = legendItems.map(item => {
-            const tw = ctx.measureText(item.label).width;
-            totalLegendW += tw + 14 + legendGap;
-            return tw;
-        });
-        totalLegendW -= legendGap;
-        let legendX = w - totalLegendW - 8;
-        legendItems.forEach((item, idx) => {
-            const lx = legendX;
-            ctx.beginPath();
-            ctx.arc(lx + 5, legendY + 6, 4, 0, Math.PI * 2);
-            ctx.fillStyle = item.color;
-            ctx.fill();
-            ctx.fillStyle = '#374151';
-            ctx.font = '600 10px system-ui, -apple-system, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(item.label, lx + 13, legendY + 6);
-            legendX += legendMeasures[idx] + 14 + legendGap;
-        });
+      // Update HTML legend with final values
+      updateLegend(points, contribPoints);
 
         // Store chart metadata for tooltip
         canvas._chartMeta = {padding, chartW, chartH, points, contribPoints, niceMax, years, toCanvasX, toCanvasY};
     }
+
+  /**
+   * Update the HTML legend with final chart values.
+   * @param {Array} points - Total value data points.
+   * @param {Array} contribPoints - Contributions data points.
+   */
+  function updateLegend(points, contribPoints) {
+    if (points.length === 0 || contribPoints.length === 0) return;
+    const lastValue = points[points.length - 1].y;
+    const lastContrib = contribPoints[contribPoints.length - 1].y;
+    const lastInterest = lastValue - lastContrib;
+
+    const valueEl = document.getElementById('calcLegendValue');
+    const contribEl = document.getElementById('calcLegendContrib');
+    const interestEl = document.getElementById('calcLegendInterest');
+
+    if (valueEl) valueEl.textContent = formatCurrency(lastValue);
+    if (contribEl) contribEl.textContent = formatCurrency(lastContrib);
+    if (interestEl) interestEl.textContent = formatCurrency(lastInterest);
+  }
 
     /**
      * Round a max value up to a "nice" number for axis scaling.
