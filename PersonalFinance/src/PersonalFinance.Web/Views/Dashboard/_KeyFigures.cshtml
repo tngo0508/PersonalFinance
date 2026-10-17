@@ -1,0 +1,8 @@
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
+@* Key figures row. Each feature owns its own tile partial so tiles can change independently:
+   _KeyFiguresNetWorth (net worth + savings), _KeyFigureBudget (budgeted income), _KeyFigureGoals (goals). *@
+<section class="dash-figures" aria-label="Key figures">
+    <partial name="_KeyFiguresNetWorth" model="Model"/>
+    <partial name="_KeyFigureBudget" model="Model"/>
+    <partial name="_KeyFigureGoals" model="Model"/>
+</section>

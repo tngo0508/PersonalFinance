@@ -1,0 +1,20 @@
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
+@* Goals funded tile (ticket 07): total saved ÷ total target across ALL of the user's goals, capped at 100%
+   by the Dashboard service. Percent is floored so "100%" only appears once everything is funded. *@
+@{
+    var overview = Model.GoalsOverview;
+    var hasGoals = overview.TotalCount > 0;
+    string? value = null;
+    if (hasGoals)
+    {
+        value = overview.FundedPercent is { } funded ? $"{Math.Floor(funded):0}%" : "—";
+    }
+}
+<partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
+{
+    Label = "Goals funded",
+    Value = value,
+    Caption = hasGoals ? $"{overview.CompletedCount} of {overview.TotalCount} complete" : "Add a savings goal",
+    Icon = "target",
+    Controller = "SavingsGoals"
+})"/>

@@ -16,6 +16,128 @@ const {chromium} = require('playwright');
         console.log(`  ✗ ${message}`);
     }
 
+    /**
+     * Verify the signed-in Dashboard at one viewport: greeting h1, heading order, summary card,
+     * key figure tiles, quick actions, and the mobile bottom navigation clearing the last section.
+     * @param {import('playwright').Page} dashPage - A page already showing /Dashboard.
+     * @param {{name: string, width: number, mobile: boolean}} vp - The viewport under test.
+     */
+    async function checkDashboard(dashPage, vp) {
+        const label = `Dashboard (${vp.name} ${vp.width}px)`;
+
+        const h1 = dashPage.locator('main h1');
+        const h1Count = await h1.count().catch(() => 0);
+        const h1Text = h1Count > 0 ? (await h1.first().textContent().catch(() => '')) : '';
+        if (h1Count === 1 && h1Text.includes('Welcome back')) {
+            pass(`${label}: single h1 greeting "${h1Text.trim()}"`);
+        } else {
+            fail(`${label}: expected one "Welcome back" h1, found ${h1Count} ("${(h1Text || '').trim()}")`);
+        }
+
+        // Heading levels must not skip (e.g. h2 straight to h4) inside the main landmark.
+        const skippedHeading = await dashPage.evaluate(() => {
+            const levels = [...document.querySelectorAll('main h1, main h2, main h3, main h4, main h5, main h6')]
+                .map(h => Number(h.tagName.substring(1)));
+            for (let i = 1; i < levels.length; i++) {
+                if (levels[i] > levels[i - 1] + 1) {
+                    return `h${levels[i - 1]} -> h${levels[i]}`;
+                }
+            }
+            return null;
+        });
+        if (skippedHeading === null) {
+            pass(`${label}: heading levels do not skip`);
+        } else {
+            fail(`${label}: skipped heading level ${skippedHeading}`);
+        }
+
+        const summary = dashPage.locator('section.dash-summary');
+        const summaryTitle = await summary.locator('h2').first().textContent({timeout: 3000}).catch(() => '');
+        if (await summary.isVisible({timeout: 3000}).catch(() => false) && summaryTitle.includes('Net Worth')) {
+            pass(`${label}: summary card is visible`);
+        } else {
+            fail(`${label}: summary card not found`);
+        }
+
+        const tiles = dashPage.locator('section.dash-figures[aria-label="Key figures"] a.dash-tile');
+        const tileCount = await tiles.count().catch(() => 0);
+        const tilesVisible = tileCount > 0 && await tiles.last().isVisible({timeout: 3000}).catch(() => false);
+        if (tileCount === 4 && tilesVisible) {
+            pass(`${label}: 4 key figure tiles are visible`);
+        } else {
+            fail(`${label}: expected 4 visible key figure tiles, found ${tileCount}`);
+        }
+
+        const actions = dashPage.locator('section.dash-actions a.dash-action');
+        const actionCount = await actions.count().catch(() => 0);
+        if (actionCount === 5 && await actions.first().isVisible({timeout: 3000}).catch(() => false)) {
+            pass(`${label}: 5 quick actions are visible`);
+        } else {
+            fail(`${label}: expected 5 visible quick actions, found ${actionCount}`);
+        }
+
+        // Every progress bar needs an accessible name and a value range.
+        const unlabelledBars = await dashPage.evaluate(() =>
+            [...document.querySelectorAll('.dash [role="progressbar"]')].filter(bar =>
+                !bar.getAttribute('aria-label') ||
+                bar.getAttribute('aria-valuenow') === null ||
+                bar.getAttribute('aria-valuemin') === null ||
+                bar.getAttribute('aria-valuemax') === null
+            ).length
+        );
+        if (unlabelledBars === 0) {
+            pass(`${label}: progress bars expose a label and aria values`);
+        } else {
+            fail(`${label}: ${unlabelledBars} progress bar(s) missing a label or aria values`);
+        }
+
+        const bottomNav = dashPage.locator('nav.bottom-nav');
+        const bottomNavVisible = await bottomNav.isVisible().catch(() => false);
+        if (!vp.mobile) {
+            if (!bottomNavVisible) {
+                pass(`${label}: bottom navigation is hidden on desktop`);
+            } else {
+                fail(`${label}: bottom navigation should be hidden on desktop`);
+            }
+            return;
+        }
+
+        if (bottomNavVisible) {
+            pass(`${label}: bottom navigation is visible on mobile`);
+        } else {
+            fail(`${label}: bottom navigation not visible on mobile`);
+        }
+
+        const animationName = await dashPage.evaluate(() => {
+            const first = document.querySelector('.dash > *');
+            return first ? getComputedStyle(first).animationName : null;
+        });
+        if (animationName === 'none') {
+            pass(`${label}: entrance animation is disabled under prefers-reduced-motion`);
+        } else {
+            fail(`${label}: entrance animation still runs under reduced motion (${animationName})`);
+        }
+
+        // Scroll to the very bottom; the last Dashboard section must end above the fixed bottom nav.
+        const overlap = await dashPage.evaluate(() => {
+            window.scrollTo(0, document.documentElement.scrollHeight);
+            const last = document.querySelector('.dash') && document.querySelector('.dash').lastElementChild;
+            const nav = document.querySelector('nav.bottom-nav');
+            if (!last || !nav) {
+                return null;
+            }
+            return {
+                lastBottom: Math.round(last.getBoundingClientRect().bottom),
+                navTop: Math.round(nav.getBoundingClientRect().top)
+            };
+        });
+        if (overlap && overlap.lastBottom <= overlap.navTop) {
+            pass(`${label}: last section (bottom ${overlap.lastBottom}px) clears the bottom nav (top ${overlap.navTop}px)`);
+        } else {
+            fail(`${label}: last section overlaps the bottom nav ${JSON.stringify(overlap)}`);
+        }
+    }
+
     // Pages that require authentication — unauthenticated access should redirect to login
     const authPages = [
         {path: '/Networth', name: 'Net Worth', expectedTitle: 'Net Worth Projection'},
@@ -56,29 +178,79 @@ const {chromium} = require('playwright');
         });
 
         // =========================================================
-        // Test 1: Default route (home page)
+        // Test 1: Default route shows the Landing Page when signed out
         // =========================================================
-        console.log('\n--- Test 1: Default Route (Home) ---');
+        console.log('\n--- Test 1: Default Route (Landing Page) ---');
         try {
             await page.goto(`${base}/`, {
                 waitUntil: 'networkidle',
                 timeout: 15000
             });
-            const url = page.url();
-            console.log(`  Resolved URL: ${url}`);
+            const url = new URL(page.url());
+            console.log(`  Resolved URL: ${url.href}`);
             const title = await page.title();
             console.log(`  Page title: "${title}"`);
 
-            // Default route is Networth/Index, which requires auth → redirects to login
-            if (url.includes('/Identity/Account/Login')) {
-                pass('Default route redirects to login (requires auth)');
-            } else if (url.includes('/Networth')) {
-                pass('Default route loaded Net Worth page');
+            if (url.pathname === '/') {
+                pass('Default route stays on / for signed-out visitors');
             } else {
-                fail(`Unexpected default route destination: ${url}`);
+                fail(`Default route redirected unexpectedly to: ${url.href}`);
+            }
+
+            const headingCount = await page.locator('h1#lp-hero-title').count().catch(() => 0);
+            if (headingCount === 1) {
+                pass('Landing Page hero heading is present');
+            } else {
+                fail('Landing Page hero heading not found');
+            }
+
+            const registerCta = page.locator('main a[href*="/Identity/Account/Register"]', {hasText: 'Create free account'});
+            if (await registerCta.first().isVisible({timeout: 3000}).catch(() => false)) {
+                pass('"Create free account" call to action is visible');
+            } else {
+                fail('"Create free account" call to action not found');
+            }
+
+            const signInCta = page.locator('main a[href*="/Identity/Account/Login"]', {hasText: 'Sign in'});
+            if (await signInCta.first().isVisible({timeout: 3000}).catch(() => false)) {
+                pass('"Sign in" call to action is visible');
+            } else {
+                fail('"Sign in" call to action not found');
+            }
+
+            const preview = page.locator('.lp-preview[aria-hidden="true"]');
+            const previewText = await preview.first().textContent({timeout: 3000}).catch(() => '');
+            if (previewText && previewText.includes('Sample data')) {
+                pass('Product preview is labelled "Sample data" and hidden from assistive tech');
+            } else {
+                fail('Product preview with "Sample data" label not found');
+            }
+
+            const featureCount = await page.locator('.lp-feature').count().catch(() => 0);
+            if (featureCount === 9) {
+                pass('Feature grid lists all 9 features');
+            } else {
+                fail(`Feature grid expected 9 features, found ${featureCount}`);
             }
         } catch (error) {
             fail(`Default route failed: ${error.message}`);
+        }
+
+        // Signed-out visitors opening /Dashboard are sent to login with a return URL
+        try {
+            await page.goto(`${base}/Dashboard`, {
+                waitUntil: 'networkidle',
+                timeout: 15000
+            });
+            const url = new URL(page.url());
+            const returnUrl = url.searchParams.get('ReturnUrl') || '';
+            if (url.pathname.includes('/Identity/Account/Login') && returnUrl.toLowerCase().includes('/dashboard')) {
+                pass('Dashboard deep link redirects to login with return URL');
+            } else {
+                fail(`Dashboard deep link redirected unexpectedly to: ${url.href}`);
+            }
+        } catch (error) {
+            fail(`Dashboard deep link check failed: ${error.message}`);
         }
 
         // =========================================================
@@ -524,6 +696,34 @@ const {chromium} = require('playwright');
                         }
                     } catch (error) {
                         fail(`${fp.name} page navigation failed: ${error.message}`);
+                    }
+                }
+
+                // Step 4: Dashboard layout at desktop and mobile widths (same signed-in context)
+                console.log('\n--- Test 9b: Dashboard at Desktop and Mobile Widths ---');
+                const dashboardViewports = [
+                    {name: 'desktop', width: 1280, height: 800, mobile: false},
+                    {name: 'mobile', width: 390, height: 844, mobile: true},
+                ];
+                for (const vp of dashboardViewports) {
+                    const dashPage = await context.newPage();
+                    try {
+                        await dashPage.setViewportSize({width: vp.width, height: vp.height});
+                        if (vp.mobile) {
+                            // Exercise the reduced-motion path on mobile; desktop keeps the default motion.
+                            await dashPage.emulateMedia({reducedMotion: 'reduce'});
+                        }
+                        await dashPage.goto(`${base}/Dashboard`, {
+                            waitUntil: 'networkidle',
+                            timeout: 15000
+                        });
+                        // Let the short entrance fade settle before measuring layout.
+                        await dashPage.waitForTimeout(500);
+                        await checkDashboard(dashPage, vp);
+                    } catch (error) {
+                        fail(`Dashboard (${vp.name}) check failed: ${error.message}`);
+                    } finally {
+                        await dashPage.close();
                     }
                 }
             } else {

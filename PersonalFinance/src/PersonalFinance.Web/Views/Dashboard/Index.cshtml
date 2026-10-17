@@ -1,248 +1,53 @@
-@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@using System.Security.Claims
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @{
     ViewData["Title"] = "Dashboard";
+    var summary = Model ?? new PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto();
+    var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? string.Empty;
+    var displayName = User.FindFirst(ClaimTypes.GivenName)?.Value
+                      ?? (email.Contains('@') ? email[..email.IndexOf('@')] : email);
 }
-
-<h2 class="mb-4">Dashboard</h2>
-
-<div class="row g-4">
-    <!-- Net Worth Card -->
-    <div class="col-md-8">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Net Worth</h5>
-                @if (Model?.NetWorth != null)
-                {
-                    <a asp-controller="Networth" asp-action="Index" class="btn btn-sm btn-outline-primary">View
-                        Details</a>
-                }
-            </div>
-            <div class="card-body">
-                @if (Model?.NetWorth != null)
-                {
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <small class="text-muted">Current Net Worth</small>
-                            <h3>@Model.NetWorth.CurrentNetWorth.ToString("C")</h3>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">Annual Savings</small>
-                            <h4>@Model.NetWorth.AnnualSavings.ToString("C")</h4>
-                        </div>
-                    </div>
-                    <div id="netWorthChart"></div>
-                }
-                else
-                {
-                    <div class="text-center py-4 text-muted">
-                        <p>No net worth data yet.</p>
-                        <a asp-controller="Networth" asp-action="Index" class="btn btn-primary">Set Up Net Worth</a>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- Budget Status Card -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Budget</h5>
-                @if (Model?.Budget != null)
-                {
-                    <a asp-controller="Budget" asp-action="Index" class="btn btn-sm btn-outline-primary">Edit</a>
-                }
-            </div>
-            <div class="card-body">
-                @if (Model?.Budget != null)
-                {
-                    <p class="mb-2"><strong>Monthly Income:</strong> @Model.Budget.MonthlyIncome.ToString("C")</p>
-                    <p class="mb-3"><small class="text-muted">Period: @Model.Budget.Period</small></p>
-                    <div id="budgetChart"></div>
-                }
-                else
-                {
-                    <div class="text-center py-4 text-muted">
-                        <p>No budget set up yet.</p>
-                        <a asp-controller="Budget" asp-action="Index" class="btn btn-primary">Create Budget</a>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- Savings Goals Card -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Savings Goals</h5>
-                <a asp-controller="SavingsGoals" asp-action="Index" class="btn btn-sm btn-outline-primary">View All</a>
-            </div>
-            <div class="card-body">
-                @if (Model?.SavingsGoals != null && Model.SavingsGoals.Any())
-                {
-                    @foreach (var goal in Model.SavingsGoals)
-                    {
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between mb-1">
-                                <strong>@goal.Name</strong>
-                                <span class="text-muted">@goal.ProgressPercent:F1%</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar" role="progressbar"
-                                     style="width: @Math.Min(goal.ProgressPercent, 100)%"
-                                     aria-valuenow="@goal.ProgressPercent" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            <small class="text-muted">@goal.CurrentAmount.ToString("C") of @goal.TargetAmount.ToString("C")</small>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <div class="text-center py-4 text-muted">
-                        <p>No savings goals yet.</p>
-                        <a asp-controller="SavingsGoals" asp-action="Index" class="btn btn-primary">Create Goal</a>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Activity Card -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Recent Activity</h5>
-            </div>
-            <div class="card-body">
-                @if (Model?.RecentActivity != null && Model.RecentActivity.Any())
-                {
-                    <ul class="list-group list-group-flush">
-                        @foreach (var activity in Model.RecentActivity.Take(5))
-                        {
-                            <li class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <strong>@activity.Title</strong>
-                                    <small class="text-muted">@activity.Date.ToShortDateString()</small>
-                                </div>
-                                <small class="text-muted">@activity.Description</small>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <div class="text-center py-4 text-muted">
-                        <p>No recent activity.</p>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions Card -->
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Quick Actions</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-3 col-6">
-                        <a asp-controller="Networth" asp-action="Index" class="btn btn-outline-primary w-100">
-                            <i data-lucide="dollar-sign" class="mb-2"></i>
-                            <br>Net Worth
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6">
-                        <a asp-controller="Budget" asp-action="Index" class="btn btn-outline-primary w-100">
-                            <i data-lucide="pie-chart" class="mb-2"></i>
-                            <br>Budget
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6">
-                        <a asp-controller="SavingsGoals" asp-action="Index" class="btn btn-outline-primary w-100">
-                            <i data-lucide="target" class="mb-2"></i>
-                            <br>Savings Goals
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6">
-                        <a asp-controller="Analysis" asp-action="Index" class="btn btn-outline-primary w-100">
-                            <i data-lucide="bar-chart-3" class="mb-2"></i>
-                            <br>Analysis
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.css"/>
+    <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true"/>
 }
+
+@* Section order is agreed in the spec; each section lives in its own partial so it can evolve independently. *@
+<div class="dash">
+    <header class="dash-header">
+        <p class="dash-header__eyebrow">Dashboard</p>
+        <h1 class="dash-header__title">
+            @(string.IsNullOrWhiteSpace(displayName) ? "Welcome back" : $"Welcome back, {displayName}")
+        </h1>
+        <p class="dash-header__lede">Here is where your finances stand today.</p>
+    </header>
+
+    <partial name="_Summary" model="summary"/>
+
+    <partial name="_KeyFigures" model="summary"/>
+
+    <div class="dash-row dash-row--wide">
+        <partial name="_Projection" model="summary"/>
+        <partial name="_Budget" model="summary"/>
+    </div>
+
+    <div class="dash-row">
+        <partial name="_Goals" model="summary"/>
+        <partial name="_Activity" model="summary"/>
+    </div>
+
+    <partial name="_QuickActions" model="summary"/>
+
+    <partial name="_SetupCards" model="summary"/>
+</div>
+
+@* Single JSON data island read by js/dashboard/dashboard-core.js (camelCase, HTML-safe encoding). *@
+<script type="application/json" id="dashboard-data">@Json.Serialize(summary)</script>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.min.js"></script>
-    <script>
-        (function () {
-            'use strict';
-
-            // Net Worth Chart
-            @if (Model?.NetWorth != null)
-            {
-                <text>
-                    var nwOptions = {
-                        chart: {type: 'area', height: 200, toolbar: {show: false}},
-                        series: [{
-                            name: 'Net Worth',
-                            data: [@Model.NetWorth.CurrentNetWorth, @((decimal)(Model.NetWorth.CurrentNetWorth * 1.05M)), @((decimal)(Model.NetWorth.CurrentNetWorth * 1.1M)), @((decimal)(Model.NetWorth.CurrentNetWorth * 1.15M)), @((decimal)(Model.NetWorth.CurrentNetWorth * 1.2M))]
-                        }],
-                        xaxis: {categories: ['1Y ago', '8mo', '6mo', '4mo', 'Now']},
-                        colors: ['#58a6ff'],
-                        fill: {type: 'gradient', gradient: {shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.9}},
-                        dataLabels: {enabled: false},
-                        tooltip: {
-                            y: {
-                                formatter: function (val) {
-                                    return '$' + val.toLocaleString();
-                                }
-                            }
-                        }
-                    };
-                    var nwChart = new ApexCharts(document.querySelector('#netWorthChart'), nwOptions);
-                    nwChart.render();
-                </text>
-            }
-
-            // Budget Chart
-            @if (Model?.Budget != null)
-            {
-                <text>
-                    var budgetOptions = {
-                        chart: {type: 'donut', height: 200},
-                        series: [
-                            @(Model.Budget.HousingPercent ?? 0),
-                            @(Model.Budget.FoodPercent ?? 0),
-                            @(Model.Budget.TransportationPercent ?? 0),
-                            @(Model.Budget.UtilitiesPercent ?? 0),
-                            @(Model.Budget.SavingsPercent ?? 0),
-                            @(Model.Budget.EntertainmentPercent ?? 0)
-                        ],
-                        labels: ['Housing', 'Food', 'Transport', 'Utilities', 'Savings', 'Other'],
-                        colors: ['#58a6ff', '#3fb950', '#d29922', '#f85149', '#a371f7', '#6e7781'],
-                        legend: {position: 'bottom'},
-                        dataLabels: {enabled: false}
-                    };
-                    var budgetChart = new ApexCharts(document.querySelector('#budgetChart'), budgetOptions);
-                    budgetChart.render();
-                </text>
-            }
-
-            // Re-initialize Lucide icons after ApexCharts renders
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        })();
-    </script>
+    <script src="~/js/dashboard/dashboard-core.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard/dashboard-budget-chart.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard/dashboard-projection-chart.js" asp-append-version="true"></script>
 }

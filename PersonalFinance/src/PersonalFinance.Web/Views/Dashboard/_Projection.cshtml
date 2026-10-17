@@ -1,0 +1,60 @@
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
+@* Net worth projection section. Points come from the Net Worth projection calculation (Dashboard service), so this
+   chart always matches the Net Worth page. The chart is drawn by js/dashboard/dashboard-projection-chart.js from the
+   data island; the sentence below is its text alternative. No historical data is stored, so none is plotted. *@
+@{
+    var netWorth = Model.NetWorth;
+    var points = netWorth?.ProjectionPoints ?? new List<PersonalFinance.Shared.DTOs.Dashboard.ProjectionPointDto>();
+    var last = points.Count > 0 ? points[^1] : null;
+    string? summarySentence = null;
+    if (netWorth is not null && last is not null)
+    {
+        summarySentence = $"Base scenario reaches {last.Base:C0} by age {last.Age}";
+        if (netWorth.FiTarget > 0m)
+        {
+            summarySentence += netWorth.FiReachedAge is not null
+                ? $"; FI target {netWorth.FiTarget:C0} reached at age {netWorth.FiReachedAge}."
+                : $"; FI target {netWorth.FiTarget:C0} not reached by age {last.Age}.";
+        }
+        else
+        {
+            summarySentence += ".";
+        }
+        summarySentence += $" Conservative scenario reaches {last.Conservative:C0}; Aggressive scenario reaches {last.Aggressive:C0}.";
+    }
+}
+<section class="dash-card dash-projection" aria-labelledby="dash-projection-title">
+    <div class="dash-card__header">
+        <h2 id="dash-projection-title" class="dash-card__title">Net worth projection</h2>
+        <a asp-controller="Networth" asp-action="Index" class="dash-link">View details<span class="visually-hidden"> of your net worth projection</span></a>
+    </div>
+    @if (netWorth is null)
+    {
+        <p class="dash-empty">Add your Net Worth settings to see where your plan leads.</p>
+    }
+    else if (last is null)
+    {
+        <div class="dash-empty dash-projection__prompt">
+            <p class="dash-projection__prompt-text">Set your retirement age to see your projection.</p>
+            <a asp-controller="Networth" asp-action="Index" class="dash-link">Set retirement age</a>
+        </div>
+    }
+    else
+    {
+        <p class="dash-note">
+            From age @netWorth.CurrentAge to @netWorth.RetirementAge, using your Net Worth settings.
+        </p>
+        <p id="dash-projection-summary" class="visually-hidden">@summarySentence</p>
+        <div id="dash-projection-chart" class="dash-chart dash-projection__chart" aria-hidden="true"></div>
+        <dl class="dash-stats">
+            <div class="dash-stats__item">
+                <dt>Base at @last.Age</dt>
+                <dd class="dash-money">@last.Base.ToString("C0")</dd>
+            </div>
+            <div class="dash-stats__item">
+                <dt>FI Target</dt>
+                <dd class="dash-money">@(netWorth.FiTarget > 0m ? netWorth.FiTarget.ToString("C0") : "—")</dd>
+            </div>
+        </dl>
+    }
+</section>

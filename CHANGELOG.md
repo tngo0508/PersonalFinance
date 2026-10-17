@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Landing Page**: Signed-out visitors at `/` now see a public Landing Page instead of being redirected to the login
+  form; signed-in users at `/` are redirected to their Dashboard.
+    - New anonymous `HomeController` is the default route; `/Dashboard` still requires sign-in and deep links return
+      after login.
+    - Hero with "Create free account" and "Sign in" calls to action, a static HTML/CSS product preview labelled
+      "Sample data" (hidden from assistive technology), a nine-feature grid, a three-step "how it works", a privacy
+      note, and a closing call to action. No testimonials, user counts, or ratings.
+    - Page styles live in `landing.css` (`lp-*` prefix) on Indigo Ledger tokens; no chart library; entrance motion is
+      disabled for reduced-motion users; single-column layout with full-width buttons on mobile.
+    - Brand links in the sidebar and signed-out top bar, and the sign-out return URL, now point to `/`.
+    - Unit tests for the Home controller and Playwright assertions for the Landing Page at `/`.
+- **Dashboard Redesign**: The Dashboard now leads with the user's Net Worth and Progress to FI, followed by key
+  figures, the planned budget breakdown, savings goals, recent activity, quick actions, and setup guidance.
+    - Summary card shows Net Worth (from Net Worth settings), FI Target, and a Progress to FI bar with an "FI target
+      reached" badge, or a prompt to add annual spending when it is zero.
+    - Key figure tiles: Net Worth, Savings Rate (unavailable when annual income is zero), Budgeted income, and Goals
+      funded (saved ÷ target across all goals, each goal capped at its target so an over-funded goal cannot mask
+      unfunded ones, with "N of M complete").
+    - Budget card shows all ten categories in dollars and percent, with "Unallocated" for any remainder, the period
+      label, a colour-blind-checked donut, and a legend that doubles as the text alternative.
+    - Goals card has accessible progress bars and completion badges; recent activity shows a type icon per item.
+    - "Connect Google Drive" setup card appears only for users without a Google Drive connection; the setup section
+      hides once every step is complete.
+    - Quick actions redesigned as a keyboard-accessible grid, now including the Investment Calculator.
+    - Dashboard summary API extended additively with FI, savings rate, budget allocation, goals overview, and Google
+      Drive connection fields.
+    - Net worth projection chart plots the Base, Conservative, and Aggressive scenarios from today to retirement age
+      with a dashed FI Target line, year/age tooltips, and the age the FI target is reached, using the same
+      calculation as the Net Worth page.
+    - Projection chart axis always includes the FI Target line and any negative balances; Progress to FI is floored
+      so it never reads 100% before the target is reached; an API timeout renders the empty Dashboard instead of an
+      error page.
+    - Polish and accessibility pass across the Landing Page and Dashboard: consolidated stylesheet, one short
+      entrance fade and 150ms hover/focus transitions disabled under reduced motion (including chart draw-in
+      animations), descriptive link text, AA-contrast goal badges, Dashboard content kept clear of the mobile bottom
+      navigation, and Playwright checks at 1280px and 390px widths.
 - **Navbar Redesign**: Replaced the cluttered top navbar with a left sidebar navigation, Dashboard home page, global
   search, and notification system.
     - Left sidebar (240px/60px collapsible) with three navigation groups: Overview, My Finances, Resources
@@ -27,6 +63,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Overlapping labels are automatically suppressed to maintain clarity on smaller slices.
 
 ### Fixed
+
+- **Dashboard Fabricated Net Worth Chart**: Removed the net worth "trend" chart, which plotted invented history (the
+  current figure multiplied by 1.05–1.20 and labelled "1Y ago" to "Now"); no net worth history is stored.
+  - The Dashboard is rebuilt on an Indigo Ledger structure: a greeting, then one Razor partial per section (summary,
+    key figures, projection, budget, goals, activity, quick actions, setup cards) with a dedicated `dashboard.css`
+    (`dash-` prefix) and a reusable setup-card component.
+  - Chart data reaches the browser through a single JSON data island read by `js/dashboard/dashboard-core.js`; the
+    budget donut moved to its own module and labels the Entertainment slice correctly instead of "Other".
+  - The Web Dashboard controller now logs API failures (while still rendering an empty summary), and the Dashboard
+    service uses no-tracking queries with deterministic tie-breakers for "latest" selections.
 
 - **Navigation Bar in UI Test & Unauthenticated Layout**: Fixed UI test failure on login page asserting on navigation bar.
   - Added brand icon and name in topbar header for unauthenticated users in `_Layout.cshtml`.
@@ -53,6 +99,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **App Shell Accent & Sidebar Persistence**: The sidebar, top bar, and mobile bottom navigation now use the Indigo
+  Ledger brand accent, and the sidebar collapse preference is restored before first paint.
+  - Replaced hard-coded `#58a6ff` accents with the indigo brand token (light indigo on the dark sidebar for contrast).
+  - Collapse state is applied from `localStorage` in the document head to avoid layout flash; toggles expose
+    `aria-expanded`, and Escape closes the mobile sidebar.
 - **Architecture Alignment & ApiService Restructuring**: Aligned architecture documentation and codebase structure with direct service injection, permissive open-source licensing, and type-based organization.
   - Rewrote `docs/adr/0001-standardize-cqrs-feature-organization.md` to establish direct service injection via ASP.NET Core DI as the canonical pattern, documenting the explicit rejection of MediatR and AutoMapper due to commercial licensing changes and unnecessary mediator indirection.
   - Added a comprehensive License Policy to `AGENTS.md` and `.junie/AGENTS.md` enforcing strictly permissive open-source licenses (MIT, BSD 2-Clause/3-Clause, Apache 2.0) and explicitly banning commercial, dual-licensed, or copyleft dependencies.

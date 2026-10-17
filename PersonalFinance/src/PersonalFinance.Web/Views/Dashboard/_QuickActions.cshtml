@@ -1,0 +1,32 @@
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
+@* Quick actions: one keyboard-focusable link per common task (icon, label, one-line hint). *@
+@{
+    var actions = new[]
+    {
+        (Controller: "Networth", Icon: "wallet", Label: "Net Worth", Hint: "Update balances and your FI projection"),
+        (Controller: "Budget", Icon: "pie-chart", Label: "Budget", Hint: "Plan this month's spending split"),
+        (Controller: "SavingsGoals", Icon: "target", Label: "Savings Goals", Hint: "Track progress toward a goal"),
+        (Controller: "Analysis", Icon: "bar-chart-3", Label: "Analysis", Hint: "Review trends in your spending"),
+        (Controller: "InvestmentCalculator", Icon: "calculator", Label: "Investment Calculator", Hint: "Model growth from regular contributions")
+    };
+}
+<section class="dash-card dash-actions" aria-labelledby="dash-actions-title">
+    <div class="dash-card__header">
+        <h2 id="dash-actions-title" class="dash-card__title">Quick actions</h2>
+    </div>
+    <ul class="dash-actions__list">
+        @foreach (var action in actions)
+        {
+            <li>
+                <a asp-controller="@action.Controller" asp-action="Index" class="dash-action">
+                    <span class="dash-action__icon" aria-hidden="true"><i data-lucide="@action.Icon"></i></span>
+                    <span class="dash-action__body">
+                        <span class="dash-action__label">@action.Label</span>
+                        <span class="dash-action__hint">@action.Hint</span>
+                    </span>
+                    <span class="dash-action__chevron" aria-hidden="true"><i data-lucide="chevron-right"></i></span>
+                </a>
+            </li>
+        }
+    </ul>
+</section>

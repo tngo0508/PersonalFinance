@@ -45,7 +45,24 @@ A pattern where entities are marked as deleted (`IsDeleted = true`) instead of b
 ## Domain
 
 ### Net Worth
-The core financial tracking feature. Tracks assets, liabilities, and projects financial independence based on user-defined parameters (current net worth, monthly savings, investment return rate, inflation rate).
+The core financial tracking feature. Projects financial independence from user-entered parameters: a starting balance, annual income, spending and savings, current and retirement age, and three return-rate scenarios (Base, Conservative, Aggressive). The user's net worth is the starting balance they enter; it is not computed from individual assets and liabilities.
+
+### FI Target
+The portfolio value at which a user is considered financially independent: annual spending × 25 (the 4% rule).
+
+### Progress to FI
+Net worth as a percentage of the FI Target.
+
+### Savings Rate
+Annual savings as a percentage of annual income.
+
+### Landing Page
+The public page served at `/` to signed-out visitors. It explains the product and leads to registration or sign-in.
+_Avoid_: Home page (ambiguous with Dashboard)
+
+### Dashboard
+The signed-in user's overview page, summarizing net worth, budget, savings goals, and recent activity. Signed-in visitors to `/` are redirected here.
+_Avoid_: Home page, home
 
 ### Budget
 Monthly budget allocation and tracking. Compares planned spending against actual spending from spreadsheet data.

@@ -1,0 +1,855 @@
+/* ==========================================================================
+   Dashboard (dash-*)
+   "Indigo Ledger" design system — flat surfaces, hairline borders, Inter for
+   text, IBM Plex Mono with tabular figures for money. Tokens: css/site.css.
+
+   Order: page layout → shared primitives (card, link, note, money, progress)
+   → per-section rules (in page order) → focus → motion → responsive.
+   ========================================================================== */
+
+/* ==========================================================================
+   Page layout
+   ========================================================================== */
+
+.dash {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-l);
+    padding: var(--app-spacing-s) 0 var(--app-spacing-xl);
+    color: var(--app-text);
+}
+
+.dash-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-l);
+}
+
+/* ==========================================================================
+   Header and section titles
+   ========================================================================== */
+
+.dash-header__eyebrow {
+    margin: 0 0 var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--app-brand);
+}
+
+.dash-header__title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: var(--app-font-weight-bold);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+
+.dash-header__lede {
+    margin: var(--app-spacing-xs) 0 0;
+    color: var(--app-text-muted);
+}
+
+.dash-section-title {
+    margin: 0 0 var(--app-spacing-m);
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+/* ==========================================================================
+   Shared primitives
+   ========================================================================== */
+
+/* Money and numbers — tabular monospace figures */
+.dash-money {
+    font-family: var(--app-font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.dash-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-m);
+    min-width: 0;
+    padding: var(--app-spacing-l);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-l);
+    box-shadow: var(--app-shadow-2);
+}
+
+.dash-card__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--app-spacing-m);
+}
+
+.dash-card__title {
+    margin: 0;
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-link {
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-brand);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.dash-link:hover {
+    color: var(--app-brand-hover);
+    text-decoration: underline;
+}
+
+.dash-note {
+    margin: 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+.dash-empty {
+    margin: 0;
+    padding: var(--app-spacing-l) var(--app-spacing-m);
+    text-align: center;
+    color: var(--app-text-muted);
+    background: var(--app-surface);
+    border: 1px dashed var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-chart {
+    min-height: 220px;
+}
+
+.dash-progress {
+    height: 6px;
+    overflow: hidden;
+    background: var(--app-surface-secondary);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-progress__bar {
+    height: 100%;
+    background: var(--app-brand);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-xs);
+    padding: 2px var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    border-radius: 999px;
+}
+
+.dash-badge svg {
+    width: 14px;
+    height: 14px;
+}
+
+.dash-badge--positive {
+    /* Darkened positive token so small badge text meets WCAG AA on the soft background. */
+    color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
+    background: var(--app-accent-positive-soft);
+}
+
+/* ==========================================================================
+   Summary — headline Net Worth, FI Target, Progress to FI
+   ========================================================================== */
+
+.dash-summary__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-l);
+    align-items: end;
+}
+
+.dash-summary__headline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+}
+
+.dash-summary__value {
+    margin: 0;
+    font-size: clamp(2rem, 4vw + 1rem, 2.75rem);
+    font-weight: var(--app-font-weight-semibold);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.dash-summary__fi {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-m);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-summary__fi > p {
+    margin: 0;
+}
+
+.dash-summary__fi-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.dash-summary__fi-label {
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text);
+}
+
+.dash-summary__fi-percent {
+    margin-left: auto;
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-progress--fi {
+    height: 10px;
+}
+
+.dash-progress--reached .dash-progress__bar {
+    background: var(--app-accent-positive);
+}
+
+.dash-summary__fi-target {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--app-spacing-xs) var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+.dash-summary__fi-target .dash-money {
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text);
+}
+
+.dash-summary__fi-hint {
+    color: var(--app-text-muted);
+}
+
+.dash-summary__fi > .dash-summary__fi-age {
+    margin-top: var(--app-spacing-xs);
+}
+
+/* ==========================================================================
+   Key figure tiles
+   ========================================================================== */
+
+.dash-figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--app-spacing-m);
+}
+
+.dash-tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+    min-width: 0;
+    padding: var(--app-spacing-m);
+    color: var(--app-text);
+    text-decoration: none;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-tile:hover {
+    color: var(--app-text);
+    border-color: var(--app-brand-bg-hover);
+    box-shadow: var(--app-shadow-4);
+}
+
+.dash-tile__label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text-muted);
+}
+
+.dash-tile__icon {
+    width: 16px;
+    height: 16px;
+    color: var(--app-brand);
+}
+
+.dash-tile__value {
+    font-size: var(--app-font-size-xl);
+    font-weight: var(--app-font-weight-semibold);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.dash-tile__value--unavailable {
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text-muted);
+}
+
+.dash-tile__caption {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   Net worth projection
+   ========================================================================== */
+
+.dash-projection .dash-note {
+    margin-bottom: var(--app-spacing-s);
+}
+
+.dash-projection__chart {
+    min-height: 240px;
+    margin-bottom: var(--app-spacing-m);
+}
+
+.dash-projection__prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.dash-projection__prompt-text {
+    margin: 0;
+}
+
+.dash-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--app-spacing-m);
+    margin: 0;
+}
+
+.dash-stats__item {
+    padding: var(--app-spacing-m);
+    background: var(--app-surface);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-stats dt {
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text-muted);
+}
+
+.dash-stats dd {
+    margin: var(--app-spacing-xs) 0 0;
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+/* ==========================================================================
+   Budget breakdown
+   Categorical palette: one fixed colour per category, so a category keeps its colour whichever
+   categories are drawn. Validated with the dataviz palette validator against the white card surface,
+   in this order and cyclically (a donut's last slice touches its first): worst adjacent CVD dE 13.0,
+   normal-vision dE 27.5. Food, Healthcare, Debt Repayment, and Miscellaneous sit under 3:1 against
+   white, so every slice is also named with its percent and amount in the legend list (the text
+   alternative). Unallocated is a neutral grey on purpose: it is income with no category.
+   ========================================================================== */
+
+.dash-budget {
+    --dash-budget-housing: #C026D3;
+    --dash-budget-food: #EB6834;
+    --dash-budget-transportation: #6250D6;
+    --dash-budget-utilities: #E34948;
+    --dash-budget-insurance: #2A78D6;
+    --dash-budget-healthcare: #E87BA4;
+    --dash-budget-savings: #008300;
+    --dash-budget-debt-repayment: #EDA100;
+    --dash-budget-entertainment: #9B4DCA;
+    --dash-budget-miscellaneous: #1BAF7A;
+    --dash-budget-unallocated: #D1D5DB;
+}
+
+.dash-budget__chart {
+    margin: var(--app-spacing-s) 0;
+}
+
+.dash-budget__legend {
+    display: grid;
+    gap: var(--app-spacing-xs);
+    margin: var(--app-spacing-m) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--app-font-size-small);
+}
+
+.dash-budget__item {
+    display: grid;
+    grid-template-columns: 0.75rem minmax(0, 1fr) auto auto;
+    align-items: center;
+    column-gap: var(--app-spacing-s);
+}
+
+.dash-budget__item--empty {
+    color: var(--app-text-muted);
+}
+
+.dash-budget__item--unallocated {
+    padding-top: var(--app-spacing-xs);
+    border-top: 1px solid var(--app-border);
+}
+
+.dash-budget__swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 3px;
+}
+
+.dash-budget__item--empty .dash-budget__swatch {
+    opacity: 0.35;
+}
+
+.dash-budget__swatch--housing { background: var(--dash-budget-housing); }
+.dash-budget__swatch--food { background: var(--dash-budget-food); }
+.dash-budget__swatch--transportation { background: var(--dash-budget-transportation); }
+.dash-budget__swatch--utilities { background: var(--dash-budget-utilities); }
+.dash-budget__swatch--insurance { background: var(--dash-budget-insurance); }
+.dash-budget__swatch--healthcare { background: var(--dash-budget-healthcare); }
+.dash-budget__swatch--savings { background: var(--dash-budget-savings); }
+.dash-budget__swatch--debt-repayment { background: var(--dash-budget-debt-repayment); }
+.dash-budget__swatch--entertainment { background: var(--dash-budget-entertainment); }
+.dash-budget__swatch--miscellaneous { background: var(--dash-budget-miscellaneous); }
+.dash-budget__swatch--unallocated { background: var(--dash-budget-unallocated); }
+
+.dash-budget__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-budget__percent {
+    min-width: 3.5rem;
+    text-align: right;
+    color: var(--app-text-muted);
+}
+
+.dash-budget__amount {
+    min-width: 4.5rem;
+    text-align: right;
+}
+
+.dash-budget__warning {
+    margin-top: var(--app-spacing-s);
+}
+
+/* ==========================================================================
+   Lists: savings goals and recent activity
+   ========================================================================== */
+
+.dash-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dash-list > li {
+    padding: var(--app-spacing-m) 0;
+    border-top: 1px solid var(--app-border);
+}
+
+.dash-list > li:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.dash-goal__row,
+.dash-activity__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--app-spacing-m);
+}
+
+.dash-goal__name,
+.dash-activity__title {
+    font-weight: var(--app-font-weight-medium);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-goal__amounts,
+.dash-activity__description,
+.dash-activity__date {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+/* Savings goals */
+.dash-goal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+}
+
+.dash-goal__title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    min-width: 0;
+}
+
+.dash-goal__percent {
+    font-size: var(--app-font-size-small);
+    white-space: nowrap;
+}
+
+.dash-goal__badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    padding: 1px var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    /* Darkened positive token so small badge text meets WCAG AA on the soft background. */
+    color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
+    background: var(--app-accent-positive-soft);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-goal__badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+.dash-goal--completed .dash-progress__bar {
+    background: var(--app-accent-positive);
+}
+
+/* Recent activity */
+.dash-activity__item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--app-spacing-m);
+}
+
+.dash-activity__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+    min-width: 0;
+}
+
+.dash-activity__date {
+    white-space: nowrap;
+}
+
+.dash-activity__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--app-text-muted);
+    background: var(--app-surface-secondary);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-activity__icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.dash-activity__icon--income {
+    color: var(--app-accent-positive);
+    background: var(--app-accent-positive-soft);
+}
+
+.dash-activity__icon--expense {
+    color: var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+}
+
+.dash-activity__icon--goal {
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
+}
+
+/* ==========================================================================
+   Quick actions — action grid with icon, label, and hint
+   ========================================================================== */
+
+.dash-actions__list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-m);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dash-action {
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-m);
+    height: 100%;
+    padding: var(--app-spacing-m);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text);
+    text-decoration: none;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-action:hover {
+    color: var(--app-brand-pressed);
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand-bg-hover);
+}
+
+.dash-action svg {
+    width: 18px;
+    height: 18px;
+    color: var(--app-brand);
+}
+
+.dash-action__icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-action__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dash-action__label {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-action__hint {
+    font-size: var(--app-font-size-small);
+    font-weight: normal;
+    color: var(--app-text-muted);
+    line-height: 1.4;
+}
+
+.dash-action .dash-action__chevron svg {
+    width: 16px;
+    height: 16px;
+    color: var(--app-text-muted);
+}
+
+.dash-action:hover .dash-action__chevron svg,
+.dash-action:focus-visible .dash-action__chevron svg {
+    color: var(--app-brand);
+}
+
+/* ==========================================================================
+   Setup cards — reusable guided next step (Views/Dashboard/_SetupCard.cshtml)
+   ========================================================================== */
+
+.dash-setup__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-m);
+}
+
+.dash-setup-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--app-spacing-m);
+    padding: var(--app-spacing-l);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-left: 3px solid var(--app-brand);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-setup-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-setup-card__icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.dash-setup-card__title {
+    margin: 0 0 var(--app-spacing-xs);
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-setup-card__text {
+    margin: 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    line-height: 1.5;
+}
+
+.dash-setup-card__action {
+    margin-top: auto;
+}
+
+/* ==========================================================================
+   Focus — every interactive element shows a visible indicator
+   ========================================================================== */
+
+.dash-link:focus-visible,
+.dash-tile:focus-visible,
+.dash-action:focus-visible,
+.dash-setup-card__action:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.dash-tile:focus-visible,
+.dash-action:focus-visible {
+    border-color: var(--app-brand);
+    box-shadow: var(--app-shadow-4);
+}
+
+/* ==========================================================================
+   Motion — short entrance fade (lightly staggered) and hover/focus transitions,
+   only for users who have not asked to reduce motion. Matches css/landing.css.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+    .dash > * {
+        animation: dash-fade-up 240ms ease-out both;
+    }
+
+    .dash > :nth-child(2) { animation-delay: 40ms; }
+    .dash > :nth-child(3) { animation-delay: 80ms; }
+    .dash > :nth-child(4) { animation-delay: 120ms; }
+    .dash > :nth-child(n + 5) { animation-delay: 160ms; }
+
+    .dash-tile,
+    .dash-action,
+    .dash-link {
+        transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
+    }
+
+    .dash-action__chevron svg {
+        transition: color 150ms ease;
+    }
+}
+
+@keyframes dash-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (min-width: 576px) {
+    .dash-actions__list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dash-projection__chart {
+        min-height: 300px;
+    }
+}
+
+@media (min-width: 768px) {
+    .dash-summary__body {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    }
+
+    .dash-setup__grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .dash-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dash-row--wide {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+
+    .dash-figures {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .dash-actions__list {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+/* Mobile: the fixed bottom navigation (56px, css/sidebar.css) overlays the page foot. The app container
+   already reserves 80px below the content at this breakpoint; the Dashboard adds its own spacing plus the
+   home-indicator safe area on notched phones so the last section always sits fully above the bar. */
+@media (max-width: 768px) {
+    .dash {
+        padding-bottom: calc(var(--app-spacing-xl) + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+@media (forced-colors: active) {
+    .dash-budget__swatch {
+        border: 1px solid CanvasText;
+    }
+
+    .dash-progress {
+        border: 1px solid CanvasText;
+    }
+
+    .dash-progress__bar {
+        background: Highlight;
+    }
+}

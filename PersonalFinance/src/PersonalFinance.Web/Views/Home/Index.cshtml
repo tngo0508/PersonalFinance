@@ -1,0 +1,179 @@
+@using PersonalFinance.Shared.Constants
+@model LandingPageViewModel
+@{
+    ViewData["Title"] = "Plan your money with clarity";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true"/>
+}
+
+<div class="lp-page">
+    @* ---------- Hero ---------- *@
+    <section class="lp-hero" aria-labelledby="lp-hero-title">
+        <div class="lp-hero__copy lp-reveal">
+            <p class="lp-eyebrow">Personal finance, planned</p>
+            <h1 id="lp-hero-title" class="lp-hero__title">
+                Know your numbers.<br/>
+                <span class="lp-hero__title-accent">Plan your path to financial independence.</span>
+            </h1>
+            <p class="lp-hero__lead">
+                @AppVersion.ApplicationName brings your net worth projection, monthly budget, and savings goals into
+                one calm workspace, so you can see where you stand today and where your plan leads.
+            </p>
+            <div class="lp-cta-row">
+                <a class="lp-btn lp-btn--primary" asp-area="Identity" asp-page="/Account/Register">
+                    Create free account
+                    <i data-lucide="arrow-right" aria-hidden="true"></i>
+                </a>
+                <a class="lp-btn lp-btn--secondary" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
+            </div>
+            <p class="lp-hero__note">Free to use. No credit card required.</p>
+        </div>
+
+        @* Decorative product preview: static HTML/CSS with illustrative figures only. *@
+        <div class="lp-preview lp-reveal lp-reveal--delay" aria-hidden="true">
+            <div class="lp-preview__chrome">
+                <span class="lp-preview__dot"></span>
+                <span class="lp-preview__dot"></span>
+                <span class="lp-preview__dot"></span>
+                <span class="lp-preview__title">Dashboard</span>
+                <span class="lp-preview__badge">Sample data</span>
+            </div>
+            <div class="lp-preview__body">
+                <div class="lp-preview__summary">
+                    <div>
+                        <div class="lp-preview__label">Net worth</div>
+                        <div class="lp-preview__figure lp-mono">$248,500</div>
+                    </div>
+                    <div class="lp-preview__fi">
+                        <div class="lp-preview__fi-head">
+                            <span class="lp-preview__label">Progress to FI</span>
+                            <span class="lp-mono">41%</span>
+                        </div>
+                        <div class="lp-preview__bar"><span style="width: 41%"></span></div>
+                        <div class="lp-preview__hint">FI target <span class="lp-mono">$600,000</span></div>
+                    </div>
+                </div>
+
+                <div class="lp-preview__tiles">
+                    <div class="lp-preview__tile">
+                        <div class="lp-preview__label">Savings rate</div>
+                        <div class="lp-preview__tile-value lp-mono">24%</div>
+                    </div>
+                    <div class="lp-preview__tile">
+                        <div class="lp-preview__label">Monthly income</div>
+                        <div class="lp-preview__tile-value lp-mono">$6,200</div>
+                    </div>
+                    <div class="lp-preview__tile">
+                        <div class="lp-preview__label">Goals funded</div>
+                        <div class="lp-preview__tile-value lp-mono">63%</div>
+                    </div>
+                </div>
+
+                <div class="lp-preview__panels">
+                    <div class="lp-preview__panel">
+                        <div class="lp-preview__panel-head">
+                            <span>Projection</span>
+                            <span class="lp-preview__legend">
+                                <span class="lp-preview__swatch lp-preview__swatch--base"></span>Base
+                                <span class="lp-preview__swatch lp-preview__swatch--target"></span>FI target
+                            </span>
+                        </div>
+                        <svg class="lp-preview__chart" viewBox="0 0 240 110" preserveAspectRatio="none" focusable="false">
+                            <line class="lp-chart__grid" x1="0" y1="27.5" x2="240" y2="27.5"/>
+                            <line class="lp-chart__grid" x1="0" y1="55" x2="240" y2="55"/>
+                            <line class="lp-chart__grid" x1="0" y1="82.5" x2="240" y2="82.5"/>
+                            <line class="lp-chart__target" x1="0" y1="34" x2="240" y2="34"/>
+                            <path class="lp-chart__area" d="M0 92 C40 88 80 78 120 62 S200 26 240 10 L240 110 L0 110 Z"/>
+                            <path class="lp-chart__muted" d="M0 92 C40 90 80 84 120 74 S200 52 240 40"/>
+                            <path class="lp-chart__line" d="M0 92 C40 88 80 78 120 62 S200 26 240 10"/>
+                        </svg>
+                    </div>
+                    <div class="lp-preview__panel">
+                        <div class="lp-preview__panel-head"><span>Budget</span></div>
+                        <ul class="lp-preview__budget">
+                            <li><span>Housing</span><span class="lp-preview__track"><span style="width: 30%"></span></span><span class="lp-mono">30%</span></li>
+                            <li><span>Saving</span><span class="lp-preview__track"><span style="width: 20%"></span></span><span class="lp-mono">20%</span></li>
+                            <li><span>Food</span><span class="lp-preview__track"><span style="width: 12%"></span></span><span class="lp-mono">12%</span></li>
+                            <li><span>Transport</span><span class="lp-preview__track"><span style="width: 10%"></span></span><span class="lp-mono">10%</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    @* ---------- Features ---------- *@
+    <section class="lp-section" aria-labelledby="lp-features-title">
+        <div class="lp-section__head">
+            <p class="lp-eyebrow">Features</p>
+            <h2 id="lp-features-title" class="lp-section__title">Everything you need to plan, in one place</h2>
+            <p class="lp-section__lead">Each tool works on its own and feeds the bigger picture on your Dashboard.</p>
+        </div>
+        <ul class="lp-features">
+            @foreach (var feature in Model.Features)
+            {
+                <li class="lp-feature">
+                    <span class="lp-feature__icon" aria-hidden="true"><i data-lucide="@feature.Icon"></i></span>
+                    <h3 class="lp-feature__title">@feature.Title</h3>
+                    <p class="lp-feature__text">@feature.Description</p>
+                </li>
+            }
+        </ul>
+    </section>
+
+    @* ---------- How it works ---------- *@
+    <section class="lp-section lp-section--tinted" aria-labelledby="lp-steps-title">
+        <div class="lp-section__head">
+            <p class="lp-eyebrow">How it works</p>
+            <h2 id="lp-steps-title" class="lp-section__title">Up and running in three steps</h2>
+        </div>
+        <ol class="lp-steps">
+            <li class="lp-step">
+                <span class="lp-step__number lp-mono" aria-hidden="true">01</span>
+                <h3 class="lp-step__title">Create your account</h3>
+                <p class="lp-step__text">Register with your email address and choose a password. No payment details are needed.</p>
+            </li>
+            <li class="lp-step">
+                <span class="lp-step__number lp-mono" aria-hidden="true">02</span>
+                <h3 class="lp-step__title">Add your numbers</h3>
+                <p class="lp-step__text">Enter your net worth, income, and spending, set a monthly budget, and add your savings goals.</p>
+            </li>
+            <li class="lp-step">
+                <span class="lp-step__number lp-mono" aria-hidden="true">03</span>
+                <h3 class="lp-step__title">Follow your plan</h3>
+                <p class="lp-step__text">Your Dashboard shows your progress to financial independence and what to do next.</p>
+            </li>
+        </ol>
+    </section>
+
+    @* ---------- Privacy ---------- *@
+    <section class="lp-section" aria-labelledby="lp-privacy-title">
+        <div class="lp-privacy">
+            <span class="lp-privacy__icon" aria-hidden="true"><i data-lucide="shield-check"></i></span>
+            <div>
+                <h2 id="lp-privacy-title" class="lp-privacy__title">Your financial data stays yours</h2>
+                <ul class="lp-privacy__list">
+                    <li>Every figure you enter is tied to your account and shown only to you.</li>
+                    <li>Connections are encrypted with HTTPS.</li>
+                    <li>Google Drive is only accessed when you choose to connect a folder.</li>
+                    <li>No bank logins are needed. You decide exactly what to enter.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    @* ---------- Closing call to action ---------- *@
+    <section class="lp-closing" aria-labelledby="lp-closing-title">
+        <h2 id="lp-closing-title" class="lp-closing__title">Start planning with a clear picture</h2>
+        <p class="lp-closing__lead">Create a free account and set up your first plan today.</p>
+        <div class="lp-cta-row lp-cta-row--center">
+            <a class="lp-btn lp-btn--light" asp-area="Identity" asp-page="/Account/Register">
+                Create free account
+                <i data-lucide="arrow-right" aria-hidden="true"></i>
+            </a>
+            <a class="lp-btn lp-btn--ghost" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,94 @@
+using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Services;
+using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.Dashboard;
+using Xunit;
+
+namespace PersonalFinance.Tests;
+
+/// <summary>
+/// Behaviour of the Dashboard summary's <c>HasGoogleDriveConnection</c> flag, exercised against an in-memory database.
+/// </summary>
+public class DashboardDriveConnectionTests
+{
+    private const string UserId = "drive-user";
+    private const string OtherUserId = "other-drive-user";
+
+    private static AppDbContext CreateContext()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"DashboardDrive_{Guid.NewGuid():N}")
+            .Options;
+        return new AppDbContext(options);
+    }
+
+    private static Task<DashboardSummaryDto> GetSummaryAsync(AppDbContext db)
+    {
+        return new DashboardService(db).GetDashboardSummaryAsync(UserId);
+    }
+
+    [Fact]
+    public async Task UserWithConnection_IsConnected()
+    {
+        await using var db = CreateContext();
+        db.GoogleDriveConnections.Add(new GoogleDriveConnection { UserId = UserId, FolderId = "folder" });
+        await db.SaveChangesAsync();
+
+        var summary = await GetSummaryAsync(db);
+
+        Assert.True(summary.HasGoogleDriveConnection);
+    }
+
+    [Fact]
+    public async Task UserWithConnectionNeedingReauth_IsStillConnected()
+    {
+        await using var db = CreateContext();
+        db.GoogleDriveConnections.Add(new GoogleDriveConnection
+        {
+            UserId = UserId, FolderId = "folder", IsValid = false, SyncStatus = "NeedsReauth"
+        });
+        await db.SaveChangesAsync();
+
+        var summary = await GetSummaryAsync(db);
+
+        Assert.True(summary.HasGoogleDriveConnection);
+    }
+
+    [Fact]
+    public async Task UserWithoutConnection_IsNotConnected()
+    {
+        await using var db = CreateContext();
+
+        var summary = await GetSummaryAsync(db);
+
+        Assert.False(summary.HasGoogleDriveConnection);
+    }
+
+    [Fact]
+    public async Task AnotherUsersConnection_IsIgnored()
+    {
+        await using var db = CreateContext();
+        db.GoogleDriveConnections.Add(new GoogleDriveConnection { UserId = OtherUserId, FolderId = "folder" });
+        await db.SaveChangesAsync();
+
+        var summary = await GetSummaryAsync(db);
+
+        Assert.False(summary.HasGoogleDriveConnection);
+    }
+
+    [Fact]
+    public async Task SoftDeletedConnection_IsIgnored()
+    {
+        await using var db = CreateContext();
+        db.GoogleDriveConnections.Add(new GoogleDriveConnection
+        {
+            UserId = UserId, FolderId = "folder", IsDeleted = true, DeletedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var summary = await GetSummaryAsync(db);
+
+        Assert.False(summary.HasGoogleDriveConnection);
+    }
+}

@@ -1,0 +1,46 @@
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
+@* Savings goals section (ticket 07): the five most recent goals, completed goals marked with a check badge. *@
+<section class="dash-card dash-goals" aria-labelledby="dash-goals-title">
+    <div class="dash-card__header">
+        <h2 id="dash-goals-title" class="dash-card__title">Savings goals</h2>
+        <a asp-controller="SavingsGoals" asp-action="Index" class="dash-link">View all<span class="visually-hidden"> savings goals</span></a>
+    </div>
+    @if (Model.SavingsGoals.Count > 0)
+    {
+        <ul class="dash-list">
+            @foreach (var goal in Model.SavingsGoals)
+            {
+                // Floored so a goal only reads 100% once it is fully funded.
+                var progress = (int)Math.Floor(Math.Clamp(goal.ProgressPercent, 0, 100));
+                <li class="dash-goal @(goal.IsCompleted ? "dash-goal--completed" : null)">
+                    <div class="dash-goal__row">
+                        <span class="dash-goal__title">
+                            <span class="dash-goal__name">@goal.Name</span>
+                            @if (goal.IsCompleted)
+                            {
+                                <span class="dash-goal__badge">
+                                    <i data-lucide="check" aria-hidden="true"></i>
+                                    Complete
+                                </span>
+                            }
+                        </span>
+                        <span class="dash-money dash-goal__percent">@progress%</span>
+                    </div>
+                    <div class="dash-progress" role="progressbar" aria-label="@goal.Name progress"
+                         aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100"
+                         aria-valuetext="@progress% funded">
+                        <div class="dash-progress__bar" style="width: @progress%"></div>
+                    </div>
+                    <span class="dash-goal__amounts">
+                        <span class="dash-money">@goal.CurrentAmount.ToString("C0")</span>
+                        of <span class="dash-money">@goal.TargetAmount.ToString("C0")</span>
+                    </span>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="dash-empty">Add a savings goal to track your progress here.</p>
+    }
+</section>

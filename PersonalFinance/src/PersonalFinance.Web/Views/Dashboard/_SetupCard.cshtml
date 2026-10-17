@@ -1,0 +1,12 @@
+@model DashboardSetupCardViewModel
+@* Reusable setup card: a guided next step shown in place of missing data. *@
+<article class="dash-setup-card">
+    <span class="dash-setup-card__icon" aria-hidden="true"><i data-lucide="@Model.Icon"></i></span>
+    <div class="dash-setup-card__body">
+        <h3 class="dash-setup-card__title">@Model.Title</h3>
+        <p class="dash-setup-card__text">@Model.Description</p>
+    </div>
+    <a asp-controller="@Model.Controller" asp-action="@Model.Action" class="btn btn-primary btn-sm dash-setup-card__action">
+        @Model.ActionText
+    </a>
+</article>

@@ -1,0 +1,20 @@
+@model DashboardKeyFigureViewModel
+@* Reusable key-figure tile. The whole tile links to the page where the figure can be changed. *@
+<a asp-controller="@Model.Controller" asp-action="@Model.Action" class="dash-tile">
+    <span class="dash-tile__label">
+        <i data-lucide="@Model.Icon" class="dash-tile__icon" aria-hidden="true"></i>
+        @Model.Label
+    </span>
+    @if (Model.Value is not null)
+    {
+        <span class="dash-tile__value @(Model.IsNumeric ? "dash-money" : null)">@Model.Value</span>
+    }
+    else
+    {
+        <span class="dash-tile__value dash-tile__value--unavailable">@Model.UnavailableText</span>
+    }
+    @if (!string.IsNullOrEmpty(Model.Caption))
+    {
+        <span class="dash-tile__caption">@Model.Caption</span>
+    }
+</a>
