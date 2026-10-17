@@ -22,6 +22,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       disabled for reduced-motion users; single-column layout with full-width buttons on mobile.
     - Brand links in the sidebar and signed-out top bar, and the sign-out return URL, now point to `/`.
     - Unit tests for the Home controller and Playwright assertions for the Landing Page at `/`.
+- **Dashboard Redesign**: The Dashboard now leads with the user's Net Worth and Progress to FI, followed by key
+  figures, the planned budget breakdown, savings goals, recent activity, quick actions, and setup guidance.
+    - Summary card shows Net Worth (from Net Worth settings), FI Target, and a Progress to FI bar with an "FI target
+      reached" badge, or a prompt to add annual spending when it is zero.
+    - Key figure tiles: Net Worth, Savings Rate (unavailable when annual income is zero), Budgeted income, and Goals
+      funded (total saved ÷ total target across all goals, capped at 100%, with "N of M complete").
+    - Budget card shows all ten categories in dollars and percent, with "Unallocated" for any remainder, the period
+      label, a colour-blind-checked donut, and a legend that doubles as the text alternative.
+    - Goals card has accessible progress bars and completion badges; recent activity shows a type icon per item.
+    - "Connect Google Drive" setup card appears only for users without a Google Drive connection; the setup section
+      hides once every step is complete.
+    - Quick actions redesigned as a keyboard-accessible grid, now including the Investment Calculator.
+    - Dashboard summary API extended additively with FI, savings rate, budget allocation, goals overview, and Google
+      Drive connection fields.
 - **Navbar Redesign**: Replaced the cluttered top navbar with a left sidebar navigation, Dashboard home page, global
   search, and notification system.
     - Left sidebar (240px/60px collapsible) with three navigation groups: Overview, My Finances, Resources
