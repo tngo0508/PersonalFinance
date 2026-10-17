@@ -26,6 +26,7 @@
     overflow: hidden;
 }
 
+html.sidebar-collapsed .sidebar,
 .sidebar.collapsed {
     width: 60px;
 }
@@ -65,9 +66,11 @@
     transition: opacity 0.2s ease;
 }
 
+html.sidebar-collapsed .sidebar .sidebar-brand-name,
 .sidebar.collapsed .sidebar-brand-name {
     opacity: 0;
     width: 0;
+    pointer-events: none;
 }
 
 .sidebar-toggle {
@@ -88,8 +91,22 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
+html.sidebar-collapsed .sidebar .sidebar-toggle,
 .sidebar.collapsed .sidebar-toggle {
     margin: 0 auto;
+}
+
+/* Light indigo on the dark sidebar keeps the focus ring above 3:1 contrast */
+.sidebar-toggle:focus-visible,
+.sidebar-link:focus-visible {
+    outline: 2px solid #A5B4FC;
+    outline-offset: 2px;
+}
+
+.topbar-btn:focus-visible,
+.bottom-nav-item:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
 }
 
 /* Navigation */
@@ -118,11 +135,13 @@
     transition: opacity 0.2s ease;
 }
 
+html.sidebar-collapsed .sidebar .sidebar-group-label,
 .sidebar.collapsed .sidebar-group-label {
     opacity: 0;
     height: 0;
     padding: 0;
     margin: 0;
+    pointer-events: none;
 }
 
 .sidebar-link {
@@ -145,8 +164,8 @@
 }
 
 .sidebar-link.active {
-    background: rgba(56, 139, 253, 0.2);
-    color: #58a6ff;
+    background: rgba(99, 102, 241, 0.22);
+    color: #A5B4FC;
 }
 
 .sidebar-link-icon {
@@ -169,9 +188,11 @@
     transition: opacity 0.2s ease;
 }
 
+html.sidebar-collapsed .sidebar .sidebar-link-text,
 .sidebar.collapsed .sidebar-link-text {
     opacity: 0;
     width: 0;
+    pointer-events: none;
 }
 
 /* ==========================================================================
@@ -193,7 +214,8 @@
 }
 
 .sidebar.collapsed ~ .app-content .topbar,
-.sidebar.collapsed + .app-content .topbar {
+.sidebar.collapsed + .app-content .topbar,
+html.sidebar-collapsed .topbar {
     left: 60px;
 }
 
@@ -220,8 +242,8 @@ body:not(:has(#sidebar)) .topbar {
 
 .topbar-search-input:focus {
     outline: none;
-    border-color: #58a6ff;
-    box-shadow: 0 0 0 3px rgba(56, 139, 253, 0.2);
+    border-color: var(--app-brand);
+    box-shadow: 0 0 0 3px var(--app-brand-soft);
     background: #fff;
 }
 
@@ -459,7 +481,8 @@ body:not(:has(#sidebar)) .app-content {
     margin-left: 0;
 }
 
-.sidebar.collapsed ~ .app-content {
+.sidebar.collapsed ~ .app-content,
+html.sidebar-collapsed .app-content {
     margin-left: 60px;
 }
 
@@ -508,7 +531,7 @@ body:not(:has(#sidebar)) .app-content {
 
 .bottom-nav-item:hover,
 .bottom-nav-item.active {
-    color: #58a6ff;
+    color: var(--app-brand);
 }
 
 .bottom-nav-item svg {

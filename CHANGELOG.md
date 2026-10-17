@@ -53,6 +53,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **App Shell Accent & Sidebar Persistence**: The sidebar, top bar, and mobile bottom navigation now use the Indigo
+  Ledger brand accent, and the sidebar collapse preference is restored before first paint.
+  - Replaced hard-coded `#58a6ff` accents with the indigo brand token (light indigo on the dark sidebar for contrast).
+  - Collapse state is applied from `localStorage` in the document head to avoid layout flash; toggles expose
+    `aria-expanded`, and Escape closes the mobile sidebar.
 - **Architecture Alignment & ApiService Restructuring**: Aligned architecture documentation and codebase structure with direct service injection, permissive open-source licensing, and type-based organization.
   - Rewrote `docs/adr/0001-standardize-cqrs-feature-organization.md` to establish direct service injection via ASP.NET Core DI as the canonical pattern, documenting the explicit rejection of MediatR and AutoMapper due to commercial licensing changes and unnecessary mediator indirection.
   - Added a comprehensive License Policy to `AGENTS.md` and `.junie/AGENTS.md` enforcing strictly permissive open-source licenses (MIT, BSD 2-Clause/3-Clause, Apache 2.0) and explicitly banning commercial, dual-licensed, or copyleft dependencies.

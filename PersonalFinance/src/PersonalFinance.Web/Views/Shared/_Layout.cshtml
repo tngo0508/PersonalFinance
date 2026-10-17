@@ -21,6 +21,15 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"/>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    document.documentElement.classList.add('sidebar-collapsed');
+                }
+            } catch (e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
@@ -44,7 +53,7 @@
                 </span>
                 <span class="sidebar-brand-name">@AppVersion.ApplicationName</span>
             </a>
-            <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+            <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="true">
                 <i data-lucide="panel-left" style="width:20px;height:20px"></i>
             </button>
         </div>
@@ -119,7 +128,7 @@
     <header class="topbar">
         @if (isSignedIn)
         {
-            <button id="mobileMenuToggle" class="topbar-btn d-md-none" aria-label="Open menu">
+            <button id="mobileMenuToggle" class="topbar-btn d-md-none" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
                 <i data-lucide="menu"></i>
             </button>
 
