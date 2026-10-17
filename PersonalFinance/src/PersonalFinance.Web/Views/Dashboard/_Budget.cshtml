@@ -1,16 +1,13 @@
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
-@* Budget breakdown section. Allocations, totals, and Unallocated come from the Dashboard service; this view only
-   formats them. The donut (js/dashboard/dashboard-budget-chart.js) draws the "budget" slice of the data island and
-   takes each category's colour from the --dash-budget-* tokens in dashboard.css. The legend list is the text
-   alternative: every category with its percent and dollar amount. *@
+@* Budget Planner breakdown section. Allocations, totals, and Unallocated come from the Budget Planner (UserBudgetAllocations). *@
 @{
     var budget = Model.Budget;
     var periodLabel = DashboardBudgetFormat.PeriodLabel(budget?.Period);
     var overAllocatedPercent = budget is null ? 0m : budget.TotalAllocatedPercent - 100m;
 }
 <section class="dash-card dash-budget" aria-labelledby="dash-budget-title">
-    <div class="dash-card__header">
-        <h2 id="dash-budget-title" class="dash-card__title">Budget</h2>
+    <div class="dash-card__header flex-wrap gap-2">
+        <h2 id="dash-budget-title" class="dash-card__title mb-0">Budget Planner</h2>
         <a asp-controller="Budget" asp-action="Index" class="dash-link">
             @(budget is null ? "Create a budget" : "Edit budget")
         </a>
@@ -63,6 +60,9 @@
     }
     else
     {
-        <p class="dash-empty">Create a budget to see how your monthly income is planned.</p>
+        <p class="dash-empty">
+            No budget plan set up yet.
+            <a asp-controller="Budget" asp-action="Index">Create a budget plan</a> to plan your income allocation.
+        </p>
     }
 </section>

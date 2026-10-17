@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using Scalar.AspNetCore;
@@ -81,6 +80,11 @@ try
 
     // 5b. Register Personal Finance services
     builder.Services.AddScoped<IBudgetService, BudgetService>();
+    builder.Services.AddScoped<IBudgetDataSourceService, BudgetDataSourceService>();
+    builder.Services.AddScoped<SheetBudgetMonthReader>();
+    builder.Services.AddScoped<TrackerBudgetMonthReader>();
+    builder.Services.AddScoped<IBudgetDataProvider, BudgetDataProvider>();
+    builder.Services.AddScoped<IMonthlyBudgetService, MonthlyBudgetService>();
     builder.Services.AddScoped<ISavingsGoalService, SavingsGoalService>();
     builder.Services.AddScoped<IWatchlistService, WatchlistService>();
     builder.Services.AddScoped<ICommunityService, CommunityService>();
@@ -89,7 +93,8 @@ try
         var dbContext = sp.GetRequiredService<AppDbContext>();
         var spreadsheetReader = sp.GetRequiredService<ISpreadsheetReader>();
         var notificationService = sp.GetRequiredService<INotificationService>();
-        return new SpreadsheetAnalysisService(dbContext, spreadsheetReader, notificationService);
+        var budgetDataProvider = sp.GetRequiredService<IBudgetDataProvider>();
+        return new SpreadsheetAnalysisService(dbContext, spreadsheetReader, notificationService, budgetDataProvider);
     });
 
     // 5c. Register AI Assistant service for OpenAI chat integration
@@ -110,7 +115,8 @@ try
     // 5d. Register FluentValidation - scans the assembly for validators
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true);
 
     // 6. OpenAPI generator in .NET 10 with synchronized application metadata
     builder.Services.AddOpenApi(options =>

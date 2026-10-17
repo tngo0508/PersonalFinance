@@ -5,7 +5,6 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Web.Models;
-using Xunit;
 
 namespace PersonalFinance.Tests;
 
@@ -28,7 +27,8 @@ public class DashboardBudgetBreakdownTests
 
     private static async Task<BudgetSummaryDto?> GetBudgetAsync(AppDbContext db, string userId = UserId)
     {
-        var summary = await new DashboardService(db).GetDashboardSummaryAsync(userId);
+        var summary =
+            await new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(userId);
         return summary.Budget;
     }
 

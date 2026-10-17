@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -123,7 +124,8 @@ public class AnalysisController : Controller
             SelectedYear = result.Year,
             SelectedMonth = result.Month,
             AvailableYears = result.AvailableYears,
-            AvailableMonths = result.AvailableMonths
+            AvailableMonths = result.AvailableMonths,
+            ActiveSource = result.ActiveSource
         };
 
         if (result.Summary != null)
@@ -133,6 +135,10 @@ public class AnalysisController : Controller
             model.NetSavings = result.Summary.NetSavings;
             model.SavingsRate = result.Summary.SavingsRate;
             model.MonthName = result.Summary.MonthName;
+        }
+        else if (result.Month is >= 1 and <= 12)
+        {
+            model.MonthName = CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(result.Month.Value);
         }
 
         if (result.Velocity != null)

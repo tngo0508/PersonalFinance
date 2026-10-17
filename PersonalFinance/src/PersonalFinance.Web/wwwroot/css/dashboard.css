@@ -25,6 +25,13 @@
     gap: var(--app-spacing-l);
 }
 
+.dash-budget-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-l);
+    min-width: 0;
+}
+
 /* ==========================================================================
    Header and section titles
    ========================================================================== */

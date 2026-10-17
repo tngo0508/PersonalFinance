@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Budget Tracker**: Added an in-app monthly budget tracker reproducing the Google "Monthly budget" sheet layout and
+  behavior with Summary and Transactions tabs.
+    - Users can enter planned amounts, actual overrides, and dated transactions (expenses and income) directly in the
+      application, stored in Azure SQL Database.
+    - Summary tab computes Planned, Actual, and Diff per category with totals and comparison bars (Diff for Expenses:
+      Planned − Actual; Diff for Income: Actual − Planned).
+    - Transactions tab displays side-by-side dated expenses and income entries with inline editing and confirmation on
+      deletion.
+    - Categories are seeded from defaults, customizable, reorderable, and soft-deleted/archived without losing past
+      months' data.
+- **Budget Data Source Switch & Active Source Routing**: Analysis and the Dashboard now read data from the user's active
+  budget data source (Google Sheet or Budget Tracker).
+    - Segmented data source control allows users to switch between Google Sheet and Budget Tracker with anti-forgery
+      protection while preserving period/month query parameters.
+    - Source-named empty states provide actionable links to add data or switch sources without silent fallbacks.
+    - The Dashboard Monthly budget card shows planned vs actual income and expenses for the latest month of the active
+      source, with the source toggle and a source-named empty state.
+    - Recent activity labels the active source.
+- **Budget data provider**: Added a unified user-selected read path for Google Sheet or Budget Tracker budget months and
+  transactions.
+    - Monthly sheet aggregation retains its snapshot count; trends retain individual sheet snapshots, while Tracker
+      trends have one point per available month.
 - **Landing Page**: Signed-out visitors at `/` now see a public Landing Page instead of being redirected to the login
   form; signed-in users at `/` are redirected to their Dashboard.
     - New anonymous `HomeController` is the default route; `/Dashboard` still requires sign-in and deep links return
@@ -64,6 +86,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **ESLint Code Formatting**: Fixed 227 style and formatting violations across frontend JavaScript files.
+    - Resolved `space-before-function-paren` and `object-curly-spacing` rule violations across all files under
+      `PersonalFinance.Web/wwwroot/js/`.
+    - Ensured static analysis passes with zero errors in CI/CD pipeline.
+
+- **Investment Calculator Chart Rendering**: Prevented the Growth Over Time canvas from being rescaled by conflicting
+  CSS, improving sharpness and label readability across screen sizes.
+- **Budget Tracker Month/Year Selectors**: Month and year dropdowns now fill the navigation bar on mobile screens.
+  - Selects flex to share the row between the arrow buttons; extra right padding keeps text clear of the arrow.
+- **Budget Data Source Switch**: Fixed "Failed to switch budget data source" when choosing Budget Tracker on Analysis.
+  - The Web Refit client serialized the `BudgetDataSource` enum as a camelCase string, which ApiService could not bind
+    (HTTP 400); the enum now carries a `JsonStringEnumConverter` so both sides accept names and numbers.
+- **Sync Year Detection**: Fixed a synced month (e.g. "Monthly budget - October 2026") being stored under a wrong year
+  such as 2072.
+  - The year in the file name is now authoritative; sheet cells are only a fallback and monetary amounts (e.g. `2072`)
+    are no longer mistaken for years.
 - **Dashboard Fabricated Net Worth Chart**: Removed the net worth "trend" chart, which plotted invented history (the
   current figure multiplied by 1.05–1.20 and labelled "1Y ago" to "Now"); no net worth history is stored.
   - The Dashboard is rebuilt on an Indigo Ledger structure: a greeting, then one Razor partial per section (summary,
@@ -99,6 +137,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Dashboard Monthly budget card**: Added a provider-backed card showing planned vs actual income and expenses for the
+  latest month of the active source (Google Sheet or Budget Tracker), with a source toggle and source-named empty
+  states. The Budget Planner card remains separate and independent.
 - **App Shell Accent & Sidebar Persistence**: The sidebar, top bar, and mobile bottom navigation now use the Indigo
   Ledger brand accent, and the sidebar collapse preference is restored before first paint.
   - Replaced hard-coded `#58a6ff` accents with the indigo brand token (light indigo on the dark sidebar for contrast).

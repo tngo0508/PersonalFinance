@@ -402,7 +402,7 @@
                     if (seq !== txRequestSeq) { return; } // a newer request superseded this one
 
                     if (!data || !data.transactions || data.transactions.length === 0) {
-                        var message = (data && data.errorMessage) || 'No transactions were found. Make sure the spreadsheet has a sheet named "Transactions" with Date and Amount column headers.';
+                        const message = (data && data.errorMessage) || 'No transactions were found. Make sure the spreadsheet has a sheet named "Transactions" with Date and Amount column headers.';
                         $('#txErrorMessage').text(message);
                         showTxState('error');
                         return;

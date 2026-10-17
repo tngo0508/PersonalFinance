@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -20,11 +21,14 @@ public class DashboardService : IDashboardService
     /// <summary>Number of recent activity items shown on the Dashboard.</summary>
     private const int ActivityItemCount = 5;
 
+    private readonly IBudgetDataProvider _budgetDataProvider;
+
     private readonly AppDbContext _dbContext;
 
-    public DashboardService(AppDbContext dbContext)
+    public DashboardService(AppDbContext dbContext, IBudgetDataProvider budgetDataProvider)
     {
         _dbContext = dbContext;
+        _budgetDataProvider = budgetDataProvider;
     }
 
     public async Task<DashboardSummaryDto> GetDashboardSummaryAsync(string userId,
@@ -34,18 +38,22 @@ public class DashboardService : IDashboardService
         // Sequential queries on purpose: the request-scoped DbContext is not thread-safe (see spec).
         var netWorth = await GetNetWorthSummaryAsync(userId, cancellationToken);
         var budget = await GetBudgetSummaryAsync(userId, cancellationToken);
+        var monthlyBudget = await GetMonthlyBudgetSummaryAsync(userId, cancellationToken);
         var newestGoals = await GetNewestGoalsAsync(userId, cancellationToken);
         var goalsOverview = await GetGoalsOverviewAsync(userId, cancellationToken);
         var recentActivity = await GetRecentActivityAsync(userId, newestGoals, cancellationToken);
         var hasGoogleDriveConnection = await HasGoogleDriveConnectionAsync(userId, cancellationToken);
+        var activeSource = await _budgetDataProvider.GetActiveSourceAsync(userId, cancellationToken);
 
         return new DashboardSummaryDto
         {
             NetWorth = netWorth,
             Budget = budget,
+            MonthlyBudget = monthlyBudget,
             SavingsGoals = newestGoals.Select(g => g.Summary).ToList(),
             GoalsOverview = goalsOverview,
             RecentActivity = recentActivity,
+            ActiveSource = activeSource,
             HasGoogleDriveConnection = hasGoogleDriveConnection
         };
     }
@@ -134,6 +142,38 @@ public class DashboardService : IDashboardService
             .ToList();
     }
 
+    private async Task<DashboardMonthlyBudgetDto?> GetMonthlyBudgetSummaryAsync(string userId,
+        CancellationToken cancellationToken)
+    {
+        var years = await _budgetDataProvider.GetAvailableYearsAsync(userId, cancellationToken);
+        if (!years.Any())
+        {
+            return null;
+        }
+
+        var latestYear = years.Max();
+        var months = await _budgetDataProvider.GetMonthsAsync(userId, latestYear, cancellationToken);
+        if (!months.Any())
+        {
+            return null;
+        }
+
+        var latestMonth = months.OrderByDescending(m => m.Month).First();
+        var monthName =
+            new DateTime(latestYear, latestMonth.Month, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+
+        return new DashboardMonthlyBudgetDto
+        {
+            Year = latestYear,
+            Month = latestMonth.Month,
+            Period = monthName,
+            BudgetedIncome = latestMonth.BudgetedIncome,
+            ActualIncome = latestMonth.ActualIncome,
+            BudgetedExpenses = latestMonth.BudgetedExpenses,
+            ActualExpenses = latestMonth.ActualExpenses
+        };
+    }
+
     private async Task<BudgetSummaryDto?> GetBudgetSummaryAsync(string userId, CancellationToken cancellationToken)
     {
         var budget = await _dbContext.UserBudgetAllocations
@@ -203,9 +243,6 @@ public class DashboardService : IDashboardService
 
     /// <summary>Dollar share of monthly income for a percentage. Unrounded; rounding happens at presentation.</summary>
     private static decimal ToMonthlyAmount(decimal monthlyIncome, decimal percent) => percent / 100m * monthlyIncome;
-
-    /// <summary>A listed savings goal together with its creation time, which recent activity needs.</summary>
-    private sealed record NewestGoal(SavingsGoalSummaryDto Summary, DateTime CreatedAt);
 
     /// <summary>
     /// The user's newest goals, newest first. One query serves both the goals list and the goal entries in recent
@@ -289,14 +326,12 @@ public class DashboardService : IDashboardService
     private async Task<List<RecentActivityDto>> GetRecentActivityAsync(string userId, List<NewestGoal> newestGoals,
         CancellationToken cancellationToken)
     {
-        var recentTransactions = await _dbContext.SpreadsheetTransactionRecords
-            .AsNoTracking()
-            .Where(t => t.UserId == userId)
-            .OrderByDescending(t => t.Date)
-            .ThenByDescending(t => t.Id)
-            .Take(ActivityItemCount)
-            .Select(t => new { t.Id, t.Description, t.Category, t.Amount, t.Date, t.Type })
-            .ToListAsync(cancellationToken);
+        var recentTransactions = await _budgetDataProvider.GetTransactionsAsync(
+            userId,
+            DateOnly.MinValue,
+            DateOnly.MaxValue,
+            ActivityItemCount,
+            cancellationToken);
 
         var transactionItems = recentTransactions.Select(t => new
         {
@@ -345,4 +380,7 @@ public class DashboardService : IDashboardService
             .AsNoTracking()
             .AnyAsync(c => c.UserId == userId, cancellationToken);
     }
+
+    /// <summary>A listed savings goal together with its creation time, which recent activity needs.</summary>
+    private sealed record NewestGoal(SavingsGoalSummaryDto Summary, DateTime CreatedAt);
 }

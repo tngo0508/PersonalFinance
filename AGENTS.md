@@ -21,6 +21,8 @@ Before working on the project, read these reference documents:
 
 - **`GLOSSARY.md`** — Canonical definitions for architecture terms (Service, DTO, Entity) and domain concepts.
 - **`docs/adr/`** — Architecture Decision Records explaining why key design choices were made.
+- **`PersonalFinance/tests/PersonalFinance.Tests/`** — Test project using xUnit with `UseInMemoryDatabase`. New features
+  should add tests here following existing patterns (e.g., `DashboardServiceTests.cs`).
 
 ## Project Architecture
 
@@ -706,37 +708,22 @@ document.getElementById('myElement').innerHTML = userInput;
 ```
 
 ### ESLint Configuration
-The project extends `eslint:recommended` with the following key rules:
 
-**Variables:**
-- Use `let` or `const`, never `var` (`no-var`, `prefer-const`)
-- No unused variables (`no-unused-vars`) — prefix with `_` to intentionally ignore
-- No undefined variables (`no-undef`)
+The full rule set lives in `PersonalFinance.Web/wwwroot/.eslintrc.js`. Read it when you need to check a specific rule.
 
-**Code Style:**
-- **4-space indentation**
-- **Single quotes** for strings
-- **Semicolons** required at statement ends
-- **No trailing commas** (`comma-dangle: never`)
-- **4-space indent** for blocks
+**Run ESLint:**
+
+- **CI / Linux:** `npm run lint` (checks all files) or `npm run lint:fix` (auto-fixes formatting).
+- **Windows local:**
+  `$env:ESLINT_USE_FLAT_CONFIG='false'; npx --yes eslint@8 --no-eslintrc -c 'PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js' <files>`
+
+**Key rules to follow manually:**
+
+- **4-space indentation**, single quotes, semicolons required
+- **Space before function parens**: `function name ()` not `function name()`
 - **Object curly spacing**: always spaced (`{ key: value }`)
-- **Array bracket spacing**: never spaced (`[item1, item2]`)
-- **No multiple empty lines** (max 1 consecutive blank line)
-
-**Best Practices:**
-- **Always use curly braces** for all control structures (`curly: all`)
-- **No `console`** statements in production (`no-console: warn`)
-- **No `debugger`**, `eval`, or `with` statements
-- **No throwing literals** — always throw `Error` objects
-- **Require `await`** in async functions (`require-await`)
-- **No Yoda conditions** — write `x === 5`, not `5 === x`
-- **No unused expressions**
-
-**Potential Bugs:**
-- Always use `isNaN()` for NaN checks (`use-isnan`)
-- Always use valid `typeof` values (`valid-typeof`)
-- No unsafe optional chaining, negation, or finally blocks
-- No loss of precision, sparse arrays, or regex spaces
+- **Always use curly braces** for all control structures
+- **No trailing commas**
 
 ### Module Pattern
 Use **IIFE (Immediately Invoked Function Expression)** modules with `'use strict'` to avoid polluting the global namespace:

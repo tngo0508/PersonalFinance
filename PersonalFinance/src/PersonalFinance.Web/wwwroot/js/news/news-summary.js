@@ -40,11 +40,15 @@
         const articleTitle = btn.dataset.articleTitle;
         const articleDescription = btn.dataset.articleDescription;
 
-        if (!articleUrl) return;
+        if (!articleUrl) {
+            return;
+        }
 
         // Find the associated summary container
         const card = btn.closest('.finance-hub-card');
-        if (!card) return;
+        if (!card) {
+            return;
+        }
 
         const summaryContainer = card.querySelector('.finance-hub-card-summary');
         const summaryContent = summaryContainer ? summaryContainer.querySelector('.finance-hub-summary-content') : null;
@@ -61,7 +65,9 @@
         }
 
         // Prevent duplicate requests
-        if (inFlight.has(articleUrl)) return;
+        if (inFlight.has(articleUrl)) {
+            return;
+        }
 
         // Set loading state
         btn.disabled = true;

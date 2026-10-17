@@ -1,7 +1,7 @@
-using PersonalFinance.ApiService.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
@@ -40,6 +40,7 @@ public class SpreadsheetAnalysisController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var availableYears = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
+        var activeSource = await _analysisService.GetActiveSourceAsync(userId, cancellationToken);
 
         if (!availableYears.Any())
         {
@@ -47,7 +48,10 @@ public class SpreadsheetAnalysisController : ControllerBase
             {
                 HasData = false,
                 Year = year ?? 0,
-                AvailableYears = availableYears
+                Month = month,
+                AvailableYears = availableYears,
+                AvailableMonths = new List<int>(),
+                ActiveSource = activeSource
             });
         }
 
@@ -62,11 +66,12 @@ public class SpreadsheetAnalysisController : ControllerBase
 
         return Ok(new AnalysisDashboardResult
         {
-            HasData = true,
+            HasData = summary != null,
             Year = selectedYear,
             Month = month,
             AvailableYears = availableYears,
             AvailableMonths = availableMonths,
+            ActiveSource = activeSource,
             Summary = summary,
             Velocity = velocity,
             Trends = trends,

@@ -1,5 +1,7 @@
+@using System.Globalization
+@using PersonalFinance.Shared.Enums
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
-@* Recent activity section (ticket 07): type icon, title, description and date, newest first. *@
+@* Recent activity section: type icon, title, description and date, newest first. Displays active budget data source. *@
 @{
     static (string Icon, string Modifier, string Label) ActivityStyle(string type) => type switch
     {
@@ -9,12 +11,16 @@
         _ => ("circle", "other", "Activity")
     };
 
-    // The Dashboard service returns exactly the items to show, already in display order.
     var items = Model.RecentActivity;
+    var sourceName = Model.ActiveSource == BudgetDataSource.BudgetTracker ? "Budget Tracker" : "Google Sheet";
 }
 <section class="dash-card dash-activity" aria-labelledby="dash-activity-title">
-    <div class="dash-card__header">
-        <h2 id="dash-activity-title" class="dash-card__title">Recent activity</h2>
+    <div class="dash-card__header flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <h2 id="dash-activity-title" class="dash-card__title mb-0">Recent activity</h2>
+            <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
+        </div>
+        <span class="badge bg-light text-secondary border">Source: @sourceName</span>
     </div>
     @if (items.Count > 0)
     {
@@ -30,7 +36,7 @@
                     <div class="dash-activity__body">
                         <div class="dash-activity__row">
                             <span class="dash-activity__title">@activity.Title</span>
-                            <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)">@activity.Date.ToString("MMM d, yyyy")</time>
+                            <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@activity.Date.ToString("MMM d, yyyy")</time>
                         </div>
                         <span class="dash-activity__description">@activity.Description</span>
                     </div>
@@ -40,6 +46,21 @@
     }
     else
     {
-        <p class="dash-empty">No recent activity yet.</p>
+        @if (Model.ActiveSource == BudgetDataSource.GoogleSheet)
+        {
+            <p class="dash-empty">
+                No recent activity from Google Sheet.
+                <a asp-controller="GoogleDrive" asp-action="Index">Sync your spreadsheet</a> or switch to Budget Tracker
+                above.
+            </p>
+        }
+        else
+        {
+            <p class="dash-empty">
+                No recent activity in Budget Tracker.
+                <a asp-controller="BudgetTracker" asp-action="Index">Add transactions</a> or switch to Google Sheet
+                above.
+            </p>
+        }
     }
 </section>

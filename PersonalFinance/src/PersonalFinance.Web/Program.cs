@@ -159,7 +159,11 @@ try
     // Validate antiforgery tokens on every unsafe (POST/PUT/PATCH/DELETE) MVC action by default
     builder.Services.AddControllersWithViews(options =>
             options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
-        .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+        .AddJsonOptions(opts =>
+        {
+            opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        });
     builder.Services.AddProblemDetails();
 
     // 5. Register Health Checks
@@ -243,6 +247,16 @@ try
 
     // 7g. Register Dashboard API client
     builder.Services.AddRefitClient<IDashboardApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
+    // 7h. Register Budget Tracker API client
+    builder.Services.AddRefitClient<IBudgetTrackerApi>()
         .ConfigureHttpClient(client =>
         {
             client.BaseAddress = new Uri(apiBaseUrl);

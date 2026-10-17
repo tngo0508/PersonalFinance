@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
+
 namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
@@ -10,6 +10,7 @@ namespace PersonalFinance.ApiService.Services;
 /// </summary>
 public class BudgetService : IBudgetService
 {
+    private readonly IBudgetDataProvider _budgetDataProvider;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<BudgetService> _logger;
     private readonly INotificationService _notificationService;
@@ -17,11 +18,13 @@ public class BudgetService : IBudgetService
     public BudgetService(
         AppDbContext dbContext,
         ILogger<BudgetService> logger,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IBudgetDataProvider budgetDataProvider)
     {
         _dbContext = dbContext;
         _logger = logger;
         _notificationService = notificationService;
+        _budgetDataProvider = budgetDataProvider;
     }
 
     public async Task<BudgetAllocationResponseDto?> GetBudgetAsync(string userId, string period,
@@ -104,12 +107,8 @@ public class BudgetService : IBudgetService
             var year = int.Parse(period.Substring(0, 4));
             var month = int.Parse(period.Substring(5, 2));
 
-            var snapshots = await _dbContext.SpreadsheetBudgetSnapshots
-                .AsNoTracking()
-                .Where(s => s.UserId == userId && s.Year == year && s.MonthNumber == month)
-                .ToListAsync(cancellationToken);
-
-            if (!snapshots.Any())
+            var monthData = await _budgetDataProvider.GetMonthAsync(userId, year, month, cancellationToken);
+            if (monthData == null)
             {
                 return;
             }
@@ -123,8 +122,8 @@ public class BudgetService : IBudgetService
                 return;
             }
 
-            var totalBudgetedExpenses = snapshots.Sum(s => s.BudgetedExpenses);
-            var totalActualExpenses = snapshots.Sum(s => s.ActualExpenses);
+            var totalBudgetedExpenses = monthData.BudgetedExpenses;
+            var totalActualExpenses = monthData.ActualExpenses;
 
             if (totalBudgetedExpenses <= 0)
             {

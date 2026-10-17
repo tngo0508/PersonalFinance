@@ -95,6 +95,31 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<SpreadsheetTransactionRecord> SpreadsheetTransactionRecords => Set<SpreadsheetTransactionRecord>();
 
     /// <summary>
+    ///     Budget Tracker categories table set — user-owned expense and income categories.
+    /// </summary>
+    public DbSet<BudgetCategory> BudgetCategories => Set<BudgetCategory>();
+
+    /// <summary>
+    ///     Budget Tracker monthly plans table set — one plan per user and calendar month.
+    /// </summary>
+    public DbSet<MonthlyBudgetPlan> MonthlyBudgetPlans => Set<MonthlyBudgetPlan>();
+
+    /// <summary>
+    ///     Budget Tracker monthly plan lines table set — planned amounts and optional Actual overrides per category and month.
+    /// </summary>
+    public DbSet<MonthlyBudgetLine> MonthlyBudgetLines => Set<MonthlyBudgetLine>();
+
+    /// <summary>
+    ///     Budget Tracker transactions table set — dated expense and income entries.
+    /// </summary>
+    public DbSet<BudgetTransaction> BudgetTransactions => Set<BudgetTransaction>();
+
+    /// <summary>
+    ///     Budget data source preferences table set — the source a user explicitly selected for Analysis and the Dashboard.
+    /// </summary>
+    public DbSet<UserBudgetSourcePreference> UserBudgetSourcePreferences => Set<UserBudgetSourcePreference>();
+
+    /// <summary>
     /// User notifications table set — stores budget alerts, savings milestones, and sync status notifications.
     /// </summary>
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -122,6 +147,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         modelBuilder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<CommunityStoryLike>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<BudgetCategory>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<MonthlyBudgetPlan>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<MonthlyBudgetLine>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<BudgetTransaction>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
 
         // Explicit Identity key/FK lengths so both providers (and design-time scaffolding) produce
         // bounded string columns. SQL Server cannot index or key nvarchar(max).
@@ -460,6 +490,79 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.UserId, e.IsRead });
+        });
+
+        // --- Budget Tracker entities ---
+
+        // Configure BudgetCategory entity — unique per user and kind among non-deleted rows
+        modelBuilder.Entity<BudgetCategory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Kind).IsRequired();
+            entity.HasIndex(e => new { e.UserId, e.Kind, e.Name })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+        });
+
+        // Configure MonthlyBudgetPlan entity — one plan per user and calendar month among non-deleted rows
+        modelBuilder.Entity<MonthlyBudgetPlan>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => new { e.UserId, e.Year, e.Month })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+
+            entity.HasMany(e => e.Lines)
+                .WithOne(e => e.Plan)
+                .HasForeignKey(e => e.PlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure MonthlyBudgetLine entity — one line per plan and category among non-deleted rows
+        modelBuilder.Entity<MonthlyBudgetLine>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.PlannedAmount).HasPrecision(18, 2);
+            entity.Property(e => e.ActualOverride).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.PlanId, e.CategoryId })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+
+            entity.HasOne(e => e.Category)
+                .WithMany()
+                .HasForeignKey(e => e.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure BudgetTransaction entity — month membership is a date-range query on Date
+        modelBuilder.Entity<BudgetTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Date).IsRequired();
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => new { e.UserId, e.Date });
+
+            entity.HasOne(e => e.Category)
+                .WithMany()
+                .HasForeignKey(e => e.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure UserBudgetSourcePreference entity — one preference per user
+        modelBuilder.Entity<UserBudgetSourcePreference>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Source).IsRequired();
+            entity.HasIndex(e => e.UserId)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
         });
     }
 }

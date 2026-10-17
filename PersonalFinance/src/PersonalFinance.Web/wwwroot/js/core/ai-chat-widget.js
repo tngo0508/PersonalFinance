@@ -55,10 +55,18 @@
      */
     function detectPageContext() {
         const path = window.location.pathname;
-        if (path.indexOf('/GoogleDrive') >= 0) return 'GoogleDrive';
-        if (path.indexOf('/Networth') >= 0) return 'Networth';
-        if (path.indexOf('/News') >= 0) return 'News';
-        if (path.indexOf('/Community') >= 0) return 'Community';
+        if (path.indexOf('/GoogleDrive') >= 0) {
+            return 'GoogleDrive';
+        }
+        if (path.indexOf('/Networth') >= 0) {
+            return 'Networth';
+        }
+        if (path.indexOf('/News') >= 0) {
+            return 'News';
+        }
+        if (path.indexOf('/Community') >= 0) {
+            return 'Community';
+        }
         return 'Home';
     }
 
@@ -79,15 +87,6 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    }
-
-    /**
-     * Escape special characters for HTML attribute values.
-     * @param {string} text
-     * @returns {string}
-     */
-    function escapeAttr(text) {
-        return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     /**
@@ -172,7 +171,9 @@
      */
     function renderWelcome() {
         const container = document.getElementById('ai-chat-messages');
-        if (!container) return;
+        if (!container) {
+            return;
+        }
 
         const greeting = getGreeting();
         let html =
@@ -202,7 +203,9 @@
      */
     function addMessage(role, content) {
         const container = document.getElementById('ai-chat-messages');
-        if (!container) return;
+        if (!container) {
+            return;
+        }
 
         const wrapper = document.createElement('div');
         wrapper.className = 'ai-chat-message ai-chat-message-' + role;
@@ -232,7 +235,9 @@
      */
     function showTyping() {
         const container = document.getElementById('ai-chat-messages');
-        if (!container) return;
+        if (!container) {
+            return;
+        }
 
         const el = document.createElement('div');
         el.className = 'ai-chat-message ai-chat-message-assistant';
@@ -247,7 +252,9 @@
      */
     function hideTyping() {
         const el = document.getElementById('ai-chat-typing');
-        if (el) el.remove();
+        if (el) {
+            el.remove();
+        }
     }
 
     /**
@@ -255,21 +262,31 @@
      * @param {string} message
      */
     async function sendMessage(message) {
-        if (state.isLoading || !message.trim()) return;
+        if (state.isLoading || !message.trim()) {
+            return;
+        }
         state.isLoading = true;
 
         const input = document.getElementById('ai-chat-input');
         const sendBtn = document.getElementById('ai-chat-send');
-        if (input) input.disabled = true;
-        if (sendBtn) sendBtn.disabled = true;
+        if (input) {
+            input.disabled = true;
+        }
+        if (sendBtn) {
+            sendBtn.disabled = true;
+        }
 
         // Clear welcome and show conversation
         const container = document.getElementById('ai-chat-messages');
-        if (container) container.innerHTML = '';
+        if (container) {
+            container.innerHTML = '';
+        }
         state.hasInteracted = true;
 
         addMessage('user', message);
-        if (input) input.value = '';
+        if (input) {
+            input.value = '';
+        }
         showTyping();
 
         try {
@@ -283,7 +300,9 @@
                 })
             });
 
-            if (!response.ok) throw new Error('API request failed');
+            if (!response.ok) {
+                throw new Error('API request failed');
+            }
 
             const data = await response.json();
             hideTyping();
@@ -292,9 +311,13 @@
             hideTyping();
             addMessage('assistant', 'I\'m sorry, I encountered an error. Please try again later.');
         } finally {
-            state.isLoading = false;
-            if (input) input.disabled = false;
-            if (sendBtn) sendBtn.disabled = !input || !input.value.trim();
+            state.isLoading = false; // eslint-disable-line require-atomic-updates
+            if (input) {
+                input.disabled = false;
+            }
+            if (sendBtn) {
+                sendBtn.disabled = !input || !input.value.trim();
+            }
         }
     }
 
@@ -304,7 +327,9 @@
     function openChat() {
         const panel = document.getElementById('ai-chat-panel');
         const button = document.getElementById('ai-chat-button');
-        if (!panel || !button) return;
+        if (!panel || !button) {
+            return;
+        }
 
         state.isOpen = true;
         panel.classList.add('ai-chat-panel-open');
@@ -316,7 +341,9 @@
         }
 
         const input = document.getElementById('ai-chat-input');
-        if (input) input.focus();
+        if (input) {
+            input.focus();
+        }
     }
 
     /**
@@ -325,7 +352,9 @@
     function closeChat() {
         const panel = document.getElementById('ai-chat-panel');
         const button = document.getElementById('ai-chat-button');
-        if (!panel || !button) return;
+        if (!panel || !button) {
+            return;
+        }
 
         state.isOpen = false;
         panel.classList.remove('ai-chat-panel-open');
@@ -337,7 +366,11 @@
      * Toggle the chat panel.
      */
     function toggleChat() {
-        state.isOpen ? closeChat() : openChat();
+        if (state.isOpen) {
+            closeChat();
+        } else {
+            openChat();
+        }
     }
 
     /**
@@ -359,11 +392,17 @@
         const form = document.getElementById('ai-chat-form');
         const input = document.getElementById('ai-chat-input');
 
-        if (button) button.addEventListener('click', toggleChat);
+        if (button) {
+            button.addEventListener('click', toggleChat);
+        }
 
-        if (closeBtn) closeBtn.addEventListener('click', closeChat);
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeChat);
+        }
 
-        if (resetBtn) resetBtn.addEventListener('click', resetChat);
+        if (resetBtn) {
+            resetBtn.addEventListener('click', resetChat);
+        }
 
         if (form) {
             form.addEventListener('submit', function (e) {
@@ -377,7 +416,9 @@
         if (input) {
             input.addEventListener('input', function () {
                 const sendBtn = document.getElementById('ai-chat-send');
-                if (sendBtn) sendBtn.disabled = !this.value.trim();
+                if (sendBtn) {
+                    sendBtn.disabled = !this.value.trim();
+                }
             });
         }
 
@@ -386,7 +427,9 @@
         if (messagesContainer) {
             messagesContainer.addEventListener('click', function (e) {
                 const chip = e.target.closest('.ai-chat-chip');
-                if (!chip) return;
+                if (!chip) {
+                    return;
+                }
                 const index = parseInt(chip.getAttribute('data-index'), 10);
                 if (!isNaN(index) && QUICK_ACTIONS[index]) {
                     sendMessage(QUICK_ACTIONS[index].message);
@@ -396,12 +439,16 @@
 
         // Escape key closes panel
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && state.isOpen) closeChat();
+            if (e.key === 'Escape' && state.isOpen) {
+                closeChat();
+            }
         });
 
         // Close on outside click (use capture phase so it runs before inner handlers that may mutate the DOM)
         document.addEventListener('click', function (e) {
-            if (!state.isOpen) return;
+            if (!state.isOpen) {
+                return;
+            }
             const panel = document.getElementById('ai-chat-panel');
             const button = document.getElementById('ai-chat-button');
             if (panel && button && !panel.contains(e.target) && !button.contains(e.target)) {
