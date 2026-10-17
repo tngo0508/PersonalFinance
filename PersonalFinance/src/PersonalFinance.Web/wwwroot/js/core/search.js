@@ -14,7 +14,7 @@
          * Initialize the search module.
          * @returns {void}
          */
-        function init() {
+        function init () {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', setup);
             } else {
@@ -26,7 +26,7 @@
          * Set up search event listeners.
          * @returns {void}
          */
-        function setup() {
+        function setup () {
             searchInput = document.getElementById('topbarSearchInput');
             resultsDropdown = document.getElementById('searchResultsDropdown');
 
@@ -62,7 +62,7 @@
          * @param {string} query - The search query.
          * @returns {void}
          */
-        function performSearch(query) {
+        function performSearch (query) {
             fetch('/api/Search?q=' + encodeURIComponent(query))
                 .then(function (response) {
                     if (!response.ok) {
@@ -83,7 +83,7 @@
          * @param {Object} data - Search results with Transactions, BudgetItems, SavingsGoals.
          * @returns {void}
          */
-        function displayResults(data) {
+        function displayResults (data) {
             if (!resultsDropdown) {
                 return;
             }
@@ -136,7 +136,7 @@
          * Hide the search results dropdown.
          * @returns {void}
          */
-        function hideResults() {
+        function hideResults () {
             if (resultsDropdown) {
                 resultsDropdown.classList.remove('show');
                 resultsDropdown.innerHTML = '';
@@ -148,7 +148,7 @@
          * @param {string} text - The text to escape.
          * @returns {string} Escaped text.
          */
-        function escapeHtml(text) {
+        function escapeHtml (text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;

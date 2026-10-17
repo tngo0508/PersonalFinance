@@ -4,7 +4,7 @@
 (function () {
     'use strict';
 
-    let calcChartTooltip = {visible: false, x: 0, y: 0, text: ''};
+    let calcChartTooltip = { visible: false, x: 0, y: 0, text: '' };
     let calcChartResizeTimer = null;
 
     /**
@@ -12,7 +12,7 @@
      * @param {number} value - The value to format.
      * @returns {string} The formatted currency string.
      */
-    function formatCurrency(value) {
+    function formatCurrency (value) {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
@@ -24,7 +24,7 @@
     /**
      * Initialize the calculator inputs and event listeners.
      */
-    function initCalculator() {
+    function initCalculator () {
         const inputs = [
             {
                 rangeId: 'calcInitialRange',
@@ -38,11 +38,11 @@
                 valId: 'calcMonthlyValue',
                 format: v => formatCurrency(v)
             },
-            {rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => v + '%'},
-            {rangeId: 'calcYearsRange', numId: 'calcYears', valId: 'calcYearsValue', format: v => v + ' years'}
+            { rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => v + '%' },
+            { rangeId: 'calcYearsRange', numId: 'calcYears', valId: 'calcYearsValue', format: v => v + ' years' }
         ];
 
-        inputs.forEach(({rangeId, numId, valId, format}) => {
+        inputs.forEach(({ rangeId, numId, valId, format }) => {
             const range = document.getElementById(rangeId);
             const num = document.getElementById(numId);
             const val = document.getElementById(valId);
@@ -70,7 +70,7 @@
     /**
      * Setup resize handler for responsive chart.
      */
-    function setupCalcChartResize() {
+    function setupCalcChartResize () {
         const container = document.querySelector('.calculator-chart-container');
         if (!container) {
             return;
@@ -95,7 +95,7 @@
     /**
      * Calculate investment growth and update the UI.
      */
-    function calculateInvestment() {
+    function calculateInvestment () {
         const initial = parseFloat(document.getElementById('calcInitial')?.value) || 0;
         const monthly = parseFloat(document.getElementById('calcMonthly')?.value) || 0;
         const rate = parseFloat(document.getElementById('calcRate')?.value) || 0;
@@ -135,7 +135,7 @@
      * Get chart dimensions based on container size.
      * @returns {Object|null} The chart dimensions.
      */
-    function getCalcChartDimensions() {
+    function getCalcChartDimensions () {
         const canvas = document.getElementById('calcChart');
         if (!canvas) {
             return null;
@@ -148,7 +148,7 @@
         const maxWidth = 800;
         const w = Math.min(maxWidth, containerWidth);
         const h = Math.round(w * 0.7);
-        return {w, h};
+        return { w, h };
     }
 
     /**
@@ -158,7 +158,7 @@
      * @param {number} rate - Annual return rate.
      * @param {number} years - Time period in years.
      */
-    function drawCalcChart(initial, monthly, rate, years) {
+    function drawCalcChart (initial, monthly, rate, years) {
         const canvas = document.getElementById('calcChart');
         if (!canvas) {
             return;
@@ -177,7 +177,7 @@
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        const padding = {top: 16, right: 24, bottom: 50, left: 68};
+        const padding = { top: 16, right: 24, bottom: 50, left: 68 };
         const chartW = w - padding.left - padding.right;
         const chartH = h - padding.top - padding.bottom;
 
@@ -198,19 +198,19 @@
                 fv = initial * Math.pow(1 + monthlyRate, m) + monthly * ((Math.pow(1 + monthlyRate, m) - 1) / monthlyRate);
             }
             const contrib = initial + monthly * m;
-            points.push({x: y, y: fv});
-            contribPoints.push({x: y, y: contrib});
+            points.push({ x: y, y: fv });
+            contribPoints.push({ x: y, y: contrib });
         }
 
         const maxVal = Math.max(...points.map(p => p.y), 1);
         const niceMax = niceScaleMax(maxVal);
         const gridLines = 5;
 
-        function toCanvasX(year) {
+        function toCanvasX (year) {
             return padding.left + (year / years) * chartW;
         }
 
-        function toCanvasY(val) {
+        function toCanvasY (val) {
             return padding.top + chartH - (val / niceMax) * chartH;
         }
 
@@ -258,11 +258,11 @@
         }
 
         // Smooth curve helper
-        function drawSmoothCurve(data) {
+        function drawSmoothCurve (data) {
             if (data.length < 2) {
                 return;
             }
-            const coords = data.map(p => ({x: toCanvasX(p.x), y: toCanvasY(p.y)}));
+            const coords = data.map(p => ({ x: toCanvasX(p.x), y: toCanvasY(p.y) }));
             ctx.beginPath();
             ctx.moveTo(coords[0].x, coords[0].y);
             for (let i = 0; i < coords.length - 1; i++) {
@@ -322,7 +322,7 @@
         ctx.stroke();
 
         // End-point dots
-        function drawDot(data, color) {
+        function drawDot (data, color) {
             const last = data[data.length - 1];
             const cx = toCanvasX(last.x);
             const cy = toCanvasY(last.y);
@@ -346,7 +346,7 @@
         updateLegend(points, contribPoints);
 
         // Store chart metadata for tooltip
-        canvas._chartMeta = {padding, chartW, chartH, points, contribPoints, niceMax, years, toCanvasX, toCanvasY};
+        canvas._chartMeta = { padding, chartW, chartH, points, contribPoints, niceMax, years, toCanvasX, toCanvasY };
     }
 
     /**
@@ -354,7 +354,7 @@
    * @param {Array} points - Total value data points.
    * @param {Array} contribPoints - Contributions data points.
    */
-    function updateLegend(points, contribPoints) {
+    function updateLegend (points, contribPoints) {
         if (points.length === 0 || contribPoints.length === 0) {
             return;
         }
@@ -382,7 +382,7 @@
      * @param {number} rawMax - The raw maximum value.
      * @returns {number} The nice maximum value.
      */
-    function niceScaleMax(rawMax) {
+    function niceScaleMax (rawMax) {
         if (rawMax <= 0) {
             return 100;
         }
@@ -412,7 +412,7 @@
      * @param {number} val - The value to format.
      * @returns {string} The formatted string.
      */
-    function formatAxisValue(val) {
+    function formatAxisValue (val) {
         if (val >= 1000000) {
             return '$' + (val / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
         }
@@ -431,7 +431,7 @@
      * @param {number} h - Height.
      * @param {number} r - Corner radius.
      */
-    function roundRect(ctx, x, y, w, h, r) {
+    function roundRect (ctx, x, y, w, h, r) {
         ctx.beginPath();
         ctx.moveTo(x + r, y);
         ctx.lineTo(x + w - r, y);
@@ -448,7 +448,7 @@
     /**
      * Setup chart hover tooltip.
      */
-    function setupCalcChartTooltip() {
+    function setupCalcChartTooltip () {
         const canvas = document.getElementById('calcChart');
         if (!canvas) {
             return;
@@ -463,7 +463,7 @@
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
 
-            const {padding, chartW, chartH, points, contribPoints, years, toCanvasX} = meta;
+            const { padding, chartW, chartH, points, contribPoints, years, toCanvasX } = meta;
 
             if (mx < padding.left || mx > padding.left + chartW || my < padding.top || my > padding.top + chartH) {
                 calcChartTooltip.visible = false;
@@ -507,7 +507,7 @@
      * @param {number} year - The target year.
      * @returns {Object} The nearest point.
      */
-    function nearestPoint(data, year) {
+    function nearestPoint (data, year) {
         let best = data[0];
         let bestDist = Math.abs(best.x - year);
         for (let i = 1; i < data.length; i++) {
@@ -523,7 +523,7 @@
     /**
      * Redraw the chart with tooltip if visible.
      */
-    function redrawCalcChartWithTooltip() {
+    function redrawCalcChartWithTooltip () {
         const initial = parseFloat(document.getElementById('calcInitial')?.value) || 0;
         const monthly = parseFloat(document.getElementById('calcMonthly')?.value) || 0;
         const rate = parseFloat(document.getElementById('calcRate')?.value) || 0;
@@ -538,7 +538,7 @@
     /**
      * Draw the tooltip on the chart.
      */
-    function drawCalcChartTooltip() {
+    function drawCalcChartTooltip () {
         const canvas = document.getElementById('calcChart');
         if (!canvas) {
             return;
@@ -549,8 +549,8 @@
             return;
         }
 
-        const {toCanvasY, padding, chartH} = meta;
-        const {x: cx, year, value, contribution} = calcChartTooltip;
+        const { toCanvasY, padding, chartH } = meta;
+        const { x: cx, year, value, contribution } = calcChartTooltip;
 
         // Vertical guide line
         ctx.beginPath();

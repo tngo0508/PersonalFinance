@@ -74,7 +74,7 @@
     /**
      * Set background colors on category color boxes to match chart slice colors.
      */
-    function setColorBoxes() {
+    function setColorBoxes () {
         const colorBoxes = document.querySelectorAll('.budget-category-color-box');
         colorBoxes.forEach(function (box) {
             const index = parseInt(box.getAttribute('data-color-index'), 10);
@@ -87,7 +87,7 @@
     /**
      * Sync slider and input values from currentData.
      */
-    function syncSlidersFromData() {
+    function syncSlidersFromData () {
         categories.forEach(function (cat) {
             const value = currentData[cat] || 0;
             const slider = document.getElementById('slider-' + capitalize(cat));
@@ -117,7 +117,7 @@
     /**
      * Bind all event listeners.
      */
-    function bindEvents() {
+    function bindEvents () {
         // Income input
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
@@ -233,7 +233,7 @@
     /**
      * Sync all form input values from currentData so the form POST carries the latest values.
      */
-    function syncFormInputsFromData() {
+    function syncFormInputsFromData () {
         // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
@@ -260,7 +260,7 @@
     /**
      * Update all UI components: chart, amounts, summary, remaining.
      */
-    function updateAll() {
+    function updateAll () {
         updateAmounts();
         updateRemaining();
         updateTotalBadge();
@@ -271,7 +271,7 @@
     /**
      * Update dollar amount displays for each category.
      */
-    function updateAmounts() {
+    function updateAmounts () {
         const income = currentData.monthlyIncome || 0;
 
         categories.forEach(function (cat) {
@@ -297,7 +297,7 @@
      * @param {string} cat - Category name (PascalCase)
      * @param {number} percent - Percentage value
      */
-    function syncAmountInput(cat, percent) {
+    function syncAmountInput (cat, percent) {
         const income = currentData.monthlyIncome || 0;
         const amount = (income * percent) / 100;
         const amountInput = document.querySelector('.budget-amount-input[data-category="' + cat + '"]');
@@ -309,7 +309,7 @@
     /**
      * Update remaining allocation indicator.
      */
-    function updateRemaining() {
+    function updateRemaining () {
         const total = getTotal();
         const remaining = 100 - total;
         const remainingEl = document.getElementById('budgetRemainingValue');
@@ -333,7 +333,7 @@
     /**
      * Update total allocation badge.
      */
-    function updateTotalBadge() {
+    function updateTotalBadge () {
         const total = getTotal();
         const badge = document.getElementById('budgetTotalBadge');
         const totalSpan = document.getElementById('budgetTotalPercent');
@@ -356,7 +356,7 @@
     /**
      * Update the summary list.
      */
-    function updateSummaryTable() {
+    function updateSummaryTable () {
         const income = currentData.monthlyIncome || 0;
         const list = document.getElementById('budgetSummaryList');
         if (!list) {
@@ -562,7 +562,7 @@
                 ctx.fillStyle = '#505050';
                 ctx.fillText(displayText, textX, labelY);
 
-                placedLabels.push({x: labelX, y: labelY});
+                placedLabels.push({ x: labelX, y: labelY });
             });
 
             ctx.restore();
@@ -572,7 +572,7 @@
     /**
      * Initialize the pie chart.
      */
-    function initChart() {
+    function initChart () {
         Chart.register(leaderLinePlugin);
 
         const canvas = document.getElementById('budgetPieChart');
@@ -632,7 +632,7 @@
     /**
      * Update the pie chart with current data.
      */
-    function updateChart() {
+    function updateChart () {
         if (!chart) {
             return;
         }
@@ -647,7 +647,7 @@
      * Calculate total allocation percentage.
      * @returns {number} Total percentage
      */
-    function getTotal() {
+    function getTotal () {
         let total = 0;
         categories.forEach(function (cat) {
             total += currentData[cat] || 0;
@@ -660,11 +660,11 @@
      * @param {number} value - The amount to format
      * @returns {string} Formatted currency string
      */
-    function formatCurrency(value) {
+    function formatCurrency (value) {
         if (value === Math.floor(value)) {
             return value.toLocaleString('en-US');
         }
-        return value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     /**
@@ -672,7 +672,7 @@
      * @param {string} str - The camelCase category key (e.g., "debtRepayment")
      * @returns {string} PascalCase property name (e.g., "DebtRepayment")
      */
-    function capitalize(str) {
+    function capitalize (str) {
         if (!str) {
             return str;
         }
@@ -697,7 +697,7 @@
      * @param {string} cat - Category name (e.g., "DebtRepayment")
      * @returns {string} Normalized category (e.g., "debtRepayment")
      */
-    function normalizeCategory(cat) {
+    function normalizeCategory (cat) {
         if (!cat) {
             return cat;
         }

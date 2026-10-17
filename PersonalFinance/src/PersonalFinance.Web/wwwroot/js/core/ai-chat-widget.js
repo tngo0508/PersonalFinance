@@ -27,15 +27,15 @@
             label: 'Analyze my budget',
             message: 'Analyze my budget allocations and show me spending patterns.'
         },
-        {icon: '💰', label: 'Savings tips', message: 'Suggest areas where I can reduce spending to save more money.'},
+        { icon: '💰', label: 'Savings tips', message: 'Suggest areas where I can reduce spending to save more money.' },
         {
             icon: '📈',
             label: 'Net worth outlook',
             message: 'Based on my current finances, project my net worth over the next 5 years.'
         },
-        {icon: '🎯', label: 'Budget planning', message: 'Help me apply the 50/30/20 budgeting rule to my finances.'},
-        {icon: '🔍', label: 'Spending patterns', message: 'Review my recent transactions and identify spending trends.'},
-        {icon: '🏦', label: 'Retirement check', message: 'Help me understand if I\'m on track for retirement.'}
+        { icon: '🎯', label: 'Budget planning', message: 'Help me apply the 50/30/20 budgeting rule to my finances.' },
+        { icon: '🔍', label: 'Spending patterns', message: 'Review my recent transactions and identify spending trends.' },
+        { icon: '🏦', label: 'Retirement check', message: 'Help me understand if I\'m on track for retirement.' }
     ];
 
     /**
@@ -53,7 +53,7 @@
      * Detect the current page context from the URL path.
      * @returns {string}
      */
-    function detectPageContext() {
+    function detectPageContext () {
         const path = window.location.pathname;
         if (path.indexOf('/GoogleDrive') >= 0) {
             return 'GoogleDrive';
@@ -74,7 +74,7 @@
      * Get a contextual greeting based on the current page.
      * @returns {string}
      */
-    function getGreeting() {
+    function getGreeting () {
         return PAGE_GREETINGS[detectPageContext()] || PAGE_GREETINGS.Home;
     }
 
@@ -83,7 +83,7 @@
      * @param {string} text
      * @returns {string}
      */
-    function escapeHtml(text) {
+    function escapeHtml (text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -94,7 +94,7 @@
      * @param {string} markdown
      * @returns {string}
      */
-    function renderMarkdown(markdown) {
+    function renderMarkdown (markdown) {
         if (typeof marked !== 'undefined') {
             try {
                 return marked.parse(markdown, { async: false });
@@ -108,7 +108,7 @@
     /**
      * Build the complete widget DOM and append it to the body.
      */
-    function createWidget() {
+    function createWidget () {
         // Floating action button
         const button = document.createElement('button');
         button.id = 'ai-chat-button';
@@ -169,7 +169,7 @@
     /**
      * Render the welcome screen with quick action chips.
      */
-    function renderWelcome() {
+    function renderWelcome () {
         const container = document.getElementById('ai-chat-messages');
         if (!container) {
             return;
@@ -201,7 +201,7 @@
      * @param {string} role - "user" or "assistant"
      * @param {string} content
      */
-    function addMessage(role, content) {
+    function addMessage (role, content) {
         const container = document.getElementById('ai-chat-messages');
         if (!container) {
             return;
@@ -224,7 +224,7 @@
         container.scrollTop = container.scrollHeight;
 
         // Keep conversation history bounded
-        state.history.push({role: role, content: content});
+        state.history.push({ role: role, content: content });
         if (state.history.length > MAX_HISTORY) {
             state.history = state.history.slice(-MAX_HISTORY);
         }
@@ -233,7 +233,7 @@
     /**
      * Show the animated typing indicator.
      */
-    function showTyping() {
+    function showTyping () {
         const container = document.getElementById('ai-chat-messages');
         if (!container) {
             return;
@@ -250,7 +250,7 @@
     /**
      * Remove the typing indicator.
      */
-    function hideTyping() {
+    function hideTyping () {
         const el = document.getElementById('ai-chat-typing');
         if (el) {
             el.remove();
@@ -261,7 +261,7 @@
      * Send a message to the AI backend.
      * @param {string} message
      */
-    async function sendMessage(message) {
+    async function sendMessage (message) {
         if (state.isLoading || !message.trim()) {
             return;
         }
@@ -293,7 +293,7 @@
             const historyToSend = state.history.slice(-MAX_HISTORY_SENT);
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: message,
                     conversationHistory: historyToSend
@@ -324,7 +324,7 @@
     /**
      * Open the chat panel.
      */
-    function openChat() {
+    function openChat () {
         const panel = document.getElementById('ai-chat-panel');
         const button = document.getElementById('ai-chat-button');
         if (!panel || !button) {
@@ -349,7 +349,7 @@
     /**
      * Close the chat panel.
      */
-    function closeChat() {
+    function closeChat () {
         const panel = document.getElementById('ai-chat-panel');
         const button = document.getElementById('ai-chat-button');
         if (!panel || !button) {
@@ -365,7 +365,7 @@
     /**
      * Toggle the chat panel.
      */
-    function toggleChat() {
+    function toggleChat () {
         if (state.isOpen) {
             closeChat();
         } else {
@@ -376,7 +376,7 @@
     /**
      * Reset the chat to the welcome state.
      */
-    function resetChat() {
+    function resetChat () {
         state.history = [];
         state.hasInteracted = false;
         renderWelcome();
@@ -385,7 +385,7 @@
     /**
      * Wire up all event listeners.
      */
-    function initEvents() {
+    function initEvents () {
         const button = document.getElementById('ai-chat-button');
         const closeBtn = document.getElementById('ai-chat-close');
         const resetBtn = document.getElementById('ai-chat-reset');
@@ -460,7 +460,7 @@
     /**
      * Initialize the widget.
      */
-    function init() {
+    function init () {
         createWidget();
         initEvents();
     }

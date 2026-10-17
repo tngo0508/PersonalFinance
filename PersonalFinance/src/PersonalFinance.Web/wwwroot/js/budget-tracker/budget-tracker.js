@@ -20,7 +20,7 @@
      * Retrieves the anti-forgery token from the page.
      * @returns {string} CSRF token value.
      */
-    function getCsrfToken() {
+    function getCsrfToken () {
         const input = document.querySelector('input[name="__RequestVerificationToken"]');
         if (input && input.value) {
             return input.value;
@@ -34,7 +34,7 @@
      * @param {number|null} num - Number to format.
      * @returns {string} Formatted currency.
      */
-    function formatCurrency(num) {
+    function formatCurrency (num) {
         const val = Number(num) || 0;
         const formatted = Math.abs(val).toLocaleString('en-US', {
             minimumFractionDigits: 2,
@@ -48,7 +48,7 @@
      * @param {boolean} show - Whether to display spinner.
      * @returns {void}
      */
-    function setLoading(show) {
+    function setLoading (show) {
         const spinner = document.getElementById('btGlobalLoading');
         if (spinner) {
             spinner.classList.toggle('d-none', !show);
@@ -60,7 +60,7 @@
      * @param {string|null} message - Message text.
      * @returns {void}
      */
-    function showAlert(message) {
+    function showAlert (message) {
         const alertBox = document.getElementById('btAlert');
         const alertMsg = document.getElementById('btAlertMessage');
         if (!alertBox || !alertMsg) {
@@ -83,7 +83,7 @@
      * @param {string|null} message - The error message, or null to hide.
      * @returns {void}
      */
-    function showModalAlert(alertId, message) {
+    function showModalAlert (alertId, message) {
         const alertEl = document.getElementById(alertId);
         if (!alertEl) {
             return;
@@ -102,7 +102,7 @@
      * Initializes Lucide icon elements on the page.
      * @returns {void}
      */
-    function refreshIcons() {
+    function refreshIcons () {
         if (window.lucide && typeof window.lucide.createIcons === 'function') {
             window.lucide.createIcons();
         }
@@ -114,7 +114,7 @@
      * @param {number} month - The target month.
      * @returns {Promise<void>}
      */
-    async function loadSheet(year, month) {
+    async function loadSheet (year, month) {
         const requestId = ++activeRequestId;
         setLoading(true);
         showAlert(null);
@@ -162,7 +162,7 @@
      * Loads the user's active categories for transaction and modal dropdowns.
      * @returns {Promise<void>}
      */
-    async function loadCategories() {
+    async function loadCategories () {
         try {
             const response = await fetch('/BudgetTracker/GetCategories?includeArchived=false', {
                 method: 'GET',
@@ -184,7 +184,7 @@
      * Synchronizes month and year dropdown selectors with current state.
      * @returns {void}
      */
-    function renderMonthSelector() {
+    function renderMonthSelector () {
         const selMonth = document.getElementById('selectMonth');
         const selYear = document.getElementById('selectYear');
         if (selMonth) {
@@ -213,7 +213,7 @@
      * @param {Object} sheet - The MonthlyBudgetSheetDto object.
      * @returns {void}
      */
-    function renderSheet(sheet) {
+    function renderSheet (sheet) {
         renderInitPrompt(sheet);
         renderBars(sheet);
         renderSummaryTable('tbodyExpenses', sheet.expenses ? sheet.expenses.rows : [], 1);
@@ -228,7 +228,7 @@
      * @param {Object} updatedSheet - Updated MonthlyBudgetSheetDto.
      * @returns {void}
      */
-    function applyUpdatedSheet(updatedSheet) {
+    function applyUpdatedSheet (updatedSheet) {
         if (updatedSheet && updatedSheet.year === currentYear && updatedSheet.month === currentMonth) {
             currentSheet = updatedSheet;
             renderSheet(updatedSheet);
@@ -242,7 +242,7 @@
      * @param {Object} sheet - Monthly budget sheet.
      * @returns {void}
      */
-    function renderInitPrompt(sheet) {
+    function renderInitPrompt (sheet) {
         const promptBanner = document.getElementById('btInitPrompt');
         const btnCopy = document.getElementById('btnCopyPrevious');
         const btnCopyText = document.getElementById('btnCopyPreviousText');
@@ -284,7 +284,7 @@
      * @param {Object} sheet - Monthly budget sheet.
      * @returns {void}
      */
-    function renderBars(sheet) {
+    function renderBars (sheet) {
         const expPlanned = sheet.expenses ? sheet.expenses.totalPlanned : 0;
         const expActual = sheet.expenses ? sheet.expenses.totalActual : 0;
         const incPlanned = sheet.income ? sheet.income.totalPlanned : 0;
@@ -336,7 +336,7 @@
      * @param {number} kind - 1 for Expense, 2 for Income.
      * @returns {void}
      */
-    function renderSummaryTable(tbodyId, rows, kind) {
+    function renderSummaryTable (tbodyId, rows, kind) {
         const tbody = document.getElementById(tbodyId);
         if (!tbody) {
             return;
@@ -546,7 +546,7 @@
      * @param {Object} sheet - Monthly budget sheet.
      * @returns {void}
      */
-    function renderTotals(sheet) {
+    function renderTotals (sheet) {
         const expPlanned = sheet.expenses ? sheet.expenses.totalPlanned : 0;
         const expActual = sheet.expenses ? sheet.expenses.totalActual : 0;
         const expDiff = sheet.expenses ? sheet.expenses.totalDiff : 0;
@@ -592,7 +592,7 @@
      * @param {number} diff - Diff amount.
      * @returns {void}
      */
-    function applyDiffClass(el, diff) {
+    function applyDiffClass (el, diff) {
         el.classList.remove('bt-diff-positive', 'bt-diff-negative', 'bt-diff-neutral');
         if (diff > 0) {
             el.classList.add('bt-diff-positive');
@@ -611,7 +611,7 @@
      * @param {string} categoryName - Category name for labels.
      * @returns {void}
      */
-    function startInlinePlannedEdit(cell, categoryId, currentVal, categoryName) {
+    function startInlinePlannedEdit (cell, categoryId, currentVal, categoryName) {
         const input = document.createElement('input');
         input.type = 'number';
         input.step = '0.01';
@@ -628,7 +628,7 @@
 
         let isSaved = false;
 
-        async function savePlanned() {
+        async function savePlanned () {
             if (isSaved) {
                 return;
             }
@@ -667,7 +667,7 @@
                             'RequestVerificationToken': getCsrfToken(),
                             'X-Requested-With': 'XMLHttpRequest'
                         },
-                        body: JSON.stringify({amount: newVal})
+                        body: JSON.stringify({ amount: newVal })
                     }
                 );
 
@@ -709,7 +709,7 @@
      * @param {Array} transactions - List of BudgetTransactionDto objects.
      * @returns {void}
      */
-    function renderTransactions(transactions) {
+    function renderTransactions (transactions) {
         const txList = transactions || [];
         const expenseTxs = txList.filter(function (t) {
             return t.kind === 1;
@@ -744,7 +744,7 @@
      * @param {number} kind - 1 for Expense, 2 for Income.
      * @returns {void}
      */
-    function renderTransactionTable(tbodyId, emptyId, list, kind) {
+    function renderTransactionTable (tbodyId, emptyId, list, kind) {
         const tbody = document.getElementById(tbodyId);
         const emptyState = document.getElementById(emptyId);
 
@@ -827,7 +827,7 @@
      * @param {number} kind - 1 Expense, 2 Income.
      * @returns {Promise<void>}
      */
-    async function handleReorderCategory(row, direction, kind) {
+    async function handleReorderCategory (row, direction, kind) {
         if (isReordering) {
             return;
         }
@@ -891,14 +891,14 @@
      * @param {number} targetIndex - Index of the neighbour it swaps with.
      * @returns {Array<{category: Object, sortOrder: number}>} Updates to send.
      */
-    function buildReorderUpdates(cats, currentIndex, targetIndex) {
+    function buildReorderUpdates (cats, currentIndex, targetIndex) {
         const sourceCat = cats[currentIndex];
         const targetCat = cats[targetIndex];
 
         if (sourceCat.sortOrder !== targetCat.sortOrder) {
             return [
-                {category: sourceCat, sortOrder: targetCat.sortOrder},
-                {category: targetCat, sortOrder: sourceCat.sortOrder}
+                { category: sourceCat, sortOrder: targetCat.sortOrder },
+                { category: targetCat, sortOrder: sourceCat.sortOrder }
             ];
         }
 
@@ -911,7 +911,7 @@
                 assignedOrder = (currentIndex + 1) * 10;
             }
             if (c.sortOrder !== assignedOrder || i === currentIndex || i === targetIndex) {
-                updates.push({category: c, sortOrder: assignedOrder});
+                updates.push({ category: c, sortOrder: assignedOrder });
             }
         });
         return updates;
@@ -924,7 +924,7 @@
      * @returns {Promise<void>}
      * @throws {Error} When the server rejects the update.
      */
-    async function putCategorySortOrder(category, sortOrder) {
+    async function putCategorySortOrder (category, sortOrder) {
         const response = await fetch(`/BudgetTracker/UpdateCategory?id=${category.id}`, {
             method: 'PUT',
             headers: {
@@ -952,7 +952,7 @@
      * @param {boolean} active - True while a reorder is in progress.
      * @returns {void}
      */
-    function setReordering(active) {
+    function setReordering (active) {
         isReordering = active;
         setReorderControlsDisabled(active);
     }
@@ -963,7 +963,7 @@
      * @param {boolean} disabled - True to disable every move control.
      * @returns {void}
      */
-    function setReorderControlsDisabled(disabled) {
+    function setReorderControlsDisabled (disabled) {
         document.querySelectorAll('.bt-move-btn').forEach(function (btn) {
             btn.disabled = disabled || btn.dataset.boundary === 'true';
         });
@@ -975,7 +975,7 @@
      * @param {number} kind - Category kind.
      * @returns {void}
      */
-    function openEditCategoryModal(row, kind) {
+    function openEditCategoryModal (row, kind) {
         showModalAlert('alertEditCategory', null);
         const idInput = document.getElementById('editCategoryId');
         const sortInput = document.getElementById('editCategorySortOrder');
@@ -1014,7 +1014,7 @@
      * Handles updating category from edit modal submission.
      * @returns {Promise<void>}
      */
-    async function handleEditCategory() {
+    async function handleEditCategory () {
         const idInput = document.getElementById('editCategoryId');
         const sortInput = document.getElementById('editCategorySortOrder');
         const kindInput = document.getElementById('editCategoryKind');
@@ -1081,7 +1081,7 @@
      * @param {Object} row - Category row DTO.
      * @returns {void}
      */
-    function openActualOverrideModal(row) {
+    function openActualOverrideModal (row) {
         showModalAlert('alertActualOverride', null);
         const catIdInput = document.getElementById('overrideCategoryId');
         const catNameLabel = document.getElementById('overrideCategoryName');
@@ -1118,7 +1118,7 @@
      * @param {number} categoryId - Category ID.
      * @returns {Promise<void>}
      */
-    async function revertActualOverride(categoryId) {
+    async function revertActualOverride (categoryId) {
         try {
             setLoading(true);
             const response = await fetch(
@@ -1130,7 +1130,7 @@
                         'RequestVerificationToken': getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({amount: null})
+                    body: JSON.stringify({ amount: null })
                 }
             );
 
@@ -1155,7 +1155,7 @@
      * @param {number|null} defaultKind - Default kind (1 Expense, 2 Income).
      * @returns {void}
      */
-    function openAddTransactionModal(defaultKind) {
+    function openAddTransactionModal (defaultKind) {
         showModalAlert('alertTransaction', null);
         const title = document.getElementById('modalTransactionTitle');
         const idInput = document.getElementById('inputTxId');
@@ -1203,7 +1203,7 @@
      * @param {Object} tx - Transaction DTO.
      * @returns {void}
      */
-    function openEditTransactionModal(tx) {
+    function openEditTransactionModal (tx) {
         showModalAlert('alertTransaction', null);
         const title = document.getElementById('modalTransactionTitle');
         const idInput = document.getElementById('inputTxId');
@@ -1242,7 +1242,7 @@
      * @param {number|null} _filterKind - Optional kind filter.
      * @returns {void}
      */
-    function populateCategoryDropdown(selectEl, selectedId, _filterKind) {
+    function populateCategoryDropdown (selectEl, selectedId, _filterKind) {
         if (!selectEl) {
             return;
         }
@@ -1288,7 +1288,7 @@
      * @param {Object} row - Category row.
      * @returns {void}
      */
-    function confirmArchiveCategory(row) {
+    function confirmArchiveCategory (row) {
         showModalAlert('alertDeleteConfirm', null);
         const msg = document.getElementById('deleteConfirmMessage');
         const title = document.getElementById('modalDeleteConfirmTitle');
@@ -1352,7 +1352,7 @@
      * @param {Object} tx - Transaction DTO.
      * @returns {void}
      */
-    function confirmDeleteTransaction(tx) {
+    function confirmDeleteTransaction (tx) {
         showModalAlert('alertDeleteConfirm', null);
         const msg = document.getElementById('deleteConfirmMessage');
         const title = document.getElementById('modalDeleteConfirmTitle');
@@ -1414,7 +1414,7 @@
      * Attaches DOM event listeners.
      * @returns {void}
      */
-    function setupEventListeners() {
+    function setupEventListeners () {
         // Month Navigation
         const btnPrev = document.getElementById('btnPrevMonth');
         const btnNext = document.getElementById('btnNextMonth');
@@ -1584,7 +1584,7 @@
      * @param {boolean} copyFromPrevious - Whether to copy planned amounts.
      * @returns {Promise<void>}
      */
-    async function initializeMonth(copyFromPrevious) {
+    async function initializeMonth (copyFromPrevious) {
         const btnCopy = document.getElementById('btnCopyPrevious');
         const btnBlank = document.getElementById('btnStartBlank');
 
@@ -1637,7 +1637,7 @@
      * Handles adding a new category from modal submission.
      * @returns {Promise<void>}
      */
-    async function handleCreateCategory() {
+    async function handleCreateCategory () {
         const nameInput = document.getElementById('inputCategoryName');
         const kindSelect = document.getElementById('selectCategoryKind');
         const btnSubmit = document.getElementById('btnSubmitCategory');
@@ -1710,7 +1710,7 @@
      * Handles setting manual actual override from modal submission.
      * @returns {Promise<void>}
      */
-    async function handleSaveActualOverride() {
+    async function handleSaveActualOverride () {
         const catIdInput = document.getElementById('overrideCategoryId');
         const amountInput = document.getElementById('inputOverrideAmount');
         const btnSubmit = document.getElementById('btnSubmitOverride');
@@ -1739,7 +1739,7 @@
                         'RequestVerificationToken': getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({amount: amount})
+                    body: JSON.stringify({ amount: amount })
                 }
             );
 
@@ -1770,7 +1770,7 @@
      * Handles saving (create or update) a transaction from modal submission.
      * @returns {Promise<void>}
      */
-    async function handleSaveTransaction() {
+    async function handleSaveTransaction () {
         const idInput = document.getElementById('inputTxId');
         const catSelect = document.getElementById('selectTxCategory');
         const dateInput = document.getElementById('inputTxDate');
@@ -1853,7 +1853,7 @@
      * Initializes the Budget Tracker UI on DOM ready.
      * @returns {void}
      */
-    function init() {
+    function init () {
         const container = document.getElementById('budgetTrackerContainer');
         if (!container) {
             return;

@@ -6,7 +6,7 @@
      * @param {HTMLElement} container - The toggle container element.
      * @returns {string} The anti-forgery token.
      */
-    function getVerificationToken(container) {
+    function getVerificationToken (container) {
         const input = container.querySelector('input[name="__RequestVerificationToken"]');
         if (input && input.value) {
             return input.value;
@@ -23,7 +23,7 @@
      * @param {Event} event - The click event.
      * @returns {Promise<void>}
      */
-    async function handleSourceClick(event) {
+    async function handleSourceClick (event) {
         const button = event.currentTarget;
         if (!button || button.classList.contains('active')) {
             return;
@@ -52,7 +52,7 @@
                     'Content-Type': 'application/json',
                     'RequestVerificationToken': token
                 },
-                body: JSON.stringify({source: sourceValue})
+                body: JSON.stringify({ source: sourceValue })
             });
 
             if (!response.ok) {
@@ -88,7 +88,7 @@
      * Initialises all data source toggle components on the page.
      * @returns {void}
      */
-    function init() {
+    function init () {
         const toggles = document.querySelectorAll('.data-source-toggle');
         toggles.forEach(function (toggle) {
             const buttons = toggle.querySelectorAll('.data-source-btn');

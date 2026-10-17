@@ -5,7 +5,7 @@
     'use strict';
 
     // --- Toast Notification ---
-    function showToast(message) {
+    function showToast (message) {
         let toast = document.querySelector('.community-toast');
         if (!toast) {
             toast = document.createElement('div');
@@ -17,7 +17,7 @@
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    function getAntiForgeryToken() {
+    function getAntiForgeryToken () {
         const meta = document.querySelector('meta[name="__RequestVerificationToken"]');
         return meta ? meta.content : '';
     }
@@ -51,7 +51,7 @@
                 'Content-Type': 'application/json',
                 'RequestVerificationToken': getAntiForgeryToken()
             },
-            body: JSON.stringify({pollCode: pollCode, optionId: optionId})
+            body: JSON.stringify({ pollCode: pollCode, optionId: optionId })
         })
             .then(function (res) {
                 return res.json();
@@ -85,7 +85,7 @@
     /**
    * Update poll card with new results from the server.
    */
-    function updatePollResults(pollCard, pollData) {
+    function updatePollResults (pollCard, pollData) {
         const buttons = pollCard.querySelectorAll('.community-poll-option-btn');
         const voteSpans = pollCard.querySelectorAll('.community-poll-option-votes');
         const totalVotesEl = pollCard.querySelector('.community-poll-votes');
@@ -238,7 +238,7 @@
                 'Content-Type': 'application/json',
                 'RequestVerificationToken': getAntiForgeryToken()
             },
-            body: JSON.stringify({commentId: commentId})
+            body: JSON.stringify({ commentId: commentId })
         })
             .then(function (res) {
                 return res.json();
@@ -303,7 +303,7 @@
                 'Content-Type': 'application/json',
                 'RequestVerificationToken': getAntiForgeryToken()
             },
-            body: JSON.stringify({pollCode: pollCode, text: text})
+            body: JSON.stringify({ pollCode: pollCode, text: text })
         })
             .then(function (res) {
                 return res.json();
@@ -358,7 +358,7 @@
                 'Content-Type': 'application/json',
                 'RequestVerificationToken': getAntiForgeryToken()
             },
-            body: JSON.stringify({storyId: storyId, text: text})
+            body: JSON.stringify({ storyId: storyId, text: text })
         })
             .then(function (res) {
                 return res.json();
@@ -422,7 +422,7 @@
                 'Content-Type': 'application/json',
                 'RequestVerificationToken': getAntiForgeryToken()
             },
-            body: JSON.stringify({storyId: storyId})
+            body: JSON.stringify({ storyId: storyId })
         })
             .then(function (res) {
                 return res.json();
@@ -484,7 +484,7 @@
     /**
    * Prepend a new comment to the recent comments list.
    */
-    function prependComment(comment) {
+    function prependComment (comment) {
         const list = document.getElementById('communityCommentsList');
         if (!list) {
             return;
@@ -532,7 +532,7 @@
     /**
    * Escape HTML to prevent XSS.
    */
-    function escapeHtml(str) {
+    function escapeHtml (str) {
         if (!str) {
             return '';
         }

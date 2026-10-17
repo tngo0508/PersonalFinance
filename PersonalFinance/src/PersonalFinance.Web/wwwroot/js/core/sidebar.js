@@ -12,7 +12,7 @@
          * Initialize the sidebar navigation.
          * @returns {void}
          */
-        function init() {
+        function init () {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', setup);
             } else {
@@ -24,7 +24,7 @@
          * Set up sidebar event listeners and initial state.
          * @returns {void}
          */
-        function setup() {
+        function setup () {
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('sidebarToggle');
             const overlay = document.getElementById('sidebarOverlay');
@@ -72,7 +72,7 @@
             }
 
             // Close mobile sidebar helper
-            function closeMobileSidebar() {
+            function closeMobileSidebar () {
                 sidebar.classList.remove('mobile-open');
                 if (overlay) {
                     overlay.classList.remove('show');
@@ -109,7 +109,7 @@
          * Highlight the active navigation item based on current URL.
          * @returns {void}
          */
-        function highlightActive() {
+        function highlightActive () {
             const currentPath = window.location.pathname.toLowerCase();
             const links = document.querySelectorAll('.sidebar-link');
 
@@ -155,7 +155,7 @@
          * @param {string} href - The navigation link href (lowercased).
          * @returns {boolean} True if the path matches the href exactly or as a prefix segment.
          */
-        function matchPath(currentPath, href) {
+        function matchPath (currentPath, href) {
             if (currentPath === href) {
                 return true;
             }

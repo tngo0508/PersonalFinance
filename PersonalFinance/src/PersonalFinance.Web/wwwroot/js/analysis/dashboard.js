@@ -5,7 +5,7 @@
      * Initialize the analysis dashboard charts.
      * @returns {void}
      */
-    function init() {
+    function init () {
         const data = window.__analysisData;
         if (!data) {
             return;
@@ -21,7 +21,7 @@
      * @param {Array} weeklyTrend - Array of weekly spending data.
      * @returns {void}
      */
-    function renderWeeklyTrendChart(weeklyTrend) {
+    function renderWeeklyTrendChart (weeklyTrend) {
         const canvas = document.getElementById('weeklyTrendChart');
         if (!canvas || !weeklyTrend || weeklyTrend.length === 0) {
             return;
@@ -48,7 +48,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {display: false},
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: function (context) {
@@ -79,7 +79,7 @@
      * @param {Array} trendPoints - Array of monthly trend data.
      * @returns {void}
      */
-    function renderTrendChart(trendPoints) {
+    function renderTrendChart (trendPoints) {
         const canvas = document.getElementById('trendChart');
         if (!canvas || !trendPoints || trendPoints.length === 0) {
             return;
@@ -159,7 +159,7 @@
      * @param {Array} categories - Array of category insight data.
      * @returns {void}
      */
-    function renderCategoryCharts(categories) {
+    function renderCategoryCharts (categories) {
         if (!categories || categories.length === 0) {
             return;
         }
@@ -173,7 +173,7 @@
      * @param {Array} categories - Array of category insight data.
      * @returns {void}
      */
-    function renderCategoryPieChart(categories) {
+    function renderCategoryPieChart (categories) {
         const canvas = document.getElementById('categoryPieChart');
         if (!canvas) {
             return;
@@ -205,7 +205,7 @@
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: {boxWidth: 12, padding: 10}
+                        labels: { boxWidth: 12, padding: 10 }
                     },
                     tooltip: {
                         callbacks: {
@@ -230,7 +230,7 @@
      * @param {Array} categories - Array of category insight data.
      * @returns {void}
      */
-    function renderCategoryBarChart(categories) {
+    function renderCategoryBarChart (categories) {
         const canvas = document.getElementById('categoryBarChart');
         if (!canvas) {
             return;

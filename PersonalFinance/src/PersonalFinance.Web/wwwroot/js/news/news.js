@@ -41,7 +41,7 @@
     // =========================================================================
     // Utility Functions
     // =========================================================================
-    function timeAgo(dateString) {
+    function timeAgo (dateString) {
         const date = new Date(dateString);
         const now = new Date();
         const diffMs = now.getTime() - date.getTime();
@@ -60,20 +60,20 @@
         if (diffDays < 7) {
             return diffDays + 'd ago';
         }
-        return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
-    function escapeHtml(str) {
+    function escapeHtml (str) {
         if (!str) {
             return '';
         }
-        const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
         return str.replace(/[&<>"']/g, m => map[m]);
     }
 
-    async function apiFetch(url, options) {
+    async function apiFetch (url, options) {
         const res = await fetch(url, {
-            headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
             ...options
         });
         if (!res.ok) {
@@ -96,7 +96,7 @@
     const refreshBtn = document.getElementById('refreshBtn');
     const filterForm = document.getElementById('newsFilterForm');
 
-    function buildQueryString() {
+    function buildQueryString () {
         const params = new URLSearchParams();
         if (filterForm) {
             const search = filterForm.querySelector('input[name="search"]');
@@ -115,7 +115,7 @@
         return params.toString();
     }
 
-    async function handleRefresh() {
+    async function handleRefresh () {
         if (!refreshBtn) {
             return;
         }
@@ -127,7 +127,7 @@
         try {
             const qs = buildQueryString();
             const url = '/News/Refresh' + (qs ? '?' + qs : '');
-            const response = await fetch(url, {headers: {'Accept': 'application/json'}});
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
             const data = await response.json();
 
             if (data.success && Array.isArray(data.articles)) {
@@ -155,7 +155,7 @@
         }
     }
 
-    function renderArticleCard(article) {
+    function renderArticleCard (article) {
         const desc = (article.description || '').length > 250 ? (article.description || '').slice(0, 250) + '...' : article.description || '';
         const timeLabel = timeAgo(article.publishedAt);
         const isSaved = savedArticleUrls.has(article.url);
@@ -199,7 +199,7 @@
    * @param {boolean} isSaved - Whether the article is saved.
    * @returns {void}
    */
-    function setSaveButtonState(btn, isSaved) {
+    function setSaveButtonState (btn, isSaved) {
         if (isSaved) {
             btn.classList.add('saved');
             btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved';
@@ -209,7 +209,7 @@
         }
     }
 
-    function bindSaveButton(btn) {
+    function bindSaveButton (btn) {
     // Set initial state from savedArticleUrls
         const url = btn.dataset.url;
         if (url && savedArticleUrls.has(url)) {
@@ -230,7 +230,7 @@
             try {
                 const data = await apiFetch('/api/PersonalFinance/watchlist', {
                     method: 'POST',
-                    body: JSON.stringify({title, url, source, category, imageUrl})
+                    body: JSON.stringify({ title, url, source, category, imageUrl })
                 });
 
                 if (data.success) {
@@ -271,7 +271,7 @@
    * Called once on page init (silently) to know which articles are already saved.
    * @returns {Promise<void>}
    */
-    async function loadWatchlistUrls() {
+    async function loadWatchlistUrls () {
         try {
             const items = await apiFetch('/api/PersonalFinance/watchlist');
             watchlistItems = items;
@@ -295,7 +295,7 @@
    * Refresh the watchlist data from the server when the user switches to the tab.
    * @returns {Promise<void>}
    */
-    async function refreshWatchlist() {
+    async function refreshWatchlist () {
         if (!window._watchlistLoaded) {
             window._watchlistLoaded = true;
         }
@@ -320,7 +320,7 @@
         }
     }
 
-    function renderWatchlist() {
+    function renderWatchlist () {
         const container = document.getElementById('watchlistGrid');
         if (!container) {
             return;
@@ -356,7 +356,7 @@
                 const id = parseInt(item.dataset.id, 10);
                 const articleUrl = item.dataset.url;
                 try {
-                    await apiFetch('/api/PersonalFinance/watchlist/' + id, {method: 'DELETE'});
+                    await apiFetch('/api/PersonalFinance/watchlist/' + id, { method: 'DELETE' });
                     watchlistItems = watchlistItems.filter(a => a.id !== id);
                     savedArticleUrls.delete(articleUrl);
                     renderWatchlist();

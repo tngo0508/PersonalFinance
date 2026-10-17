@@ -22,7 +22,7 @@
      * Initialize the summary module by attaching click handlers to all summarize buttons.
      * @returns {void}
      */
-    function init() {
+    function init () {
         const buttons = document.querySelectorAll('.finance-hub-summarize-btn');
         buttons.forEach(function (btn) {
             btn.addEventListener('click', handleSummarize);
@@ -34,7 +34,7 @@
      * @param {Event} event - The click event.
      * @returns {void}
      */
-    async function handleSummarize(event) {
+    async function handleSummarize (event) {
         const btn = /** @type {HTMLButtonElement} */ (event.currentTarget);
         const articleUrl = btn.dataset.articleUrl;
         const articleTitle = btn.dataset.articleTitle;
@@ -140,7 +140,7 @@
      * @param {string} message - The error message.
      * @returns {void}
      */
-    function showError(btn, message) {
+    function showError (btn, message) {
         btn.disabled = false;
         btn.textContent = 'Retry';
         btn.classList.add('finance-hub-summarize-error');
