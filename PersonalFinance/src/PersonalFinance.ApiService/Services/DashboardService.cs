@@ -8,6 +8,9 @@ namespace PersonalFinance.ApiService.Services;
 /// </summary>
 public class DashboardService : IDashboardService
 {
+    /// <summary>FI Target = annual spending × 25 (the 4% rule, see GLOSSARY.md).</summary>
+    private const decimal FiTargetMultiplier = 25m;
+
     private readonly AppDbContext _dbContext;
 
     public DashboardService(AppDbContext dbContext)
@@ -23,14 +26,18 @@ public class DashboardService : IDashboardService
         var netWorth = await GetNetWorthSummaryAsync(userId, cancellationToken);
         var budget = await GetBudgetSummaryAsync(userId, cancellationToken);
         var savingsGoals = await GetSavingsGoalsSummaryAsync(userId, cancellationToken);
+        var goalsOverview = await GetGoalsOverviewAsync(userId, cancellationToken);
         var recentActivity = await GetRecentActivityAsync(userId, cancellationToken);
+        var hasGoogleDriveConnection = await HasGoogleDriveConnectionAsync(userId, cancellationToken);
 
         return new DashboardSummaryDto
         {
             NetWorth = netWorth,
             Budget = budget,
             SavingsGoals = savingsGoals,
-            RecentActivity = recentActivity
+            GoalsOverview = goalsOverview,
+            RecentActivity = recentActivity,
+            HasGoogleDriveConnection = hasGoogleDriveConnection
         };
     }
 
@@ -48,14 +55,27 @@ public class DashboardService : IDashboardService
             return null;
         }
 
+        var netWorth = parameters.StartingBalance;
+        var fiTarget = parameters.AnnualSpending * FiTargetMultiplier;
+        decimal? progressToFi = fiTarget != 0m ? netWorth / fiTarget * 100m : null;
+        decimal? savingsRate = parameters.AnnualIncome != 0m
+            ? parameters.AnnualSavings / parameters.AnnualIncome * 100m
+            : null;
+
         return new NetWorthSummaryDto
         {
-            CurrentNetWorth = parameters.StartingBalance,
+            CurrentNetWorth = netWorth,
             AnnualSavings = parameters.AnnualSavings,
             AnnualIncome = parameters.AnnualIncome,
             AnnualSpending = parameters.AnnualSpending,
             BaseRoi = (double)parameters.BaseRoi,
-            FiYears = null
+            FiYears = null,
+            FiTarget = fiTarget,
+            ProgressToFiPercent = progressToFi,
+            FiTargetReached = progressToFi >= 100m,
+            SavingsRatePercent = savingsRate,
+            CurrentAge = parameters.CurrentAge,
+            RetirementAge = parameters.RetirementAge
         };
     }
 
@@ -148,6 +168,41 @@ public class DashboardService : IDashboardService
         return goals;
     }
 
+    /// <summary>
+    /// Totals across all of the user's (non-deleted) goals, aggregated database-side in a single query.
+    /// </summary>
+    private async Task<GoalsOverviewDto> GetGoalsOverviewAsync(string userId, CancellationToken cancellationToken)
+    {
+        var totals = await _dbContext.SavingsGoals
+            .AsNoTracking()
+            .Where(g => g.UserId == userId)
+            .GroupBy(_ => 1)
+            .Select(grp => new
+            {
+                TotalSaved = grp.Sum(g => g.CurrentAmount),
+                TotalTarget = grp.Sum(g => g.TargetAmount),
+                CompletedCount = grp.Count(g => g.IsCompleted),
+                TotalCount = grp.Count()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (totals is null)
+        {
+            return new GoalsOverviewDto();
+        }
+
+        return new GoalsOverviewDto
+        {
+            TotalSaved = totals.TotalSaved,
+            TotalTarget = totals.TotalTarget,
+            FundedPercent = totals.TotalTarget > 0
+                ? Math.Min(totals.TotalSaved / totals.TotalTarget * 100m, 100m)
+                : null,
+            CompletedCount = totals.CompletedCount,
+            TotalCount = totals.TotalCount
+        };
+    }
+
     private async Task<List<RecentActivityDto>> GetRecentActivityAsync(string userId,
         CancellationToken cancellationToken)
     {
@@ -191,5 +246,16 @@ public class DashboardService : IDashboardService
 
         // Sort by date descending and take top 10 (OrderBy is stable, so ties keep query order)
         return activities.OrderByDescending(a => a.Date).Take(10).ToList();
+    }
+
+    /// <summary>
+    /// A connection counts as long as it exists and is not soft-deleted, even when it needs re-authentication
+    /// (<c>IsValid == false</c>): the user should repair it from Google Drive, not be asked to connect again.
+    /// </summary>
+    private Task<bool> HasGoogleDriveConnectionAsync(string userId, CancellationToken cancellationToken)
+    {
+        return _dbContext.GoogleDriveConnections
+            .AsNoTracking()
+            .AnyAsync(c => c.UserId == userId, cancellationToken);
     }
 }

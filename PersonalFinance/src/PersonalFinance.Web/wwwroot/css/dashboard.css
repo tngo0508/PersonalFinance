@@ -564,3 +564,268 @@
         border: 1px solid CanvasText;
     }
 }
+
+/* ==========================================================================
+   Quick actions — action grid with icon, label, and hint (ticket 08)
+   ========================================================================== */
+
+.dash-actions__list {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 576px) {
+    .dash-actions__list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .dash-actions__list {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+.dash-action {
+    height: 100%;
+    gap: var(--app-spacing-m);
+    background: var(--app-bg);
+}
+
+.dash-action__icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-action__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dash-action__label {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-action__hint {
+    font-size: var(--app-font-size-small);
+    font-weight: normal;
+    color: var(--app-text-muted);
+    line-height: 1.4;
+}
+
+.dash-action .dash-action__chevron svg {
+    width: 16px;
+    height: 16px;
+    color: var(--app-text-muted);
+}
+
+.dash-action:hover .dash-action__chevron svg,
+.dash-action:focus-visible .dash-action__chevron svg {
+    color: var(--app-brand);
+}
+
+.dash-action:focus-visible {
+    border-color: var(--app-brand);
+    box-shadow: var(--app-shadow-4);
+}
+
+/* ==========================================================================
+   Summary / FI progress (ticket 04) — headline Net Worth, FI Target, Progress to FI
+   ========================================================================== */
+
+.dash-summary__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-l);
+    align-items: end;
+}
+
+@media (min-width: 768px) {
+    .dash-summary__body {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    }
+}
+
+.dash-summary__headline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+}
+
+.dash-summary .dash-summary__value {
+    font-size: clamp(2rem, 4vw + 1rem, 2.75rem);
+    letter-spacing: -0.02em;
+}
+
+.dash-summary__fi {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-m);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-summary__fi > p {
+    margin: 0;
+}
+
+.dash-summary__fi-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.dash-summary__fi-label {
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text);
+}
+
+.dash-summary__fi-percent {
+    margin-left: auto;
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-progress--fi {
+    height: 10px;
+}
+
+.dash-progress--reached .dash-progress__bar {
+    background: var(--app-accent-positive);
+}
+
+.dash-summary__fi-target {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--app-spacing-xs) var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+.dash-summary__fi-target .dash-money {
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text);
+}
+
+.dash-summary__fi-hint {
+    color: var(--app-text-muted);
+}
+
+.dash-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-xs);
+    padding: 2px var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    border-radius: 999px;
+}
+
+.dash-badge svg {
+    width: 14px;
+    height: 14px;
+}
+
+.dash-badge--positive {
+    /* Darkened positive token so small badge text meets WCAG AA on the soft background. */
+    color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
+    background: var(--app-accent-positive-soft);
+}
+
+/* ==========================================================================
+   Goals & activity (ticket 07)
+   ========================================================================== */
+
+.dash-goal__title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    min-width: 0;
+}
+
+.dash-goal__percent {
+    font-size: var(--app-font-size-small);
+    white-space: nowrap;
+}
+
+.dash-goal__badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    padding: 1px var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-accent-positive);
+    background: var(--app-accent-positive-soft);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-goal__badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+.dash-goal--completed .dash-progress__bar {
+    background: var(--app-accent-positive);
+}
+
+.dash-activity__item {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--app-spacing-m);
+}
+
+.dash-activity__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+    min-width: 0;
+}
+
+.dash-activity__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--app-text-muted);
+    background: var(--app-surface-secondary);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-activity__icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.dash-activity__icon--income {
+    color: var(--app-accent-positive);
+    background: var(--app-accent-positive-soft);
+}
+
+.dash-activity__icon--expense {
+    color: var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+}
+
+.dash-activity__icon--goal {
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
+}
