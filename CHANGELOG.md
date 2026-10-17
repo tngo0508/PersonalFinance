@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Landing Page**: Signed-out visitors at `/` now see a public Landing Page instead of being redirected to the login
+  form; signed-in users at `/` are redirected to their Dashboard.
+    - New anonymous `HomeController` is the default route; `/Dashboard` still requires sign-in and deep links return
+      after login.
+    - Hero with "Create free account" and "Sign in" calls to action, a static HTML/CSS product preview labelled
+      "Sample data" (hidden from assistive technology), a nine-feature grid, a three-step "how it works", a privacy
+      note, and a closing call to action. No testimonials, user counts, or ratings.
+    - Page styles live in `landing.css` (`lp-*` prefix) on Indigo Ledger tokens; no chart library; entrance motion is
+      disabled for reduced-motion users; single-column layout with full-width buttons on mobile.
+    - Brand links in the sidebar and signed-out top bar, and the sign-out return URL, now point to `/`.
+    - Unit tests for the Home controller and Playwright assertions for the Landing Page at `/`.
 - **Navbar Redesign**: Replaced the cluttered top navbar with a left sidebar navigation, Dashboard home page, global
   search, and notification system.
     - Left sidebar (240px/60px collapsible) with three navigation groups: Overview, My Finances, Resources
