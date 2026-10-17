@@ -40,15 +40,6 @@
     });
 
     /**
-     * Whether the user asked the operating system to minimise motion.
-     * @returns {boolean} True when animations should be disabled.
-     */
-    function prefersReducedMotion () {
-        return typeof window.matchMedia === 'function' &&
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
-
-    /**
      * Chart height that scales with the viewport so the plot stays legible on phones and desktops.
      * @returns {number} Height in pixels.
      */
@@ -104,7 +95,7 @@
             return;
         }
 
-        const animate = !prefersReducedMotion();
+        const animate = !window.PFDashboard.prefersReducedMotion();
         const chart = new window.ApexCharts(element, {
             chart: {
                 type: 'area',

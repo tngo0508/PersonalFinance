@@ -2,6 +2,13 @@
    Dashboard (dash-*)
    "Indigo Ledger" design system — flat surfaces, hairline borders, Inter for
    text, IBM Plex Mono with tabular figures for money. Tokens: css/site.css.
+
+   Order: page layout → shared primitives (card, link, note, money, progress)
+   → per-section rules (in page order) → focus → motion → responsive.
+   ========================================================================== */
+
+/* ==========================================================================
+   Page layout
    ========================================================================== */
 
 .dash {
@@ -10,6 +17,12 @@
     gap: var(--app-spacing-l);
     padding: var(--app-spacing-s) 0 var(--app-spacing-xl);
     color: var(--app-text);
+}
+
+.dash-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-l);
 }
 
 /* ==========================================================================
@@ -45,38 +58,15 @@
 }
 
 /* ==========================================================================
-   Money and numbers — tabular monospace figures
+   Shared primitives
    ========================================================================== */
 
+/* Money and numbers — tabular monospace figures */
 .dash-money {
     font-family: var(--app-font-mono);
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.01em;
 }
-
-/* ==========================================================================
-   Layout rows
-   ========================================================================== */
-
-.dash-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--app-spacing-l);
-}
-
-@media (min-width: 992px) {
-    .dash-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .dash-row--wide {
-        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-    }
-}
-
-/* ==========================================================================
-   Card
-   ========================================================================== */
 
 .dash-card {
     display: flex;
@@ -132,15 +122,130 @@
     border-radius: var(--app-radius-m);
 }
 
+.dash-chart {
+    min-height: 220px;
+}
+
+.dash-progress {
+    height: 6px;
+    overflow: hidden;
+    background: var(--app-surface-secondary);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-progress__bar {
+    height: 100%;
+    background: var(--app-brand);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-xs);
+    padding: 2px var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    border-radius: 999px;
+}
+
+.dash-badge svg {
+    width: 14px;
+    height: 14px;
+}
+
+.dash-badge--positive {
+    /* Darkened positive token so small badge text meets WCAG AA on the soft background. */
+    color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
+    background: var(--app-accent-positive-soft);
+}
+
 /* ==========================================================================
-   Summary
+   Summary — headline Net Worth, FI Target, Progress to FI
    ========================================================================== */
+
+.dash-summary__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-l);
+    align-items: end;
+}
+
+.dash-summary__headline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+}
 
 .dash-summary__value {
     margin: 0;
-    font-size: var(--app-font-size-xxl);
+    font-size: clamp(2rem, 4vw + 1rem, 2.75rem);
     font-weight: var(--app-font-weight-semibold);
     line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.dash-summary__fi {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-m);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-summary__fi > p {
+    margin: 0;
+}
+
+.dash-summary__fi-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.dash-summary__fi-label {
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text);
+}
+
+.dash-summary__fi-percent {
+    margin-left: auto;
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-progress--fi {
+    height: 10px;
+}
+
+.dash-progress--reached .dash-progress__bar {
+    background: var(--app-accent-positive);
+}
+
+.dash-summary__fi-target {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--app-spacing-xs) var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+.dash-summary__fi-target .dash-money {
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text);
+}
+
+.dash-summary__fi-hint {
+    color: var(--app-text-muted);
+}
+
+.dash-summary__fi > .dash-summary__fi-age {
+    margin-top: var(--app-spacing-xs);
 }
 
 /* ==========================================================================
@@ -151,12 +256,6 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--app-spacing-m);
-}
-
-@media (min-width: 992px) {
-    .dash-figures {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
 }
 
 .dash-tile {
@@ -215,8 +314,28 @@
 }
 
 /* ==========================================================================
-   Stats list (projection section)
+   Net worth projection
    ========================================================================== */
+
+.dash-projection .dash-note {
+    margin-bottom: var(--app-spacing-s);
+}
+
+.dash-projection__chart {
+    min-height: 240px;
+    margin-bottom: var(--app-spacing-m);
+}
+
+.dash-projection__prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.dash-projection__prompt-text {
+    margin: 0;
+}
 
 .dash-stats {
     display: grid;
@@ -241,226 +360,6 @@
     margin: var(--app-spacing-xs) 0 0;
     font-size: var(--app-font-size-large);
     font-weight: var(--app-font-weight-semibold);
-}
-
-.dash-chart {
-    min-height: 220px;
-}
-
-/* ==========================================================================
-   Lists: goals and activity
-   ========================================================================== */
-
-.dash-list {
-    display: flex;
-    flex-direction: column;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.dash-list > li {
-    padding: var(--app-spacing-m) 0;
-    border-top: 1px solid var(--app-border);
-}
-
-.dash-list > li:first-child {
-    padding-top: 0;
-    border-top: 0;
-}
-
-.dash-goal,
-.dash-activity__item {
-    display: flex;
-    flex-direction: column;
-    gap: var(--app-spacing-xs);
-}
-
-.dash-goal__row,
-.dash-activity__row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--app-spacing-m);
-}
-
-.dash-goal__name,
-.dash-activity__title {
-    font-weight: var(--app-font-weight-medium);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.dash-goal__amounts,
-.dash-activity__description,
-.dash-activity__date {
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
-}
-
-.dash-activity__date {
-    white-space: nowrap;
-}
-
-.dash-progress {
-    height: 6px;
-    overflow: hidden;
-    background: var(--app-surface-secondary);
-    border-radius: var(--app-radius-s);
-}
-
-.dash-progress__bar {
-    height: 100%;
-    background: var(--app-brand);
-    border-radius: var(--app-radius-s);
-}
-
-/* ==========================================================================
-   Quick actions
-   ========================================================================== */
-
-.dash-actions__list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--app-spacing-m);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-@media (min-width: 768px) {
-    .dash-actions__list {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-}
-
-.dash-action {
-    display: flex;
-    align-items: center;
-    gap: var(--app-spacing-s);
-    padding: var(--app-spacing-m);
-    font-weight: var(--app-font-weight-medium);
-    color: var(--app-text);
-    text-decoration: none;
-    background: var(--app-surface);
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-}
-
-.dash-action svg {
-    width: 18px;
-    height: 18px;
-    color: var(--app-brand);
-}
-
-.dash-action:hover {
-    color: var(--app-brand-pressed);
-    background: var(--app-brand-soft);
-    border-color: var(--app-brand-bg-hover);
-}
-
-/* ==========================================================================
-   Setup cards — reusable guided next step (Views/Dashboard/_SetupCard.cshtml)
-   ========================================================================== */
-
-.dash-setup__grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--app-spacing-m);
-}
-
-@media (min-width: 768px) {
-    .dash-setup__grid {
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    }
-}
-
-.dash-setup-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--app-spacing-m);
-    padding: var(--app-spacing-l);
-    background: var(--app-bg);
-    border: 1px solid var(--app-border);
-    border-left: 3px solid var(--app-brand);
-    border-radius: var(--app-radius-m);
-}
-
-.dash-setup-card__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    color: var(--app-brand);
-    background: var(--app-brand-soft);
-    border-radius: var(--app-radius-m);
-}
-
-.dash-setup-card__icon svg {
-    width: 18px;
-    height: 18px;
-}
-
-.dash-setup-card__title {
-    margin: 0 0 var(--app-spacing-xs);
-    font-size: var(--app-font-size-base);
-    font-weight: var(--app-font-weight-semibold);
-}
-
-.dash-setup-card__text {
-    margin: 0;
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
-    line-height: 1.5;
-}
-
-.dash-setup-card__action {
-    margin-top: auto;
-}
-
-/* ==========================================================================
-   Focus and motion
-   ========================================================================== */
-
-.dash-link:focus-visible,
-.dash-tile:focus-visible,
-.dash-action:focus-visible,
-.dash-setup-card__action:focus-visible {
-    outline: 2px solid var(--app-brand);
-    outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .dash > * {
-        animation: dash-fade-in 240ms ease-out both;
-    }
-
-    .dash > :nth-child(2) { animation-delay: 40ms; }
-    .dash > :nth-child(3) { animation-delay: 80ms; }
-    .dash > :nth-child(4) { animation-delay: 120ms; }
-    .dash > :nth-child(5) { animation-delay: 160ms; }
-
-    .dash-tile,
-    .dash-action,
-    .dash-link {
-        transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
-    }
-}
-
-@keyframes dash-fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: none;
-    }
 }
 
 /* ==========================================================================
@@ -559,36 +458,182 @@
     margin-top: var(--app-spacing-s);
 }
 
-@media (forced-colors: active) {
-    .dash-budget__swatch {
-        border: 1px solid CanvasText;
-    }
+/* ==========================================================================
+   Lists: savings goals and recent activity
+   ========================================================================== */
+
+.dash-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dash-list > li {
+    padding: var(--app-spacing-m) 0;
+    border-top: 1px solid var(--app-border);
+}
+
+.dash-list > li:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.dash-goal__row,
+.dash-activity__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--app-spacing-m);
+}
+
+.dash-goal__name,
+.dash-activity__title {
+    font-weight: var(--app-font-weight-medium);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-goal__amounts,
+.dash-activity__description,
+.dash-activity__date {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+/* Savings goals */
+.dash-goal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+}
+
+.dash-goal__title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    min-width: 0;
+}
+
+.dash-goal__percent {
+    font-size: var(--app-font-size-small);
+    white-space: nowrap;
+}
+
+.dash-goal__badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    padding: 1px var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    /* Darkened positive token so small badge text meets WCAG AA on the soft background. */
+    color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
+    background: var(--app-accent-positive-soft);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-goal__badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+.dash-goal--completed .dash-progress__bar {
+    background: var(--app-accent-positive);
+}
+
+/* Recent activity */
+.dash-activity__item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--app-spacing-m);
+}
+
+.dash-activity__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+    min-width: 0;
+}
+
+.dash-activity__date {
+    white-space: nowrap;
+}
+
+.dash-activity__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--app-text-muted);
+    background: var(--app-surface-secondary);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-activity__icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.dash-activity__icon--income {
+    color: var(--app-accent-positive);
+    background: var(--app-accent-positive-soft);
+}
+
+.dash-activity__icon--expense {
+    color: var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+}
+
+.dash-activity__icon--goal {
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
 }
 
 /* ==========================================================================
-   Quick actions — action grid with icon, label, and hint (ticket 08)
+   Quick actions — action grid with icon, label, and hint
    ========================================================================== */
 
 .dash-actions__list {
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
-}
-
-@media (min-width: 576px) {
-    .dash-actions__list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (min-width: 992px) {
-    .dash-actions__list {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    }
+    gap: var(--app-spacing-m);
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 .dash-action {
-    height: 100%;
+    display: flex;
+    align-items: center;
     gap: var(--app-spacing-m);
+    height: 100%;
+    padding: var(--app-spacing-m);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text);
+    text-decoration: none;
     background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-action:hover {
+    color: var(--app-brand-pressed);
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand-bg-hover);
+}
+
+.dash-action svg {
+    width: 18px;
+    height: 18px;
+    color: var(--app-brand);
 }
 
 .dash-action__icon {
@@ -633,231 +678,178 @@
     color: var(--app-brand);
 }
 
+/* ==========================================================================
+   Setup cards — reusable guided next step (Views/Dashboard/_SetupCard.cshtml)
+   ========================================================================== */
+
+.dash-setup__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-m);
+}
+
+.dash-setup-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--app-spacing-m);
+    padding: var(--app-spacing-l);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-left: 3px solid var(--app-brand);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-setup-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-setup-card__icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.dash-setup-card__title {
+    margin: 0 0 var(--app-spacing-xs);
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-setup-card__text {
+    margin: 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    line-height: 1.5;
+}
+
+.dash-setup-card__action {
+    margin-top: auto;
+}
+
+/* ==========================================================================
+   Focus — every interactive element shows a visible indicator
+   ========================================================================== */
+
+.dash-link:focus-visible,
+.dash-tile:focus-visible,
+.dash-action:focus-visible,
+.dash-setup-card__action:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.dash-tile:focus-visible,
 .dash-action:focus-visible {
     border-color: var(--app-brand);
     box-shadow: var(--app-shadow-4);
 }
 
 /* ==========================================================================
-   Summary / FI progress (ticket 04) — headline Net Worth, FI Target, Progress to FI
+   Motion — short entrance fade (lightly staggered) and hover/focus transitions,
+   only for users who have not asked to reduce motion. Matches css/landing.css.
    ========================================================================== */
 
-.dash-summary__body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--app-spacing-l);
-    align-items: end;
+@media (prefers-reduced-motion: no-preference) {
+    .dash > * {
+        animation: dash-fade-up 240ms ease-out both;
+    }
+
+    .dash > :nth-child(2) { animation-delay: 40ms; }
+    .dash > :nth-child(3) { animation-delay: 80ms; }
+    .dash > :nth-child(4) { animation-delay: 120ms; }
+    .dash > :nth-child(n + 5) { animation-delay: 160ms; }
+
+    .dash-tile,
+    .dash-action,
+    .dash-link {
+        transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
+    }
+
+    .dash-action__chevron svg {
+        transition: color 150ms ease;
+    }
+}
+
+@keyframes dash-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (min-width: 576px) {
+    .dash-actions__list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dash-projection__chart {
+        min-height: 300px;
+    }
 }
 
 @media (min-width: 768px) {
     .dash-summary__body {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
     }
-}
 
-.dash-summary__headline {
-    display: flex;
-    flex-direction: column;
-    gap: var(--app-spacing-xs);
-}
-
-.dash-summary .dash-summary__value {
-    font-size: clamp(2rem, 4vw + 1rem, 2.75rem);
-    letter-spacing: -0.02em;
-}
-
-.dash-summary__fi {
-    display: flex;
-    flex-direction: column;
-    gap: var(--app-spacing-s);
-    padding: var(--app-spacing-m);
-    background: var(--app-surface);
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-}
-
-.dash-summary__fi > p {
-    margin: 0;
-}
-
-.dash-summary__fi-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--app-spacing-s);
-}
-
-.dash-summary__fi-label {
-    font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text);
-}
-
-.dash-summary__fi-percent {
-    margin-left: auto;
-    font-size: var(--app-font-size-large);
-    font-weight: var(--app-font-weight-semibold);
-}
-
-.dash-progress--fi {
-    height: 10px;
-}
-
-.dash-progress--reached .dash-progress__bar {
-    background: var(--app-accent-positive);
-}
-
-.dash-summary__fi-target {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--app-spacing-xs) var(--app-spacing-s);
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
-}
-
-.dash-summary__fi-target .dash-money {
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text);
-}
-
-.dash-summary__fi-hint {
-    color: var(--app-text-muted);
-}
-
-.dash-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--app-spacing-xs);
-    padding: 2px var(--app-spacing-s);
-    font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-semibold);
-    border-radius: 999px;
-}
-
-.dash-badge svg {
-    width: 14px;
-    height: 14px;
-}
-
-.dash-badge--positive {
-    /* Darkened positive token so small badge text meets WCAG AA on the soft background. */
-    color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
-    background: var(--app-accent-positive-soft);
-}
-
-/* ==========================================================================
-   Goals & activity (ticket 07)
-   ========================================================================== */
-
-.dash-goal__title {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--app-spacing-s);
-    min-width: 0;
-}
-
-.dash-goal__percent {
-    font-size: var(--app-font-size-small);
-    white-space: nowrap;
-}
-
-.dash-goal__badge {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 2px;
-    padding: 1px var(--app-spacing-xs);
-    font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-medium);
-    color: var(--app-accent-positive);
-    background: var(--app-accent-positive-soft);
-    border-radius: var(--app-radius-s);
-}
-
-.dash-goal__badge svg {
-    width: 12px;
-    height: 12px;
-}
-
-.dash-goal--completed .dash-progress__bar {
-    background: var(--app-accent-positive);
-}
-
-.dash-activity__item {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: var(--app-spacing-m);
-}
-
-.dash-activity__body {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: var(--app-spacing-xs);
-    min-width: 0;
-}
-
-.dash-activity__icon {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    color: var(--app-text-muted);
-    background: var(--app-surface-secondary);
-    border-radius: var(--app-radius-m);
-}
-
-.dash-activity__icon svg {
-    width: 16px;
-    height: 16px;
-}
-
-.dash-activity__icon--income {
-    color: var(--app-accent-positive);
-    background: var(--app-accent-positive-soft);
-}
-
-.dash-activity__icon--expense {
-    color: var(--app-accent-negative);
-    background: var(--app-accent-negative-soft);
-}
-
-.dash-activity__icon--goal {
-    color: var(--app-brand);
-    background: var(--app-brand-soft);
-
-   Projection chart (ticket 05)
-   ========================================================================== */
-
-.dash-projection .dash-note {
-    margin-bottom: var(--app-spacing-s);
-}
-
-.dash-projection__chart {
-    min-height: 240px;
-    margin-bottom: var(--app-spacing-m);
-}
-
-@media (min-width: 576px) {
-    .dash-projection__chart {
-        min-height: 300px;
+    .dash-setup__grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     }
 }
 
-.dash-projection__prompt {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--app-spacing-s);
+@media (min-width: 992px) {
+    .dash-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dash-row--wide {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+
+    .dash-figures {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .dash-actions__list {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
 }
 
-.dash-projection__prompt-text {
-    margin: 0;
+/* Mobile: the fixed bottom navigation (56px, css/sidebar.css) overlays the page foot. The app container
+   already reserves 80px below the content at this breakpoint; the Dashboard adds its own spacing plus the
+   home-indicator safe area on notched phones so the last section always sits fully above the bar. */
+@media (max-width: 768px) {
+    .dash {
+        padding-bottom: calc(var(--app-spacing-xl) + env(safe-area-inset-bottom, 0px));
+    }
 }
 
-.dash-summary__fi-age {
-    margin-top: var(--app-spacing-xs);
+@media (forced-colors: active) {
+    .dash-budget__swatch {
+        border: 1px solid CanvasText;
+    }
+
+    .dash-progress {
+        border: 1px solid CanvasText;
+    }
+
+    .dash-progress__bar {
+        background: Highlight;
+    }
 }

@@ -81,6 +81,16 @@
          */
         getData: function () {
             return data || {};
+        },
+
+        /**
+         * Whether the user asked the operating system to minimise motion. Charts use this to turn
+         * off their draw-in animations, matching the CSS reduced-motion rules in dashboard.css.
+         * @returns {boolean} True when animations should be disabled.
+         */
+        prefersReducedMotion: function () {
+            return typeof window.matchMedia === 'function' &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         }
     };
 

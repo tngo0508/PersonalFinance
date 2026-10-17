@@ -80,7 +80,12 @@
         const percent = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 
         const chart = new window.ApexCharts(element, {
-            chart: { type: 'donut', height: 220, fontFamily: 'Inter, sans-serif' },
+            chart: {
+                type: 'donut',
+                height: 220,
+                fontFamily: 'Inter, sans-serif',
+                animations: { enabled: !window.PFDashboard.prefersReducedMotion() }
+            },
             series: slices.map((slice) => slice.percent),
             labels: slices.map((slice) => slice.label),
             colors: slices.map((slice) => colorFor(element, slice.slug)),

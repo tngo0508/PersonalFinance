@@ -26,7 +26,7 @@
 <section class="dash-card dash-projection" aria-labelledby="dash-projection-title">
     <div class="dash-card__header">
         <h2 id="dash-projection-title" class="dash-card__title">Net worth projection</h2>
-        <a asp-controller="Networth" asp-action="Index" class="dash-link">View details</a>
+        <a asp-controller="Networth" asp-action="Index" class="dash-link">View details<span class="visually-hidden"> of your net worth projection</span></a>
     </div>
     @if (netWorth is null)
     {

@@ -53,17 +53,11 @@
     font-weight: var(--app-font-weight-semibold);
     line-height: 1.2;
     text-decoration: none;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .lp-btn svg {
     width: 16px;
     height: 16px;
-    transition: transform 0.15s ease;
-}
-
-.lp-btn:hover svg {
-    transform: translateX(2px);
 }
 
 .lp-btn:focus-visible {
@@ -460,7 +454,6 @@
 .lp-feature {
     padding: 1.6rem 1.5rem;
     background: var(--app-bg);
-    transition: background-color 0.15s ease;
 }
 
 .lp-feature:hover {
@@ -601,42 +594,45 @@
 }
 
 /* ==========================================================================
-   Motion — soft entrance fade, disabled for reduced-motion users
+   Motion — short entrance fade (lightly staggered) and hover/focus transitions,
+   only for users who have not asked to reduce motion. Matches css/dashboard.css.
    ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+    .lp-reveal {
+        animation: lp-fade-up 240ms ease-out both;
+    }
+
+    .lp-reveal--delay {
+        animation-delay: 80ms;
+    }
+
+    .lp-btn {
+        transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .lp-btn svg {
+        transition: transform 150ms ease;
+    }
+
+    .lp-btn:hover svg,
+    .lp-btn:focus-visible svg {
+        transform: translateX(2px);
+    }
+
+    .lp-feature {
+        transition: background-color 150ms ease;
+    }
+}
 
 @keyframes lp-fade-up {
     from {
         opacity: 0;
-        transform: translateY(12px);
+        transform: translateY(6px);
     }
 
     to {
         opacity: 1;
-        transform: none;
-    }
-}
-
-.lp-reveal {
-    animation: lp-fade-up 0.5s ease-out both;
-}
-
-.lp-reveal--delay {
-    animation-delay: 0.12s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .lp-reveal,
-    .lp-reveal--delay {
-        animation: none;
-    }
-
-    .lp-btn,
-    .lp-btn svg,
-    .lp-feature {
-        transition: none;
-    }
-
-    .lp-btn:hover svg {
         transform: none;
     }
 }

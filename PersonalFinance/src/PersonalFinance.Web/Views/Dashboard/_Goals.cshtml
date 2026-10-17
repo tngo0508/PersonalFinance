@@ -3,7 +3,7 @@
 <section class="dash-card dash-goals" aria-labelledby="dash-goals-title">
     <div class="dash-card__header">
         <h2 id="dash-goals-title" class="dash-card__title">Savings goals</h2>
-        <a asp-controller="SavingsGoals" asp-action="Index" class="dash-link">View all</a>
+        <a asp-controller="SavingsGoals" asp-action="Index" class="dash-link">View all<span class="visually-hidden"> savings goals</span></a>
     </div>
     @if (Model.SavingsGoals.Count > 0)
     {

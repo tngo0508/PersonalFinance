@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Quick actions redesigned as a keyboard-accessible grid, now including the Investment Calculator.
     - Dashboard summary API extended additively with FI, savings rate, budget allocation, goals overview, and Google
       Drive connection fields.
+    - Net worth projection chart plots the Base, Conservative, and Aggressive scenarios from today to retirement age
+      with a dashed FI Target line, year/age tooltips, and the age the FI target is reached, using the same
+      calculation as the Net Worth page.
+    - Polish and accessibility pass across the Landing Page and Dashboard: consolidated stylesheet, one short
+      entrance fade and 150ms hover/focus transitions disabled under reduced motion (including chart draw-in
+      animations), descriptive link text, AA-contrast goal badges, Dashboard content kept clear of the mobile bottom
+      navigation, and Playwright checks at 1280px and 390px widths.
 - **Navbar Redesign**: Replaced the cluttered top navbar with a left sidebar navigation, Dashboard home page, global
   search, and notification system.
     - Left sidebar (240px/60px collapsible) with three navigation groups: Overview, My Finances, Resources
