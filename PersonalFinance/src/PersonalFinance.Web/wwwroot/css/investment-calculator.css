@@ -267,9 +267,7 @@
 
 #calcChart {
     display: block;
-    width: 100% !important;
-    height: auto !important;
-    max-height: 400px !important;
+    max-width: 100%;
 }
 
 /* ==========================================================================

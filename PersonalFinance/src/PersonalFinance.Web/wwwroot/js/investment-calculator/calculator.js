@@ -128,10 +128,9 @@
         if (!canvas) return null;
         const container = canvas.parentElement;
         if (!container) return null;
-        const containerWidth = container.clientWidth - 24;
-        const minWidth = 300;
+        const containerWidth = Math.max(1, container.clientWidth - 24);
         const maxWidth = 800;
-        const w = Math.max(minWidth, Math.min(maxWidth, containerWidth));
+        const w = Math.min(maxWidth, containerWidth);
         const h = Math.round(w * 0.7);
         return {w, h};
     }
@@ -213,7 +212,7 @@
 
             const val = niceMax - (niceMax / gridLines) * i;
             ctx.fillStyle = '#6b7280';
-            ctx.font = '11px system-ui, -apple-system, sans-serif';
+            ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
             ctx.fillText(formatAxisValue(val), padding.left - 10, y);
@@ -224,7 +223,7 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillStyle = '#6b7280';
-        ctx.font = '11px system-ui, -apple-system, sans-serif';
+        ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
         const xStep = Math.max(1, Math.floor(years / 7));
         for (let y = 0; y <= years; y += xStep) {
             const x = toCanvasX(y);
@@ -542,7 +541,7 @@
             'Contrib: ' + formatCurrency(contribution)
         ];
 
-        ctx.font = '600 11px system-ui, -apple-system, sans-serif';
+        ctx.font = '600 12px Inter, system-ui, -apple-system, sans-serif';
         const lineH = 18;
         const boxW = 150;
         const boxH = lines.length * lineH + 12;
@@ -590,7 +589,7 @@
 
         lines.forEach((line, i) => {
             const isTitle = i === 0;
-            ctx.font = isTitle ? '700 11px system-ui, -apple-system, sans-serif' : '500 11px system-ui, -apple-system, sans-serif';
+            ctx.font = isTitle ? '700 12px Inter, system-ui, -apple-system, sans-serif' : '500 12px Inter, system-ui, -apple-system, sans-serif';
             ctx.fillStyle = isTitle ? '#111827' : '#4b5563';
             ctx.fillText(line, boxX + boxPad, boxY + boxPad + i * lineH);
         });

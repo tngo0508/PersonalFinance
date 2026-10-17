@@ -86,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Investment Calculator Chart Rendering**: Prevented the Growth Over Time canvas from being rescaled by conflicting
+  CSS, improving sharpness and label readability across screen sizes.
 - **Budget Tracker Month/Year Selectors**: Month and year dropdowns now fill the navigation bar on mobile screens.
   - Selects flex to share the row between the arrow buttons; extra right padding keeps text clear of the arrow.
 - **Budget Data Source Switch**: Fixed "Failed to switch budget data source" when choosing Budget Tracker on Analysis.
