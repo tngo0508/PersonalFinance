@@ -23,6 +23,7 @@ public class DashboardService : IDashboardService
         var netWorth = await GetNetWorthSummaryAsync(userId, cancellationToken);
         var budget = await GetBudgetSummaryAsync(userId, cancellationToken);
         var savingsGoals = await GetSavingsGoalsSummaryAsync(userId, cancellationToken);
+        var goalsOverview = await GetGoalsOverviewAsync(userId, cancellationToken);
         var recentActivity = await GetRecentActivityAsync(userId, cancellationToken);
 
         return new DashboardSummaryDto
@@ -30,6 +31,7 @@ public class DashboardService : IDashboardService
             NetWorth = netWorth,
             Budget = budget,
             SavingsGoals = savingsGoals,
+            GoalsOverview = goalsOverview,
             RecentActivity = recentActivity
         };
     }
@@ -111,6 +113,41 @@ public class DashboardService : IDashboardService
             .ToListAsync(cancellationToken);
 
         return goals;
+    }
+
+    /// <summary>
+    /// Totals across all of the user's (non-deleted) goals, aggregated database-side in a single query.
+    /// </summary>
+    private async Task<GoalsOverviewDto> GetGoalsOverviewAsync(string userId, CancellationToken cancellationToken)
+    {
+        var totals = await _dbContext.SavingsGoals
+            .AsNoTracking()
+            .Where(g => g.UserId == userId)
+            .GroupBy(_ => 1)
+            .Select(grp => new
+            {
+                TotalSaved = grp.Sum(g => g.CurrentAmount),
+                TotalTarget = grp.Sum(g => g.TargetAmount),
+                CompletedCount = grp.Count(g => g.IsCompleted),
+                TotalCount = grp.Count()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (totals is null)
+        {
+            return new GoalsOverviewDto();
+        }
+
+        return new GoalsOverviewDto
+        {
+            TotalSaved = totals.TotalSaved,
+            TotalTarget = totals.TotalTarget,
+            FundedPercent = totals.TotalTarget > 0
+                ? Math.Min(totals.TotalSaved / totals.TotalTarget * 100m, 100m)
+                : null,
+            CompletedCount = totals.CompletedCount,
+            TotalCount = totals.TotalCount
+        };
     }
 
     private async Task<List<RecentActivityDto>> GetRecentActivityAsync(string userId,

@@ -1,20 +1,41 @@
 @model PersonalFinance.Shared.Contracts.DashboardSummaryDto
-@* Recent activity section (owned by ticket 07). Items arrive newest first from the Dashboard service. *@
+@* Recent activity section (ticket 07): type icon, title, description and date, newest first. *@
+@{
+    static (string Icon, string Modifier, string Label) ActivityStyle(string type) => type switch
+    {
+        "Income" => ("arrow-down-left", "income", "Income"),
+        "Expense" => ("arrow-up-right", "expense", "Expense"),
+        "SavingsGoal" => ("target", "goal", "Savings goal"),
+        _ => ("circle", "other", "Activity")
+    };
+
+    var items = Model.RecentActivity
+        .OrderByDescending(a => a.Date)
+        .Take(5)
+        .ToList();
+}
 <section class="dash-card dash-activity" aria-labelledby="dash-activity-title">
     <div class="dash-card__header">
         <h2 id="dash-activity-title" class="dash-card__title">Recent activity</h2>
     </div>
-    @if (Model.RecentActivity.Count > 0)
+    @if (items.Count > 0)
     {
         <ul class="dash-list">
-            @foreach (var activity in Model.RecentActivity.Take(5))
+            @foreach (var activity in items)
             {
+                var style = ActivityStyle(activity.Type);
                 <li class="dash-activity__item">
-                    <div class="dash-activity__row">
-                        <span class="dash-activity__title">@activity.Title</span>
-                        <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd")">@activity.Date.ToShortDateString()</time>
+                    <span class="dash-activity__icon dash-activity__icon--@style.Modifier">
+                        <i data-lucide="@style.Icon" aria-hidden="true"></i>
+                        <span class="visually-hidden">@style.Label</span>
+                    </span>
+                    <div class="dash-activity__body">
+                        <div class="dash-activity__row">
+                            <span class="dash-activity__title">@activity.Title</span>
+                            <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)">@activity.Date.ToString("MMM d, yyyy")</time>
+                        </div>
+                        <span class="dash-activity__description">@activity.Description</span>
                     </div>
-                    <span class="dash-activity__description">@activity.Description</span>
                 </li>
             }
         </ul>

@@ -46,6 +46,21 @@ public class SavingsGoalSummaryDto
 }
 
 /// <summary>
+/// Savings goals totals aggregated across all of the user's goals (not just the five listed).
+/// </summary>
+public class GoalsOverviewDto
+{
+    public decimal TotalSaved { get; set; }
+    public decimal TotalTarget { get; set; }
+
+    /// <summary>TotalSaved / TotalTarget × 100, capped at 100; null when TotalTarget is zero.</summary>
+    public decimal? FundedPercent { get; set; }
+
+    public int CompletedCount { get; set; }
+    public int TotalCount { get; set; }
+}
+
+/// <summary>
 /// Recent activity item for the Dashboard.
 /// </summary>
 public class RecentActivityDto
@@ -64,6 +79,7 @@ public class DashboardSummaryDto
     public NetWorthSummaryDto? NetWorth { get; set; }
     public BudgetSummaryDto? Budget { get; set; }
     public List<SavingsGoalSummaryDto> SavingsGoals { get; set; } = new();
+    public GoalsOverviewDto GoalsOverview { get; set; } = new();
     public List<RecentActivityDto> RecentActivity { get; set; } = new();
 }
 
