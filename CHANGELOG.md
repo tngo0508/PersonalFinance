@@ -86,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Budget Tracker Month/Year Selectors**: Month and year dropdowns now fill the navigation bar on mobile screens.
+  - Selects flex to share the row between the arrow buttons; extra right padding keeps text clear of the arrow.
 - **Budget Data Source Switch**: Fixed "Failed to switch budget data source" when choosing Budget Tracker on Analysis.
   - The Web Refit client serialized the `BudgetDataSource` enum as a camelCase string, which ApiService could not bind
     (HTTP 400); the enum now carries a `JsonStringEnumConverter` so both sides accept names and numbers.

@@ -49,6 +49,7 @@
 
 .bt-month-nav select {
     font-weight: 600;
+    padding-right: 2.25rem;
 }
 
 /* Alert / Toast Messages */
@@ -475,6 +476,11 @@
 
     .bt-month-nav {
         justify-content: space-between;
+    }
+
+    .bt-month-nav select {
+        flex: 1 1 0;
+        min-width: 0;
     }
 
     .bt-table th,
