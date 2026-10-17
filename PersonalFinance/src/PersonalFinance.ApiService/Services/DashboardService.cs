@@ -73,6 +73,32 @@ public class DashboardService : IDashboardService
             return null;
         }
 
+        // All ten categories in Budget-page order. Zero categories stay in the list so the totals are honest;
+        // the view decides what to draw.
+        var allocations = new[]
+            {
+                ("Housing", budget.HousingPercent),
+                ("Food", budget.FoodPercent),
+                ("Transportation", budget.TransportationPercent),
+                ("Utilities", budget.UtilitiesPercent),
+                ("Insurance", budget.InsurancePercent),
+                ("Healthcare", budget.HealthcarePercent),
+                ("Savings", budget.SavingsPercent),
+                ("Debt Repayment", budget.DebtRepaymentPercent),
+                ("Entertainment", budget.EntertainmentPercent),
+                ("Miscellaneous", budget.MiscellaneousPercent)
+            }
+            .Select(category => new BudgetAllocationDto
+            {
+                Name = category.Item1,
+                Percent = category.Item2,
+                Amount = ToMonthlyAmount(budget.MonthlyIncome, category.Item2)
+            })
+            .ToList();
+
+        var totalAllocatedPercent = allocations.Sum(a => a.Percent);
+        decimal? unallocatedPercent = totalAllocatedPercent < 100m ? 100m - totalAllocatedPercent : null;
+
         return new BudgetSummaryDto
         {
             MonthlyIncome = budget.MonthlyIncome,
@@ -86,9 +112,18 @@ public class DashboardService : IDashboardService
             DebtRepaymentPercent = budget.DebtRepaymentPercent,
             EntertainmentPercent = budget.EntertainmentPercent,
             MiscellaneousPercent = budget.MiscellaneousPercent,
-            Period = budget.Period
+            Period = budget.Period,
+            Allocations = allocations,
+            TotalAllocatedPercent = totalAllocatedPercent,
+            UnallocatedPercent = unallocatedPercent,
+            UnallocatedAmount = unallocatedPercent is { } remainder
+                ? ToMonthlyAmount(budget.MonthlyIncome, remainder)
+                : null
         };
     }
+
+    /// <summary>Dollar share of monthly income for a percentage. Unrounded; rounding happens at presentation.</summary>
+    private static decimal ToMonthlyAmount(decimal monthlyIncome, decimal percent) => percent / 100m * monthlyIncome;
 
     private async Task<List<SavingsGoalSummaryDto>> GetSavingsGoalsSummaryAsync(string userId,
         CancellationToken cancellationToken)

@@ -462,3 +462,105 @@
         transform: none;
     }
 }
+
+/* ==========================================================================
+   Budget breakdown
+   Categorical palette: one fixed colour per category, so a category keeps its colour whichever
+   categories are drawn. Validated with the dataviz palette validator against the white card surface,
+   in this order and cyclically (a donut's last slice touches its first): worst adjacent CVD dE 13.0,
+   normal-vision dE 27.5. Food, Healthcare, Debt Repayment, and Miscellaneous sit under 3:1 against
+   white, so every slice is also named with its percent and amount in the legend list (the text
+   alternative). Unallocated is a neutral grey on purpose: it is income with no category.
+   ========================================================================== */
+
+.dash-budget {
+    --dash-budget-housing: #C026D3;
+    --dash-budget-food: #EB6834;
+    --dash-budget-transportation: #6250D6;
+    --dash-budget-utilities: #E34948;
+    --dash-budget-insurance: #2A78D6;
+    --dash-budget-healthcare: #E87BA4;
+    --dash-budget-savings: #008300;
+    --dash-budget-debt-repayment: #EDA100;
+    --dash-budget-entertainment: #9B4DCA;
+    --dash-budget-miscellaneous: #1BAF7A;
+    --dash-budget-unallocated: #D1D5DB;
+}
+
+.dash-budget__chart {
+    margin: var(--app-spacing-s) 0;
+}
+
+.dash-budget__legend {
+    display: grid;
+    gap: var(--app-spacing-xs);
+    margin: var(--app-spacing-m) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--app-font-size-small);
+}
+
+.dash-budget__item {
+    display: grid;
+    grid-template-columns: 0.75rem minmax(0, 1fr) auto auto;
+    align-items: center;
+    column-gap: var(--app-spacing-s);
+}
+
+.dash-budget__item--empty {
+    color: var(--app-text-muted);
+}
+
+.dash-budget__item--unallocated {
+    padding-top: var(--app-spacing-xs);
+    border-top: 1px solid var(--app-border);
+}
+
+.dash-budget__swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 3px;
+}
+
+.dash-budget__item--empty .dash-budget__swatch {
+    opacity: 0.35;
+}
+
+.dash-budget__swatch--housing { background: var(--dash-budget-housing); }
+.dash-budget__swatch--food { background: var(--dash-budget-food); }
+.dash-budget__swatch--transportation { background: var(--dash-budget-transportation); }
+.dash-budget__swatch--utilities { background: var(--dash-budget-utilities); }
+.dash-budget__swatch--insurance { background: var(--dash-budget-insurance); }
+.dash-budget__swatch--healthcare { background: var(--dash-budget-healthcare); }
+.dash-budget__swatch--savings { background: var(--dash-budget-savings); }
+.dash-budget__swatch--debt-repayment { background: var(--dash-budget-debt-repayment); }
+.dash-budget__swatch--entertainment { background: var(--dash-budget-entertainment); }
+.dash-budget__swatch--miscellaneous { background: var(--dash-budget-miscellaneous); }
+.dash-budget__swatch--unallocated { background: var(--dash-budget-unallocated); }
+
+.dash-budget__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-budget__percent {
+    min-width: 3.5rem;
+    text-align: right;
+    color: var(--app-text-muted);
+}
+
+.dash-budget__amount {
+    min-width: 4.5rem;
+    text-align: right;
+}
+
+.dash-budget__warning {
+    margin-top: var(--app-spacing-s);
+}
+
+@media (forced-colors: active) {
+    .dash-budget__swatch {
+        border: 1px solid CanvasText;
+    }
+}

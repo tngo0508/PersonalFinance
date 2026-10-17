@@ -1,19 +1,65 @@
 @model PersonalFinance.Shared.Contracts.DashboardSummaryDto
-@* Budget breakdown section (owned by ticket 06). The donut is drawn by js/dashboard/dashboard-budget-chart.js
-   from the "budget" slice of the dashboard data island. *@
+@* Budget breakdown section. Allocations, totals, and Unallocated come from the Dashboard service; this view only
+   formats them. The donut (js/dashboard/dashboard-budget-chart.js) draws the "budget" slice of the data island and
+   takes each category's colour from the --dash-budget-* tokens in dashboard.css. The legend list is the text
+   alternative: every category with its percent and dollar amount. *@
+@{
+    var budget = Model.Budget;
+    var periodLabel = DashboardBudgetFormat.PeriodLabel(budget?.Period);
+    var overAllocatedPercent = budget is null ? 0m : budget.TotalAllocatedPercent - 100m;
+}
 <section class="dash-card dash-budget" aria-labelledby="dash-budget-title">
     <div class="dash-card__header">
         <h2 id="dash-budget-title" class="dash-card__title">Budget</h2>
-        <a asp-controller="Budget" asp-action="Index" class="dash-link">Edit budget</a>
+        <a asp-controller="Budget" asp-action="Index" class="dash-link">
+            @(budget is null ? "Create a budget" : "Edit budget")
+        </a>
     </div>
-    @if (Model.Budget is not null)
+    @if (budget is not null)
     {
         <p class="dash-note">
-            <span class="dash-money">@Model.Budget.MonthlyIncome.ToString("C0")</span> monthly income
-            &middot; @Model.Budget.Period
+            @if (!string.IsNullOrEmpty(periodLabel))
+            {
+                <span class="dash-budget__period">@periodLabel</span>
+                <text>&middot;</text>
+            }
+            <span class="dash-money">@budget.MonthlyIncome.ToString("C0")</span> monthly income
         </p>
-        <div id="dash-budget-chart" class="dash-chart" role="img"
-             aria-label="Planned budget split for @Model.Budget.Period"></div>
+
+        @if (budget.TotalAllocatedPercent > 0m)
+        {
+            <div id="dash-budget-chart" class="dash-chart dash-budget__chart" aria-hidden="true"></div>
+        }
+
+        <ul class="dash-budget__legend" aria-label="Planned split of monthly income@(string.IsNullOrEmpty(periodLabel) ? null : $" for {periodLabel}")">
+            @foreach (var allocation in budget.Allocations)
+            {
+                <li class="dash-budget__item @(allocation.Percent > 0m ? null : "dash-budget__item--empty")">
+                    <span class="dash-budget__swatch dash-budget__swatch--@DashboardBudgetFormat.CategorySlug(allocation.Name)"
+                          aria-hidden="true"></span>
+                    <span class="dash-budget__name">@allocation.Name</span>
+                    <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(allocation.Percent)</span>
+                    <span class="dash-budget__amount dash-money">@allocation.Amount.ToString("C0")</span>
+                </li>
+            }
+            @if (budget.UnallocatedPercent is { } unallocatedPercent)
+            {
+                <li class="dash-budget__item dash-budget__item--unallocated">
+                    <span class="dash-budget__swatch dash-budget__swatch--unallocated" aria-hidden="true"></span>
+                    <span class="dash-budget__name">Unallocated</span>
+                    <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(unallocatedPercent)</span>
+                    <span class="dash-budget__amount dash-money">@((budget.UnallocatedAmount ?? 0m).ToString("C0"))</span>
+                </li>
+            }
+        </ul>
+
+        @if (overAllocatedPercent > 0m)
+        {
+            <p class="dash-note dash-budget__warning">
+                Allocations total @DashboardBudgetFormat.Percent(budget.TotalAllocatedPercent) of income,
+                @DashboardBudgetFormat.Percent(overAllocatedPercent) more than you earn.
+            </p>
+        }
     }
     else
     {

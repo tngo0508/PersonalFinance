@@ -50,6 +50,28 @@ public class BudgetSummaryDto
     public decimal? EntertainmentPercent { get; set; }
     public decimal? MiscellaneousPercent { get; set; }
     public string? Period { get; set; }
+
+    /// <summary>All ten budget categories in Budget-page order, each with its percent and dollar amount.</summary>
+    public List<BudgetAllocationDto> Allocations { get; set; } = new();
+
+    /// <summary>Sum of all category percentages.</summary>
+    public decimal TotalAllocatedPercent { get; set; }
+
+    /// <summary>Percent of monthly income not allocated; null when allocations total 100% or more.</summary>
+    public decimal? UnallocatedPercent { get; set; }
+
+    /// <summary>Dollar amount of monthly income not allocated; null when allocations total 100% or more.</summary>
+    public decimal? UnallocatedAmount { get; set; }
+}
+
+/// <summary>
+/// One budget category's planned share of monthly income.
+/// </summary>
+public class BudgetAllocationDto
+{
+    public string Name { get; set; } = string.Empty;
+    public decimal Percent { get; set; }
+    public decimal Amount { get; set; }
 }
 
 public class SavingsGoalSummaryDto
