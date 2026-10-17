@@ -115,7 +115,8 @@ try
     // 5d. Register FluentValidation - scans the assembly for validators
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true);
 
     // 6. OpenAPI generator in .NET 10 with synchronized application metadata
     builder.Services.AddOpenApi(options =>

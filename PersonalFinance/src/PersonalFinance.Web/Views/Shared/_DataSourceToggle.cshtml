@@ -1,21 +1,32 @@
 @using PersonalFinance.Shared.Enums
 @model PersonalFinance.Shared.Enums.BudgetDataSource
 
-<div class="data-source-toggle d-inline-flex align-items-center" data-active-source="@Model">
+<style>
+    .data-source-error {
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+        color: #dc3545;
+    }
+</style>
+
+<div class="data-source-toggle d-inline-flex align-items-center flex-column align-items-start"
+     data-active-source="@Model">
     @Html.AntiForgeryToken()
-    <span class="data-source-toggle__label me-2 text-muted small fw-medium">Data source:</span>
-    <div class="btn-group btn-group-sm" role="group" aria-label="Budget data source selection">
-        <button type="button"
-                class="btn @(Model == BudgetDataSource.GoogleSheet ? "btn-primary active" : "btn-outline-secondary") data-source-btn"
-                data-source="@((int)BudgetDataSource.GoogleSheet)"
-                aria-pressed="@(Model == BudgetDataSource.GoogleSheet ? "true" : "false")">
-            Google Sheet
-        </button>
-        <button type="button"
-                class="btn @(Model == BudgetDataSource.BudgetTracker ? "btn-primary active" : "btn-outline-secondary") data-source-btn"
-                data-source="@((int)BudgetDataSource.BudgetTracker)"
-                aria-pressed="@(Model == BudgetDataSource.BudgetTracker ? "true" : "false")">
-            Budget Tracker
-        </button>
+    <div class="d-inline-flex align-items-center">
+        <span class="data-source-toggle__label me-2 text-muted small fw-medium">Data source:</span>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Budget data source selection">
+            <button type="button"
+                    class="btn @(Model == BudgetDataSource.GoogleSheet ? "btn-primary active" : "btn-outline-secondary") data-source-btn"
+                    data-source="@((int)BudgetDataSource.GoogleSheet)"
+                    aria-pressed="@(Model == BudgetDataSource.GoogleSheet ? "true" : "false")">
+                Google Sheet
+            </button>
+            <button type="button"
+                    class="btn @(Model == BudgetDataSource.BudgetTracker ? "btn-primary active" : "btn-outline-secondary") data-source-btn"
+                    data-source="@((int)BudgetDataSource.BudgetTracker)"
+                    aria-pressed="@(Model == BudgetDataSource.BudgetTracker ? "true" : "false")">
+                Budget Tracker
+            </button>
+        </div>
     </div>
 </div>

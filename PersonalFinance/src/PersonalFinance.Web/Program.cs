@@ -159,7 +159,11 @@ try
     // Validate antiforgery tokens on every unsafe (POST/PUT/PATCH/DELETE) MVC action by default
     builder.Services.AddControllersWithViews(options =>
             options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
-        .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+        .AddJsonOptions(opts =>
+        {
+            opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        });
     builder.Services.AddProblemDetails();
 
     // 5. Register Health Checks

@@ -25,7 +25,7 @@ Dashboard is preserved through characterization tests before any refactoring.
 - [x] `GET/PUT api/budget-tracker/data-source` endpoints added to `BudgetTrackerController` with the corresponding Refit
   contract methods.
 - [x] All new services registered in `ApiService/Program.cs`.
-- [ ] Update the manual factory registration of `SpreadsheetAnalysisService` when its read methods switch to the
+- [x] Update the manual factory registration of `SpreadsheetAnalysisService` when its read methods switch to the
   provider in Ticket 04.
 - [x] Provider tests cover default resolution, explicit preference override, tracker reader mapping, and the no-fallback
   rule (empty active source never falls back silently).

@@ -459,19 +459,18 @@ tests. Existing Dashboard tests are updated only where constructor signatures ch
 
 Tickets are published as local files under `.scratch/budget-tracker/issues/` (no issue tracker configured).
 
-| #  | Ticket                                                                                                                                     | Blocked by | Status          |
-|----|--------------------------------------------------------------------------------------------------------------------------------------------|------------|-----------------|
-| 01 | [Monthly Budget service, validators, and API endpoints](.scratch/budget-tracker/issues/01-monthly-budget-api.md)                           | None       | ready-for-agent |
-| 02 | [Budget Tracker page — Summary and Transactions tabs](.scratch/budget-tracker/issues/02-budget-tracker-page.md)                            | 01         | ready-for-agent |
-| 03 | [Data source preference and unified budget data provider](.scratch/budget-tracker/issues/03-data-source-provider.md)                       | None       | ready-for-agent |
-| 04 | [Switch Analysis and Dashboard to active source with source toggle](.scratch/budget-tracker/issues/04-analysis-dashboard-source-toggle.md) | 03         | ready-for-agent |
+| #  | Ticket                                                                                                                                     | Blocked by | Status |
+|----|--------------------------------------------------------------------------------------------------------------------------------------------|------------|--------|
+| 01 | [Monthly Budget service, validators, and API endpoints](.scratch/budget-tracker/issues/01-monthly-budget-api.md)                           | None       | closed |
+| 02 | [Budget Tracker page — Summary and Transactions tabs](.scratch/budget-tracker/issues/02-budget-tracker-page.md)                            | 01         | closed |
+| 03 | [Data source preference and unified budget data provider](.scratch/budget-tracker/issues/03-data-source-provider.md)                       | None       | closed |
+| 04 | [Switch Analysis and Dashboard to active source with source toggle](.scratch/budget-tracker/issues/04-analysis-dashboard-source-toggle.md) | 03         | closed |
 
 **Execution order:** Tickets 01 and 03 can start in parallel. Ticket 02 follows 01. Ticket 04 follows 03.
 
 # Delivery Steps
 
 ### ✓ Step 1: Add Budget Tracker data model, migration, glossary and ADR
-
 **COMPLETED** — Azure SQL has the new Budget Tracker tables with soft deletes, and the domain language and decision are
 documented.
 
@@ -487,21 +486,17 @@ documented.
 - Added `docs/adr/0002-budget-tracker-separate-from-spreadsheet-data.md` (separate entities plus user-selected source).
 
 ### ✓ Step 2: Implement Monthly Budget service, validators and API endpoints
-
 Maps to **Ticket 01**. The ApiService exposes a tested `api/budget-tracker` surface that computes the sheet and manages
 categories, plans, overrides and transactions.
 
 ### ✓ Step 3: Build the Budget Tracker page (Summary and Transactions tabs)
-
 Maps to **Ticket 02**. Signed-in users can open Budget Tracker from the nav and enter and view everything the Google
 sheet captures, saved to Azure SQL.
 
 ### ✓ Step 4: Introduce the data source preference and unified budget data provider
-
 Maps to **Ticket 03**. Budget reads go through a single provider that returns sheet or tracker data according to the
 user's preference, with the sheet path behavior preserved.
 
 ### ✓ Step 5: Switch Analysis and Dashboard to the active source with a source toggle
-
 Maps to **Ticket 04**. Analysis and the Dashboard budget views show data from the user's chosen source, with a visible
 switch and source-named empty states, and the release is documented.

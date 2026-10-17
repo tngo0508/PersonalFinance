@@ -67,7 +67,20 @@
             buttons.forEach(function (btn) {
                 btn.disabled = false;
             });
-            alert('Failed to switch budget data source. Please try again.');
+            const existingError = container.querySelector('.data-source-error');
+            if (existingError) {
+                existingError.remove();
+            }
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'data-source-error';
+            errorDiv.setAttribute('role', 'alert');
+            errorDiv.textContent = 'Failed to switch budget data source. Please try again.';
+            container.appendChild(errorDiv);
+            setTimeout(function () {
+                if (errorDiv.parentNode) {
+                    errorDiv.remove();
+                }
+            }, 5000);
         }
     }
 

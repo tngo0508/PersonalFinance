@@ -121,9 +121,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Dashboard Budgeted income tile**: The tile shows Budget Planner income only. Google Sheet and Budget Tracker planned
-  vs actual figures appear on the Monthly budget card and are never mixed with Planner numbers or substituted when the
-  active source has no data.
+- **Dashboard Monthly budget card**: Added a provider-backed card showing planned vs actual income and expenses for the
+  latest month of the active source (Google Sheet or Budget Tracker), with a source toggle and source-named empty
+  states. The Budget Planner card remains separate and independent.
 - **App Shell Accent & Sidebar Persistence**: The sidebar, top bar, and mobile bottom navigation now use the Indigo
   Ledger brand accent, and the sidebar collapse preference is restored before first paint.
   - Replaced hard-coded `#58a6ff` accents with the indigo brand token (light indigo on the dark sidebar for contrast).

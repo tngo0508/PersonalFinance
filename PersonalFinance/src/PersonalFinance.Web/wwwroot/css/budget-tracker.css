@@ -227,6 +227,7 @@
     margin-bottom: 0;
     font-size: 0.925rem;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .bt-table th,
