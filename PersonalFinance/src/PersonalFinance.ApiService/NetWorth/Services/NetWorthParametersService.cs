@@ -22,13 +22,23 @@ public sealed class NetWorthParametersService : INetWorthParametersService
     /// Saves or updates the net worth projection parameters for a given user.
     /// Creates a new record if one does not already exist.
     /// </summary>
-    public async Task<NetWorthParametersDto> SaveAsync(string userId, NetWorthProjectionRequestDto parameters, CancellationToken cancellationToken = default)
+    public async Task<NetWorthParametersDto> SaveAsync(string userId, NetWorthProjectionRequestDto parameters,
+        CancellationToken cancellationToken = default)
     {
+        // Include soft-deleted records to handle re-saving after deletion
         var existing = await _dbContext.NetWorthParameters
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.UserId == userId, cancellationToken);
 
         if (existing != null)
         {
+            // Reactivate if soft-deleted
+            if (existing.IsDeleted)
+            {
+                existing.IsDeleted = false;
+                existing.DeletedAt = null;
+            }
+
             ApplyParameters(existing, parameters);
             existing.UpdatedAt = DateTime.UtcNow;
         }

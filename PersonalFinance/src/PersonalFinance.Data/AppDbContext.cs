@@ -95,6 +95,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<SpreadsheetTransactionRecord> SpreadsheetTransactionRecords => Set<SpreadsheetTransactionRecord>();
 
     /// <summary>
+    /// User notifications table set — stores budget alerts, savings milestones, and sync status notifications.
+    /// </summary>
+    public DbSet<Notification> Notifications => Set<Notification>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -116,6 +121,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         modelBuilder.Entity<CommunityCommentLike>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<CommunityStoryLike>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
 
         // Explicit Identity key/FK lengths so both providers (and design-time scaffolding) produce
         // bounded string columns. SQL Server cannot index or key nvarchar(max).
@@ -440,6 +446,20 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
                 .WithMany()
                 .HasForeignKey(e => e.ConnectionId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure Notification entity
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.SourceFeature).HasMaxLength(50);
+
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.UserId, e.IsRead });
         });
     }
 }

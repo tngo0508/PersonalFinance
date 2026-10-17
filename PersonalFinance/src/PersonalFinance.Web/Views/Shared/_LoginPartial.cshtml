@@ -35,7 +35,8 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "GoogleDrive", new { area = "" })" method="post">
+                    <form asp-area="Identity" asp-page="/Account/Logout"
+                          asp-route-returnUrl="@Url.Action("Index", "Dashboard", new { area = "" })" method="post">
                         <button type="submit" class="dropdown-item">Sign out</button>
                     </form>
                 </li>

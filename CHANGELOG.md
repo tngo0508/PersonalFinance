@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Navbar Redesign**: Replaced the cluttered top navbar with a left sidebar navigation, Dashboard home page, global
+  search, and notification system.
+    - Left sidebar (240px/60px collapsible) with three navigation groups: Overview, My Finances, Resources
+    - New Dashboard home page with grid of cards: Net Worth trend, Budget status, Savings Goals, Recent Activity, Quick
+      Actions
+    - Global search across transactions, budgets, and savings goals with debounced input
+    - Database-backed notification system with budget alerts, savings milestones, and sync status
+    - Mobile bottom navigation bar with 5 items (Home, Finances, Tools, Community, Profile)
+    - Lucide Icons for all navigation items, ApexCharts for Dashboard charts
+    - New API endpoints: Dashboard summary, Search, Notification CRUD
 - **Budget Chart Leader Lines**: Replaced the grid-based legend with labels drawn directly on the pie chart canvas.
   - Each label is connected to its corresponding chart slice by a colored leader line with a dot marker.
   - Labels show percentage only, keeping the chart area clean and uncluttered.
