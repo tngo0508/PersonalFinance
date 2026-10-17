@@ -27,13 +27,15 @@ public class DashboardService : IDashboardService
         var budget = await GetBudgetSummaryAsync(userId, cancellationToken);
         var savingsGoals = await GetSavingsGoalsSummaryAsync(userId, cancellationToken);
         var recentActivity = await GetRecentActivityAsync(userId, cancellationToken);
+        var hasGoogleDriveConnection = await HasGoogleDriveConnectionAsync(userId, cancellationToken);
 
         return new DashboardSummaryDto
         {
             NetWorth = netWorth,
             Budget = budget,
             SavingsGoals = savingsGoals,
-            RecentActivity = recentActivity
+            RecentActivity = recentActivity,
+            HasGoogleDriveConnection = hasGoogleDriveConnection
         };
     }
 
@@ -172,5 +174,16 @@ public class DashboardService : IDashboardService
 
         // Sort by date descending and take top 10 (OrderBy is stable, so ties keep query order)
         return activities.OrderByDescending(a => a.Date).Take(10).ToList();
+    }
+
+    /// <summary>
+    /// A connection counts as long as it exists and is not soft-deleted, even when it needs re-authentication
+    /// (<c>IsValid == false</c>): the user should repair it from Google Drive, not be asked to connect again.
+    /// </summary>
+    private Task<bool> HasGoogleDriveConnectionAsync(string userId, CancellationToken cancellationToken)
+    {
+        return _dbContext.GoogleDriveConnections
+            .AsNoTracking()
+            .AnyAsync(c => c.UserId == userId, cancellationToken);
     }
 }
