@@ -29,6 +29,27 @@ public class NetWorthSummaryDto
 
     /// <summary>The user's target retirement age from Net Worth settings.</summary>
     public int RetirementAge { get; set; }
+
+    /// <summary>Age at which the Base scenario first reaches the FI Target; null when it never does or the FI Target is 0.</summary>
+    public int? FiReachedAge { get; set; }
+
+    /// <summary>
+    /// Year-by-year projection from current age through retirement age, from the Net Worth projection calculation;
+    /// empty when retirement age is at or below current age.
+    /// </summary>
+    public List<ProjectionPointDto> ProjectionPoints { get; set; } = new();
+}
+
+/// <summary>
+/// One year of the Dashboard net worth projection: end-of-year balance for each scenario.
+/// </summary>
+public class ProjectionPointDto
+{
+    public int Year { get; set; }
+    public int Age { get; set; }
+    public decimal Base { get; set; }
+    public decimal Conservative { get; set; }
+    public decimal Aggressive { get; set; }
 }
 
 /// <summary>

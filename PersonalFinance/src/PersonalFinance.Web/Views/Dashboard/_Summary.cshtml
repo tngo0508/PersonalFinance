@@ -45,6 +45,12 @@
                         FI Target <span class="dash-money">@netWorth.FiTarget.ToString("C0")</span>
                         <span class="dash-summary__fi-hint">annual spending × 25</span>
                     </p>
+                    @if (netWorth.FiReachedAge is not null)
+                    {
+                        <p class="dash-note dash-summary__fi-age">
+                            On the Base scenario you reach your FI target at age @netWorth.FiReachedAge.
+                        </p>
+                    }
                 }
                 else
                 {

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.NetWorth;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -59,6 +61,10 @@ public class DashboardService : IDashboardService
         decimal? savingsRate = parameters.AnnualIncome != 0m
             ? parameters.AnnualSavings / parameters.AnnualIncome * 100m
             : null;
+        var projectionPoints = BuildProjectionPoints(parameters);
+        var fiReachedAge = fiTarget > 0m
+            ? projectionPoints.FirstOrDefault(p => p.Base >= fiTarget)?.Age
+            : null;
 
         return new NetWorthSummaryDto
         {
@@ -67,14 +73,54 @@ public class DashboardService : IDashboardService
             AnnualIncome = parameters.AnnualIncome,
             AnnualSpending = parameters.AnnualSpending,
             BaseRoi = (double)parameters.BaseRoi,
-            FiYears = null,
+            FiYears = fiReachedAge - parameters.CurrentAge,
             FiTarget = fiTarget,
             ProgressToFiPercent = progressToFi,
             FiTargetReached = progressToFi >= 100m,
             SavingsRatePercent = savingsRate,
             CurrentAge = parameters.CurrentAge,
-            RetirementAge = parameters.RetirementAge
+            RetirementAge = parameters.RetirementAge,
+            FiReachedAge = fiReachedAge,
+            ProjectionPoints = projectionPoints
         };
+    }
+
+    /// <summary>
+    /// Projection points from the same calculation the Net Worth page uses, so both pages always agree.
+    /// Each point is the end-of-year balance for that age. Empty when retirement age is at or below current age.
+    /// </summary>
+    private static List<ProjectionPointDto> BuildProjectionPoints(NetWorthParameters parameters)
+    {
+        if (parameters.RetirementAge <= parameters.CurrentAge)
+        {
+            return new List<ProjectionPointDto>();
+        }
+
+        var projection = NetWorthProjectionService.ComputeProjection(new NetWorthProjectionRequestDto
+        {
+            StartingBalance = parameters.StartingBalance,
+            AnnualSavings = parameters.AnnualSavings,
+            AnnualIncome = parameters.AnnualIncome,
+            AnnualSpending = parameters.AnnualSpending,
+            CurrentAge = parameters.CurrentAge,
+            RetirementAge = parameters.RetirementAge,
+            BaseRoi = parameters.BaseRoi,
+            ConservativeRoi = parameters.ConservativeRoi,
+            AggressiveRoi = parameters.AggressiveRoi,
+            AggressiveSavings = parameters.AggressiveSavings
+        });
+
+        // All three scenarios share the same years and ages; index-align them.
+        return projection.Base.Years
+            .Select((year, i) => new ProjectionPointDto
+            {
+                Year = year.Year,
+                Age = year.Age,
+                Base = year.EndingBalance,
+                Conservative = projection.Conservative.Years[i].EndingBalance,
+                Aggressive = projection.Aggressive.Years[i].EndingBalance
+            })
+            .ToList();
     }
 
     private async Task<BudgetSummaryDto?> GetBudgetSummaryAsync(string userId, CancellationToken cancellationToken)

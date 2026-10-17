@@ -643,3 +643,37 @@
     color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
     background: var(--app-accent-positive-soft);
 }
+
+/* ==========================================================================
+   Projection chart (ticket 05)
+   ========================================================================== */
+
+.dash-projection .dash-note {
+    margin-bottom: var(--app-spacing-s);
+}
+
+.dash-projection__chart {
+    min-height: 240px;
+    margin-bottom: var(--app-spacing-m);
+}
+
+@media (min-width: 576px) {
+    .dash-projection__chart {
+        min-height: 300px;
+    }
+}
+
+.dash-projection__prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.dash-projection__prompt-text {
+    margin: 0;
+}
+
+.dash-summary__fi-age {
+    margin-top: var(--app-spacing-xs);
+}
