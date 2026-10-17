@@ -1,15 +1,9 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
-using PersonalFinance.ApiService.AiAssistant.Services;
-using PersonalFinance.ApiService.Budget.Services;
-using PersonalFinance.ApiService.Community.Services;
-using PersonalFinance.ApiService.GoogleDrive.Services;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.NetWorth.Services;
-using PersonalFinance.ApiService.SavingsGoals.Services;
-using PersonalFinance.ApiService.SpreadsheetAnalysis.Services;
-using PersonalFinance.ApiService.Watchlist.Services;
+using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using Scalar.AspNetCore;
@@ -94,13 +88,23 @@ try
     {
         var dbContext = sp.GetRequiredService<AppDbContext>();
         var spreadsheetReader = sp.GetRequiredService<ISpreadsheetReader>();
-        return new SpreadsheetAnalysisService(dbContext, spreadsheetReader);
+        var notificationService = sp.GetRequiredService<INotificationService>();
+        return new SpreadsheetAnalysisService(dbContext, spreadsheetReader, notificationService);
     });
 
     // 5c. Register AI Assistant service for OpenAI chat integration
     builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
 
-    // 5d. Register Rate Limiter service for per-user request throttling
+    // 5d. Register Dashboard service
+    builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+    // 5e. Register Notification service
+    builder.Services.AddScoped<INotificationService, NotificationService>();
+
+    // 5f. Register Search service
+    builder.Services.AddScoped<ISearchService, SearchService>();
+
+    // 5f. Register Rate Limiter service for per-user request throttling
     builder.Services.AddSingleton<IRateLimiterService, RateLimiterService>();
 
     // 5d. Register FluentValidation - scans the assembly for validators

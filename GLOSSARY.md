@@ -5,19 +5,13 @@ Canonical definitions for the Personal Finance application domain and architectu
 ## Architecture
 
 ### Feature
-A vertical slice of functionality that spans all layers: entity, service, commands/queries, handlers, controller, API contract, DTOs, and views. Features are organized in dedicated folders (e.g., `NetWorth/`, `Budget/`, `Community/`). Each feature is self-contained and can be developed, tested, and migrated independently.
-
-### Command
-An intent-bearing object that represents an action to be performed (e.g., `SaveParametersCommand`, `DeleteConnectionCommand`). Commands are sent through MediatR and handled by a dedicated handler. Commands live in `Features/[Feature]/Commands/`.
-
-### Query
-An intent-bearing object that represents a request for data (e.g., `LoadParametersQuery`, `GetConnectionsQuery`). Queries are sent through MediatR and handled by a dedicated handler. Queries live in `Features/[Feature]/Queries/`.
-
-### Handler
-A class that processes a command or query. Handlers are thin coordinators: they receive the request, call the appropriate service(s), map the result, and return the response. Business logic lives in services, not handlers. Handlers live alongside their commands/queries in `Features/[Feature]/`.
+A vertical slice of functionality spanning entities, domain services, controllers, API contracts, DTOs, and views. Code is organized by type in the ApiService (`Controllers/`, `Services/`, `Validators/`) and Web layer, with feature-specific DTOs organized under `PersonalFinance.Shared/DTOs/`.
 
 ### Service
-A class that owns business logic and data access coordination for a feature. Services are injected into handlers and contain the domain rules, validation, and database operations. Services live in `Features/[Feature]/Services/`.
+A class that owns business logic and data access coordination for a feature. Injected directly into controllers via dependency injection, containing domain rules, validation, and database operations. Services live in `PersonalFinance.ApiService/Services/`.
+
+### Validator
+A class that provides validation logic for requests and inputs. Validators live in `PersonalFinance.ApiService/Validators/`.
 
 ### API Contract
 A Refit interface that defines the HTTP API between the Web layer and the ApiService layer. Contracts live in `PersonalFinance.Shared/Contracts/` and are shared by both layers. Examples: `INetWorthApi`, `ICommunityApi`.
@@ -37,10 +31,10 @@ A pattern where entities are marked as deleted (`IsDeleted = true`) instead of b
 ## Layers
 
 ### Web Layer
-`PersonalFinance.Web` — the MVC frontend. Contains controllers, views, Razor pages, and UI-specific services. Calls the ApiService via Refit HTTP clients. Does NOT use CQRS; controllers call APIs directly.
+`PersonalFinance.Web` — the MVC frontend. Contains controllers, views, Razor pages, and UI-specific services. Calls the ApiService via Refit HTTP clients. Controllers call APIs directly.
 
 ### ApiService Layer
-`PersonalFinance.ApiService` — the REST API backend. Contains feature folders with commands, queries, handlers, and services. Uses CQRS with MediatR for all features. Organized by feature, not by type.
+`PersonalFinance.ApiService` — the REST API backend. Contains controllers, services, and validators organized by type in `Controllers/`, `Services/`, and `Validators/`. Uses direct service injection via ASP.NET Core dependency injection.
 
 ### Data Layer
 `PersonalFinance.Data` — data access. Contains entities, DbContext, and database configuration. Independent of UI and API concerns.

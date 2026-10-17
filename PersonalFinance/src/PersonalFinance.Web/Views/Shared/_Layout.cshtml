@@ -20,130 +20,211 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"/>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/ai-chat-widget.css" asp-append-version="true"/>
 </head>
-<body class="app-body">
+<body class="app-body @(isSignedIn ? "has-sidebar" : "no-sidebar")">
 <a class="visually-hidden-focusable app-skip-link" href="#main-content">Skip to main content</a>
 
-<header class="app-header">
-    <nav class="navbar navbar-expand-md" aria-label="Main navigation">
-        <div class="container-xl">
-            <a class="navbar-brand app-brand" asp-area="" asp-controller="GoogleDrive" asp-action="Index">
-                <span class="app-brand-mark" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M1 13.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 0-1H2V2.5a.5.5 0 0 0-1 0v11z"/>
-                        <path d="M4.5 11a.5.5 0 0 1-.354-.854l3-3a.5.5 0 0 1 .708 0L9.5 8.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0L7.5 8.207l-2.646 2.647A.5.5 0 0 1 4.5 11z"/>
-                    </svg>
-                </span>
-                <span class="app-brand-name">@AppVersion.ApplicationName</span>
-            </a>
+@if (isSignedIn)
+{
+    <!-- Sidebar Overlay (mobile) -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#appNavbar"
-                    aria-controls="appNavbar" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+        <div class="sidebar-header">
+            <a class="sidebar-brand" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                <span class="sidebar-brand-icon">
+                    <i data-lucide="trending-up"></i>
+                </span>
+                <span class="sidebar-brand-name">@AppVersion.ApplicationName</span>
+            </a>
+            <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+                <i data-lucide="panel-left" style="width:20px;height:20px"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <!-- Overview -->
+            <div class="sidebar-group">
+                <div class="sidebar-group-label">Overview</div>
+                <a class="sidebar-link @(currentController == "Dashboard" ? "active" : "")"
+                   asp-area="" asp-controller="Dashboard" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="layout-dashboard"></i></span>
+                    <span class="sidebar-link-text">Dashboard</span>
+                </a>
+            </div>
+
+            <!-- My Finances -->
+            <div class="sidebar-group">
+                <div class="sidebar-group-label">My Finances</div>
+                <a class="sidebar-link @(currentController == "Networth" ? "active" : "")"
+                   asp-area="" asp-controller="Networth" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="dollar-sign"></i></span>
+                    <span class="sidebar-link-text">Net Worth</span>
+                </a>
+                <a class="sidebar-link @(currentController == "Budget" ? "active" : "")"
+                   asp-area="" asp-controller="Budget" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="pie-chart"></i></span>
+                    <span class="sidebar-link-text">Budget Planner</span>
+                </a>
+                <a class="sidebar-link @(currentController == "SavingsGoals" ? "active" : "")"
+                   asp-area="" asp-controller="SavingsGoals" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="target"></i></span>
+                    <span class="sidebar-link-text">Savings Goals</span>
+                </a>
+                <a class="sidebar-link @(currentController == "Analysis" ? "active" : "")"
+                   asp-area="" asp-controller="Analysis" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="bar-chart-3"></i></span>
+                    <span class="sidebar-link-text">Analysis</span>
+                </a>
+            </div>
+
+            <!-- Resources -->
+            <div class="sidebar-group">
+                <div class="sidebar-group-label">Resources</div>
+                <a class="sidebar-link @(currentController == "InvestmentCalculator" ? "active" : "")"
+                   asp-area="" asp-controller="InvestmentCalculator" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="calculator"></i></span>
+                    <span class="sidebar-link-text">Investment Calculator</span>
+                </a>
+                <a class="sidebar-link @(currentController == "News" ? "active" : "")"
+                   asp-area="" asp-controller="News" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="newspaper"></i></span>
+                    <span class="sidebar-link-text">Finance News</span>
+                </a>
+                <a class="sidebar-link @(currentController == "Community" ? "active" : "")"
+                   asp-area="" asp-controller="Community" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="users"></i></span>
+                    <span class="sidebar-link-text">Community</span>
+                </a>
+                <a class="sidebar-link @(currentController == "GoogleDrive" ? "active" : "")"
+                   asp-area="" asp-controller="GoogleDrive" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="folder-open"></i></span>
+                    <span class="sidebar-link-text">Google Drive</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+}
+
+<!-- Main Content Area -->
+<div class="app-content">
+    <!-- Top Bar -->
+    <header class="topbar">
+        @if (isSignedIn)
+        {
+            <button id="mobileMenuToggle" class="topbar-btn d-md-none" aria-label="Open menu">
+                <i data-lucide="menu"></i>
             </button>
 
-            <div class="collapse navbar-collapse" id="appNavbar">
-                @if (isSignedIn)
-                {
-                    <ul class="navbar-nav me-auto app-nav">
-                        <li class="nav-item">
-                            @{ var isDriveActive = currentController == "GoogleDrive"; }
-                            <a class="nav-link @(isDriveActive ? "active" : "")" aria-current="@(isDriveActive ? "page" : null)"
-                               asp-area="" asp-controller="GoogleDrive" asp-action="Index">
-                                Google Drive
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            @{ var isAnalysisActive = currentController == "Analysis"; }
-                            <a class="nav-link @(isAnalysisActive ? "active" : "")"
-                               aria-current="@(isAnalysisActive ? "page" : null)"
-                               asp-area="" asp-controller="Analysis" asp-action="Index">
-                                Analysis
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            @{ var isNetworthActive = currentController == "Networth"; }
-                            <a class="nav-link @(isNetworthActive ? "active" : "")" aria-current="@(isNetworthActive ? "page" : null)"
-                               asp-area="" asp-controller="Networth" asp-action="Index">
-                                Net Worth
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            @{ var isNewsActive = currentController == "News"; }
-                            <a class="nav-link @(isNewsActive ? "active" : "")" aria-current="@(isNewsActive ? "page" : null)"
-                               asp-area="" asp-controller="News" asp-action="Index">
-                                Finance News
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            @{ var isBudgetActive = currentController == "Budget"; }
-                            <a class="nav-link @(isBudgetActive ? "active" : "")"
-                               aria-current="@(isBudgetActive ? "page" : null)"
-                               asp-area="" asp-controller="Budget" asp-action="Index">
-                                Budget Planner
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            @{ var isSavingsActive = currentController == "SavingsGoals"; }
-                            <a class="nav-link @(isSavingsActive ? "active" : "")"
-                               aria-current="@(isSavingsActive ? "page" : null)"
-                               asp-area="" asp-controller="SavingsGoals" asp-action="Index">
-                                Savings Goals
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            @{ var isCalculatorActive = currentController == "InvestmentCalculator"; }
-                            <a class="nav-link @(isCalculatorActive ? "active" : "")"
-                               aria-current="@(isCalculatorActive ? "page" : null)"
-                               asp-area="" asp-controller="InvestmentCalculator" asp-action="Index">
-                                Investment Calculator
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            @{ var isCommunityActive = currentController == "Community"; }
-                            <a class="nav-link @(isCommunityActive ? "active" : "")" aria-current="@(isCommunityActive ? "page" : null)"
-                               asp-area="" asp-controller="Community" asp-action="Index">
-                                Community
-                            </a>
-                        </li>
-                    </ul>
-                }
-                else
-                {
-                    <div class="me-auto"></div>
-                }
+            <!-- Search -->
+            <div class="topbar-search">
+                <span class="topbar-search-icon">
+                    <i data-lucide="search"></i>
+                </span>
+                <input type="text" id="topbarSearchInput" class="topbar-search-input"
+                       placeholder="Search transactions, budgets, goals..." aria-label="Search">
+                <div id="searchResultsDropdown" class="search-results-dropdown"></div>
+            </div>
+
+            <!-- Actions -->
+            <div class="topbar-actions">
+                <!-- Notification Bell -->
+                <button id="notificationBell" class="topbar-btn" aria-label="Notifications">
+                    <i data-lucide="bell"></i>
+                    <span id="notificationBadge" class="topbar-badge hidden">0</span>
+                </button>
+                <div id="notificationDropdown" class="notification-dropdown"></div>
+
+                <!-- User Profile -->
                 <partial name="_LoginPartial"/>
             </div>
+        }
+        else
+        {
+            <a class="sidebar-brand text-decoration-none" asp-area="" asp-controller="Dashboard" asp-action="Index" style="color: #24292f;">
+                <span class="sidebar-brand-icon" style="color: var(--app-brand);">
+                    <i data-lucide="trending-up"></i>
+                </span>
+                <span class="sidebar-brand-name" style="color: #24292f;">@AppVersion.ApplicationName</span>
+            </a>
+            <div class="topbar-actions ms-auto">
+                <partial name="_LoginPartial"/>
+            </div>
+        }
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="app-main" role="main" tabindex="-1">
+        <div class="container-xl">
+            @RenderBody()
         </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span>&copy; @DateTime.Now.Year @AppVersion.ApplicationName</span>
+            <span>Version @AppVersion.Current</span>
+        </div>
+    </footer>
+</div>
+
+<!-- Mobile Bottom Navigation -->
+@if (isSignedIn)
+{
+    <nav class="bottom-nav" aria-label="Mobile navigation">
+        <a class="bottom-nav-item @(currentController == "Dashboard" ? "active" : "")"
+           asp-area="" asp-controller="Dashboard" asp-action="Index">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Home</span>
+        </a>
+        <a class="bottom-nav-item @(currentController == "Networth" || currentController == "Budget" || currentController == "SavingsGoals" || currentController == "Analysis" ? "active" : "")"
+           asp-area="" asp-controller="Networth" asp-action="Index">
+            <i data-lucide="dollar-sign"></i>
+            <span>Finances</span>
+        </a>
+        <a class="bottom-nav-item @(currentController == "InvestmentCalculator" || currentController == "News" || currentController == "GoogleDrive" ? "active" : "")"
+           asp-area="" asp-controller="InvestmentCalculator" asp-action="Index">
+            <i data-lucide="calculator"></i>
+            <span>Tools</span>
+        </a>
+        <a class="bottom-nav-item @(currentController == "Community" ? "active" : "")"
+           asp-area="" asp-controller="Community" asp-action="Index">
+            <i data-lucide="users"></i>
+            <span>Community</span>
+        </a>
+        <a class="bottom-nav-item" asp-area="Identity" asp-page="/Account/Manage/Index" aria-label="Profile">
+            <i data-lucide="user"></i>
+            <span>Profile</span>
+        </a>
     </nav>
-</header>
-
-<main id="main-content" class="app-main" role="main" tabindex="-1">
-    <div class="container-xl">
-        @RenderBody()
-    </div>
-</main>
-
-<footer class="app-footer">
-    <div class="container-xl d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span>&copy; @DateTime.Now.Year @AppVersion.ApplicationName</span>
-        <span>Version @AppVersion.Current</span>
-    </div>
-</footer>
+}
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/lib/marked/marked.min.js"></script>
-    <script src="~/js/core/utils.js" asp-append-version="true"></script>
-    <script src="~/js/core/site.js" asp-append-version="true"></script>
-    @if (isSignedIn)
-    {
-        <script src="~/js/core/ai-chat-widget.js" asp-append-version="true"></script>
-    }
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/lib/marked/marked.min.js"></script>
+<script src="~/js/core/utils.js" asp-append-version="true"></script>
+<script src="~/js/core/site.js" asp-append-version="true"></script>
+@if (isSignedIn)
+{
+    <script src="~/js/core/sidebar.js" asp-append-version="true"></script>
+    <script src="~/js/core/search.js" asp-append-version="true"></script>
+    <script src="~/js/core/notifications.js" asp-append-version="true"></script>
+    <script src="~/js/core/ai-chat-widget.js" asp-append-version="true"></script>
+}
 @await RenderSectionAsync("Scripts", required: false)
+<script>
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+</script>
 </body>
 </html>

@@ -221,6 +221,36 @@ try
         .AddHttpMessageHandler<UserIdForwardingHandler>()
         .AddStandardResilienceHandler();
 
+    // 7e. Register Notification API client
+    builder.Services.AddRefitClient<INotificationApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
+    // 7f. Register Search API client
+    builder.Services.AddRefitClient<ISearchApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
+    // 7g. Register Dashboard API client
+    builder.Services.AddRefitClient<IDashboardApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
     var app = builder.Build();
 
     // 7. Enable Serilog HTTP request logging
@@ -245,7 +275,7 @@ try
 
     app.MapControllerRoute(
             name: "default",
-            pattern: "{controller=Networth}/{action=Index}/{id?}")
+            pattern: "{controller=Dashboard}/{action=Index}/{id?}")
         .WithStaticAssets();
 
     app.MapRazorPages();

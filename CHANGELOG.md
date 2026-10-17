@@ -11,12 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Navbar Redesign**: Replaced the cluttered top navbar with a left sidebar navigation, Dashboard home page, global
+  search, and notification system.
+    - Left sidebar (240px/60px collapsible) with three navigation groups: Overview, My Finances, Resources
+    - New Dashboard home page with grid of cards: Net Worth trend, Budget status, Savings Goals, Recent Activity, Quick
+      Actions
+    - Global search across transactions, budgets, and savings goals with debounced input
+    - Database-backed notification system with budget alerts, savings milestones, and sync status
+    - Mobile bottom navigation bar with 5 items (Home, Finances, Tools, Community, Profile)
+    - Lucide Icons for all navigation items, ApexCharts for Dashboard charts
+    - New API endpoints: Dashboard summary, Search, Notification CRUD
 - **Budget Chart Leader Lines**: Replaced the grid-based legend with labels drawn directly on the pie chart canvas.
   - Each label is connected to its corresponding chart slice by a colored leader line with a dot marker.
   - Labels show percentage only, keeping the chart area clean and uncluttered.
   - Overlapping labels are automatically suppressed to maintain clarity on smaller slices.
 
 ### Fixed
+
+- **Navigation Bar in UI Test & Unauthenticated Layout**: Fixed UI test failure on login page asserting on navigation bar.
+  - Added brand icon and name in topbar header for unauthenticated users in `_Layout.cshtml`.
+  - Added full-width positioning rules in `sidebar.css` when sidebar is not present (`.no-sidebar`).
+  - Updated `e2e-tests/ui-test.js` to assert on topbar/header for unauthenticated pages and sidebar navigation for authenticated pages.
 
 - **Investment Calculator Chart**: Fixed the Growth Over Time chart not rendering at all after the recent rework.
   - The interest earned area fill was missing a `moveTo` call to start the canvas path, causing the entire chart to fail
@@ -38,6 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Architecture Alignment & ApiService Restructuring**: Aligned architecture documentation and codebase structure with direct service injection, permissive open-source licensing, and type-based organization.
+  - Rewrote `docs/adr/0001-standardize-cqrs-feature-organization.md` to establish direct service injection via ASP.NET Core DI as the canonical pattern, documenting the explicit rejection of MediatR and AutoMapper due to commercial licensing changes and unnecessary mediator indirection.
+  - Added a comprehensive License Policy to `AGENTS.md` and `.junie/AGENTS.md` enforcing strictly permissive open-source licenses (MIT, BSD 2-Clause/3-Clause, Apache 2.0) and explicitly banning commercial, dual-licensed, or copyleft dependencies.
+  - Updated `GLOSSARY.md` to purge obsolete CQRS terms (`Command`, `Query`, `Handler`) and aligned the `ApiService Layer` and `Feature` definitions with direct service injection.
+  - Restructured `PersonalFinance.ApiService` from 11 feature-nested directories (`AiAssistant/`, `Budget/`, `Community/`, `Dashboard/`, `GoogleDrive/`, `NetWorth/`, `Notification/`, `SavingsGoals/`, `Search/`, `SpreadsheetAnalysis/`, `Watchlist/`) into cohesive top-level type folders: `Controllers/`, `Services/`, and `Validators/`.
+  - Standardized root namespaces across ApiService (`PersonalFinance.ApiService.Controllers`, `PersonalFinance.ApiService.Services`, `PersonalFinance.ApiService.Validators`) and updated service registrations in `Program.cs` and test suites (`PersonalFinance.Tests`).
+  - Separated composite models previously bundled in `Validators/SpreadsheetAnalysisResults.cs` into individual, dedicated class files under `Services/`: `AnalysisDashboardResult.cs`, `SyncSpreadsheetBudgetResult.cs`, and `MonthConflictInfo.cs`.
+  - Removed unused `PersonalFinance.ApiService.Validators` namespace imports across all 11 API controllers and associated service classes.
+  - Incremented application version in `PersonalFinance.Shared/Constants/AppVersion.cs` to `1.20.1`.
 - **Investment Calculator Growth Chart**: Reworked the Growth Over Time chart with a clearer visual design.
   - Added a third area fill highlighting interest earned (the gap between contributions and total value).
   - Replaced the tiny on-canvas legend with a styled HTML legend below the chart showing final values.

@@ -5,6 +5,7 @@ This document provides guidelines for AI agents working on this .NET Core MVC pr
 ## Table of Contents
 - [Quick Start](#quick-start)
 - [Project Architecture](#project-architecture)
+- [License Policy](#license-policy)
 - [Backend/Frontend Code Separation](#backendfrontend-code-separation)
 - [Git Worktrees](#git-worktrees)
 - [Feature Implementation Protocol](#feature-implementation-protocol)
@@ -18,7 +19,7 @@ This document provides guidelines for AI agents working on this .NET Core MVC pr
 
 Before working on the project, read these reference documents:
 
-- **`GLOSSARY.md`** — Canonical definitions for architecture terms (Feature, Command, Query, Handler, Service, DTO, Entity) and domain concepts.
+- **`GLOSSARY.md`** — Canonical definitions for architecture terms (Service, DTO, Entity) and domain concepts.
 - **`docs/adr/`** — Architecture Decision Records explaining why key design choices were made.
 
 ## Project Architecture
@@ -36,9 +37,28 @@ The project follows a layered architecture pattern with clear separation of conc
 - **Composition Root**: `Program.cs` is responsible for wiring up dependencies via DI
 - **No Direct Instantiation**: Use dependency injection instead of `new` keyword for services
 - **Interface Segregation**: Define interfaces in the layer that consumes them
-- **CQRS with MediatR**: All ApiService features use CQRS — commands for actions, queries for data. See `docs/adr/0001-standardize-cqrs-feature-organization.md`.
-- **Feature-Based Organization**: ApiService is organized by feature (e.g., `NetWorth/`, `Budget/`), not by type. Each feature is a vertical slice containing its controller, commands, queries, handlers, services, and validators.
+- **Direct Service Injection**: ApiService controllers inject service interfaces directly via DI without intermediate mediator libraries. See `docs/adr/0001-standardize-cqrs-feature-organization.md`.
+- **Type-Based Organization**: ApiService is organized by type (`Controllers/`, `Services/`, `Validators/`), keeping all controllers, services, and validators in cohesive type folders.
 - **Soft Deletes**: All user-owned entities inherit from `AuditableEntity` with soft-delete support. EF Core global query filters automatically exclude deleted records.
+
+## License Policy
+
+### Permissive Open-Source Only
+This project strictly allows only **permissive open-source dependencies** with licenses:
+- **MIT**
+- **BSD** (2-Clause / 3-Clause)
+- **Apache 2.0**
+
+### Prohibited Packages & Licenses
+- **No Commercial / Paid Licenses**: Dependencies requiring paid commercial licenses, dual licensing, or subscription tiers are strictly prohibited.
+- **Banned Packages**:
+  - **MediatR** (Lucky Penny Software / commercial license) — Prohibited. Use direct service injection via built-in .NET DI instead.
+  - **AutoMapper** (Lucky Penny Software / commercial license) — Prohibited. Use explicit manual mapping methods or extension methods instead.
+- **No GPL / AGPL / Copyleft** dependencies that impose licensing viral requirements on the solution.
+
+### Rules for Package Management
+1. **Check License Before Adding**: Always verify the license of any NuGet package before adding it to any project in the solution.
+2. **Remove Paid Packages**: If an existing dependency changes its license to require payment or restrictive terms, it must be removed and replaced with a permissive open-source alternative or built-in .NET capability.
 
 ## Backend/Frontend Code Separation
 
@@ -50,13 +70,11 @@ When creating or modifying code, always place it in the correct project:
 
 | Code Type | Project | Examples |
 |---|---|---|
-| Feature controllers (API) | `PersonalFinance.ApiService` | `NetWorth/NetWorthController.cs` |
-| CQRS commands & queries | `PersonalFinance.ApiService` | `NetWorth/Commands/SaveParametersCommand.cs` |
-| CQRS handlers | `PersonalFinance.ApiService` | `NetWorth/Commands/SaveParametersCommandHandler.cs` |
-| Business logic services | `PersonalFinance.ApiService` | `NetWorth/Services/NetWorthParametersService.cs` |
-| Validators | `PersonalFinance.ApiService` | `NetWorth/Validators/NetWorthValidators.cs` |
-| MVC controllers (Web) | `PersonalFinance.Web` | `NetworthController.cs` |
-| Views (Razor) | `PersonalFinance.Web` | `.cshtml` files |
+| API controllers | `PersonalFinance.ApiService` | `Controllers/NetWorthController.cs` |
+| Business logic services | `PersonalFinance.ApiService` | `Services/NetWorthParametersService.cs` |
+| Validators | `PersonalFinance.ApiService` | `Validators/NetWorthProjectionValidator.cs` |
+| MVC controllers (Web) | `PersonalFinance.Web` | `Controllers/NetworthController.cs` |
+| Views (Razor) | `PersonalFinance.Web` | `Views/*.cshtml` files |
 | UI-specific services | `PersonalFinance.Web` | `UserIdForwardingHandler`, view model factories |
 | Data entities | `PersonalFinance.Data` | `NetWorthParameters` entity |
 | DbContext | `PersonalFinance.Data` | `ApplicationDbContext` |
@@ -244,67 +262,53 @@ Implement and validate the data layer before building dependent application logi
 - Prefer testing migrations against a dedicated development or test database before staging or production.
 - Clearly identify any migration that requires manual execution, elevated permissions, data backfills, or deployment coordination.
 
-### 3. Application Layer — CQRS and MediatR
+### 3. Application Layer — Direct Service Injection and Type-Based Organization
 
-**All ApiService features use CQRS with MediatR.** There is no exception — every feature follows the same pattern. See `docs/adr/0001-standardize-cqrs-feature-organization.md` for the rationale.
+**All ApiService features use Direct Service Injection.** Controllers inject service interfaces directly through built-in .NET dependency injection. There is no mediator indirection. See `docs/adr/0001-standardize-cqrs-feature-organization.md` for the rationale.
 
-#### Feature Folder Structure
+#### Type-Based Folder Structure
 
-Each feature lives in its own folder under `PersonalFinance.ApiService/`:
+ApiService code is organized by type in top-level folders under `PersonalFinance.ApiService/`:
 
 ```
 ApiService/
-  NetWorth/
-    NetWorthController.cs          ← API controller, injects IMediator
-    Commands/
-      SaveParametersCommand.cs     ← Command + handler in same file
-      DeleteParametersCommand.cs
-    Queries/
-      LoadParametersQuery.cs       ← Query + handler in same file
-    Services/
-      NetWorthParametersService.cs ← Business logic and data access
-    Validators/
-      NetWorthValidators.cs        ← FluentValidation rules
+  Controllers/
+    NetWorthController.cs          ← API controller, injects INetWorthParametersService
+    BudgetController.cs
+    CommunityController.cs
+    ...
+  Services/
+    INetWorthParametersService.cs  ← Service interface
+    NetWorthParametersService.cs   ← Business logic and data access
+    IBudgetService.cs
+    BudgetService.cs
+    ...
+  Validators/
+    NetWorthProjectionValidator.cs ← Validation rules
+    ...
 ```
 
-Namespace convention: `PersonalFinance.ApiService.[Feature].Commands`, `PersonalFinance.ApiService.[Feature].Services`, etc.
+Namespace conventions: `PersonalFinance.ApiService.Controllers`, `PersonalFinance.ApiService.Services`, `PersonalFinance.ApiService.Validators`.
 
-#### Commands and Queries
+#### Service Responsibilities
 
-Use clear, intention-revealing names, such as:
-
-- `Create[Feature]Command`
-- `Update[Feature]Command`
-- `Delete[Feature]Command`
-- `Get[Feature]Query`
-- `Get[Feature]ByIdQuery`
-- `[Feature]CommandHandler`
-- `[Feature]QueryHandler`
-
-Create only the operations required by the feature.
-
-#### Handler Responsibilities
-
-- **Handlers are thin coordinators** — they receive the command/query, call the appropriate service(s), map the result, and return the response.
-- **Business logic lives in services** — handlers delegate to services; don't duplicate logic in handlers.
-- Keep business logic out of MVC controllers.
-- Inject required dependencies through constructors.
-- Inject `DbContext`, external API clients, and other dependencies into the component that actually requires them.
-- Keep handlers focused on one use case.
-- Apply business rules, validation, authorization requirements, and transaction boundaries at the appropriate layer.
+- **Services own business logic and data access** — Services contain domain rules, database operations via EF Core, validation coordination, and transaction management.
+- Keep business logic out of MVC and API controllers.
+- Inject required dependencies (`ApplicationDbContext`, HTTP clients, etc.) through constructors.
+- Keep services focused on clear domain boundaries.
 - Use asynchronous operations and propagate cancellation tokens.
 - Return explicit, predictable results for success, validation failures, missing records, and conflicts.
 - Avoid swallowing exceptions or returning success when an operation failed.
-- Do not add unnecessary abstractions or repository layers when existing patterns already provide the required separation.
+- Do not add unnecessary mediator or CQRS abstractions.
 
 #### Validation and External Dependencies
 
-- Validate inputs at the appropriate application boundary.
+- Validate inputs at the appropriate application boundary using dedicated validators in `Validators/`.
 - Treat browser-side validation as a usability feature, not a security boundary.
 - Validate external API responses and handle timeouts, cancellation, rate limits, and expected failures.
 - Use `IHttpClientFactory` or the application's existing typed-client approach for HTTP integrations.
 - Never hardcode API keys, credentials, connection strings, or other secrets.
-- Use transactions only when required by the consistency requirements; do not wrap every query in a transaction.
+- Use transactions only when required by consistency requirements; do not wrap every query in a transaction.
 
 ### 4. Dependency Injection and Architecture
 
@@ -312,12 +316,12 @@ Create only the operations required by the feature.
 - Follow built-in .NET dependency injection lifetime rules.
 - Register EF Core DbContext instances and request-scoped services as `Scoped` unless the existing design requires otherwise.
 - Register stateless singleton services only when their dependencies are safe for singleton use.
-- Use `Transient` for lightweight services when their lifecycle is appropriate; do not assume all handlers must be transient.
+- Use `Transient` for lightweight services when their lifecycle is appropriate.
 - Never inject a scoped service directly into a singleton.
 - Avoid service locator patterns and unnecessary direct use of `IServiceProvider`.
-- Ensure new services, handlers, validators, and integrations are registered correctly using the project's existing registration approach.
+- Ensure new services, validators, and integrations are registered correctly using the project's existing registration approach.
 - Avoid circular dependencies and duplicated registrations.
-- Do not introduce new NuGet packages unless necessary. Check the target framework, package compatibility, licensing implications, and existing alternatives first.
+- Strictly adhere to the License Policy — only MIT, BSD, or Apache 2.0 packages allowed. Check licenses before introducing any package.
 
 ### 5. MVC Controllers and HTTP Endpoints
 
@@ -325,11 +329,11 @@ Keep controllers thin and consistent with the application's existing conventions
 
 #### ApiService Controllers (API endpoints)
 
-- **Inject `IMediator`** — Never inject services directly. Send commands and queries through MediatR.
+- **Inject Service Interfaces Directly** — Controllers inject service interfaces (e.g., `INetWorthParametersService`, `IBudgetService`) directly via constructor injection.
 - Receive and bind HTTP input.
-- Perform appropriate request-level validation.
-- Dispatch commands and queries through MediatR.
-- Translate application results into appropriate HTTP responses.
+- Perform appropriate request-level validation using validators in `Validators/`.
+- Delegate operations to injected domain services.
+- Translate service results into appropriate HTTP responses (`Ok`, `BadRequest`, `NotFound`, `NoContent`).
 - Avoid embedding database queries, complex business rules, or substantial calculation logic in controllers.
 
 #### Web Controllers (MVC views)
