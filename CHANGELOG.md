@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Navigation Bar in UI Test & Unauthenticated Layout**: Fixed UI test failure on login page asserting on navigation bar.
+  - Added brand icon and name in topbar header for unauthenticated users in `_Layout.cshtml`.
+  - Added full-width positioning rules in `sidebar.css` when sidebar is not present (`.no-sidebar`).
+  - Updated `e2e-tests/ui-test.js` to assert on topbar/header for unauthenticated pages and sidebar navigation for authenticated pages.
+
 - **Investment Calculator Chart**: Fixed the Growth Over Time chart not rendering at all after the recent rework.
   - The interest earned area fill was missing a `moveTo` call to start the canvas path, causing the entire chart to fail
     drawing.

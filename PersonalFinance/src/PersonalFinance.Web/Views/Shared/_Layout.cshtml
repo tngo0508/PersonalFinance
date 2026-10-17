@@ -27,7 +27,7 @@
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/ai-chat-widget.css" asp-append-version="true"/>
 </head>
-<body class="app-body">
+<body class="app-body @(isSignedIn ? "has-sidebar" : "no-sidebar")">
 <a class="visually-hidden-focusable app-skip-link" href="#main-content">Skip to main content</a>
 
 @if (isSignedIn)
@@ -148,7 +148,13 @@
         }
         else
         {
-            <div class="topbar-actions">
+            <a class="sidebar-brand text-decoration-none" asp-area="" asp-controller="Dashboard" asp-action="Index" style="color: #24292f;">
+                <span class="sidebar-brand-icon" style="color: var(--app-brand);">
+                    <i data-lucide="trending-up"></i>
+                </span>
+                <span class="sidebar-brand-name" style="color: #24292f;">@AppVersion.ApplicationName</span>
+            </a>
+            <div class="topbar-actions ms-auto">
                 <partial name="_LoginPartial"/>
             </div>
         }
