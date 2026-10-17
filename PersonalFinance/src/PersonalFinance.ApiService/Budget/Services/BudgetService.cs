@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Notification.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
+using CreateNotificationRequestDto = PersonalFinance.ApiService.Notification.Services.CreateNotificationRequestDto;
 
 namespace PersonalFinance.ApiService.Budget.Services;
 
@@ -12,16 +14,20 @@ public class BudgetService : IBudgetService
 {
     private readonly AppDbContext _dbContext;
     private readonly ILogger<BudgetService> _logger;
+    private readonly INotificationService _notificationService;
 
     public BudgetService(
         AppDbContext dbContext,
-        ILogger<BudgetService> logger)
+        ILogger<BudgetService> logger,
+        INotificationService notificationService)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
-    public async Task<BudgetAllocationResponseDto?> GetBudgetAsync(string userId, string period, CancellationToken cancellationToken = default)
+    public async Task<BudgetAllocationResponseDto?> GetBudgetAsync(string userId, string period,
+        CancellationToken cancellationToken = default)
     {
         var budget = await _dbContext.UserBudgetAllocations
             .AsNoTracking()
@@ -51,7 +57,8 @@ public class BudgetService : IBudgetService
         };
     }
 
-    public async Task SaveBudgetAsync(string userId, SaveBudgetRequestDto request, CancellationToken cancellationToken = default)
+    public async Task SaveBudgetAsync(string userId, SaveBudgetRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         var period = request.Period ?? DateTime.UtcNow.ToString("yyyy-MM");
 
@@ -83,5 +90,77 @@ public class BudgetService : IBudgetService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("User {UserId} saved budget for period {Period}", userId, period);
+
+        // Check for budget alerts after saving
+        await CheckBudgetAlertsAsync(userId, period, cancellationToken);
+    }
+
+    /// <summary>
+    /// Checks if overall budget spending is approaching or exceeding the allocated amount.
+    /// Creates notifications at 80% and 100% thresholds based on synced spreadsheet data.
+    /// </summary>
+    async Task CheckBudgetAlertsAsync(string userId, string period, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var year = int.Parse(period.Substring(0, 4));
+            var month = int.Parse(period.Substring(5, 2));
+
+            var snapshots = await _dbContext.SpreadsheetBudgetSnapshots
+                .AsNoTracking()
+                .Where(s => s.UserId == userId && s.Year == year && s.MonthNumber == month)
+                .ToListAsync(cancellationToken);
+
+            if (!snapshots.Any())
+            {
+                return;
+            }
+
+            var budget = await _dbContext.UserBudgetAllocations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == period, cancellationToken);
+
+            if (budget == null)
+            {
+                return;
+            }
+
+            var totalBudgetedExpenses = snapshots.Sum(s => s.BudgetedExpenses);
+            var totalActualExpenses = snapshots.Sum(s => s.ActualExpenses);
+
+            if (totalBudgetedExpenses <= 0)
+            {
+                return;
+            }
+
+            var percentUsed = (totalActualExpenses / totalBudgetedExpenses) * 100;
+
+            if (percentUsed >= 100)
+            {
+                await _notificationService.CreateNotificationAsync(userId, new CreateNotificationRequestDto
+                {
+                    Type = "BudgetAlert",
+                    Title = "Budget exceeded",
+                    Message =
+                        $"Your total spending has reached {percentUsed:F1}% of your budgeted amount for {period}.",
+                    SourceFeature = "Budget"
+                }, cancellationToken);
+            }
+            else if (percentUsed >= 80)
+            {
+                await _notificationService.CreateNotificationAsync(userId, new CreateNotificationRequestDto
+                {
+                    Type = "BudgetAlert",
+                    Title = "Budget warning",
+                    Message =
+                        $"Your total spending has reached {percentUsed:F1}% of your budgeted amount for {period}.",
+                    SourceFeature = "Budget"
+                }, cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check budget alerts for user {UserId}", userId);
+        }
     }
 }

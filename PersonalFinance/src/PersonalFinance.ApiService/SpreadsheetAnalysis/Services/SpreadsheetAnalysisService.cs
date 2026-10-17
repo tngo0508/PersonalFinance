@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Notification.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
@@ -13,12 +14,15 @@ namespace PersonalFinance.ApiService.SpreadsheetAnalysis.Services;
 public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 {
     private readonly AppDbContext _dbContext;
+    private readonly INotificationService _notificationService;
     private readonly ISpreadsheetReader _spreadsheetReader;
 
-    public SpreadsheetAnalysisService(AppDbContext dbContext, ISpreadsheetReader spreadsheetReader)
+    public SpreadsheetAnalysisService(AppDbContext dbContext, ISpreadsheetReader spreadsheetReader,
+        INotificationService notificationService)
     {
         _dbContext = dbContext;
         _spreadsheetReader = spreadsheetReader;
+        _notificationService = notificationService;
     }
 
     public async Task<SummaryStatisticsDto?> GetSummaryStatisticsAsync(string userId, int year, int? month = null,
@@ -483,6 +487,16 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
+            // Create success notification
+            await _notificationService.CreateNotificationAsync(userId, new CreateNotificationRequestDto
+            {
+                Type = "SyncStatus",
+                Title = "Google Drive sync completed",
+                Message =
+                    $"Successfully synced {snapshotsCreated} budget snapshots and {transactionsCreated} transactions from '{fileName}'.",
+                SourceFeature = "GoogleDrive"
+            }, cancellationToken);
+
             return new SyncSpreadsheetBudgetResult
             {
                 Success = true,
@@ -492,6 +506,15 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         }
         catch (Exception ex)
         {
+            // Create failure notification
+            await _notificationService.CreateNotificationAsync(userId, new CreateNotificationRequestDto
+            {
+                Type = "SyncStatus",
+                Title = "Google Drive sync failed",
+                Message = $"Sync failed: {ex.Message}",
+                SourceFeature = "GoogleDrive"
+            }, cancellationToken);
+
             return new SyncSpreadsheetBudgetResult
             {
                 Success = false,

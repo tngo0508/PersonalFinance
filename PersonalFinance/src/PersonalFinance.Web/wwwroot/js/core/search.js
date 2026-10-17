@@ -6,9 +6,9 @@
      * Handles debounced search input and displays results from the API.
      */
     window.SearchModule = (function () {
-        var debounceTimer;
-        var searchInput;
-        var resultsDropdown;
+        let debounceTimer;
+        let searchInput;
+        let resultsDropdown;
 
         /**
          * Initialize the search module.
@@ -34,7 +34,7 @@
 
             searchInput.addEventListener('input', function () {
                 clearTimeout(debounceTimer);
-                var query = searchInput.value.trim();
+                const query = searchInput.value.trim();
 
                 if (query.length < 2) {
                     hideResults();
@@ -82,8 +82,8 @@
         function displayResults(data) {
             if (!resultsDropdown) return;
 
-            var hasResults = false;
-            var html = '';
+            let hasResults = false;
+            let html = '';
 
             if (data.transactions && data.transactions.length > 0) {
                 hasResults = true;
@@ -143,7 +143,7 @@
          * @returns {string} Escaped text.
          */
         function escapeHtml(text) {
-            var div = document.createElement('div');
+            const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }

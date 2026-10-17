@@ -6,9 +6,9 @@
      * Handles notification bell, unread count, and dropdown display.
      */
     window.NotificationModule = (function () {
-        var bellButton;
-        var dropdown;
-        var badge;
+        let bellButton;
+        let dropdown;
+        let badge;
 
         /**
          * Initialize the notification module.
@@ -119,22 +119,35 @@
                 return;
             }
 
-            var html = '<div class="notification-dropdown-header">' +
+            let html = '<div class="notification-dropdown-header">' +
                 '<h6>Notifications</h6>' +
-                '<button class="btn btn-sm btn-link" onclick="window.NotificationModule.markAllRead()">Mark all read</button>' +
+                '<button class="btn btn-sm btn-link" id="markAllReadBtn">Mark all read</button>' +
                 '</div>';
 
             notifications.forEach(function (notif) {
-                var timeAgo = getTimeAgo(notif.createdAt);
+                const timeAgo = getTimeAgo(notif.createdAt);
                 html += '<div class="notification-item ' + (notif.isRead ? '' : 'unread') + '" ' +
-                    'onclick="window.NotificationModule.markAsRead(' + notif.id + ')">' +
+                    'data-id="' + notif.id + '">' +
                     '<div class="notification-title">' + escapeHtml(notif.title) + '</div>' +
                     '<div class="notification-message">' + escapeHtml(notif.message) + '</div>' +
                     '<div class="notification-time">' + timeAgo + '</div>' +
                     '</div>';
             });
 
+            // Attach event listeners after setting innerHTML
             dropdown.innerHTML = html;
+            const markAllBtn = dropdown.querySelector('#markAllReadBtn');
+            if (markAllBtn) {
+                markAllBtn.addEventListener('click', function () {
+                    window.NotificationModule.markAllRead();
+                });
+            }
+            dropdown.querySelectorAll('.notification-item').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    const id = item.getAttribute('data-id');
+                    if (id) window.NotificationModule.markAsRead(parseInt(id, 10));
+                });
+            });
         }
 
         /**
@@ -173,9 +186,9 @@
          * @returns {string} Human-readable time ago.
          */
         function getTimeAgo(dateStr) {
-            var date = new Date(dateStr);
-            var now = new Date();
-            var seconds = Math.floor((now - date) / 1000);
+            const date = new Date(dateStr);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
 
             if (seconds < 60) return 'Just now';
             if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
@@ -189,7 +202,7 @@
          * @returns {string} Escaped text.
          */
         function escapeHtml(text) {
-            var div = document.createElement('div');
+            const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }

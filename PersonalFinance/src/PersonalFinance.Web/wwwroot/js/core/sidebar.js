@@ -25,15 +25,15 @@
          * @returns {void}
          */
         function setup() {
-            var sidebar = document.getElementById('sidebar');
-            var toggleBtn = document.getElementById('sidebarToggle');
-            var overlay = document.getElementById('sidebarOverlay');
-            var mobileToggle = document.getElementById('mobileMenuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const overlay = document.getElementById('sidebarOverlay');
+            const mobileToggle = document.getElementById('mobileMenuToggle');
 
             if (!sidebar) return;
 
             // Restore collapsed state from localStorage
-            var collapsed = localStorage.getItem(STORAGE_KEY);
+            const collapsed = localStorage.getItem(STORAGE_KEY);
             if (collapsed === 'true') {
                 sidebar.classList.add('collapsed');
             }
@@ -71,20 +71,20 @@
          * @returns {void}
          */
         function highlightActive() {
-            var currentPath = window.location.pathname;
-            var links = document.querySelectorAll('.sidebar-link');
+            const currentPath = window.location.pathname;
+            const links = document.querySelectorAll('.sidebar-link');
 
             links.forEach(function (link) {
-                var href = link.getAttribute('href');
+                const href = link.getAttribute('href');
                 if (href && currentPath.includes(href)) {
                     link.classList.add('active');
                 }
             });
 
             // Also highlight bottom nav on mobile
-            var bottomLinks = document.querySelectorAll('.bottom-nav-item');
+            const bottomLinks = document.querySelectorAll('.bottom-nav-item');
             bottomLinks.forEach(function (link) {
-                var href = link.getAttribute('href');
+                const href = link.getAttribute('href');
                 if (href && currentPath.includes(href)) {
                     link.classList.add('active');
                 }

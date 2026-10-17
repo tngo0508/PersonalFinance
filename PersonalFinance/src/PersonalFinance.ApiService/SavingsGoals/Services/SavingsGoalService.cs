@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Notification.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
+using CreateNotificationRequestDto = PersonalFinance.ApiService.Notification.Services.CreateNotificationRequestDto;
 
 namespace PersonalFinance.ApiService.SavingsGoals.Services;
 
@@ -12,16 +14,20 @@ public class SavingsGoalService : ISavingsGoalService
 {
     private readonly AppDbContext _dbContext;
     private readonly ILogger<SavingsGoalService> _logger;
+    private readonly INotificationService _notificationService;
 
     public SavingsGoalService(
         AppDbContext dbContext,
-        ILogger<SavingsGoalService> logger)
+        ILogger<SavingsGoalService> logger,
+        INotificationService notificationService)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
-    public async Task<List<SavingsGoalResponseDto>> GetSavingsGoalsAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<List<SavingsGoalResponseDto>> GetSavingsGoalsAsync(string userId,
+        CancellationToken cancellationToken = default)
     {
         var goals = await _dbContext.SavingsGoals
             .AsNoTracking()
@@ -38,14 +44,17 @@ public class SavingsGoalService : ISavingsGoalService
                 IsCompleted = g.IsCompleted,
                 CreatedAtUtc = g.CreatedAt,
                 UpdatedAtUtc = g.UpdatedAt ?? g.CreatedAt,
-                ProgressPercent = g.TargetAmount > 0 ? (double)Math.Min(100m, (g.CurrentAmount / g.TargetAmount) * 100m) : 0
+                ProgressPercent = g.TargetAmount > 0
+                    ? (double)Math.Min(100m, (g.CurrentAmount / g.TargetAmount) * 100m)
+                    : 0
             })
             .ToListAsync(cancellationToken);
 
         return goals;
     }
 
-    public async Task<int> CreateSavingsGoalAsync(string userId, CreateSavingsGoalRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<int> CreateSavingsGoalAsync(string userId, CreateSavingsGoalRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         var goal = new SavingsGoal
         {
@@ -64,7 +73,8 @@ public class SavingsGoalService : ISavingsGoalService
         return goal.Id;
     }
 
-    public async Task<bool> UpdateSavingsGoalAsync(string userId, int id, UpdateSavingsGoalRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateSavingsGoalAsync(string userId, int id, UpdateSavingsGoalRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         var goal = await _dbContext.SavingsGoals
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId, cancellationToken);
@@ -73,6 +83,7 @@ public class SavingsGoalService : ISavingsGoalService
 
         if (!string.IsNullOrEmpty(request.Name)) goal.Name = request.Name;
         if (request.TargetAmount.HasValue) goal.TargetAmount = request.TargetAmount.Value;
+        var previousAmount = goal.CurrentAmount;
         if (request.CurrentAmount.HasValue) goal.CurrentAmount = request.CurrentAmount.Value;
         if (request.Description != null) goal.Description = request.Description;
         if (request.TargetDate.HasValue) goal.TargetDate = request.TargetDate.Value;
@@ -80,6 +91,11 @@ public class SavingsGoalService : ISavingsGoalService
         goal.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Check for milestone notifications
+        await CheckSavingsMilestonesAsync(userId, goal.Id, goal.Name, previousAmount, goal.CurrentAmount,
+            goal.TargetAmount, cancellationToken);
+
         return true;
     }
 
@@ -95,5 +111,42 @@ public class SavingsGoalService : ISavingsGoalService
 
         _logger.LogInformation("User {UserId} deleted savings goal {GoalId}", userId, id);
         return true;
+    }
+
+    /// <summary>
+    /// Checks if a savings goal has crossed any milestone thresholds (50%, 75%, 100%).
+    /// Creates notifications only when crossing from below to above the threshold.
+    /// </summary>
+    async Task CheckSavingsMilestonesAsync(string userId, int goalId, string goalName,
+        decimal previousAmount, decimal currentAmount, decimal targetAmount, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (targetAmount <= 0) return;
+
+            var milestones = new[] { 50, 75, 100 };
+
+            foreach (var milestone in milestones)
+            {
+                var threshold = targetAmount * milestone / 100m;
+
+                // Only notify if we just crossed the threshold
+                if (previousAmount < threshold && currentAmount >= threshold)
+                {
+                    await _notificationService.CreateNotificationAsync(userId, new CreateNotificationRequestDto
+                    {
+                        Type = "SavingsMilestone",
+                        Title = $"{milestone}% savings milestone reached!",
+                        Message =
+                            $"Your goal '{goalName}' has reached {milestone}% of its target ({currentAmount:C} of {targetAmount:C}).",
+                        SourceFeature = "SavingsGoals"
+                    }, cancellationToken);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check savings milestones for goal {GoalId}", goalId);
+        }
     }
 }

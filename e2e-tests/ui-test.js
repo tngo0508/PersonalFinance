@@ -268,10 +268,10 @@ const {chromium} = require('playwright');
                 timeout: 15000
             });
 
-            // Check for navbar
-            const hasNavbar = await page.locator('nav.navbar').first().isVisible({timeout: 5000}).catch(() => false);
-            if (hasNavbar) {
-                pass('Navigation bar is present');
+            // Check for sidebar navigation
+            const hasSidebar = await page.locator('#sidebar').first().isVisible({timeout: 5000}).catch(() => false);
+            if (hasSidebar) {
+                pass('Sidebar navigation is present');
             } else {
                 fail('Navigation bar not found');
             }
@@ -389,10 +389,10 @@ const {chromium} = require('playwright');
                 fail('Login form not visible on mobile viewport');
             }
 
-            // Check navbar toggler for mobile
-            const toggler = mobilePage.locator('.navbar-toggler');
-            const togglerCount = await toggler.count().catch(() => 0);
-            if (togglerCount > 0) {
+            // Check mobile bottom nav for mobile
+            const bottomNav = mobilePage.locator('#mobileMenuToggle');
+            const bottomNavCount = await bottomNav.count().catch(() => 0);
+            if (bottomNavCount > 0) {
                 pass('Mobile navbar toggler is present');
             } else {
                 console.log('  [Info] Mobile toggler not found');

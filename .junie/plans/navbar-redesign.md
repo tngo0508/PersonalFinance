@@ -209,7 +209,7 @@ button, unchanged.
 
 ### ✓ Step 2: Notification Backend API and Refit Contract
 
-### Step 3: Notification Triggers in Existing Services
+### ✓ Step 3: Notification Triggers in Existing Services
 
 ### ✓ Step 4: Unified Search Backend API
 

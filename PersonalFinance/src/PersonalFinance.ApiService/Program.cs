@@ -97,7 +97,8 @@ try
     {
         var dbContext = sp.GetRequiredService<AppDbContext>();
         var spreadsheetReader = sp.GetRequiredService<ISpreadsheetReader>();
-        return new SpreadsheetAnalysisService(dbContext, spreadsheetReader);
+        var notificationService = sp.GetRequiredService<INotificationService>();
+        return new SpreadsheetAnalysisService(dbContext, spreadsheetReader, notificationService);
     });
 
     // 5c. Register AI Assistant service for OpenAI chat integration
