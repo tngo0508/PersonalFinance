@@ -48,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Architecture Alignment & ApiService Restructuring**: Aligned architecture documentation and codebase structure with direct service injection, permissive open-source licensing, and type-based organization.
+  - Rewrote `docs/adr/0001-standardize-cqrs-feature-organization.md` to establish direct service injection via ASP.NET Core DI as the canonical pattern, documenting the explicit rejection of MediatR and AutoMapper due to commercial licensing changes and unnecessary mediator indirection.
+  - Added a comprehensive License Policy to `AGENTS.md` and `.junie/AGENTS.md` enforcing strictly permissive open-source licenses (MIT, BSD 2-Clause/3-Clause, Apache 2.0) and explicitly banning commercial, dual-licensed, or copyleft dependencies.
+  - Updated `GLOSSARY.md` to purge obsolete CQRS terms (`Command`, `Query`, `Handler`) and aligned the `ApiService Layer` and `Feature` definitions with direct service injection.
+  - Restructured `PersonalFinance.ApiService` from 11 feature-nested directories (`AiAssistant/`, `Budget/`, `Community/`, `Dashboard/`, `GoogleDrive/`, `NetWorth/`, `Notification/`, `SavingsGoals/`, `Search/`, `SpreadsheetAnalysis/`, `Watchlist/`) into cohesive top-level type folders: `Controllers/`, `Services/`, and `Validators/`.
+  - Standardized root namespaces across ApiService (`PersonalFinance.ApiService.Controllers`, `PersonalFinance.ApiService.Services`, `PersonalFinance.ApiService.Validators`) and updated service registrations in `Program.cs` and test suites (`PersonalFinance.Tests`).
+  - Separated composite models previously bundled in `Validators/SpreadsheetAnalysisResults.cs` into individual, dedicated class files under `Services/`: `AnalysisDashboardResult.cs`, `SyncSpreadsheetBudgetResult.cs`, and `MonthConflictInfo.cs`.
+  - Removed unused `PersonalFinance.ApiService.Validators` namespace imports across all 11 API controllers and associated service classes.
+  - Incremented application version in `PersonalFinance.Shared/Constants/AppVersion.cs` to `1.20.1`.
 - **Investment Calculator Growth Chart**: Reworked the Growth Over Time chart with a clearer visual design.
   - Added a third area fill highlighting interest earned (the gap between contributions and total value).
   - Replaced the tiny on-canvas legend with a styled HTML legend below the chart showing final values.

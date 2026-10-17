@@ -1,108 +1,91 @@
-# 0001 – Standardize ApiService on CQRS with Feature-Based Organization
+# 0001 – Standardize ApiService on Direct Service Injection and Permissive Open-Source Licensing
 
 **Date:** 2026-10-16  
 **Status:** Accepted
 
 ## Context
 
-The ApiService layer uses two inconsistent patterns for handling requests:
+The architecture previously contemplated standardizing the ApiService layer on CQRS with MediatR. However, key factors led to revisiting and rejecting that approach:
 
-1. **CQRS with MediatR** — Used by Budget, Community, SavingsGoals, Watchlist, and SpreadsheetAnalysis. Commands and queries live in `Features/[Feature]/`, handlers coordinate business logic, and controllers inject `IMediator`.
-
-2. **Direct service calls** — Used by NetWorth, GoogleDrive, and AI Assistant. Controllers inject service interfaces directly and call methods without MediatR.
-
-Additionally, code is organized by **type** (Controllers/, Services/, Features/, Validators/) rather than by **feature**, which means implementing a new feature requires touching 4+ folders across the project.
-
-This inconsistency creates confusion for developers and AI agents: when adding a new feature, it's unclear which pattern to follow. The mixed patterns also make refactoring harder and increase cognitive load.
+1. **Licensing constraints** — MediatR and AutoMapper transitioned to commercial licensing models (Lucky Penny Software / paid licensing). The project enforces a strict policy that all dependencies must use permissive open-source licenses (MIT, BSD, Apache 2.0).
+2. **Unnecessary indirection** — MediatR and CQRS command/query handlers introduce unnecessary layers of indirection and boilerplate for the project's scale without clear benefits.
+3. **Architecture reality** — The codebase never actually adopted CQRS or MediatR; all controllers inject domain service interfaces directly through ASP.NET Core dependency injection.
+4. **Folder layout** — Type-based organization (`Controllers/`, `Services/`, `Validators/`) provides a clean, discoverable structure for a direct-service architecture without excessive nested subdirectories.
 
 ## Decision
 
 Standardize the ApiService layer on these patterns:
 
-### 1. All features use CQRS with MediatR
+### 1. Reject MediatR and CQRS in favor of Direct Service Injection
 
-Every feature in the ApiService will use commands and queries sent through MediatR. Controllers will inject `IMediator` and send intent-bearing objects, never call services directly.
+All ApiService features use direct service injection via ASP.NET Core built-in dependency injection:
+- API controllers inject service interfaces directly (e.g., `INetWorthParametersService`, `IBudgetService`).
+- Services contain business logic, domain rules, and data access coordination.
+- Controllers remain thin coordinators responsible for request binding, parameter validation, and mapping responses.
+- No mediator library or CQRS indirection is used.
 
-**Migration path:** Incremental, one feature at a time:
-- AI Assistant first (simplest, single endpoint)
-- NetWorth second (moderate complexity)
-- GoogleDrive last (most complex, OAuth flow)
+### 2. Permissive Open-Source License Policy (MIT, BSD, Apache 2.0 Only)
 
-### 2. Feature-based folder organization
+The project strictly prohibits dependencies with paid, commercial, or copyleft licenses. Specifically:
+- **MediatR** is banned due to commercial licensing changes; built-in .NET dependency injection is used instead.
+- **AutoMapper** is banned due to commercial licensing changes; manual mapping methods and extensions are used instead.
+- All new NuGet packages must be verified for MIT, BSD, or Apache 2.0 compliance before adoption.
 
-Reorganize the ApiService by feature instead of by type:
+### 3. Type-Based Folder Organization
 
+The ApiService project is organized by type in top-level folders:
 ```
 ApiService/
-  NetWorth/
+  Controllers/
     NetWorthController.cs
-    Commands/
-      SaveParametersCommand.cs
-      DeleteParametersCommand.cs
-    Queries/
-      LoadParametersQuery.cs
-    Services/
-      NetWorthParametersService.cs
-    Validators/
-      NetWorthValidators.cs
-  Budget/
-  Community/
-  ...
+    BudgetController.cs
+    CommunityController.cs
+    ...
+  Services/
+    INetWorthParametersService.cs
+    NetWorthParametersService.cs
+    IBudgetService.cs
+    BudgetService.cs
+    ...
+  Validators/
+    NetWorthProjectionValidator.cs
+    ...
 ```
 
-Namespace convention: `PersonalFinance.ApiService.[Feature].Commands`, `PersonalFinance.ApiService.[Feature].Services`, etc.
+Namespace conventions:
+- `PersonalFinance.ApiService.Controllers`
+- `PersonalFinance.ApiService.Services`
+- `PersonalFinance.ApiService.Validators`
 
-### 3. Handlers are thin coordinators
+### 4. DTOs Organized by Feature within Shared
 
-Handlers receive commands/queries, call the appropriate service(s), map results, and return responses. Business logic remains in services, not handlers. This minimizes migration risk and preserves existing tested code.
+Data transfer objects in `PersonalFinance.Shared/DTOs/` remain organized by feature subfolders (`DTOs/NetWorth/`, `DTOs/Community/`, etc.) for clear cross-project contracts between ApiService and Web.
 
-### 4. DTOs organized by feature within Shared
+### 5. AuditableEntity Base Class for User-Owned Entities
 
-DTOs in `PersonalFinance.Shared/DTOs/` will be organized by feature subfolders:
-
-```
-Shared/DTOs/
-  NetWorth/
-    NetWorthParametersDto.cs
-    NetWorthProjectionDto.cs
-  Community/
-    CommunityDto.cs
-  ...
-```
-
-### 5. AuditableEntity base class for user-owned entities
-
-All entities with a `UserId` field will inherit from `AuditableEntity`, which provides:
+All entities with a `UserId` field inherit from `AuditableEntity`, which provides:
 - `Id` (int), `UserId` (string)
 - `CreatedAt` (DateTime), `UpdatedAt` (DateTime?)
 - `IsDeleted` (bool), `DeletedAt` (DateTime?)
 
-EF Core global query filters will automatically exclude soft-deleted records from normal queries.
+EF Core global query filters automatically exclude soft-deleted records from normal queries.
 
-### 6. Web layer remains simple
+### 6. Web Layer Simplicity
 
-The Web MVC layer will NOT adopt CQRS. Web controllers are already thin — they call Refit APIs and return views. Adding MediatR at the UI layer adds unnecessary complexity.
+The Web MVC layer remains simple. Controllers call Refit API contracts (e.g., `INetWorthApi`) to communicate with ApiService. No mediator or CQRS pattern is introduced in the UI layer.
 
 ## Consequences
 
 **Positive:**
-- **Predictability**: New developers and AI agents know exactly where to put code.
-- **Consistency**: One pattern across all features reduces cognitive load.
-- **Testability**: Handlers are isolated units; services are already tested.
-- **Safety**: Soft deletes prevent accidental data loss; audit fields provide traceability.
-- **Discoverability**: Feature folders keep related code together.
+- **Zero licensing risk**: Guarantees no hidden licensing costs or legal compliance issues from third-party libraries.
+- **Simplicity and transparency**: Direct service injection is idiomatic .NET, easy to navigate, debug, and test.
+- **Codebase consistency**: Project documentation now accurately mirrors the actual implementation.
+- **Fast onboarding**: Developers and AI agents follow standard .NET dependency injection without bespoke mediator layers.
 
 **Negative:**
-- **Migration effort**: 3 features need to be migrated to CQRS, and all features need folder reorganization.
-- **Indirection**: Adding MediatR to simple CRUD operations adds a layer of indirection.
-- **Learning curve**: New contributors need to understand CQRS patterns.
-
-**Mitigation:**
-- Incremental migration reduces risk by verifying each feature independently.
-- Handlers are thin coordinators, so the indirection is minimal.
-- GLOSSARY.md and this ADR document the patterns for onboarding.
+- Reorganizing files into type-based folders requires updating namespaces and using statements across ApiService.
 
 ## Related Decisions
 
 - GLOSSARY.md — Canonical definitions for architecture and domain terms.
-- Future ADR may address whether to keep the two-service split (Web + ApiService) or consolidate into a single process.
+- AGENTS.md — Agent guidelines and license policy enforcement.
