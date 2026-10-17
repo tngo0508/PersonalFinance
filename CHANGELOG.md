@@ -86,6 +86,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **ESLint Code Formatting**: Fixed 227 style and formatting violations across frontend JavaScript files.
+    - Resolved `space-before-function-paren` and `object-curly-spacing` rule violations across all files under
+      `PersonalFinance.Web/wwwroot/js/`.
+    - Ensured static analysis passes with zero errors in CI/CD pipeline.
+
 - **Investment Calculator Chart Rendering**: Prevented the Growth Over Time canvas from being rescaled by conflicting
   CSS, improving sharpness and label readability across screen sizes.
 - **Budget Tracker Month/Year Selectors**: Month and year dropdowns now fill the navigation bar on mobile screens.
