@@ -56,29 +56,79 @@ const {chromium} = require('playwright');
         });
 
         // =========================================================
-        // Test 1: Default route (home page)
+        // Test 1: Default route shows the Landing Page when signed out
         // =========================================================
-        console.log('\n--- Test 1: Default Route (Home) ---');
+        console.log('\n--- Test 1: Default Route (Landing Page) ---');
         try {
             await page.goto(`${base}/`, {
                 waitUntil: 'networkidle',
                 timeout: 15000
             });
-            const url = page.url();
-            console.log(`  Resolved URL: ${url}`);
+            const url = new URL(page.url());
+            console.log(`  Resolved URL: ${url.href}`);
             const title = await page.title();
             console.log(`  Page title: "${title}"`);
 
-            // Default route is Networth/Index, which requires auth → redirects to login
-            if (url.includes('/Identity/Account/Login')) {
-                pass('Default route redirects to login (requires auth)');
-            } else if (url.includes('/Networth')) {
-                pass('Default route loaded Net Worth page');
+            if (url.pathname === '/') {
+                pass('Default route stays on / for signed-out visitors');
             } else {
-                fail(`Unexpected default route destination: ${url}`);
+                fail(`Default route redirected unexpectedly to: ${url.href}`);
+            }
+
+            const headingCount = await page.locator('h1#lp-hero-title').count().catch(() => 0);
+            if (headingCount === 1) {
+                pass('Landing Page hero heading is present');
+            } else {
+                fail('Landing Page hero heading not found');
+            }
+
+            const registerCta = page.locator('main a[href*="/Identity/Account/Register"]', {hasText: 'Create free account'});
+            if (await registerCta.first().isVisible({timeout: 3000}).catch(() => false)) {
+                pass('"Create free account" call to action is visible');
+            } else {
+                fail('"Create free account" call to action not found');
+            }
+
+            const signInCta = page.locator('main a[href*="/Identity/Account/Login"]', {hasText: 'Sign in'});
+            if (await signInCta.first().isVisible({timeout: 3000}).catch(() => false)) {
+                pass('"Sign in" call to action is visible');
+            } else {
+                fail('"Sign in" call to action not found');
+            }
+
+            const preview = page.locator('.lp-preview[aria-hidden="true"]');
+            const previewText = await preview.first().textContent({timeout: 3000}).catch(() => '');
+            if (previewText && previewText.includes('Sample data')) {
+                pass('Product preview is labelled "Sample data" and hidden from assistive tech');
+            } else {
+                fail('Product preview with "Sample data" label not found');
+            }
+
+            const featureCount = await page.locator('.lp-feature').count().catch(() => 0);
+            if (featureCount === 9) {
+                pass('Feature grid lists all 9 features');
+            } else {
+                fail(`Feature grid expected 9 features, found ${featureCount}`);
             }
         } catch (error) {
             fail(`Default route failed: ${error.message}`);
+        }
+
+        // Signed-out visitors opening /Dashboard are sent to login with a return URL
+        try {
+            await page.goto(`${base}/Dashboard`, {
+                waitUntil: 'networkidle',
+                timeout: 15000
+            });
+            const url = new URL(page.url());
+            const returnUrl = url.searchParams.get('ReturnUrl') || '';
+            if (url.pathname.includes('/Identity/Account/Login') && returnUrl.toLowerCase().includes('/dashboard')) {
+                pass('Dashboard deep link redirects to login with return URL');
+            } else {
+                fail(`Dashboard deep link redirected unexpectedly to: ${url.href}`);
+            }
+        } catch (error) {
+            fail(`Dashboard deep link check failed: ${error.message}`);
         }
 
         // =========================================================
