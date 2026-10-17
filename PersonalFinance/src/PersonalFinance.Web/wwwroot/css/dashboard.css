@@ -643,3 +643,87 @@
     color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
     background: var(--app-accent-positive-soft);
 }
+
+/* ==========================================================================
+   Goals & activity (ticket 07)
+   ========================================================================== */
+
+.dash-goal__title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    min-width: 0;
+}
+
+.dash-goal__percent {
+    font-size: var(--app-font-size-small);
+    white-space: nowrap;
+}
+
+.dash-goal__badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    padding: 1px var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-accent-positive);
+    background: var(--app-accent-positive-soft);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-goal__badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+.dash-goal--completed .dash-progress__bar {
+    background: var(--app-accent-positive);
+}
+
+.dash-activity__item {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--app-spacing-m);
+}
+
+.dash-activity__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+    min-width: 0;
+}
+
+.dash-activity__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--app-text-muted);
+    background: var(--app-surface-secondary);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-activity__icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.dash-activity__icon--income {
+    color: var(--app-accent-positive);
+    background: var(--app-accent-positive-soft);
+}
+
+.dash-activity__icon--expense {
+    color: var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+}
+
+.dash-activity__icon--goal {
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
+}
