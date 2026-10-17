@@ -65,6 +65,9 @@ public class DashboardSummaryDto
     public BudgetSummaryDto? Budget { get; set; }
     public List<SavingsGoalSummaryDto> SavingsGoals { get; set; } = new();
     public List<RecentActivityDto> RecentActivity { get; set; } = new();
+
+    /// <summary>True when the user has a non-deleted Google Drive connection (valid or awaiting re-authentication).</summary>
+    public bool HasGoogleDriveConnection { get; set; }
 }
 
 /// <summary>

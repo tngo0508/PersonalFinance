@@ -39,6 +39,18 @@
             Controller = "SavingsGoals"
         });
     }
+
+    if (!Model.HasGoogleDriveConnection)
+    {
+        cards.Add(new DashboardSetupCardViewModel
+        {
+            Title = "Connect Google Drive",
+            Description = "Link a Drive folder to import budget and transaction spreadsheets automatically.",
+            ActionText = "Connect Google Drive",
+            Icon = "hard-drive",
+            Controller = "GoogleDrive"
+        });
+    }
 }
 @if (cards.Count > 0)
 {
