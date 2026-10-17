@@ -31,7 +31,9 @@
             dropdown = document.getElementById('notificationDropdown');
             badge = document.getElementById('notificationBadge');
 
-            if (!bellButton || !dropdown) return;
+            if (!bellButton || !dropdown) {
+                return;
+            }
 
             bellButton.addEventListener('click', function (e) {
                 e.stopPropagation();
@@ -61,7 +63,9 @@
         function loadUnreadCount() {
             fetch('/api/Notification/unread-count')
                 .then(function (response) {
-                    if (!response.ok) throw new Error('Failed');
+                    if (!response.ok) {
+                        throw new Error('Failed');
+                    }
                     return response.json();
                 })
                 .then(function (data) {
@@ -78,7 +82,9 @@
          * @returns {void}
          */
         function updateBadge(count) {
-            if (!badge) return;
+            if (!badge) {
+                return;
+            }
             if (count > 0) {
                 badge.textContent = count > 99 ? '99+' : count;
                 badge.classList.remove('hidden');
@@ -94,7 +100,9 @@
         function loadNotifications() {
             fetch('/api/Notification')
                 .then(function (response) {
-                    if (!response.ok) throw new Error('Failed');
+                    if (!response.ok) {
+                        throw new Error('Failed');
+                    }
                     return response.json();
                 })
                 .then(function (data) {
@@ -112,7 +120,9 @@
          * @returns {void}
          */
         function displayNotifications(notifications) {
-            if (!dropdown) return;
+            if (!dropdown) {
+                return;
+            }
 
             if (!notifications || notifications.length === 0) {
                 dropdown.innerHTML = '<div class="notification-empty">No notifications</div>';
@@ -145,7 +155,9 @@
             dropdown.querySelectorAll('.notification-item').forEach(function (item) {
                 item.addEventListener('click', function () {
                     const id = item.getAttribute('data-id');
-                    if (id) window.NotificationModule.markAsRead(parseInt(id, 10));
+                    if (id) {
+                        window.NotificationModule.markAsRead(parseInt(id, 10));
+                    }
                 });
             });
         }
@@ -190,9 +202,15 @@
             const now = new Date();
             const seconds = Math.floor((now - date) / 1000);
 
-            if (seconds < 60) return 'Just now';
-            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
-            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            if (seconds < 60) {
+                return 'Just now';
+            }
+            if (seconds < 3600) {
+                return Math.floor(seconds / 60) + 'm ago';
+            }
+            if (seconds < 86400) {
+                return Math.floor(seconds / 3600) + 'h ago';
+            }
             return Math.floor(seconds / 86400) + 'd ago';
         }
 

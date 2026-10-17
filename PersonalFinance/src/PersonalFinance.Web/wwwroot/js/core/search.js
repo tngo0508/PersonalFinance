@@ -30,7 +30,9 @@
             searchInput = document.getElementById('topbarSearchInput');
             resultsDropdown = document.getElementById('searchResultsDropdown');
 
-            if (!searchInput || !resultsDropdown) return;
+            if (!searchInput || !resultsDropdown) {
+                return;
+            }
 
             searchInput.addEventListener('input', function () {
                 clearTimeout(debounceTimer);
@@ -63,7 +65,9 @@
         function performSearch(query) {
             fetch('/api/Search?q=' + encodeURIComponent(query))
                 .then(function (response) {
-                    if (!response.ok) throw new Error('Search failed');
+                    if (!response.ok) {
+                        throw new Error('Search failed');
+                    }
                     return response.json();
                 })
                 .then(function (data) {
@@ -80,7 +84,9 @@
          * @returns {void}
          */
         function displayResults(data) {
-            if (!resultsDropdown) return;
+            if (!resultsDropdown) {
+                return;
+            }
 
             let hasResults = false;
             let html = '';
