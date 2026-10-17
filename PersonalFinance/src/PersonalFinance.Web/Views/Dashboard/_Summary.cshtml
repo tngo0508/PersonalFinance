@@ -1,17 +1,62 @@
+@using System.Globalization
 @model PersonalFinance.Shared.Contracts.DashboardSummaryDto
-@* Summary card: headline Net Worth. Progress to FI is added here by ticket 04. *@
+@* Summary card: headline Net Worth, FI Target, and Progress to FI (all calculated by the Dashboard service).
+   The bar is capped at 100% for display; the percentage label shows the uncapped value. *@
+@{
+    var netWorth = Model.NetWorth;
+    var progress = netWorth?.ProgressToFiPercent;
+    var barPercent = progress is null ? 0m : Math.Clamp(progress.Value, 0m, 100m);
+}
 <section class="dash-card dash-summary" aria-labelledby="dash-summary-title">
     <div class="dash-card__header">
         <h2 id="dash-summary-title" class="dash-card__title">Net Worth</h2>
         <a asp-controller="Networth" asp-action="Index" class="dash-link">Edit settings</a>
     </div>
-    @if (Model.NetWorth is not null)
+    @if (netWorth is not null)
     {
-        <p class="dash-summary__value dash-money">@Model.NetWorth.CurrentNetWorth.ToString("C0")</p>
-        <p class="dash-note">From your Net Worth settings.</p>
+        <div class="dash-summary__body">
+            <div class="dash-summary__headline">
+                <p class="dash-summary__value dash-money">@netWorth.CurrentNetWorth.ToString("C0")</p>
+                <p class="dash-note">From your Net Worth settings.</p>
+            </div>
+
+            <div class="dash-summary__fi">
+                @if (progress is not null)
+                {
+                    <div class="dash-summary__fi-row">
+                        <span class="dash-summary__fi-label">Progress to FI</span>
+                        @if (netWorth.FiTargetReached)
+                        {
+                            <span class="dash-badge dash-badge--positive">
+                                <i data-lucide="badge-check" aria-hidden="true"></i>
+                                FI target reached
+                            </span>
+                        }
+                        <span class="dash-summary__fi-percent dash-money">@progress.Value.ToString("F0")%</span>
+                    </div>
+                    <div class="dash-progress dash-progress--fi @(netWorth.FiTargetReached ? "dash-progress--reached" : null)"
+                         role="progressbar" aria-label="Progress to FI"
+                         aria-valuenow="@barPercent.ToString("F0", CultureInfo.InvariantCulture)"
+                         aria-valuemin="0" aria-valuemax="100"
+                         aria-valuetext="@($"{progress.Value:F0}% of your FI Target")">
+                        <div class="dash-progress__bar" style="width: @barPercent.ToString("F1", CultureInfo.InvariantCulture)%"></div>
+                    </div>
+                    <p class="dash-summary__fi-target">
+                        FI Target <span class="dash-money">@netWorth.FiTarget.ToString("C0")</span>
+                        <span class="dash-summary__fi-hint">annual spending × 25</span>
+                    </p>
+                }
+                else
+                {
+                    <p class="dash-summary__fi-label">Progress to FI</p>
+                    <p class="dash-note">Add your annual spending to see your FI Target and Progress to FI.</p>
+                    <a asp-controller="Networth" asp-action="Index" class="dash-link">Add annual spending</a>
+                }
+            </div>
+        </div>
     }
     else
     {
-        <p class="dash-empty">Add your Net Worth settings to see your headline figure.</p>
+        <p class="dash-empty">Add your Net Worth settings to see your headline figure and Progress to FI.</p>
     }
 </section>

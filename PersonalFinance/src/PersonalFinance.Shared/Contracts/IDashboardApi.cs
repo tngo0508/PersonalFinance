@@ -34,6 +34,24 @@ public class NetWorthSummaryDto
     public decimal AnnualSpending { get; set; }
     public double BaseRoi { get; set; }
     public int? FiYears { get; set; }
+
+    /// <summary>FI Target: annual spending × 25 (the 4% rule).</summary>
+    public decimal FiTarget { get; set; }
+
+    /// <summary>Progress to FI: net worth as a percentage of the FI Target (uncapped); null when the FI Target is 0.</summary>
+    public decimal? ProgressToFiPercent { get; set; }
+
+    /// <summary>True when Progress to FI is at least 100%.</summary>
+    public bool FiTargetReached { get; set; }
+
+    /// <summary>Savings Rate: annual savings as a percentage of annual income; null when income is 0.</summary>
+    public decimal? SavingsRatePercent { get; set; }
+
+    /// <summary>The user's current age from Net Worth settings.</summary>
+    public int CurrentAge { get; set; }
+
+    /// <summary>The user's target retirement age from Net Worth settings.</summary>
+    public int RetirementAge { get; set; }
 }
 
 public class BudgetSummaryDto

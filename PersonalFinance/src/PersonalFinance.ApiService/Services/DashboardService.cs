@@ -8,6 +8,9 @@ namespace PersonalFinance.ApiService.Services;
 /// </summary>
 public class DashboardService : IDashboardService
 {
+    /// <summary>FI Target = annual spending × 25 (the 4% rule, see GLOSSARY.md).</summary>
+    private const decimal FiTargetMultiplier = 25m;
+
     private readonly AppDbContext _dbContext;
 
     public DashboardService(AppDbContext dbContext)
@@ -48,14 +51,27 @@ public class DashboardService : IDashboardService
             return null;
         }
 
+        var netWorth = parameters.StartingBalance;
+        var fiTarget = parameters.AnnualSpending * FiTargetMultiplier;
+        decimal? progressToFi = fiTarget != 0m ? netWorth / fiTarget * 100m : null;
+        decimal? savingsRate = parameters.AnnualIncome != 0m
+            ? parameters.AnnualSavings / parameters.AnnualIncome * 100m
+            : null;
+
         return new NetWorthSummaryDto
         {
-            CurrentNetWorth = parameters.StartingBalance,
+            CurrentNetWorth = netWorth,
             AnnualSavings = parameters.AnnualSavings,
             AnnualIncome = parameters.AnnualIncome,
             AnnualSpending = parameters.AnnualSpending,
             BaseRoi = (double)parameters.BaseRoi,
-            FiYears = null
+            FiYears = null,
+            FiTarget = fiTarget,
+            ProgressToFiPercent = progressToFi,
+            FiTargetReached = progressToFi >= 100m,
+            SavingsRatePercent = savingsRate,
+            CurrentAge = parameters.CurrentAge,
+            RetirementAge = parameters.RetirementAge
         };
     }
 
