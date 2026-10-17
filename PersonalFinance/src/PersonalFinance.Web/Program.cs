@@ -27,6 +27,12 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    // 1a. Load user secrets in Development environment for local credential management
+    if (builder.Environment.IsDevelopment())
+    {
+        builder.Configuration.AddUserSecrets<Program>(optional: true, reloadOnChange: true);
+    }
+
     // 2. Add Aspire service defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
     builder.AddServiceDefaults();
 
