@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Web.Models;
 using Xunit;
 
@@ -180,9 +181,17 @@ public class DashboardBudgetBreakdownTests
     }
 
     [Fact]
-    public void CategorySlug_MatchesTheCssColourTokenNames()
+    public async Task Allocations_CarryAKeyMatchingTheCssColourTokenNames()
     {
-        Assert.Equal("debt-repayment", DashboardBudgetFormat.CategorySlug("Debt Repayment"));
-        Assert.Equal("housing", DashboardBudgetFormat.CategorySlug("Housing"));
+        await using var db = CreateContext();
+        db.UserBudgetAllocations.Add(FullyAllocatedBudget());
+        await db.SaveChangesAsync();
+
+        var budget = await GetBudgetAsync(db);
+
+        var keys = budget!.Allocations.ToDictionary(a => a.Name, a => a.Key);
+        Assert.Equal("debt-repayment", keys["Debt Repayment"]);
+        Assert.Equal("housing", keys["Housing"]);
+        Assert.All(budget.Allocations, a => Assert.Matches("^[a-z-]+$", a.Key));
     }
 }

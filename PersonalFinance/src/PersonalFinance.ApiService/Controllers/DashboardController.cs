@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
 

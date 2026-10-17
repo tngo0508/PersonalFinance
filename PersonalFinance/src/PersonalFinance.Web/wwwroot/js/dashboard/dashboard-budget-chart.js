@@ -2,7 +2,7 @@
  * Dashboard budget donut.
  * Draws the planned budget split from the "budget" slice of the dashboard data island
  * (allocations and Unallocated are computed by the Dashboard service; nothing is recalculated here).
- * Each category's colour comes from its --dash-budget-<slug> token in css/dashboard.css, so a category
+ * Each category's colour comes from its --dash-budget-<key> token (key supplied by the service) in css/dashboard.css, so a category
  * keeps the same colour whichever categories are drawn. The legend list in _Budget.cshtml is the
  * text alternative; the chart itself is decorative to assistive technology.
  */
@@ -12,15 +12,6 @@
     const CHART_ELEMENT_ID = 'dash-budget-chart';
     const UNALLOCATED_LABEL = 'Unallocated';
     const FALLBACK_COLOR = '#6B7280';
-
-    /**
-     * CSS-friendly slug for a category name, matching DashboardBudgetFormat.CategorySlug on the server.
-     * @param {string} name - Category name, e.g. "Debt Repayment".
-     * @returns {string} The slug, e.g. "debt-repayment".
-     */
-    function toSlug (name) {
-        return String(name).trim().toLowerCase().replace(/ /g, '-');
-    }
 
     /**
      * Read a category's colour token from the card.
@@ -44,7 +35,8 @@
             .map((allocation) => ({
                 label: allocation.name,
                 percent: Number(allocation.percent) || 0,
-                slug: toSlug(allocation.name)
+                // Category key comes from the Dashboard service, the single source for colour-token names.
+                slug: String(allocation.key || '')
             }))
             .filter((slice) => slice.percent > 0);
 

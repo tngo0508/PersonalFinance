@@ -28,11 +28,4 @@ public static class DashboardBudgetFormat
     /// <summary>Formats a percentage with at most one decimal place, e.g. "12.5%" or "30%".</summary>
     public static string Percent(decimal percent) =>
         $"{Math.Round(percent, 1, MidpointRounding.AwayFromZero).ToString("0.#", CultureInfo.InvariantCulture)}%";
-
-    /// <summary>
-    /// CSS-friendly slug for a category name ("Debt Repayment" becomes "debt-repayment"), used to pick the
-    /// category's colour token so a category keeps its colour whichever categories are drawn.
-    /// </summary>
-    public static string CategorySlug(string name) =>
-        name.Trim().ToLowerInvariant().Replace(' ', '-');
 }

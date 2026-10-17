@@ -1,8 +1,8 @@
 @using System.Security.Claims
-@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @{
     ViewData["Title"] = "Dashboard";
-    var summary = Model ?? new PersonalFinance.Shared.Contracts.DashboardSummaryDto();
+    var summary = Model ?? new PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto();
     var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? string.Empty;
     var displayName = User.FindFirst(ClaimTypes.GivenName)?.Value
                       ?? (email.Contains('@') ? email[..email.IndexOf('@')] : email);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Web.Controllers;
 using Xunit;
 
@@ -76,6 +77,22 @@ public class DashboardWebControllerTests
             new RecordingLogger<DashboardController>());
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(cts.Token));
+    }
+
+    [Fact]
+    public async Task Index_WhenApiTimesOutWithoutCallerCancellation_RendersEmptySummary()
+    {
+        var logger = new RecordingLogger<DashboardController>();
+        var controller = CreateController(
+            new FakeDashboardApi { Failure = new TaskCanceledException("The request timed out.") }, logger);
+
+        var result = await controller.Index(CancellationToken.None);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<DashboardSummaryDto>(viewResult.Model);
+        Assert.Null(model.NetWorth);
+        var entry = Assert.Single(logger.Entries, e => e.Level >= LogLevel.Warning);
+        Assert.IsType<TaskCanceledException>(entry.Exception);
     }
 }
 

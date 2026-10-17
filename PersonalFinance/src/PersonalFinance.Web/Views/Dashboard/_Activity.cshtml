@@ -1,4 +1,4 @@
-@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Recent activity section (ticket 07): type icon, title, description and date, newest first. *@
 @{
     static (string Icon, string Modifier, string Label) ActivityStyle(string type) => type switch
@@ -9,10 +9,8 @@
         _ => ("circle", "other", "Activity")
     };
 
-    var items = Model.RecentActivity
-        .OrderByDescending(a => a.Date)
-        .Take(5)
-        .ToList();
+    // The Dashboard service returns exactly the items to show, already in display order.
+    var items = Model.RecentActivity;
 }
 <section class="dash-card dash-activity" aria-labelledby="dash-activity-title">
     <div class="dash-card__header">

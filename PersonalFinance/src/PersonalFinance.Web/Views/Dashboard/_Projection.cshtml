@@ -1,10 +1,10 @@
-@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Net worth projection section. Points come from the Net Worth projection calculation (Dashboard service), so this
    chart always matches the Net Worth page. The chart is drawn by js/dashboard/dashboard-projection-chart.js from the
    data island; the sentence below is its text alternative. No historical data is stored, so none is plotted. *@
 @{
     var netWorth = Model.NetWorth;
-    var points = netWorth?.ProjectionPoints ?? new List<PersonalFinance.Shared.Contracts.ProjectionPointDto>();
+    var points = netWorth?.ProjectionPoints ?? new List<PersonalFinance.Shared.DTOs.Dashboard.ProjectionPointDto>();
     var last = points.Count > 0 ? points[^1] : null;
     string? summarySentence = null;
     if (netWorth is not null && last is not null)

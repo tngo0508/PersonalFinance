@@ -1,4 +1,4 @@
-@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Budget breakdown section. Allocations, totals, and Unallocated come from the Dashboard service; this view only
    formats them. The donut (js/dashboard/dashboard-budget-chart.js) draws the "budget" slice of the data island and
    takes each category's colour from the --dash-budget-* tokens in dashboard.css. The legend list is the text
@@ -35,7 +35,7 @@
             @foreach (var allocation in budget.Allocations)
             {
                 <li class="dash-budget__item @(allocation.Percent > 0m ? null : "dash-budget__item--empty")">
-                    <span class="dash-budget__swatch dash-budget__swatch--@DashboardBudgetFormat.CategorySlug(allocation.Name)"
+                    <span class="dash-budget__swatch dash-budget__swatch--@allocation.Key"
                           aria-hidden="true"></span>
                     <span class="dash-budget__name">@allocation.Name</span>
                     <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(allocation.Percent)</span>

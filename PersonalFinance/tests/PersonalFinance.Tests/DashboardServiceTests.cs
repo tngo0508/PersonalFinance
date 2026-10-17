@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.Dashboard;
 using Xunit;
 
 namespace PersonalFinance.Tests;

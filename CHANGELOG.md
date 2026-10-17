@@ -27,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Summary card shows Net Worth (from Net Worth settings), FI Target, and a Progress to FI bar with an "FI target
       reached" badge, or a prompt to add annual spending when it is zero.
     - Key figure tiles: Net Worth, Savings Rate (unavailable when annual income is zero), Budgeted income, and Goals
-      funded (total saved ÷ total target across all goals, capped at 100%, with "N of M complete").
+      funded (saved ÷ target across all goals, each goal capped at its target so an over-funded goal cannot mask
+      unfunded ones, with "N of M complete").
     - Budget card shows all ten categories in dollars and percent, with "Unallocated" for any remainder, the period
       label, a colour-blind-checked donut, and a legend that doubles as the text alternative.
     - Goals card has accessible progress bars and completion badges; recent activity shows a type icon per item.
@@ -39,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Net worth projection chart plots the Base, Conservative, and Aggressive scenarios from today to retirement age
       with a dashed FI Target line, year/age tooltips, and the age the FI target is reached, using the same
       calculation as the Net Worth page.
+    - Projection chart axis always includes the FI Target line and any negative balances; Progress to FI is floored
+      so it never reads 100% before the target is reached; an API timeout renders the empty Dashboard instead of an
+      error page.
     - Polish and accessibility pass across the Landing Page and Dashboard: consolidated stylesheet, one short
       entrance fade and 150ms hover/focus transitions disabled under reduced motion (including chart draw-in
       animations), descriptive link text, AA-contrast goal badges, Dashboard content kept clear of the mobile bottom

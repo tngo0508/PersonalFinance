@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.Dashboard;
 using Xunit;
 
 namespace PersonalFinance.Tests;
@@ -61,15 +62,15 @@ public class DashboardGoalsOverviewTests
     }
 
     [Fact]
-    public async Task Overview_WhenSavedExceedsTarget_CapsFundedPercentAt100()
+    public async Task Overview_WhenSavedExceedsTarget_CapsFundedPercentAt100_ButReportsActualTotalSaved()
     {
         await using var db = CreateContext();
-        db.SavingsGoals.AddRange(Goal(1, 100m, 250m, completed: true), Goal(2, 100m, 50m));
+        db.SavingsGoals.AddRange(Goal(1, 100m, 250m, completed: true), Goal(2, 100m, 100m, completed: true));
         await db.SaveChangesAsync();
 
         var summary = await GetSummaryAsync(db);
 
-        Assert.Equal(300m, summary.GoalsOverview.TotalSaved);
+        Assert.Equal(350m, summary.GoalsOverview.TotalSaved);
         Assert.Equal(100m, summary.GoalsOverview.FundedPercent);
     }
 
@@ -143,5 +144,62 @@ public class DashboardGoalsOverviewTests
 
         Assert.Equal(new[] { "New income", "Goal 1", "Old expense" }, summary.RecentActivity.Select(a => a.Title));
         Assert.Equal(new[] { "Income", "SavingsGoal", "Expense" }, summary.RecentActivity.Select(a => a.Type));
+    }
+
+    [Fact]
+    public async Task Overview_CapsEachGoalAtItsTarget_SoOverFundedGoalsCannotMaskUnfundedOnes()
+    {
+        await using var db = CreateContext();
+        db.SavingsGoals.AddRange(Goal(1, 1_000m, 2_000m, completed: true), Goal(2, 1_000m, 0m));
+        await db.SaveChangesAsync();
+
+        var summary = await GetSummaryAsync(db);
+
+        Assert.Equal(50m, summary.GoalsOverview.FundedPercent);
+    }
+
+    [Fact]
+    public async Task RecentActivity_ReturnsAtMostFiveItemsNewestFirst()
+    {
+        await using var db = CreateContext();
+        db.SavingsGoals.AddRange(Enumerable.Range(1, 4).Select(i => Goal(i, 100m, 10m)));
+        db.SpreadsheetTransactionRecords.AddRange(Enumerable.Range(1, 6).Select(i => new SpreadsheetTransactionRecord
+        {
+            Id = i, UserId = UserId, Description = $"Tx {i}", Category = "Food", Amount = 5m, Type = "Expense",
+            Date = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i).AddHours(12)
+        }));
+        await db.SaveChangesAsync();
+
+        var summary = await GetSummaryAsync(db);
+
+        // Goals are created at midnight on day i, transactions at noon on day i; only three goals are considered.
+        Assert.Equal(new[] { "Tx 6", "Tx 5", "Tx 4", "Goal 4", "Tx 3" }, summary.RecentActivity.Select(a => a.Title));
+    }
+
+    [Fact]
+    public async Task RecentActivity_WhenDatesTie_OrdersDeterministically()
+    {
+        await using var db = CreateContext();
+        var date = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc);
+        db.SavingsGoals.AddRange(
+            new SavingsGoal { Id = 1, UserId = UserId, Name = "Goal A", TargetAmount = 100m, CreatedAt = date },
+            new SavingsGoal { Id = 2, UserId = UserId, Name = "Goal B", TargetAmount = 100m, CreatedAt = date });
+        db.SpreadsheetTransactionRecords.AddRange(
+            new SpreadsheetTransactionRecord
+            {
+                Id = 1, UserId = UserId, Description = "Tx A", Category = "Food", Amount = 5m, Type = "Expense",
+                Date = date
+            },
+            new SpreadsheetTransactionRecord
+            {
+                Id = 2, UserId = UserId, Description = "Tx B", Category = "Food", Amount = 5m, Type = "Expense",
+                Date = date
+            });
+        await db.SaveChangesAsync();
+
+        var summary = await GetSummaryAsync(db);
+
+        // Same date: transactions before goals, then newest record (highest Id) first within each source.
+        Assert.Equal(new[] { "Tx B", "Tx A", "Goal B", "Goal A" }, summary.RecentActivity.Select(a => a.Title));
     }
 }

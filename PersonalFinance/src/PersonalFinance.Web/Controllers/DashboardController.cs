@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.Dashboard;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -31,7 +32,7 @@ public class DashboardController : Controller
             var summary = await _dashboardApi.GetSummaryAsync(cancellationToken);
             return View(summary);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Failed to load the dashboard summary; rendering an empty summary instead.");
             return View(new DashboardSummaryDto());

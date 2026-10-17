@@ -8,6 +8,7 @@
     'use strict';
 
     const CHART_ELEMENT_ID = 'dash-projection-chart';
+    const Y_AXIS_HEADROOM = 0.1;
 
     // Indigo Ledger tokens (wwwroot/css/site.css).
     const COLORS = {
@@ -72,6 +73,26 @@
     }
 
     /**
+     * Y-axis bounds that always include zero, every scenario balance (negative balances are not clipped), and the
+     * FI Target, so the dashed FI line stays visible even when every scenario ends below it.
+     * @param {Array<Object>} points - Projection points.
+     * @param {number} fiTarget - The FI Target amount (0 when there is none).
+     * @returns {{min: number, max: number}} The y-axis bounds.
+     */
+    function yAxisBounds (points, fiTarget) {
+        const values = points.flatMap((point) => SERIES.map((series) => Number(point[series.key]) || 0));
+        const minPoint = Math.min(0, ...values);
+        const maxPoint = Math.max(0, ...values, fiTarget > 0 ? fiTarget : 0);
+        // Headroom (10% of the range) beyond the extremes so no line or the FI label is drawn on the plot edge.
+        const span = maxPoint - minPoint;
+        const headroom = span > 0 ? span * Y_AXIS_HEADROOM : 1;
+        return {
+            min: minPoint < 0 ? minPoint - headroom : 0,
+            max: maxPoint + headroom
+        };
+    }
+
+    /**
      * Tooltip title for a hovered point: the calendar year and the user's age.
      * @param {Array<Object>} points - Projection points.
      * @param {number} index - Hovered data-point index.
@@ -95,6 +116,8 @@
             return;
         }
 
+        const fiTarget = Number(netWorth.fiTarget) || 0;
+        const bounds = yAxisBounds(points, fiTarget);
         const animate = !window.PFDashboard.prefersReducedMotion();
         const chart = new window.ApexCharts(element, {
             chart: {
@@ -132,13 +155,15 @@
                 tooltip: { enabled: false }
             },
             yaxis: {
-                min: 0,
+                min: bounds.min,
+                max: bounds.max,
+                forceNiceScale: true,
                 labels: {
                     style: { colors: COLORS.axis },
                     formatter: (value) => compactFormatter.format(value)
                 }
             },
-            annotations: { yaxis: buildFiAnnotation(Number(netWorth.fiTarget) || 0) },
+            annotations: { yaxis: buildFiAnnotation(fiTarget) },
             tooltip: {
                 shared: true,
                 intersect: false,
