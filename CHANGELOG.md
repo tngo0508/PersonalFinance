@@ -86,6 +86,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Budget Data Source Switch**: Fixed "Failed to switch budget data source" when choosing Budget Tracker on Analysis.
+  - The Web Refit client serialized the `BudgetDataSource` enum as a camelCase string, which ApiService could not bind
+    (HTTP 400); the enum now carries a `JsonStringEnumConverter` so both sides accept names and numbers.
+- **Sync Year Detection**: Fixed a synced month (e.g. "Monthly budget - October 2026") being stored under a wrong year
+  such as 2072.
+  - The year in the file name is now authoritative; sheet cells are only a fallback and monetary amounts (e.g. `2072`)
+    are no longer mistaken for years.
 - **Dashboard Fabricated Net Worth Chart**: Removed the net worth "trend" chart, which plotted invented history (the
   current figure multiplied by 1.05–1.20 and labelled "1Y ago" to "Now"); no net worth history is stored.
   - The Dashboard is rebuilt on an Indigo Ledger structure: a greeting, then one Razor partial per section (summary,

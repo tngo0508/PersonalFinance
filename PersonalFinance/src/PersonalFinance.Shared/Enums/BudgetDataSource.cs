@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace PersonalFinance.Shared.Enums;
 
 /// <summary>
 /// Enum representing which stored budget data Analysis and the Dashboard read from.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum BudgetDataSource
 {
     /// <summary>

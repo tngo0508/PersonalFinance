@@ -1,5 +1,7 @@
+using System.IO.Compression;
 using System.Net;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -8,7 +10,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Helpers;
-using Xunit;
+using PersonalFinance.Web.Controllers;
 
 namespace PersonalFinance.Tests;
 
@@ -25,11 +27,16 @@ public class GoogleDriveHelperTests
     }
 
     [Theory]
-    [InlineData("https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("https://drive.google.com/drive/u/0/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("https://drive.google.com/open?id=127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("https://drive.google.com/file/d/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_/view", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
+    [InlineData("https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link",
+        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
+    [InlineData("https://drive.google.com/drive/u/0/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
+    [InlineData("https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
+    [InlineData("https://drive.google.com/open?id=127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
+    [InlineData("https://drive.google.com/file/d/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_/view",
+        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
     [InlineData("127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
     public void ExtractFolderId_WithValidInputs_ExtractsCorrectId(string input, string expectedId)
     {
@@ -67,7 +74,8 @@ public class GoogleDriveHelperTests
     [Theory]
     [InlineData("application/vnd.google-apps.folder", "folder", "Folder", true)]
     [InlineData("application/pdf", "document.pdf", "PDF Document", false)]
-    [InlineData("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "budget.xlsx", "Spreadsheet", false)]
+    [InlineData("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "budget.xlsx", "Spreadsheet",
+        false)]
     [InlineData("application/vnd.google-apps.spreadsheet", "Financial Model", "Spreadsheet", false)]
     [InlineData("text/csv", "transactions.csv", "Spreadsheet", false)]
     [InlineData("application/vnd.ms-excel", "data.xls", "Spreadsheet", false)]
@@ -76,7 +84,8 @@ public class GoogleDriveHelperTests
     [InlineData("image/png", "scan.png", "Image", false)]
     [InlineData("video/mp4", "clip.mp4", "Video", false)]
     [InlineData("application/zip", "archive.zip", "Archive", false)]
-    public void ResolveTypeInfo_IdentifiesExpectedTypes(string mimeType, string filename, string expectedCategory, bool expectedIsFolder)
+    public void ResolveTypeInfo_IdentifiesExpectedTypes(string mimeType, string filename, string expectedCategory,
+        bool expectedIsFolder)
     {
         var (category, _, isFolder) = GoogleDriveHelper.ResolveTypeInfo(mimeType, filename);
         Assert.Equal(expectedCategory, category);
@@ -90,7 +99,8 @@ public class GoogleDriveHelperTests
         var inMemorySettings = new Dictionary<string, string?>();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
         var httpClient = new HttpClient();
-        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext,
+            NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -112,7 +122,8 @@ public class GoogleDriveHelperTests
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
-        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext,
+            NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -134,7 +145,8 @@ public class GoogleDriveHelperTests
         var handler = new DelegatingTestHandler((req, ct) =>
             throw new TaskCanceledException("A task was canceled.", new TimeoutException("The operation timed out.")));
         var httpClient = new HttpClient(handler);
-        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext,
+            NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -163,7 +175,8 @@ public class GoogleDriveHelperTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         });
         var httpClient = new HttpClient(handler);
-        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext,
+            NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -191,7 +204,8 @@ public class GoogleDriveHelperTests
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext,
+            NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -221,7 +235,8 @@ public class GoogleDriveHelperTests
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext,
+            NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -247,12 +262,13 @@ public class GoogleDriveHelperTests
         {
             var msg = new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(emptyJsonResponse, System.Text.Encoding.UTF8, "application/json")
+                Content = new StringContent(emptyJsonResponse, Encoding.UTF8, "application/json")
             };
             return Task.FromResult(msg);
         });
         var httpClient = new HttpClient(handler);
-        var service = new DriveConnectionService(httpClient, configuration, dbContext, NullLogger<DriveConnectionService>.Instance);
+        var service = new DriveConnectionService(httpClient, configuration, dbContext,
+            NullLogger<DriveConnectionService>.Instance);
 
         var request = new GoogleDriveRequestDto
         {
@@ -272,8 +288,8 @@ public class GoogleDriveHelperTests
     [Fact]
     public void GoogleDriveController_IsDecoratedWithAuthorizeAttribute()
     {
-        var controllerType = typeof(PersonalFinance.Web.Controllers.GoogleDriveController);
-        var authorizeAttribute = Attribute.GetCustomAttribute(controllerType, typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute));
+        var controllerType = typeof(GoogleDriveController);
+        var authorizeAttribute = Attribute.GetCustomAttribute(controllerType, typeof(AuthorizeAttribute));
 
         Assert.NotNull(authorizeAttribute);
     }
@@ -291,7 +307,8 @@ public class GoogleDriveHelperTests
     [InlineData("Weekly budget.xlsx", "Spreadsheet", null, false)]
     [InlineData(null, "Spreadsheet", null, false)]
     [InlineData("", "Spreadsheet", null, false)]
-    public void IsMonthlyBudgetSpreadsheet_EvaluatesCorrectly(string? fileName, string? fileType, string? mimeType, bool expected)
+    public void IsMonthlyBudgetSpreadsheet_EvaluatesCorrectly(string? fileName, string? fileType, string? mimeType,
+        bool expected)
     {
         var result = GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(fileName, fileType, mimeType);
         Assert.Equal(expected, result);
@@ -339,7 +356,8 @@ public class GoogleDriveHelperTests
     [Fact]
     public void ParseCsvTable_HandlesQuotedFieldsCommasAndNewlinesCorrectly()
     {
-        var csv = "\"Category\",\"Planned Amount\",\"Actual Amount\"\n\"Housing, Rent & HOA\",\"$1,500.00\",\"$1,550.00\"\n\"Groceries \"\"Supermarket\"\"\",\"$650.00\",\"$680.00\"";
+        var csv =
+            "\"Category\",\"Planned Amount\",\"Actual Amount\"\n\"Housing, Rent & HOA\",\"$1,500.00\",\"$1,550.00\"\n\"Groceries \"\"Supermarket\"\"\",\"$650.00\",\"$680.00\"";
         var table = GoogleDriveHelper.ParseCsvTable(csv);
 
         Assert.Equal(3, table.Count);
@@ -366,7 +384,8 @@ Groceries,600,650
 Utilities,300,280
 Entertainment,400,450";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget 2026.xlsx", "drive-file-999");
+        var report =
+            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget 2026.xlsx", "drive-file-999");
 
         Assert.NotNull(report);
         Assert.Equal("Monthly budget 2026.xlsx", report.FileName);
@@ -401,9 +420,11 @@ Entertainment,400,450";
     {
         using var dbContext = CreateTestDbContext();
         var configuration = new ConfigurationBuilder().Build();
-        var handler = new DelegatingTestHandler((req, ct) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)));
+        var handler =
+            new DelegatingTestHandler((req, ct) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)));
         var httpClient = new HttpClient(handler);
-        var service = new SpreadsheetReaderService(httpClient, configuration, dbContext, NullLogger<SpreadsheetReaderService>.Instance);
+        var service = new SpreadsheetReaderService(httpClient, configuration, dbContext,
+            NullLogger<SpreadsheetReaderService>.Instance);
 
         var report = await service.GetSpreadsheetBudgetReportAsync("sample-sheet-budget-1", "Monthly budget 2026.xlsx");
 
@@ -440,7 +461,8 @@ Food,800,750";
         });
 
         var httpClient = new HttpClient(handler);
-        var service = new SpreadsheetReaderService(httpClient, configuration, dbContext, NullLogger<SpreadsheetReaderService>.Instance);
+        var service = new SpreadsheetReaderService(httpClient, configuration, dbContext,
+            NullLogger<SpreadsheetReaderService>.Instance);
 
         var report = await service.GetSpreadsheetBudgetReportAsync("live-sheet-123", "Monthly budget 2026.gsheet");
 
@@ -456,18 +478,20 @@ Food,800,750";
     public void ParseXlsxBudgetReport_WithOpenXmlSpreadsheet_ParsesActualDataCorrectly()
     {
         using var ms = new MemoryStream();
-        using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
             var ssEntry = archive.CreateEntry("xl/sharedStrings.xml");
             using (var writer = new StreamWriter(ssEntry.Open(), Encoding.UTF8))
             {
-                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"5\" uniqueCount=\"5\"><si><t>INCOME</t></si><si><t>Salary</t></si><si><t>EXPENSES</t></si><si><t>Housing</t></si><si><t>Groceries</t></si></sst>");
+                writer.Write(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"5\" uniqueCount=\"5\"><si><t>INCOME</t></si><si><t>Salary</t></si><si><t>EXPENSES</t></si><si><t>Housing</t></si><si><t>Groceries</t></si></sst>");
             }
 
             var wsEntry = archive.CreateEntry("xl/worksheets/sheet1.xml");
             using (var writer = new StreamWriter(wsEntry.Open(), Encoding.UTF8))
             {
-                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row><row r=\"2\"><c r=\"A2\" t=\"s\"><v>1</v></c><c r=\"B2\"><v>5000</v></c><c r=\"C2\"><v>5400</v></c></row><row r=\"3\"><c r=\"A3\" t=\"s\"><v>2</v></c></row><row r=\"4\"><c r=\"A4\" t=\"s\"><v>3</v></c><c r=\"B4\"><v>1500</v></c><c r=\"C4\"><v>1500</v></c></row><row r=\"5\"><c r=\"A5\" t=\"s\"><v>4</v></c><c r=\"B5\"><v>600</v></c><c r=\"C5\"><v>650</v></c></row></sheetData></worksheet>");
+                writer.Write(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c></row><row r=\"2\"><c r=\"A2\" t=\"s\"><v>1</v></c><c r=\"B2\"><v>5000</v></c><c r=\"C2\"><v>5400</v></c></row><row r=\"3\"><c r=\"A3\" t=\"s\"><v>2</v></c></row><row r=\"4\"><c r=\"A4\" t=\"s\"><v>3</v></c><c r=\"B4\"><v>1500</v></c><c r=\"C4\"><v>1500</v></c></row><row r=\"5\"><c r=\"A5\" t=\"s\"><v>4</v></c><c r=\"B5\"><v>600</v></c><c r=\"C5\"><v>650</v></c></row></sheetData></worksheet>");
             }
         }
 
@@ -491,43 +515,49 @@ Food,800,750";
     public void ParseXlsxBudgetReport_WithMultiSheetSummaryAndTransactions_ParsesBothSheetsAccurately()
     {
         using var ms = new MemoryStream();
-        using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
             var wbEntry = archive.CreateEntry("xl/workbook.xml");
             using (var writer = new StreamWriter(wbEntry.Open(), Encoding.UTF8))
             {
-                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Summary\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Transactions\" sheetId=\"2\" r:id=\"rId2\"/></sheets></workbook>");
+                writer.Write(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Summary\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Transactions\" sheetId=\"2\" r:id=\"rId2\"/></sheets></workbook>");
             }
 
             var wbRelsEntry = archive.CreateEntry("xl/_rels/workbook.xml.rels");
             using (var writer = new StreamWriter(wbRelsEntry.Open(), Encoding.UTF8))
             {
-                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/></Relationships>");
+                writer.Write(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/></Relationships>");
             }
 
             var ssEntry = archive.CreateEntry("xl/sharedStrings.xml");
             using (var writer = new StreamWriter(ssEntry.Open(), Encoding.UTF8))
             {
-                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"12\" uniqueCount=\"12\"><si><t>Starting balance</t></si><si><t>Ending balance</t></si><si><t>INCOME</t></si><si><t>Salary</t></si><si><t>EXPENSES</t></si><si><t>Rent</t></si><si><t>Groceries</t></si><si><t>Date</t></si><si><t>Amount</t></si><si><t>Description</t></si><si><t>Category</t></si><si><t>Trader Joe's</t></si></sst>");
+                writer.Write(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"12\" uniqueCount=\"12\"><si><t>Starting balance</t></si><si><t>Ending balance</t></si><si><t>INCOME</t></si><si><t>Salary</t></si><si><t>EXPENSES</t></si><si><t>Rent</t></si><si><t>Groceries</t></si><si><t>Date</t></si><si><t>Amount</t></si><si><t>Description</t></si><si><t>Category</t></si><si><t>Trader Joe's</t></si></sst>");
             }
 
             // Sheet 1: Summary (September)
             var ws1Entry = archive.CreateEntry("xl/worksheets/sheet1.xml");
             using (var writer = new StreamWriter(ws1Entry.Open(), Encoding.UTF8))
             {
-                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\"><v>2000</v></c><c r=\"C1\"><v>2000</v></c></row><row r=\"2\"><c r=\"A2\" t=\"s\"><v>1</v></c><c r=\"B2\"><v>3500</v></c><c r=\"C2\"><v>3600</v></c></row><row r=\"3\"><c r=\"A3\" t=\"s\"><v>2</v></c></row><row r=\"4\"><c r=\"A4\" t=\"s\"><v>3</v></c><c r=\"B4\"><v>5000</v></c><c r=\"C4\"><v>5000</v></c></row><row r=\"5\"><c r=\"A5\" t=\"s\"><v>4</v></c></row><row r=\"6\"><c r=\"A6\" t=\"s\"><v>5</v></c><c r=\"B6\"><v>1500</v></c><c r=\"C6\"><v>1500</v></c></row><row r=\"7\"><c r=\"A7\" t=\"s\"><v>6</v></c><c r=\"B7\"><v>600</v></c><c r=\"C7\"><v>500</v></c></row></sheetData></worksheet>");
+                writer.Write(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\"><v>2000</v></c><c r=\"C1\"><v>2000</v></c></row><row r=\"2\"><c r=\"A2\" t=\"s\"><v>1</v></c><c r=\"B2\"><v>3500</v></c><c r=\"C2\"><v>3600</v></c></row><row r=\"3\"><c r=\"A3\" t=\"s\"><v>2</v></c></row><row r=\"4\"><c r=\"A4\" t=\"s\"><v>3</v></c><c r=\"B4\"><v>5000</v></c><c r=\"C4\"><v>5000</v></c></row><row r=\"5\"><c r=\"A5\" t=\"s\"><v>4</v></c></row><row r=\"6\"><c r=\"A6\" t=\"s\"><v>5</v></c><c r=\"B6\"><v>1500</v></c><c r=\"C6\"><v>1500</v></c></row><row r=\"7\"><c r=\"A7\" t=\"s\"><v>6</v></c><c r=\"B7\"><v>600</v></c><c r=\"C7\"><v>500</v></c></row></sheetData></worksheet>");
             }
 
             // Sheet 2: Transactions
             var ws2Entry = archive.CreateEntry("xl/worksheets/sheet2.xml");
             using (var writer = new StreamWriter(ws2Entry.Open(), Encoding.UTF8))
             {
-                writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>7</v></c><c r=\"B1\" t=\"s\"><v>8</v></c><c r=\"C1\" t=\"s\"><v>9</v></c><c r=\"D1\" t=\"s\"><v>10</v></c></row><row r=\"2\"><c r=\"A2\"><v>2026-09-02</v></c><c r=\"B2\"><v>250</v></c><c r=\"C2\" t=\"s\"><v>11</v></c><c r=\"D2\" t=\"s\"><v>6</v></c></row><row r=\"3\"><c r=\"A3\"><v>2026-09-15</v></c><c r=\"B3\"><v>250</v></c><c r=\"C3\" t=\"s\"><v>11</v></c><c r=\"D3\" t=\"s\"><v>6</v></c></row></sheetData></worksheet>");
+                writer.Write(
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>7</v></c><c r=\"B1\" t=\"s\"><v>8</v></c><c r=\"C1\" t=\"s\"><v>9</v></c><c r=\"D1\" t=\"s\"><v>10</v></c></row><row r=\"2\"><c r=\"A2\"><v>2026-09-02</v></c><c r=\"B2\"><v>250</v></c><c r=\"C2\" t=\"s\"><v>11</v></c><c r=\"D2\" t=\"s\"><v>6</v></c></row><row r=\"3\"><c r=\"A3\"><v>2026-09-15</v></c><c r=\"B3\"><v>250</v></c><c r=\"C3\" t=\"s\"><v>11</v></c><c r=\"D3\" t=\"s\"><v>6</v></c></row></sheetData></worksheet>");
             }
         }
 
         ms.Position = 0;
-        var report = GoogleDriveHelper.ParseXlsxBudgetReport(ms, "Monthly budget - September 2026.xlsx", "multi-sheet-1");
+        var report =
+            GoogleDriveHelper.ParseXlsxBudgetReport(ms, "Monthly budget - September 2026.xlsx", "multi-sheet-1");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
@@ -550,7 +580,8 @@ Food,800,750";
     [Fact]
     public void ParseCsvTransactions_WithSideBySideExpenseAndIncomeTables_ReadsBothSections()
     {
-        var result = GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleTransactionsCsv(), "Monthly budget 2026.xlsx", "sample-tx");
+        var result = GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleTransactionsCsv(),
+            "Monthly budget 2026.xlsx", "sample-tx");
 
         Assert.Null(result.ErrorMessage);
         Assert.Equal(18, result.Transactions.Count);
@@ -570,7 +601,8 @@ Food,800,750";
     [Fact]
     public void ParseCsvTransactions_WithUnlabelledSignedAmounts_UsesSignForType()
     {
-        var csv = "Date,Description,Amount\n2026-09-01,Paycheck,2500.00\n2026-09-03,Netflix,-15.99\n2026-09-04,Groceries,(80.00)\nTotal,,2404.01";
+        var csv =
+            "Date,Description,Amount\n2026-09-01,Paycheck,2500.00\n2026-09-03,Netflix,-15.99\n2026-09-04,Groceries,(80.00)\nTotal,,2404.01";
 
         var result = GoogleDriveHelper.ParseCsvTransactions(csv);
 
@@ -578,7 +610,8 @@ Food,800,750";
         Assert.Equal(2500m, result.TotalIncome);
         Assert.Equal(95.99m, result.TotalExpenses);
         Assert.All(result.Transactions, t => Assert.True(t.Amount > 0));
-        Assert.Contains(result.Transactions, t => t.Description == "Netflix" && t.Type == SpreadsheetTransactionDto.ExpenseType);
+        Assert.Contains(result.Transactions,
+            t => t.Description == "Netflix" && t.Type == SpreadsheetTransactionDto.ExpenseType);
     }
 
     [Fact]
@@ -594,7 +627,7 @@ Food,800,750";
     public void ParseXlsxTransactions_WithSerialDatesOnTransactionsSheet_ReadsOnlyTransactionsSheet()
     {
         using var ms = new MemoryStream();
-        using (var archive = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
             void WriteEntry(string name, string xml)
             {
@@ -602,14 +635,19 @@ Food,800,750";
                 writer.Write(xml);
             }
 
-            WriteEntry("xl/workbook.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Summary\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Transactions\" sheetId=\"2\" r:id=\"rId2\"/></sheets></workbook>");
-            WriteEntry("xl/_rels/workbook.xml.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/></Relationships>");
+            WriteEntry("xl/workbook.xml",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Summary\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Transactions\" sheetId=\"2\" r:id=\"rId2\"/></sheets></workbook>");
+            WriteEntry("xl/_rels/workbook.xml.rels",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/></Relationships>");
             // 0 Date, 1 Amount, 2 Description, 3 Category, 4 Expenses, 5 Income, 6 Trader Joe's, 7 Groceries, 8 Paycheck, 9 Salary
-            WriteEntry("xl/sharedStrings.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><si><t>Date</t></si><si><t>Amount</t></si><si><t>Description</t></si><si><t>Category</t></si><si><t>Expenses</t></si><si><t>Income</t></si><si><t>Trader Joe's</t></si><si><t>Groceries</t></si><si><t>Paycheck</t></si><si><t>Salary</t></si></sst>");
+            WriteEntry("xl/sharedStrings.xml",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><si><t>Date</t></si><si><t>Amount</t></si><si><t>Description</t></si><si><t>Category</t></si><si><t>Expenses</t></si><si><t>Income</t></si><si><t>Trader Joe's</t></si><si><t>Groceries</t></si><si><t>Paycheck</t></si><si><t>Salary</t></si></sst>");
             // Summary sheet also has a Date/Amount table that must be ignored
-            WriteEntry("xl/worksheets/sheet1.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>1</v></c></row><row r=\"2\"><c r=\"A2\"><v>46266</v></c><c r=\"B2\"><v>999</v></c></row></sheetData></worksheet>");
+            WriteEntry("xl/worksheets/sheet1.xml",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>1</v></c></row><row r=\"2\"><c r=\"A2\"><v>46266</v></c><c r=\"B2\"><v>999</v></c></row></sheetData></worksheet>");
             // Transactions sheet: Expenses table in B:E, Income table in G:J, labels on row 4, headers on row 5
-            WriteEntry("xl/worksheets/sheet2.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>" +
+            WriteEntry("xl/worksheets/sheet2.xml",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>" +
                 "<row r=\"4\"><c r=\"B4\" t=\"s\"><v>4</v></c><c r=\"G4\" t=\"s\"><v>5</v></c></row>" +
                 "<row r=\"5\"><c r=\"B5\" t=\"s\"><v>0</v></c><c r=\"C5\" t=\"s\"><v>1</v></c><c r=\"D5\" t=\"s\"><v>2</v></c><c r=\"E5\" t=\"s\"><v>3</v></c><c r=\"G5\" t=\"s\"><v>0</v></c><c r=\"H5\" t=\"s\"><v>1</v></c><c r=\"I5\" t=\"s\"><v>2</v></c><c r=\"J5\" t=\"s\"><v>3</v></c></row>" +
                 "<row r=\"6\"><c r=\"B6\"><v>46267</v></c><c r=\"C6\"><v>84.12</v></c><c r=\"D6\" t=\"s\"><v>6</v></c><c r=\"E6\" t=\"s\"><v>7</v></c><c r=\"G6\"><v>46266</v></c><c r=\"H6\"><v>3000</v></c><c r=\"I6\" t=\"s\"><v>8</v></c><c r=\"J6\" t=\"s\"><v>9</v></c></row>" +
@@ -629,7 +667,8 @@ Food,800,750";
         Assert.Equal(new DateTime(2026, 9, 1), paycheck.Date);
         Assert.Equal("Paycheck", paycheck.Description);
         Assert.Equal("Salary", paycheck.Category);
-        Assert.Contains(result.Transactions, t => t.Date == new DateTime(2026, 9, 2) && t.Amount == 84.12m && t.Category == "Groceries");
+        Assert.Contains(result.Transactions,
+            t => t.Date == new DateTime(2026, 9, 2) && t.Amount == 84.12m && t.Category == "Groceries");
     }
 
     [Theory]
@@ -653,7 +692,8 @@ Food,800,750";
     public void GenerateMonthlyBudgetReport_WithSingleMonthName_ReturnsOnlyThatMonth()
     {
         // Act
-        var report = GoogleDriveHelper.GenerateMonthlyBudgetReport("Monthly budget - September 2026.xlsx", "file-sep-123");
+        var report =
+            GoogleDriveHelper.GenerateMonthlyBudgetReport("Monthly budget - September 2026.xlsx", "file-sep-123");
 
         // Assert
         Assert.NotNull(report);
@@ -686,7 +726,9 @@ EXPENSES,Planned,Actual
 Rent,1500,1500
 Food,650,620";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-sep-456");
+        var report =
+            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+                "file-sep-456");
 
         Assert.NotNull(report);
         Assert.True(report.IsSingleMonth);
@@ -717,7 +759,9 @@ Utilities,300.00,280.00,20.00
 Dining & Entertainment,400.00,370.00,30.00
 Total Expenses,3000.00,2900.00,100.00";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-sep-789");
+        var report =
+            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+                "file-sep-789");
 
         Assert.NotNull(report);
         Assert.True(report.IsSingleMonth);
@@ -753,8 +797,10 @@ Total Expenses,3000.00,2900.00,100.00";
 
         // Expense categories should only have the 4 expense items, not Start Balance or End Balance or Total rows
         Assert.Equal(4, month.Categories.Count);
-        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Balance", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Total", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(month.Categories,
+            c => c.CategoryName.Contains("Balance", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(month.Categories,
+            c => c.CategoryName.Contains("Total", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -768,7 +814,9 @@ Groceries, 600, 580, 20, , Freelance, 1000, 1200, 200
 Utilities, 250, 220, 30, , Dividend, 200, 300, 100
 Total Expenses, 2050, 2000, 50, , Total Income, 5200, 5500, 300";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-sep-side");
+        var report =
+            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+                "file-sep-side");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
@@ -806,7 +854,9 @@ Date, Amount, Description, Category
 2026-09-10, 80.00, Whole Foods, Groceries
 2026-09-18, 150.00, Safeway, Groceries";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-tx-table");
+        var report =
+            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+                "file-tx-table");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
@@ -846,7 +896,8 @@ Dining & Entertainment,500.00,470.00,30.00
 Personal & Miscellaneous,300.00,100.00,200.00
 Total Expenses,3800.00,3500.00,300.00";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-increase-savings");
+        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+            "file-increase-savings");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
@@ -871,7 +922,9 @@ Total Expenses,3800.00,3500.00,300.00";
 
         // Ensure "Increase in total savings" was not added as an expense category
         Assert.Equal(5, month.Categories.Count);
-        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("savings", StringComparison.OrdinalIgnoreCase) && c.CategoryName.Contains("increase", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(month.Categories,
+            c => c.CategoryName.Contains("savings", StringComparison.OrdinalIgnoreCase) &&
+                 c.CategoryName.Contains("increase", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -893,7 +946,8 @@ Groceries & Food,1000.00,1200.00,-200.00
 Utilities,500.00,800.00,-300.00
 Total Expenses,3500.00,4000.00,-500.00";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx", "file-decrease-savings");
+        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+            "file-decrease-savings");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
@@ -916,7 +970,49 @@ Total Expenses,3500.00,4000.00,-500.00";
 
         // Categories must not include "Decrease in total savings"
         Assert.Equal(3, month.Categories.Count);
-        Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Decrease", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(month.Categories,
+            c => c.CategoryName.Contains("Decrease", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("2072")]
+    [InlineData("2072.00")]
+    [InlineData("$2,072.00")]
+    public void ParseSpreadsheetBudgetReport_WithAmountResemblingYear_KeepsYearFromFileName(string amount)
+    {
+        var sampleCsv = $@"Monthly budget - October 2026
+
+INCOME,Planned,Actual,Difference
+Salary,{amount},{amount},0.00
+Total Income,{amount},{amount},0.00
+
+EXPENSES,Planned,Actual,Difference
+Housing & Rent,1800.00,1800.00,0.00
+Total Expenses,1800.00,1800.00,0.00";
+
+        var report =
+            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - October 2026",
+                "file-year-amount");
+
+        Assert.Equal(2026, report.Year);
+    }
+
+    [Fact]
+    public void ParseSpreadsheetBudgetReport_WithoutYearInFileName_FallsBackToYearInSheetTitle()
+    {
+        var sampleCsv = @"Monthly budget - October 2026
+
+INCOME,Planned,Actual,Difference
+Salary,2072,2072,0.00
+Total Income,2072,2072,0.00
+
+EXPENSES,Planned,Actual,Difference
+Housing & Rent,1800.00,1800.00,0.00
+Total Expenses,1800.00,1800.00,0.00";
+
+        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget", "file-no-year");
+
+        Assert.Equal(2026, report.Year);
     }
 }
 
@@ -932,7 +1028,8 @@ public class DelegatingTestHandler : HttpMessageHandler
         _handler = handler;
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+        CancellationToken cancellationToken)
     {
         return _handler(request, cancellationToken);
     }
