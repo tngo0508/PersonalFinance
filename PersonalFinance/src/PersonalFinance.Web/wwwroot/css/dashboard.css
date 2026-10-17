@@ -1,0 +1,464 @@
+/* ==========================================================================
+   Dashboard (dash-*)
+   "Indigo Ledger" design system — flat surfaces, hairline borders, Inter for
+   text, IBM Plex Mono with tabular figures for money. Tokens: css/site.css.
+   ========================================================================== */
+
+.dash {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-l);
+    padding: var(--app-spacing-s) 0 var(--app-spacing-xl);
+    color: var(--app-text);
+}
+
+/* ==========================================================================
+   Header and section titles
+   ========================================================================== */
+
+.dash-header__eyebrow {
+    margin: 0 0 var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--app-brand);
+}
+
+.dash-header__title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: var(--app-font-weight-bold);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+
+.dash-header__lede {
+    margin: var(--app-spacing-xs) 0 0;
+    color: var(--app-text-muted);
+}
+
+.dash-section-title {
+    margin: 0 0 var(--app-spacing-m);
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+/* ==========================================================================
+   Money and numbers — tabular monospace figures
+   ========================================================================== */
+
+.dash-money {
+    font-family: var(--app-font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+/* ==========================================================================
+   Layout rows
+   ========================================================================== */
+
+.dash-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-l);
+}
+
+@media (min-width: 992px) {
+    .dash-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dash-row--wide {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+}
+
+/* ==========================================================================
+   Card
+   ========================================================================== */
+
+.dash-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-m);
+    min-width: 0;
+    padding: var(--app-spacing-l);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-l);
+    box-shadow: var(--app-shadow-2);
+}
+
+.dash-card__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--app-spacing-m);
+}
+
+.dash-card__title {
+    margin: 0;
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-link {
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-brand);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.dash-link:hover {
+    color: var(--app-brand-hover);
+    text-decoration: underline;
+}
+
+.dash-note {
+    margin: 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+.dash-empty {
+    margin: 0;
+    padding: var(--app-spacing-l) var(--app-spacing-m);
+    text-align: center;
+    color: var(--app-text-muted);
+    background: var(--app-surface);
+    border: 1px dashed var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+/* ==========================================================================
+   Summary
+   ========================================================================== */
+
+.dash-summary__value {
+    margin: 0;
+    font-size: var(--app-font-size-xxl);
+    font-weight: var(--app-font-weight-semibold);
+    line-height: 1.1;
+}
+
+/* ==========================================================================
+   Key figure tiles
+   ========================================================================== */
+
+.dash-figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--app-spacing-m);
+}
+
+@media (min-width: 992px) {
+    .dash-figures {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.dash-tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+    min-width: 0;
+    padding: var(--app-spacing-m);
+    color: var(--app-text);
+    text-decoration: none;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-tile:hover {
+    color: var(--app-text);
+    border-color: var(--app-brand-bg-hover);
+    box-shadow: var(--app-shadow-4);
+}
+
+.dash-tile__label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text-muted);
+}
+
+.dash-tile__icon {
+    width: 16px;
+    height: 16px;
+    color: var(--app-brand);
+}
+
+.dash-tile__value {
+    font-size: var(--app-font-size-xl);
+    font-weight: var(--app-font-weight-semibold);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.dash-tile__value--unavailable {
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text-muted);
+}
+
+.dash-tile__caption {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   Stats list (projection section)
+   ========================================================================== */
+
+.dash-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--app-spacing-m);
+    margin: 0;
+}
+
+.dash-stats__item {
+    padding: var(--app-spacing-m);
+    background: var(--app-surface);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-stats dt {
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text-muted);
+}
+
+.dash-stats dd {
+    margin: var(--app-spacing-xs) 0 0;
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-chart {
+    min-height: 220px;
+}
+
+/* ==========================================================================
+   Lists: goals and activity
+   ========================================================================== */
+
+.dash-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dash-list > li {
+    padding: var(--app-spacing-m) 0;
+    border-top: 1px solid var(--app-border);
+}
+
+.dash-list > li:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.dash-goal,
+.dash-activity__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+}
+
+.dash-goal__row,
+.dash-activity__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--app-spacing-m);
+}
+
+.dash-goal__name,
+.dash-activity__title {
+    font-weight: var(--app-font-weight-medium);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dash-goal__amounts,
+.dash-activity__description,
+.dash-activity__date {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+.dash-activity__date {
+    white-space: nowrap;
+}
+
+.dash-progress {
+    height: 6px;
+    overflow: hidden;
+    background: var(--app-surface-secondary);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-progress__bar {
+    height: 100%;
+    background: var(--app-brand);
+    border-radius: var(--app-radius-s);
+}
+
+/* ==========================================================================
+   Quick actions
+   ========================================================================== */
+
+.dash-actions__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--app-spacing-m);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+@media (min-width: 768px) {
+    .dash-actions__list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.dash-action {
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-m);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text);
+    text-decoration: none;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-action svg {
+    width: 18px;
+    height: 18px;
+    color: var(--app-brand);
+}
+
+.dash-action:hover {
+    color: var(--app-brand-pressed);
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand-bg-hover);
+}
+
+/* ==========================================================================
+   Setup cards — reusable guided next step (Views/Dashboard/_SetupCard.cshtml)
+   ========================================================================== */
+
+.dash-setup__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-m);
+}
+
+@media (min-width: 768px) {
+    .dash-setup__grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+}
+
+.dash-setup-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--app-spacing-m);
+    padding: var(--app-spacing-l);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-left: 3px solid var(--app-brand);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-setup-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--app-brand);
+    background: var(--app-brand-soft);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-setup-card__icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.dash-setup-card__title {
+    margin: 0 0 var(--app-spacing-xs);
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-setup-card__text {
+    margin: 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    line-height: 1.5;
+}
+
+.dash-setup-card__action {
+    margin-top: auto;
+}
+
+/* ==========================================================================
+   Focus and motion
+   ========================================================================== */
+
+.dash-link:focus-visible,
+.dash-tile:focus-visible,
+.dash-action:focus-visible,
+.dash-setup-card__action:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .dash > * {
+        animation: dash-fade-in 240ms ease-out both;
+    }
+
+    .dash > :nth-child(2) { animation-delay: 40ms; }
+    .dash > :nth-child(3) { animation-delay: 80ms; }
+    .dash > :nth-child(4) { animation-delay: 120ms; }
+    .dash > :nth-child(5) { animation-delay: 160ms; }
+
+    .dash-tile,
+    .dash-action,
+    .dash-link {
+        transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
+    }
+}
+
+@keyframes dash-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}

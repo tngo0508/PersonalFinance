@@ -1,0 +1,26 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Recent activity section (owned by ticket 07). Items arrive newest first from the Dashboard service. *@
+<section class="dash-card dash-activity" aria-labelledby="dash-activity-title">
+    <div class="dash-card__header">
+        <h2 id="dash-activity-title" class="dash-card__title">Recent activity</h2>
+    </div>
+    @if (Model.RecentActivity.Count > 0)
+    {
+        <ul class="dash-list">
+            @foreach (var activity in Model.RecentActivity.Take(5))
+            {
+                <li class="dash-activity__item">
+                    <div class="dash-activity__row">
+                        <span class="dash-activity__title">@activity.Title</span>
+                        <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd")">@activity.Date.ToShortDateString()</time>
+                    </div>
+                    <span class="dash-activity__description">@activity.Description</span>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="dash-empty">No recent activity yet.</p>
+    }
+</section>

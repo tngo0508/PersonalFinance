@@ -1,0 +1,22 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Budget breakdown section (owned by ticket 06). The donut is drawn by js/dashboard/dashboard-budget-chart.js
+   from the "budget" slice of the dashboard data island. *@
+<section class="dash-card dash-budget" aria-labelledby="dash-budget-title">
+    <div class="dash-card__header">
+        <h2 id="dash-budget-title" class="dash-card__title">Budget</h2>
+        <a asp-controller="Budget" asp-action="Index" class="dash-link">Edit budget</a>
+    </div>
+    @if (Model.Budget is not null)
+    {
+        <p class="dash-note">
+            <span class="dash-money">@Model.Budget.MonthlyIncome.ToString("C0")</span> monthly income
+            &middot; @Model.Budget.Period
+        </p>
+        <div id="dash-budget-chart" class="dash-chart" role="img"
+             aria-label="Planned budget split for @Model.Budget.Period"></div>
+    }
+    else
+    {
+        <p class="dash-empty">Create a budget to see how your monthly income is planned.</p>
+    }
+</section>

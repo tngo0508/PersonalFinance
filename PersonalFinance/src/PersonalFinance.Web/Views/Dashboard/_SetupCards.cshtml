@@ -1,0 +1,54 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Setup section: one card per incomplete setup step, hidden entirely when every step is complete.
+   Each step is a separate block so steps can be added (e.g. Google Drive, ticket 08) without touching the others. *@
+@{
+    var cards = new List<DashboardSetupCardViewModel>();
+
+    if (Model.NetWorth is null)
+    {
+        cards.Add(new DashboardSetupCardViewModel
+        {
+            Title = "Set up net worth",
+            Description = "Enter your balance, income, and spending to see your Net Worth and Progress to FI.",
+            ActionText = "Set up net worth",
+            Icon = "wallet",
+            Controller = "Networth"
+        });
+    }
+
+    if (Model.Budget is null)
+    {
+        cards.Add(new DashboardSetupCardViewModel
+        {
+            Title = "Create a budget",
+            Description = "Plan how your monthly income is split across your spending categories.",
+            ActionText = "Create a budget",
+            Icon = "pie-chart",
+            Controller = "Budget"
+        });
+    }
+
+    if (Model.SavingsGoals.Count == 0)
+    {
+        cards.Add(new DashboardSetupCardViewModel
+        {
+            Title = "Add a goal",
+            Description = "Track progress toward something you are saving for.",
+            ActionText = "Add a goal",
+            Icon = "target",
+            Controller = "SavingsGoals"
+        });
+    }
+}
+@if (cards.Count > 0)
+{
+    <section class="dash-setup" aria-labelledby="dash-setup-title">
+        <h2 id="dash-setup-title" class="dash-section-title">Finish setting up</h2>
+        <div class="dash-setup__grid">
+            @foreach (var card in cards)
+            {
+                <partial name="_SetupCard" model="card"/>
+            }
+        </div>
+    </section>
+}

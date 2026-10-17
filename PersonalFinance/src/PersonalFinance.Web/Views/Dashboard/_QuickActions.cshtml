@@ -1,0 +1,29 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Quick actions section (owned by ticket 08). *@
+<section class="dash-card dash-actions" aria-labelledby="dash-actions-title">
+    <div class="dash-card__header">
+        <h2 id="dash-actions-title" class="dash-card__title">Quick actions</h2>
+    </div>
+    <ul class="dash-actions__list">
+        <li>
+            <a asp-controller="Networth" asp-action="Index" class="dash-action">
+                <i data-lucide="dollar-sign" aria-hidden="true"></i> Net Worth
+            </a>
+        </li>
+        <li>
+            <a asp-controller="Budget" asp-action="Index" class="dash-action">
+                <i data-lucide="pie-chart" aria-hidden="true"></i> Budget
+            </a>
+        </li>
+        <li>
+            <a asp-controller="SavingsGoals" asp-action="Index" class="dash-action">
+                <i data-lucide="target" aria-hidden="true"></i> Savings Goals
+            </a>
+        </li>
+        <li>
+            <a asp-controller="Analysis" asp-action="Index" class="dash-action">
+                <i data-lucide="bar-chart-3" aria-hidden="true"></i> Analysis
+            </a>
+        </li>
+    </ul>
+</section>

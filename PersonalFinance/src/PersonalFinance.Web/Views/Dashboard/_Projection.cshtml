@@ -1,0 +1,34 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Net worth projection section (owned by ticket 05, which adds the projection chart and its init file
+   js/dashboard/dashboard-projection-chart.js). No historical data is stored, so none is plotted. *@
+<section class="dash-card dash-projection" aria-labelledby="dash-projection-title">
+    <div class="dash-card__header">
+        <h2 id="dash-projection-title" class="dash-card__title">Net worth plan</h2>
+        <a asp-controller="Networth" asp-action="Index" class="dash-link">View details</a>
+    </div>
+    @if (Model.NetWorth is not null)
+    {
+        <dl class="dash-stats">
+            <div class="dash-stats__item">
+                <dt>Current net worth</dt>
+                <dd class="dash-money">@Model.NetWorth.CurrentNetWorth.ToString("C0")</dd>
+            </div>
+            <div class="dash-stats__item">
+                <dt>Annual savings</dt>
+                <dd class="dash-money">@Model.NetWorth.AnnualSavings.ToString("C0")</dd>
+            </div>
+            <div class="dash-stats__item">
+                <dt>Annual spending</dt>
+                <dd class="dash-money">@Model.NetWorth.AnnualSpending.ToString("C0")</dd>
+            </div>
+            <div class="dash-stats__item">
+                <dt>Base return</dt>
+                <dd class="dash-money">@Model.NetWorth.BaseRoi.ToString("0.#")%</dd>
+            </div>
+        </dl>
+    }
+    else
+    {
+        <p class="dash-empty">Add your Net Worth settings to see where your plan leads.</p>
+    }
+</section>

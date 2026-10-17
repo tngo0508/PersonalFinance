@@ -1,0 +1,21 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Net Worth-derived tiles (owned by ticket 04, which replaces Annual savings with Savings Rate). *@
+@{
+    var netWorth = Model.NetWorth;
+}
+<partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
+{
+    Label = "Net Worth",
+    Value = netWorth?.CurrentNetWorth.ToString("C0"),
+    Caption = netWorth is null ? "Add your Net Worth settings" : "From Net Worth settings",
+    Icon = "wallet",
+    Controller = "Networth"
+})"/>
+<partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
+{
+    Label = "Annual savings",
+    Value = netWorth?.AnnualSavings.ToString("C0"),
+    Caption = netWorth is null ? "Add your Net Worth settings" : "Planned per year",
+    Icon = "piggy-bank",
+    Controller = "Networth"
+})"/>

@@ -1,0 +1,17 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Summary card: headline Net Worth. Progress to FI is added here by ticket 04. *@
+<section class="dash-card dash-summary" aria-labelledby="dash-summary-title">
+    <div class="dash-card__header">
+        <h2 id="dash-summary-title" class="dash-card__title">Net Worth</h2>
+        <a asp-controller="Networth" asp-action="Index" class="dash-link">Edit settings</a>
+    </div>
+    @if (Model.NetWorth is not null)
+    {
+        <p class="dash-summary__value dash-money">@Model.NetWorth.CurrentNetWorth.ToString("C0")</p>
+        <p class="dash-note">From your Net Worth settings.</p>
+    }
+    else
+    {
+        <p class="dash-empty">Add your Net Worth settings to see your headline figure.</p>
+    }
+</section>

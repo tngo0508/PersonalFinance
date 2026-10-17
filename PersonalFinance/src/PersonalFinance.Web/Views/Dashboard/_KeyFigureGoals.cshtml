@@ -1,0 +1,14 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Savings goals tile (owned by ticket 07, which replaces it with goals funded across all goals).
+   Until then it shows the progress of the most recent goal, as calculated by the Dashboard service. *@
+@{
+    var latestGoal = Model.SavingsGoals.FirstOrDefault();
+}
+<partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
+{
+    Label = "Latest goal",
+    Value = latestGoal is null ? null : $"{latestGoal.ProgressPercent:F0}%",
+    Caption = latestGoal?.Name ?? "Add a savings goal",
+    Icon = "target",
+    Controller = "SavingsGoals"
+})"/>

@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Dashboard Fabricated Net Worth Chart**: Removed the net worth "trend" chart, which plotted invented history (the
+  current figure multiplied by 1.05–1.20 and labelled "1Y ago" to "Now"); no net worth history is stored.
+  - The Dashboard is rebuilt on an Indigo Ledger structure: a greeting, then one Razor partial per section (summary,
+    key figures, projection, budget, goals, activity, quick actions, setup cards) with a dedicated `dashboard.css`
+    (`dash-` prefix) and a reusable setup-card component.
+  - Chart data reaches the browser through a single JSON data island read by `js/dashboard/dashboard-core.js`; the
+    budget donut moved to its own module and labels the Entertainment slice correctly instead of "Other".
+  - The Web Dashboard controller now logs API failures (while still rendering an empty summary), and the Dashboard
+    service uses no-tracking queries with deterministic tie-breakers for "latest" selections.
+
 - **Navigation Bar in UI Test & Unauthenticated Layout**: Fixed UI test failure on login page asserting on navigation bar.
   - Added brand icon and name in topbar header for unauthenticated users in `_Layout.cshtml`.
   - Added full-width positioning rules in `sidebar.css` when sidebar is not present (`.no-sidebar`).

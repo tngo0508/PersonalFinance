@@ -1,0 +1,35 @@
+@model PersonalFinance.Shared.Contracts.DashboardSummaryDto
+@* Savings goals section (owned by ticket 07): the five most recent goals. *@
+<section class="dash-card dash-goals" aria-labelledby="dash-goals-title">
+    <div class="dash-card__header">
+        <h2 id="dash-goals-title" class="dash-card__title">Savings goals</h2>
+        <a asp-controller="SavingsGoals" asp-action="Index" class="dash-link">View all</a>
+    </div>
+    @if (Model.SavingsGoals.Count > 0)
+    {
+        <ul class="dash-list">
+            @foreach (var goal in Model.SavingsGoals)
+            {
+                var progress = Math.Clamp(goal.ProgressPercent, 0, 100);
+                <li class="dash-goal">
+                    <div class="dash-goal__row">
+                        <span class="dash-goal__name">@goal.Name</span>
+                        <span class="dash-money">@goal.ProgressPercent.ToString("F0")%</span>
+                    </div>
+                    <div class="dash-progress" role="progressbar" aria-label="@goal.Name progress"
+                         aria-valuenow="@progress.ToString("F0")" aria-valuemin="0" aria-valuemax="100">
+                        <div class="dash-progress__bar" style="width: @progress.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                    </div>
+                    <span class="dash-goal__amounts">
+                        <span class="dash-money">@goal.CurrentAmount.ToString("C0")</span>
+                        of <span class="dash-money">@goal.TargetAmount.ToString("C0")</span>
+                    </span>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="dash-empty">Add a savings goal to track your progress here.</p>
+    }
+</section>
