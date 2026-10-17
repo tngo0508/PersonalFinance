@@ -77,6 +77,11 @@
                     <span class="sidebar-link-icon"><i data-lucide="dollar-sign"></i></span>
                     <span class="sidebar-link-text">Net Worth</span>
                 </a>
+                <a class="sidebar-link @(currentController == "BudgetTracker" ? "active" : "")"
+                   asp-area="" asp-controller="BudgetTracker" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="receipt"></i></span>
+                    <span class="sidebar-link-text">Budget Tracker</span>
+                </a>
                 <a class="sidebar-link @(currentController == "Budget" ? "active" : "")"
                    asp-area="" asp-controller="Budget" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="pie-chart"></i></span>
@@ -227,6 +232,7 @@
     <script src="~/js/core/search.js" asp-append-version="true"></script>
     <script src="~/js/core/notifications.js" asp-append-version="true"></script>
     <script src="~/js/core/ai-chat-widget.js" asp-append-version="true"></script>
+    <script src="~/js/core/data-source-toggle.js" asp-append-version="true"></script>
 }
 @await RenderSectionAsync("Scripts", required: false)
 <script>

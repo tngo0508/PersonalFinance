@@ -3,7 +3,6 @@ using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Dashboard;
-using Xunit;
 
 namespace PersonalFinance.Tests;
 
@@ -25,7 +24,7 @@ public class DashboardDriveConnectionTests
 
     private static Task<DashboardSummaryDto> GetSummaryAsync(AppDbContext db)
     {
-        return new DashboardService(db).GetDashboardSummaryAsync(UserId);
+        return new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(UserId);
     }
 
     [Fact]

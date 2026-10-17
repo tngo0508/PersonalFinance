@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.Enums;
 using Refit;
 
 namespace PersonalFinance.Shared.Contracts;
@@ -253,6 +254,7 @@ public class AnalysisDashboardDto
     public int? Month { get; set; }
     public List<int> AvailableYears { get; set; } = new();
     public List<int> AvailableMonths { get; set; } = new();
+    public BudgetDataSource ActiveSource { get; set; } = BudgetDataSource.GoogleSheet;
     public SummaryStatisticsDto? Summary { get; set; }
     public SpendingVelocityDto? Velocity { get; set; }
     public TrendDataDto? Trends { get; set; }

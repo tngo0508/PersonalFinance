@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using PersonalFinance.Shared.Enums
 @model AnalysisDashboardViewModel
 
 @{
@@ -8,7 +9,7 @@
 <div class="analysis-page">
     <!-- Page header -->
     <header class="analysis-page-header mb-4">
-        <div class="analysis-page-header__content">
+        <div class="analysis-page-header__content d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div class="analysis-page-header__text">
                 <h1 class="analysis-page-header__title">
                     <span class="analysis-page-header__icon" aria-hidden="true">
@@ -21,6 +22,9 @@
                 </h1>
                 <p class="analysis-page-header__subtitle">Analyze your budget data, track spending trends, and
                     understand your financial patterns.</p>
+            </div>
+            <div class="analysis-page-header__controls">
+                <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
             </div>
         </div>
     </header>
@@ -41,27 +45,7 @@
         </div>
     }
 
-    @if (!Model.HasData)
-    {
-        <!-- Empty state -->
-        <div class="analysis-empty-state text-center py-5">
-            <div class="analysis-empty-state__icon mb-3" aria-hidden="true">
-                <svg width="64" height="64" fill="#adb5bd" viewBox="0 0 16 16">
-                    <path
-                        d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
-                </svg>
-            </div>
-            <h2 class="analysis-empty-state__title">No analysis data yet</h2>
-            <p class="analysis-empty-state__text mb-4">
-                Sync your Google Drive spreadsheets to start analyzing your budget data.
-                The analysis dashboard will show spending trends, category insights, and more.
-            </p>
-            <a asp-controller="GoogleDrive" asp-action="Index" class="btn btn-primary px-4">
-                Go to Google Drive
-            </a>
-        </div>
-    }
-    else
+    @if (Model.AvailableYears.Any() || Model.SelectedYear > 0)
     {
         <!-- Period selector -->
         <div class="analysis-period-selector mb-4">
@@ -69,6 +53,10 @@
                 <label for="yearSelect" class="visually-hidden">Select year</label>
                 <select name="year" id="yearSelect" class="form-select form-select-sm w-auto"
                         onchange="this.form.submit()">
+                    @if (Model.SelectedYear > 0 && !Model.AvailableYears.Contains(Model.SelectedYear))
+                    {
+                        <option value="@Model.SelectedYear" selected="selected">@Model.SelectedYear</option>
+                    }
                     @foreach (var year in Model.AvailableYears)
                     {
                         <option value="@year"
@@ -76,12 +64,23 @@
                     }
                 </select>
 
-                @if (Model.AvailableMonths.Count > 1)
+                @if (Model.AvailableMonths.Count > 1 || (Model.SelectedMonth.HasValue && !Model.AvailableMonths.Contains(Model.SelectedMonth.Value)))
                 {
                     <label for="monthSelect" class="visually-hidden">Select month</label>
                     <select name="month" id="monthSelect" class="form-select form-select-sm w-auto"
                             onchange="this.form.submit()">
                         <option value="">All months</option>
+                        @if (Model.SelectedMonth.HasValue && !Model.AvailableMonths.Contains(Model.SelectedMonth.Value))
+                        {
+                            var selectedMonthName = Model.SelectedMonth.Value switch
+                            {
+                                    1 => "January", 2 => "February", 3 => "March", 4 => "April",
+                                    5 => "May", 6 => "June", 7 => "July", 8 => "August",
+                                    9 => "September", 10 => "October", 11 => "November", 12 => "December",
+                                    _ => ""
+                            };
+                            <option value="@Model.SelectedMonth.Value" selected="selected">@selectedMonthName</option>
+                        }
                         @foreach (var month in Model.AvailableMonths)
                         {
                             var monthName = month switch
@@ -98,7 +97,54 @@
                 }
             </form>
         </div>
+    }
 
+    @if (!Model.HasData)
+    {
+        <!-- Empty state -->
+        <div class="analysis-empty-state text-center py-5">
+            <div class="analysis-empty-state__icon mb-3" aria-hidden="true">
+                <svg width="64" height="64" fill="#adb5bd" viewBox="0 0 16 16">
+                    <path
+                            d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
+                </svg>
+            </div>
+            <h2 class="analysis-empty-state__title">No data found
+                for @(Model.ActiveSource == BudgetDataSource.GoogleSheet ? "Google Sheet" : "Budget Tracker")</h2>
+            @if (Model.ActiveSource == BudgetDataSource.GoogleSheet)
+            {
+                <p class="analysis-empty-state__text mb-4">
+                    There is no synced Google Sheet budget data for @Model.PeriodLabel.
+                    Sync your Google Drive spreadsheets or switch to Budget Tracker to view your financial analysis.
+                </p>
+                <div class="d-flex justify-content-center gap-2">
+                    <a asp-controller="GoogleDrive" asp-action="Index" class="btn btn-primary px-4">
+                        Go to Google Drive
+                    </a>
+                    <a asp-controller="BudgetTracker" asp-action="Index" class="btn btn-outline-secondary px-4">
+                        Open Budget Tracker
+                    </a>
+                </div>
+            }
+            else
+            {
+                <p class="analysis-empty-state__text mb-4">
+                    There are no Budget Tracker entries for @Model.PeriodLabel.
+                    Add your monthly budget and transactions in the Budget Tracker or switch to Google Sheet.
+                </p>
+                <div class="d-flex justify-content-center gap-2">
+                    <a asp-controller="BudgetTracker" asp-action="Index" class="btn btn-primary px-4">
+                        Open Budget Tracker
+                    </a>
+                    <a asp-controller="GoogleDrive" asp-action="Index" class="btn btn-outline-secondary px-4">
+                        Go to Google Drive
+                    </a>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
         <!-- Summary cards -->
         <div class="row g-3 mb-4">
             <div class="col-6 col-lg-3">

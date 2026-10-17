@@ -67,6 +67,47 @@ _Avoid_: Home page, home
 ### Budget
 Monthly budget allocation and tracking. Compares planned spending against actual spending from spreadsheet data.
 
+### Budget Tracker
+
+The in-app monthly budget page where the user enters plans, transactions, and overrides directly. It mirrors the layout
+and rules of the Google monthly budget sheet, with a Summary view and a Transactions view. Its data is separate from
+synced spreadsheet data.
+
+### Planned
+
+The amount the user intends to spend in a category, or earn in an income category, for a given month.
+
+### Actual
+
+The amount recorded for a category in a month. It is the sum of that category's transactions in the month, unless an
+Actual Override is set.
+
+### Actual Override
+
+A manually entered Actual for a category in a month. It replaces the transaction sum for that category and month and can
+be reverted to the transaction sum.
+
+### Diff
+
+The difference between Planned and Actual, always calculated and never entered. For expenses it is Planned minus Actual,
+so a positive value means under budget. For income it is Actual minus Planned, so a positive value means more was earned
+than planned.
+
+### Budget Category
+
+A user-defined grouping of budget entries, classified as an expense or an income category. Deleting a category hides it
+from new months and entries, but its name remains visible in past months that used it.
+
+### Budget Transaction
+
+A dated expense or income entry with an amount, description, and category. Its month is determined by its date. Its type
+follows the kind of its category.
+
+### Data Source
+
+The choice between the synced Google Sheet data and Budget Tracker data that Analysis and the Dashboard budget views
+display. The source applies to a whole view and is never mixed within one month.
+
 ### Community
 Social features including polls, stories, comments, and likes. System-defined polls are shared across users; user-generated content (stories, comments) is user-owned.
 

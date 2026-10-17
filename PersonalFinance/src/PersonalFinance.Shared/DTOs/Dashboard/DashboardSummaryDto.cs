@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Enums;
+
 namespace PersonalFinance.Shared.DTOs.Dashboard;
 
 /// <summary>
@@ -143,15 +145,33 @@ public class RecentActivityDto
 }
 
 /// <summary>
+/// Provider-backed monthly budget figures (Google Sheet snapshot or Budget Tracker monthly plan) for the most recent month.
+/// </summary>
+public class DashboardMonthlyBudgetDto
+{
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public string Period { get; set; } = string.Empty;
+    public decimal BudgetedIncome { get; set; }
+    public decimal ActualIncome { get; set; }
+    public decimal BudgetedExpenses { get; set; }
+    public decimal ActualExpenses { get; set; }
+}
+
+/// <summary>
 /// Full dashboard summary aggregating all features.
 /// </summary>
 public class DashboardSummaryDto
 {
     public NetWorthSummaryDto? NetWorth { get; set; }
     public BudgetSummaryDto? Budget { get; set; }
+    public DashboardMonthlyBudgetDto? MonthlyBudget { get; set; }
     public List<SavingsGoalSummaryDto> SavingsGoals { get; set; } = new();
     public GoalsOverviewDto GoalsOverview { get; set; } = new();
     public List<RecentActivityDto> RecentActivity { get; set; } = new();
+
+    /// <summary>The user's active budget data source.</summary>
+    public BudgetDataSource ActiveSource { get; set; } = BudgetDataSource.GoogleSheet;
 
     /// <summary>True when the user has a non-deleted Google Drive connection (valid or awaiting re-authentication).</summary>
     public bool HasGoogleDriveConnection { get; set; }

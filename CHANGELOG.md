@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Budget Tracker**: Added an in-app monthly budget tracker reproducing the Google "Monthly budget" sheet layout and
+  behavior with Summary and Transactions tabs.
+    - Users can enter planned amounts, actual overrides, and dated transactions (expenses and income) directly in the
+      application, stored in Azure SQL Database.
+    - Summary tab computes Planned, Actual, and Diff per category with totals and comparison bars (Diff for Expenses:
+      Planned − Actual; Diff for Income: Actual − Planned).
+    - Transactions tab displays side-by-side dated expenses and income entries with inline editing and confirmation on
+      deletion.
+    - Categories are seeded from defaults, customizable, reorderable, and soft-deleted/archived without losing past
+      months' data.
+- **Budget Data Source Switch & Active Source Routing**: Analysis and the Dashboard now read data from the user's active
+  budget data source (Google Sheet or Budget Tracker).
+    - Segmented data source control allows users to switch between Google Sheet and Budget Tracker with anti-forgery
+      protection while preserving period/month query parameters.
+    - Source-named empty states provide actionable links to add data or switch sources without silent fallbacks.
+    - The Dashboard Monthly budget card shows planned vs actual income and expenses for the latest month of the active
+      source, with the source toggle and a source-named empty state.
+    - Recent activity labels the active source.
+- **Budget data provider**: Added a unified user-selected read path for Google Sheet or Budget Tracker budget months and
+  transactions.
+    - Monthly sheet aggregation retains its snapshot count; trends retain individual sheet snapshots, while Tracker
+      trends have one point per available month.
 - **Landing Page**: Signed-out visitors at `/` now see a public Landing Page instead of being redirected to the login
   form; signed-in users at `/` are redirected to their Dashboard.
     - New anonymous `HomeController` is the default route; `/Dashboard` still requires sign-in and deep links return
@@ -99,6 +121,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Dashboard Budgeted income tile**: The tile shows Budget Planner income only. Google Sheet and Budget Tracker planned
+  vs actual figures appear on the Monthly budget card and are never mixed with Planner numbers or substituted when the
+  active source has no data.
 - **App Shell Accent & Sidebar Persistence**: The sidebar, top bar, and mobile bottom navigation now use the Indigo
   Ledger brand accent, and the sidebar collapse preference is restored before first paint.
   - Replaced hard-coded `#58a6ff` accents with the indigo brand token (light indigo on the dark sidebar for contrast).

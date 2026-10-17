@@ -1,8 +1,6 @@
-using System.IO;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Web.Controllers;
-using Xunit;
 
 namespace PersonalFinance.Tests;
 
@@ -36,6 +34,7 @@ public class NavigationLayoutTests
         {
             typeof(DashboardController),
             typeof(NetworthController),
+            typeof(BudgetTrackerController),
             typeof(BudgetController),
             typeof(SavingsGoalsController),
             typeof(AnalysisController),
@@ -48,7 +47,8 @@ public class NavigationLayoutTests
         foreach (var type in controllerTypes)
         {
             Assert.True(typeof(Controller).IsAssignableFrom(type), $"{type.Name} should inherit from Controller.");
-            var indexMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance).Where(m => m.Name == "Index").ToList();
+            var indexMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => m.Name == "Index").ToList();
             Assert.NotEmpty(indexMethods);
         }
     }
@@ -56,7 +56,8 @@ public class NavigationLayoutTests
     [Fact]
     public void LayoutView_ContainsThreeNavigationTiers()
     {
-        var layoutPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Shared", "_Layout.cshtml");
+        var layoutPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Shared",
+            "_Layout.cshtml");
         Assert.True(File.Exists(layoutPath), $"_Layout.cshtml not found at {layoutPath}");
 
         var content = File.ReadAllText(layoutPath);
@@ -69,6 +70,7 @@ public class NavigationLayoutTests
         // Verify required controller links
         Assert.Contains("asp-controller=\"Dashboard\"", content);
         Assert.Contains("asp-controller=\"Networth\"", content);
+        Assert.Contains("asp-controller=\"BudgetTracker\"", content);
         Assert.Contains("asp-controller=\"Budget\"", content);
         Assert.Contains("asp-controller=\"SavingsGoals\"", content);
         Assert.Contains("asp-controller=\"Analysis\"", content);
@@ -89,7 +91,8 @@ public class NavigationLayoutTests
     [Fact]
     public void SidebarCss_DefinesRequiredResponsiveAndCollapsedDimensions()
     {
-        var cssPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "css", "sidebar.css");
+        var cssPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "css",
+            "sidebar.css");
         Assert.True(File.Exists(cssPath), $"sidebar.css not found at {cssPath}");
 
         var content = File.ReadAllText(cssPath);
@@ -111,7 +114,8 @@ public class NavigationLayoutTests
     [Fact]
     public void SidebarJs_ImplementsLocalStoragePersistenceAndAccessibility()
     {
-        var jsPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "js", "core", "sidebar.js");
+        var jsPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "js",
+            "core", "sidebar.js");
         Assert.True(File.Exists(jsPath), $"sidebar.js not found at {jsPath}");
 
         var content = File.ReadAllText(jsPath);

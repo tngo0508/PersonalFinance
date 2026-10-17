@@ -1,4 +1,6 @@
+using System.Globalization;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Web.Models;
 
@@ -12,6 +14,30 @@ public class AnalysisDashboardViewModel
     public int? SelectedMonth { get; set; }
     public List<int> AvailableYears { get; set; } = new();
     public List<int> AvailableMonths { get; set; } = new();
+    public BudgetDataSource ActiveSource { get; set; } = BudgetDataSource.GoogleSheet;
+
+    /// <summary>
+    /// User-facing period label built from the selected year and month, e.g. "March 2026".
+    /// Independent of whether the active source has a summary for that period.
+    /// </summary>
+    public string PeriodLabel
+    {
+        get
+        {
+            if (SelectedMonth is >= 1 and <= 12 && SelectedYear > 0)
+            {
+                return new DateTime(SelectedYear, SelectedMonth.Value, 1)
+                    .ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+            }
+
+            if (SelectedYear > 0)
+            {
+                return SelectedYear.ToString(CultureInfo.InvariantCulture);
+            }
+
+            return "this period";
+        }
+    }
 
     // Summary statistics
     public decimal TotalIncome { get; set; }

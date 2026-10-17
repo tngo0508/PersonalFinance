@@ -251,6 +251,16 @@ try
         .AddHttpMessageHandler<UserIdForwardingHandler>()
         .AddStandardResilienceHandler();
 
+    // 7h. Register Budget Tracker API client
+    builder.Services.AddRefitClient<IBudgetTrackerApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
     var app = builder.Build();
 
     // 7. Enable Serilog HTTP request logging

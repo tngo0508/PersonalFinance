@@ -1,0 +1,59 @@
+@using PersonalFinance.Shared.Enums
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
+@* Provider-backed monthly budget card: planned vs actual from the active source. Never falls back to Budget Planner. *@
+@{
+    var monthlyBudget = Model.MonthlyBudget;
+    var isTracker = Model.ActiveSource == BudgetDataSource.BudgetTracker;
+    var sourceName = isTracker ? "Budget Tracker" : "Google Sheet";
+}
+<section class="dash-card dash-monthly-budget" aria-labelledby="dash-monthly-budget-title">
+    <div class="dash-card__header flex-wrap gap-2">
+        <h2 id="dash-monthly-budget-title" class="dash-card__title mb-0">Monthly budget</h2>
+        <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
+    </div>
+    @if (monthlyBudget is not null)
+    {
+        <p class="dash-note">
+            <span class="dash-budget__period">@monthlyBudget.Period</span>
+            <text>&middot;</text>
+            <span>Source: @sourceName</span>
+        </p>
+        <dl class="dash-stats" aria-label="Planned versus actual income and expenses for @monthlyBudget.Period">
+            <div class="dash-stats__item">
+                <dt>Planned income</dt>
+                <dd class="dash-money">@monthlyBudget.BudgetedIncome.ToString("C0")</dd>
+            </div>
+            <div class="dash-stats__item">
+                <dt>Actual income</dt>
+                <dd class="dash-money">@monthlyBudget.ActualIncome.ToString("C0")</dd>
+            </div>
+            <div class="dash-stats__item">
+                <dt>Planned expenses</dt>
+                <dd class="dash-money">@monthlyBudget.BudgetedExpenses.ToString("C0")</dd>
+            </div>
+            <div class="dash-stats__item">
+                <dt>Actual expenses</dt>
+                <dd class="dash-money">@monthlyBudget.ActualExpenses.ToString("C0")</dd>
+            </div>
+        </dl>
+        <a asp-controller="@(isTracker ? "BudgetTracker" : "Analysis")" asp-action="Index" class="dash-link">
+            @(isTracker ? "Open Budget Tracker" : "Open Analysis")
+        </a>
+    }
+    else if (isTracker)
+    {
+        <p class="dash-empty">
+            No data in Budget Tracker.
+            <a asp-controller="BudgetTracker" asp-action="Index">Add a monthly budget</a>
+            or switch to Google Sheet above.
+        </p>
+    }
+    else
+    {
+        <p class="dash-empty">
+            No data in Google Sheet.
+            <a asp-controller="GoogleDrive" asp-action="Index">Sync your spreadsheet</a>
+            or switch to Budget Tracker above.
+        </p>
+    }
+</section>
