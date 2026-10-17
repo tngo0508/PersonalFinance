@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Development Documentation**: Enhanced the user secrets section in DEVELOPMENT.md with comprehensive management guidance.
+  - Includes all `dotnet user-secrets` commands for both Web and ApiService projects with placeholder values.
+  - Covers database connection strings, Brevo API key, Google OAuth credentials, Google Drive API key, and OpenAI API key.
+  - Provides verification, reset, and single-secret removal commands.
+  - Added a dedicated section explaining where user secrets are stored (`%APPDATA%\Microsoft\UserSecrets\`), how to find the SecretId from `.csproj` files, and how to view configured secrets.
+
 ### Added
 
 - **Budget Tracker**: Added an in-app monthly budget tracker reproducing the Google "Monthly budget" sheet layout and

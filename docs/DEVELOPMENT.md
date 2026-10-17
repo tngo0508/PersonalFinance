@@ -77,6 +77,106 @@ The project separates configuration into:
 
 ---
 
+### Setting Up User Secrets on a New Machine
+
+When cloning this repository on a new machine, run the following commands to configure development user secrets. Replace each placeholder value with your actual credential.
+
+#### PersonalFinance.Web Project
+
+```bash
+# Azure SQL Database connection string
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.Web
+
+# Brevo transactional email API key
+dotnet user-secrets set "Brevo:ApiKey" "<YOUR_BREVO_API_KEY>" --project PersonalFinance/src/PersonalFinance.Web
+
+# Google OAuth 2.0 credentials
+dotnet user-secrets set "Authentication:Google:ClientId" "<YOUR_GOOGLE_CLIENT_ID>.apps.googleusercontent.com" --project PersonalFinance/src/PersonalFinance.Web
+dotnet user-secrets set "Authentication:Google:ClientSecret" "<YOUR_GOOGLE_CLIENT_SECRET>" --project PersonalFinance/src/PersonalFinance.Web
+```
+
+#### PersonalFinance.ApiService Project
+
+```bash
+# Azure SQL Database connection string
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.ApiService
+
+# Google Drive API key (default; users can also enter their own key via /GoogleDrive)
+dotnet user-secrets set "GoogleDrive:ApiKey" "<YOUR_GOOGLE_DRIVE_API_KEY>" --project PersonalFinance/src/PersonalFinance.ApiService
+
+# OpenAI API key (for AI Assistant feature)
+dotnet user-secrets set "OpenAI:ApiKey" "<YOUR_OPENAI_API_KEY>" --project PersonalFinance/src/PersonalFinance.ApiService
+```
+
+#### Verify Configured Secrets
+
+```bash
+# List Web project secrets
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web
+
+# List ApiService project secrets
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService
+```
+
+#### Resetting User Secrets
+
+If you need to clear all secrets and start fresh:
+
+```bash
+# Clear all secrets for Web project
+dotnet user-secrets clear --project PersonalFinance/src/PersonalFinance.Web
+
+# Clear all secrets for ApiService project
+dotnet user-secrets clear --project PersonalFinance/src/PersonalFinance.ApiService
+```
+
+#### Remove a Single Secret
+
+To remove an individual secret without clearing all others:
+
+```bash
+# Example: Remove the Brevo API key
+dotnet user-secrets remove "Brevo:ApiKey" --project PersonalFinance/src/PersonalFinance.Web
+```
+
+---
+
+### Viewing and Locating User Secrets
+
+#### Viewing Configured Secrets
+
+To see all currently configured secrets for a project, run:
+
+```bash
+# List Web project secrets
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web
+
+# List ApiService project secrets
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService
+```
+
+#### Where Are User Secrets Stored?
+
+User secrets are stored in a JSON file in your user profile's AppData folder:
+
+```
+%APPDATA%\Microsoft\UserSecrets\<SecretId>\secrets.json
+```
+
+The `SecretId` is unique to each project and can be found in the project's `.csproj` file. Look for the `<UserSecretsId>` element:
+
+```xml
+<PropertyGroup>
+  <UserSecretsId>aspnet-PersonalFinance.Web-abc123</UserSecretsId>
+</PropertyGroup>
+```
+
+You can open the `secrets.json` file directly in a text editor to view the raw key-value pairs, but using `dotnet user-secrets list` is the recommended approach.
+
+**Important:** User secrets are for **development only**. They are loaded only when the environment is set to `Development` and should never be relied upon in production deployments.
+
+---
+
 ### Brevo Transactional Email Configuration
 
 Account registration requires email confirmation (`options.SignIn.RequireConfirmedAccount = true`). Verification emails are sent via the **Brevo REST API** (`https://api.brevo.com/v3/smtp/email`).
