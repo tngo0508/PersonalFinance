@@ -11,22 +11,16 @@
             "command": "npx",
             "args": [
                 "-y",
-                "@azure/mcp-server"
+                "@azure/mcp@latest",
+                "server",
+                "start"
             ]
         },
         "github": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "@github/mcp-server"
-            ]
+            "url": "https://github.github.com/mcp"
         },
         "microsoft-learn": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "@microsoft/learn-docs-mcp"
-            ]
+            "url": "https://learn.microsoft.com/mcp"
         }
     }
 }
