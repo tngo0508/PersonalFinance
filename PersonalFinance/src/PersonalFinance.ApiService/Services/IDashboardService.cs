@@ -69,6 +69,28 @@ public class BudgetSummaryDto
     public decimal? EntertainmentPercent { get; set; }
     public decimal? MiscellaneousPercent { get; set; }
     public string? Period { get; set; }
+
+    /// <summary>All ten budget categories in Budget-page order, each with its percent and dollar amount.</summary>
+    public List<BudgetAllocationDto> Allocations { get; set; } = new();
+
+    /// <summary>Sum of all category percentages.</summary>
+    public decimal TotalAllocatedPercent { get; set; }
+
+    /// <summary>Percent of monthly income not allocated; null when allocations total 100% or more.</summary>
+    public decimal? UnallocatedPercent { get; set; }
+
+    /// <summary>Dollar amount of monthly income not allocated; null when allocations total 100% or more.</summary>
+    public decimal? UnallocatedAmount { get; set; }
+}
+
+/// <summary>
+/// One budget category's planned share of monthly income.
+/// </summary>
+public class BudgetAllocationDto
+{
+    public string Name { get; set; } = string.Empty;
+    public decimal Percent { get; set; }
+    public decimal Amount { get; set; }
 }
 
 /// <summary>
@@ -82,6 +104,21 @@ public class SavingsGoalSummaryDto
     public decimal CurrentAmount { get; set; }
     public double ProgressPercent { get; set; }
     public bool IsCompleted { get; set; }
+}
+
+/// <summary>
+/// Savings goals totals aggregated across all of the user's goals (not just the five listed).
+/// </summary>
+public class GoalsOverviewDto
+{
+    public decimal TotalSaved { get; set; }
+    public decimal TotalTarget { get; set; }
+
+    /// <summary>TotalSaved / TotalTarget × 100, capped at 100; null when TotalTarget is zero.</summary>
+    public decimal? FundedPercent { get; set; }
+
+    public int CompletedCount { get; set; }
+    public int TotalCount { get; set; }
 }
 
 /// <summary>
@@ -103,6 +140,7 @@ public class DashboardSummaryDto
     public NetWorthSummaryDto? NetWorth { get; set; }
     public BudgetSummaryDto? Budget { get; set; }
     public List<SavingsGoalSummaryDto> SavingsGoals { get; set; } = new();
+    public GoalsOverviewDto GoalsOverview { get; set; } = new();
     public List<RecentActivityDto> RecentActivity { get; set; } = new();
 
     /// <summary>True when the user has a non-deleted Google Drive connection (valid or awaiting re-authentication).</summary>
