@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **README Architecture Section**: Rewrote the Architecture section to accurately reflect the current layered architecture.
+  - Replaced "Clean Architecture" with "layered architecture" and added layers, dependency flow diagram, and key principles.
+  - Documented direct service injection, type-based organization, soft deletes, and permissive license policy.
+  - Added links to Architecture Decision Records (ADR-0001, ADR-0002).
+  - Removed outdated references to SQLite, `GoogleDriveHelper`, and `CredentialProtector`.
+  - Updated Tech Stack table to reflect Azure SQL Database as the sole database.
+
+- **README**: Updated Quick Start section with user secrets setup commands and added new features (Budget Tracker, Dashboard & Navigation, Landing Page).
+  - Added user secrets configuration commands in the Run Locally section.
+  - Included important note directing users to DEVELOPMENT.md for complete setup instructions.
+  - Added feature descriptions for Budget Tracker, Dashboard & Navigation, and Landing Page.
+
 - **Development Documentation**: Enhanced the user secrets section in DEVELOPMENT.md with comprehensive management guidance.
   - Includes all `dotnet user-secrets` commands for both Web and ApiService projects with placeholder values.
   - Covers database connection strings, Brevo API key, Google OAuth credentials, Google Drive API key, and OpenAI API key.

@@ -4,7 +4,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A modular, multi-tier personal finance management application built on **.NET 10** with **Clean Architecture** and **.NET Aspire**. Connect Google Drive folders, analyze budget spreadsheets, and plan for financial independence — all from a responsive, self-hosted web interface.
+A modular, multi-tier personal finance management application built on **.NET 10** with a **layered architecture** and **.NET Aspire**. Connect Google Drive folders, analyze budget spreadsheets, and plan for financial independence — all from a responsive, self-hosted web interface.
 
 > **Developer Guide**: Local setup, secrets management, EF Core migrations, OAuth configuration, and troubleshooting — see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).  
 > **Deployment Guide**: Azure Container Apps, Docker, CI/CD pipelines, and Infrastructure as Code — see [docs/deployment.md](docs/deployment.md).  
@@ -40,6 +40,15 @@ Interactive projections for Financial Independence (FI) goals with year-by-year 
 ### Spreadsheet Transactions Viewer
 View, search, and filter transaction data from Google Sheets with category chips, spending-over-time charts, top category rankings, and CSV export.
 
+### Budget Tracker
+In-app monthly budget tracker with Summary and Transactions tabs. Enter planned amounts, actual overrides, and dated transactions directly in the application, stored in Azure SQL Database.
+
+### Dashboard & Navigation
+Modern left sidebar navigation with Dashboard home page showing Net Worth, Progress to FI, key figures, budget breakdown, savings goals, recent activity, and quick actions. Includes global search and notification system.
+
+### Landing Page
+Public landing page for signed-out visitors showcasing features, how it works, and calls to action. Signed-in users are redirected to their Dashboard.
+
 ### Authentication & Identity
 ASP.NET Core Identity with email verification (Brevo), Google OAuth 2.0 social sign-in, and secure account linking with pre-account-takeover defense.
 
@@ -47,42 +56,56 @@ ASP.NET Core Identity with email verification (Brevo), Google OAuth 2.0 social s
 
 ## Architecture
 
-The solution follows a **Clean Architecture** pattern with .NET Aspire orchestration:
+The solution follows a **layered architecture** pattern with clear separation of concerns, orchestrated by .NET Aspire.
+
+### Layers
+
+1. **UI Layer** (`PersonalFinance.Web`) — MVC controllers, Razor views, Identity, and UI-specific services. Communicates with the API via typed Refit clients.
+2. **API Service Layer** (`PersonalFinance.ApiService`) — REST API endpoints, business logic, and service implementations. Uses direct service injection via built-in .NET DI.
+3. **Data Layer** (`PersonalFinance.Data`) — EF Core `ApplicationDbContext`, entity definitions, and migrations.
+4. **Shared Layer** (`PersonalFinance.Shared`) — DTOs, Refit API contracts, constants, and shared utilities referenced by all layers.
+
+### Dependency Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    PersonalFinance.Web                          │
-│         (MVC, Razor Pages, Identity, Chart.js, Bootstrap)       │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │ Typed Refit Client + Polly Resilience
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  PersonalFinance.ApiService                     │
-│           (REST API, Google Drive, OpenAPI / Scalar)            │
-└───────────────┬───────────────────┬─────────────────────────────┘
-                │                   │
-    ┌───────────▼──────────┐  ┌─────▼─────────────────────────────┐
-    │  PersonalFinance.    │  │  PersonalFinance.Data             │
-    │  Shared              │  │  (EF Core, SQLite + SQL Server)   │
-    │  (DTOs, Contracts,   │  │                                   │
-    │   Parsers, Crypto)   │  │  ┌──────────────────────────┐    │
-    └──────────────────────┘  │  │  PersonalFinance.db       │    │
-                              │  │  / Azure SQL Database     │    │
-                              │  └──────────────────────────┘    │
-                              └──────────────────────────────────┘
+PersonalFinance.Web  ──depends on──>  PersonalFinance.ApiService  ──depends on──>  PersonalFinance.Data
+         │                                    │                                    ▲
+         └──────── depends on ────────────────┘                                    │
+              PersonalFinance.Shared  ──referenced by all layers───────────────────┘
 ```
+
+### Key Principles
+
+- **Direct Service Injection** — ApiService controllers inject service interfaces directly via .NET DI. No mediator libraries (MediatR) or CQRS indirection. See [ADR-0001](docs/adr/0001-standardize-cqrs-feature-organization.md).
+- **Type-Based Organization** — ApiService is organized by type: `Controllers/`, `Services/`, `Validators/`.
+- **Strict Backend/Frontend Separation** — Web controllers call Refit APIs; they never inject ApiService services directly. Business logic lives in ApiService, not in Web controllers.
+- **Soft Deletes** — All user-owned entities inherit from `AuditableEntity` with soft-delete support. EF Core global query filters exclude deleted records.
+- **Permissive Open-Source Only** — Dependencies are restricted to MIT, BSD, or Apache 2.0 licenses. MediatR and AutoMapper are banned due to commercial licensing.
+
+### Projects
 
 | Project | Role |
 |---|---|
-| `PersonalFinance.Web` | Presentation layer — MVC, Identity, Refit client, Chart.js visualizations |
-| `PersonalFinance.ApiService` | Application & API layer — REST endpoints, Google Drive integration, Scalar docs |
-| `PersonalFinance.Data` | Persistence layer — EF Core `AppDbContext`, migrations, Identity stores |
-| `PersonalFinance.Shared` | Domain & cross-cutting — DTOs, Refit contracts, `GoogleDriveHelper`, `CredentialProtector` |
+| `PersonalFinance.Web` | UI layer — MVC controllers, Razor views, Bootstrap/Chart.js frontend, Refit API clients |
+| `PersonalFinance.ApiService` | API layer — REST endpoints, business logic services, validators, direct DI |
+| `PersonalFinance.Data` | Data layer — EF Core `ApplicationDbContext`, entities, Azure SQL migrations |
+| `PersonalFinance.Shared` | Shared — DTOs, Refit contracts, constants, cross-cutting utilities |
 | `PersonalFinance.AppHost` | .NET Aspire orchestrator — service discovery, telemetry, dashboard (local dev) |
 | `PersonalFinance.ServiceDefaults` | Shared defaults — OpenTelemetry, health checks, HTTP resilience |
-| `PersonalFinance.Tests` | Verification — xUnit unit and integration tests (104+ tests) |
+| `PersonalFinance.Tests` | Verification — xUnit unit and integration tests |
 
-For detailed data flow diagrams and system interaction sequences, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
+### Database
+
+The application uses **Azure SQL Database** exclusively, accessed through Entity Framework Core Code-First migrations. There is no SQLite or local database option.
+
+### Architecture Decision Records
+
+For the rationale behind key design choices, see:
+
+- [ADR-0001](docs/adr/0001-standardize-cqrs-feature-organization.md) — Direct service injection over MediatR/CQRS; permissive license policy
+- [ADR-0002](docs/adr/0002-budget-tracker-separate-from-spreadsheet-data.md) — Budget Tracker data stored in separate entities
+
+For detailed setup instructions, secrets management, and EF Core migrations, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
 
 ---
 
@@ -100,6 +123,11 @@ For detailed data flow diagrams and system interaction sequences, see [**docs/DE
 git clone https://github.com/tngo0508/PersonalFinanceApp.git
 cd PersonalFinanceApp
 
+# Configure user secrets (required for database and API access)
+# See docs/DEVELOPMENT.md for detailed setup instructions
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<YOUR_CONNECTION_STRING>" --project PersonalFinance/src/PersonalFinance.Web
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<YOUR_CONNECTION_STRING>" --project PersonalFinance/src/PersonalFinance.ApiService
+
 # Launch via .NET Aspire (recommended — starts all services + dashboard)
 dotnet run --project PersonalFinance/src/PersonalFinance.AppHost
 ```
@@ -109,7 +137,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.AppHost
 - **Scalar API Docs**: `https://localhost:7100/scalar/v1`
 - **Aspire Dashboard**: URL shown in terminal output
 
-For first-time setup including secrets configuration and database initialization, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
+> **Important**: Before running the application, you must configure user secrets with your database connection string and API keys. See [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md) for complete setup instructions including Brevo API key, Google OAuth credentials, Google Drive API key, and OpenAI API key.
 
 ---
 
@@ -119,7 +147,7 @@ For first-time setup including secrets configuration and database initialization
 |---|---|
 | **Framework** | .NET 10, ASP.NET Core MVC & Minimal APIs |
 | **Orchestration** | .NET Aspire (service discovery, telemetry, dashboard) |
-| **Database** | SQLite (local dev), Azure SQL Serverless (production) |
+| **Database** | Azure SQL Database (development and production) |
 | **ORM** | Entity Framework Core 10 (Code-First, provider-specific migrations) |
 | **Authentication** | ASP.NET Core Identity, Google OAuth 2.0, Brevo email verification |
 | **API Client** | Refit (typed HTTP client) + Polly (resilience) |
