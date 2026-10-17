@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Enums;
+
 namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
@@ -180,6 +182,11 @@ public interface ISpreadsheetAnalysisService
     ///     Gets the most recent synced month for the user, or null if no data exists.
     /// </summary>
     Task<(int year, int month)?> GetMostRecentMonthAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Gets the active budget data source for the user.
+    /// </summary>
+    Task<BudgetDataSource> GetActiveSourceAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Syncs budget data from a Google Drive spreadsheet to the database.

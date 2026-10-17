@@ -14,7 +14,7 @@
          * Initialize the search module.
          * @returns {void}
          */
-        function init() {
+        function init () {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', setup);
             } else {
@@ -26,11 +26,13 @@
          * Set up search event listeners.
          * @returns {void}
          */
-        function setup() {
+        function setup () {
             searchInput = document.getElementById('topbarSearchInput');
             resultsDropdown = document.getElementById('searchResultsDropdown');
 
-            if (!searchInput || !resultsDropdown) return;
+            if (!searchInput || !resultsDropdown) {
+                return;
+            }
 
             searchInput.addEventListener('input', function () {
                 clearTimeout(debounceTimer);
@@ -60,10 +62,12 @@
          * @param {string} query - The search query.
          * @returns {void}
          */
-        function performSearch(query) {
+        function performSearch (query) {
             fetch('/api/Search?q=' + encodeURIComponent(query))
                 .then(function (response) {
-                    if (!response.ok) throw new Error('Search failed');
+                    if (!response.ok) {
+                        throw new Error('Search failed');
+                    }
                     return response.json();
                 })
                 .then(function (data) {
@@ -79,8 +83,10 @@
          * @param {Object} data - Search results with Transactions, BudgetItems, SavingsGoals.
          * @returns {void}
          */
-        function displayResults(data) {
-            if (!resultsDropdown) return;
+        function displayResults (data) {
+            if (!resultsDropdown) {
+                return;
+            }
 
             let hasResults = false;
             let html = '';
@@ -130,7 +136,7 @@
          * Hide the search results dropdown.
          * @returns {void}
          */
-        function hideResults() {
+        function hideResults () {
             if (resultsDropdown) {
                 resultsDropdown.classList.remove('show');
                 resultsDropdown.innerHTML = '';
@@ -142,7 +148,7 @@
          * @param {string} text - The text to escape.
          * @returns {string} Escaped text.
          */
-        function escapeHtml(text) {
+        function escapeHtml (text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;

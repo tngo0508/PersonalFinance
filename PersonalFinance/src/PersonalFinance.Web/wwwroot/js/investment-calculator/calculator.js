@@ -4,7 +4,7 @@
 (function () {
     'use strict';
 
-    let calcChartTooltip = {visible: false, x: 0, y: 0, text: ''};
+    let calcChartTooltip = { visible: false, x: 0, y: 0, text: '' };
     let calcChartResizeTimer = null;
 
     /**
@@ -12,7 +12,7 @@
      * @param {number} value - The value to format.
      * @returns {string} The formatted currency string.
      */
-    function formatCurrency(value) {
+    function formatCurrency (value) {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
@@ -24,7 +24,7 @@
     /**
      * Initialize the calculator inputs and event listeners.
      */
-    function initCalculator() {
+    function initCalculator () {
         const inputs = [
             {
                 rangeId: 'calcInitialRange',
@@ -38,15 +38,17 @@
                 valId: 'calcMonthlyValue',
                 format: v => formatCurrency(v)
             },
-            {rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => v + '%'},
-            {rangeId: 'calcYearsRange', numId: 'calcYears', valId: 'calcYearsValue', format: v => v + ' years'}
+            { rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => v + '%' },
+            { rangeId: 'calcYearsRange', numId: 'calcYears', valId: 'calcYearsValue', format: v => v + ' years' }
         ];
 
-        inputs.forEach(({rangeId, numId, valId, format}) => {
+        inputs.forEach(({ rangeId, numId, valId, format }) => {
             const range = document.getElementById(rangeId);
             const num = document.getElementById(numId);
             const val = document.getElementById(valId);
-            if (!range || !num || !val) return;
+            if (!range || !num || !val) {
+                return;
+            }
 
             range.addEventListener('input', () => {
                 num.value = range.value;
@@ -68,12 +70,16 @@
     /**
      * Setup resize handler for responsive chart.
      */
-    function setupCalcChartResize() {
+    function setupCalcChartResize () {
         const container = document.querySelector('.calculator-chart-container');
-        if (!container) return;
+        if (!container) {
+            return;
+        }
 
         const observer = new ResizeObserver(() => {
-            if (calcChartResizeTimer) cancelAnimationFrame(calcChartResizeTimer);
+            if (calcChartResizeTimer) {
+                cancelAnimationFrame(calcChartResizeTimer);
+            }
             calcChartResizeTimer = requestAnimationFrame(() => {
                 const initial = parseFloat(document.getElementById('calcInitial')?.value) || 0;
                 const monthly = parseFloat(document.getElementById('calcMonthly')?.value) || 0;
@@ -89,7 +95,7 @@
     /**
      * Calculate investment growth and update the UI.
      */
-    function calculateInvestment() {
+    function calculateInvestment () {
         const initial = parseFloat(document.getElementById('calcInitial')?.value) || 0;
         const monthly = parseFloat(document.getElementById('calcMonthly')?.value) || 0;
         const rate = parseFloat(document.getElementById('calcRate')?.value) || 0;
@@ -112,9 +118,15 @@
         const tcEl = document.getElementById('calcTotalContributions');
         const tiEl = document.getElementById('calcTotalInterest');
 
-        if (fvEl) fvEl.textContent = formatCurrency(futureValue);
-        if (tcEl) tcEl.textContent = formatCurrency(totalContributions);
-        if (tiEl) tiEl.textContent = formatCurrency(totalInterest);
+        if (fvEl) {
+            fvEl.textContent = formatCurrency(futureValue);
+        }
+        if (tcEl) {
+            tcEl.textContent = formatCurrency(totalContributions);
+        }
+        if (tiEl) {
+            tiEl.textContent = formatCurrency(totalInterest);
+        }
 
         drawCalcChart(initial, monthly, rate, years);
     }
@@ -123,17 +135,20 @@
      * Get chart dimensions based on container size.
      * @returns {Object|null} The chart dimensions.
      */
-    function getCalcChartDimensions() {
+    function getCalcChartDimensions () {
         const canvas = document.getElementById('calcChart');
-        if (!canvas) return null;
+        if (!canvas) {
+            return null;
+        }
         const container = canvas.parentElement;
-        if (!container) return null;
-        const containerWidth = container.clientWidth - 24;
-        const minWidth = 300;
+        if (!container) {
+            return null;
+        }
+        const containerWidth = Math.max(1, container.clientWidth - 24);
         const maxWidth = 800;
-        const w = Math.max(minWidth, Math.min(maxWidth, containerWidth));
+        const w = Math.min(maxWidth, containerWidth);
         const h = Math.round(w * 0.7);
-        return {w, h};
+        return { w, h };
     }
 
     /**
@@ -143,13 +158,17 @@
      * @param {number} rate - Annual return rate.
      * @param {number} years - Time period in years.
      */
-    function drawCalcChart(initial, monthly, rate, years) {
+    function drawCalcChart (initial, monthly, rate, years) {
         const canvas = document.getElementById('calcChart');
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
         const dims = getCalcChartDimensions();
-        if (!dims) return;
+        if (!dims) {
+            return;
+        }
         const w = dims.w;
         const h = dims.h;
         canvas.width = w * dpr;
@@ -158,7 +177,7 @@
         canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        const padding = {top: 16, right: 24, bottom: 50, left: 68};
+        const padding = { top: 16, right: 24, bottom: 50, left: 68 };
         const chartW = w - padding.left - padding.right;
         const chartH = h - padding.top - padding.bottom;
 
@@ -179,19 +198,19 @@
                 fv = initial * Math.pow(1 + monthlyRate, m) + monthly * ((Math.pow(1 + monthlyRate, m) - 1) / monthlyRate);
             }
             const contrib = initial + monthly * m;
-            points.push({x: y, y: fv});
-            contribPoints.push({x: y, y: contrib});
+            points.push({ x: y, y: fv });
+            contribPoints.push({ x: y, y: contrib });
         }
 
         const maxVal = Math.max(...points.map(p => p.y), 1);
         const niceMax = niceScaleMax(maxVal);
         const gridLines = 5;
 
-        function toCanvasX(year) {
+        function toCanvasX (year) {
             return padding.left + (year / years) * chartW;
         }
 
-        function toCanvasY(val) {
+        function toCanvasY (val) {
             return padding.top + chartH - (val / niceMax) * chartH;
         }
 
@@ -213,7 +232,7 @@
 
             const val = niceMax - (niceMax / gridLines) * i;
             ctx.fillStyle = '#6b7280';
-            ctx.font = '11px system-ui, -apple-system, sans-serif';
+            ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
             ctx.fillText(formatAxisValue(val), padding.left - 10, y);
@@ -224,7 +243,7 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillStyle = '#6b7280';
-        ctx.font = '11px system-ui, -apple-system, sans-serif';
+        ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
         const xStep = Math.max(1, Math.floor(years / 7));
         for (let y = 0; y <= years; y += xStep) {
             const x = toCanvasX(y);
@@ -239,9 +258,11 @@
         }
 
         // Smooth curve helper
-        function drawSmoothCurve(data) {
-            if (data.length < 2) return;
-            const coords = data.map(p => ({x: toCanvasX(p.x), y: toCanvasY(p.y)}));
+        function drawSmoothCurve (data) {
+            if (data.length < 2) {
+                return;
+            }
+            const coords = data.map(p => ({ x: toCanvasX(p.x), y: toCanvasY(p.y) }));
             ctx.beginPath();
             ctx.moveTo(coords[0].x, coords[0].y);
             for (let i = 0; i < coords.length - 1; i++) {
@@ -257,34 +278,34 @@
             }
         }
 
-      // Interest earned area fill (between contributions and total value lines)
-      const interestGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-      interestGrad.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
-      interestGrad.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
+        // Interest earned area fill (between contributions and total value lines)
+        const interestGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+        interestGrad.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
+        interestGrad.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
         ctx.beginPath();
-      ctx.moveTo(toCanvasX(0), toCanvasY(contribPoints[0].y));
+        ctx.moveTo(toCanvasX(0), toCanvasY(contribPoints[0].y));
         contribPoints.forEach(p => {
             ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
         });
-      for (let i = points.length - 1; i >= 0; i--) {
-        ctx.lineTo(toCanvasX(points[i].x), toCanvasY(points[i].y));
-      }
+        for (let i = points.length - 1; i >= 0; i--) {
+            ctx.lineTo(toCanvasX(points[i].x), toCanvasY(points[i].y));
+        }
         ctx.closePath();
-      ctx.fillStyle = interestGrad;
+        ctx.fillStyle = interestGrad;
         ctx.fill();
 
-      // Contributions area fill
-      const contribGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-      contribGrad.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
-      contribGrad.addColorStop(1, 'rgba(99, 102, 241, 0.02)');
+        // Contributions area fill
+        const contribGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+        contribGrad.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+        contribGrad.addColorStop(1, 'rgba(99, 102, 241, 0.02)');
         ctx.beginPath();
         ctx.moveTo(toCanvasX(0), padding.top + chartH);
-      contribPoints.forEach(p => {
+        contribPoints.forEach(p => {
             ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
         });
         ctx.lineTo(toCanvasX(years), padding.top + chartH);
         ctx.closePath();
-      ctx.fillStyle = contribGrad;
+        ctx.fillStyle = contribGrad;
         ctx.fill();
 
         // Smooth lines
@@ -297,74 +318,92 @@
 
         drawSmoothCurve(points);
         ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 3;
+        ctx.lineWidth = 3;
         ctx.stroke();
 
         // End-point dots
-        function drawDot(data, color) {
+        function drawDot (data, color) {
             const last = data[data.length - 1];
             const cx = toCanvasX(last.x);
             const cy = toCanvasY(last.y);
             ctx.beginPath();
-          ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.fill();
             ctx.beginPath();
-          ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 4, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
             ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 2;
+            ctx.lineWidth = 2;
             ctx.stroke();
         }
 
         drawDot(contribPoints, '#6366f1');
         drawDot(points, '#10b981');
 
-      // Update HTML legend with final values
-      updateLegend(points, contribPoints);
+        // Update HTML legend with final values
+        updateLegend(points, contribPoints);
 
         // Store chart metadata for tooltip
-        canvas._chartMeta = {padding, chartW, chartH, points, contribPoints, niceMax, years, toCanvasX, toCanvasY};
+        canvas._chartMeta = { padding, chartW, chartH, points, contribPoints, niceMax, years, toCanvasX, toCanvasY };
     }
 
-  /**
+    /**
    * Update the HTML legend with final chart values.
    * @param {Array} points - Total value data points.
    * @param {Array} contribPoints - Contributions data points.
    */
-  function updateLegend(points, contribPoints) {
-    if (points.length === 0 || contribPoints.length === 0) return;
-    const lastValue = points[points.length - 1].y;
-    const lastContrib = contribPoints[contribPoints.length - 1].y;
-    const lastInterest = lastValue - lastContrib;
+    function updateLegend (points, contribPoints) {
+        if (points.length === 0 || contribPoints.length === 0) {
+            return;
+        }
+        const lastValue = points[points.length - 1].y;
+        const lastContrib = contribPoints[contribPoints.length - 1].y;
+        const lastInterest = lastValue - lastContrib;
 
-    const valueEl = document.getElementById('calcLegendValue');
-    const contribEl = document.getElementById('calcLegendContrib');
-    const interestEl = document.getElementById('calcLegendInterest');
+        const valueEl = document.getElementById('calcLegendValue');
+        const contribEl = document.getElementById('calcLegendContrib');
+        const interestEl = document.getElementById('calcLegendInterest');
 
-    if (valueEl) valueEl.textContent = formatCurrency(lastValue);
-    if (contribEl) contribEl.textContent = formatCurrency(lastContrib);
-    if (interestEl) interestEl.textContent = formatCurrency(lastInterest);
-  }
+        if (valueEl) {
+            valueEl.textContent = formatCurrency(lastValue);
+        }
+        if (contribEl) {
+            contribEl.textContent = formatCurrency(lastContrib);
+        }
+        if (interestEl) {
+            interestEl.textContent = formatCurrency(lastInterest);
+        }
+    }
 
     /**
      * Round a max value up to a "nice" number for axis scaling.
      * @param {number} rawMax - The raw maximum value.
      * @returns {number} The nice maximum value.
      */
-    function niceScaleMax(rawMax) {
-        if (rawMax <= 0) return 100;
+    function niceScaleMax (rawMax) {
+        if (rawMax <= 0) {
+            return 100;
+        }
         const magnitude = Math.pow(10, Math.floor(Math.log10(rawMax)));
         const normalized = rawMax / magnitude;
         let nice;
-        if (normalized <= 1) nice = 1;
-        else if (normalized <= 1.5) nice = 1.5;
-        else if (normalized <= 2) nice = 2;
-        else if (normalized <= 3) nice = 3;
-        else if (normalized <= 5) nice = 5;
-        else if (normalized <= 7.5) nice = 7.5;
-        else nice = 10;
+        if (normalized <= 1) {
+            nice = 1;
+        } else if (normalized <= 1.5) {
+            nice = 1.5;
+        } else if (normalized <= 2) {
+            nice = 2;
+        } else if (normalized <= 3) {
+            nice = 3;
+        } else if (normalized <= 5) {
+            nice = 5;
+        } else if (normalized <= 7.5) {
+            nice = 7.5;
+        } else {
+            nice = 10;
+        }
         return nice * magnitude;
     }
 
@@ -373,7 +412,7 @@
      * @param {number} val - The value to format.
      * @returns {string} The formatted string.
      */
-    function formatAxisValue(val) {
+    function formatAxisValue (val) {
         if (val >= 1000000) {
             return '$' + (val / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
         }
@@ -392,7 +431,7 @@
      * @param {number} h - Height.
      * @param {number} r - Corner radius.
      */
-    function roundRect(ctx, x, y, w, h, r) {
+    function roundRect (ctx, x, y, w, h, r) {
         ctx.beginPath();
         ctx.moveTo(x + r, y);
         ctx.lineTo(x + w - r, y);
@@ -409,18 +448,22 @@
     /**
      * Setup chart hover tooltip.
      */
-    function setupCalcChartTooltip() {
+    function setupCalcChartTooltip () {
         const canvas = document.getElementById('calcChart');
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
 
         canvas.addEventListener('mousemove', (e) => {
             const meta = canvas._chartMeta;
-            if (!meta) return;
+            if (!meta) {
+                return;
+            }
             const rect = canvas.getBoundingClientRect();
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
 
-            const {padding, chartW, chartH, points, contribPoints, niceMax, years, toCanvasX, toCanvasY} = meta;
+            const { padding, chartW, chartH, points, contribPoints, years, toCanvasX } = meta;
 
             if (mx < padding.left || mx > padding.left + chartW || my < padding.top || my > padding.top + chartH) {
                 calcChartTooltip.visible = false;
@@ -464,7 +507,7 @@
      * @param {number} year - The target year.
      * @returns {Object} The nearest point.
      */
-    function nearestPoint(data, year) {
+    function nearestPoint (data, year) {
         let best = data[0];
         let bestDist = Math.abs(best.x - year);
         for (let i = 1; i < data.length; i++) {
@@ -480,7 +523,7 @@
     /**
      * Redraw the chart with tooltip if visible.
      */
-    function redrawCalcChartWithTooltip() {
+    function redrawCalcChartWithTooltip () {
         const initial = parseFloat(document.getElementById('calcInitial')?.value) || 0;
         const monthly = parseFloat(document.getElementById('calcMonthly')?.value) || 0;
         const rate = parseFloat(document.getElementById('calcRate')?.value) || 0;
@@ -495,15 +538,19 @@
     /**
      * Draw the tooltip on the chart.
      */
-    function drawCalcChartTooltip() {
+    function drawCalcChartTooltip () {
         const canvas = document.getElementById('calcChart');
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
         const ctx = canvas.getContext('2d');
         const meta = canvas._chartMeta;
-        if (!meta) return;
+        if (!meta) {
+            return;
+        }
 
-        const {toCanvasX, toCanvasY, padding, chartH} = meta;
-        const {x: cx, year, value, contribution} = calcChartTooltip;
+        const { toCanvasY, padding, chartH } = meta;
+        const { x: cx, year, value, contribution } = calcChartTooltip;
 
         // Vertical guide line
         ctx.beginPath();
@@ -542,7 +589,7 @@
             'Contrib: ' + formatCurrency(contribution)
         ];
 
-        ctx.font = '600 11px system-ui, -apple-system, sans-serif';
+        ctx.font = '600 12px Inter, system-ui, -apple-system, sans-serif';
         const lineH = 18;
         const boxW = 150;
         const boxH = lines.length * lineH + 12;
@@ -590,7 +637,7 @@
 
         lines.forEach((line, i) => {
             const isTitle = i === 0;
-            ctx.font = isTitle ? '700 11px system-ui, -apple-system, sans-serif' : '500 11px system-ui, -apple-system, sans-serif';
+            ctx.font = isTitle ? '700 12px Inter, system-ui, -apple-system, sans-serif' : '500 12px Inter, system-ui, -apple-system, sans-serif';
             ctx.fillStyle = isTitle ? '#111827' : '#4b5563';
             ctx.fillText(line, boxX + boxPad, boxY + boxPad + i * lineH);
         });

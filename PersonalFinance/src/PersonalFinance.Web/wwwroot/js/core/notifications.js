@@ -14,7 +14,7 @@
          * Initialize the notification module.
          * @returns {void}
          */
-        function init() {
+        function init () {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', setup);
             } else {
@@ -26,12 +26,14 @@
          * Set up notification event listeners.
          * @returns {void}
          */
-        function setup() {
+        function setup () {
             bellButton = document.getElementById('notificationBell');
             dropdown = document.getElementById('notificationDropdown');
             badge = document.getElementById('notificationBadge');
 
-            if (!bellButton || !dropdown) return;
+            if (!bellButton || !dropdown) {
+                return;
+            }
 
             bellButton.addEventListener('click', function (e) {
                 e.stopPropagation();
@@ -58,10 +60,12 @@
          * Load unread notification count.
          * @returns {void}
          */
-        function loadUnreadCount() {
+        function loadUnreadCount () {
             fetch('/api/Notification/unread-count')
                 .then(function (response) {
-                    if (!response.ok) throw new Error('Failed');
+                    if (!response.ok) {
+                        throw new Error('Failed');
+                    }
                     return response.json();
                 })
                 .then(function (data) {
@@ -77,8 +81,10 @@
          * @param {number} count - Unread count.
          * @returns {void}
          */
-        function updateBadge(count) {
-            if (!badge) return;
+        function updateBadge (count) {
+            if (!badge) {
+                return;
+            }
             if (count > 0) {
                 badge.textContent = count > 99 ? '99+' : count;
                 badge.classList.remove('hidden');
@@ -91,10 +97,12 @@
          * Load and display notifications.
          * @returns {void}
          */
-        function loadNotifications() {
+        function loadNotifications () {
             fetch('/api/Notification')
                 .then(function (response) {
-                    if (!response.ok) throw new Error('Failed');
+                    if (!response.ok) {
+                        throw new Error('Failed');
+                    }
                     return response.json();
                 })
                 .then(function (data) {
@@ -111,8 +119,10 @@
          * @param {Array} notifications - List of notification objects.
          * @returns {void}
          */
-        function displayNotifications(notifications) {
-            if (!dropdown) return;
+        function displayNotifications (notifications) {
+            if (!dropdown) {
+                return;
+            }
 
             if (!notifications || notifications.length === 0) {
                 dropdown.innerHTML = '<div class="notification-empty">No notifications</div>';
@@ -145,7 +155,9 @@
             dropdown.querySelectorAll('.notification-item').forEach(function (item) {
                 item.addEventListener('click', function () {
                     const id = item.getAttribute('data-id');
-                    if (id) window.NotificationModule.markAsRead(parseInt(id, 10));
+                    if (id) {
+                        window.NotificationModule.markAsRead(parseInt(id, 10));
+                    }
                 });
             });
         }
@@ -155,8 +167,8 @@
          * @param {number} id - Notification ID.
          * @returns {void}
          */
-        function markAsRead(id) {
-            fetch('/api/Notification/' + id + '/read', {method: 'POST'})
+        function markAsRead (id) {
+            fetch('/api/Notification/' + id + '/read', { method: 'POST' })
                 .then(function () {
                     loadUnreadCount();
                 })
@@ -169,8 +181,8 @@
          * Mark all notifications as read.
          * @returns {void}
          */
-        function markAllRead() {
-            fetch('/api/Notification/mark-all-read', {method: 'POST'})
+        function markAllRead () {
+            fetch('/api/Notification/mark-all-read', { method: 'POST' })
                 .then(function () {
                     loadUnreadCount();
                     loadNotifications();
@@ -185,14 +197,20 @@
          * @param {string} dateStr - ISO date string.
          * @returns {string} Human-readable time ago.
          */
-        function getTimeAgo(dateStr) {
+        function getTimeAgo (dateStr) {
             const date = new Date(dateStr);
             const now = new Date();
             const seconds = Math.floor((now - date) / 1000);
 
-            if (seconds < 60) return 'Just now';
-            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
-            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            if (seconds < 60) {
+                return 'Just now';
+            }
+            if (seconds < 3600) {
+                return Math.floor(seconds / 60) + 'm ago';
+            }
+            if (seconds < 86400) {
+                return Math.floor(seconds / 3600) + 'h ago';
+            }
             return Math.floor(seconds / 86400) + 'd ago';
         }
 
@@ -201,7 +219,7 @@
          * @param {string} text - The text to escape.
          * @returns {string} Escaped text.
          */
-        function escapeHtml(text) {
+        function escapeHtml (text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;

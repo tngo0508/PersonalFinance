@@ -3,7 +3,6 @@ using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Dashboard;
-using Xunit;
 
 namespace PersonalFinance.Tests;
 
@@ -28,7 +27,8 @@ public class DashboardNetWorthSummaryTests
     {
         db.NetWorthParameters.AddRange(rows);
         await db.SaveChangesAsync();
-        var summary = await new DashboardService(db).GetDashboardSummaryAsync(UserId);
+        var summary =
+            await new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(UserId);
         return summary.NetWorth;
     }
 

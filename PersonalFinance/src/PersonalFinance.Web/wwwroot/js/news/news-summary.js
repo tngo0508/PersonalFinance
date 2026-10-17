@@ -22,7 +22,7 @@
      * Initialize the summary module by attaching click handlers to all summarize buttons.
      * @returns {void}
      */
-    function init() {
+    function init () {
         const buttons = document.querySelectorAll('.finance-hub-summarize-btn');
         buttons.forEach(function (btn) {
             btn.addEventListener('click', handleSummarize);
@@ -34,17 +34,21 @@
      * @param {Event} event - The click event.
      * @returns {void}
      */
-    async function handleSummarize(event) {
+    async function handleSummarize (event) {
         const btn = /** @type {HTMLButtonElement} */ (event.currentTarget);
         const articleUrl = btn.dataset.articleUrl;
         const articleTitle = btn.dataset.articleTitle;
         const articleDescription = btn.dataset.articleDescription;
 
-        if (!articleUrl) return;
+        if (!articleUrl) {
+            return;
+        }
 
         // Find the associated summary container
         const card = btn.closest('.finance-hub-card');
-        if (!card) return;
+        if (!card) {
+            return;
+        }
 
         const summaryContainer = card.querySelector('.finance-hub-card-summary');
         const summaryContent = summaryContainer ? summaryContainer.querySelector('.finance-hub-summary-content') : null;
@@ -61,7 +65,9 @@
         }
 
         // Prevent duplicate requests
-        if (inFlight.has(articleUrl)) return;
+        if (inFlight.has(articleUrl)) {
+            return;
+        }
 
         // Set loading state
         btn.disabled = true;
@@ -134,7 +140,7 @@
      * @param {string} message - The error message.
      * @returns {void}
      */
-    function showError(btn, message) {
+    function showError (btn, message) {
         btn.disabled = false;
         btn.textContent = 'Retry';
         btn.classList.add('finance-hub-summarize-error');

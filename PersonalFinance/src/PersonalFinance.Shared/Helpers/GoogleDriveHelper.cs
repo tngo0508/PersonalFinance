@@ -92,7 +92,8 @@ public static class GoogleDriveHelper
     /// <summary>
     /// Resolves human-friendly file type description and Bootstrap badge color from MIME type and filename.
     /// </summary>
-    public static (string FileType, string BadgeClass, bool IsFolder) ResolveTypeInfo(string? mimeType, string? fileName)
+    public static (string FileType, string BadgeClass, bool IsFolder) ResolveTypeInfo(string? mimeType,
+        string? fileName)
     {
         var mime = mimeType?.ToLowerInvariant() ?? string.Empty;
         var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
@@ -137,7 +138,8 @@ public static class GoogleDriveHelper
             return ("Audio", "bg-secondary", false);
         }
 
-        if (mime is "application/zip" or "application/x-tar" or "application/x-rar-compressed" or "application/x-7z-compressed" ||
+        if (mime is "application/zip" or "application/x-tar" or "application/x-rar-compressed"
+                or "application/x-7z-compressed" ||
             ext is ".zip" or ".tar" or ".gz" or ".7z" or ".rar")
         {
             return ("Archive", "bg-secondary", false);
@@ -199,7 +201,9 @@ public static class GoogleDriveHelper
     {
         var cleanName = string.IsNullOrWhiteSpace(fileName) ? "Monthly budget.xlsx" : fileName.Trim();
         var yearMatch = Regex.Match(cleanName, @"\b(20\d{2})\b");
-        var year = yearMatch.Success && int.TryParse(yearMatch.Value, out var parsedYear) ? parsedYear : DateTime.UtcNow.Year;
+        var year = yearMatch.Success && int.TryParse(yearMatch.Value, out var parsedYear)
+            ? parsedYear
+            : DateTime.UtcNow.Year;
         var singleMonth = DetectMonthFromText(cleanName);
 
         // Seed deterministically based on file name or year for stable report data
@@ -548,17 +552,6 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
 9/29/2026,182.00,Gas & parking,Transportation & Gas";
     }
 
-    private sealed class TransactionTableLayout
-    {
-        public int DateCol { get; init; }
-        public int AmountCol { get; init; }
-        public int DescriptionCol { get; init; } = -1;
-        public int CategoryCol { get; init; } = -1;
-        public int TypeCol { get; init; } = -1;
-        public string? SectionType { get; init; }
-        public List<SpreadsheetTransactionDto> Transactions { get; } = new();
-    }
-
     private static List<TransactionTableLayout> DetectTransactionTables(List<List<string>> rows, int headerRow)
     {
         var tables = new List<TransactionTableLayout>();
@@ -571,7 +564,8 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
             var end = t + 1 < dateCols.Count ? dateCols[t + 1] - 1 : row.Count - 1;
 
             int Find(Func<string, bool> predicate) =>
-                Enumerable.Range(start, end - start + 1).FirstOrDefault(i => i != start && predicate(row[i].Trim().ToLowerInvariant()), -1);
+                Enumerable.Range(start, end - start + 1)
+                    .FirstOrDefault(i => i != start && predicate(row[i].Trim().ToLowerInvariant()), -1);
 
             var amountCol = Find(h => h.Contains("amount") || h is "amt" or "cost" or "price" or "value");
             if (amountCol < 0) continue;
@@ -580,7 +574,9 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
             {
                 DateCol = start,
                 AmountCol = amountCol,
-                DescriptionCol = Find(h => h is "description" or "payee" or "merchant" or "memo" or "details" or "item" or "name" or "notes" or "note"),
+                DescriptionCol = Find(h =>
+                    h is "description" or "payee" or "merchant" or "memo" or "details" or "item" or "name" or "notes"
+                        or "note"),
                 CategoryCol = Find(h => h.Contains("category")),
                 TypeCol = Find(h => h == "type"),
                 SectionType = FindSectionType(rows, headerRow, start, end)
@@ -608,6 +604,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                 if (type != null) return type;
             }
         }
+
         return null;
     }
 
@@ -615,8 +612,10 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
     {
         var lower = text.Trim().ToLowerInvariant();
         if (lower.Length == 0) return null;
-        if (lower.Contains("income") || lower.Contains("deposit") || lower.Contains("credit")) return SpreadsheetTransactionDto.IncomeType;
-        if (lower.Contains("expense") || lower.Contains("spending") || lower.Contains("debit") || lower.Contains("withdrawal")) return SpreadsheetTransactionDto.ExpenseType;
+        if (lower.Contains("income") || lower.Contains("deposit") || lower.Contains("credit"))
+            return SpreadsheetTransactionDto.IncomeType;
+        if (lower.Contains("expense") || lower.Contains("spending") || lower.Contains("debit") ||
+            lower.Contains("withdrawal")) return SpreadsheetTransactionDto.ExpenseType;
         return null;
     }
 
@@ -694,10 +693,49 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
             {
                 sb.Append(t.Value);
             }
+
             sharedStrings.Add(sb.ToString());
         }
 
         return sharedStrings;
+    }
+
+    /// <summary>
+    /// Detects a plausible calendar year from a spreadsheet row without mistaking monetary amounts
+    /// (e.g. "2072", "2,072.50", "$2072") for years.
+    /// </summary>
+    private static bool TryDetectYearFromRow(List<string> row, out int year)
+    {
+        year = 0;
+        var currentYear = DateTime.UtcNow.Year;
+
+        foreach (var cell in row)
+        {
+            if (string.IsNullOrWhiteSpace(cell))
+            {
+                continue;
+            }
+
+            var text = cell.Trim();
+            var isPlainYear = Regex.IsMatch(text, @"^20\d{2}$");
+            var isTextOrDate = !Regex.IsMatch(text, @"^[\p{Sc}\s\d,.\-+()%]+$");
+            if (!isPlainYear && !isTextOrDate)
+            {
+                continue;
+            }
+
+            var match = Regex.Match(text, @"(?<![\d.,$])(20\d{2})(?![\d,]|\.\d)");
+            if (match.Success
+                && int.TryParse(match.Groups[1].Value, out var parsed)
+                && parsed >= currentYear - 15
+                && parsed <= currentYear + 5)
+            {
+                year = parsed;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -712,7 +750,9 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
     {
         var cleanName = string.IsNullOrWhiteSpace(fileName) ? "Monthly budget.xlsx" : fileName.Trim();
         var yearMatch = Regex.Match(cleanName, @"\b(20\d{2})\b");
-        var year = yearMatch.Success && int.TryParse(yearMatch.Value, out var parsedYear) ? parsedYear : DateTime.UtcNow.Year;
+        var year = yearMatch.Success && int.TryParse(yearMatch.Value, out var parsedYear)
+            ? parsedYear
+            : DateTime.UtcNow.Year;
         var fileNameMonth = DetectMonthFromText(cleanName);
 
         var title = fileNameMonth.HasValue
@@ -776,8 +816,8 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                 targetMonth = detectedMonth.Value;
             }
 
-            var detectedYear = Regex.Match(combinedRowText, @"\b(20\d{2})\b");
-            if (detectedYear.Success && int.TryParse(detectedYear.Value, out var yr) && yr >= 2000 && yr <= 2099)
+            // A year in the file name is authoritative; sheet content is only a fallback hint.
+            if (!yearMatch.Success && TryDetectYearFromRow(row, out var yr))
             {
                 report.Year = yr;
                 report.Title = fileNameMonth.HasValue
@@ -802,6 +842,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                 currentSection = "Income";
                 continue;
             }
+
             if (IsExpenseSectionHeader(firstCol) && allRowNumbers.Count == 0)
             {
                 currentSection = "Expenses";
@@ -829,7 +870,8 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                         var catName = CleanCategoryName(textCells.Last());
                         if (!string.IsNullOrWhiteSpace(catName) && !IsIgnoredHeaderText(catName))
                         {
-                            var existingCat = monthlyExpenseCategories[targetMonth].FirstOrDefault(c => c.CategoryName.Equals(catName, StringComparison.OrdinalIgnoreCase));
+                            var existingCat = monthlyExpenseCategories[targetMonth].FirstOrDefault(c =>
+                                c.CategoryName.Equals(catName, StringComparison.OrdinalIgnoreCase));
                             if (existingCat != null)
                             {
                                 existingCat.ActualAmount += amount;
@@ -847,6 +889,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                         }
                     }
                 }
+
                 continue;
             }
 
@@ -869,6 +912,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                     {
                         monthlyStartBalance[targetMonth] = nums[0];
                     }
+
                     continue;
                 }
 
@@ -883,6 +927,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                     {
                         monthlyEndBalance[targetMonth] = nums[0];
                     }
+
                     continue;
                 }
 
@@ -897,28 +942,37 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                     {
                         explicitNetSavings[targetMonth] = (nums[0], nums[0]);
                     }
+
                     continue;
                 }
 
                 // 4. Planned Income / Actual Income standalone key-value rows
-                if (name.Contains("Planned", StringComparison.OrdinalIgnoreCase) && IsIncomeCategory(name) && nums.Count >= 1)
+                if (name.Contains("Planned", StringComparison.OrdinalIgnoreCase) && IsIncomeCategory(name) &&
+                    nums.Count >= 1)
                 {
                     plannedIncomePart[targetMonth] = nums[0];
                     continue;
                 }
-                if (name.Contains("Actual", StringComparison.OrdinalIgnoreCase) && IsIncomeCategory(name) && nums.Count >= 1)
+
+                if (name.Contains("Actual", StringComparison.OrdinalIgnoreCase) && IsIncomeCategory(name) &&
+                    nums.Count >= 1)
                 {
                     actualIncomePart[targetMonth] = nums[0];
                     continue;
                 }
 
                 // 5. Planned Expense / Actual Expense standalone key-value rows
-                if (name.Contains("Planned", StringComparison.OrdinalIgnoreCase) && (name.Contains("Expense", StringComparison.OrdinalIgnoreCase) || name.Contains("Spending", StringComparison.OrdinalIgnoreCase)) && nums.Count >= 1)
+                if (name.Contains("Planned", StringComparison.OrdinalIgnoreCase) &&
+                    (name.Contains("Expense", StringComparison.OrdinalIgnoreCase) ||
+                     name.Contains("Spending", StringComparison.OrdinalIgnoreCase)) && nums.Count >= 1)
                 {
                     plannedExpensePart[targetMonth] = nums[0];
                     continue;
                 }
-                if (name.Contains("Actual", StringComparison.OrdinalIgnoreCase) && (name.Contains("Expense", StringComparison.OrdinalIgnoreCase) || name.Contains("Spending", StringComparison.OrdinalIgnoreCase)) && nums.Count >= 1)
+
+                if (name.Contains("Actual", StringComparison.OrdinalIgnoreCase) &&
+                    (name.Contains("Expense", StringComparison.OrdinalIgnoreCase) ||
+                     name.Contains("Spending", StringComparison.OrdinalIgnoreCase)) && nums.Count >= 1)
                 {
                     actualExpensePart[targetMonth] = nums[0];
                     continue;
@@ -935,6 +989,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                     {
                         explicitIncomeSummary[targetMonth] = (nums[0], nums[0]);
                     }
+
                     continue;
                 }
 
@@ -949,6 +1004,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                     {
                         explicitExpenseSummary[targetMonth] = (nums[0], nums[0]);
                     }
+
                     continue;
                 }
 
@@ -973,6 +1029,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                         explicitIncomeSummary[mIdx] = (nums[0], nums[0]);
                         explicitExpenseSummary[mIdx] = (nums[1], nums[1]);
                     }
+
                     continue;
                 }
 
@@ -1114,12 +1171,14 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                     bInc = fallbackMonth.Value.Value.Budget;
                     aInc = fallbackMonth.Value.Value.Actual;
                 }
+
                 var fallbackExp = explicitExpenseSummary.FirstOrDefault(kv => kv.Value.HasValue);
                 if (fallbackExp.Value.HasValue)
                 {
                     bExp = fallbackExp.Value.Value.Budget;
                     aExp = fallbackExp.Value.Value.Actual;
                 }
+
                 if (cats.Count == 0 && aExp > 0)
                 {
                     cats = CreateDefaultCategoriesForExpense(aExp, bExp);
@@ -1168,6 +1227,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                 {
                     currentName = "Item";
                 }
+
                 currentNumbers.Add(val);
             }
             else
@@ -1177,6 +1237,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                     segments.Add((currentName, currentNumbers));
                     currentNumbers = new List<decimal>();
                 }
+
                 currentName = cell.Trim();
             }
         }
@@ -1245,13 +1306,15 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
     private static bool IsIncomeSectionHeader(string text)
     {
         var lower = text.ToLowerInvariant().Trim();
-        return lower == "income" || lower == "incomes" || lower == "income:" || lower == "earnings" || lower == "revenue";
+        return lower == "income" || lower == "incomes" || lower == "income:" || lower == "earnings" ||
+               lower == "revenue";
     }
 
     private static bool IsExpenseSectionHeader(string text)
     {
         var lower = text.ToLowerInvariant().Trim();
-        return lower == "expenses" || lower == "expense" || lower == "expense:" || lower == "expenses:" || lower == "spending" || lower == "outflows";
+        return lower == "expenses" || lower == "expense" || lower == "expense:" || lower == "expenses:" ||
+               lower == "spending" || lower == "outflows";
     }
 
     private static bool IsIncomeCategory(string name)
@@ -1302,7 +1365,8 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                 using var wbStream = workbookEntry.Open();
                 var wbDoc = XDocument.Load(wbStream);
                 var wbNs = wbDoc.Root?.Name.Namespace ?? XNamespace.None;
-                var rNs = wbDoc.Root?.GetNamespaceOfPrefix("r") ?? XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+                var rNs = wbDoc.Root?.GetNamespaceOfPrefix("r") ??
+                          XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
 
                 using var relsStream = workbookRelsEntry.Open();
                 var relsDoc = XDocument.Load(relsStream);
@@ -1323,7 +1387,9 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                         {
                             cleanTarget = "xl/" + cleanTarget;
                         }
-                        var wsEntry = archive.GetEntry(cleanTarget) ?? archive.Entries.FirstOrDefault(e => e.FullName.Equals(cleanTarget, StringComparison.OrdinalIgnoreCase));
+
+                        var wsEntry = archive.GetEntry(cleanTarget) ?? archive.Entries.FirstOrDefault(e =>
+                            e.FullName.Equals(cleanTarget, StringComparison.OrdinalIgnoreCase));
                         if (wsEntry != null)
                         {
                             result.Add((sheetName, wsEntry));
@@ -1340,7 +1406,8 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
         if (result.Count == 0)
         {
             var worksheetEntries = archive.Entries
-                .Where(e => e.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase) && e.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                .Where(e => e.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase) &&
+                            e.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(e => e.FullName)
                 .ToList();
 
@@ -1402,6 +1469,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                 {
                     rowList[col] = val;
                 }
+
                 rows.Add(rowList);
             }
         }
@@ -1481,7 +1549,9 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
         }
 
         // Formats like "Sep 1", "September 15", "1-Sep", "15-Sep-2026", "Sep 15, 2026"
-        if (Regex.IsMatch(trimmed, @"^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[- ]\d{1,2}(?:[- ,]+\d{2,4})?|\d{1,2}[- ](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*(?:[- ,]+\d{2,4})?)$", RegexOptions.IgnoreCase))
+        if (Regex.IsMatch(trimmed,
+                @"^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[- ]\d{1,2}(?:[- ,]+\d{2,4})?|\d{1,2}[- ](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*(?:[- ,]+\d{2,4})?)$",
+                RegexOptions.IgnoreCase))
         {
             return true;
         }
@@ -1541,6 +1611,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                 {
                     result.Add(currentRow);
                 }
+
                 currentRow = new List<string>();
             }
             else
@@ -1595,19 +1666,28 @@ Total Expenses,4870.00,5040.00,-170.00";
     public static string AssignCategoryColor(string categoryName)
     {
         var lower = categoryName.ToLowerInvariant();
-        if (lower.Contains("rent") || lower.Contains("house") || lower.Contains("mortgage") || lower.Contains("home")) return "#3b82f6";
+        if (lower.Contains("rent") || lower.Contains("house") || lower.Contains("mortgage") || lower.Contains("home"))
+            return "#3b82f6";
         if (lower.Contains("groc") || lower.Contains("food") || lower.Contains("market")) return "#10b981";
-        if (lower.Contains("util") || lower.Contains("power") || lower.Contains("internet") || lower.Contains("phone") || lower.Contains("electric")) return "#f59e0b";
-        if (lower.Contains("trans") || lower.Contains("gas") || lower.Contains("car") || lower.Contains("auto") || lower.Contains("fuel")) return "#8b5cf6";
-        if (lower.Contains("health") || lower.Contains("med") || lower.Contains("insur") || lower.Contains("dental")) return "#ec4899";
-        if (lower.Contains("din") || lower.Contains("restaur") || lower.Contains("entert") || lower.Contains("fun") || lower.Contains("hobby")) return "#06b6d4";
-        if (lower.Contains("save") || lower.Contains("invest") || lower.Contains("retire") || lower.Contains("401k") || lower.Contains("stock")) return "#6366f1";
+        if (lower.Contains("util") || lower.Contains("power") || lower.Contains("internet") ||
+            lower.Contains("phone") || lower.Contains("electric")) return "#f59e0b";
+        if (lower.Contains("trans") || lower.Contains("gas") || lower.Contains("car") || lower.Contains("auto") ||
+            lower.Contains("fuel")) return "#8b5cf6";
+        if (lower.Contains("health") || lower.Contains("med") || lower.Contains("insur") || lower.Contains("dental"))
+            return "#ec4899";
+        if (lower.Contains("din") || lower.Contains("restaur") || lower.Contains("entert") || lower.Contains("fun") ||
+            lower.Contains("hobby")) return "#06b6d4";
+        if (lower.Contains("save") || lower.Contains("invest") || lower.Contains("retire") || lower.Contains("401k") ||
+            lower.Contains("stock")) return "#6366f1";
         if (lower.Contains("debt") || lower.Contains("loan") || lower.Contains("credit")) return "#ef4444";
         if (lower.Contains("pers") || lower.Contains("cloth") || lower.Contains("misc")) return "#64748b";
 
         // Deterministic hash color fallback
         var hash = Math.Abs(categoryName.GetHashCode());
-        var palette = new[] { "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#6366f1", "#14b8a6", "#f97316", "#84cc16" };
+        var palette = new[]
+        {
+            "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#6366f1", "#14b8a6", "#f97316", "#84cc16"
+        };
         return palette[hash % palette.Length];
     }
 
@@ -1652,6 +1732,7 @@ Total Expenses,4870.00,5040.00,-170.00";
                 decimals.Add(val);
             }
         }
+
         return decimals;
     }
 
@@ -1673,7 +1754,8 @@ Total Expenses,4870.00,5040.00,-170.00";
             clean = "-" + clean.Substring(1, clean.Length - 2);
         }
 
-        return decimal.TryParse(clean, NumberStyles.Number | NumberStyles.AllowCurrencySymbol, CultureInfo.InvariantCulture, out value) ||
+        return decimal.TryParse(clean, NumberStyles.Number | NumberStyles.AllowCurrencySymbol,
+                   CultureInfo.InvariantCulture, out value) ||
                decimal.TryParse(clean, NumberStyles.Number, CultureInfo.CurrentCulture, out value);
     }
 
@@ -1693,18 +1775,47 @@ Total Expenses,4870.00,5040.00,-170.00";
                firstCol.StartsWith("Change in", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static List<MonthlyBudgetCategoryItemDto> CreateDefaultCategoriesForExpense(decimal actualExp, decimal budgetedExp)
+    private static List<MonthlyBudgetCategoryItemDto> CreateDefaultCategoriesForExpense(decimal actualExp,
+        decimal budgetedExp)
     {
         var ratio = budgetedExp > 0 ? (actualExp / budgetedExp) : 1m;
         return new List<MonthlyBudgetCategoryItemDto>
         {
-            new() { CategoryName = "Housing & Rent", BudgetedAmount = budgetedExp * 0.35m, ActualAmount = actualExp * 0.35m, ColorHex = AssignCategoryColor("Housing") },
-            new() { CategoryName = "Groceries & Food", BudgetedAmount = budgetedExp * 0.15m, ActualAmount = actualExp * 0.15m, ColorHex = AssignCategoryColor("Groceries") },
-            new() { CategoryName = "Utilities & Internet", BudgetedAmount = budgetedExp * 0.10m, ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Utilities") },
-            new() { CategoryName = "Transportation & Gas", BudgetedAmount = budgetedExp * 0.10m, ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Transportation") },
-            new() { CategoryName = "Healthcare & Insurance", BudgetedAmount = budgetedExp * 0.10m, ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Healthcare") },
-            new() { CategoryName = "Dining & Entertainment", BudgetedAmount = budgetedExp * 0.10m, ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Dining") },
-            new() { CategoryName = "Personal & Other", BudgetedAmount = budgetedExp * 0.10m, ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Personal") }
+            new()
+            {
+                CategoryName = "Housing & Rent", BudgetedAmount = budgetedExp * 0.35m, ActualAmount = actualExp * 0.35m,
+                ColorHex = AssignCategoryColor("Housing")
+            },
+            new()
+            {
+                CategoryName = "Groceries & Food", BudgetedAmount = budgetedExp * 0.15m,
+                ActualAmount = actualExp * 0.15m, ColorHex = AssignCategoryColor("Groceries")
+            },
+            new()
+            {
+                CategoryName = "Utilities & Internet", BudgetedAmount = budgetedExp * 0.10m,
+                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Utilities")
+            },
+            new()
+            {
+                CategoryName = "Transportation & Gas", BudgetedAmount = budgetedExp * 0.10m,
+                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Transportation")
+            },
+            new()
+            {
+                CategoryName = "Healthcare & Insurance", BudgetedAmount = budgetedExp * 0.10m,
+                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Healthcare")
+            },
+            new()
+            {
+                CategoryName = "Dining & Entertainment", BudgetedAmount = budgetedExp * 0.10m,
+                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Dining")
+            },
+            new()
+            {
+                CategoryName = "Personal & Other", BudgetedAmount = budgetedExp * 0.10m,
+                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Personal")
+            }
         };
     }
 
@@ -1719,6 +1830,18 @@ Total Expenses,4870.00,5040.00,-170.00";
         {
             col = col * 26 + (c - 'A' + 1);
         }
+
         return col - 1; // 0-based
+    }
+
+    private sealed class TransactionTableLayout
+    {
+        public int DateCol { get; init; }
+        public int AmountCol { get; init; }
+        public int DescriptionCol { get; init; } = -1;
+        public int CategoryCol { get; init; } = -1;
+        public int TypeCol { get; init; } = -1;
+        public string? SectionType { get; init; }
+        public List<SpreadsheetTransactionDto> Transactions { get; } = new();
     }
 }

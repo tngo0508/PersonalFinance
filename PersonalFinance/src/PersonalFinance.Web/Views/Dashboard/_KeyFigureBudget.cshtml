@@ -1,15 +1,19 @@
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
-@* Monthly budgeted income tile: the income the most recent budget period plans against. Links to Budget. *@
+@* Budgeted income tile: Budget Planner only. Active-source monthly figures live on the Monthly budget card. *@
 @{
-    var periodLabel = DashboardBudgetFormat.PeriodLabel(Model.Budget?.Period);
+    var plannerBudget = Model.Budget;
+    decimal? income = plannerBudget?.MonthlyIncome;
+    var periodLabel = DashboardBudgetFormat.PeriodLabel(plannerBudget?.Period);
+    var caption = plannerBudget is not null
+            ? (string.IsNullOrEmpty(periodLabel) ? "Per month (Budget Planner)" : $"Per month · {periodLabel} (Budget Planner)")
+            : "Create a budget";
 }
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
     Label = "Budgeted income",
-    Value = Model.Budget?.MonthlyIncome.ToString("C0"),
-    Caption = Model.Budget is null
-        ? "Create a budget"
-        : string.IsNullOrEmpty(periodLabel) ? "Per month" : $"Per month · {periodLabel}",
+    Value = income?.ToString("C0"),
+    Caption = caption,
     Icon = "pie-chart",
-    Controller = "Budget"
+    Controller = "Budget",
+    Action = "Index"
 })"/>
