@@ -23,7 +23,7 @@
 
     @if (!ViewData.ModelState.IsValid)
     {
-        <validation-summary asp-validation-summary="ModelOnly" class="alert alert-danger"/>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
     }
 
     <!-- Page Header -->
