@@ -39,6 +39,8 @@ public class AppCultureTests : IDisposable
     [Fact]
     public void ApplyDefault_FromInvariantCulture_AppliesToThreadsThatDoNotInheritCulture()
     {
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
         AppCulture.ApplyDefault();
