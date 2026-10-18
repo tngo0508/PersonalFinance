@@ -4,6 +4,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -189,26 +190,26 @@ public class DashboardService : IDashboardService
         }
 
         // All ten categories in Budget-page order. Zero categories stay in the list so the totals are honest;
-        // the view decides what to draw.
+        // the view decides what to draw. Percent is always derived from the stored dollar amount.
         var allocations = new[]
             {
-                ("Housing", budget.HousingPercent),
-                ("Food", budget.FoodPercent),
-                ("Transportation", budget.TransportationPercent),
-                ("Utilities", budget.UtilitiesPercent),
-                ("Insurance", budget.InsurancePercent),
-                ("Healthcare", budget.HealthcarePercent),
-                ("Savings", budget.SavingsPercent),
-                ("Debt Repayment", budget.DebtRepaymentPercent),
-                ("Entertainment", budget.EntertainmentPercent),
-                ("Miscellaneous", budget.MiscellaneousPercent)
+                ("Housing", budget.HousingAmount),
+                ("Food", budget.FoodAmount),
+                ("Transportation", budget.TransportationAmount),
+                ("Utilities", budget.UtilitiesAmount),
+                ("Insurance", budget.InsuranceAmount),
+                ("Healthcare", budget.HealthcareAmount),
+                ("Savings", budget.SavingsAmount),
+                ("Debt Repayment", budget.DebtRepaymentAmount),
+                ("Entertainment", budget.EntertainmentAmount),
+                ("Miscellaneous", budget.MiscellaneousAmount)
             }
             .Select(category => new BudgetAllocationDto
             {
                 Name = category.Item1,
                 Key = CategoryKey(category.Item1),
-                Percent = category.Item2,
-                Amount = ToMonthlyAmount(budget.MonthlyIncome, category.Item2)
+                Percent = BudgetHelper.ToPercent(budget.MonthlyIncome, category.Item2),
+                Amount = category.Item2
             })
             .ToList();
 
@@ -218,16 +219,16 @@ public class DashboardService : IDashboardService
         return new BudgetSummaryDto
         {
             MonthlyIncome = budget.MonthlyIncome,
-            HousingPercent = budget.HousingPercent,
-            FoodPercent = budget.FoodPercent,
-            TransportationPercent = budget.TransportationPercent,
-            UtilitiesPercent = budget.UtilitiesPercent,
-            InsurancePercent = budget.InsurancePercent,
-            HealthcarePercent = budget.HealthcarePercent,
-            SavingsPercent = budget.SavingsPercent,
-            DebtRepaymentPercent = budget.DebtRepaymentPercent,
-            EntertainmentPercent = budget.EntertainmentPercent,
-            MiscellaneousPercent = budget.MiscellaneousPercent,
+            HousingPercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.HousingAmount),
+            FoodPercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.FoodAmount),
+            TransportationPercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.TransportationAmount),
+            UtilitiesPercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.UtilitiesAmount),
+            InsurancePercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.InsuranceAmount),
+            HealthcarePercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.HealthcareAmount),
+            SavingsPercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.SavingsAmount),
+            DebtRepaymentPercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.DebtRepaymentAmount),
+            EntertainmentPercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.EntertainmentAmount),
+            MiscellaneousPercent = BudgetHelper.ToPercent(budget.MonthlyIncome, budget.MiscellaneousAmount),
             Period = budget.Period,
             Allocations = allocations,
             TotalAllocatedPercent = totalAllocatedPercent,

@@ -106,6 +106,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Budget Planner Exact Amounts**: The Budget Planner now stores each category's dollar Allocation Amount exactly as typed, so $700 stays $700.00 after saving and reloading.
+  - Added per-category amount columns (`decimal(18,2)`) and migrated existing budgets from percentages.
+  - Dropped the stored percentage columns; percentages are always derived from amounts.
+  - JavaScript state uses integer cents to avoid floating-point drift.
+  - Initial page data renders with invariant culture, so any server locale works.
+- **Budget Planner Validation**: Save is only allowed when allocation amounts sum to Monthly Income exactly, with clear error messages.
+  - Added a FluentValidation validator in the ApiService that returns 400 on validation failure.
+  - Web controller maps API validation errors into ModelState and preserves user input.
+  - Remaining shows both dollars and percent; the exact badge only appears at $0.00 remaining.
+- **Budget Planner Responsive Layout**: Long numbers up to $10,000,000.00 now display in full without clipping at any screen width from 320px up.
+  - Replaced fixed input widths with flexible min-width-based sizing.
+  - Category grid uses shrinkable columns with an earlier single-column breakpoint.
+  - Card headers, controls, and summary rows wrap neatly; the slider takes a full row on narrow cards.
+
+### Changed
+
+- **Budget Planner Contract**: The Budget allocations DTO now carries dollar amounts instead of percentages.
+  - XML documentation clarifies that each property is a dollar amount.
+  - Dashboard, AI Assistant, and Search all derive percentages from amounts.
 - **Pre-commit Hook**: Added Husky pre-commit hook with lint-staged to auto-fix ESLint errors before commits.
   - Installed Husky 9 and lint-staged 15 as dev dependencies.
   - Staged JavaScript files are auto-formatted by ESLint before each commit.

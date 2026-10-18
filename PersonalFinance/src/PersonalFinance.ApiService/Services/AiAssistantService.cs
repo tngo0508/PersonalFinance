@@ -6,6 +6,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -227,18 +228,19 @@ public class AiAssistantService : IAiAssistantService
             if (budget != null)
             {
                 context.MonthlyIncome = budget.MonthlyIncome;
+                decimal income = budget.MonthlyIncome;
                 context.BudgetAllocations = new Dictionary<string, double>
                 {
-                    { "Housing", (double)budget.HousingPercent },
-                    { "Food", (double)budget.FoodPercent },
-                    { "Transportation", (double)budget.TransportationPercent },
-                    { "Utilities", (double)budget.UtilitiesPercent },
-                    { "Insurance", (double)budget.InsurancePercent },
-                    { "Healthcare", (double)budget.HealthcarePercent },
-                    { "Savings", (double)budget.SavingsPercent },
-                    { "Debt Repayment", (double)budget.DebtRepaymentPercent },
-                    { "Entertainment", (double)budget.EntertainmentPercent },
-                    { "Miscellaneous", (double)budget.MiscellaneousPercent }
+                    { "Housing", (double)BudgetHelper.ToPercent(income, budget.HousingAmount) },
+                    { "Food", (double)BudgetHelper.ToPercent(income, budget.FoodAmount) },
+                    { "Transportation", (double)BudgetHelper.ToPercent(income, budget.TransportationAmount) },
+                    { "Utilities", (double)BudgetHelper.ToPercent(income, budget.UtilitiesAmount) },
+                    { "Insurance", (double)BudgetHelper.ToPercent(income, budget.InsuranceAmount) },
+                    { "Healthcare", (double)BudgetHelper.ToPercent(income, budget.HealthcareAmount) },
+                    { "Savings", (double)BudgetHelper.ToPercent(income, budget.SavingsAmount) },
+                    { "Debt Repayment", (double)BudgetHelper.ToPercent(income, budget.DebtRepaymentAmount) },
+                    { "Entertainment", (double)BudgetHelper.ToPercent(income, budget.EntertainmentAmount) },
+                    { "Miscellaneous", (double)BudgetHelper.ToPercent(income, budget.MiscellaneousAmount) }
                 };
             }
 
@@ -789,4 +791,5 @@ public class AiAssistantService : IAiAssistantService
         public bool IsCompleted { get; set; }
         public DateTime? TargetDate { get; set; }
     }
+
 }

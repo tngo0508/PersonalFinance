@@ -4,6 +4,7 @@
     /**
      * Budget Planner interactive module.
      * Manages pie chart, slider/input sync, dollar amount calculation, and summary table.
+     * All state is stored in integer cents to avoid floating-point drift.
      */
     const BudgetPlanner = {};
 
@@ -32,7 +33,8 @@
     ];
 
     let chart = null;
-    let currentData = {};
+    let incomeCents = 0;
+    const amountCents = {};
 
     /**
      * Initialize the budget planner.
@@ -40,23 +42,14 @@
     BudgetPlanner.init = function () {
         const initialData = window.budgetInitialData;
         if (initialData) {
-            currentData = {
-                monthlyIncome: initialData.monthlyIncome || 0,
-                housing: initialData.housing || 0,
-                food: initialData.food || 0,
-                transportation: initialData.transportation || 0,
-                utilities: initialData.utilities || 0,
-                insurance: initialData.insurance || 0,
-                healthcare: initialData.healthcare || 0,
-                savings: initialData.savings || 0,
-                debtRepayment: initialData.debtRepayment || 0,
-                entertainment: initialData.entertainment || 0,
-                miscellaneous: initialData.miscellaneous || 0
-            };
+            incomeCents = Math.round(parseFloat(initialData.monthlyIncome) * 100) || 0;
+            categories.forEach(function (cat) {
+                amountCents[cat] = Math.round(parseFloat(initialData[cat]) * 100) || 0;
+            });
         }
 
-        // Sync initial slider values from data
-        syncSlidersFromData();
+        // Sync initial input values from data
+        syncInputsFromData();
 
         // Set color box backgrounds
         setColorBoxes();
@@ -85,32 +78,34 @@
     }
 
     /**
-     * Sync slider and input values from currentData.
+     * Sync all input values from current state.
      */
-    function syncSlidersFromData () {
+    function syncInputsFromData () {
         categories.forEach(function (cat) {
-            const value = currentData[cat] || 0;
-            const slider = document.getElementById('slider-' + capitalize(cat));
-            const input = document.querySelector('.budget-percent-input[data-category="' + capitalize(cat) + '"]');
-            const amountInput = document.querySelector('.budget-amount-input[data-category="' + capitalize(cat) + '"]');
+            const cents = amountCents[cat] || 0;
+            const amount = cents / 100;
+            const percent = toPercent(cents);
+            const capitalized = capitalize(cat);
+
+            const slider = document.getElementById('slider-' + capitalized);
+            const percentInput = document.querySelector('.budget-percent-input[data-category="' + capitalized + '"]');
+            const amountInput = document.querySelector('.budget-amount-input[data-category="' + capitalized + '"]');
 
             if (slider) {
-                slider.value = value;
+                slider.value = percent;
             }
-            if (input) {
-                input.value = value;
+            if (percentInput) {
+                percentInput.value = percent > 0 ? percent.toFixed(2) : '';
             }
             if (amountInput) {
-                const income = currentData.monthlyIncome || 0;
-                const amount = (income * value) / 100;
                 amountInput.value = amount > 0 ? amount.toFixed(2) : '';
             }
         });
 
         // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
-        if (incomeInput && currentData.monthlyIncome) {
-            incomeInput.value = currentData.monthlyIncome;
+        if (incomeInput && incomeCents > 0) {
+            incomeInput.value = (incomeCents / 100).toFixed(2);
         }
     }
 
@@ -122,7 +117,7 @@
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
             incomeInput.addEventListener('input', function () {
-                currentData.monthlyIncome = parseFloat(this.value) || 0;
+                incomeCents = Math.round(parseFloat(this.value) * 100) || 0;
                 updateAll();
             });
         }
@@ -132,91 +127,42 @@
         sliders.forEach(function (slider) {
             slider.addEventListener('input', function () {
                 const cat = this.getAttribute('data-category');
-                const value = parseFloat(this.value) || 0;
+                const pct = parseFloat(this.value) || 0;
                 const normalizedCat = normalizeCategory(cat);
-                currentData[normalizedCat] = value;
-
-                // Sync the percentage number input (this is the asp-for bound input)
-                const input = document.querySelector('.budget-percent-input[data-category="' + cat + '"]');
-                if (input) {
-                    input.value = value;
-                }
-
-                // Sync dollar amount input
-                syncAmountInput(cat, value);
-
+                setCategoryFromPercent(normalizedCat, pct);
                 updateAll();
             });
         });
 
-        // Number inputs (these are the asp-for bound inputs)
-        const inputs = document.querySelectorAll('.budget-percent-input');
-        inputs.forEach(function (input) {
+        // Percent inputs (unbound helper controls)
+        const percentInputs = document.querySelectorAll('.budget-percent-input');
+        percentInputs.forEach(function (input) {
             input.addEventListener('input', function () {
                 const cat = this.getAttribute('data-category');
-                let value = parseFloat(this.value) || 0;
+                let pct = parseFloat(this.value) || 0;
 
                 // Clamp to 0-100
-                if (value < 0) {
-                    value = 0;
+                if (pct < 0) {
+                    pct = 0;
                 }
-                if (value > 100) {
-                    value = 100;
+                if (pct > 100) {
+                    pct = 100;
                 }
 
                 const normalizedCat = normalizeCategory(cat);
-                currentData[normalizedCat] = value;
-
-                // Sync slider
-                const slider = document.getElementById('slider-' + cat);
-                if (slider) {
-                    slider.value = value;
-                }
-
-                // Sync dollar amount input
-                syncAmountInput(cat, value);
-
+                setCategoryFromPercent(normalizedCat, pct);
                 updateAll();
             });
         });
 
-        // Dollar amount inputs
+        // Dollar amount inputs (model-bound fields)
         const amountInputs = document.querySelectorAll('.budget-amount-input');
         amountInputs.forEach(function (amountInput) {
             amountInput.addEventListener('input', function () {
                 const cat = this.getAttribute('data-category');
-                const amount = parseFloat(this.value) || 0;
-                const income = currentData.monthlyIncome || 0;
-
-                // Convert amount to percentage
-                let percent = 0;
-                if (income > 0) {
-                    percent = (amount * 100) / income;
-                }
-
-                // Clamp percentage to 0-100
-                if (percent < 0) {
-                    percent = 0;
-                }
-                if (percent > 100) {
-                    percent = 100;
-                }
-
+                const cents = Math.round(parseFloat(this.value) * 100) || 0;
                 const normalizedCat = normalizeCategory(cat);
-                currentData[normalizedCat] = percent;
-
-                // Sync slider
-                const slider = document.getElementById('slider-' + cat);
-                if (slider) {
-                    slider.value = percent;
-                }
-
-                // Sync percentage input
-                const percentInput = document.querySelector('.budget-percent-input[data-category="' + cat + '"]');
-                if (percentInput) {
-                    percentInput.value = percent;
-                }
-
+                setCategoryFromCents(normalizedCat, cents);
                 updateAll();
             });
         });
@@ -231,28 +177,84 @@
     }
 
     /**
-     * Sync all form input values from currentData so the form POST carries the latest values.
+     * Set a category's amount from a percentage value.
+     * @param {string} cat - Normalized category key
+     * @param {number} pct - Percentage value
+     */
+    function setCategoryFromPercent (cat, pct) {
+        const cents = Math.round((incomeCents * pct) / 100);
+        amountCents[cat] = cents;
+
+        // Sync slider
+        const capitalized = capitalize(cat);
+        const slider = document.getElementById('slider-' + capitalized);
+        if (slider) {
+            slider.value = pct;
+        }
+
+        // Sync percent input
+        const percentInput = document.querySelector('.budget-percent-input[data-category="' + capitalized + '"]');
+        if (percentInput && document.activeElement !== percentInput) {
+            percentInput.value = pct > 0 ? pct.toFixed(2) : '';
+        }
+    }
+
+    /**
+     * Set a category's amount from cents value.
+     * @param {string} cat - Normalized category key
+     * @param {number} cents - Amount in cents
+     */
+    function setCategoryFromCents (cat, cents) {
+        amountCents[cat] = cents;
+
+        // Sync slider
+        const capitalized = capitalize(cat);
+        const slider = document.getElementById('slider-' + capitalized);
+        if (slider) {
+            const pct = toPercent(cents);
+            slider.value = pct;
+        }
+
+        // Sync percent input
+        const percentInput = document.querySelector('.budget-percent-input[data-category="' + capitalized + '"]');
+        if (percentInput && document.activeElement !== percentInput) {
+            const pct = toPercent(cents);
+            percentInput.value = pct > 0 ? pct.toFixed(2) : '';
+        }
+    }
+
+    /**
+     * Calculate percentage from cents.
+     * @param {number} cents - Amount in cents
+     * @returns {number} Percentage value
+     */
+    function toPercent (cents) {
+        if (incomeCents <= 0) {
+            return 0;
+        }
+        return (cents / incomeCents) * 100;
+    }
+
+    /**
+     * Sync all form input values from current state so the form POST carries the latest values.
      */
     function syncFormInputsFromData () {
         // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
-            incomeInput.value = currentData.monthlyIncome || 0;
+            incomeInput.value = (incomeCents / 100).toFixed(2);
         }
 
-        // Sync each category percentage input
+        // Sync each category amount input (the asp-for bound field)
         categories.forEach(function (cat) {
-            const value = currentData[cat] || 0;
-            // The asp-for input ID matches the PascalCase property name (e.g. "Housing")
+            const cents = amountCents[cat] || 0;
+            const amount = cents / 100;
             const capitalized = capitalize(cat);
+
+            // The asp-for input ID matches the PascalCase property name (e.g. "Housing")
             const input = document.getElementById(capitalized);
             if (input) {
-                input.value = value;
-            }
-            // Also update the data-category input as fallback
-            const dataInput = document.querySelector('.budget-percent-input[data-category="' + capitalized + '"]');
-            if (dataInput) {
-                dataInput.value = value;
+                input.value = amount.toFixed(2);
             }
         });
     }
@@ -272,11 +274,9 @@
      * Update dollar amount displays for each category.
      */
     function updateAmounts () {
-        const income = currentData.monthlyIncome || 0;
-
         categories.forEach(function (cat) {
-            const percent = currentData[cat] || 0;
-            const amount = (income * percent) / 100;
+            const cents = amountCents[cat] || 0;
+            const amount = cents / 100;
             const capitalized = capitalize(cat);
 
             const amountEl = document.querySelector('.budget-category__amount[data-amount-for="' + capitalized + '"] span');
@@ -284,7 +284,7 @@
                 amountEl.textContent = formatCurrency(amount);
             }
 
-            // Sync the editable amount input (only if not currently focused, to avoid disrupting user typing)
+            // Sync the editable amount input (only if not currently focused)
             const amountInput = document.querySelector('.budget-amount-input[data-category="' + capitalized + '"]');
             if (amountInput && document.activeElement !== amountInput) {
                 amountInput.value = amount > 0 ? amount.toFixed(2) : '';
@@ -293,38 +293,27 @@
     }
 
     /**
-     * Sync the dollar amount input for a category based on its percentage.
-     * @param {string} cat - Category name (PascalCase)
-     * @param {number} percent - Percentage value
-     */
-    function syncAmountInput (cat, percent) {
-        const income = currentData.monthlyIncome || 0;
-        const amount = (income * percent) / 100;
-        const amountInput = document.querySelector('.budget-amount-input[data-category="' + cat + '"]');
-        if (amountInput && document.activeElement !== amountInput) {
-            amountInput.value = amount > 0 ? amount.toFixed(2) : '';
-        }
-    }
-
-    /**
      * Update remaining allocation indicator.
      */
     function updateRemaining () {
-        const total = getTotal();
-        const remaining = 100 - total;
+        const totalCents = getTotalCents();
+        const remainingCents = incomeCents - totalCents;
+        const remainingAmount = remainingCents / 100;
+        const remainingPct = incomeCents > 0 ? (remainingCents / incomeCents) * 100 : 0;
+
         const remainingEl = document.getElementById('budgetRemainingValue');
         const remainingContainer = document.getElementById('budgetRemaining');
 
         if (remainingEl) {
-            remainingEl.textContent = remaining.toFixed(1) + '%';
+            remainingEl.textContent = '$' + formatCurrency(Math.abs(remainingAmount)) + ' (' + remainingPct.toFixed(1) + '%)';
         }
 
         if (remainingContainer) {
             remainingContainer.classList.remove('budget-remaining--over', 'budget-remaining--exact');
 
-            if (total > 100) {
+            if (totalCents > incomeCents) {
                 remainingContainer.classList.add('budget-remaining--over');
-            } else if (Math.abs(total - 100) < 0.01) {
+            } else if (remainingCents === 0) {
                 remainingContainer.classList.add('budget-remaining--exact');
             }
         }
@@ -334,73 +323,114 @@
      * Update total allocation badge.
      */
     function updateTotalBadge () {
-        const total = getTotal();
+        const totalCents = getTotalCents();
+        const totalAmount = totalCents / 100;
+        const incomeAmount = incomeCents / 100;
+
         const badge = document.getElementById('budgetTotalBadge');
-        const totalSpan = document.getElementById('budgetTotalPercent');
+        const totalSpan = document.getElementById('budgetTotalAmount');
+        const incomeSpan = document.getElementById('budgetIncomeAmount');
 
         if (totalSpan) {
-            totalSpan.textContent = total.toFixed(1);
+            totalSpan.textContent = '$' + formatCurrency(totalAmount);
+        }
+        if (incomeSpan) {
+            incomeSpan.textContent = '$' + formatCurrency(incomeAmount);
         }
 
         if (badge) {
             badge.classList.remove('budget-total-badge--over', 'budget-total-badge--exact');
 
-            if (total > 100) {
+            if (totalCents > incomeCents) {
                 badge.classList.add('budget-total-badge--over');
-            } else if (Math.abs(total - 100) < 0.01) {
+            } else if (totalCents === incomeCents && incomeCents > 0) {
                 badge.classList.add('budget-total-badge--exact');
             }
         }
     }
 
     /**
-     * Update the summary list.
+     * Update the summary list using DOM APIs and textContent.
      */
     function updateSummaryTable () {
-        const income = currentData.monthlyIncome || 0;
         const list = document.getElementById('budgetSummaryList');
         if (!list) {
             return;
         }
 
-        let html = '';
-        let totalPercent = 0;
-        let totalAmount = 0;
-
-        // Find the max percent for scaling progress bars
-        let maxPercent = 0;
+        // Find the max amount for scaling progress bars
+        let maxCents = 0;
         categories.forEach(function (cat) {
-            const p = currentData[cat] || 0;
-            if (p > maxPercent) {
-                maxPercent = p;
+            const cents = amountCents[cat] || 0;
+            if (cents > maxCents) {
+                maxCents = cents;
             }
         });
 
-        categories.forEach(function (cat, index) {
-            const percent = currentData[cat] || 0;
-            const amount = (income * percent) / 100;
-            totalPercent += percent;
-            totalAmount += amount;
+        let totalCents = 0;
 
-            const barWidth = maxPercent > 0 ? (percent / maxPercent) * 100 : 0;
+        // Clear existing items
+        list.innerHTML = '';
+
+        categories.forEach(function (cat, index) {
+            const cents = amountCents[cat] || 0;
+            const amount = cents / 100;
+            const percent = toPercent(cents);
+            totalCents += cents;
+
+            const barWidth = maxCents > 0 ? (cents / maxCents) * 100 : 0;
             const color = categoryColors[index];
 
-            html += '<div class="budget-summary-item">';
-            html += '<span class="budget-summary-item__dot" style="background:' + color + ';" aria-hidden="true"></span>';
-            html += '<span class="budget-summary-item__name" title="' + categoryLabels[cat] + '">' + categoryLabels[cat] + '</span>';
-            html += '<div class="budget-summary-item__bar-wrapper">';
-            html += '<div class="budget-summary-item__bar" style="width:' + barWidth.toFixed(1) + '%;background:' + color + ';"></div>';
-            html += '</div>';
-            html += '<div class="budget-summary-item__values">';
-            html += '<span class="budget-summary-item__percent">' + percent.toFixed(1) + '%</span>';
-            html += '<span class="budget-summary-item__amount">$' + formatCurrency(amount) + '</span>';
-            html += '</div>';
-            html += '</div>';
+            // Build row with DOM APIs
+            const item = document.createElement('div');
+            item.className = 'budget-summary-item';
+
+            const dot = document.createElement('span');
+            dot.className = 'budget-summary-item__dot';
+            dot.style.background = color;
+            dot.setAttribute('aria-hidden', 'true');
+
+            const name = document.createElement('span');
+            name.className = 'budget-summary-item__name';
+            name.title = categoryLabels[cat];
+            name.textContent = categoryLabels[cat];
+
+            const barWrapper = document.createElement('div');
+            barWrapper.className = 'budget-summary-item__bar-wrapper';
+
+            const bar = document.createElement('div');
+            bar.className = 'budget-summary-item__bar';
+            bar.style.width = barWidth.toFixed(1) + '%';
+            bar.style.background = color;
+
+            barWrapper.appendChild(bar);
+
+            const values = document.createElement('div');
+            values.className = 'budget-summary-item__values';
+
+            const percentSpan = document.createElement('span');
+            percentSpan.className = 'budget-summary-item__percent';
+            percentSpan.textContent = percent.toFixed(1) + '%';
+
+            const amountSpan = document.createElement('span');
+            amountSpan.className = 'budget-summary-item__amount';
+            amountSpan.textContent = '$' + formatCurrency(amount);
+
+            values.appendChild(percentSpan);
+            values.appendChild(amountSpan);
+
+            item.appendChild(dot);
+            item.appendChild(name);
+            item.appendChild(barWrapper);
+            item.appendChild(values);
+
+            list.appendChild(item);
         });
 
-        list.innerHTML = html;
-
         // Update totals
+        const totalAmount = totalCents / 100;
+        const totalPercent = toPercent(totalCents);
+
         const totalPercentEl = document.getElementById('budgetSummaryTotalPercent');
         const totalAmountEl = document.getElementById('budgetSummaryTotalAmount');
 
@@ -590,7 +620,7 @@
                 }),
                 datasets: [{
                     data: categories.map(function (c) {
-                        return currentData[c] || 0;
+                        return toPercent(amountCents[c] || 0);
                     }),
                     backgroundColor: categoryColors,
                     borderWidth: 2,
@@ -617,7 +647,7 @@
                             label: function (context) {
                                 const label = context.label || '';
                                 const value = context.parsed || 0;
-                                const income = currentData.monthlyIncome || 0;
+                                const income = incomeCents / 100;
                                 const amount = (income * value) / 100;
                                 return label + ': ' + value.toFixed(1) + '% ($' + formatCurrency(amount) + ')';
                             }
@@ -638,19 +668,19 @@
         }
 
         chart.data.datasets[0].data = categories.map(function (c) {
-            return currentData[c] || 0;
+            return toPercent(amountCents[c] || 0);
         });
         chart.update('none');
     }
 
     /**
-     * Calculate total allocation percentage.
-     * @returns {number} Total percentage
+     * Calculate total allocation in cents.
+     * @returns {number} Total cents
      */
-    function getTotal () {
+    function getTotalCents () {
         let total = 0;
         categories.forEach(function (cat) {
-            total += currentData[cat] || 0;
+            total += amountCents[cat] || 0;
         });
         return total;
     }

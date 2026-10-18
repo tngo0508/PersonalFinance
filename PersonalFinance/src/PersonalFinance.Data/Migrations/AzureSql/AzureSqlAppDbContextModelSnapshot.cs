@@ -1365,37 +1365,37 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal>("DebtRepaymentPercent")
+                    b.Property<decimal>("DebtRepaymentAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal>("EntertainmentPercent")
+                    b.Property<decimal>("EntertainmentAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("FoodPercent")
+                    b.Property<decimal>("FoodAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("HealthcarePercent")
+                    b.Property<decimal>("HealthcareAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("HousingPercent")
+                    b.Property<decimal>("HousingAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("InsurancePercent")
+                    b.Property<decimal>("InsuranceAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<decimal>("MiscellaneousPercent")
+                    b.Property<decimal>("MiscellaneousAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -1408,11 +1408,11 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
-                    b.Property<decimal>("SavingsPercent")
+                    b.Property<decimal>("SavingsAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("TransportationPercent")
+                    b.Property<decimal>("TransportationAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -1427,7 +1427,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<decimal>("UtilitiesPercent")
+                    b.Property<decimal>("UtilitiesAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 

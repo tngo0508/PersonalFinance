@@ -70,11 +70,17 @@ public class BudgetController : Controller
             return View("Index", model);
         }
 
-        // Validate that allocations sum to 100%
-        if (model.TotalAllocation <= 0 || model.TotalAllocation > 100m)
+        // Validate that allocations sum to monthly income exactly
+        if (model.MonthlyIncome <= 0)
+        {
+            ModelState.AddModelError("", "Monthly income must be greater than 0.");
+            return View("Index", model);
+        }
+
+        if (model.TotalAllocated != model.MonthlyIncome)
         {
             ModelState.AddModelError("",
-                $"Budget allocations must add up to exactly 100%. Current total: {model.TotalAllocation:F1}%.");
+                $"Budget allocations must add up to exactly ${model.MonthlyIncome:F2}. Current total: ${model.TotalAllocated:F2}.");
             return View("Index", model);
         }
 
@@ -84,6 +90,12 @@ public class BudgetController : Controller
         {
             await _personalFinanceApi.SaveBudgetAsync(request, HttpContext.RequestAborted);
             TempData["SaveSuccess"] = "Budget saved successfully.";
+        }
+        catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            // Map API validation errors into ModelState
+            ModelState.AddModelError("", ex.Content ?? "Validation failed. Please check your entries.");
+            return View("Index", model);
         }
         catch (Exception ex)
         {

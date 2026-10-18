@@ -43,16 +43,16 @@ public class BudgetService : IBudgetService
         {
             Allocations = new BudgetAllocationsDto
             {
-                Housing = budget.HousingPercent,
-                Food = budget.FoodPercent,
-                Transportation = budget.TransportationPercent,
-                Utilities = budget.UtilitiesPercent,
-                Insurance = budget.InsurancePercent,
-                Healthcare = budget.HealthcarePercent,
-                Savings = budget.SavingsPercent,
-                DebtRepayment = budget.DebtRepaymentPercent,
-                Entertainment = budget.EntertainmentPercent,
-                Miscellaneous = budget.MiscellaneousPercent
+                Housing = budget.HousingAmount,
+                Food = budget.FoodAmount,
+                Transportation = budget.TransportationAmount,
+                Utilities = budget.UtilitiesAmount,
+                Insurance = budget.InsuranceAmount,
+                Healthcare = budget.HealthcareAmount,
+                Savings = budget.SavingsAmount,
+                DebtRepayment = budget.DebtRepaymentAmount,
+                Entertainment = budget.EntertainmentAmount,
+                Miscellaneous = budget.MiscellaneousAmount
             },
             MonthlyIncome = budget.MonthlyIncome
         };
@@ -77,16 +77,16 @@ public class BudgetService : IBudgetService
         }
 
         budget.MonthlyIncome = request.MonthlyIncome;
-        budget.HousingPercent = request.Allocations.Housing;
-        budget.FoodPercent = request.Allocations.Food;
-        budget.TransportationPercent = request.Allocations.Transportation;
-        budget.UtilitiesPercent = request.Allocations.Utilities;
-        budget.InsurancePercent = request.Allocations.Insurance;
-        budget.HealthcarePercent = request.Allocations.Healthcare;
-        budget.SavingsPercent = request.Allocations.Savings;
-        budget.DebtRepaymentPercent = request.Allocations.DebtRepayment;
-        budget.EntertainmentPercent = request.Allocations.Entertainment;
-        budget.MiscellaneousPercent = request.Allocations.Miscellaneous;
+        budget.HousingAmount = request.Allocations.Housing;
+        budget.FoodAmount = request.Allocations.Food;
+        budget.TransportationAmount = request.Allocations.Transportation;
+        budget.UtilitiesAmount = request.Allocations.Utilities;
+        budget.InsuranceAmount = request.Allocations.Insurance;
+        budget.HealthcareAmount = request.Allocations.Healthcare;
+        budget.SavingsAmount = request.Allocations.Savings;
+        budget.DebtRepaymentAmount = request.Allocations.DebtRepayment;
+        budget.EntertainmentAmount = request.Allocations.Entertainment;
+        budget.MiscellaneousAmount = request.Allocations.Miscellaneous;
         budget.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);

@@ -1,6 +1,8 @@
 using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Validators;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
+using FluentValidation;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -14,10 +16,12 @@ namespace PersonalFinance.ApiService.Controllers;
 public class BudgetController : ControllerBase
 {
     private readonly IBudgetService _budgetService;
+    private readonly SaveBudgetRequestValidator _validator;
 
-    public BudgetController(IBudgetService budgetService)
+    public BudgetController(IBudgetService budgetService, SaveBudgetRequestValidator validator)
     {
         _budgetService = budgetService;
+        _validator = validator;
     }
 
     /// <summary>
@@ -113,10 +117,17 @@ public class BudgetController : ControllerBase
     /// </summary>
     [HttpPost("budget")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveBudget([FromBody] SaveBudgetRequestDto request,
         CancellationToken cancellationToken = default)
     {
+        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(validationResult.Errors.Select(e => new { e.ErrorCode, e.ErrorMessage }));
+        }
+
         var userId = GetUserId();
         await _budgetService.SaveBudgetAsync(userId, request, cancellationToken);
         return Ok(new { success = true });

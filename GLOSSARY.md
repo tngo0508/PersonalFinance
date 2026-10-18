@@ -67,6 +67,12 @@ _Avoid_: Home page, home
 ### Budget
 Monthly budget allocation and tracking. Compares planned spending against actual spending from spreadsheet data.
 
+### Budget Planner
+The page where a user sets a yearly budget by allocating Monthly Income across 10 spending categories. Each category stores an **Allocation Amount** in dollars and cents; the percentage is always calculated from that amount. Save is only allowed when the allocation amounts add up to Monthly Income exactly.
+
+### Allocation Amount
+The dollar amount assigned to a budget category, stored to the cent. It is the source of truth for the Budget Planner. Percentages are always derived from this value.
+
 ### Budget Tracker
 
 The in-app monthly budget page where the user enters plans, transactions, and overrides directly. It mirrors the layout
