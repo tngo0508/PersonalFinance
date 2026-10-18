@@ -604,6 +604,60 @@ const {chromium} = require('playwright');
         }
 
         // =========================================================
+        // Test 8b: Cookie consent banner visibility
+        // =========================================================
+        console.log('\n--- Test 8b: Cookie Consent Banner ---');
+        let bannerContext;
+        try {
+            bannerContext = await browser.newContext({
+                ignoreHTTPSErrors: true,
+                viewport: {width: 1280, height: 720}
+            });
+            const bannerPage = await bannerContext.newPage();
+            const banner = bannerPage.locator('#cookieBanner');
+
+            await bannerPage.goto(`${base}/`, {waitUntil: 'networkidle', timeout: 15000});
+            if (await banner.isVisible({timeout: 3000}).catch(() => false)) {
+                pass('Cookie banner is visible when no consent choice is stored');
+            } else {
+                fail('Cookie banner should be visible when no consent choice is stored');
+            }
+
+            await bannerPage.locator('#cookieAcceptAll').click();
+            if (await banner.isHidden()) {
+                pass('Cookie banner hides after "Accept All"');
+            } else {
+                fail('Cookie banner should hide after "Accept All"');
+            }
+
+            await bannerPage.reload({waitUntil: 'networkidle', timeout: 15000});
+            if (await banner.isHidden()) {
+                pass('Cookie banner stays hidden after reload once "Accept All" is stored');
+            } else {
+                fail('Cookie banner should stay hidden after reload once "Accept All" is stored');
+            }
+
+            await bannerContext.clearCookies();
+            await bannerContext.addCookies([{
+                name: 'pf_cookie_consent',
+                value: 'essential',
+                url: base
+            }]);
+            await bannerPage.reload({waitUntil: 'networkidle', timeout: 15000});
+            if (await banner.isHidden()) {
+                pass('Cookie banner stays hidden when "Essential Only" is stored');
+            } else {
+                fail('Cookie banner should stay hidden when "Essential Only" is stored');
+            }
+        } catch (error) {
+            fail(`Cookie banner test failed: ${error.message}`);
+        } finally {
+            if (bannerContext) {
+                await bannerContext.close();
+            }
+        }
+
+        // =========================================================
         // Test 9: Register and login flow, then visit authenticated pages
         // =========================================================
         console.log('\n--- Test 9: Register + Login + Authenticated Pages ---');
