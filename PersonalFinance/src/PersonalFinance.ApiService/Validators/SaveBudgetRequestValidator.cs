@@ -4,7 +4,7 @@ using PersonalFinance.Shared.Contracts;
 namespace PersonalFinance.ApiService.Validators;
 
 /// <summary>
-/// Validator for save budget requests. Ensures amounts are valid and sum to monthly income exactly.
+/// Validator for save budget requests. Ensures amounts are valid and do not exceed monthly income.
 /// </summary>
 public class SaveBudgetRequestValidator : AbstractValidator<SaveBudgetRequestDto>
 {
@@ -103,8 +103,8 @@ public class SaveBudgetRequestValidator : AbstractValidator<SaveBudgetRequestDto
                     + r.Allocations.Utilities + r.Allocations.Insurance + r.Allocations.Healthcare
                     + r.Allocations.Savings + r.Allocations.DebtRepayment + r.Allocations.Entertainment
                     + r.Allocations.Miscellaneous;
-                return Math.Abs(total - r.MonthlyIncome) < 0.005m;
+                return total <= r.MonthlyIncome;
             })
-            .WithMessage("Budget allocations must add up to monthly income exactly.");
+            .WithMessage("Budget allocations cannot exceed monthly income.");
     }
 }

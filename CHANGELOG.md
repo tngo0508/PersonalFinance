@@ -116,6 +116,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Budget Planner Allocation Flexibility**: Allowed budget allocations to be less than or equal to monthly income instead of forcing exact equality.
+  - Relaxed validation in `SaveBudgetRequestValidator` and `BudgetController` so users can save budget allocations when total allocated amount is less than or equal to monthly income.
+  - Prevented saving only when total allocations exceed monthly income, with clear error messaging.
+  - Updated Budget Planner header guidance to reflect that allocations cannot exceed monthly income.
 - **Cookie Banner `[hidden]` Safeguard**: Added `.cookie-banner[hidden] { display: none; }` so a future `display` rule on the banner can no longer override the `hidden` attribute and keep it permanently visible.
   - Added Playwright checks (Test 8b) for the banner: visible with no stored choice, hidden after "Accept All", and hidden on reload for "Accept All" and "Essential Only".
 - **Contact Page Email**: The Contact page now uses `tngo0508@gmail.com` for both general and security inquiries instead of the unconfigured `support@`/`security@personalfinance.app` addresses.

@@ -59,7 +59,7 @@ public class BudgetController : Controller
 
     /// <summary>
     /// Saves the current budget allocation via the ApiService.
-    /// Validates that allocations sum to 100% and delegates to the API.
+    /// Validates that allocations do not exceed monthly income and delegates to the API.
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -70,17 +70,17 @@ public class BudgetController : Controller
             return View("Index", model);
         }
 
-        // Validate that allocations sum to monthly income exactly
+        // Validate that allocations do not exceed monthly income
         if (model.MonthlyIncome <= 0)
         {
             ModelState.AddModelError("", "Monthly income must be greater than 0.");
             return View("Index", model);
         }
 
-        if (model.TotalAllocated != model.MonthlyIncome)
+        if (model.TotalAllocated > model.MonthlyIncome)
         {
             ModelState.AddModelError("",
-                $"Budget allocations must add up to exactly ${model.MonthlyIncome:F2}. Current total: ${model.TotalAllocated:F2}.");
+                $"Budget allocations cannot exceed monthly income of ${model.MonthlyIncome:F2}. Current total: ${model.TotalAllocated:F2}.");
             return View("Index", model);
         }
 
