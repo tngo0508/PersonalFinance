@@ -625,6 +625,7 @@ const {chromium} = require('playwright');
                 await passwordInputs[0].fill(testPassword);
                 await passwordInputs[1].fill(testPassword);
             }
+            await page.check('input[type="checkbox"][name="Input.AcceptTerms"]');
 
             // Submit the registration form using the specific button ID to avoid
             // matching other submit buttons on the page (e.g., the "Sign out" button)

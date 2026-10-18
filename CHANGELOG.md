@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Legal Pages and GDPR Compliance**: Added legal pages and consent features to reduce legal exposure from storing user financial data.
+  - Added Privacy Policy, Terms of Service, Financial Disclaimer, Cookie Policy, and Contact pages.
+  - Added two-column footer with legal links and app version display.
+  - Added consent checkbox to registration form with policy version tracking (UserConsent entity).
+  - Added GDPR cookie consent banner that defers third-party scripts (Google Fonts, Lucide icons) until user consent.
+  - Cookie consent stored in a 180-day cookie with "Accept All" and "Essential Only" options.
 - **Budget Tracker**: Added an in-app monthly budget tracker reproducing the Google "Monthly budget" sheet layout and
   behavior with Summary and Transactions tabs.
     - Users can enter planned amounts, actual overrides, and dated transactions (expenses and income) directly in the
@@ -106,6 +112,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Contact Page Email**: The Contact page now uses `tngo0508@gmail.com` for both general and security inquiries instead of the unconfigured `support@`/`security@personalfinance.app` addresses.
+- **Registration Consent and Cookie Banner**: Fixed the Terms/Privacy consent not being enforced on the server and the cookie banner reappearing for visitors who already accepted all cookies.
+  - Registration now rejects submissions where the Terms of Service / Privacy Policy checkbox is unchecked (`[Required]` on a `bool` never fails).
+  - The cookie banner is rendered hidden and only shown when no consent choice is stored.
+  - Legal links now clear the ambient route area (`asp-area=""`) so they resolve on Identity pages, and `LegalController` is explicitly `[AllowAnonymous]`.
+  - Registration E2E test now ticks the consent checkbox.
 - **Budget Planner Exact Amounts**: The Budget Planner now stores each category's dollar Allocation Amount exactly as typed, so $700 stays $700.00 after saving and reloading.
   - Added per-category amount columns (`decimal(18,2)`) and migrated existing budgets from percentages.
   - Dropped the stored percentage columns; percentages are always derived from amounts.

@@ -16,11 +16,7 @@
     <meta name="__RequestVerificationToken" content="@tokens.RequestToken" />
     <title>@(string.IsNullOrEmpty(pageTitle) ? AppVersion.ApplicationName : $"{pageTitle} · {AppVersion.ApplicationName}")</title>
     <link rel="icon" href="~/favicon.ico"/>
-    <link rel="preconnect" href="https://fonts.googleapis.com"/>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"/>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Third-party resources (Google Fonts, Lucide) are loaded after cookie consent -->
     <script>
         (function () {
             try {
@@ -183,12 +179,27 @@
 
     <!-- Footer -->
     <footer class="app-footer">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span>&copy; @DateTime.Now.Year @AppVersion.ApplicationName</span>
-            <span>Version @AppVersion.Current</span>
+        <div class="container-xl">
+            <div class="row align-items-center">
+                <div class="col-12 col-md-6 text-center text-md-start mb-2 mb-md-0">
+                    <span>&copy; @DateTime.Now.Year @AppVersion.ApplicationName — Version @AppVersion.Current</span>
+                </div>
+                <div class="col-12 col-md-6 text-center text-md-end">
+                    <ul class="app-footer__links justify-content-center justify-content-md-end">
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Privacy">Privacy Policy</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Terms">Terms of Service</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Disclaimer">Disclaimer</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Cookies">Cookies</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Contact">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </footer>
 </div>
+
+<!-- Cookie Consent Banner -->
+<partial name="_CookieBanner" />
 
 <!-- Mobile Bottom Navigation -->
 @if (isSignedIn)
@@ -226,6 +237,7 @@
 <script src="~/lib/marked/marked.min.js"></script>
 <script src="~/js/core/utils.js" asp-append-version="true"></script>
 <script src="~/js/core/site.js" asp-append-version="true"></script>
+<script src="~/js/core/cookie-consent.js" asp-append-version="true"></script>
 @if (isSignedIn)
 {
     <script src="~/js/core/sidebar.js" asp-append-version="true"></script>
@@ -236,8 +248,8 @@
 }
 @await RenderSectionAsync("Scripts", required: false)
 <script>
-    // Initialize Lucide icons
-    if (typeof lucide !== 'undefined') {
+    // Initialize Lucide icons (only if loaded via cookie consent)
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
     }
 </script>

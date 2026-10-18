@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
@@ -22,6 +23,7 @@ public class RegisterModel : PageModel
     private readonly ILogger<RegisterModel> _logger;
     private readonly IEmailSender _emailSender;
     private readonly BrevoOptions _brevoOptions;
+    private readonly IUserConsentService _consentService;
 
     public RegisterModel(
         UserManager<IdentityUser> userManager,
@@ -29,7 +31,8 @@ public class RegisterModel : PageModel
         SignInManager<IdentityUser> signInManager,
         ILogger<RegisterModel> logger,
         IEmailSender emailSender,
-        IOptions<BrevoOptions> brevoOptionsAccessor)
+        IOptions<BrevoOptions> brevoOptionsAccessor,
+        IUserConsentService consentService)
     {
         _userManager = userManager;
         _userStore = userStore;
@@ -38,6 +41,7 @@ public class RegisterModel : PageModel
         _logger = logger;
         _emailSender = emailSender;
         _brevoOptions = brevoOptionsAccessor.Value;
+        _consentService = consentService;
     }
 
     [BindProperty]
@@ -64,6 +68,9 @@ public class RegisterModel : PageModel
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        [Display(Name = "I agree to the Terms of Service and Privacy Policy")]
+        public bool AcceptTerms { get; set; }
     }
 
     public async Task OnGetAsync(string? returnUrl = null)
@@ -76,6 +83,13 @@ public class RegisterModel : PageModel
     {
         returnUrl ??= Url.Content("~/");
         ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
+        // [Required] on a bool is always satisfied, so acceptance must be enforced explicitly.
+        if (!Input.AcceptTerms)
+        {
+            ModelState.AddModelError("Input.AcceptTerms", "You must agree to the Terms of Service and Privacy Policy to create an account.");
+        }
+
         if (ModelState.IsValid)
         {
             var user = CreateUser();
@@ -89,6 +103,13 @@ public class RegisterModel : PageModel
                 _logger.LogInformation("User created a new account with password.");
 
                 var userId = await _userManager.GetUserIdAsync(user);
+
+                // Save consent record
+                await _consentService.RecordConsentAsync(
+                    userId!,
+                    AppVersion.Current,
+                    HttpContext.Connection.RemoteIpAddress?.ToString());
+
                 var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                 code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
                 var callbackUrl = Url.Page(

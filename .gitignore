@@ -1,6 +1,9 @@
 # Git worktrees
 .worktrees/
 
+# Junie session plans (session artifacts, not configuration)
+.junie/plans/
+
 # Build and package folders
 bin/
 obj/
