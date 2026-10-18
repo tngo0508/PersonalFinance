@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
@@ -27,7 +28,10 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // 1a. Load user secrets in Development environment for local credential management
+    // 1a. Pin culture to en-US (chiseled containers start in the invariant culture and format currency as "¤")
+    AppCulture.ApplyDefault();
+
+    // 1b. Load user secrets in Development environment for local credential management
     if (builder.Environment.IsDevelopment())
     {
         builder.Configuration.AddUserSecrets<Program>(optional: true, reloadOnChange: true);
@@ -159,6 +163,14 @@ try
         options.KnownProxies.Clear();
     });
 
+    // 3h. Lock request localization to en-US so a browser Accept-Language header cannot change currency or number formats
+    builder.Services.Configure<RequestLocalizationOptions>(options =>
+    {
+        options.DefaultRequestCulture = new RequestCulture(AppCulture.DefaultCultureName);
+        options.SupportedCultures = [AppCulture.Default];
+        options.SupportedUICultures = [AppCulture.Default];
+    });
+
     builder.Services.AddRazorPages();
 
     // 4. Add MVC Controllers and Views
@@ -287,6 +299,7 @@ try
 
     app.UseForwardedHeaders();
     app.UseHttpsRedirection();
+    app.UseRequestLocalization();
     app.UseRouting();
 
     app.UseAuthentication();

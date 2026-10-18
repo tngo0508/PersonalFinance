@@ -21,6 +21,7 @@ try
     Log.Information("Starting {AppName} (v{Version})...", AppVersion.ApplicationName, AppVersion.Current);
 
     var builder = WebApplication.CreateBuilder(args);
+    AppCulture.ApplyDefault();
 
     // 1a. Load user secrets in Development environment for local credential management
     if (builder.Environment.IsDevelopment())

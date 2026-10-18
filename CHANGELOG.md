@@ -106,6 +106,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Currency Symbol in Azure Container Apps**: Amounts now render as `$1,234.56` instead of `¤1,234.56` when the app runs in the Azure Container Apps container.
+  - Added a shared `AppCulture` helper and applied the `en-US` default culture at startup in both Web and ApiService, because the chiseled container image sets no locale and .NET falls back to the invariant culture, whose currency symbol is `¤`.
+  - Locked Web request localization to `en-US` only, so a browser `Accept-Language` such as `de-DE` cannot change the currency symbol.
+  - Added regression tests for the culture default and for backend text (dashboard activity, search results, savings-goal notifications). Amounts already stored with `¤` are not rewritten.
+
 - **Budget Planner Exact Amounts**: The Budget Planner now stores each category's dollar Allocation Amount exactly as typed, so $700 stays $700.00 after saving and reloading.
   - Added per-category amount columns (`decimal(18,2)`) and migrated existing budgets from percentages.
   - Dropped the stored percentage columns; percentages are always derived from amounts.
