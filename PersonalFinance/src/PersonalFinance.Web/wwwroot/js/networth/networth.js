@@ -8,6 +8,81 @@
     const NW = window.NW;
 
     /**
+     * Cache of the initial saved/default parameter values loaded on page render.
+     * Used by Reset to restore values without an API call.
+     * @type {Object<string, number>|null}
+     */
+    let cachedSavedValues = null;
+
+    /**
+     * Capture the current slider values into the cache.
+     * Called once on page load to store the saved/default values.
+     */
+    function cacheSavedValues () {
+        const fields = [
+            'nwStartingBalance',
+            'nwAnnualSavings',
+            'nwAnnualIncome',
+            'nwAnnualSpending',
+            'nwCurrentAge',
+            'nwRetirementAge',
+            'nwBaseRoi',
+            'nwConservativeRoi',
+            'nwAggressiveRoi',
+            'nwAggressiveSavings'
+        ];
+        cachedSavedValues = {};
+        fields.forEach(function (fieldId) {
+            const rangeEl = document.getElementById(fieldId + 'Range');
+            if (rangeEl) {
+                cachedSavedValues[fieldId] = parseFloat(rangeEl.value);
+            }
+        });
+    }
+
+    /**
+     * Show a brief toast-style message to the user.
+     * @param {string} message - The message to display.
+     */
+    function showResetMessage (message) {
+        // Remove existing message if present
+        const existing = document.getElementById('nwResetMessage');
+        if (existing) {
+            existing.remove();
+        }
+
+        const msgEl = document.createElement('div');
+        msgEl.id = 'nwResetMessage';
+        msgEl.className = 'nw-reset-message';
+        msgEl.setAttribute('role', 'status');
+        msgEl.setAttribute('aria-live', 'polite');
+        msgEl.textContent = message;
+
+        // Insert before the actions bar
+        const actionsEl = document.querySelector('.nw-form__actions');
+        if (actionsEl) {
+            actionsEl.parentNode.insertBefore(msgEl, actionsEl);
+        }
+
+        // Auto-dismiss after 4 seconds
+        setTimeout(function () {
+            if (msgEl.parentNode) {
+                msgEl.remove();
+            }
+        }, 4000);
+    }
+
+    /**
+     * Restore the cached saved values to all sliders and recalculate.
+     * Does nothing if no cached values exist.
+     */
+    function resetToSaved () {
+        if (cachedSavedValues) {
+            NW.applyPreset(cachedSavedValues);
+        }
+    }
+
+    /**
      * Initialize everything when DOM is ready.
      * Renders charts, sets up sliders, tabs, presets, and triggers initial recalculation.
      */
@@ -40,13 +115,32 @@
             randomBtn.addEventListener('click', NW.randomizeParameters);
         }
 
-        // Initialize reset button — reset sliders to defaults and clear saved data
-        const resetBtn = document.querySelector('#nwResetForm button[type="submit"]');
+        // Cache the initial saved/default values before any interaction
+        cacheSavedValues();
+
+        // Initialize reset button — restores cached saved values (frontend-only)
+        const resetBtn = document.getElementById('nwResetBtn');
         if (resetBtn) {
-            resetBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                NW.resetToDefaults();
-                document.getElementById('nwResetForm').submit();
+            resetBtn.addEventListener('click', resetToSaved);
+        }
+
+        // Initialize "Reset to saved" dropdown item
+        const resetToSavedBtn = document.getElementById('nwResetToSaved');
+        if (resetToSavedBtn) {
+            resetToSavedBtn.addEventListener('click', resetToSaved);
+        }
+
+        // Initialize "Clear saved parameters" dropdown item
+        const clearSavedBtn = document.getElementById('nwClearSaved');
+        if (clearSavedBtn) {
+            clearSavedBtn.addEventListener('click', function () {
+                const confirmed = confirm('This will delete your saved net worth parameters. Your current slider values will be reset to defaults. This action cannot be undone.');
+                if (confirmed) {
+                    const clearForm = document.getElementById('nwClearForm');
+                    if (clearForm) {
+                        clearForm.submit();
+                    }
+                }
             });
         }
 
@@ -63,5 +157,11 @@
     } else {
         init();
     }
+
+    // Expose cache and message functions for testing
+    window.NW = Object.assign(window.NW || {}, {
+        getSavedValuesCache: function () { return cachedSavedValues; },
+        showResetMessage: showResetMessage
+    });
 
 })();

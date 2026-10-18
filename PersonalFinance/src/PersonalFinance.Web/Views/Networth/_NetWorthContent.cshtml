@@ -295,11 +295,32 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l5 5"/><path d="M4 4l5 5"/></svg>
                     Randomize
                 </button>
-                <form asp-action="DeleteParameters" method="post" class="d-inline" id="nwResetForm">
-                    <button type="submit" class="btn nw-btn-reset">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn nw-btn-reset" id="nwResetBtn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
                         Reset
                     </button>
+                    <button type="button" class="btn nw-btn-reset dropdown-toggle dropdown-toggle-split" id="nwResetDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Open reset options</span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="nwResetDropdownBtn">
+                        <li>
+                            <button type="button" class="dropdown-item" id="nwResetToSaved">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
+                                Reset to saved
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                            <button type="button" class="dropdown-item text-danger" id="nwClearSaved">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                Clear saved parameters
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <form asp-action="DeleteParameters" method="post" class="d-none" id="nwClearForm">
+                    @Html.AntiForgeryToken()
                 </form>
             </div>
         </div>
