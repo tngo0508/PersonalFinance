@@ -1,6 +1,5 @@
 {
   "PersonalFinance/src/PersonalFinance.Web/wwwroot/js/**/*.js": [
-    "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js --fix",
-    "git add"
+    "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js --fix"
   ]
 }

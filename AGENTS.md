@@ -713,9 +713,9 @@ The full rule set lives in `PersonalFinance.Web/wwwroot/.eslintrc.js`. Read it w
 
 **Run ESLint:**
 
-- **CI / Linux:** `npm run lint` (checks all files) or `npm run lint:fix` (auto-fixes formatting).
-- **Windows local:**
-  `$env:ESLINT_USE_FLAT_CONFIG='false'; npx --yes eslint@8 --no-eslintrc -c 'PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js' <files>`
+- **All platforms:** `npm run lint` (checks all files) or `npm run lint:fix` (auto-fixes formatting).
+
+**Pre-commit hook:** The project uses Husky with lint-staged to auto-fix ESLint errors on staged JavaScript files before each commit. No manual linting is required before committing — the hook runs automatically. To bypass the hook in emergencies, use `git commit --no-verify`.
 
 **Key rules to follow manually:**
 

@@ -5,7 +5,7 @@
 (function () {
     'use strict';
 
-    const NW = window.NW;
+    const NW = window.NW ;
 
     /**
      * Cache of the initial saved/default parameter values loaded on page render.

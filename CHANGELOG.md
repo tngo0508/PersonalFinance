@@ -106,6 +106,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Pre-commit Hook**: Added Husky pre-commit hook with lint-staged to auto-fix ESLint errors before commits.
+  - Installed Husky 9 and lint-staged 15 as dev dependencies.
+  - Staged JavaScript files are auto-formatted by ESLint before each commit.
+  - Fixed `npm run lint` scripts to work on Windows (removed Linux-style env var syntax).
+
 - **NetWorth Reset Button**: Reset now restores saved parameters as a frontend-only action instead of soft-deleting database records.
   - Reset restores the user's last saved values from a JavaScript cache populated on page load.
   - Reset is a dropdown button with "Reset to saved" (primary) and "Clear saved parameters" (destructive, with confirmation dialog).
