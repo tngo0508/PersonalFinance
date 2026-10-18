@@ -106,6 +106,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **NetWorth Reset Button**: Reset now restores saved parameters as a frontend-only action instead of soft-deleting database records.
+  - Reset restores the user's last saved values from a JavaScript cache populated on page load.
+  - Reset is a dropdown button with "Reset to saved" (primary) and "Clear saved parameters" (destructive, with confirmation dialog).
+  - Clear saved parameters reuses the existing `DeleteParameters` endpoint with a detailed confirmation warning.
+  - Falls back to hardcoded defaults with a message when no saved parameters exist.
+  - Randomize remains unchanged (already frontend-only).
+  - Documented in ADR-0003.
+
 - **ESLint Code Formatting**: Fixed 227 style and formatting violations across frontend JavaScript files.
     - Resolved `space-before-function-paren` and `object-curly-spacing` rule violations across all files under
       `PersonalFinance.Web/wwwroot/js/`.

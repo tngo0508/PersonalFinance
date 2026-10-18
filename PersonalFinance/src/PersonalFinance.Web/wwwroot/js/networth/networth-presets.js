@@ -192,10 +192,20 @@
     }
 
     /**
-     * Reset all input fields to their default values and recalculate.
-     * Also submits the reset form to clear any saved custom values.
+     * Reset all input fields to the cached saved values (from page load).
+     * If no cached values exist, falls back to hardcoded defaults with a message.
+     * This is a frontend-only operation — it does not affect saved database records.
      */
-    function resetToDefaults () {
+    function resetToSaved () {
+        const cached = window.NW.getSavedValuesCache && window.NW.getSavedValuesCache();
+        if (cached && Object.keys(cached).length > 0) {
+            applyPreset(cached);
+            return;
+        }
+        // Fallback to hardcoded defaults if no cached values
+        if (window.NW.showResetMessage) {
+            window.NW.showResetMessage('No saved parameters, using defaults.');
+        }
         applyPreset({
             nwStartingBalance: 195033,
             nwAnnualSavings: 32000,
@@ -215,7 +225,7 @@
         applyPreset: applyPreset,
         initPresets: initPresets,
         randomizeParameters: randomizeParameters,
-        resetToDefaults: resetToDefaults
+        resetToSaved: resetToSaved
     });
 
 })();
