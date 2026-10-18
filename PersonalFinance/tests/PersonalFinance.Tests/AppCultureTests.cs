@@ -7,6 +7,7 @@ namespace PersonalFinance.Tests;
 /// Regression tests for the "¤1,234.56" currency bug: chiseled containers start in the invariant culture,
 /// so currency formatting must be pinned to en-US at startup.
 /// </summary>
+[Collection("Culture")]
 public class AppCultureTests : IDisposable
 {
     private readonly CultureInfo _originalCulture = CultureInfo.CurrentCulture;
