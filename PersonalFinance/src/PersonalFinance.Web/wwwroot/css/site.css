@@ -2665,6 +2665,10 @@ button.bgt-rank-row:hover { background: var(--bgt-hover); }
    Cookie Consent Banner
    ========================================================================== */
 
+.cookie-banner[hidden] {
+  display: none;
+}
+
 .cookie-banner {
   position: fixed;
   bottom: 0;

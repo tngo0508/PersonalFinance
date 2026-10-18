@@ -553,6 +553,28 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 - `DatabasePersistenceAndMigrationTests`: Provider switching, provider-specific migration sets, SQLite migrate/seed pipeline, SQL Server migration script inspection (`nvarchar(450)` keys), and Data Protection key persistence.
 - `ServiceDefaultsTests`: Validates OpenTelemetry providers, health check registration, and Aspire defaults.
 - `GitHubActionsDeploymentWorkflowTests`: Validates CI/CD workflow configuration including job timeouts, concurrency settings, `paths-ignore`, per-image cache scopes, deploy gating, and `promote-latest` behavior.
+- `ModelValidationConventionTests`: Fails when `[Required]` is placed on a `bool` property (it is always satisfied, so it never rejects an unchecked box).
+
+### Running the E2E tests locally
+
+The Playwright suites in `e2e-tests/` need a running Web app, a running ApiService, and a reachable database. CI runs them automatically; locally, follow these steps in order.
+
+1. **Make the database reachable.** The apps use the `ConnectionStrings:DefaultConnection` user secret (see section 3). Check what it points at with `dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web`. If it targets `localhost,1433`, start whatever provides SQL Server there (for example Docker Desktop and your SQL container, or the local SQL Server service with TCP enabled on 1433). The ApiService applies pending EF Core migrations on startup, so a database that is down shows up as a SQL error 258 (timeout) crash in `DatabaseMigrationExtensions`.
+2. **Start the apps.** Run `PersonalFinance.ApiService` (profile ports `7100`/`5100`) and `PersonalFinance.Web` (profile ports `7200`/`5200`), or start both through `PersonalFinance.AppHost`.
+3. **Check everything is up.** `npm run e2e:preflight` fails fast, with a hint, if the database port, Web app or API is unreachable.
+4. **Run the suites.**
+
+```powershell
+$env:WEB_URL = 'http://localhost:5200'
+$env:API_URL = 'https://localhost:7100'
+npm run e2e:preflight
+npm run test:e2e   # UI tests (default WEB_URL is http://localhost:5000)
+npm run test:api   # API tests (default API_URL is https://localhost:7100)
+```
+
+If the database is not on `localhost:1433`, set `E2E_DB_HOST` and `E2E_DB_PORT` for the preflight check.
+
+> **Side effects:** the registration test (Test 9) creates a real user (`e2etest_<timestamp>@example.com`) in whichever database the app uses, and startup applies any pending migrations. Do not run the suites against production.
 
 ---
 

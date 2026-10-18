@@ -6,6 +6,7 @@ This directory contains the project documentation for the Personal Finance App.
 
 | Document | Description |
 |---|---|
+| [CODING_STANDARDS.md](CODING_STANDARDS.md) | Full coding standards — architecture, data layer, EF Core, security, UI, JavaScript/ESLint, versioning and changelog rules. The short version is in the root `AGENTS.md`. |
 | [AI_ASSISTANT_SETUP.md](AI_ASSISTANT_SETUP.md) | AI Assistant setup guide — OpenAI API key configuration, cost estimation, troubleshooting, and architecture overview for the chat widget feature. |
 | [CQRS_ARCHITECTURE.md](CQRS_ARCHITECTURE.md) | CQRS pattern guide — explains Commands, Queries, Handlers, and step-by-step instructions for adding new API endpoints. |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Developer guide — local setup, secrets management, EF Core migrations, OAuth configuration, troubleshooting, and detailed architecture. |

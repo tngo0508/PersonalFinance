@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Agent Guidelines and E2E Tooling**: Shrank `AGENTS.md` into a short, always-loaded rule set and moved the full standards to `docs/CODING_STANDARDS.md`.
+  - `AGENTS.md` and `.junie/AGENTS.md` now list the verify commands (`dotnet test`, `npm run lint`), a "Where things live" map, search-exclusion hints and the done checklist; duplicated and unused sections (Git Worktrees) were removed.
+  - Added `npm run e2e:preflight` (`e2e-tests/preflight.js`) that fails fast when the database, Web app or API is unreachable, and documented "Running the E2E tests locally" in `docs/DEVELOPMENT.md`.
+  - Added `ModelValidationConventionTests`, which fails when `[Required]` is applied to a `bool` property.
 - **README Architecture Section**: Rewrote the Architecture section to accurately reflect the current layered architecture.
   - Replaced "Clean Architecture" with "layered architecture" and added layers, dependency flow diagram, and key principles.
   - Documented direct service injection, type-based organization, soft deletes, and permissive license policy.
@@ -112,6 +116,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cookie Banner `[hidden]` Safeguard**: Added `.cookie-banner[hidden] { display: none; }` so a future `display` rule on the banner can no longer override the `hidden` attribute and keep it permanently visible.
+  - Added Playwright checks (Test 8b) for the banner: visible with no stored choice, hidden after "Accept All", and hidden on reload for "Accept All" and "Essential Only".
 - **Contact Page Email**: The Contact page now uses `tngo0508@gmail.com` for both general and security inquiries instead of the unconfigured `support@`/`security@personalfinance.app` addresses.
 - **Registration Consent and Cookie Banner**: Fixed the Terms/Privacy consent not being enforced on the server and the cookie banner reappearing for visitors who already accepted all cookies.
   - Registration now rejects submissions where the Terms of Service / Privacy Policy checkbox is unchecked (`[Required]` on a `bool` never fails).
