@@ -383,6 +383,16 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.DebtRepaymentPercent).HasPrecision(decPrec, decScale);
             entity.Property(e => e.EntertainmentPercent).HasPrecision(decPrec, decScale);
             entity.Property(e => e.MiscellaneousPercent).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.HousingAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.FoodAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.TransportationAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.UtilitiesAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.InsuranceAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.HealthcareAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.SavingsAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.DebtRepaymentAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.EntertainmentAmount).HasPrecision(decPrec, decScale);
+            entity.Property(e => e.MiscellaneousAmount).HasPrecision(decPrec, decScale);
         });
 
         // Configure SavingsGoal entity

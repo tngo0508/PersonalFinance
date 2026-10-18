@@ -87,6 +87,16 @@ public class BudgetService : IBudgetService
         budget.DebtRepaymentPercent = request.Allocations.DebtRepayment;
         budget.EntertainmentPercent = request.Allocations.Entertainment;
         budget.MiscellaneousPercent = request.Allocations.Miscellaneous;
+        budget.HousingAmount = ToAmount(request.MonthlyIncome, request.Allocations.Housing);
+        budget.FoodAmount = ToAmount(request.MonthlyIncome, request.Allocations.Food);
+        budget.TransportationAmount = ToAmount(request.MonthlyIncome, request.Allocations.Transportation);
+        budget.UtilitiesAmount = ToAmount(request.MonthlyIncome, request.Allocations.Utilities);
+        budget.InsuranceAmount = ToAmount(request.MonthlyIncome, request.Allocations.Insurance);
+        budget.HealthcareAmount = ToAmount(request.MonthlyIncome, request.Allocations.Healthcare);
+        budget.SavingsAmount = ToAmount(request.MonthlyIncome, request.Allocations.Savings);
+        budget.DebtRepaymentAmount = ToAmount(request.MonthlyIncome, request.Allocations.DebtRepayment);
+        budget.EntertainmentAmount = ToAmount(request.MonthlyIncome, request.Allocations.Entertainment);
+        budget.MiscellaneousAmount = ToAmount(request.MonthlyIncome, request.Allocations.Miscellaneous);
         budget.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -94,6 +104,15 @@ public class BudgetService : IBudgetService
 
         // Check for budget alerts after saving
         await CheckBudgetAlertsAsync(userId, period, cancellationToken);
+    }
+
+    /// <summary>
+    /// Converts an unrounded request percentage into a whole-cent dollar amount of the monthly income.
+    /// The amount is computed from the full-precision percentage, before the stored percentage column rounds it.
+    /// </summary>
+    private static decimal ToAmount(decimal monthlyIncome, decimal percent)
+    {
+        return Math.Round(monthlyIncome * percent / 100m, 2, MidpointRounding.AwayFromZero);
     }
 
     /// <summary>
