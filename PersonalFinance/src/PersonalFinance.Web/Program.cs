@@ -28,10 +28,10 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // 1b. Pin culture to en-US (chiseled containers start in the invariant culture and format currency as "¤")
+    // 1a. Pin culture to en-US (chiseled containers start in the invariant culture and format currency as "¤")
     AppCulture.ApplyDefault();
 
-    // 1a. Load user secrets in Development environment for local credential management
+    // 1b. Load user secrets in Development environment for local credential management
     if (builder.Environment.IsDevelopment())
     {
         builder.Configuration.AddUserSecrets<Program>(optional: true, reloadOnChange: true);

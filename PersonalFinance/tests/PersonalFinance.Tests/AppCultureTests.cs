@@ -37,14 +37,30 @@ public class AppCultureTests : IDisposable
     }
 
     [Fact]
-    public async Task ApplyDefault_FromInvariantCulture_AppliesToThreadPoolWork()
+    public void ApplyDefault_FromInvariantCulture_AppliesToThreadsThatDoNotInheritCulture()
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
         AppCulture.ApplyDefault();
 
-        var formatted = await Task.Run(() => 1234.56m.ToString("C"));
+        string? formatted = null;
+        string? cultureName = null;
+        var thread = new Thread(() =>
+        {
+            formatted = 1234.56m.ToString("C");
+            cultureName = CultureInfo.CurrentCulture.Name;
+        });
+
+        // A new thread must pick up DefaultThreadCurrentCulture, not the async-local culture of this test.
+        using (ExecutionContext.SuppressFlow())
+        {
+            thread.Start();
+        }
+
+        thread.Join();
+
         Assert.Equal("$1,234.56", formatted);
+        Assert.Equal("en-US", cultureName);
     }
 
     [Fact]
