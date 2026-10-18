@@ -15,7 +15,8 @@ module.exports = {
         Chart: 'readonly',
         DataTable: 'readonly',
         bootstrap: 'readonly',
-        marked: 'readonly'
+        marked: 'readonly',
+        lucide: 'readonly'
     },
     parserOptions: {
         ecmaVersion: 2022

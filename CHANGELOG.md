@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Legal Pages and GDPR Compliance**: Added legal pages and consent features to reduce legal exposure from storing user financial data.
+  - Added Privacy Policy, Terms of Service, Financial Disclaimer, Cookie Policy, and Contact pages.
+  - Added two-column footer with legal links and app version display.
+  - Added consent checkbox to registration form with policy version tracking (UserConsent entity).
+  - Added GDPR cookie consent banner that defers third-party scripts (Google Fonts, Lucide icons) until user consent.
+  - Cookie consent stored in a 180-day cookie with "Accept All" and "Essential Only" options.
+
 ### Changed
 
 - **README Architecture Section**: Rewrote the Architecture section to accurately reflect the current layered architecture.
@@ -28,8 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Covers database connection strings, Brevo API key, Google OAuth credentials, Google Drive API key, and OpenAI API key.
   - Provides verification, reset, and single-secret removal commands.
   - Added a dedicated section explaining where user secrets are stored (`%APPDATA%\Microsoft\UserSecrets\`), how to find the SecretId from `.csproj` files, and how to view configured secrets.
-
-### Added
 
 - **Budget Tracker**: Added an in-app monthly budget tracker reproducing the Google "Monthly budget" sheet layout and
   behavior with Summary and Transactions tabs.

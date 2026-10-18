@@ -125,6 +125,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<Notification> Notifications => Set<Notification>();
 
     /// <summary>
+    /// User consent records table set — tracks acceptance of Terms of Service and Privacy Policy.
+    /// </summary>
+    public DbSet<UserConsent> UserConsents => Set<UserConsent>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -152,6 +157,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         modelBuilder.Entity<MonthlyBudgetLine>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<BudgetTransaction>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
 
         // Explicit Identity key/FK lengths so both providers (and design-time scaffolding) produce
         // bounded string columns. SQL Server cannot index or key nvarchar(max).
@@ -563,6 +569,16 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.HasIndex(e => e.UserId)
                 .IsUnique()
                 .HasFilter("[IsDeleted] = 0");
+        });
+
+        // Configure UserConsent entity
+        modelBuilder.Entity<UserConsent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.PolicyVersion).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.IpAddress).HasMaxLength(45);
+            entity.HasIndex(e => e.UserId);
         });
     }
 }

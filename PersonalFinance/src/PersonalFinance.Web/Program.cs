@@ -191,6 +191,9 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddTransient<UserIdForwardingHandler>();
 
+    // 6b. Register User Consent Service
+    builder.Services.AddScoped<IUserConsentService, UserConsentService>();
+
     // 7. Register Refit Clients with Service Discovery
     var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https+http://apiservice";
 
