@@ -373,16 +373,6 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             const int decPrec = 18;
             const int decScale = 2;
             entity.Property(e => e.MonthlyIncome).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.HousingPercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.FoodPercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.TransportationPercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.UtilitiesPercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.InsurancePercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.HealthcarePercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.SavingsPercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.DebtRepaymentPercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.EntertainmentPercent).HasPrecision(decPrec, decScale);
-            entity.Property(e => e.MiscellaneousPercent).HasPrecision(decPrec, decScale);
             entity.Property(e => e.HousingAmount).HasPrecision(decPrec, decScale);
             entity.Property(e => e.FoodAmount).HasPrecision(decPrec, decScale);
             entity.Property(e => e.TransportationAmount).HasPrecision(decPrec, decScale);

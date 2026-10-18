@@ -39,60 +39,59 @@ public class BudgetServiceTests
     }
 
     [Fact]
-    public async Task Save_WhenHousingPercentIsFullPrecisionOf700Over3700_StoresExactly700Amount()
+    public async Task Save_WhenHousingAmountIs700_StoresExactly700Amount()
     {
         await using var db = CreateContext();
         var service = CreateService(db);
 
         await service.SaveBudgetAsync(UserId, CreateRequest(3_700m,
-            new BudgetAllocationsDto { Housing = 700m * 100m / 3_700m }));
+            new BudgetAllocationsDto { Housing = 700m }));
 
         var stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(700.00m, stored.HousingAmount);
     }
 
     [Fact]
-    public async Task Save_StoresRoundedAmountForEveryCategory()
+    public async Task Save_StoresExactAmountForEveryCategory()
     {
         await using var db = CreateContext();
         var service = CreateService(db);
         var allocations = new BudgetAllocationsDto
         {
-            Housing = 30.005m,
-            Food = 12.5m,
-            Transportation = 10.1234m,
-            Utilities = 5m,
-            Insurance = 7.77m,
-            Healthcare = 3.333m,
-            Savings = 20m,
-            DebtRepayment = 4.4444m,
-            Entertainment = 2.2222m,
-            Miscellaneous = 1.1111m
+            Housing = 370.37m,
+            Food = 154.32m,
+            Transportation = 125.00m,
+            Utilities = 61.73m,
+            Insurance = 95.92m,
+            Healthcare = 41.15m,
+            Savings = 246.91m,
+            DebtRepayment = 54.87m,
+            Entertainment = 27.44m,
+            Miscellaneous = 13.72m
         };
 
         await service.SaveBudgetAsync(UserId, CreateRequest(1_234.57m, allocations));
 
         var stored = await db.UserBudgetAllocations.SingleAsync();
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Housing), stored.HousingAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Food), stored.FoodAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Transportation), stored.TransportationAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Utilities), stored.UtilitiesAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Insurance), stored.InsuranceAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Healthcare), stored.HealthcareAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Savings), stored.SavingsAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.DebtRepayment), stored.DebtRepaymentAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Entertainment), stored.EntertainmentAmount);
-        Assert.Equal(ExpectedAmount(1_234.57m, allocations.Miscellaneous), stored.MiscellaneousAmount);
+        Assert.Equal(370.37m, stored.HousingAmount);
+        Assert.Equal(154.32m, stored.FoodAmount);
+        Assert.Equal(125.00m, stored.TransportationAmount);
+        Assert.Equal(61.73m, stored.UtilitiesAmount);
+        Assert.Equal(95.92m, stored.InsuranceAmount);
+        Assert.Equal(41.15m, stored.HealthcareAmount);
+        Assert.Equal(246.91m, stored.SavingsAmount);
+        Assert.Equal(54.87m, stored.DebtRepaymentAmount);
+        Assert.Equal(27.44m, stored.EntertainmentAmount);
+        Assert.Equal(13.72m, stored.MiscellaneousAmount);
     }
 
     [Fact]
-    public async Task Save_RoundsMidpointAmountsAwayFromZero()
+    public async Task Save_StoresSmallCentAmountsExactly()
     {
         await using var db = CreateContext();
         var service = CreateService(db);
 
-        // 0.0005% of 1000 is exactly 0.005, which rounds away from zero to 0.01.
-        await service.SaveBudgetAsync(UserId, CreateRequest(1_000m, new BudgetAllocationsDto { Housing = 0.0005m }));
+        await service.SaveBudgetAsync(UserId, CreateRequest(1_000m, new BudgetAllocationsDto { Housing = 0.01m }));
 
         var stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(0.01m, stored.HousingAmount);
@@ -105,7 +104,7 @@ public class BudgetServiceTests
         var service = CreateService(db);
 
         await service.SaveBudgetAsync(UserId, CreateRequest(0m,
-            new BudgetAllocationsDto { Housing = 50m, Food = 25m, Miscellaneous = 25m }));
+            new BudgetAllocationsDto { Housing = 0m, Food = 0m, Miscellaneous = 0m }));
 
         var stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(0m, stored.HousingAmount);
@@ -114,22 +113,22 @@ public class BudgetServiceTests
     }
 
     [Fact]
-    public async Task Get_AfterSave_ReturnsTheSamePercentagesAndIncomeAsSaved()
+    public async Task Get_AfterSave_ReturnsTheSameAmountsAndIncomeAsSaved()
     {
         await using var db = CreateContext();
         var service = CreateService(db);
         var allocations = new BudgetAllocationsDto
         {
-            Housing = 30m,
-            Food = 15.5m,
-            Transportation = 10m,
-            Utilities = 5m,
-            Insurance = 5m,
-            Healthcare = 4.5m,
-            Savings = 20m,
-            DebtRepayment = 5m,
-            Entertainment = 3m,
-            Miscellaneous = 2m
+            Housing = 1110m,
+            Food = 573.50m,
+            Transportation = 370m,
+            Utilities = 185m,
+            Insurance = 185m,
+            Healthcare = 166.50m,
+            Savings = 740m,
+            DebtRepayment = 185m,
+            Entertainment = 111m,
+            Miscellaneous = 74m
         };
         await service.SaveBudgetAsync(UserId, CreateRequest(3_700m, allocations));
 
@@ -138,16 +137,16 @@ public class BudgetServiceTests
         Assert.NotNull(response);
         Assert.Equal(3_700m, response.MonthlyIncome);
         var returned = Assert.IsType<BudgetAllocationsDto>(response.Allocations);
-        Assert.Equal(30m, returned.Housing);
-        Assert.Equal(15.5m, returned.Food);
-        Assert.Equal(10m, returned.Transportation);
-        Assert.Equal(5m, returned.Utilities);
-        Assert.Equal(5m, returned.Insurance);
-        Assert.Equal(4.5m, returned.Healthcare);
-        Assert.Equal(20m, returned.Savings);
-        Assert.Equal(5m, returned.DebtRepayment);
-        Assert.Equal(3m, returned.Entertainment);
-        Assert.Equal(2m, returned.Miscellaneous);
+        Assert.Equal(1110m, returned.Housing);
+        Assert.Equal(573.50m, returned.Food);
+        Assert.Equal(370m, returned.Transportation);
+        Assert.Equal(185m, returned.Utilities);
+        Assert.Equal(185m, returned.Insurance);
+        Assert.Equal(166.50m, returned.Healthcare);
+        Assert.Equal(740m, returned.Savings);
+        Assert.Equal(185m, returned.DebtRepayment);
+        Assert.Equal(111m, returned.Entertainment);
+        Assert.Equal(74m, returned.Miscellaneous);
     }
 
     [Fact]
@@ -155,20 +154,15 @@ public class BudgetServiceTests
     {
         await using var db = CreateContext();
         var service = CreateService(db);
-        await service.SaveBudgetAsync(UserId, CreateRequest(3_700m, new BudgetAllocationsDto { Housing = 20m }));
+        await service.SaveBudgetAsync(UserId, CreateRequest(3_700m, new BudgetAllocationsDto { Housing = 740m }));
 
-        await service.SaveBudgetAsync(UserId, CreateRequest(4_000m, new BudgetAllocationsDto { Housing = 25m }));
+        await service.SaveBudgetAsync(UserId, CreateRequest(4_000m, new BudgetAllocationsDto { Housing = 1_000m }));
 
         var stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(4_000m, stored.MonthlyIncome);
         Assert.Equal(1_000m, stored.HousingAmount);
-        Assert.Equal(25m, stored.HousingPercent);
     }
 
-    private static decimal ExpectedAmount(decimal income, decimal percent)
-    {
-        return Math.Round(income * percent / 100m, 2, MidpointRounding.AwayFromZero);
-    }
 
     private sealed class StubNotificationService : INotificationService
     {

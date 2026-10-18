@@ -43,16 +43,16 @@ public class BudgetService : IBudgetService
         {
             Allocations = new BudgetAllocationsDto
             {
-                Housing = budget.HousingPercent,
-                Food = budget.FoodPercent,
-                Transportation = budget.TransportationPercent,
-                Utilities = budget.UtilitiesPercent,
-                Insurance = budget.InsurancePercent,
-                Healthcare = budget.HealthcarePercent,
-                Savings = budget.SavingsPercent,
-                DebtRepayment = budget.DebtRepaymentPercent,
-                Entertainment = budget.EntertainmentPercent,
-                Miscellaneous = budget.MiscellaneousPercent
+                Housing = budget.HousingAmount,
+                Food = budget.FoodAmount,
+                Transportation = budget.TransportationAmount,
+                Utilities = budget.UtilitiesAmount,
+                Insurance = budget.InsuranceAmount,
+                Healthcare = budget.HealthcareAmount,
+                Savings = budget.SavingsAmount,
+                DebtRepayment = budget.DebtRepaymentAmount,
+                Entertainment = budget.EntertainmentAmount,
+                Miscellaneous = budget.MiscellaneousAmount
             },
             MonthlyIncome = budget.MonthlyIncome
         };
@@ -77,26 +77,16 @@ public class BudgetService : IBudgetService
         }
 
         budget.MonthlyIncome = request.MonthlyIncome;
-        budget.HousingPercent = request.Allocations.Housing;
-        budget.FoodPercent = request.Allocations.Food;
-        budget.TransportationPercent = request.Allocations.Transportation;
-        budget.UtilitiesPercent = request.Allocations.Utilities;
-        budget.InsurancePercent = request.Allocations.Insurance;
-        budget.HealthcarePercent = request.Allocations.Healthcare;
-        budget.SavingsPercent = request.Allocations.Savings;
-        budget.DebtRepaymentPercent = request.Allocations.DebtRepayment;
-        budget.EntertainmentPercent = request.Allocations.Entertainment;
-        budget.MiscellaneousPercent = request.Allocations.Miscellaneous;
-        budget.HousingAmount = ToAmount(request.MonthlyIncome, request.Allocations.Housing);
-        budget.FoodAmount = ToAmount(request.MonthlyIncome, request.Allocations.Food);
-        budget.TransportationAmount = ToAmount(request.MonthlyIncome, request.Allocations.Transportation);
-        budget.UtilitiesAmount = ToAmount(request.MonthlyIncome, request.Allocations.Utilities);
-        budget.InsuranceAmount = ToAmount(request.MonthlyIncome, request.Allocations.Insurance);
-        budget.HealthcareAmount = ToAmount(request.MonthlyIncome, request.Allocations.Healthcare);
-        budget.SavingsAmount = ToAmount(request.MonthlyIncome, request.Allocations.Savings);
-        budget.DebtRepaymentAmount = ToAmount(request.MonthlyIncome, request.Allocations.DebtRepayment);
-        budget.EntertainmentAmount = ToAmount(request.MonthlyIncome, request.Allocations.Entertainment);
-        budget.MiscellaneousAmount = ToAmount(request.MonthlyIncome, request.Allocations.Miscellaneous);
+        budget.HousingAmount = request.Allocations.Housing;
+        budget.FoodAmount = request.Allocations.Food;
+        budget.TransportationAmount = request.Allocations.Transportation;
+        budget.UtilitiesAmount = request.Allocations.Utilities;
+        budget.InsuranceAmount = request.Allocations.Insurance;
+        budget.HealthcareAmount = request.Allocations.Healthcare;
+        budget.SavingsAmount = request.Allocations.Savings;
+        budget.DebtRepaymentAmount = request.Allocations.DebtRepayment;
+        budget.EntertainmentAmount = request.Allocations.Entertainment;
+        budget.MiscellaneousAmount = request.Allocations.Miscellaneous;
         budget.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -104,15 +94,6 @@ public class BudgetService : IBudgetService
 
         // Check for budget alerts after saving
         await CheckBudgetAlertsAsync(userId, period, cancellationToken);
-    }
-
-    /// <summary>
-    /// Converts an unrounded request percentage into a whole-cent dollar amount of the monthly income.
-    /// The amount is computed from the full-precision percentage, before the stored percentage column rounds it.
-    /// </summary>
-    private static decimal ToAmount(decimal monthlyIncome, decimal percent)
-    {
-        return Math.Round(monthlyIncome * percent / 100m, 2, MidpointRounding.AwayFromZero);
     }
 
     /// <summary>

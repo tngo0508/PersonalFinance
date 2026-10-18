@@ -32,22 +32,22 @@ public class DashboardBudgetBreakdownTests
         return summary.Budget;
     }
 
-    /// <summary>A $5,000 budget whose ten categories total exactly 100%.</summary>
+    /// <summary>A $5,000 budget whose ten category amounts total exactly $5,000 (100% of income).</summary>
     private static UserBudgetAllocation FullyAllocatedBudget(string userId = UserId, string period = "2026-10") => new()
     {
         UserId = userId,
         Period = period,
         MonthlyIncome = 5_000m,
-        HousingPercent = 30m,
-        FoodPercent = 12.5m,
-        TransportationPercent = 10m,
-        UtilitiesPercent = 5m,
-        InsurancePercent = 5m,
-        HealthcarePercent = 5m,
-        SavingsPercent = 15m,
-        DebtRepaymentPercent = 7.5m,
-        EntertainmentPercent = 6m,
-        MiscellaneousPercent = 4m
+        HousingAmount = 1_500m,
+        FoodAmount = 625m,
+        TransportationAmount = 500m,
+        UtilitiesAmount = 250m,
+        InsuranceAmount = 250m,
+        HealthcareAmount = 250m,
+        SavingsAmount = 750m,
+        DebtRepaymentAmount = 375m,
+        EntertainmentAmount = 300m,
+        MiscellaneousAmount = 200m
     };
 
     [Fact]
@@ -67,11 +67,45 @@ public class DashboardBudgetBreakdownTests
     }
 
     [Fact]
+    public async Task Percent_IsDerivedFromTheStoredAmount_ForAnExactAmountThatIsNotAWholePercent()
+    {
+        await using var db = CreateContext();
+        var allocation = FullyAllocatedBudget();
+        allocation.MonthlyIncome = 3_700m;
+        allocation.HousingAmount = 700m;
+        db.UserBudgetAllocations.Add(allocation);
+        await db.SaveChangesAsync();
+
+        var budget = await GetBudgetAsync(db);
+
+        var housing = budget!.Allocations.Single(a => a.Name == "Housing");
+        Assert.Equal(700m, housing.Amount);
+        Assert.Equal(18.92m, Math.Round(housing.Percent, 2));
+        Assert.Equal(18.92m, Math.Round(budget.HousingPercent!.Value, 2));
+    }
+
+    [Fact]
+    public async Task Percent_IsZeroForEveryCategory_WhenMonthlyIncomeIsZero()
+    {
+        await using var db = CreateContext();
+        var allocation = FullyAllocatedBudget();
+        allocation.MonthlyIncome = 0m;
+        db.UserBudgetAllocations.Add(allocation);
+        await db.SaveChangesAsync();
+
+        var budget = await GetBudgetAsync(db);
+
+        Assert.All(budget!.Allocations, a => Assert.Equal(0m, a.Percent));
+        Assert.Equal(0m, budget.HousingPercent);
+        Assert.Equal(0m, budget.TotalAllocatedPercent);
+    }
+
+    [Fact]
     public async Task Allocations_ListAllTenCategoriesInBudgetPageOrder_IncludingZeroOnes()
     {
         await using var db = CreateContext();
         var allocation = FullyAllocatedBudget();
-        allocation.EntertainmentPercent = 0m;
+        allocation.EntertainmentAmount = 0m;
         db.UserBudgetAllocations.Add(allocation);
         await db.SaveChangesAsync();
 
@@ -94,7 +128,7 @@ public class DashboardBudgetBreakdownTests
     {
         await using var db = CreateContext();
         var allocation = FullyAllocatedBudget();
-        allocation.HousingPercent = 20m; // total now 90%
+        allocation.HousingAmount = 1_000m; // 20% of 5,000, so total is now 90%
         db.UserBudgetAllocations.Add(allocation);
         await db.SaveChangesAsync();
 
@@ -112,7 +146,7 @@ public class DashboardBudgetBreakdownTests
     {
         await using var db = CreateContext();
         var allocation = FullyAllocatedBudget();
-        allocation.HousingPercent = housingPercent;
+        allocation.HousingAmount = housingPercent * 50m; // 1% of $5,000 income is $50
         db.UserBudgetAllocations.Add(allocation);
         await db.SaveChangesAsync();
 
@@ -129,6 +163,7 @@ public class DashboardBudgetBreakdownTests
         await using var db = CreateContext();
         var october = FullyAllocatedBudget(period: "2026-10");
         october.MonthlyIncome = 6_000m;
+        october.HousingAmount = 1_800m; // amounts stay fixed when income changes
         var lastYear = FullyAllocatedBudget(period: "2025-12");
         lastYear.MonthlyIncome = 9_000m;
         // Newest period inserted first, so the latest Id belongs to an older period.

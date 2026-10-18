@@ -158,6 +158,8 @@
     background: var(--app-surface-soft);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
     overflow: hidden;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .budget-income-hero__input-wrapper:focus-within {
@@ -178,7 +180,8 @@
 }
 
 .budget-income-input {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     border: none;
     background: transparent;
     font-size: 1.25rem;
@@ -188,6 +191,7 @@
     padding: 0 0.5rem;
     height: 44px;
     box-shadow: none !important;
+    overflow-wrap: anywhere;
 }
 
 .budget-income-input:focus {
@@ -308,7 +312,7 @@
 
 .budget-categories {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
 }
 
@@ -333,6 +337,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
     margin-bottom: 0.6rem;
 }
 
@@ -340,6 +346,8 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .budget-category-card__icon {
@@ -376,28 +384,33 @@
     font-weight: var(--app-font-weight-bold);
     font-family: var(--app-font-mono);
     color: var(--app-text);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+    flex-shrink: 0;
 }
 
 .budget-category-card__controls {
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    flex-wrap: wrap;
 }
 
 .budget-slider {
-    flex: 1;
+    flex: 1 1 100%;
     min-width: 0;
     height: 6px;
     cursor: pointer;
     min-height: 44px;
     margin: -9px 0;
+    order: 1;
 }
 
 .budget-category__input-group {
     position: relative;
-    width: 75px;
-    flex-shrink: 0;
+    flex: 1 1 auto;
+    min-width: 5.5rem;
+    order: 0;
 }
 
 .budget-percent-input {
@@ -433,8 +446,9 @@
 
 .budget-amount-input-group {
     position: relative;
-    width: 100px;
-    flex-shrink: 0;
+    flex: 1 1 auto;
+    min-width: 8rem;
+    order: 0;
 }
 
 .budget-amount-input {
@@ -592,15 +606,14 @@
 }
 
 .budget-summary-item__name {
-    flex-shrink: 0;
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: var(--app-font-size-small);
     font-weight: var(--app-font-weight-medium);
     color: var(--app-text);
-    width: 85px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    min-width: 0;
 }
 
 .budget-summary-item__bar-wrapper {
@@ -627,6 +640,7 @@
     gap: 0.5rem;
     font-family: var(--app-font-mono);
     font-size: var(--app-font-size-small);
+    flex-wrap: wrap;
 }
 
 .budget-summary-item__percent {
@@ -647,6 +661,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
     padding: 0.5rem 0.6rem;
     background: var(--app-surface-soft) !important;
     border-top: 2px solid var(--app-border);
@@ -679,20 +695,12 @@
 /* Medium screens — tighten the two-column layout */
 @media (max-width: 1199px) {
     .budget-categories {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.5rem;
     }
 
     .budget-category-card {
         padding: 0.65rem;
-    }
-
-    .budget-category__input-group {
-        width: 65px;
-    }
-
-    .budget-amount-input-group {
-        width: 85px;
     }
 
     .budget-chart-container {
@@ -705,14 +713,6 @@
 
     .budget-summary-list-container {
         max-height: 220px;
-    }
-
-    .budget-summary-item__name {
-        width: 70px;
-    }
-
-    .budget-summary-item__amount {
-        min-width: 50px;
     }
 }
 
@@ -737,14 +737,6 @@
 
     .budget-summary-list-container {
         max-height: 240px;
-    }
-
-    .budget-category__input-group {
-        width: 70px;
-    }
-
-    .budget-amount-input-group {
-        width: 90px;
     }
 }
 
@@ -810,10 +802,6 @@
         max-height: 200px;
     }
 
-    .budget-summary-item__name {
-        width: 60px;
-    }
-
     .budget-summary-item__bar-wrapper {
         height: 4px;
     }
@@ -829,15 +817,6 @@
 
     .budget-category-card__controls {
         flex-wrap: wrap;
-    }
-
-    .budget-amount-input-group {
-        width: 90px;
-    }
-
-    .budget-percent-input-group,
-    .budget-amount-input-group {
-        flex-shrink: 0;
     }
 }
 

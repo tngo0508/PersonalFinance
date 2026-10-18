@@ -38,8 +38,8 @@
                     </span>
                     Budget Planner
                 </h1>
-                <p class="budget-subtitle">Allocate your monthly income across spending categories. Percentages must add
-                    up to 100%.</p>
+                <p class="budget-subtitle">Allocate your monthly income across spending categories. Amounts must add
+                    up to your monthly income exactly.</p>
             </div>
         </div>
     </div>
@@ -92,7 +92,7 @@
                             <h2 class="budget-card__title">Category Allocations</h2>
                         </div>
                         <span class="budget-total-badge" id="budgetTotalBadge">
-                            <span id="budgetTotalPercent">0</span>% / 100%
+                            <span id="budgetTotalAmount">$0</span> / <span id="budgetIncomeAmount">$0</span>
                         </span>
                     </div>
                     <div class="budget-card__body">
@@ -115,17 +115,17 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Housing" min="0" max="100" step="any"
-                                           data-category="Housing" value="@Model.Housing"
+                                           data-category="Housing" value="@Model.PercentFor(Model.Housing)"
                                            aria-label="Housing allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Housing" type="number" class="form-control budget-percent-input"
+                                        <input type="number" class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Housing"
                                                aria-label="Housing percentage"/>
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Housing" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Housing"
                                                aria-label="Housing dollar amount"/>
                                     </div>
@@ -150,17 +150,17 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Food" min="0" max="100" step="any"
-                                           data-category="Food" value="@Model.Food"
+                                           data-category="Food" value="@Model.PercentFor(Model.Food)"
                                            aria-label="Food allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Food" type="number" class="form-control budget-percent-input"
+                                        <input type="number" class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Food"
                                                aria-label="Food percentage"/>
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Food" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Food"
                                                aria-label="Food dollar amount"/>
                                     </div>
@@ -186,11 +186,10 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Transportation" min="0" max="100" step="any"
-                                           data-category="Transportation" value="@Model.Transportation"
+                                           data-category="Transportation" value="@Model.PercentFor(Model.Transportation)"
                                            aria-label="Transportation allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Transportation" type="number"
-                                               class="form-control budget-percent-input"
+                                        <input type="number" class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Transportation"
                                                aria-label="Transportation percentage"/>
                                         <span class="budget-percent-input__suffix">%</span>
@@ -222,10 +221,10 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Utilities" min="0" max="100" step="any"
-                                           data-category="Utilities" value="@Model.Utilities"
+                                           data-category="Utilities" value="@Model.PercentFor(Model.Utilities)"
                                            aria-label="Utilities allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Utilities" type="number"
+                                        <input type="number"
                                                class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Utilities"
                                                aria-label="Utilities percentage"/>
@@ -233,7 +232,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Utilities" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Utilities"
                                                aria-label="Utilities dollar amount"/>
                                     </div>
@@ -258,10 +257,10 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Insurance" min="0" max="100" step="any"
-                                           data-category="Insurance" value="@Model.Insurance"
+                                           data-category="Insurance" value="@Model.PercentFor(Model.Insurance)"
                                            aria-label="Insurance allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Insurance" type="number"
+                                        <input type="number"
                                                class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Insurance"
                                                aria-label="Insurance percentage"/>
@@ -269,7 +268,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Insurance" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Insurance"
                                                aria-label="Insurance dollar amount"/>
                                     </div>
@@ -294,10 +293,10 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Healthcare" min="0" max="100" step="any"
-                                           data-category="Healthcare" value="@Model.Healthcare"
+                                           data-category="Healthcare" value="@Model.PercentFor(Model.Healthcare)"
                                            aria-label="Healthcare allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Healthcare" type="number"
+                                        <input type="number"
                                                class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Healthcare"
                                                aria-label="Healthcare percentage"/>
@@ -305,7 +304,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Healthcare" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Healthcare"
                                                aria-label="Healthcare dollar amount"/>
                                     </div>
@@ -330,17 +329,17 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Savings" min="0" max="100" step="any"
-                                           data-category="Savings" value="@Model.Savings"
+                                           data-category="Savings" value="@Model.PercentFor(Model.Savings)"
                                            aria-label="Savings allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Savings" type="number" class="form-control budget-percent-input"
+                                        <input type="number" class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Savings"
                                                aria-label="Savings percentage"/>
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Savings" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Savings"
                                                aria-label="Savings dollar amount"/>
                                     </div>
@@ -365,10 +364,10 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-DebtRepayment" min="0" max="100" step="any"
-                                           data-category="DebtRepayment" value="@Model.DebtRepayment"
+                                           data-category="DebtRepayment" value="@Model.PercentFor(Model.DebtRepayment)"
                                            aria-label="Debt Repayment allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="DebtRepayment" type="number"
+                                        <input type="number"
                                                class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="DebtRepayment"
                                                aria-label="Debt Repayment percentage"/>
@@ -376,7 +375,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="DebtRepayment" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="DebtRepayment"
                                                aria-label="Debt Repayment dollar amount"/>
                                     </div>
@@ -401,10 +400,10 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Entertainment" min="0" max="100" step="any"
-                                           data-category="Entertainment" value="@Model.Entertainment"
+                                           data-category="Entertainment" value="@Model.PercentFor(Model.Entertainment)"
                                            aria-label="Entertainment allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Entertainment" type="number"
+                                        <input type="number"
                                                class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Entertainment"
                                                aria-label="Entertainment percentage"/>
@@ -412,7 +411,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Entertainment" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Entertainment"
                                                aria-label="Entertainment dollar amount"/>
                                     </div>
@@ -437,10 +436,10 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Miscellaneous" min="0" max="100" step="any"
-                                           data-category="Miscellaneous" value="@Model.Miscellaneous"
+                                           data-category="Miscellaneous" value="@Model.PercentFor(Model.Miscellaneous)"
                                            aria-label="Miscellaneous allocation percentage"/>
                                     <div class="budget-category__input-group">
-                                        <input asp-for="Miscellaneous" type="number"
+                                        <input type="number"
                                                class="form-control budget-percent-input"
                                                min="0" max="100" step="any" data-category="Miscellaneous"
                                                aria-label="Miscellaneous percentage"/>
@@ -448,7 +447,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Miscellaneous" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Miscellaneous"
                                                aria-label="Miscellaneous dollar amount"/>
                                     </div>
@@ -459,7 +458,7 @@
                         <!-- Remaining Allocation Indicator -->
                         <div class="budget-remaining" id="budgetRemaining">
                             <span class="budget-remaining__label">Remaining to allocate:</span>
-                            <span class="budget-remaining__value" id="budgetRemainingValue">100%</span>
+                            <span class="budget-remaining__value" id="budgetRemainingValue">$0 (0%)</span>
                         </div>
                     </div>
                     <div class="budget-card__footer">
@@ -505,7 +504,7 @@
                                 <div class="budget-summary-total__label">Total</div>
                                 <div class="budget-summary-total__values">
                                     <span id="budgetSummaryTotalPercent">0%</span>
-                                    <span id="budgetSummaryTotalAmount">$0</span>
+                                    <span id="budgetSummaryTotalAmount">$0.00</span>
                                 </div>
                             </div>
                         </div>
@@ -523,17 +522,17 @@
         (function () {
             'use strict';
             window.budgetInitialData = {
-                monthlyIncome: @Model.MonthlyIncome,
-                housing: @Model.Housing,
-                food: @Model.Food,
-                transportation: @Model.Transportation,
-                utilities: @Model.Utilities,
-                insurance: @Model.Insurance,
-                healthcare: @Model.Healthcare,
-                savings: @Model.Savings,
-                debtRepayment: @Model.DebtRepayment,
-                entertainment: @Model.Entertainment,
-                miscellaneous: @Model.Miscellaneous
+                monthlyIncome: @Model.MonthlyIncome.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                housing: @Model.Housing.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                food: @Model.Food.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                transportation: @Model.Transportation.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                utilities: @Model.Utilities.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                insurance: @Model.Insurance.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                healthcare: @Model.Healthcare.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                savings: @Model.Savings.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                debtRepayment: @Model.DebtRepayment.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                entertainment: @Model.Entertainment.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                miscellaneous: @Model.Miscellaneous.ToString(System.Globalization.CultureInfo.InvariantCulture)
             };
         })();
     </script>
