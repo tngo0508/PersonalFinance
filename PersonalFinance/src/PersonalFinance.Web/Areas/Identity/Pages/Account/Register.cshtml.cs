@@ -69,7 +69,6 @@ public class RegisterModel : PageModel
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = string.Empty;
 
-        [Required]
         [Display(Name = "I agree to the Terms of Service and Privacy Policy")]
         public bool AcceptTerms { get; set; }
     }
@@ -84,6 +83,13 @@ public class RegisterModel : PageModel
     {
         returnUrl ??= Url.Content("~/");
         ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
+        // [Required] on a bool is always satisfied, so acceptance must be enforced explicitly.
+        if (!Input.AcceptTerms)
+        {
+            ModelState.AddModelError("Input.AcceptTerms", "You must agree to the Terms of Service and Privacy Policy to create an account.");
+        }
+
         if (ModelState.IsValid)
         {
             var user = CreateUser();

@@ -71,7 +71,17 @@
     function hideBanner () {
         const banner = document.getElementById('cookieBanner');
         if (banner) {
-            banner.style.display = 'none';
+            banner.hidden = true;
+        }
+    }
+
+    /**
+     * Show the cookie banner (it is rendered hidden so returning visitors never see it flash).
+     */
+    function showBanner () {
+        const banner = document.getElementById('cookieBanner');
+        if (banner) {
+            banner.hidden = false;
         }
     }
 
@@ -83,6 +93,7 @@
 
         // If already consented, load third-party resources silently
         if (consent === 'all') {
+            hideBanner();
             loadThirdParty();
             return;
         }
@@ -94,6 +105,7 @@
         }
 
         // No consent yet — show banner and wire up buttons
+        showBanner();
         const acceptAll = document.getElementById('cookieAcceptAll');
         const acceptEssential = document.getElementById('cookieAcceptEssential');
 

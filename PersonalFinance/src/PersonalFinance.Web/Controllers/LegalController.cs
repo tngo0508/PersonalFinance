@@ -1,7 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PersonalFinance.Web.Controllers;
 
+/// <summary>
+/// Serves the public legal pages (privacy, terms, disclaimer, cookies, contact).
+/// These pages must remain reachable without signing in, for example from the registration form.
+/// </summary>
+[AllowAnonymous]
 public class LegalController : Controller
 {
     [HttpGet("/privacy")]
