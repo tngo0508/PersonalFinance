@@ -7,16 +7,21 @@
     "doc": "docs"
   },
   "scripts": {
-    "lint": "ESLINT_USE_FLAT_CONFIG=false npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js PersonalFinance/src/PersonalFinance.Web/wwwroot/js/",
-    "lint:fix": "ESLINT_USE_FLAT_CONFIG=false npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js --fix PersonalFinance/src/PersonalFinance.Web/wwwroot/js/",
+    "lint": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js PersonalFinance/src/PersonalFinance.Web/wwwroot/js/",
+    "lint:fix": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js --fix PersonalFinance/src/PersonalFinance.Web/wwwroot/js/",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:e2e": "node e2e-tests/ui-test.js",
-    "test:api": "node e2e-tests/api-test.js"
+    "test:api": "node e2e-tests/api-test.js",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "playwright": "^1.64.1"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2"
   }
 }
