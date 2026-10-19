@@ -190,13 +190,77 @@ public class RbacTests
         await AddUserAsync(provider, "b@example.com", confirmed: false);
         await RbacSeeder.SeedAsync(provider);
 
-        var summary = await new AdminService(provider.GetRequiredService<AppDbContext>()).GetSummaryAsync();
+        var summary = await CreateAdminService(provider).GetSummaryAsync();
 
         Assert.Equal(3, summary.TotalAccounts);
         Assert.Equal(2, summary.ConfirmedAccounts);
         Assert.Equal(1, summary.UnconfirmedAccounts);
         Assert.Equal(1, summary.AccountsPerRole[AppRoles.Admin]);
         Assert.NotNull(admin);
+    }
+
+    private static AdminService CreateAdminService(IServiceProvider provider) => new(
+        provider.GetRequiredService<AppDbContext>(),
+        provider.GetRequiredService<UserManager<IdentityUser>>(),
+        provider.GetRequiredService<RoleManager<IdentityRole>>());
+
+    [Fact]
+    public async Task AdminService_CreatesAndDeletesCustomRole_ButNotBuiltInOrNonEmpty()
+    {
+        using var provider = BuildProvider(adminEmail: null);
+        await RbacSeeder.SeedAsync(provider);
+        var service = CreateAdminService(provider);
+        var user = await AddUserAsync(provider, "a@example.com", confirmed: true);
+
+        Assert.True((await service.CreateRoleAsync("ReadOnly")).Succeeded);
+        Assert.False((await service.CreateRoleAsync("readonly")).Succeeded);
+        Assert.False((await service.CreateRoleAsync("bad name!")).Succeeded);
+        Assert.False((await service.DeleteRoleAsync(AppRoles.Admin)).Succeeded);
+
+        Assert.True((await service.AssignRoleAsync(user.Id, "ReadOnly")).Succeeded);
+        Assert.False((await service.DeleteRoleAsync("ReadOnly")).Succeeded);
+
+        Assert.True((await service.RemoveRoleAsync("someone-else", user.Id, "ReadOnly")).Succeeded);
+        Assert.True((await service.DeleteRoleAsync("ReadOnly")).Succeeded);
+        Assert.Equal(AdminOperationStatus.NotFound, (await service.DeleteRoleAsync("ReadOnly")).Status);
+    }
+
+    [Fact]
+    public async Task AdminService_AssignsRole_UpdatesStampAndListsIt()
+    {
+        using var provider = BuildProvider(adminEmail: null);
+        await RbacSeeder.SeedAsync(provider);
+        var service = CreateAdminService(provider);
+        var user = await AddUserAsync(provider, "a@example.com", confirmed: true);
+        var stampBefore = user.SecurityStamp;
+
+        Assert.True((await service.AssignRoleAsync(user.Id, AppRoles.Admin)).Succeeded);
+        Assert.True((await service.AssignRoleAsync(user.Id, AppRoles.Admin)).Succeeded);
+
+        var listed = Assert.Single(await service.GetUsersAsync());
+        Assert.Equal([AppRoles.Admin], listed.Roles);
+        var reloaded = (await provider.GetRequiredService<UserManager<IdentityUser>>().FindByIdAsync(user.Id))!;
+        Assert.NotEqual(stampBefore, reloaded.SecurityStamp);
+        Assert.Equal(1, Assert.Single(await service.GetRolesAsync()).UserCount);
+        Assert.Equal(AdminOperationStatus.NotFound, (await service.AssignRoleAsync("nope", AppRoles.Admin)).Status);
+        Assert.Equal(AdminOperationStatus.NotFound, (await service.AssignRoleAsync(user.Id, "Missing")).Status);
+    }
+
+    [Fact]
+    public async Task AdminService_RefusesSelfDemotionAndRemovingLastAdmin()
+    {
+        using var provider = BuildProvider(adminEmail: null);
+        await RbacSeeder.SeedAsync(provider);
+        var service = CreateAdminService(provider);
+        var first = await AddUserAsync(provider, "a@example.com", confirmed: true);
+        var second = await AddUserAsync(provider, "b@example.com", confirmed: true);
+        await service.AssignRoleAsync(first.Id, AppRoles.Admin);
+
+        Assert.False((await service.RemoveRoleAsync(first.Id, first.Id, AppRoles.Admin)).Succeeded);
+        Assert.False((await service.RemoveRoleAsync(second.Id, first.Id, AppRoles.Admin)).Succeeded);
+
+        await service.AssignRoleAsync(second.Id, AppRoles.Admin);
+        Assert.True((await service.RemoveRoleAsync(second.Id, first.Id, AppRoles.Admin)).Succeeded);
     }
 
     [Theory]

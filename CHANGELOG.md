@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Admin Role Management**: The Admin Dashboard can now assign and remove roles for accounts and add or delete roles.
+  - New admin-only endpoints under `api/admin` (`users`, `roles`, `users/{id}/roles/{role}`) return 403 to non-admins.
+  - Built-in roles cannot be deleted, a role with members cannot be deleted, and the last Admin or your own Admin role cannot be removed.
+  - Role changes update the account's security stamp so the Web session picks up the change.
 - **Role-Based Access Control and Admin Dashboard**: Added Identity roles with named policies and an admin-only Admin Dashboard.
   - `AppRoles` and `AppPolicies` (`RequireAdmin`) live in `PersonalFinance.Shared`; both apps enable `.AddRoles<IdentityRole>()` and register the policy.
   - On startup, `RbacSeeder` creates every role and grants Admin (add-only) to the confirmed account matching `Rbac:AdminEmail`; see `docs/DEVELOPMENT.md`.
