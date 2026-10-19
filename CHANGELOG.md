@@ -116,10 +116,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Budget Planner Allocation Flexibility**: Allowed budget allocations to be less than or equal to monthly income instead of forcing exact equality.
-  - Relaxed validation in `SaveBudgetRequestValidator` and `BudgetController` so users can save budget allocations when total allocated amount is less than or equal to monthly income.
-  - Prevented saving only when total allocations exceed monthly income, with clear error messaging.
-  - Updated Budget Planner header guidance to reflect that allocations cannot exceed monthly income.
+- **Budget Planner Flexible Allocations & Warning**: Replaced blocking allocation constraints with an informational warning when budget allocations exceed monthly income.
+  - Allowed budget allocations to be saved whether under, equal to, or exceeding monthly income, empowering users to plan ahead flexibly without data loss.
+  - Displayed a persistent warning banner upon saving when allocations exceed monthly income and updated UI remaining indicators.
+- **Budget Planner Transportation Field Binding**: Fixed Transportation allocation resetting to an empty string on save due to a missing `asp-for` tag helper.
+  - Added `asp-for="Transportation"` to the Transportation amount input field in `PersonalFinance.Web/Views/Budget/Index.cshtml`.
+  - Added unit test asserting all 10 budget categories in `Index.cshtml` have correct `asp-for` bindings to prevent future regressions.
 - **Cookie Banner `[hidden]` Safeguard**: Added `.cookie-banner[hidden] { display: none; }` so a future `display` rule on the banner can no longer override the `hidden` attribute and keep it permanently visible.
   - Added Playwright checks (Test 8b) for the banner: visible with no stored choice, hidden after "Accept All", and hidden on reload for "Accept All" and "Essential Only".
 - **Contact Page Email**: The Contact page now uses `tngo0508@gmail.com` for both general and security inquiries instead of the unconfigured `support@`/`security@personalfinance.app` addresses.

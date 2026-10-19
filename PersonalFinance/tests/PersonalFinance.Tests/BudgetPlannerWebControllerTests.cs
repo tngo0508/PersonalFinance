@@ -41,14 +41,14 @@ public class BudgetPlannerWebControllerTests
             MonthlyIncome = 3575.00m,
             Housing = 700.00m,
             Food = 643.14m,
-            Transportation = 0.00m,
+            Transportation = 350.00m,
             Utilities = 199.84m,
             Insurance = 175.18m,
             Healthcare = 375.02m,
             Savings = 500.00m,
             DebtRepayment = 300.00m,
             Entertainment = 200.00m,
-            Miscellaneous = 417.49m // total = 3510.67 < 3575.00
+            Miscellaneous = 76.82m // total = 3520.00 < 3575.00
         };
 
         var result = await controller.Save(model);
@@ -58,11 +58,62 @@ public class BudgetPlannerWebControllerTests
         Assert.NotNull(fakeApi.SavedRequest);
         Assert.Equal(3575.00m, fakeApi.SavedRequest!.MonthlyIncome);
         Assert.Equal(700.00m, fakeApi.SavedRequest.Allocations.Housing);
+        Assert.Equal(643.14m, fakeApi.SavedRequest.Allocations.Food);
+        Assert.Equal(350.00m, fakeApi.SavedRequest.Allocations.Transportation);
+        Assert.Equal(199.84m, fakeApi.SavedRequest.Allocations.Utilities);
+        Assert.Equal(175.18m, fakeApi.SavedRequest.Allocations.Insurance);
+        Assert.Equal(375.02m, fakeApi.SavedRequest.Allocations.Healthcare);
+        Assert.Equal(500.00m, fakeApi.SavedRequest.Allocations.Savings);
+        Assert.Equal(300.00m, fakeApi.SavedRequest.Allocations.DebtRepayment);
+        Assert.Equal(200.00m, fakeApi.SavedRequest.Allocations.Entertainment);
+        Assert.Equal(76.82m, fakeApi.SavedRequest.Allocations.Miscellaneous);
         Assert.Equal("Budget saved successfully.", controller.TempData["SaveSuccess"]);
     }
 
     [Fact]
-    public async Task Save_WhenAllocationsExceedMonthlyIncome_ReturnsViewWithError()
+    public async Task Index_WhenBudgetLoadedFromApi_PopulatesAllCategoriesIncludingTransportation()
+    {
+        var fakeApi = new FakePersonalFinanceApi
+        {
+            BudgetResponse = new BudgetResponseDto
+            {
+                MonthlyIncome = 4000.00m,
+                Allocations = new BudgetAllocationsDto
+                {
+                    Housing = 1000m,
+                    Food = 500m,
+                    Transportation = 300m,
+                    Utilities = 200m,
+                    Insurance = 150m,
+                    Healthcare = 100m,
+                    Savings = 800m,
+                    DebtRepayment = 400m,
+                    Entertainment = 250m,
+                    Miscellaneous = 300m
+                }
+            }
+        };
+
+        var controller = CreateController(fakeApi);
+        var result = await controller.Index();
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<BudgetViewModel>(viewResult.Model);
+        Assert.Equal(4000.00m, model.MonthlyIncome);
+        Assert.Equal(1000m, model.Housing);
+        Assert.Equal(500m, model.Food);
+        Assert.Equal(300m, model.Transportation);
+        Assert.Equal(200m, model.Utilities);
+        Assert.Equal(150m, model.Insurance);
+        Assert.Equal(100m, model.Healthcare);
+        Assert.Equal(800m, model.Savings);
+        Assert.Equal(400m, model.DebtRepayment);
+        Assert.Equal(250m, model.Entertainment);
+        Assert.Equal(300m, model.Miscellaneous);
+    }
+
+    [Fact]
+    public async Task Save_WhenAllocationsExceedMonthlyIncome_SavesBudgetAndSetsWarning()
     {
         var fakeApi = new FakePersonalFinanceApi();
         var controller = CreateController(fakeApi);
@@ -75,12 +126,14 @@ public class BudgetPlannerWebControllerTests
 
         var result = await controller.Save(model);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.Equal("Index", viewResult.ViewName);
-        Assert.Null(fakeApi.SavedRequest);
-        Assert.False(controller.ModelState.IsValid);
-        Assert.Contains(controller.ModelState.Values.SelectMany(v => v.Errors),
-            e => e.ErrorMessage.Contains("Budget allocations cannot exceed monthly income"));
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Index", redirectResult.ActionName);
+        Assert.NotNull(fakeApi.SavedRequest);
+        Assert.Equal(3000.00m, fakeApi.SavedRequest!.MonthlyIncome);
+        Assert.Equal(2000.00m, fakeApi.SavedRequest.Allocations.Housing);
+        Assert.Equal(1500.00m, fakeApi.SavedRequest.Allocations.Food);
+        Assert.NotNull(controller.TempData["SaveWarning"]);
+        Assert.Contains("exceed your monthly income", controller.TempData["SaveWarning"]!.ToString());
     }
 
     [Fact]
@@ -99,6 +152,36 @@ public class BudgetPlannerWebControllerTests
         Assert.Equal("Index", viewResult.ViewName);
         Assert.Null(fakeApi.SavedRequest);
         Assert.False(controller.ModelState.IsValid);
+    }
+
+    [Fact]
+    public void BudgetIndexView_ContainsAspForBindingsForAllCategories()
+    {
+        var viewPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/PersonalFinance.Web/Views/Budget/Index.cshtml"));
+        if (!File.Exists(viewPath))
+        {
+            var dir = AppContext.BaseDirectory;
+            while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "PersonalFinance.sln")))
+            {
+                var parent = Directory.GetParent(dir);
+                if (parent == null) break;
+                dir = parent.FullName;
+            }
+            viewPath = Path.Combine(dir, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Budget", "Index.cshtml");
+        }
+
+        Assert.True(File.Exists(viewPath), $"View file should exist at: {viewPath}");
+        var content = File.ReadAllText(viewPath);
+        var expectedCategories = new[]
+        {
+            "Housing", "Food", "Transportation", "Utilities", "Insurance",
+            "Healthcare", "Savings", "DebtRepayment", "Entertainment", "Miscellaneous"
+        };
+
+        foreach (var category in expectedCategories)
+        {
+            Assert.Contains($"asp-for=\"{category}\"", content);
+        }
     }
 }
 

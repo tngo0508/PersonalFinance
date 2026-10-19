@@ -303,9 +303,10 @@
 
         const remainingEl = document.getElementById('budgetRemainingValue');
         const remainingContainer = document.getElementById('budgetRemaining');
+        const remainingLabelEl = document.querySelector('.budget-remaining__label');
 
         if (remainingEl) {
-            remainingEl.textContent = '$' + formatCurrency(Math.abs(remainingAmount)) + ' (' + remainingPct.toFixed(1) + '%)';
+            remainingEl.textContent = '$' + formatCurrency(Math.abs(remainingAmount)) + ' (' + Math.abs(remainingPct).toFixed(1) + '%)';
         }
 
         if (remainingContainer) {
@@ -313,8 +314,16 @@
 
             if (totalCents > incomeCents) {
                 remainingContainer.classList.add('budget-remaining--over');
-            } else if (remainingCents === 0) {
-                remainingContainer.classList.add('budget-remaining--exact');
+                if (remainingLabelEl) {
+                    remainingLabelEl.textContent = 'Over budget by:';
+                }
+            } else {
+                if (remainingCents === 0) {
+                    remainingContainer.classList.add('budget-remaining--exact');
+                }
+                if (remainingLabelEl) {
+                    remainingLabelEl.textContent = 'Remaining to allocate:';
+                }
             }
         }
     }

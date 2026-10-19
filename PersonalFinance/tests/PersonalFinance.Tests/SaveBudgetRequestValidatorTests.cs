@@ -70,7 +70,7 @@ public class SaveBudgetRequestValidatorTests
     }
 
     [Fact]
-    public void Validate_WhenAllocationsExceedIncome_IsInvalid()
+    public void Validate_WhenAllocationsExceedIncome_IsValid()
     {
         var request = new SaveBudgetRequestDto
         {
@@ -84,8 +84,7 @@ public class SaveBudgetRequestValidatorTests
 
         var result = _validator.Validate(request);
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.ErrorMessage.Contains("Budget allocations cannot exceed monthly income"));
+        Assert.True(result.IsValid);
     }
 
     [Theory]
