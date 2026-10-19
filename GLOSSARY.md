@@ -42,6 +42,24 @@ A pattern where entities are marked as deleted (`IsDeleted = true`) instead of b
 ### Shared Layer
 `PersonalFinance.Shared` — cross-cutting types. Contains DTOs (organized by feature), API contracts, constants, and shared helpers. Referenced by all layers.
 
+## Access Control
+
+### Account
+A person's sign-in identity in the application. An account with no Role is an ordinary signed-in user.
+_Avoid_: Member, customer
+
+### Role
+A named label assigned to an Account that determines which Policies it satisfies. Roles are additive; an Account may hold none, one, or several.
+_Avoid_: Group, permission level
+
+### Admin
+The Role held by the operator of the application. Only Admins can reach admin pages and admin API endpoints.
+_Avoid_: Owner (clashes with "user-owned" data), superuser, root
+
+### Policy
+A named access rule, such as "requires Admin", that pages and endpoints check instead of naming a Role directly.
+_Avoid_: Rule, guard
+
 ## Domain
 
 ### Net Worth

@@ -211,6 +211,20 @@ During execution, the User Secrets store automatically overrides `Brevo:ApiKey` 
 
 ---
 
+### Admin Account (`Rbac:AdminEmail`)
+
+On startup the database seeder creates the roles in `AppRoles` and grants **Admin** to the account whose email matches `Rbac:AdminEmail`, but only if that account exists and its email is confirmed. It never removes roles.
+
+```powershell
+dotnet user-secrets set "Rbac:AdminEmail" "you@example.com" --project PersonalFinance/src/PersonalFinance.Web
+```
+
+- In Azure, set the environment variable `Rbac__AdminEmail` (or a Key Vault reference). Never commit a real value to `appsettings.json`.
+- If the account does not exist yet, register and confirm it, then restart the app.
+- After the first grant, **sign out and back in**: the Web cookie keeps its role claims until the next security-stamp check (up to 30 minutes).
+
+---
+
 ### Google Drive API Configuration
 
 To interact with Google Drive folders without entering a key in the web interface on each session:

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
 namespace PersonalFinance.ApiService.Infrastructure;
@@ -32,24 +33,37 @@ public class XUserIdAuthenticationHandler : AuthenticationHandler<Authentication
         _logger = logger;
     }
 
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // If the X-User-Id header is not present, return no result so the next handler can try
         if (!Request.Headers.TryGetValue("X-User-Id", out var userIdValues) ||
             string.IsNullOrEmpty(userIdValues))
-            return Task.FromResult(AuthenticateResult.NoResult());
+            return AuthenticateResult.NoResult();
 
         var userId = userIdValues.First() ?? string.Empty;
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, userId),
-            new Claim(ClaimTypes.Name, userId)
+            new(ClaimTypes.NameIdentifier, userId),
+            new(ClaimTypes.Name, userId)
         };
+
+        // Roles are always read from the database on every request; a client-supplied roles header is never trusted.
+        var userManager = Context.RequestServices.GetService<UserManager<IdentityUser>>();
+        if (userManager is not null)
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user is not null)
+            {
+                var roles = await userManager.GetRolesAsync(user);
+                claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+            }
+        }
+
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
         _logger.LogDebug("Authenticated user {UserId} via X-User-Id header.", userId);
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return AuthenticateResult.Success(ticket);
     }
 }

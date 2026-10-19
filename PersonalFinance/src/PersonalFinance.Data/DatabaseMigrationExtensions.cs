@@ -71,6 +71,9 @@ public static class DatabaseMigrationExtensions
                 // Seed initial community data if missing
                 await SeedCommunityDataAsync(db, logger, cancellationToken);
 
+                // Seed Identity roles and the configured Admin grant
+                await RbacSeeder.SeedAsync(scope.ServiceProvider, logger, cancellationToken);
+
                 logger?.LogInformation("Database migration and initialization completed successfully.");
                 return;
             }

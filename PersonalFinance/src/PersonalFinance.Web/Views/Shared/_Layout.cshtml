@@ -1,8 +1,12 @@
 @using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authorization
 @using PersonalFinance.Shared.Constants
 <!DOCTYPE html>
 @inject IAntiforgery Antiforgery
+@inject IAuthorizationService AuthorizationService
 @{
+    var isAdmin = User.Identity?.IsAuthenticated == true
+                  && (await AuthorizationService.AuthorizeAsync(User, AppPolicies.RequireAdmin)).Succeeded;
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var currentController = ViewContext.RouteData.Values["controller"] as string;
     var pageTitle = ViewData["Title"] as string;
@@ -119,6 +123,19 @@
                     <span class="sidebar-link-text">Google Drive</span>
                 </a>
             </div>
+
+            @if (isAdmin)
+            {
+                <!-- Admin -->
+                <div class="sidebar-group">
+                    <div class="sidebar-group-label">Admin</div>
+                    <a class="sidebar-link @(currentController == "Admin" ? "active" : "")"
+                       asp-area="" asp-controller="Admin" asp-action="Index">
+                        <span class="sidebar-link-icon"><i data-lucide="shield-check"></i></span>
+                        <span class="sidebar-link-text">Admin Dashboard</span>
+                    </a>
+                </div>
+            }
         </nav>
     </aside>
 }
