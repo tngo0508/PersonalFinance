@@ -38,6 +38,13 @@ param brevoSenderName string = 'PersonalFinance'
 @secure()
 param dbConnectionString string = ''
 
+@description('Email of the account granted the Admin role at startup (Rbac:AdminEmail)')
+param rbacAdminEmail string = ''
+
+@description('Shared secret sent to the API service as X-Internal-Key (Internal:ApiKey)')
+@secure()
+param internalApiKey string = ''
+
 @description('CPU core allocation for the container (Consumption tier minimum: 0.25)')
 param cpu string = '0.25'
 
@@ -97,6 +104,12 @@ var secrets = concat(
     {
       name: 'db-connection-string'
       value: dbConnectionString
+    }
+  ] : [],
+  !empty(internalApiKey) ? [
+    {
+      name: 'internal-api-key'
+      value: internalApiKey
     }
   ] : []
 )
@@ -160,7 +173,21 @@ var dbEnv = !empty(dbConnectionString) ? [
   }
 ] : []
 
-var containerEnvVars = concat(baseEnv, googleClientIdEnv, googleClientSecretEnv, brevoEnv, dbEnv)
+var rbacEnv = !empty(rbacAdminEmail) ? [
+  {
+    name: 'Rbac__AdminEmail'
+    value: rbacAdminEmail
+  }
+] : []
+
+var internalKeyEnv = !empty(internalApiKey) ? [
+  {
+    name: 'Internal__ApiKey'
+    secretRef: 'internal-api-key'
+  }
+] : []
+
+var containerEnvVars = concat(baseEnv, googleClientIdEnv, googleClientSecretEnv, brevoEnv, dbEnv, rbacEnv, internalKeyEnv)
 
 resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name

@@ -22,6 +22,10 @@ param dbConnectionString string = ''
 @secure()
 param openAiApiKey string = ''
 
+@description('Shared secret the Web app sends as X-Internal-Key (Internal:ApiKey)')
+@secure()
+param internalApiKey string = ''
+
 @description('CPU core allocation for the container (Consumption tier minimum: 0.25)')
 param cpu string = '0.25'
 
@@ -73,6 +77,12 @@ var secrets = concat(
       name: 'openai-api-key'
       value: openAiApiKey
     }
+  ] : [],
+  !empty(internalApiKey) ? [
+    {
+      name: 'internal-api-key'
+      value: internalApiKey
+    }
   ] : []
 )
 
@@ -112,7 +122,14 @@ var openAiEnv = !empty(openAiApiKey) ? [
   }
 ] : []
 
-var containerEnvVars = concat(baseEnv, googleDriveEnv, dbEnv, openAiEnv)
+var internalKeyEnv = !empty(internalApiKey) ? [
+  {
+    name: 'Internal__ApiKey'
+    secretRef: 'internal-api-key'
+  }
+] : []
+
+var containerEnvVars = concat(baseEnv, googleDriveEnv, dbEnv, openAiEnv, internalKeyEnv)
 
 resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name

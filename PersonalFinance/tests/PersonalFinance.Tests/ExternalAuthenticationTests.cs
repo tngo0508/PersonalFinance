@@ -19,6 +19,10 @@ namespace PersonalFinance.Tests;
 
 public class ExternalAuthenticationTests
 {
+    private sealed class NoOpEmailSender : Microsoft.AspNetCore.Identity.UI.Services.IEmailSender
+    {
+        public Task SendEmailAsync(string email, string subject, string htmlMessage) => Task.CompletedTask;
+    }
     private class TestWebHostEnvironment : IWebHostEnvironment
     {
         public string WebRootPath { get; set; } = string.Empty;
@@ -377,7 +381,9 @@ public class ExternalAuthenticationTests
             signInManager,
             userManager,
             userStore,
-            NullLogger<ExternalLoginModel>.Instance);
+            NullLogger<ExternalLoginModel>.Instance,
+            new NoOpEmailSender(),
+            Microsoft.Extensions.Options.Options.Create(new PersonalFinance.Web.Services.BrevoOptions()));
 
         var result = model.OnGet();
         var redirectResult = Assert.IsType<RedirectToPageResult>(result);

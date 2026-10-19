@@ -57,7 +57,13 @@ try
             options.SignIn.RequireConfirmedAccount = true;
             options.User.RequireUniqueEmail = true;
         })
+        .AddRoles<IdentityRole>()
         .AddEntityFrameworkStores<AppDbContext>();
+
+    builder.Services.AddAuthorizationBuilder()
+        .AddPolicy(AppPolicies.RequireAdmin, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireRole(AppRoles.Admin));
 
     // 3b. Register X-User-Id header-based authentication for internal service-to-service calls
     builder.Services.AddAuthentication(XUserIdAuthenticationDefaults.Scheme)
@@ -109,6 +115,9 @@ try
 
     // 5d. Register Dashboard service
     builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+    // 5d-1. Register Admin service (system-level counts for admin-only endpoints)
+    builder.Services.AddScoped<IAdminService, AdminService>();
 
     // 5e. Register Notification service
     builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -191,6 +200,7 @@ try
     await app.MigrateAndSeedDatabaseAsync();
 
     app.UseHttpsRedirection();
+    app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
 

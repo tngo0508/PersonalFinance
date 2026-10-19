@@ -1,10 +1,16 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using PersonalFinance.Data;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 
@@ -16,13 +22,19 @@ public class ExternalLoginModel : PageModel
     private readonly IUserStore<IdentityUser> _userStore;
     private readonly IUserEmailStore<IdentityUser> _emailStore;
     private readonly ILogger<ExternalLoginModel> _logger;
+    private readonly IEmailSender _emailSender;
+    private readonly BrevoOptions _brevoOptions;
 
     public ExternalLoginModel(
         SignInManager<IdentityUser> signInManager,
         UserManager<IdentityUser> userManager,
         IUserStore<IdentityUser> userStore,
-        ILogger<ExternalLoginModel> logger)
+        ILogger<ExternalLoginModel> logger,
+        IEmailSender emailSender,
+        IOptions<BrevoOptions> brevoOptionsAccessor)
     {
+        _emailSender = emailSender;
+        _brevoOptions = brevoOptionsAccessor.Value;
         _signInManager = signInManager;
         _userManager = userManager;
         _userStore = userStore;
@@ -142,6 +154,7 @@ public class ExternalLoginModel : PageModel
                 if (addLoginResult.Succeeded)
                 {
                     _logger.LogInformation("User created an account using {LoginProvider} provider.", info.LoginProvider);
+                    await _userManager.AssignDefaultRoleAsync(user, _logger);
                     await SynchronizeCustomClaimsAsync(user, info.Principal);
                     await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
                     return LocalRedirect(returnUrl);
@@ -184,37 +197,19 @@ public class ExternalLoginModel : PageModel
 
         if (ModelState.IsValid)
         {
+            // The email was typed by the user, not supplied by the provider, so it is never trusted:
+            // never link it to an existing account and never mark it as confirmed.
             var existingUser = await _userManager.FindByEmailAsync(Input.Email);
             if (existingUser != null)
             {
-                if (existingUser.EmailConfirmed)
-                {
-                    var addLoginResult = await _userManager.AddLoginAsync(existingUser, info);
-                    if (addLoginResult.Succeeded)
-                    {
-                        _logger.LogInformation("Linked {LoginProvider} login to existing user {Email}.", info.LoginProvider, Input.Email);
-                        await SynchronizeCustomClaimsAsync(existingUser, info.Principal);
-                        await _signInManager.SignInAsync(existingUser, isPersistent: false, info.LoginProvider);
-                        return LocalRedirect(returnUrl);
-                    }
-
-                    foreach (var error in addLoginResult.Errors)
-                    {
-                        ModelState.AddModelError(string.Empty, error.Description);
-                    }
-                }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "An account with this email address already exists but has not been confirmed. Please confirm your email address first.");
-                }
-
+                ModelState.AddModelError(string.Empty, "An account with this email address already exists. Sign in with your password and link this provider from Manage > External logins.");
                 return Page();
             }
 
             var user = CreateUser();
             await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
             await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-            user.EmailConfirmed = true;
+            user.EmailConfirmed = false;
 
             var createResult = await _userManager.CreateAsync(user);
             if (createResult.Succeeded)
@@ -222,10 +217,23 @@ public class ExternalLoginModel : PageModel
                 var addLoginResult = await _userManager.AddLoginAsync(user, info);
                 if (addLoginResult.Succeeded)
                 {
-                    _logger.LogInformation("User created an account using {LoginProvider} provider.", info.LoginProvider);
-                    await SynchronizeCustomClaimsAsync(user, info.Principal);
-                    await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
-                    return LocalRedirect(returnUrl);
+                    _logger.LogInformation("User created an unconfirmed account using {LoginProvider} provider.", info.LoginProvider);
+                    await _userManager.AssignDefaultRoleAsync(user, _logger);
+
+                    var userId = await _userManager.GetUserIdAsync(user);
+                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                    var callbackUrl = Url.Page(
+                        "/Account/ConfirmEmail",
+                        pageHandler: null,
+                        values: new { area = "Identity", userId, code, returnUrl },
+                        protocol: Request.Scheme);
+
+                    var appName = _brevoOptions.SenderName ?? "PersonalFinance";
+                    var htmlBody = EmailTemplateHelper.BuildConfirmationEmail(callbackUrl ?? string.Empty, appName);
+                    await _emailSender.SendEmailAsync(Input.Email, $"Confirm your {appName} account", htmlBody);
+
+                    return RedirectToPage("./RegisterConfirmation", new { email = Input.Email, returnUrl });
                 }
 
                 foreach (var error in addLoginResult.Errors)

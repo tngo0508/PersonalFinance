@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Production Admin Provisioning**: The deploy now sets `Rbac__AdminEmail` (default `tngo0508@gmail.com`) and the shared `Internal__ApiKey` on the Web and ApiService container apps.
+  - New Bicep parameters `rbacAdminEmail` and `internalApiKey`; the workflow reads `vars.RBAC_ADMIN_EMAIL` and `secrets.INTERNAL_API_KEY`.
+
+- **Admin Authorization Hardening**: ApiService no longer grants role claims to a caller that only supplies `X-User-Id`.
+  - New shared secret `Internal:ApiKey` (`Internal__ApiKey`): Web sends it as `X-Internal-Key`; when configured, ApiService rejects requests without it. Without it, roles are only attached in Development.
+  - ApiService now calls `UseAuthentication()` before `UseAuthorization()`.
+  - The last-Admin check and removal are serialized so concurrent removals cannot leave zero Admins.
+  - The `User` role backfill runs once (when the role is first created) using a database-side query, so manual removals stay permanent.
+
+### Added
+
+- **Default User Role**: Every newly registered account is now automatically assigned the `User` role; `User` and `Admin` are the two built-in roles.
+  - Applies to password and external-login registration; existing accounts are backfilled once, when the role is first created by the seeder.
+
+- **Admin Role Management**: The Admin Dashboard can now assign and remove roles for accounts and add or delete roles.
+  - New admin-only endpoints under `api/admin` (`users`, `roles`, `users/{id}/roles/{role}`) return 403 to non-admins.
+  - Built-in roles cannot be deleted, a role with members cannot be deleted, and the last Admin or your own Admin role cannot be removed.
+  - Role changes update the account's security stamp so the Web session picks up the change.
+- **Role-Based Access Control and Admin Dashboard**: Added Identity roles with named policies and an admin-only Admin Dashboard.
+  - `AppRoles` and `AppPolicies` (`RequireAdmin`) live in `PersonalFinance.Shared`; both apps enable `.AddRoles<IdentityRole>()` and register the policy.
+  - On startup, `RbacSeeder` creates every role and grants Admin (add-only) to the confirmed account matching `Rbac:AdminEmail`; see `docs/DEVELOPMENT.md`.
+  - ApiService `XUserIdAuthenticationHandler` loads roles from the database on every request; a client-supplied roles header is never trusted (ADR 0004).
+  - Web `/Admin` returns 404 to non-admins; the Admin sidebar group and profile-dropdown link appear only for admins.
+  - `GET api/admin/summary` (403 for non-admins) feeds the dashboard with account counts only.
+
+### Security
+
+- **External Login Email Confirmation**: Closed an account-takeover path where an email typed during external login was auto-confirmed and linked to an existing account.
+  - A typed email now creates an unconfirmed account and sends the standard confirmation email; it is never linked to an existing account.
+
 ### Changed
 
 - **Agent Guidelines and E2E Tooling**: Shrank `AGENTS.md` into a short, always-loaded rule set and moved the full standards to `docs/CODING_STANDARDS.md`.

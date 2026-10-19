@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -72,7 +73,13 @@ try
             options.Password.RequireNonAlphanumeric = true;
             options.Password.RequiredLength = 8;
         })
+        .AddRoles<IdentityRole>()
         .AddEntityFrameworkStores<AppDbContext>();
+
+    builder.Services.AddAuthorizationBuilder()
+        .AddPolicy(AppPolicies.RequireAdmin, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireRole(AppRoles.Admin));
 
     // Persist Data Protection keys to AppDbContext to preserve authentication sessions & antiforgery tokens across container restarts
     builder.Services.AddDataProtection()
@@ -191,6 +198,9 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddTransient<UserIdForwardingHandler>();
 
+    // 6a. Return 404 (not 403) to signed-in non-admins on admin pages
+    builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AdminNotFoundAuthorizationResultHandler>();
+
     // 6b. Register User Consent Service
     builder.Services.AddScoped<IUserConsentService, UserConsentService>();
 
@@ -206,6 +216,16 @@ try
         .AddStandardResilienceHandler();
 
     builder.Services.AddRefitClient<INetWorthApi>()
+        .ConfigureHttpClient(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+        })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
+        .AddStandardResilienceHandler();
+
+    // 7a-1. Register Admin API client (admin-only summary)
+    builder.Services.AddRefitClient<IAdminApi>()
         .ConfigureHttpClient(client =>
         {
             client.BaseAddress = new Uri(apiBaseUrl);
