@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Production Admin Provisioning**: The deploy now sets `Rbac__AdminEmail` (default `tngo0508@gmail.com`) and the shared `Internal__ApiKey` on the Web and ApiService container apps.
+  - New Bicep parameters `rbacAdminEmail` and `internalApiKey`; the workflow reads `vars.RBAC_ADMIN_EMAIL` and `secrets.INTERNAL_API_KEY`.
+
+- **Admin Authorization Hardening**: ApiService no longer grants role claims to a caller that only supplies `X-User-Id`.
+  - New shared secret `Internal:ApiKey` (`Internal__ApiKey`): Web sends it as `X-Internal-Key`; when configured, ApiService rejects requests without it. Without it, roles are only attached in Development.
+  - ApiService now calls `UseAuthentication()` before `UseAuthorization()`.
+  - The last-Admin check and removal are serialized so concurrent removals cannot leave zero Admins.
+  - The `User` role backfill runs once (when the role is first created) using a database-side query, so manual removals stay permanent.
+
 ### Added
+
+- **Default User Role**: Every newly registered account is now automatically assigned the `User` role; `User` and `Admin` are the two built-in roles.
+  - Applies to password and external-login registration; existing accounts are backfilled once, when the role is first created by the seeder.
 
 - **Admin Role Management**: The Admin Dashboard can now assign and remove roles for accounts and add or delete roles.
   - New admin-only endpoints under `api/admin` (`users`, `roles`, `users/{id}/roles/{role}`) return 403 to non-admins.

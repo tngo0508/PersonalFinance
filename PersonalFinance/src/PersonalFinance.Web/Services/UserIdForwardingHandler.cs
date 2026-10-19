@@ -10,11 +10,16 @@ namespace PersonalFinance.Web.Services;
 /// </summary>
 public sealed class UserIdForwardingHandler : DelegatingHandler
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private const string InternalKeyHeader = "X-Internal-Key";
+    private const string InternalKeyConfig = "Internal:ApiKey";
 
-    public UserIdForwardingHandler(IHttpContextAccessor httpContextAccessor)
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly string? _internalKey;
+
+    public UserIdForwardingHandler(IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
     {
         _httpContextAccessor = httpContextAccessor;
+        _internalKey = configuration[InternalKeyConfig];
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -24,6 +29,10 @@ public sealed class UserIdForwardingHandler : DelegatingHandler
                    ?? "anonymous";
 
         request.Headers.Add("X-User-Id", userId);
+        if (!string.IsNullOrEmpty(_internalKey))
+        {
+            request.Headers.Add(InternalKeyHeader, _internalKey);
+        }
 
         var response = await base.SendAsync(request, cancellationToken);
         return response;

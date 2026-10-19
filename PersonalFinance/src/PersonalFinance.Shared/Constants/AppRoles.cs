@@ -11,7 +11,12 @@ public static class AppRoles
     public const string Admin = "Admin";
 
     /// <summary>
+    /// The default Role automatically assigned to every newly registered account.
+    /// </summary>
+    public const string User = "User";
+
+    /// <summary>
     /// Every Role the database seeder must ensure exists.
     /// </summary>
-    public static readonly IReadOnlyList<string> All = [Admin];
+    public static readonly IReadOnlyList<string> All = [Admin, User];
 }

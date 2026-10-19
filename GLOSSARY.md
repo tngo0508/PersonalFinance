@@ -45,7 +45,7 @@ A pattern where entities are marked as deleted (`IsDeleted = true`) instead of b
 ## Access Control
 
 ### Account
-A person's sign-in identity in the application. An account with no Role is an ordinary signed-in user.
+A person's sign-in identity in the application. Every new Account is assigned the `User` Role; an Account with no Role is still treated as an ordinary signed-in user.
 _Avoid_: Member, customer
 
 ### Role

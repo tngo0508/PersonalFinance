@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +14,12 @@ namespace PersonalFinance.ApiService.Infrastructure;
 public static class XUserIdAuthenticationDefaults
 {
     public const string Scheme = "XUserId";
+
+    /// <summary>Header carrying the shared secret that proves the caller is the Web app.</summary>
+    public const string InternalKeyHeader = "X-Internal-Key";
+
+    /// <summary>Configuration key holding the shared secret (<c>Internal:ApiKey</c>).</summary>
+    public const string InternalKeyConfig = "Internal:ApiKey";
 }
 
 /// <summary>
@@ -40,6 +48,19 @@ public class XUserIdAuthenticationHandler : AuthenticationHandler<Authentication
             string.IsNullOrEmpty(userIdValues))
             return AuthenticateResult.NoResult();
 
+        var configuredKey = Context.RequestServices.GetService<IConfiguration>()?[XUserIdAuthenticationDefaults.InternalKeyConfig];
+        var keyConfigured = !string.IsNullOrEmpty(configuredKey);
+        if (keyConfigured)
+        {
+            // A configured shared secret is mandatory: callers without it are not authenticated at all.
+            var supplied = Request.Headers[XUserIdAuthenticationDefaults.InternalKeyHeader].FirstOrDefault() ?? string.Empty;
+            if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(supplied), Encoding.UTF8.GetBytes(configuredKey!)))
+            {
+                _logger.LogWarning("Rejected X-User-Id request with a missing or invalid internal key.");
+                return AuthenticateResult.NoResult();
+            }
+        }
+
         var userId = userIdValues.First() ?? string.Empty;
         var claims = new List<Claim>
         {
@@ -48,8 +69,11 @@ public class XUserIdAuthenticationHandler : AuthenticationHandler<Authentication
         };
 
         // Roles are always read from the database on every request; a client-supplied roles header is never trusted.
+        // They are only attached when the caller proved itself with the shared secret (or in Development),
+        // because X-User-Id alone is spoofable when the API is reachable from outside.
+        var isDevelopment = Context.RequestServices.GetService<IHostEnvironment>()?.IsDevelopment() == true;
         var userManager = Context.RequestServices.GetService<UserManager<IdentityUser>>();
-        if (userManager is not null)
+        if (userManager is not null && (keyConfigured || isDevelopment))
         {
             var user = await userManager.FindByIdAsync(userId);
             if (user is not null)

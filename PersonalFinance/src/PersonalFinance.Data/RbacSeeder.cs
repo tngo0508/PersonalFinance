@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,7 @@ public static class RbacSeeder
             return;
         }
 
+        var userRoleCreated = false;
         foreach (var role in AppRoles.All)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -45,7 +47,14 @@ public static class RbacSeeder
                 }
 
                 logger?.LogInformation("Created role {Role}.", role);
+                userRoleCreated |= role == AppRoles.User;
             }
+        }
+
+        // One-time backfill: only when the User role was just created, so manual removals stay permanent.
+        if (userRoleCreated)
+        {
+            await BackfillDefaultRoleAsync(services, userManager, logger, cancellationToken);
         }
 
         var adminEmail = services.GetService<IConfiguration>()?[AdminEmailKey];
@@ -82,5 +91,33 @@ public static class RbacSeeder
 
         await userManager.UpdateSecurityStampAsync(user);
         logger?.LogInformation("Granted Admin role to the configured admin account.");
+    }
+
+    private static async Task BackfillDefaultRoleAsync(
+        IServiceProvider services,
+        UserManager<IdentityUser> userManager,
+        ILogger? logger,
+        CancellationToken cancellationToken)
+    {
+        var db = services.GetRequiredService<AppDbContext>();
+        var userRoleId = await db.Roles.AsNoTracking()
+            .Where(r => r.Name == AppRoles.User)
+            .Select(r => r.Id)
+            .SingleAsync(cancellationToken);
+
+        var missingIds = await db.Users.AsNoTracking()
+            .Where(u => !db.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == userRoleId))
+            .OrderBy(u => u.Id)
+            .Select(u => u.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var id in missingIds)
+        {
+            var account = await userManager.FindByIdAsync(id);
+            if (account is not null)
+            {
+                await userManager.AssignDefaultRoleAsync(account, logger);
+            }
+        }
     }
 }

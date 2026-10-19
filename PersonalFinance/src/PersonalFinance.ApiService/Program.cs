@@ -200,6 +200,7 @@ try
     await app.MigrateAndSeedDatabaseAsync();
 
     app.UseHttpsRedirection();
+    app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
 

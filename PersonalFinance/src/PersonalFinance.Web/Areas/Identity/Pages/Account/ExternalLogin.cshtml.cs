@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PersonalFinance.Data;
 using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
@@ -153,6 +154,7 @@ public class ExternalLoginModel : PageModel
                 if (addLoginResult.Succeeded)
                 {
                     _logger.LogInformation("User created an account using {LoginProvider} provider.", info.LoginProvider);
+                    await _userManager.AssignDefaultRoleAsync(user, _logger);
                     await SynchronizeCustomClaimsAsync(user, info.Principal);
                     await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
                     return LocalRedirect(returnUrl);
@@ -216,6 +218,7 @@ public class ExternalLoginModel : PageModel
                 if (addLoginResult.Succeeded)
                 {
                     _logger.LogInformation("User created an unconfirmed account using {LoginProvider} provider.", info.LoginProvider);
+                    await _userManager.AssignDefaultRoleAsync(user, _logger);
 
                     var userId = await _userManager.GetUserIdAsync(user);
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);

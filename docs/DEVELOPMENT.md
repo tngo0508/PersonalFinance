@@ -222,6 +222,7 @@ dotnet user-secrets set "Rbac:AdminEmail" "you@example.com" --project PersonalFi
 - In Azure, set the environment variable `Rbac__AdminEmail` (or a Key Vault reference). Never commit a real value to `appsettings.json`.
 - If the account does not exist yet, register and confirm it, then restart the app.
 - After the first grant, **sign out and back in**: the Web cookie keeps its role claims until the next security-stamp check (up to 30 minutes).
+- **Production requires a shared secret.** Set the same random value as `Internal__ApiKey` on both the Web and ApiService apps. Web sends it as `X-Internal-Key`; ApiService only attaches roles (and, once configured, only authenticates) when it matches. Without it ApiService attaches no roles outside Development, so Admin pages will fail with 403 from the API. Store it as a secret, never in `appsettings.json`.
 
 ---
 

@@ -46,6 +46,13 @@ param openAiApiKey string = ''
 @description('Whether to provision Azure SQL Database Basic tier (~$4.90/month, 2 GB storage, 5 DTUs)')
 param deploySqlDatabase bool = true
 
+@description('Email of the account granted the Admin role at startup. The account must exist and have a confirmed email.')
+param rbacAdminEmail string = 'tngo0508@gmail.com'
+
+@description('Shared secret between Web and ApiService (X-Internal-Key). Without it ApiService attaches no roles in production.')
+@secure()
+param internalApiKey string = ''
+
 @description('Number of days of log retention in the Log Analytics Workspace (30 days included in free tier)')
 @minValue(30)
 @maxValue(730)
@@ -166,6 +173,7 @@ module apiService 'modules/api-service.bicep' = {
     googleDriveApiKey: googleDriveApiKey
     dbConnectionString: effectiveConnectionString
     openAiApiKey: openAiApiKey
+    internalApiKey: internalApiKey
     exposePublicly: exposeApiPublicly
     enableScheduledScaling: enableScheduledScaling
     businessHoursStartHour: businessHoursStartHour
@@ -191,6 +199,8 @@ module webService 'modules/web-service.bicep' = {
     brevoSenderEmail: brevoSenderEmail
     brevoSenderName: brevoSenderName
     dbConnectionString: effectiveConnectionString
+    rbacAdminEmail: rbacAdminEmail
+    internalApiKey: internalApiKey
     enableScheduledScaling: enableScheduledScaling
     businessHoursStartHour: businessHoursStartHour
     businessHoursStartMinute: businessHoursStartMinute
