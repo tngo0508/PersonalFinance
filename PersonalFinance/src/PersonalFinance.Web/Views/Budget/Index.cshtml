@@ -21,6 +21,20 @@
         </div>
     }
 
+    @if (TempData["SaveWarning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show budget-alert" role="alert">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            @TempData["SaveWarning"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     @if (!ViewData.ModelState.IsValid)
     {
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
@@ -38,8 +52,7 @@
                     </span>
                     Budget Planner
                 </h1>
-                <p class="budget-subtitle">Allocate your monthly income across spending categories. Amounts must add
-                    up to your monthly income exactly.</p>
+                <p class="budget-subtitle">Allocate your monthly income across spending categories to plan ahead.</p>
             </div>
         </div>
     </div>
@@ -196,7 +209,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input type="number" class="form-control budget-amount-input"
+                                        <input asp-for="Transportation" type="number" class="form-control budget-amount-input"
                                                min="0" step="0.01" data-category="Transportation"
                                                aria-label="Transportation dollar amount"/>
                                     </div>

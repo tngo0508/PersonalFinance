@@ -59,7 +59,7 @@ public class BudgetController : Controller
 
     /// <summary>
     /// Saves the current budget allocation via the ApiService.
-    /// Validates that allocations sum to 100% and delegates to the API.
+    /// Validates income and delegates to the API, displaying a warning if allocations exceed income.
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -70,17 +70,10 @@ public class BudgetController : Controller
             return View("Index", model);
         }
 
-        // Validate that allocations sum to monthly income exactly
+        // Validate monthly income
         if (model.MonthlyIncome <= 0)
         {
             ModelState.AddModelError("", "Monthly income must be greater than 0.");
-            return View("Index", model);
-        }
-
-        if (model.TotalAllocated != model.MonthlyIncome)
-        {
-            ModelState.AddModelError("",
-                $"Budget allocations must add up to exactly ${model.MonthlyIncome:F2}. Current total: ${model.TotalAllocated:F2}.");
             return View("Index", model);
         }
 
@@ -89,7 +82,15 @@ public class BudgetController : Controller
         try
         {
             await _personalFinanceApi.SaveBudgetAsync(request, HttpContext.RequestAborted);
-            TempData["SaveSuccess"] = "Budget saved successfully.";
+            if (model.TotalAllocated > model.MonthlyIncome)
+            {
+                TempData["SaveWarning"] =
+                    $"Budget saved. Note: Total allocations (${model.TotalAllocated:F2}) exceed your monthly income of ${model.MonthlyIncome:F2}.";
+            }
+            else
+            {
+                TempData["SaveSuccess"] = "Budget saved successfully.";
+            }
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
         {
