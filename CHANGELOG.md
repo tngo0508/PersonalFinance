@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **AI Assistant Experience**: Redesigned the chat with a roomier indigo panel, focused starter cards, readable conversations, and an accessible multiline composer.
+  - Preserve visible follow-up messages and restore failed questions for retry.
+  - Add keyboard controls, loading feedback, safe response formatting, and mobile navigation clearance.
+
+
 ### Added
 
 - **AI Assistant Finance Scope Protection**: The AI assistant now rejects non-financial queries instantly with a canned refusal, saving OpenAI API tokens.
