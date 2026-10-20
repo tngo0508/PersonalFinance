@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.AI;
+using OpenAI;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
@@ -112,6 +114,28 @@ try
 
     // 5c. Register AI Assistant service for OpenAI chat integration
     builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
+
+    // 5c-0. Register the IChatClient (OpenAI + automatic tool-call loop) when an API key is configured;
+    //       without a key the assistant returns its friendly "unavailable" fallback.
+    var openAiApiKey = builder.Configuration.GetValue<string>("OpenAI:ApiKey");
+    if (!string.IsNullOrWhiteSpace(openAiApiKey))
+    {
+        var openAiModel = builder.Configuration.GetValue<string>("OpenAI:Model") ?? "gpt-4o-mini";
+        builder.Services.AddSingleton<IChatClient>(sp =>
+            new OpenAIClient(openAiApiKey)
+                .GetChatClient(openAiModel)
+                .AsIChatClient()
+                .AsBuilder()
+                .UseFunctionInvocation(sp.GetService<ILoggerFactory>(),
+                    client => client.MaximumIterationsPerRequest = 3)
+                .Build());
+    }
+
+    // 5c-1. Register AI scope filter for deterministic finance-only pre-filtering
+    builder.Services.AddSingleton<IAiScopeFilter, AiScopeFilter>();
+
+    // 5c-2. Register AI quota service for token usage tracking and spend cap enforcement
+    builder.Services.AddScoped<IAiQuotaService, AiQuotaService>();
 
     // 5d. Register Dashboard service
     builder.Services.AddScoped<IDashboardService, DashboardService>();

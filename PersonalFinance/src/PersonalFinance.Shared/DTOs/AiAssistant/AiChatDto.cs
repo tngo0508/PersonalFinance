@@ -21,6 +21,8 @@ public class AiChatRequestDto
 /// </summary>
 public class AiChatResponseDto
 {
+    public string? BudgetWarning { get; set; }
+
     /// <summary>
     /// The AI assistant's response message.
     /// </summary>
@@ -30,6 +32,16 @@ public class AiChatResponseDto
     /// The model used for the response (e.g., "gpt-4o-mini").
     /// </summary>
     public string Model { get; set; } = string.Empty;
+
+    /// <summary>
+    /// True when the response is a canned refusal or acknowledgement and did not call the LLM.
+    /// </summary>
+    public bool IsRefusal { get; set; }
+
+    /// <summary>
+    /// Non-fiduciary disclaimer shown with AI-generated financial guidance, or null for canned responses.
+    /// </summary>
+    public string? Disclaimer { get; set; }
 
     /// <summary>
     /// Timestamp of the response in UTC.

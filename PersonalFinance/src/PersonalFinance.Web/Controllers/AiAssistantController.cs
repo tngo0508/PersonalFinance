@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Net;
+using ApiException = Refit.ApiException;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -13,7 +15,7 @@ namespace PersonalFinance.Web.Controllers;
 /// </summary>
 [Authorize]
 [ApiController]
-[IgnoreAntiforgeryToken]
+[ValidateAntiForgeryToken]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class AiAssistantController : ControllerBase
@@ -52,6 +54,15 @@ public class AiAssistantController : ControllerBase
             var response = await _aiAssistantApi.SendChatMessageAsync(request);
             return Ok(response);
         }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            return new ContentResult
+            {
+                StatusCode = StatusCodes.Status429TooManyRequests,
+                ContentType = "application/json",
+                Content = ex.Content ?? "{\"error\":\"AI usage limit reached. Please try again later.\"}"
+            };
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending chat message to AI assistant for user {UserId}", GetCurrentUserId());
@@ -72,6 +83,15 @@ public class AiAssistantController : ControllerBase
         {
             var response = await _aiAssistantApi.SummarizeArticleAsync(request);
             return Ok(response);
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            return new ContentResult
+            {
+                StatusCode = StatusCodes.Status429TooManyRequests,
+                ContentType = "application/json",
+                Content = ex.Content ?? "{\"error\":\"AI usage limit reached. Please try again later.\"}"
+            };
         }
         catch (Exception ex)
         {

@@ -22,20 +22,10 @@
      * @type {Array<{icon: string, label: string, message: string}>}
      */
     const QUICK_ACTIONS = [
-        {
-            icon: '📊',
-            label: 'Analyze my budget',
-            message: 'Analyze my budget allocations and show me spending patterns.'
-        },
-        { icon: '💰', label: 'Savings tips', message: 'Suggest areas where I can reduce spending to save more money.' },
-        {
-            icon: '📈',
-            label: 'Net worth outlook',
-            message: 'Based on my current finances, project my net worth over the next 5 years.'
-        },
-        { icon: '🎯', label: 'Budget planning', message: 'Help me apply the 50/30/20 budgeting rule to my finances.' },
-        { icon: '🔍', label: 'Spending patterns', message: 'Review my recent transactions and identify spending trends.' },
-        { icon: '🏦', label: 'Retirement check', message: 'Help me understand if I\'m on track for retirement.' }
+        { icon: '\u2197', label: 'Find room to save', message: 'Review my budget and suggest practical ways to save more.' },
+        { icon: '\u25ce', label: 'Review my budget', message: 'Analyze my budget allocations and show me spending patterns.' },
+        { icon: '\u2301', label: 'Explore my net worth', message: 'Help me understand my net worth and progress toward financial independence.' },
+        { icon: '\u2192', label: 'Plan my next step', message: 'Help me prioritize my savings goals and choose a practical next step.' }
     ];
 
     /**
@@ -92,17 +82,38 @@
     /**
      * Convert markdown text to safe HTML for assistant messages.
      * @param {string} markdown
-     * @returns {string}
+     * @returns {DocumentFragment}
      */
     function renderMarkdown (markdown) {
-        if (typeof marked !== 'undefined') {
-            try {
-                return marked.parse(markdown, { async: false });
-            } catch (_e) {
-                // Fall through to plain-text fallback
-            }
+        const fragment = document.createDocumentFragment();
+        if (typeof marked === 'undefined') {
+            fragment.appendChild(document.createTextNode(markdown));
+            return fragment;
         }
-        return markdown.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        // Rebuild only formatting elements; discard raw HTML attributes and unsafe links.
+        const parsed = new DOMParser().parseFromString(marked.parse(markdown, { async: false }), 'text/html');
+        const allowed = new Set(['P', 'BR', 'STRONG', 'EM', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'CODE', 'PRE', 'HR', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'A']);
+        function appendSafe (source, target) {
+            source.childNodes.forEach(function (node) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    target.appendChild(document.createTextNode(node.textContent));
+                } else if (allowed.has(node.nodeName)) {
+                    const element = document.createElement(node.nodeName.toLowerCase());
+                    if (node.nodeName === 'A') {
+                        const href = node.getAttribute('href') || '';
+                        if (/^https?:\/\//i.test(href)) {
+                            element.setAttribute('href', href);
+                            element.setAttribute('target', '_blank');
+                            element.setAttribute('rel', 'noopener noreferrer');
+                        }
+                    }
+                    appendSafe(node, element);
+                    target.appendChild(element);
+                }
+            });
+        }
+        appendSafe(parsed.body, fragment);
+        return fragment;
     }
 
     /**
@@ -115,52 +126,40 @@
         button.className = 'ai-chat-button';
         button.setAttribute('aria-label', 'Open AI Assistant');
         button.setAttribute('title', 'AI Assistant');
-        button.innerHTML =
-            '<svg class="ai-chat-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">'
-            + '<path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.472a.235.235 0 0 0-.42.022A4.357 4.357 0 0 1 6 8.529v.061a.236.236 0 0 0 .18.228 3.52 3.52 0 0 1 .952.24c.26.138.483.3.592.516.233.457.271.982.096 1.438A.236.236 0 0 0 7.64 11h.088a.236.236 0 0 0 .225-.168.236.236 0 0 0 .236-.202c.039-.315.014-.626-.059-.919a.236.236 0 0 0-.164-.184.236.236 0 0 0-.184.157c-.053.173-.086.353-.11.527a.236.236 0 0 0 .134.936.236.236 0 0 0 .225.168h.088z"/>'
-            + '<path d="M8 1.5c-.253 0-.497.1-.68.28L7.5 2v1.5l-.12.12A1.5 1.5 0 0 0 6 5v1a1.5 1.5 0 0 0 1.5 1.5h1A1.5 1.5 0 0 0 10 6V5a1.5 1.5 0 0 0-.38-1.38L9.5 3.5V2l-.12-.12A1.5 1.5 0 0 0 8 1.5z"/>'
-            + '</svg>'
-            + '<span class="ai-chat-button-close" aria-hidden="true">&times;</span>';
+        button.type = 'button';
+        button.setAttribute('aria-controls', 'ai-chat-panel');
+        button.setAttribute('aria-expanded', 'false');
+        button.innerHTML = '<span class="ai-chat-spark" aria-hidden="true">&#10022;</span><span class="ai-chat-launcher-label">Ask assistant</span>';
 
-        // Chat panel
-        const panel = document.createElement('div');
+        const panel = document.createElement('section');
         panel.id = 'ai-chat-panel';
         panel.className = 'ai-chat-panel';
+        panel.hidden = true;
         panel.setAttribute('role', 'dialog');
-        panel.setAttribute('aria-label', 'AI Assistant Chat');
-        panel.setAttribute('aria-hidden', 'true');
-
-        panel.innerHTML =
-            '<div class="ai-chat-header">'
-            + '  <div class="ai-chat-header-info">'
-            + '    <span class="ai-chat-header-dot" aria-hidden="true"></span>'
-            + '    <span class="ai-chat-header-title">AI Assistant</span>'
-            + '  </div>'
-            + '  <div class="ai-chat-header-actions">'
-            + '    <button type="button" class="ai-chat-btn-icon" id="ai-chat-reset" title="New chat" aria-label="Start new chat">'
-            + '      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">'
-            + '        <path d="M11.534 7h3.932a.235.235 0 0 1 .193.383l-1.932 2.222A1.162 1.162 0 0 1 12.866 10H11.5a2.5 2.5 0 0 1-2.5-2.5V4.5a.5.5 0 0 1 1 0v3A1.5 1.5 0 0 0 11.5 9z"/>'
-            + '        <path d="M3.717 11H2.5a.5.5 0 0 1 0-1h1.217A11.974 11.974 0 0 1 1 8c0-2.507.956-4.794 2.517-6.432a.473.473 0 0 1 .692.647A10.974 10.974 0 0 0 2 8a10.974 10.974 0 0 0 2.217 6.783z"/>'
-            + '      </svg>'
-            + '    </button>'
-            + '    <button type="button" class="ai-chat-btn-icon" id="ai-chat-close" title="Close" aria-label="Close">'
-            + '      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">'
-            + '        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>'
-            + '      </svg>'
-            + '    </button>'
-            + '  </div>'
-            + '</div>'
-            + '<div class="ai-chat-body" id="ai-chat-messages"></div>'
-            + '<div class="ai-chat-footer">'
-            + '  <form id="ai-chat-form" class="ai-chat-form">'
-            + '    <input type="text" class="ai-chat-input" id="ai-chat-input" placeholder="Ask about your finances..." aria-label="Chat message" autocomplete="off" />'
-            + '    <button type="submit" class="ai-chat-send-btn" id="ai-chat-send" disabled aria-label="Send message">'
-            + '      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">'
-            + '        <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15zm-1.833 1.89L6.637 10.07l-.295-.06a.76.76 0 0 0-.155 0H5.29L.42.924l13.68.752z"/>'
-            + '      </svg>'
-            + '    </button>'
-            + '  </form>'
-            + '</div>';
+        panel.setAttribute('aria-labelledby', 'ai-chat-title');
+        panel.innerHTML = `
+            <div class="ai-chat-header">
+                <div class="ai-chat-header-info">
+                    <span class="ai-chat-mark" aria-hidden="true">&#10022;</span>
+                    <div><h2 id="ai-chat-title">AI Assistant</h2><p>Your finances, a little clearer</p></div>
+                </div>
+                <div class="ai-chat-header-actions">
+                    <button type="button" class="ai-chat-btn-icon" id="ai-chat-reset" title="New chat" aria-label="Start new chat">+</button>
+                    <button type="button" class="ai-chat-btn-icon" id="ai-chat-close" title="Close" aria-label="Close assistant">&times;</button>
+                </div>
+            </div>
+            <div class="ai-chat-body" id="ai-chat-messages" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
+            <p class="ai-chat-status" id="ai-chat-status" role="status"></p>
+            <div class="ai-chat-footer">
+                <form id="ai-chat-form" class="ai-chat-form">
+                    <textarea class="ai-chat-input" id="ai-chat-input" rows="2" maxlength="2000" placeholder="What would you like to understand?" aria-label="Message the assistant" aria-describedby="ai-chat-input-hint"></textarea>
+                    <div class="ai-chat-composer-actions">
+                        <span id="ai-chat-input-hint">Enter to send &middot; Shift + Enter for a new line</span>
+                        <button type="submit" class="ai-chat-send-btn" id="ai-chat-send" disabled aria-label="Send message">&uarr;</button>
+                    </div>
+                </form>
+                <p class="ai-chat-disclaimer">AI can make mistakes. For guidance, not financial advice.</p>
+            </div>`;
 
         document.body.appendChild(button);
         document.body.appendChild(panel);
@@ -178,7 +177,9 @@
         const greeting = getGreeting();
         let html =
             '<div class="ai-chat-welcome">'
-            + '  <div class="ai-chat-welcome-icon" aria-hidden="true">💡</div>'
+            + '  <div class="ai-chat-welcome-icon" aria-hidden="true">&#10022;</div>'
+            + '  <p class="ai-chat-eyebrow">YOUR FINANCE COMPANION</p>'
+            + '  <h3>Make sense of your money.</h3>'
             + '  <p class="ai-chat-welcome-text">' + escapeHtml(greeting) + '</p>'
             + '  <p class="ai-chat-welcome-hint">Pick a topic or type your own question</p>'
             + '</div>';
@@ -214,11 +215,15 @@
         bubble.className = 'ai-chat-bubble';
 
         if (role === 'assistant') {
-            bubble.innerHTML = renderMarkdown(content);
+            bubble.appendChild(renderMarkdown(content));
         } else {
             bubble.textContent = content;
         }
 
+        const label = document.createElement('span');
+        label.className = 'ai-chat-message-label';
+        label.textContent = role === 'user' ? 'You' : 'Assistant';
+        wrapper.appendChild(label);
         wrapper.appendChild(bubble);
         container.appendChild(wrapper);
         container.scrollTop = container.scrollHeight;
@@ -242,6 +247,7 @@
         const el = document.createElement('div');
         el.className = 'ai-chat-message ai-chat-message-assistant';
         el.id = 'ai-chat-typing';
+        el.setAttribute('aria-label', 'Assistant is thinking');
         el.innerHTML = '<div class="ai-chat-bubble ai-chat-typing"><span></span><span></span><span></span></div>';
         container.appendChild(el);
         container.scrollTop = container.scrollHeight;
@@ -265,7 +271,10 @@
         if (state.isLoading || !message.trim()) {
             return;
         }
+        const historyToSend = state.history.slice(-MAX_HISTORY_SENT);
         state.isLoading = true;
+        document.getElementById('ai-chat-reset').disabled = true;
+        document.getElementById('ai-chat-status').textContent = 'Thinking through your question...';
 
         const input = document.getElementById('ai-chat-input');
         const sendBtn = document.getElementById('ai-chat-send');
@@ -278,7 +287,7 @@
 
         // Clear welcome and show conversation
         const container = document.getElementById('ai-chat-messages');
-        if (container) {
+        if (container && !state.hasInteracted) {
             container.innerHTML = '';
         }
         state.hasInteracted = true;
@@ -286,34 +295,61 @@
         addMessage('user', message);
         if (input) {
             input.value = '';
+            input.style.height = '';
         }
         showTyping();
 
         try {
-            const historyToSend = state.history.slice(-MAX_HISTORY_SENT);
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('meta[name="__RequestVerificationToken"]')?.content || ''
+                },
                 body: JSON.stringify({
                     message: message,
                     conversationHistory: historyToSend
                 })
             });
 
+            if (response.status === 429) {
+                const error = await response.json();
+                const limitError = new Error(error.error || 'AI usage limit reached. Please try again later.');
+                limitError.isUsageLimit = true;
+                throw limitError;
+            }
             if (!response.ok) {
                 throw new Error('API request failed');
             }
 
             const data = await response.json();
             hideTyping();
+            if (typeof data.response !== 'string' || !data.response.trim()) {
+                throw new Error('Empty response');
+            }
             addMessage('assistant', data.response);
-        } catch (_error) {
+            document.getElementById('ai-chat-status').textContent = data.budgetWarning || '';
+            const disclaimer = document.querySelector('.ai-chat-disclaimer');
+            if (disclaimer && data.disclaimer) {
+                disclaimer.textContent = data.disclaimer;
+            }
+        } catch (error) {
             hideTyping();
-            addMessage('assistant', 'I\'m sorry, I encountered an error. Please try again later.');
+            state.history.pop();
+            document.getElementById('ai-chat-status').textContent = error.isUsageLimit
+                ? error.message
+                : 'Couldn\u2019t get a reply. Your question is ready to try again.';
+            if (input) {
+                input.value = message;
+            }
         } finally {
             state.isLoading = false; // eslint-disable-line require-atomic-updates
+            document.getElementById('ai-chat-reset').disabled = false;
             if (input) {
                 input.disabled = false;
+                if (state.isOpen) {
+                    input.focus();
+                }
             }
             if (sendBtn) {
                 sendBtn.disabled = !input || !input.value.trim();
@@ -332,7 +368,9 @@
         }
 
         state.isOpen = true;
+        panel.hidden = false;
         panel.classList.add('ai-chat-panel-open');
+        button.setAttribute('aria-expanded', 'true');
         panel.setAttribute('aria-hidden', 'false');
         button.classList.add('ai-chat-button-active');
 
@@ -357,7 +395,12 @@
         }
 
         state.isOpen = false;
+        panel.hidden = true;
         panel.classList.remove('ai-chat-panel-open');
+        button.setAttribute('aria-expanded', 'false');
+        if (panel.contains(document.activeElement)) {
+            button.focus();
+        }
         panel.setAttribute('aria-hidden', 'true');
         button.classList.remove('ai-chat-button-active');
     }
@@ -377,9 +420,18 @@
      * Reset the chat to the welcome state.
      */
     function resetChat () {
+        if (state.isLoading) {
+            return;
+        }
+        document.getElementById('ai-chat-status').textContent = '';
         state.history = [];
         state.hasInteracted = false;
         renderWelcome();
+        const input = document.getElementById('ai-chat-input');
+        input.value = '';
+        input.style.height = '';
+        document.getElementById('ai-chat-send').disabled = true;
+        input.focus();
     }
 
     /**
@@ -414,10 +466,18 @@
         }
 
         if (input) {
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                    e.preventDefault();
+                    form.requestSubmit();
+                }
+            });
             input.addEventListener('input', function () {
                 const sendBtn = document.getElementById('ai-chat-send');
                 if (sendBtn) {
-                    sendBtn.disabled = !this.value.trim();
+                    sendBtn.disabled = state.isLoading || !this.value.trim();
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
                 }
             });
         }

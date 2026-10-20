@@ -130,6 +130,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<UserConsent> UserConsents => Set<UserConsent>();
 
     /// <summary>
+    /// AI assistant token usage records table set — tracks cost per request for quota enforcement.
+    /// </summary>
+    public DbSet<AiUsageRecord> AiUsageRecords => Set<AiUsageRecord>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -158,6 +163,17 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         modelBuilder.Entity<BudgetTransaction>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
+
+        // Configure AiUsageRecord entity — usage records are never soft-deleted
+        modelBuilder.Entity<AiUsageRecord>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Endpoint).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.EstimatedCostUsd).HasPrecision(18, 6);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.CreatedAt);
+        });
 
         // Explicit Identity key/FK lengths so both providers (and design-time scaffolding) produce
         // bounded string columns. SQL Server cannot index or key nvarchar(max).
