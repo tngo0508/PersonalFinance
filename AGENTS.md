@@ -82,3 +82,17 @@ Only MIT, BSD (2/3-clause) and Apache 2.0 dependencies. Check the license before
 ## Naming
 
 PascalCase for types and public members, camelCase for private fields and locals, `I` prefix for interfaces, `Async` suffix on async methods, suffixes `Service`/`Controller`/`Dto`/`ViewModel`. File name matches the class name.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues and are tracked on the **PersonalFinance Roadmap** project board. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical labels (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one GLOSSARY.md and docs/adr/ at the repo root. See `docs/agents/domain.md`.

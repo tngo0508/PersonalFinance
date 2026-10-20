@@ -41,6 +41,8 @@
 
         <!-- OpenAI SDK for AI Assistant -->
         <PackageReference Include="OpenAI" />
+        <PackageReference Include="Microsoft.Extensions.AI" />
+        <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
     </ItemGroup>
 
 </Project>

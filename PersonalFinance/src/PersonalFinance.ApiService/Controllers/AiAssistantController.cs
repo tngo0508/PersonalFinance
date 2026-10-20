@@ -1,5 +1,6 @@
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
 
@@ -15,10 +16,15 @@ namespace PersonalFinance.ApiService.Controllers;
 public class AiAssistantController : ControllerBase
 {
     private readonly IAiAssistantService _aiAssistantService;
+    private readonly IAiScopeFilter _scopeFilter;
+    private readonly IAiQuotaService _quotaService;
 
-    public AiAssistantController(IAiAssistantService aiAssistantService)
+    public AiAssistantController(IAiAssistantService aiAssistantService, IAiScopeFilter scopeFilter,
+        IAiQuotaService quotaService)
     {
         _aiAssistantService = aiAssistantService;
+        _scopeFilter = scopeFilter;
+        _quotaService = quotaService;
     }
 
     /// <summary>
@@ -40,10 +46,13 @@ public class AiAssistantController : ControllerBase
 
     /// <summary>
     /// Sends a chat message to the AI assistant and returns the response.
+    /// Off-topic messages are refused immediately without calling the LLM.
+    /// Rate limited by per-user daily quota and global monthly budget.
     /// </summary>
     [HttpPost("chat")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Chat([FromBody] AiChatRequestDto request,
         CancellationToken cancellationToken = default)
@@ -53,9 +62,33 @@ public class AiAssistantController : ControllerBase
             return BadRequest(new { error = "Message is required." });
         }
 
+        // Enforce message length limit
+        if (request.Message.Length > AiAssistantMessages.MaxMessageLength)
+        {
+            return BadRequest(new { error = $"Message must be under {AiAssistantMessages.MaxMessageLength} characters." });
+        }
+
+        // Check scope before calling the LLM
+        var cannedResponse = _scopeFilter.Evaluate(request.Message);
+        if (cannedResponse != null)
+        {
+            return Ok(cannedResponse);
+        }
+
         var userId = GetUserId();
+
+        // Check quota before calling the LLM
+        var quotaResult = await _quotaService.CheckQuotaAsync(userId, "chat");
+        if (!quotaResult.Allowed)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests,
+                new { error = quotaResult.DenialReason });
+        }
+
         var response = await _aiAssistantService.SendChatMessageAsync(userId, request, cancellationToken);
 
+        // Add disclaimer to AI-generated responses
+        response.Disclaimer = AiAssistantMessages.Disclaimer;
         return Ok(response);
     }
 

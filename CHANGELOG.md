@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **AI Assistant Finance Scope Protection**: The AI assistant now rejects non-financial queries instantly with a canned refusal, saving OpenAI API tokens.
+  - Deterministic keyword-based classifier (`AiScopeFilter`) checks each message before it reaches the LLM.
+  - Off-topic queries (programming, trivia, creative writing, etc.) receive a static refusal with zero token cost.
+  - Small talk greetings receive a brief acknowledgement guiding the user toward financial topics.
+  - Prompt injection attempts are detected and refused.
+  - All AI responses include a non-fiduciary disclaimer.
+  - Input length is limited to 2,000 characters per message.
+
+- **AI Assistant Token Usage Tracking and Spend Cap**: Every AI request now records its token counts and estimated cost in the database.
+  - New `AiUsageRecord` entity tracks prompt tokens, completion tokens, and estimated cost per request.
+  - Per-user daily message limit (30 messages/day) prevents abuse.
+  - Global monthly budget ceiling ($10/month) with a hard kill switch — requests are rejected with HTTP 429 when limits are exceeded.
+  - Budget warning at 90% of the monthly ceiling.
+  - Cost calculation uses `gpt-4o-mini` pricing ($0.15/1M input, $0.075/1M cached, $0.60/1M output).
+
+- **AI Assistant Compact System Prompt**: Replaced the monolithic full-transaction prompt with a compact, cacheable financial overview.
+  - The system prompt is now stable across calls, enabling OpenAI prompt caching for lower costs.
+  - Financial data (budget, transactions, savings goals, net worth) is available through on-demand tool calls.
+  - Chat now runs through `Microsoft.Extensions.AI` `IChatClient` with `UseFunctionInvocation` (max 4 tool rounds); the four read-only tools (`get_budget_summary`, `get_recent_transactions`, `get_savings_goals`, `get_net_worth_details`) are bound to the authenticated user.
+  - Token usage, including cached prompt tokens, is aggregated across tool rounds before it is recorded; client-supplied history is capped at 10 messages of 2,000 characters.
+  - `max_completion_tokens` is applied to all requests (configurable via `OpenAI:MaxTokens`, default 400).
+
 ### Fixed
 
 - **Production Admin Provisioning**: The deploy now sets `Rbac__AdminEmail` (default `tngo0508@gmail.com`) and the shared `Internal__ApiKey` on the Web and ApiService container apps.

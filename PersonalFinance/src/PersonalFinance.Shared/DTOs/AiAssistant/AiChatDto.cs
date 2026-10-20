@@ -32,6 +32,16 @@ public class AiChatResponseDto
     public string Model { get; set; } = string.Empty;
 
     /// <summary>
+    /// True when the response is a canned refusal or acknowledgement and did not call the LLM.
+    /// </summary>
+    public bool IsRefusal { get; set; }
+
+    /// <summary>
+    /// Non-fiduciary disclaimer shown with AI-generated financial guidance, or null for canned responses.
+    /// </summary>
+    public string? Disclaimer { get; set; }
+
+    /// <summary>
     /// Timestamp of the response in UTC.
     /// </summary>
     public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
