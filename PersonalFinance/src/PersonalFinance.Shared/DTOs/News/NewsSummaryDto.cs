@@ -21,6 +21,9 @@ public class NewsArticleSummaryRequestDto
 /// </summary>
 public class NewsArticleSummaryResponseDto
 {
+    public string? BudgetWarning { get; set; }
+    public string? Disclaimer { get; set; }
+
     /// <summary>
     ///     The AI-generated summary text.
     /// </summary>

@@ -302,13 +302,22 @@
         try {
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('meta[name="__RequestVerificationToken"]')?.content || ''
+                },
                 body: JSON.stringify({
                     message: message,
                     conversationHistory: historyToSend
                 })
             });
 
+            if (response.status === 429) {
+                const error = await response.json();
+                const limitError = new Error(error.error || 'AI usage limit reached. Please try again later.');
+                limitError.isUsageLimit = true;
+                throw limitError;
+            }
             if (!response.ok) {
                 throw new Error('API request failed');
             }
@@ -319,11 +328,17 @@
                 throw new Error('Empty response');
             }
             addMessage('assistant', data.response);
-            document.getElementById('ai-chat-status').textContent = '';
-        } catch (_error) {
+            document.getElementById('ai-chat-status').textContent = data.budgetWarning || '';
+            const disclaimer = document.querySelector('.ai-chat-disclaimer');
+            if (disclaimer && data.disclaimer) {
+                disclaimer.textContent = data.disclaimer;
+            }
+        } catch (error) {
             hideTyping();
             state.history.pop();
-            document.getElementById('ai-chat-status').textContent = 'Couldn\u2019t get a reply. Your question is ready to try again.';
+            document.getElementById('ai-chat-status').textContent = error.isUsageLimit
+                ? error.message
+                : 'Couldn\u2019t get a reply. Your question is ready to try again.';
             if (input) {
                 input.value = message;
             }

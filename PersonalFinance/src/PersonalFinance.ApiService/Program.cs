@@ -127,7 +127,7 @@ try
                 .AsIChatClient()
                 .AsBuilder()
                 .UseFunctionInvocation(sp.GetService<ILoggerFactory>(),
-                    client => client.MaximumIterationsPerRequest = 4)
+                    client => client.MaximumIterationsPerRequest = 3)
                 .Build());
     }
 

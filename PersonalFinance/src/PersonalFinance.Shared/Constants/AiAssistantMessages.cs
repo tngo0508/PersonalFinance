@@ -6,6 +6,8 @@ namespace PersonalFinance.Shared.Constants;
 /// </summary>
 public static class AiAssistantMessages
 {
+    public const string BudgetWarning = "The AI assistant is approaching its monthly budget limit.";
+
     /// <summary>
     /// Maximum allowed length for a single user message to prevent abuse.
     /// </summary>

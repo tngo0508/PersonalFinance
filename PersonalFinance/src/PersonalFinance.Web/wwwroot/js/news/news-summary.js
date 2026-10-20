@@ -89,7 +89,8 @@
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('meta[name="__RequestVerificationToken"]')?.content || ''
                 },
                 body: JSON.stringify({
                     title: articleTitle,
@@ -99,7 +100,7 @@
 
             if (response.ok) {
                 const data = await response.json();
-                const summary = data.summary || 'No summary available.';
+                const summary = [data.summary || 'No summary available.', data.budgetWarning, data.disclaimer].filter(Boolean).join('\n\n');
 
                 // Cache the result
                 summaryCache.set(articleUrl, summary);
@@ -111,8 +112,9 @@
                     summaryContainer.hidden = false;
                 }
             } else if (response.status === 429) {
+                const error = await response.json();
                 if (summaryContent) {
-                    summaryContent.textContent = 'Too many requests. Please wait a moment and try again.';
+                    summaryContent.textContent = error.error || 'AI usage limit reached. Please try again later.';
                 }
                 showError(btn, 'Rate limited. Try again later.');
             } else {

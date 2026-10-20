@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -19,6 +20,37 @@ public class AiQuotaServiceTests
             .UseInMemoryDatabase($"Quota_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
+    }
+
+    [Fact]
+    public async Task CheckQuotaAsync_UsesConfiguredLimitsAcrossServiceInstances()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"PersistentQuota_{Guid.NewGuid():N}").Options;
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["OpenAI:DailyMessageLimit"] = "1", ["OpenAI:MonthlyBudgetUsd"] = "2",
+            ["OpenAI:BudgetWarningThreshold"] = "0.5"
+        }).Build();
+        await using (var first = new AppDbContext(options))
+        {
+            await new AiQuotaService(first, config).RecordUsageAsync(UserId, "chat", 1, 1, 0, 1m);
+        }
+        await using var second = new AppDbContext(options);
+        var quota = new AiQuotaService(second, config);
+        Assert.False((await quota.CheckQuotaAsync(UserId, "summarize")).Allowed);
+        Assert.True((await quota.CheckQuotaAsync(OtherUserId, "chat")).BudgetWarning);
+        await quota.RecordUsageAsync(OtherUserId, "summarize", 1, 1, 0, 1m);
+        Assert.False((await quota.CheckQuotaAsync("third-user", "chat")).Allowed);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("anonymous")]
+    public async Task CheckQuotaAsync_AnonymousRequestsAreDenied(string userId)
+    {
+        await using var db = CreateContext();
+        Assert.False((await new AiQuotaService(db).CheckQuotaAsync(userId, "chat")).Allowed);
     }
 
     [Fact]

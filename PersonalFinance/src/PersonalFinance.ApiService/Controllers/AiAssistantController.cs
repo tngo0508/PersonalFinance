@@ -1,4 +1,6 @@
 using PersonalFinance.ApiService.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
@@ -11,6 +13,7 @@ namespace PersonalFinance.ApiService.Controllers;
 /// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class AiAssistantController : ControllerBase
@@ -32,16 +35,7 @@ public class AiAssistantController : ControllerBase
     /// </summary>
     private string GetUserId()
     {
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
-        {
-            var value = userId.First();
-            if (!string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-        }
-
-        return "anonymous";
+        return User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
     }
 
     /// <summary>
@@ -89,6 +83,7 @@ public class AiAssistantController : ControllerBase
 
         // Add disclaimer to AI-generated responses
         response.Disclaimer = AiAssistantMessages.Disclaimer;
+        response.BudgetWarning = quotaResult.BudgetWarning ? AiAssistantMessages.BudgetWarning : null;
         return Ok(response);
     }
 
@@ -107,9 +102,17 @@ public class AiAssistantController : ControllerBase
 
         var userId = GetUserId();
 
+        var quotaResult = await _quotaService.CheckQuotaAsync(userId, "summarize");
+        if (!quotaResult.Allowed)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, new { error = quotaResult.DenialReason });
+        }
+
         try
         {
             var response = await _aiAssistantService.SummarizeArticleAsync(userId, request, cancellationToken);
+            response.Disclaimer = AiAssistantMessages.Disclaimer;
+            response.BudgetWarning = quotaResult.BudgetWarning ? AiAssistantMessages.BudgetWarning : null;
             return Ok(response);
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))

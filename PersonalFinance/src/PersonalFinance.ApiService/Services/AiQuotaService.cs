@@ -28,23 +28,26 @@ public class AiQuotaService : IAiQuotaService
     /// <summary>
     /// Maximum messages per user per day.
     /// </summary>
-    private const int MaxDailyMessagesPerUser = 30;
+    private readonly int MaxDailyMessagesPerUser;
 
     /// <summary>
     /// Global monthly budget ceiling in USD.
     /// </summary>
-    private const decimal MonthlyBudgetCeilingUsd = 10m;
+    private readonly decimal MonthlyBudgetCeilingUsd;
 
     /// <summary>
     /// Warning threshold as a fraction of the monthly budget (90%).
     /// </summary>
-    private const decimal WarningThreshold = 0.9m;
+    private readonly decimal WarningThreshold;
 
     private readonly AppDbContext _dbContext;
 
-    public AiQuotaService(AppDbContext dbContext)
+    public AiQuotaService(AppDbContext dbContext, IConfiguration? configuration = null)
     {
         _dbContext = dbContext;
+        MaxDailyMessagesPerUser = Math.Max(0, configuration?.GetValue<int?>("OpenAI:DailyMessageLimit") ?? 30);
+        MonthlyBudgetCeilingUsd = Math.Max(0m, configuration?.GetValue<decimal?>("OpenAI:MonthlyBudgetUsd") ?? 10m);
+        WarningThreshold = Math.Clamp(configuration?.GetValue<decimal?>("OpenAI:BudgetWarningThreshold") ?? 0.9m, 0m, 1m);
     }
 
     /// <summary>
@@ -52,6 +55,10 @@ public class AiQuotaService : IAiQuotaService
     /// </summary>
     public async Task<QuotaCheckResult> CheckQuotaAsync(string userId, string endpoint)
     {
+        if (string.IsNullOrWhiteSpace(userId) || userId == "anonymous")
+        {
+            return new QuotaCheckResult { Allowed = false, DenialReason = "Please sign in to use the AI assistant." };
+        }
         var now = DateTime.UtcNow;
         var todayStart = now.Date;
         var monthStart = new DateTime(now.Year, now.Month, 1);
@@ -122,7 +129,10 @@ public class AiQuotaService : IAiQuotaService
     public static decimal CalculateEstimatedCost(int promptTokens, int completionTokens, int cachedPromptTokens)
     {
         // Non-cached input tokens
-        var nonCachedInputTokens = Math.Max(0, promptTokens - cachedPromptTokens);
+        promptTokens = Math.Max(0, promptTokens);
+        completionTokens = Math.Max(0, completionTokens);
+        cachedPromptTokens = Math.Clamp(cachedPromptTokens, 0, promptTokens);
+        var nonCachedInputTokens = promptTokens - cachedPromptTokens;
 
         var inputCost = nonCachedInputTokens * InputTokenPricePerMillion / 1_000_000m;
         var cachedInputCost = cachedPromptTokens * CachedInputTokenPricePerMillion / 1_000_000m;

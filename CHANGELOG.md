@@ -36,11 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AI Assistant Compact System Prompt**: Replaced the monolithic full-transaction prompt with a compact, cacheable financial overview.
   - The system prompt is now stable across calls, enabling OpenAI prompt caching for lower costs.
   - Financial data (budget, transactions, savings goals, net worth) is available through on-demand tool calls.
-  - Chat now runs through `Microsoft.Extensions.AI` `IChatClient` with `UseFunctionInvocation` (max 4 tool rounds); the four read-only tools (`get_budget_summary`, `get_recent_transactions`, `get_savings_goals`, `get_net_worth_details`) are bound to the authenticated user.
+  - Chat now runs through `Microsoft.Extensions.AI` `IChatClient` with `UseFunctionInvocation` (max 3 tool rounds); the four read-only tools (`get_budget_summary`, `get_recent_transactions`, `get_savings_goals`, `get_net_worth_details`) are bound to the authenticated user.
   - Token usage, including cached prompt tokens, is aggregated across tool rounds before it is recorded; client-supplied history is capped at 10 messages of 2,000 characters.
   - `max_completion_tokens` is applied to all requests (configurable via `OpenAI:MaxTokens`, default 400).
 
 ### Fixed
+
+- **AI Assistant Ticket Completion (#77, #78, #79)**: Closed implementation gaps in finance scope filtering, quota enforcement, and financial tools.
+  - Refuse off-topic and mixed requests before model calls using whole-word classification.
+  - Track summary usage through the shared AI client, apply completion limits, and expose configurable daily/monthly quotas and budget warnings.
+  - Preserve HTTP 429 messages through the Web proxy and display warnings and disclaimers with CSRF-protected requests.
+  - Add stable compact financial snapshots, fetch detailed budget data on demand from the selected source, include goal and retirement projections, and limit tool invocation to three rounds.
 
 - **Production Admin Provisioning**: The deploy now sets `Rbac__AdminEmail` (default `tngo0508@gmail.com`) and the shared `Internal__ApiKey` on the Web and ApiService container apps.
   - New Bicep parameters `rbacAdminEmail` and `internalApiKey`; the workflow reads `vars.RBAC_ADMIN_EMAIL` and `secrets.INTERNAL_API_KEY`.

@@ -85,7 +85,7 @@ public class AiAssistantServiceTests
         await service.SendChatMessageAsync(UserId, Request("How is my budget?"));
 
         // Assert
-        var system = Assert.Single(fake.LastMessages, m => m.Role == ChatRole.System);
+        var system = fake.LastMessages.First(m => m.Role == ChatRole.System);
         Assert.Contains("get_budget_summary", system.Text);
         Assert.DoesNotContain("Emergency Fund", system.Text);
         Assert.True(system.Text.Length < 4000, "System prompt must stay compact");
@@ -341,6 +341,43 @@ public class AiAssistantServiceTests
         Assert.DoesNotContain("secret-api-failure", result.Response);
         Assert.Contains("error", result.Response, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(db.AiUsageRecords);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_RecordsUsageAndAppliesCompletionLimitWithoutFinancialTools()
+    {
+        await using var db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply("Article summary", new UsageDetails
+        {
+            InputTokenCount = 1000, OutputTokenCount = 100, CachedInputTokenCount = 500
+        }));
+        var service = CreateService(db, fake, settings: new() { ["OpenAI:MaxTokens"] = "123" });
+        var result = await service.SummarizeArticleAsync(UserId,
+            new PersonalFinance.Shared.DTOs.News.NewsArticleSummaryRequestDto { Title = "Finance news" });
+        Assert.Equal("Article summary", result.Summary);
+        Assert.NotNull(result.Disclaimer);
+        Assert.Equal(123, fake.LastOptions!.MaxOutputTokens);
+        Assert.Null(fake.LastOptions.Tools);
+        var usage = Assert.Single(db.AiUsageRecords);
+        Assert.Equal("summarize", usage.Endpoint);
+        Assert.Equal(500, usage.CachedPromptTokens);
+        Assert.Equal(AiQuotaService.CalculateEstimatedCost(1000, 100, 500), usage.EstimatedCostUsd);
+    }
+
+    [Fact]
+    public async Task SendChatMessageAsync_UnchangedDataProducesIdenticalCompactSnapshots()
+    {
+        await using var db = CreateContext();
+        await SeedSavingsGoalsAsync(db);
+        var fake = new FakeChatClient((_, _) => Reply("ok"));
+        var service = CreateService(db, fake);
+        await service.SendChatMessageAsync(UserId, Request("Budget?"));
+        var first = fake.LastMessages.Where(m => m.Role == ChatRole.System).Select(m => m.Text).ToArray();
+        await service.SendChatMessageAsync(UserId, Request("Savings?"));
+        Assert.Equal(first, fake.LastMessages.Where(m => m.Role == ChatRole.System).Select(m => m.Text).ToArray());
+        Assert.Contains("SavingsGoalCount", first[1]);
+        Assert.DoesNotContain("Secret Yacht", string.Join("", first));
+        Assert.True(string.Join("", first).Length < 4000);
     }
 
     private static SpreadsheetTransactionDto Tx(string date, decimal amount, string description, string category)

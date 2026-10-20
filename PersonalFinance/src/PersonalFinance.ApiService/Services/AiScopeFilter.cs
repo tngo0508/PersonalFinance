@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 
@@ -35,19 +36,15 @@ public class AiScopeFilter : IAiScopeFilter
         "tax", "taxes", "deduction", "deductions", "filing", "insurance",
         "premium", "coverage",
         // App navigation
-        "how do i", "where is", "how to", "help me with", "show me",
         "dashboard", "report", "chart", "graph", "settings",
         // General finance terms
         "finance", "financial", "money", "cash", "bank", "account", "accounts",
         "overdraft", "fee", "fees", "withdrawal", "deposit", "transfer",
         "inflation", "compound", "compound interest",
         // Comparative and analytical
-        "compare", "comparison", "trend", "trends", "analysis", "analyze",
-        "summary", "summarize", "breakdown", "category", "categories",
+        "category", "categories",
         "over budget", "under budget", "overspend", "underspend",
         // Advice-seeking phrases
-        "should i", "can i", "is it", "advice", "recommend", "suggest",
-        "what do you think", "how can i", "ways to", "tips",
     ];
 
     /// <summary>
@@ -103,7 +100,7 @@ public class AiScopeFilter : IAiScopeFilter
     /// </summary>
     private static readonly string[] InjectionPatterns =
     [
-        "ignore previous instructions", "ignore the above", "disregard previous",
+        "ignore previous instructions", "ignore all previous instructions", "ignore the above", "disregard previous",
         "system prompt", "you are now", "from now on you", "new instruction",
         "forget your instructions", "override your",
     ];
@@ -153,16 +150,13 @@ public class AiScopeFilter : IAiScopeFilter
         var offTopicScore = CountKeywordMatches(lowerMessage, OffTopicKeywords);
         var financeScore = CountKeywordMatches(lowerMessage, FinanceKeywords);
 
-        // If off-topic score is greater than or equal to finance score, refuse
-        // (ties go to refusal to be conservative about token spending)
-        if (offTopicScore > 0 && offTopicScore >= financeScore)
+        // Mixed requests still contain an out-of-scope task; do not spend tokens on it.
+        if (offTopicScore > 0)
         {
             return CreateRefusalResponse();
         }
 
-        // If no finance keywords found and no off-topic keywords, it's ambiguous — let it through
-        // The LLM's system prompt will handle the final scope check
-        return null;
+        return financeScore > 0 ? null : CreateRefusalResponse();
     }
 
     /// <summary>
@@ -213,7 +207,8 @@ public class AiScopeFilter : IAiScopeFilter
         var count = 0;
         foreach (var keyword in keywords)
         {
-            if (lowerMessage.Contains(keyword))
+            if (Regex.IsMatch(lowerMessage, @"(?<!\w)" + Regex.Escape(keyword) + @"(?!\w)",
+                    RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))
             {
                 count++;
             }

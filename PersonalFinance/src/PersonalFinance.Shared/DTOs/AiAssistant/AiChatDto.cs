@@ -21,6 +21,8 @@ public class AiChatRequestDto
 /// </summary>
 public class AiChatResponseDto
 {
+    public string? BudgetWarning { get; set; }
+
     /// <summary>
     /// The AI assistant's response message.
     /// </summary>
