@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -6,8 +8,9 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// API controller for watchlist (saved articles) endpoints.
-/// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
+/// All endpoints are scoped to the current user identified by the authenticated Account (see XUserIdAuthenticationHandler).
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -21,23 +24,6 @@ public class WatchlistController : ControllerBase
     }
 
     /// <summary>
-    /// Returns the current user's ID from the X-User-Id header forwarded by the Web proxy.
-    /// </summary>
-    private string GetUserId()
-    {
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
-        {
-            var value = userId.First();
-            if (!string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-        }
-
-        return "anonymous";
-    }
-
-    /// <summary>
     /// Gets all saved articles for the current user.
     /// </summary>
     [HttpGet]
@@ -45,7 +31,7 @@ public class WatchlistController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetWatchlist(CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var articles = await _watchlistService.GetWatchlistAsync(userId, cancellationToken);
         return Ok(articles);
     }
@@ -59,7 +45,7 @@ public class WatchlistController : ControllerBase
     public async Task<IActionResult> SaveArticle([FromBody] SaveArticleRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var result = await _watchlistService.SaveArticleAsync(userId, request, cancellationToken);
         return Ok(new { success = result.Success, alreadySaved = result.AlreadySaved, id = result.Id });
     }
@@ -73,7 +59,7 @@ public class WatchlistController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveArticle(int id, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var removed = await _watchlistService.RemoveArticleAsync(userId, id, cancellationToken);
         if (!removed) return NotFound();
         return Ok(new { success = true });
@@ -88,7 +74,7 @@ public class WatchlistController : ControllerBase
     public async Task<IActionResult> CheckArticleSaved([FromQuery] string url,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var isSaved = await _watchlistService.IsArticleSavedAsync(userId, url, cancellationToken);
         return Ok(new { isSaved });
     }

@@ -49,6 +49,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Account Isolation in ApiService**: Every ApiService endpoint now identifies the Account from authenticated claims, so a spoofed `X-User-Id` header or a foreign `connectionId` can no longer reach another Account's data.
+  - Budget, Community, Dashboard, NetWorth, Notification, SavingsGoals, Search and Watchlist controllers read the raw header (skipping the `X-Internal-Key` check); they now require `[Authorize]` and use `User.GetUserId()`.
+  - Google Drive endpoints no longer accept `userId` in the query string or body, and a spreadsheet `connectionId` only resolves for its owner, so another Account's stored API key cannot be used.
+  - Web forwards the Account on the Google Drive client too, and no longer sends a placeholder `anonymous` id for signed-out visitors.
+  - A convention test fails the build if an ApiService controller lacks `[Authorize]` or `[AllowAnonymous]`.
+
 - **AI Assistant Ticket Completion (#77, #78, #79)**: Closed implementation gaps in finance scope filtering, quota enforcement, and financial tools.
   - Refuse off-topic and mixed requests before model calls using whole-word classification.
   - Track summary usage through the shared AI client, apply completion limits, and expose configurable daily/monthly quotas and budget warnings.

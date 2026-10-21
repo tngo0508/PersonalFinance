@@ -278,19 +278,19 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
         return Task.FromResult(new GoogleDriveFolderResponseDto { Success = true, FolderId = "fake-folder" });
     }
 
-    public Task<List<GoogleDriveConnectionDto>> GetUserConnectionsAsync(string userId, CancellationToken cancellationToken = default)
+    public Task<List<GoogleDriveConnectionDto>> GetUserConnectionsAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(SavedConnections);
     }
 
-    public Task<GoogleDriveFolderResponseDto> GetConnectionFilesAsync(int connectionId, string userId, bool forceRefresh = false, CancellationToken cancellationToken = default)
+    public Task<GoogleDriveFolderResponseDto> GetConnectionFilesAsync(int connectionId, bool forceRefresh = false, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(ConnectionFilesResponse);
     }
 
     public Task<GoogleDriveConnectionDto> ConnectDriveAsync(ConnectGoogleDriveRequestDto request, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new GoogleDriveConnectionDto { Id = 1, Name = request.ConnectionName ?? "Google Drive", FolderId = "folder-id", UserId = request.UserId });
+        return Task.FromResult(new GoogleDriveConnectionDto { Id = 1, Name = request.ConnectionName ?? "Google Drive", FolderId = "folder-id" });
     }
 
     public Task<GoogleDriveFolderResponseDto> SyncConnectionAsync(int connectionId, SyncGoogleDriveRequestDto request, CancellationToken cancellationToken = default)
@@ -303,17 +303,17 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
         return Task.FromResult(new GoogleDriveConnectionDto { Id = connectionId, IsValid = true });
     }
 
-    public Task<bool> DeleteConnectionAsync(int connectionId, string userId, CancellationToken cancellationToken = default)
+    public Task<bool> DeleteConnectionAsync(int connectionId, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(true);
     }
 
-    public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string fileId, string? fileName = null, int? connectionId = null, string? userId = null, CancellationToken cancellationToken = default)
+    public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string fileId, string? fileName = null, int? connectionId = null, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(GoogleDriveHelper.GenerateMonthlyBudgetReport(fileName, fileId));
     }
 
-    public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string fileId, string? fileName = null, int? connectionId = null, string? userId = null, CancellationToken cancellationToken = default)
+    public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string fileId, string? fileName = null, int? connectionId = null, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleTransactionsCsv(), fileName, fileId));
     }

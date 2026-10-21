@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,6 +8,7 @@ namespace PersonalFinance.ApiService.Controllers;
 /// <summary>
 /// API controller for unified search endpoints.
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -18,20 +21,6 @@ public class SearchController : ControllerBase
         _searchService = searchService;
     }
 
-    private string GetUserId()
-    {
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
-        {
-            var value = userId.First();
-            if (!string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-        }
-
-        return "anonymous";
-    }
-
     /// <summary>
     /// Searches across transactions, budgets, and savings goals.
     /// </summary>
@@ -39,7 +28,7 @@ public class SearchController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Search([FromQuery] string q, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var results = await _searchService.SearchAsync(userId, q, cancellationToken);
         return Ok(results);
     }

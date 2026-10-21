@@ -299,18 +299,18 @@ public class SpreadsheetReaderService : ISpreadsheetReader
         string? userId,
         CancellationToken cancellationToken)
     {
+        // A connection (and its stored API key) is only ever resolved for the Account that owns it.
+        // Without an Account, only the configured default API key is used.
         GoogleDriveConnection? connection = null;
-        if (connectionId.HasValue && connectionId.Value > 0)
+        if (!string.IsNullOrWhiteSpace(userId))
         {
-            connection = await _dbContext.GoogleDriveConnections
+            var ownConnections = _dbContext.GoogleDriveConnections
                 .Include(c => c.CachedFiles)
-                .FirstOrDefaultAsync(c => c.Id == connectionId.Value && (userId == null || c.UserId == userId), cancellationToken);
-        }
-        else if (!string.IsNullOrWhiteSpace(userId))
-        {
-            connection = await _dbContext.GoogleDriveConnections
-                .Include(c => c.CachedFiles)
-                .FirstOrDefaultAsync(c => c.UserId == userId && c.CachedFiles.Any(f => f.DriveFileId == fileId), cancellationToken);
+                .Where(c => c.UserId == userId);
+
+            connection = connectionId is > 0
+                ? await ownConnections.FirstOrDefaultAsync(c => c.Id == connectionId.Value, cancellationToken)
+                : await ownConnections.FirstOrDefaultAsync(c => c.CachedFiles.Any(f => f.DriveFileId == fileId), cancellationToken);
         }
 
         var cachedFile = connection?.CachedFiles.FirstOrDefault(f => f.DriveFileId == fileId);

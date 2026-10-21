@@ -6,6 +6,7 @@ namespace PersonalFinance.Shared.Contracts;
 
 /// <summary>
 /// Refit API contract for Google Drive folder exploration and file retrieval.
+/// The signed-in Account is forwarded by <c>UserIdForwardingHandler</c>; it is never a parameter here.
 /// </summary>
 public interface IGoogleDriveApi
 {
@@ -16,16 +17,16 @@ public interface IGoogleDriveApi
     Task<GoogleDriveFolderResponseDto> ExploreFolderAsync([Body] GoogleDriveRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all saved Google Drive connections for an authenticated user.
+    /// Gets all saved Google Drive connections for the signed-in Account.
     /// </summary>
     [Get("/api/googledrive/connections")]
-    Task<List<GoogleDriveConnectionDto>> GetUserConnectionsAsync([Query] string userId, CancellationToken cancellationToken = default);
+    Task<List<GoogleDriveConnectionDto>> GetUserConnectionsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets files for a specific connection from local database cache (or synchronizes if stale/forced).
     /// </summary>
     [Get("/api/googledrive/connections/{connectionId}")]
-    Task<GoogleDriveFolderResponseDto> GetConnectionFilesAsync(int connectionId, [Query] string userId, [Query] bool forceRefresh = false, CancellationToken cancellationToken = default);
+    Task<GoogleDriveFolderResponseDto> GetConnectionFilesAsync(int connectionId, [Query] bool forceRefresh = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Connects and persists a new or existing Google Drive folder connection.
@@ -49,7 +50,7 @@ public interface IGoogleDriveApi
     /// Removes a connected Drive and deletes all locally cached files from database.
     /// </summary>
     [Delete("/api/googledrive/connections/{connectionId}")]
-    Task<bool> DeleteConnectionAsync(int connectionId, [Query] string userId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteConnectionAsync(int connectionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads and parses a spreadsheet from Google Drive into a monthly budget report with actual data.
@@ -59,7 +60,6 @@ public interface IGoogleDriveApi
         [Query] string fileId,
         [Query] string? fileName = null,
         [Query] int? connectionId = null,
-        [Query] string? userId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -70,6 +70,5 @@ public interface IGoogleDriveApi
         [Query] string fileId,
         [Query] string? fileName = null,
         [Query] int? connectionId = null,
-        [Query] string? userId = null,
         CancellationToken cancellationToken = default);
 }

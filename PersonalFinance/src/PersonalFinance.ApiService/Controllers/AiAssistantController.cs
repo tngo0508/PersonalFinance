@@ -1,5 +1,5 @@
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.ApiService.Services;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Constants;
@@ -10,7 +10,7 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// API controller for the AI assistant chat feature.
-/// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
+/// All endpoints are scoped to the current user identified by the authenticated Account (see XUserIdAuthenticationHandler).
 /// </summary>
 [ApiController]
 [Authorize]
@@ -28,14 +28,6 @@ public class AiAssistantController : ControllerBase
         _aiAssistantService = aiAssistantService;
         _scopeFilter = scopeFilter;
         _quotaService = quotaService;
-    }
-
-    /// <summary>
-    /// Returns the current user's ID from the X-User-Id header forwarded by the Web proxy.
-    /// </summary>
-    private string GetUserId()
-    {
-        return User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
     }
 
     /// <summary>
@@ -69,7 +61,7 @@ public class AiAssistantController : ControllerBase
             return Ok(cannedResponse);
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
 
         // Check quota before calling the LLM
         var quotaResult = await _quotaService.CheckQuotaAsync(userId, "chat");
@@ -100,7 +92,7 @@ public class AiAssistantController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request?.Title)) return BadRequest(new { error = "Title is required." });
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
 
         var quotaResult = await _quotaService.CheckQuotaAsync(userId, "summarize");
         if (!quotaResult.Allowed)

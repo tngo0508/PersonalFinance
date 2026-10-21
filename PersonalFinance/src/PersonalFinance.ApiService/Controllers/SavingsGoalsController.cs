@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -6,8 +8,9 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// API controller for savings goals endpoints.
-/// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
+/// All endpoints are scoped to the current user identified by the authenticated Account (see XUserIdAuthenticationHandler).
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -21,23 +24,6 @@ public class SavingsGoalsController : ControllerBase
     }
 
     /// <summary>
-    /// Returns the current user's ID from the X-User-Id header forwarded by the Web proxy.
-    /// </summary>
-    private string GetUserId()
-    {
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
-        {
-            var value = userId.First();
-            if (!string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-        }
-
-        return "anonymous";
-    }
-
-    /// <summary>
     /// Gets all savings goals for the current user.
     /// </summary>
     [HttpGet]
@@ -45,7 +31,7 @@ public class SavingsGoalsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetSavingsGoals(CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var goals = await _savingsGoalService.GetSavingsGoalsAsync(userId, cancellationToken);
         return Ok(goals);
     }
@@ -59,7 +45,7 @@ public class SavingsGoalsController : ControllerBase
     public async Task<IActionResult> CreateSavingsGoal([FromBody] CreateSavingsGoalRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var id = await _savingsGoalService.CreateSavingsGoalAsync(userId, request, cancellationToken);
         return Ok(new { success = true, id });
     }
@@ -74,7 +60,7 @@ public class SavingsGoalsController : ControllerBase
     public async Task<IActionResult> UpdateSavingsGoal(int id, [FromBody] UpdateSavingsGoalRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var updated = await _savingsGoalService.UpdateSavingsGoalAsync(userId, id, request, cancellationToken);
         if (!updated) return NotFound();
         return Ok(new { success = true });
@@ -89,7 +75,7 @@ public class SavingsGoalsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSavingsGoal(int id, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var deleted = await _savingsGoalService.DeleteSavingsGoalAsync(userId, id, cancellationToken);
         if (!deleted) return NotFound();
         return Ok(new { success = true });

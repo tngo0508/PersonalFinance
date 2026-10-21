@@ -43,14 +43,13 @@ public class GoogleDrivePersistenceTests
 
         var request = new ConnectGoogleDriveRequestDto
         {
-            UserId = "user-101",
             FolderUrl = "https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ConnectionName = "My Financial Docs",
             ApiKey = "AIzaSyTestApiKey123456"
         };
 
         // Act
-        var result = await service.ConnectDriveAsync(request);
+        var result = await service.ConnectDriveAsync("user-101", request);
 
         // Assert
         Assert.NotNull(result);
@@ -88,9 +87,8 @@ public class GoogleDrivePersistenceTests
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // First setup
-        var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
+        var conn = await service.ConnectDriveAsync("user-subsequent", new ConnectGoogleDriveRequestDto
         {
-            UserId = "user-subsequent",
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ConnectionName = "Saved Drive"
         });
@@ -115,17 +113,15 @@ public class GoogleDrivePersistenceTests
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Connect Drive 1
-        var drive1 = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
+        var drive1 = await service.ConnectDriveAsync("user-multi", new ConnectGoogleDriveRequestDto
         {
-            UserId = "user-multi",
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ConnectionName = "Drive 1 - Financial"
         });
 
         // Connect Drive 2 (Add another Drive)
-        var drive2 = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
+        var drive2 = await service.ConnectDriveAsync("user-multi", new ConnectGoogleDriveRequestDto
         {
-            UserId = "user-multi",
             FolderUrl = "1ABCdEfGhIjKlMnOpQrStUvWxYz12345_",
             ConnectionName = "Drive 2 - Receipts"
         });
@@ -161,9 +157,8 @@ public class GoogleDrivePersistenceTests
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Initial setup calls API once to cache
-        var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
+        var conn = await service.ConnectDriveAsync("user-cache", new ConnectGoogleDriveRequestDto
         {
-            UserId = "user-cache",
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ApiKey = "AIzaSyTest"
         });
@@ -212,9 +207,8 @@ public class GoogleDrivePersistenceTests
         var httpClient = new HttpClient(handler);
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
-        var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
+        var conn = await service.ConnectDriveAsync("user-sync", new ConnectGoogleDriveRequestDto
         {
-            UserId = "user-sync",
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ApiKey = "AIzaSyTest"
         });
@@ -257,9 +251,8 @@ public class GoogleDrivePersistenceTests
         var httpClient = new HttpClient();
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
-        var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
+        var conn = await service.ConnectDriveAsync("user-delete", new ConnectGoogleDriveRequestDto
         {
-            UserId = "user-delete",
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_"
         });
 
@@ -306,9 +299,8 @@ public class GoogleDrivePersistenceTests
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Connect with invalid credentials
-        var conn = await service.ConnectDriveAsync(new ConnectGoogleDriveRequestDto
+        var conn = await service.ConnectDriveAsync("user-auth", new ConnectGoogleDriveRequestDto
         {
-            UserId = "user-auth",
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ApiKey = "ExpiredApiKey"
         });

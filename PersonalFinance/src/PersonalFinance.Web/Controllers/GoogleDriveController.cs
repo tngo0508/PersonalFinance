@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -39,7 +38,7 @@ public class GoogleDriveController : Controller
         [FromQuery] bool addNew = false,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         var model = new GoogleDriveViewModel
         {
             StatusMessage = TempData["StatusMessage"] as string,
@@ -49,7 +48,7 @@ public class GoogleDriveController : Controller
         try
         {
             // 1. Load all saved connections for this user from database
-            var connections = await _googleDriveApi.GetUserConnectionsAsync(userId, cancellationToken);
+            var connections = await _googleDriveApi.GetUserConnectionsAsync(cancellationToken);
             model.Connections = connections ?? new List<GoogleDriveConnectionDto>();
 
             // 2. Handle explicit "Add New Drive" request
@@ -77,7 +76,7 @@ public class GoogleDriveController : Controller
                 model.SelectedConnectionId = selectedId;
 
                 // Load cached files from database (zero external API requests if fresh)
-                var cachedResponse = await _googleDriveApi.GetConnectionFilesAsync(selectedId, userId, forceRefresh: false, cancellationToken);
+                var cachedResponse = await _googleDriveApi.GetConnectionFilesAsync(selectedId, forceRefresh: false, cancellationToken);
                 model.Response = cachedResponse;
                 model.HasQueried = true;
 
@@ -127,7 +126,7 @@ public class GoogleDriveController : Controller
         int id,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         _logger.LogInformation("User {UserId} requested manual sync for Google Drive connection {ConnectionId}", userId, id);
 
         try
@@ -137,7 +136,6 @@ public class GoogleDriveController : Controller
                 new SyncGoogleDriveRequestDto
                 {
                     ConnectionId = id,
-                    UserId = userId,
                     ForceRefresh = true
                 },
                 cancellationToken);
@@ -170,7 +168,7 @@ public class GoogleDriveController : Controller
         string apiKey,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         _logger.LogInformation("User {UserId} re-authenticating Google Drive connection {ConnectionId}", userId, id);
 
         try
@@ -180,7 +178,6 @@ public class GoogleDriveController : Controller
                 new ReauthGoogleDriveRequestDto
                 {
                     ConnectionId = id,
-                    UserId = userId,
                     ApiKey = apiKey
                 },
                 cancellationToken);
@@ -212,12 +209,12 @@ public class GoogleDriveController : Controller
         int id,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         _logger.LogInformation("User {UserId} deleting Google Drive connection {ConnectionId}", userId, id);
 
         try
         {
-            await _googleDriveApi.DeleteConnectionAsync(id, userId, cancellationToken);
+            await _googleDriveApi.DeleteConnectionAsync(id, cancellationToken);
             TempData["StatusMessage"] = "Google Drive connection and cached data removed successfully.";
         }
         catch (Exception ex)
@@ -244,13 +241,11 @@ public class GoogleDriveController : Controller
             return BadRequest(new { error = "File name or file ID is required." });
         }
 
-        var userId = GetCurrentUserId();
-
         try
         {
             if (!string.IsNullOrWhiteSpace(fileId))
             {
-                var report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, userId, cancellationToken);
+                var report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, cancellationToken);
                 if (report != null)
                 {
                     return Json(report);
@@ -281,11 +276,9 @@ public class GoogleDriveController : Controller
             return BadRequest(new { error = "File ID is required." });
         }
 
-        var userId = GetCurrentUserId();
-
         try
         {
-            var result = await _googleDriveApi.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, userId, cancellationToken);
+            var result = await _googleDriveApi.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, cancellationToken);
             return Json(result);
         }
         catch (Exception ex)
@@ -299,7 +292,6 @@ public class GoogleDriveController : Controller
         GoogleDriveViewModel model,
         CancellationToken cancellationToken)
     {
-        var userId = GetCurrentUserId();
         model.HasQueried = true;
 
         if (string.IsNullOrWhiteSpace(model.FolderUrl))
@@ -314,7 +306,6 @@ public class GoogleDriveController : Controller
             var connection = await _googleDriveApi.ConnectDriveAsync(
                 new ConnectGoogleDriveRequestDto
                 {
-                    UserId = userId,
                     FolderUrl = model.FolderUrl,
                     ConnectionName = model.ConnectionName,
                     ApiKey = model.ApiKey
@@ -346,7 +337,7 @@ public class GoogleDriveController : Controller
         // Re-load existing connections for display on error
         try
         {
-            model.Connections = await _googleDriveApi.GetUserConnectionsAsync(userId, cancellationToken) ?? new List<GoogleDriveConnectionDto>();
+            model.Connections = await _googleDriveApi.GetUserConnectionsAsync(cancellationToken) ?? new List<GoogleDriveConnectionDto>();
         }
         catch
         {
@@ -354,12 +345,5 @@ public class GoogleDriveController : Controller
         }
 
         return View("Index", model);
-    }
-
-    private string GetCurrentUserId()
-    {
-        return User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.Identity?.Name
-               ?? "default-user";
     }
 }
