@@ -96,16 +96,10 @@ public class BudgetController : Controller
                 TempData["SaveSuccess"] = "Budget saved successfully.";
             }
         }
-        catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
-        {
-            // Show ApiService's validation messages, never the raw response body.
-            ModelState.AddModelError("", ApiErrorMessages.FromApiException(ex));
-            return View("Index", model);
-        }
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogError(ex, "Saving the budget failed.");
-            ModelState.AddModelError("", "Failed to save budget. Please try again.");
+            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, "Failed to save budget. Please try again."));
             return View("Index", model);
         }
 

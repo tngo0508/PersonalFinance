@@ -106,14 +106,10 @@ public class AdminController : Controller
             await action();
             TempData["AdminMessage"] = successMessage;
         }
-        catch (ApiException ex)
-        {
-            TempData["AdminError"] = ApiErrorMessages.FromApiException(ex);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException)
         {
             _logger.LogWarning(ex, "Admin role operation failed.");
-            TempData["AdminError"] = "The operation failed. Try again later.";
+            TempData["AdminError"] = ApiErrorMessages.ForUser(ex, "The operation failed. Try again later.");
         }
 
         return RedirectToAction(nameof(Index));
