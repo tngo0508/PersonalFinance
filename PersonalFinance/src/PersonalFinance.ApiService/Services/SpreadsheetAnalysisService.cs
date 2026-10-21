@@ -4,6 +4,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -38,7 +39,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             var totalIncome = monthData.ActualIncome;
             var totalExpenses = monthData.ActualExpenses;
             var netSavings = totalIncome - totalExpenses;
-            var savingsRate = totalIncome > 0 ? (double)(netSavings / totalIncome) * 100 : 0;
+            var savingsRate = FinanceMetrics.ActualSavingsRatePercent(totalIncome, totalExpenses);
 
             return new SummaryStatisticsDto
             {
@@ -48,7 +49,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 TotalIncome = totalIncome,
                 TotalExpenses = totalExpenses,
                 NetSavings = netSavings,
-                SavingsRate = Math.Round(savingsRate, 1),
+                SavingsRate = savingsRate,
                 SnapshotCount = monthData.SourceRecordCount
             };
         }
@@ -60,7 +61,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             var totalIncome = months.Sum(m => m.ActualIncome);
             var totalExpenses = months.Sum(m => m.ActualExpenses);
             var netSavings = totalIncome - totalExpenses;
-            var savingsRate = totalIncome > 0 ? (double)(netSavings / totalIncome) * 100 : 0;
+            var savingsRate = FinanceMetrics.ActualSavingsRatePercent(totalIncome, totalExpenses);
             var firstMonth = months.FirstOrDefault()?.Month ?? 0;
             var snapshotCount = months.Sum(m => m.SourceRecordCount);
 
@@ -72,7 +73,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 TotalIncome = totalIncome,
                 TotalExpenses = totalExpenses,
                 NetSavings = netSavings,
-                SavingsRate = Math.Round(savingsRate, 1),
+                SavingsRate = savingsRate,
                 SnapshotCount = snapshotCount
             };
         }

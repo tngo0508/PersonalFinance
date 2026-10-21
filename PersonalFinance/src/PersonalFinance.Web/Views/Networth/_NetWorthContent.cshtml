@@ -101,10 +101,10 @@
                     <div class="nw-savings-indicator" id="nwSavingsIndicator">
                         <div class="nw-savings-indicator__header">
                             <span>Savings Rate</span>
-                            <span class="nw-savings-indicator__value" id="nwSavingsRateValue">29.5%</span>
+                            <span class="nw-savings-indicator__value" id="nwSavingsRateValue">@($"{Model.SavingsRatePercent:F1}%")</span>
                         </div>
                         <div class="nw-savings-indicator__bar">
-                            <div class="nw-savings-indicator__fill" id="nwSavingsRateFill" style="width: 29.5%"></div>
+                            <div class="nw-savings-indicator__fill" id="nwSavingsRateFill" style="width: @($"{Math.Clamp(Model.SavingsRatePercent, 0m, 100m):F1}%")"></div>
                         </div>
                     </div>
                 </div>
@@ -593,29 +593,8 @@
                                 <th class="text-end">Ending Balance</th>
                             </tr>
                         </thead>
-                        <tbody id="nwTableBody">
-                            @foreach (var year in projection.Base.Years)
-                            {
-                                string rowClass = "";
-                                if (year.EndingBalance >= 5000000m)
-                                {
-                                    rowClass = "nw-row-5m";
-                                }
-                                else if (year.EndingBalance >= projection.FiTarget)
-                                {
-                                    rowClass = "nw-row-fi";
-                                }
-                                string roiClass = year.Roi >= Model.AnnualIncome ? "nw-roi-highlight" : "";
-                                <tr class="@rowClass">
-                                    <td>@year.Year</td>
-                                    <td>@year.Age</td>
-                                    <td class="text-end nw-currency">@FormatCurrency(year.StartingBalance)</td>
-                                    <td class="text-end nw-currency">@FormatCurrency(year.Savings)</td>
-                                    <td class="text-end nw-currency text-success @(roiClass)">@FormatCurrency(year.Roi)</td>
-                                    <td class="text-end nw-currency fw-semibold">@FormatCurrency(year.EndingBalance)</td>
-                                </tr>
-                            }
-                        </tbody>
+                        @* Rows are rendered by networth-ui.js (updateTable) from window.nwProjectionData. *@
+                        <tbody id="nwTableBody"></tbody>
                     </table>
                 </div>
             </div>

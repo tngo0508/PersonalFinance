@@ -72,26 +72,12 @@ public class DashboardService : IDashboardService
         }
 
         // FI Target and projection both come from the Net Worth page's calculation, so the pages always agree.
-        var projection = NetWorthProjectionService.ComputeProjection(new NetWorthProjectionRequestDto
-        {
-            StartingBalance = parameters.StartingBalance,
-            AnnualSavings = parameters.AnnualSavings,
-            AnnualIncome = parameters.AnnualIncome,
-            AnnualSpending = parameters.AnnualSpending,
-            CurrentAge = parameters.CurrentAge,
-            RetirementAge = parameters.RetirementAge,
-            BaseRoi = parameters.BaseRoi,
-            ConservativeRoi = parameters.ConservativeRoi,
-            AggressiveRoi = parameters.AggressiveRoi,
-            AggressiveSavings = parameters.AggressiveSavings
-        });
+        var projection = NetWorthProjectionService.ComputeProjection(parameters.ToProjectionRequest());
 
         var netWorth = parameters.StartingBalance;
         var fiTarget = projection.FiTarget;
         decimal? progressToFi = fiTarget != 0m ? netWorth / fiTarget * 100m : null;
-        decimal? savingsRate = parameters.AnnualIncome != 0m
-            ? parameters.AnnualSavings / parameters.AnnualIncome * 100m
-            : null;
+        var savingsRate = FinanceMetrics.SavingsRatePercent(parameters.AnnualSavings, parameters.AnnualIncome);
         var projectionPoints = BuildProjectionPoints(parameters, projection);
         var fiReachedAge = fiTarget > 0m
             ? projectionPoints.FirstOrDefault(p => p.Base >= fiTarget)?.Age
@@ -187,25 +173,13 @@ public class DashboardService : IDashboardService
 
         // All ten categories in Budget-page order. Zero categories stay in the list so the totals are honest;
         // the view decides what to draw. Percent is always derived from the stored dollar amount.
-        var allocations = new[]
-            {
-                ("Housing", budget.HousingAmount),
-                ("Food", budget.FoodAmount),
-                ("Transportation", budget.TransportationAmount),
-                ("Utilities", budget.UtilitiesAmount),
-                ("Insurance", budget.InsuranceAmount),
-                ("Healthcare", budget.HealthcareAmount),
-                ("Savings", budget.SavingsAmount),
-                ("Debt Repayment", budget.DebtRepaymentAmount),
-                ("Entertainment", budget.EntertainmentAmount),
-                ("Miscellaneous", budget.MiscellaneousAmount)
-            }
+        var allocations = BudgetPlannerCategories.AllocationAmounts(budget)
             .Select(category => new BudgetAllocationDto
             {
-                Name = category.Item1,
-                Key = CategoryKey(category.Item1),
-                Percent = BudgetHelper.ToPercent(budget.MonthlyIncome, category.Item2),
-                Amount = category.Item2
+                Name = category.Name,
+                Key = CategoryKey(category.Name),
+                Percent = BudgetHelper.ToPercent(budget.MonthlyIncome, category.Amount),
+                Amount = category.Amount
             })
             .ToList();
 

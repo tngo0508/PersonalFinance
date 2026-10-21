@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Web.Models;
@@ -15,10 +16,12 @@ namespace PersonalFinance.Web.Controllers;
 public class NetworthController : Controller
 {
     private readonly INetWorthApi _netWorthApi;
+    private readonly ILogger<NetworthController> _logger;
 
-    public NetworthController(INetWorthApi netWorthApi)
+    public NetworthController(INetWorthApi netWorthApi, ILogger<NetworthController> logger)
     {
         _netWorthApi = netWorthApi;
+        _logger = logger;
     }
 
     /// <summary>
@@ -38,16 +41,7 @@ public class NetworthController : Controller
             // Only apply saved values if they represent real data (not a blank DTO with all zeros)
             if (saved != null && saved.CurrentAge > 0 && saved.RetirementAge > 0)
             {
-                model.StartingBalance = saved.StartingBalance;
-                model.AnnualSavings = saved.AnnualSavings;
-                model.AnnualIncome = saved.AnnualIncome;
-                model.AnnualSpending = saved.AnnualSpending;
-                model.CurrentAge = saved.CurrentAge;
-                model.RetirementAge = saved.RetirementAge;
-                model.BaseRoi = saved.BaseRoi;
-                model.ConservativeRoi = saved.ConservativeRoi;
-                model.AggressiveRoi = saved.AggressiveRoi;
-                model.AggressiveSavings = saved.AggressiveSavings;
+                model.ApplySaved(saved);
             }
         }
         catch
@@ -55,64 +49,20 @@ public class NetworthController : Controller
             // If the API is unavailable, fall back to default values
         }
 
-        var request = BuildRequest(model);
-        model.Projection = await _netWorthApi.CalculateProjectionAsync(request, cancellationToken);
+        model.Projection = await _netWorthApi.CalculateProjectionAsync(model.ToProjectionRequest(), cancellationToken);
         return View(model);
     }
 
     /// <summary>
-    /// Returns JSON projection data for AJAX-based chart updates.
+    /// Returns JSON projection data for AJAX-based chart updates. Parameters missing from the query string
+    /// keep their <see cref="NetWorthDefaults"/> value.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Calculate(
-        decimal startingBalance = 195033.14m,
-        decimal annualSavings = 32000m,
-        decimal annualIncome = 108409.60m,
-        decimal annualSpending = 50000m,
-        int currentAge = 33,
-        int retirementAge = 65,
-        decimal baseRoi = 7.0m,
-        decimal conservativeRoi = 6.0m,
-        decimal aggressiveRoi = 10.0m,
-        decimal aggressiveSavings = 45000m,
+    public async Task<IActionResult> Calculate([FromQuery] NetWorthViewModel parameters,
         CancellationToken cancellationToken = default)
     {
-        var request = new NetWorthProjectionRequestDto
-        {
-            StartingBalance = startingBalance,
-            AnnualSavings = annualSavings,
-            AnnualIncome = annualIncome,
-            AnnualSpending = annualSpending,
-            CurrentAge = currentAge,
-            RetirementAge = retirementAge,
-            BaseRoi = baseRoi,
-            ConservativeRoi = conservativeRoi,
-            AggressiveRoi = aggressiveRoi,
-            AggressiveSavings = aggressiveSavings
-        };
-
-        var projection = await _netWorthApi.CalculateProjectionAsync(request, cancellationToken);
+        var projection = await _netWorthApi.CalculateProjectionAsync(parameters.ToProjectionRequest(), cancellationToken);
         return Json(projection);
-    }
-
-    /// <summary>
-    /// Builds a projection request DTO from a view model.
-    /// </summary>
-    private static NetWorthProjectionRequestDto BuildRequest(NetWorthViewModel model)
-    {
-        return new NetWorthProjectionRequestDto
-        {
-            StartingBalance = model.StartingBalance,
-            AnnualSavings = model.AnnualSavings,
-            AnnualIncome = model.AnnualIncome,
-            AnnualSpending = model.AnnualSpending,
-            CurrentAge = model.CurrentAge,
-            RetirementAge = model.RetirementAge,
-            BaseRoi = model.BaseRoi,
-            ConservativeRoi = model.ConservativeRoi,
-            AggressiveRoi = model.AggressiveRoi,
-            AggressiveSavings = model.AggressiveSavings
-        };
     }
 
     /// <summary>
@@ -123,7 +73,7 @@ public class NetworthController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveParameters(NetWorthViewModel model)
     {
-        var request = BuildRequest(model);
+        var request = model.ToProjectionRequest();
 
         if (!ModelState.IsValid)
         {
@@ -136,9 +86,10 @@ public class NetworthController : Controller
             await _netWorthApi.SaveParametersAsync(request, HttpContext.RequestAborted);
             TempData["SaveSuccess"] = "Parameters saved to cloud.";
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
-            ModelState.AddModelError("", $"Failed to save parameters: {ex.Message}");
+            _logger.LogError(ex, "Saving Net Worth parameters failed.");
+            ModelState.AddModelError("", "Failed to save parameters. Please try again.");
             model.Projection = await _netWorthApi.CalculateProjectionAsync(request, CancellationToken.None);
             return View("Index", model);
         }

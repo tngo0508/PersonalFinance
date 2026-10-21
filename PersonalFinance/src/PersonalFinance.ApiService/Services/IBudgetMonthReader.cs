@@ -1,4 +1,5 @@
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -45,9 +46,8 @@ public sealed class BudgetTrendRecordData
     public decimal Expenses { get; set; }
     public decimal NetSavings => Income - Expenses;
 
-    public double SavingsRate => Income > 0
-        ? Math.Round((double)(NetSavings / Income) * 100, 1)
-        : 0;
+    /// <summary>Actual Savings Rate (see <see cref="FinanceMetrics.ActualSavingsRatePercent"/>).</summary>
+    public double SavingsRate => FinanceMetrics.ActualSavingsRatePercent(Income, Expenses);
 }
 
 /// <summary>
