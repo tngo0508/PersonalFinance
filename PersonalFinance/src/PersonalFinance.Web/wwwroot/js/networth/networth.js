@@ -100,8 +100,9 @@
         NW.renderGrowthChart(data);
         NW.renderComparisonChart(data);
 
-        // Initialize scenario tabs
+        // Initialize scenario tabs and render the projection table for the selected scenario
         NW.initScenarioTabs();
+        NW.updateTable(window.nwSelectedScenario || 'Base');
 
         // Initialize live recalculation
         NW.initLiveRecalculation();

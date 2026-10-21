@@ -298,7 +298,7 @@ public class GoogleDriveController : Controller
         catch (Refit.ApiException apiEx)
         {
             _logger.LogError(apiEx, "ApiService returned HTTP {StatusCode} when connecting Google Drive.", apiEx.StatusCode);
-            model.ErrorMessage = $"Backend service returned error: {(int)apiEx.StatusCode} ({apiEx.StatusCode})";
+            model.ErrorMessage = ApiErrorMessages.FromApiException(apiEx);
             model.ShowConnectForm = true;
         }
         catch (HttpRequestException httpEx)

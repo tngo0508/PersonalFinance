@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Helpers;
+
 namespace PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 /// <summary>
@@ -15,7 +17,8 @@ public class MonthlyBudgetReportDto
     public decimal TotalAnnualBudgetedExpenses => Months.Sum(m => m.BudgetedExpenses);
     public decimal TotalAnnualSavings => TotalAnnualIncome - TotalAnnualExpenses;
     public decimal TotalAnnualBudgetedSavings => TotalAnnualBudgetedIncome - TotalAnnualBudgetedExpenses;
-    public double AverageSavingsRate => TotalAnnualIncome > 0 ? (double)(TotalAnnualSavings / TotalAnnualIncome) * 100 : 0;
+    /// <summary>Actual Savings Rate for the whole report.</summary>
+    public double AverageSavingsRate => FinanceMetrics.ActualSavingsRatePercent(TotalAnnualIncome, TotalAnnualExpenses);
     public decimal? StartingBalance => Months.FirstOrDefault(m => m.StartingBalance.HasValue)?.StartingBalance;
     public decimal? EndingBalance => Months.LastOrDefault(m => m.EndingBalance.HasValue)?.EndingBalance;
     public string DataSource { get; set; } = "Google Drive Spreadsheet (Actual Data)";
@@ -47,7 +50,8 @@ public class MonthlyBudgetMonthSummaryDto
     public decimal? EndingBalance { get; set; }
     public decimal NetSavings => ActualIncome - ActualExpenses;
     public decimal BudgetedNetSavings => BudgetedIncome - BudgetedExpenses;
-    public double SavingsRate => ActualIncome > 0 ? (double)(NetSavings / ActualIncome) * 100 : 0;
+    /// <summary>Actual Savings Rate for the month.</summary>
+    public double SavingsRate => FinanceMetrics.ActualSavingsRatePercent(ActualIncome, ActualExpenses);
     public decimal ExpenseVariance => BudgetedExpenses - ActualExpenses;
     public string Status
     {

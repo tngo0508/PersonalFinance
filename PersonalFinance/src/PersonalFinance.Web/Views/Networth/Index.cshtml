@@ -69,6 +69,9 @@
     <script src="~/js/networth/networth-presets.js" asp-append-version="true"></script>
     <script src="~/js/networth/networth-ui.js" asp-append-version="true"></script>
     <script src="~/js/networth/networth.js" asp-append-version="true"></script>
+    <script>
+        window.nwDefaultParameters = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(PersonalFinance.Shared.Constants.NetWorthDefaults.CreateRequest(), new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+    </script>
     @if (projection != null)
     {
         <script>

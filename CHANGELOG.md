@@ -35,6 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `IPersonalFinanceApi` (four features in one contract, DTOs declared inline) is split into `ISavingsGoalsApi`, `IWatchlistApi`, `IBudgetPlannerApi` and `ISpreadsheetAnalysisApi`, with DTOs under `Shared/DTOs/<Feature>/`.
   - Removed the Web `PersonalFinanceController`: its savings-goal, budget and watchlist-check endpoints had no callers, and it skipped antiforgery validation. The News watchlist now uses `/api/Watchlist`, which validates the antiforgery token.
 
+- **Net Worth Parameters and Savings Rates Defined Once**: The Net Worth parameters, their defaults, the projection table, and the two savings-rate figures each have a single definition.
+  - "Savings Rate" (planned, Net Worth/Dashboard) and "Actual Savings Rate" (budget months, Budget Report/Analysis) are separate GLOSSARY terms, each calculated by `FinanceMetrics` and rounded to one decimal place.
+  - `NetWorthParametersMapping` (ApiService) and `NetWorthViewModel.ToProjectionRequest/ApplySaved` (Web) replace eight hand-written copies of the ten-field mapping; a test fails if a parameter is missed.
+  - `NetWorthDefaults` is the one source of default parameters for the page, the projection endpoint, and the JavaScript Reset fallback (which used slightly different numbers).
+  - The Net Worth page renders the Savings Rate from the parameters instead of a hardcoded 29.5%, and the projection table only in JavaScript (the Razor copy repeated the highlight rules).
+  - `BudgetPlannerCategories` lists the ten Budget Planner categories once for the Dashboard and the AI Assistant.
+  - A failed Net Worth save no longer shows the exception message.
+  - The Budget Report and Analysis label budget-month figures "Actual savings rate"; the Net Worth page loads its parameters with the same current-record rule as the Dashboard.
+
 - **AI Assistant Reads Budget Data Through the Provider**: The AI Assistant's tools read budgets and transactions only through `IBudgetDataProvider` (ADR 0002), and it uses the same "current" Net Worth parameters and budget Period as the Dashboard.
   - Removed the legacy path that downloaded Google Drive spreadsheets live during a chat (about 380 lines).
 

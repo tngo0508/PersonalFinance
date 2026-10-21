@@ -165,7 +165,7 @@
         /**
          * Mark a notification as read.
          * @param {number} id - Notification ID.
-         * @returns {void}
+         * @returns {Promise<void>}
          */
         async function markAsRead (id) {
             try {
@@ -178,7 +178,7 @@
 
         /**
          * Mark all notifications as read.
-         * @returns {void}
+         * @returns {Promise<void>}
          */
         async function markAllRead () {
             try {

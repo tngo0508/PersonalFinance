@@ -480,19 +480,7 @@ public class AiAssistantService : IAiAssistantService
                 context.CurrentAge = netWorthParams.CurrentAge;
                 context.RetirementAge = netWorthParams.RetirementAge;
                 context.AnnualSavings = netWorthParams.AnnualSavings;
-                context.Projection = NetWorthProjectionService.ComputeProjection(new NetWorthProjectionRequestDto
-                {
-                    StartingBalance = netWorthParams.StartingBalance,
-                    AnnualSavings = netWorthParams.AnnualSavings,
-                    AnnualIncome = netWorthParams.AnnualIncome,
-                    AnnualSpending = netWorthParams.AnnualSpending,
-                    CurrentAge = netWorthParams.CurrentAge,
-                    RetirementAge = netWorthParams.RetirementAge,
-                    BaseRoi = netWorthParams.BaseRoi,
-                    ConservativeRoi = netWorthParams.ConservativeRoi,
-                    AggressiveRoi = netWorthParams.AggressiveRoi,
-                    AggressiveSavings = netWorthParams.AggressiveSavings
-                });
+                context.Projection = NetWorthProjectionService.ComputeProjection(netWorthParams.ToProjectionRequest());
             }
 
             // Get budget allocations
@@ -504,20 +492,8 @@ public class AiAssistantService : IAiAssistantService
             if (budget != null)
             {
                 context.MonthlyIncome = budget.MonthlyIncome;
-                decimal income = budget.MonthlyIncome;
-                context.BudgetAllocations = new Dictionary<string, double>
-                {
-                    { "Housing", (double)BudgetHelper.ToPercent(income, budget.HousingAmount) },
-                    { "Food", (double)BudgetHelper.ToPercent(income, budget.FoodAmount) },
-                    { "Transportation", (double)BudgetHelper.ToPercent(income, budget.TransportationAmount) },
-                    { "Utilities", (double)BudgetHelper.ToPercent(income, budget.UtilitiesAmount) },
-                    { "Insurance", (double)BudgetHelper.ToPercent(income, budget.InsuranceAmount) },
-                    { "Healthcare", (double)BudgetHelper.ToPercent(income, budget.HealthcareAmount) },
-                    { "Savings", (double)BudgetHelper.ToPercent(income, budget.SavingsAmount) },
-                    { "Debt Repayment", (double)BudgetHelper.ToPercent(income, budget.DebtRepaymentAmount) },
-                    { "Entertainment", (double)BudgetHelper.ToPercent(income, budget.EntertainmentAmount) },
-                    { "Miscellaneous", (double)BudgetHelper.ToPercent(income, budget.MiscellaneousAmount) }
-                };
+                context.BudgetAllocations = BudgetPlannerCategories.AllocationAmounts(budget)
+                    .ToDictionary(c => c.Name, c => (double)BudgetHelper.ToPercent(budget.MonthlyIncome, c.Amount));
             }
 
             // Get savings goals

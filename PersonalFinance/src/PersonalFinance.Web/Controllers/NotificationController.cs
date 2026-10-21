@@ -44,6 +44,7 @@ public class NotificationController : Controller
     /// Marks one notification as read.
     /// </summary>
     [HttpPost("{id:int}/read")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkAsRead(int id, CancellationToken cancellationToken = default)
     {
         return Ok(await _notificationApi.MarkAsReadAsync(id, cancellationToken));
@@ -53,6 +54,7 @@ public class NotificationController : Controller
     /// Marks every notification as read.
     /// </summary>
     [HttpPost("mark-all-read")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken = default)
     {
         return Ok(await _notificationApi.MarkAllAsReadAsync(cancellationToken));

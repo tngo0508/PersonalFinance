@@ -72,7 +72,17 @@ The portfolio value at which a user is considered financially independent: annua
 Net worth as a percentage of the FI Target.
 
 ### Savings Rate
-Annual savings as a percentage of annual income.
+Planned annual savings as a percentage of annual income, from the user's Net Worth parameters
+(`AnnualSavings / AnnualIncome`). Shown on the Net Worth page and the Dashboard. Calculated by
+`FinanceMetrics.SavingsRatePercent`, rounded to one decimal place.
+_Avoid_: using it for budget months; that is the Actual Savings Rate.
+
+### Actual Savings Rate
+The share of actual income left after actual expenses in budget months (`(Actual income − Actual expenses) / Actual
+income`), from the Budget Tracker or synced Google Sheet data. Shown in the Budget Report and Analysis. Calculated by
+`FinanceMetrics.ActualSavingsRatePercent`, rounded to one decimal place; 0 when there is no income. (Existing DTO
+properties keep the name `SavingsRate` / `AverageSavingsRate` for the JavaScript that reads them.)
+_Avoid_: calling it "Savings Rate" in new code or UI text without the "Actual" qualifier.
 
 ### Landing Page
 The public page served at `/` to signed-out visitors. It explains the product and leads to registration or sign-in.

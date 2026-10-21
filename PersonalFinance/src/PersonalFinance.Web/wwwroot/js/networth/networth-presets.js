@@ -202,21 +202,25 @@
             applyPreset(cached);
             return;
         }
-        // Fallback to hardcoded defaults if no cached values
+        // Fallback to the server's NetWorthDefaults (rendered into the page) if no cached values
+        const defaults = window.nwDefaultParameters;
+        if (!defaults) {
+            return;
+        }
         if (window.NW.showResetMessage) {
             window.NW.showResetMessage('No saved parameters, using defaults.');
         }
         applyPreset({
-            nwStartingBalance: 195033,
-            nwAnnualSavings: 32000,
-            nwAnnualIncome: 108410,
-            nwAnnualSpending: 50000,
-            nwCurrentAge: 33,
-            nwRetirementAge: 65,
-            nwBaseRoi: 7.0,
-            nwConservativeRoi: 6.0,
-            nwAggressiveRoi: 10.0,
-            nwAggressiveSavings: 45000
+            nwStartingBalance: defaults.startingBalance,
+            nwAnnualSavings: defaults.annualSavings,
+            nwAnnualIncome: defaults.annualIncome,
+            nwAnnualSpending: defaults.annualSpending,
+            nwCurrentAge: defaults.currentAge,
+            nwRetirementAge: defaults.retirementAge,
+            nwBaseRoi: defaults.baseRoi,
+            nwConservativeRoi: defaults.conservativeRoi,
+            nwAggressiveRoi: defaults.aggressiveRoi,
+            nwAggressiveSavings: defaults.aggressiveSavings
         });
     }
 

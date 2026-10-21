@@ -898,8 +898,8 @@ Total Expenses,3500.00,4000.00,-500.00";
         // Net Savings: 3000 - 4000 = -1000
         Assert.Equal(-1000.00m, month.NetSavings);
 
-        // Savings Rate: -1000 / 3000 * 100 = -33.33%
-        Assert.Equal(-33.33, month.SavingsRate, 2);
+        // Actual Savings Rate: -1000 / 3000 * 100 = -33.3% (one decimal place, FinanceMetrics)
+        Assert.Equal(-33.3, month.SavingsRate, 1);
 
         // Status: Over Budget (Actual 4000 > Budgeted 3500)
         Assert.Equal("Over Budget", month.Status);

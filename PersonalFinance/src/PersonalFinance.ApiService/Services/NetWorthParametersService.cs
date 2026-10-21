@@ -39,32 +39,20 @@ public sealed class NetWorthParametersService : INetWorthParametersService
                 existing.DeletedAt = null;
             }
 
-            ApplyParameters(existing, parameters);
+            existing.Apply(parameters);
             existing.UpdatedAt = DateTime.UtcNow;
         }
         else
         {
-            var entity = new NetWorthParameters
-            {
-                UserId = userId,
-                StartingBalance = parameters.StartingBalance,
-                AnnualSavings = parameters.AnnualSavings,
-                AnnualIncome = parameters.AnnualIncome,
-                AnnualSpending = parameters.AnnualSpending,
-                CurrentAge = parameters.CurrentAge,
-                RetirementAge = parameters.RetirementAge,
-                BaseRoi = parameters.BaseRoi,
-                ConservativeRoi = parameters.ConservativeRoi,
-                AggressiveRoi = parameters.AggressiveRoi,
-                AggressiveSavings = parameters.AggressiveSavings
-            };
+            var entity = new NetWorthParameters { UserId = userId };
+            entity.Apply(parameters);
 
             await _dbContext.NetWorthParameters.AddAsync(entity, cancellationToken);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return ToDto(existing ?? _dbContext.NetWorthParameters.Local.FirstOrDefault(e => e.UserId == userId)!);
+        return (existing ?? _dbContext.NetWorthParameters.Local.First(e => e.UserId == userId)).ToDto();
     }
 
     /// <summary>
@@ -74,9 +62,11 @@ public sealed class NetWorthParametersService : INetWorthParametersService
     public async Task<NetWorthParametersDto?> LoadAsync(string userId, CancellationToken cancellationToken = default)
     {
         var parameters = await _dbContext.NetWorthParameters
-            .FirstOrDefaultAsync(e => e.UserId == userId, cancellationToken);
+            .AsNoTracking()
+            .CurrentFor(userId)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        return parameters is not null ? ToDto(parameters) : null;
+        return parameters?.ToDto();
     }
 
     /// <summary>
@@ -92,37 +82,5 @@ public sealed class NetWorthParametersService : INetWorthParametersService
             parameters.SoftDelete();
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
-    }
-
-    private static void ApplyParameters(NetWorthParameters entity, NetWorthProjectionRequestDto parameters)
-    {
-        entity.StartingBalance = parameters.StartingBalance;
-        entity.AnnualSavings = parameters.AnnualSavings;
-        entity.AnnualIncome = parameters.AnnualIncome;
-        entity.AnnualSpending = parameters.AnnualSpending;
-        entity.CurrentAge = parameters.CurrentAge;
-        entity.RetirementAge = parameters.RetirementAge;
-        entity.BaseRoi = parameters.BaseRoi;
-        entity.ConservativeRoi = parameters.ConservativeRoi;
-        entity.AggressiveRoi = parameters.AggressiveRoi;
-        entity.AggressiveSavings = parameters.AggressiveSavings;
-    }
-
-    private static NetWorthParametersDto ToDto(NetWorthParameters entity)
-    {
-        return new NetWorthParametersDto
-        {
-            StartingBalance = entity.StartingBalance,
-            AnnualSavings = entity.AnnualSavings,
-            AnnualIncome = entity.AnnualIncome,
-            AnnualSpending = entity.AnnualSpending,
-            CurrentAge = entity.CurrentAge,
-            RetirementAge = entity.RetirementAge,
-            BaseRoi = entity.BaseRoi,
-            ConservativeRoi = entity.ConservativeRoi,
-            AggressiveRoi = entity.AggressiveRoi,
-            AggressiveSavings = entity.AggressiveSavings,
-            UpdatedAtUtc = entity.UpdatedAt ?? entity.CreatedAt
-        };
     }
 }
