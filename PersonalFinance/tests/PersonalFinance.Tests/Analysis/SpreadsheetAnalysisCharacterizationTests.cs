@@ -104,7 +104,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         Assert.Equal(5500m, stats.TotalIncome);
         Assert.Equal(3800m, stats.TotalExpenses);
         Assert.Equal(1700m, stats.NetSavings);
-        Assert.Equal(30.9, stats.SavingsRate); // (1700 / 5500) * 100 = 30.909...
+        Assert.Equal(30.9m, stats.SavingsRate); // (1700 / 5500) * 100 = 30.909...
         Assert.Equal(1, stats.SnapshotCount);
     }
 
@@ -125,7 +125,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         Assert.Equal(10, trend.TrendPoints[0].MonthNumber);
         Assert.Equal(11, trend.TrendPoints[1].MonthNumber);
         Assert.Equal(2000m, trend.TrendPoints[0].NetSavings);
-        Assert.Equal(40.0, trend.TrendPoints[0].SavingsRate);
+        Assert.Equal(40.0m, trend.TrendPoints[0].SavingsRate);
     }
 
     [Fact]

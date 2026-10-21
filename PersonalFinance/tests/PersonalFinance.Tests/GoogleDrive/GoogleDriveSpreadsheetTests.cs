@@ -665,7 +665,7 @@ Total Expenses,3000.00,2900.00,100.00";
         Assert.Equal(2200.00m, report.TotalAnnualSavings);
 
         // Savings Rate: 2200 / 5100 * 100 = 43.137%
-        Assert.True(month.SavingsRate > 43.0 && month.SavingsRate < 43.2);
+        Assert.True(month.SavingsRate > 43.0m && month.SavingsRate < 43.2m);
 
         // Status: Under Budget (Actual 2900 <= Budgeted 3000)
         Assert.Equal("Under Budget", month.Status);
@@ -790,7 +790,7 @@ Total Expenses,3800.00,3500.00,300.00";
         Assert.Equal(1500.00m, month.NetSavings);
 
         // Savings Rate: 1500 / 5000 * 100 = 30.0% (NOT 0.0%)
-        Assert.Equal(30.0, month.SavingsRate, 1);
+        Assert.Equal(30.0m, month.SavingsRate);
 
         // Status: Under Budget (Actual 3500 <= Budgeted 3800)
         Assert.Equal("Under Budget", month.Status);
@@ -838,7 +838,7 @@ Total Expenses,3500.00,4000.00,-500.00";
         Assert.Equal(-1000.00m, month.NetSavings);
 
         // Actual Savings Rate: -1000 / 3000 * 100 = -33.3% (one decimal place, FinanceMetrics)
-        Assert.Equal(-33.3, month.SavingsRate, 1);
+        Assert.Equal(-33.3m, month.SavingsRate);
 
         // Status: Over Budget (Actual 4000 > Budgeted 3500)
         Assert.Equal("Over Budget", month.Status);

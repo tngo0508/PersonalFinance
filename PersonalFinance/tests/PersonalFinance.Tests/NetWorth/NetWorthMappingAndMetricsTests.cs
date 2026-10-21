@@ -78,7 +78,7 @@ public class NetWorthMappingAndMetricsTests
     [InlineData(5200, 3100, 40.4)]
     [InlineData(0, 100, 0)]
     public void ActualSavingsRate_IsIncomeLeftAfterExpenses_RoundedToOneDecimal(decimal income, decimal expenses,
-        double expected)
+        decimal expected)
     {
         Assert.Equal(expected, FinanceMetrics.ActualSavingsRatePercent(income, expenses));
     }
