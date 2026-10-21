@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Code-Review Follow-Ups**: The remaining code-review findings for the refactor are resolved, and the container images build again.
+  - Docker builds copy `Directory.Build.props` (it holds `TargetFramework`); without it `dotnet restore` failed with NETSDK1013 for both images. A test checks both Dockerfiles.
+  - The spreadsheet reader and Google Drive file source require the Account id; the parser no longer swallows unexpected errors.
+  - `[JsonApiErrors]` gets its logger through DI, and Web page actions share one error-message mapping (`ApiErrorMessages.ForUser`).
+  - Savings Goals, Net Worth parameters and Budget Planner categories each have one shared definition (list order, current record, category list); the Actual Savings Rate is `decimal`.
+  - One antiforgery-token helper in `core/utils.js` replaces seven lookups.
+  - New HTTP-level tests host the real ApiService pipeline (Microsoft.AspNetCore.Mvc.Testing, MIT) and check `X-Internal-Key` handling end to end.
+
 - **Contributor Onboarding and Build Standards**: New contributors get a CONTRIBUTING guide, an accurate architecture guide, and shared build, style and analyzer settings.
   - Add `CONTRIBUTING.md` (clone, configure, run, verify, PR checklist) and `docs/ARCHITECTURE.md` (projects, request and identity flow, add-a-feature checklist).
   - Remove the stale `docs/CQRS_ARCHITECTURE.md` (MediatR, rejected by ADR 0001) and outdated SQLite instructions; document the `InMemory:` connection-string mode.

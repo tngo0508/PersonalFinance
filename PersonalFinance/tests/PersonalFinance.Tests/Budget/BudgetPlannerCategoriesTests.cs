@@ -35,7 +35,7 @@ public class BudgetPlannerCategoriesTests
     public void ToAllocationsDto_MapsEveryAllocationAmount()
     {
         var budget = new UserBudgetAllocation();
-        var amountProperties = typeof(UserBudgetAllocation).GetProperties().Where(p => p.Name.EndsWith("Amount")).ToList();
+        var amountProperties = typeof(UserBudgetAllocation).GetProperties().Where(p => p.Name.EndsWith("Amount", StringComparison.Ordinal)).ToList();
         for (var i = 0; i < amountProperties.Count; i++)
         {
             amountProperties[i].SetValue(budget, 100m + i);
