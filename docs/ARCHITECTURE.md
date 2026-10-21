@@ -19,6 +19,11 @@ repo root.
 | `PersonalFinance.Shared` | DTOs, Refit API Contracts, constants and helpers used by more than one project. |
 | `PersonalFinance.Tests` | xUnit tests using the EF Core InMemory provider. |
 
+`Program.cs` in Web and ApiService is a short, commented list of what each app uses; the details live in extension
+methods (`ServiceDefaults/LoggingExtensions.cs`, `ApiService/Infrastructure/FeatureServiceExtensions.cs`,
+`Web/Infrastructure/`, and `MigrateAndRunAsync` in `Data/DatabaseMigrationExtensions.cs`, which also handles
+`--migrate-only`).
+
 Shared build settings (target framework, nullable, analyzers) are in `PersonalFinance/Directory.Build.props`;
 package versions are in `PersonalFinance/Directory.Packages.props` (central package management); code style is in the
 root `.editorconfig`.
@@ -83,7 +88,8 @@ There is no mediator: ApiService controllers inject Service interfaces directly
 ## Identity: how an Account reaches ApiService
 
 1. The browser signs in to Web with ASP.NET Core Identity (cookie).
-2. `Web/Services/UserIdForwardingHandler.cs` is attached to every Refit client in `Web/Program.cs`. It adds the signed-in
+2. `Web/Services/UserIdForwardingHandler.cs` is attached to every Refit client by
+   `Web/Infrastructure/InternalApiClientExtensions.cs`. It adds the signed-in
    Account id as `X-User-Id` (nothing for signed-out visitors) and the shared secret as `X-Internal-Key`.
 3. `ApiService/Infrastructure/XUserIdAuthenticationHandler.cs` checks the shared secret, loads the Account's Roles from
    the Identity tables, and builds a `ClaimsPrincipal`.
@@ -116,14 +122,15 @@ Follow the existing Budget Tracker feature as the reference implementation.
 1. **Entity** in `PersonalFinance.Data/Entities/` (inherit `AuditableEntity` if user-owned), `DbSet` and configuration in
    `AppDbContext`, then a migration. Inspect the generated migration before committing.
 2. **DTOs** in `PersonalFinance.Shared/DTOs/<Feature>/`.
-3. **Service** interface and implementation in `PersonalFinance.ApiService/Services/`; register it in
-   `ApiService/Program.cs`.
+3. **Service** interface and implementation in `PersonalFinance.ApiService/Services/`; register it in its feature's
+   method in `ApiService/Infrastructure/FeatureServiceExtensions.cs` (a new feature gets a new method, called from
+   `ApiService/Program.cs`).
 4. **Validators** in `PersonalFinance.ApiService/Validators/` (picked up automatically by
    `AddValidatorsFromAssemblyContaining<Program>()`).
 5. **ApiService controller** in `PersonalFinance.ApiService/Controllers/`, with `[Authorize]`, reading the Account id from
    claims.
-6. **Refit Contract** in `PersonalFinance.Shared/Contracts/I<Feature>Api.cs`; register it in `Web/Program.cs` with
-   `.AddHttpMessageHandler<UserIdForwardingHandler>()`.
+6. **Refit Contract** in `PersonalFinance.Shared/Contracts/I<Feature>Api.cs`; add one line to `AddInternalApiClients` in
+   `Web/Infrastructure/InternalApiClientExtensions.cs` (`Web/InternalApiClientRegistrationTests` fails if you forget).
 7. **Web controller, view model and Razor view** in `PersonalFinance.Web/`; JavaScript in `wwwroot/js/<feature>/`.
 8. **Tests** in `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/`.
 9. Bump `AppVersion` and add a `CHANGELOG.md` entry (see [`CONTRIBUTING.md`](../CONTRIBUTING.md)).

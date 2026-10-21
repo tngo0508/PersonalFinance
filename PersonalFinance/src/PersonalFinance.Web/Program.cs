@@ -10,18 +10,12 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
-using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Services;
-using Refit;
 using Serilog;
-using Serilog.Sinks.SystemConsole.Themes;
 
-// 1. Bootstrap early logging to catch startup errors
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Async(a => a.Console(
-        theme: AnsiConsoleTheme.Code,
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
-    .CreateBootstrapLogger();
+// Console logging until the host is built, so startup and DI failures are captured.
+Log.Logger = LoggingExtensions.CreateBootstrapLogger();
 
 try
 {
@@ -29,40 +23,20 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // 1a. Pin culture to en-US (chiseled containers start in the invariant culture and format currency as "¤")
+    // Pin culture to en-US (chiseled containers start in the invariant culture and format currency as "¤").
     AppCulture.ApplyDefault();
 
-    // 1b. Load user secrets in Development environment for local credential management
-    if (builder.Environment.IsDevelopment())
-    {
-        builder.Configuration.AddUserSecrets<Program>(optional: true, reloadOnChange: true);
-    }
-
-    // 2. Add Aspire service defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
+    // Platform: Aspire defaults (OpenTelemetry, health checks, service discovery, HttpClient resilience) and Serilog.
     builder.AddServiceDefaults();
+    builder.AddAppLogging(logFilePrefix: "web");
 
-    // 3. Wire up Serilog with non-blocking async console sink, rolling file sink (30-day retention), and OpenTelemetry forwarding
-    builder.Host.UseSerilog((context, services, configuration) => configuration
-            .ReadFrom.Configuration(context.Configuration)
-            .ReadFrom.Services(services)
-            .Enrich.FromLogContext()
-            .WriteTo.Async(a => a.Console(
-                theme: AnsiConsoleTheme.Code,
-                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
-            .WriteTo.Async(a => a.File(
-                path: Path.Combine("logs", "web-.log"),
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 30,
-                outputTemplate:
-                "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}")),
-        writeToProviders: true);
-
-    // 3a. Register EF Core DbContext & ASP.NET Core Identity (Azure SQL Serverless / SQLite)
+    // Data: EF Core for ASP.NET Core Identity, consent records and Data Protection keys.
     builder.Services.AddAppDbContext(builder.Configuration);
+    builder.Services.AddDataProtection()
+        .PersistKeysToDbContext<AppDbContext>(); // keeps cookies and antiforgery tokens valid across container restarts
 
-    // Disable email confirmation requirement for CI/E2E runs to allow immediate login after registration
+    // Identity: CI/E2E runs disable email confirmation so a new account can sign in immediately.
     var disableEmailConfirmationForE2E = Environment.GetEnvironmentVariable("E2E_DISABLE_EMAIL_CONFIRMATION") == "true";
-
     builder.Services.AddDefaultIdentity<IdentityUser>(options =>
         {
             options.SignIn.RequireConfirmedAccount = !disableEmailConfirmationForE2E;
@@ -76,16 +50,6 @@ try
         .AddRoles<IdentityRole>()
         .AddEntityFrameworkStores<AppDbContext>();
 
-    builder.Services.AddAuthorizationBuilder()
-        .AddPolicy(AppPolicies.RequireAdmin, policy => policy
-            .RequireAuthenticatedUser()
-            .RequireRole(AppRoles.Admin));
-
-    // Persist Data Protection keys to AppDbContext to preserve authentication sessions & antiforgery tokens across container restarts
-    builder.Services.AddDataProtection()
-        .PersistKeysToDbContext<AppDbContext>();
-
-    // 3b. Configure Identity Application Cookie with .NET 10 API-Aware Redirect Handling
     builder.Services.ConfigureApplicationCookie(options =>
     {
         options.Cookie.HttpOnly = true;
@@ -96,38 +60,10 @@ try
         options.LoginPath = "/Identity/Account/Login";
         options.LogoutPath = "/Identity/Account/Logout";
         options.AccessDeniedPath = "/Identity/Account/AccessDenied";
-
-        // Prevent 302 redirects on API / Fetch / XMLHttpRequest endpoints; return 401/403 instead
-        options.Events.OnRedirectToLogin = context =>
-        {
-            if (context.Request.Path.StartsWithSegments("/api") ||
-                context.Request.Headers.Accept.Any(h => h != null && h.Contains("application/json")) ||
-                context.Request.Headers.XRequestedWith == "XMLHttpRequest")
-            {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                return Task.CompletedTask;
-            }
-
-            context.Response.Redirect(context.RedirectUri);
-            return Task.CompletedTask;
-        };
-
-        options.Events.OnRedirectToAccessDenied = context =>
-        {
-            if (context.Request.Path.StartsWithSegments("/api") ||
-                context.Request.Headers.Accept.Any(h => h != null && h.Contains("application/json")) ||
-                context.Request.Headers.XRequestedWith == "XMLHttpRequest")
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                return Task.CompletedTask;
-            }
-
-            context.Response.Redirect(context.RedirectUri);
-            return Task.CompletedTask;
-        };
+        ApiAwareCookieRedirects.Apply(options.Events); // 401/403 instead of a login redirect for fetch/XHR calls
     });
 
-    // 3c. Register Google External Authentication if configured
+    // Google sign-in, only when its credentials are configured.
     var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
     var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
     if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
@@ -139,30 +75,31 @@ try
                 options.ClientSecret = googleClientSecret;
                 options.CallbackPath = "/signin-google";
                 options.SaveTokens = true;
-
-                // Request standard OpenID Connect profile scopes
                 options.Scope.Add("profile");
                 options.Scope.Add("email");
-
-                // Map custom claims from Google's JSON userinfo payload
                 options.ClaimActions.MapJsonKey("urn:google:picture", "picture", "url");
                 options.ClaimActions.MapJsonKey("urn:google:locale", "locale", "string");
                 options.ClaimActions.MapJsonKey("urn:google:verified_email", "email_verified", "bool");
             });
     }
 
-    // 3d. Register Brevo Email Sender
-    builder.Services.Configure<BrevoOptions>(
-        builder.Configuration.GetSection("Brevo"));
-    builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(client =>
-    {
-        client.Timeout = TimeSpan.FromSeconds(15);
-    });
+    // Authorization: Policies, never Role names (ADR 0004); non-admins get 404, not 403, on admin pages.
+    builder.Services.AddAuthorizationBuilder()
+        .AddPolicy(AppPolicies.RequireAdmin, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireRole(AppRoles.Admin));
+    builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AdminNotFoundAuthorizationResultHandler>();
 
-    // 3e. Register Finance News Service for RSS feed aggregation
-    builder.Services.AddHttpClient<INewsService, NewsService>(client => { client.Timeout = TimeSpan.FromSeconds(5); });
+    // ApiService: one Refit client per contract, each forwarding the signed-in Account (Infrastructure/InternalApiClientExtensions.cs).
+    builder.Services.AddInternalApiClients(builder.Configuration);
 
-    // 3g. Configure Forwarded Headers for Azure Container Apps / Reverse Proxies (SSL Termination & OAuth Redirects)
+    // Web-only services.
+    builder.Services.Configure<BrevoOptions>(builder.Configuration.GetSection("Brevo"));
+    builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(client => client.Timeout = TimeSpan.FromSeconds(15));
+    builder.Services.AddHttpClient<INewsService, NewsService>(client => client.Timeout = TimeSpan.FromSeconds(5));
+    builder.Services.AddScoped<IUserConsentService, UserConsentService>();
+
+    // Hosting behind Azure Container Apps: trust X-Forwarded-For/Proto so HTTPS and OAuth redirect URIs are correct.
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -170,7 +107,7 @@ try
         options.KnownProxies.Clear();
     });
 
-    // 3h. Lock request localization to en-US so a browser Accept-Language header cannot change currency or number formats
+    // Lock request localization to en-US so a browser Accept-Language header cannot change currency or number formats.
     builder.Services.Configure<RequestLocalizationOptions>(options =>
     {
         options.DefaultRequestCulture = new RequestCulture(AppCulture.DefaultCultureName);
@@ -178,10 +115,8 @@ try
         options.SupportedUICultures = [AppCulture.Default];
     });
 
+    // MVC and Razor Pages; antiforgery tokens are validated on every unsafe (POST/PUT/PATCH/DELETE) action by default.
     builder.Services.AddRazorPages();
-
-    // 4. Add MVC Controllers and Views
-    // Validate antiforgery tokens on every unsafe (POST/PUT/PATCH/DELETE) MVC action by default
     builder.Services.AddControllersWithViews(options =>
             options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
         .AddJsonOptions(opts =>
@@ -191,128 +126,9 @@ try
         });
     builder.Services.AddProblemDetails();
 
-    // 5. Register Health Checks
-    builder.Services.AddHealthChecks();
-
-    // 6. Register IHttpContextAccessor for identity forwarding to API service
-    builder.Services.AddHttpContextAccessor();
-    builder.Services.AddTransient<UserIdForwardingHandler>();
-
-    // 6a. Return 404 (not 403) to signed-in non-admins on admin pages
-    builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AdminNotFoundAuthorizationResultHandler>();
-
-    // 6b. Register User Consent Service
-    builder.Services.AddScoped<IUserConsentService, UserConsentService>();
-
-    // 7. Register Refit Clients with Service Discovery
-    var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https+http://apiservice";
-
-    builder.Services.AddRefitClient<IGoogleDriveApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(35);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    builder.Services.AddRefitClient<INetWorthApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    // 7a-1. Register Admin API client (admin-only summary)
-    builder.Services.AddRefitClient<IAdminApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    // 7b. Register Community API client for polls, comments, and stories
-    builder.Services.AddRefitClient<ICommunityApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    // 7c. Register Personal Finance API client for savings goals, watchlist, and budget
-    // Uses case-insensitive JSON property matching so lowercase API properties (e.g. "housing")
-    // map correctly to PascalCase DTO properties (e.g. "Housing").
-    builder.Services.AddRefitClient<IPersonalFinanceApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    // 7d. Register AI Assistant API client for chat integration
-    builder.Services.AddRefitClient<IAiAssistantApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(30);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    // 7e. Register Notification API client
-    builder.Services.AddRefitClient<INotificationApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    // 7f. Register Search API client
-    builder.Services.AddRefitClient<ISearchApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    // 7g. Register Dashboard API client
-    builder.Services.AddRefitClient<IDashboardApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
-    // 7h. Register Budget Tracker API client
-    builder.Services.AddRefitClient<IBudgetTrackerApi>()
-        .ConfigureHttpClient(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(15);
-        })
-        .AddHttpMessageHandler<UserIdForwardingHandler>()
-        .AddStandardResilienceHandler();
-
     var app = builder.Build();
 
-    // 7. Enable Serilog HTTP request logging
     app.UseSerilogRequestLogging();
-
-    // 8. Map default Aspire endpoints (/health, /alive)
     app.MapDefaultEndpoints();
 
     if (!app.Environment.IsDevelopment())
@@ -334,22 +150,9 @@ try
             name: "default",
             pattern: "{controller=Home}/{action=Index}/{id?}")
         .WithStaticAssets();
-
     app.MapRazorPages();
 
-    // 7. Auto-migrate database schema and seed initial sample data across environments
-    if (args.Contains("--migrate-only") ||
-        string.Equals(Environment.GetEnvironmentVariable("MIGRATE_ONLY"), "true", StringComparison.OrdinalIgnoreCase))
-    {
-        Log.Information("Executing database migration task and exiting (--migrate-only)...");
-        await app.MigrateAndSeedDatabaseAsync();
-        Log.Information("Database migration task finished successfully.");
-        return;
-    }
-
-    await app.MigrateAndSeedDatabaseAsync();
-
-    app.Run();
+    await app.MigrateAndRunAsync(args);
 }
 catch (Exception ex)
 {
@@ -357,5 +160,5 @@ catch (Exception ex)
 }
 finally
 {
-    Log.CloseAndFlush();
+    await Log.CloseAndFlushAsync();
 }

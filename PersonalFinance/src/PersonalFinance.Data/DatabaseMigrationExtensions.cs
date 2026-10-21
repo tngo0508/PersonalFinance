@@ -103,6 +103,28 @@ public static class DatabaseMigrationExtensions
         await host.Services.MigrateAndSeedDatabaseAsync(logger, cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    /// Applies pending migrations and seed data, then runs the host until shutdown.
+    /// With the <c>--migrate-only</c> argument or <c>MIGRATE_ONLY=true</c> it exits after migrating
+    /// (used by Azure Container Apps jobs and init containers).
+    /// </summary>
+    public static async Task MigrateAndRunAsync(this IHost host, string[] args)
+    {
+        var migrateOnly = args.Contains("--migrate-only") ||
+                          string.Equals(Environment.GetEnvironmentVariable("MIGRATE_ONLY"), "true",
+                              StringComparison.OrdinalIgnoreCase);
+
+        await host.MigrateAndSeedDatabaseAsync();
+
+        if (migrateOnly)
+        {
+            host.Services.GetService<ILoggerFactory>()?.CreateLogger("DatabaseInitializer")
+                .LogInformation("Database migration task finished (--migrate-only); exiting.");
+            return;
+        }
+
+        await host.RunAsync();
+    }
 
     /// <summary>
     /// Seeds initial community polls and options if they don't exist.

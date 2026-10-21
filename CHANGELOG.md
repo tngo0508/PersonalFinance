@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Group `PersonalFinance.Tests` into feature folders; remove the unused `PersonalFinance.slnx`.
   - CI reports formatting drift with a non-blocking `dotnet format --verify-no-changes` step.
 
+- **Startup Composition**: Web and ApiService `Program.cs` now read as a short list of what each app uses, with the details in named extension methods.
+  - Web registers all ApiService Refit clients through `AddInternalApiClients`, which always forwards the Account; a test fails if a contract is not registered.
+  - ApiService registers Services per feature (`FeatureServiceExtensions`); shared Serilog setup lives in ServiceDefaults (`AddAppLogging`); `MigrateAndRunAsync` handles startup migrations and `--migrate-only`.
+  - Cookie redirect handling for API and fetch requests is one tested helper (`ApiAwareCookieRedirects`).
+  - Refit clients no longer add a second standard resilience handler on top of the one `AddServiceDefaults()` already applies, so retries are no longer nested.
+  - Removed the redundant `AddUserSecrets` call, which put user secrets above environment variables; configuration precedence is the ASP.NET Core default again.
+
 - **AI Assistant Experience**: Redesigned the chat with a roomier indigo panel, focused starter cards, readable conversations, and an accessible multiline composer.
   - Preserve visible follow-up messages and restore failed questions for retry.
   - Add keyboard controls, loading feedback, safe response formatting, and mobile navigation clearance.
