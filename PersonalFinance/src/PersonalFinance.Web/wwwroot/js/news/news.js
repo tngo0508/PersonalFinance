@@ -72,8 +72,13 @@
     }
 
     async function apiFetch (url, options) {
+        const tokenMeta = document.querySelector('meta[name="__RequestVerificationToken"]');
         const res = await fetch(url, {
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': tokenMeta ? tokenMeta.getAttribute('content') || '' : ''
+            },
             ...options
         });
         if (!res.ok) {
@@ -228,7 +233,7 @@
             const imageUrl = btn.dataset.imageUrl;
 
             try {
-                const data = await apiFetch('/api/PersonalFinance/watchlist', {
+                const data = await apiFetch('/api/Watchlist', {
                     method: 'POST',
                     body: JSON.stringify({ title, url, source, category, imageUrl })
                 });
@@ -273,7 +278,7 @@
    */
     async function loadWatchlistUrls () {
         try {
-            const items = await apiFetch('/api/PersonalFinance/watchlist');
+            const items = await apiFetch('/api/Watchlist');
             watchlistItems = items;
             items.forEach(item => {
                 if (item.url) {
@@ -305,7 +310,7 @@
         }
 
         try {
-            watchlistItems = await apiFetch('/api/PersonalFinance/watchlist');
+            watchlistItems = await apiFetch('/api/Watchlist');
             // Sync savedArticleUrls with latest server data
             savedArticleUrls.clear();
             watchlistItems.forEach(item => {
@@ -356,7 +361,7 @@
                 const id = parseInt(item.dataset.id, 10);
                 const articleUrl = item.dataset.url;
                 try {
-                    await apiFetch('/api/PersonalFinance/watchlist/' + id, { method: 'DELETE' });
+                    await apiFetch('/api/Watchlist/' + id, { method: 'DELETE' });
                     watchlistItems = watchlistItems.filter(a => a.id !== id);
                     savedArticleUrls.delete(articleUrl);
                     renderWatchlist();

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.SavingsGoals;
 namespace PersonalFinance.ApiService.Services;
 
 /// <summary>

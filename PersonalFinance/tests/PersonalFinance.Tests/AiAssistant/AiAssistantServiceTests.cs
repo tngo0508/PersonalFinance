@@ -113,11 +113,17 @@ public class AiAssistantServiceTests
         db.UserBudgetAllocations.AddRange(
             new UserBudgetAllocation
             {
-                UserId = UserId, Period = "2026-09", MonthlyIncome = 4100m, UpdatedAt = DateTime.UtcNow
+                UserId = UserId,
+                Period = "2026-09",
+                MonthlyIncome = 4100m,
+                UpdatedAt = DateTime.UtcNow
             },
             new UserBudgetAllocation
             {
-                UserId = UserId, Period = "2026-10", MonthlyIncome = 5200m, UpdatedAt = DateTime.UtcNow.AddDays(-5)
+                UserId = UserId,
+                Period = "2026-10",
+                MonthlyIncome = 5200m,
+                UpdatedAt = DateTime.UtcNow.AddDays(-5)
             });
         await db.SaveChangesAsync();
         var fake = new FakeChatClient((_, _) => Reply("ok"));

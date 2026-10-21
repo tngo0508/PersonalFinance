@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Web.Models;
+using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -13,10 +14,10 @@ namespace PersonalFinance.Web.Controllers;
 [Authorize]
 public class AnalysisController : Controller
 {
-    private readonly IPersonalFinanceApi _api;
+    private readonly ISpreadsheetAnalysisApi _api;
     private readonly ILogger<AnalysisController> _logger;
 
-    public AnalysisController(IPersonalFinanceApi api, ILogger<AnalysisController> logger)
+    public AnalysisController(ISpreadsheetAnalysisApi api, ILogger<AnalysisController> logger)
     {
         _api = api;
         _logger = logger;

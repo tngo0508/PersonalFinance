@@ -4,6 +4,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Models;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -231,6 +232,7 @@ public class GoogleDriveController : Controller
     /// report has no months and an <c>errorMessage</c>; figures are never made up.
     /// </summary>
     [HttpGet]
+    [JsonApiErrors]
     public async Task<IActionResult> MonthlyBudgetReport(
         [FromQuery] string? fileName = null,
         [FromQuery] string? fileId = null,
@@ -242,22 +244,15 @@ public class GoogleDriveController : Controller
             return BadRequest(new { error = "File ID is required." });
         }
 
-        try
-        {
-            var report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, cancellationToken);
-            return Json(report);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to read the budget report from spreadsheet '{FileId}'.", fileId);
-            return StatusCode(StatusCodes.Status502BadGateway, new { error = "The spreadsheet could not be read. Please try again." });
-        }
+        var report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, cancellationToken);
+        return Json(report);
     }
 
     /// <summary>
     /// Returns the transaction log read from the spreadsheet's Transactions sheet.
     /// </summary>
     [HttpGet]
+    [JsonApiErrors]
     public async Task<IActionResult> SpreadsheetTransactions(
         [FromQuery] string fileId,
         [FromQuery] string? fileName = null,
@@ -269,16 +264,8 @@ public class GoogleDriveController : Controller
             return BadRequest(new { error = "File ID is required." });
         }
 
-        try
-        {
-            var result = await _googleDriveApi.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, cancellationToken);
-            return Json(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to read transactions from spreadsheet '{FileId}'.", fileId);
-            return StatusCode(StatusCodes.Status502BadGateway, new { error = "The spreadsheet could not be read. Please try again." });
-        }
+        var result = await _googleDriveApi.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, cancellationToken);
+        return Json(result);
     }
 
     private async Task<IActionResult> ConnectAndExploreAsync(

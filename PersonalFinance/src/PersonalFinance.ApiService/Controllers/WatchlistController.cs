@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.Watchlist;
 
 namespace PersonalFinance.ApiService.Controllers;
 

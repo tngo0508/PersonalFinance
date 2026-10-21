@@ -2,22 +2,26 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Web.Models;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Budget Planner feature.
 /// Allows users to set monthly income and allocate percentages across 10 spending categories.
-/// All data persistence is delegated to the ApiService via the IPersonalFinanceApi Refit client.
+/// All data persistence is delegated to the ApiService via the IBudgetPlannerApi Refit client.
 /// </summary>
 [Authorize]
 public class BudgetController : Controller
 {
-    private readonly IPersonalFinanceApi _personalFinanceApi;
+    private readonly IBudgetPlannerApi _budgetPlannerApi;
+    private readonly ILogger<BudgetController> _logger;
 
-    public BudgetController(IPersonalFinanceApi personalFinanceApi)
+    public BudgetController(IBudgetPlannerApi budgetPlannerApi, ILogger<BudgetController> logger)
     {
-        _personalFinanceApi = personalFinanceApi;
+        _budgetPlannerApi = budgetPlannerApi;
+        _logger = logger;
     }
 
     /// <summary>
@@ -32,7 +36,7 @@ public class BudgetController : Controller
         // Try to load saved budget from the API service
         try
         {
-            var saved = await _personalFinanceApi.GetBudgetAsync("current", cancellationToken);
+            var saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
 
             if (saved != null && saved.Allocations != null)
             {
@@ -81,7 +85,7 @@ public class BudgetController : Controller
 
         try
         {
-            await _personalFinanceApi.SaveBudgetAsync(request, HttpContext.RequestAborted);
+            await _budgetPlannerApi.SaveBudgetAsync(request, HttpContext.RequestAborted);
             if (model.TotalAllocated > model.MonthlyIncome)
             {
                 TempData["SaveWarning"] =
@@ -94,13 +98,14 @@ public class BudgetController : Controller
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
         {
-            // Map API validation errors into ModelState
-            ModelState.AddModelError("", ex.Content ?? "Validation failed. Please check your entries.");
+            // Show ApiService's validation messages, never the raw response body.
+            ModelState.AddModelError("", ApiErrorMessages.FromApiException(ex));
             return View("Index", model);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
-            ModelState.AddModelError("", $"Failed to save budget: {ex.Message}");
+            _logger.LogError(ex, "Saving the budget failed.");
+            ModelState.AddModelError("", "Failed to save budget. Please try again.");
             return View("Index", model);
         }
 
@@ -115,7 +120,7 @@ public class BudgetController : Controller
     {
         try
         {
-            var saved = await _personalFinanceApi.GetBudgetAsync("current", cancellationToken);
+            var saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
 
             if (saved == null || saved.Allocations == null)
             {

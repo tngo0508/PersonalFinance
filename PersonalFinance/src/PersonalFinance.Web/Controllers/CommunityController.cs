@@ -1,10 +1,11 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Community;
 using PersonalFinance.Web.Models;
+using PersonalFinance.Shared.Helpers;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -13,6 +14,7 @@ namespace PersonalFinance.Web.Controllers;
 /// All data operations are delegated to the ApiService via the ICommunityApi Refit client.
 /// </summary>
 [Authorize]
+[JsonApiErrors]
 [IgnoreAntiforgeryToken]
 public sealed class CommunityController : Controller
 {
@@ -33,7 +35,7 @@ public sealed class CommunityController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var response = await _communityApi.GetCommunityAsync(cancellationToken);
@@ -56,12 +58,6 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> Vote([FromBody] VoteRequest request, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized(new { success = false, error = "You must be logged in to vote." });
-        }
-
         if (string.IsNullOrEmpty(request.PollCode))
         {
             return BadRequest(new { success = false, error = "Poll ID is required." });
@@ -72,29 +68,21 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = "Option ID is required." });
         }
 
-        try
+        var voteRequest = new CommunityVoteRequestDto
         {
-            var voteRequest = new CommunityVoteRequestDto
-            {
-                PollCode = request.PollCode,
-                OptionId = request.OptionId
-            };
+            PollCode = request.PollCode,
+            OptionId = request.OptionId
+        };
 
-            var response = await _communityApi.VoteAsync(voteRequest, cancellationToken);
-            var updatedPoll = response.ActivePolls.FirstOrDefault(p => p.Id == request.PollCode);
+        var response = await _communityApi.VoteAsync(voteRequest, cancellationToken);
+        var updatedPoll = response.ActivePolls.FirstOrDefault(p => p.Id == request.PollCode);
 
-            return Json(new
-            {
-                success = true,
-                message = "Thanks for voting!",
-                poll = updatedPoll != null ? MapPollToViewModel(updatedPoll) : null,
-            });
-        }
-        catch (Exception ex)
+        return Json(new
         {
-            _logger.LogError(ex, "Error voting on poll {PollCode} for user {UserId}", request.PollCode, userId);
-            return StatusCode(502, new { success = false, error = "Failed to record vote." });
-        }
+            success = true,
+            message = "Thanks for voting!",
+            poll = updatedPoll != null ? MapPollToViewModel(updatedPoll) : null,
+        });
     }
 
     /// <summary>
@@ -104,12 +92,6 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> AddComment([FromBody] CommentRequest request, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized(new { success = false, error = "You must be logged in to comment." });
-        }
-
         if (string.IsNullOrWhiteSpace(request.Text))
         {
             return BadRequest(new { success = false, error = "Comment text is required." });
@@ -131,31 +113,23 @@ public sealed class CommunityController : Controller
             StoryId = request.StoryId
         };
 
-        try
-        {
-            var comment = await _communityApi.AddCommentAsync(commentRequest, authorName, cancellationToken);
+        var comment = await _communityApi.AddCommentAsync(commentRequest, authorName, cancellationToken);
 
-            return Json(new
-            {
-                success = true,
-                comment = new
-                {
-                    id = comment.Id,
-                    author = comment.AuthorName,
-                    text = comment.Text,
-                    topic = comment.Topic,
-                    createdAt = comment.CreatedAtUtc,
-                    likes = comment.Likes,
-                    pollId = comment.PollId,
-                    storyId = comment.StoryId,
-                }
-            });
-        }
-        catch (Exception ex)
+        return Json(new
         {
-            _logger.LogError(ex, "Error adding comment for user {UserId}", userId);
-            return StatusCode(502, new { success = false, error = "Failed to add comment." });
-        }
+            success = true,
+            comment = new
+            {
+                id = comment.Id,
+                author = comment.AuthorName,
+                text = comment.Text,
+                topic = comment.Topic,
+                createdAt = comment.CreatedAtUtc,
+                likes = comment.Likes,
+                pollId = comment.PollId,
+                storyId = comment.StoryId,
+            }
+        });
     }
 
     /// <summary>
@@ -165,33 +139,19 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> ToggleLike([FromBody] LikeRequest request, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized(new { success = false, error = "You must be logged in to like comments." });
-        }
-
         if (request.CommentId <= 0)
         {
             return BadRequest(new { success = false, error = "Comment ID is required." });
         }
 
-        try
-        {
-            var result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, cancellationToken);
+        var result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, cancellationToken);
 
-            return Json(new
-            {
-                success = result.Success,
-                likes = result.NewLikeCount,
-                isLiked = result.IsLiked,
-            });
-        }
-        catch (Exception ex)
+        return Json(new
         {
-            _logger.LogError(ex, "Error toggling like on comment {CommentId} for user {UserId}", request.CommentId, userId);
-            return StatusCode(502, new { success = false, error = "Failed to toggle like." });
-        }
+            success = result.Success,
+            likes = result.NewLikeCount,
+            isLiked = result.IsLiked,
+        });
     }
 
     /// <summary>
@@ -201,29 +161,21 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> GetPollComments([FromQuery] string pollCode, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var comments = await _communityApi.GetPollCommentsAsync(pollCode, cancellationToken);
+        var comments = await _communityApi.GetPollCommentsAsync(pollCode, cancellationToken);
 
-            return Json(new
-            {
-                success = true,
-                comments = comments.Select(c => new
-                {
-                    id = c.Id,
-                    author = c.AuthorName,
-                    text = c.Text,
-                    topic = c.Topic,
-                    createdAt = c.CreatedAtUtc,
-                    likes = c.Likes,
-                }),
-            });
-        }
-        catch (Exception ex)
+        return Json(new
         {
-            _logger.LogError(ex, "Error getting poll comments for poll {PollCode}", pollCode);
-            return StatusCode(502, new { success = false, error = "Failed to load comments." });
-        }
+            success = true,
+            comments = comments.Select(c => new
+            {
+                id = c.Id,
+                author = c.AuthorName,
+                text = c.Text,
+                topic = c.Topic,
+                createdAt = c.CreatedAtUtc,
+                likes = c.Likes,
+            }),
+        });
     }
 
     /// <summary>
@@ -233,12 +185,6 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> SubmitStory([FromBody] StoryRequest request, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized(new { success = false, error = "You must be logged in to submit a story." });
-        }
-
         var authorName = User.Identity?.Name ?? "Anonymous";
 
         var storyRequest = new CommunityStoryRequestDto
@@ -249,27 +195,19 @@ public sealed class CommunityController : Controller
             Category = request.Category!
         };
 
-        try
-        {
-            var story = await _communityApi.SubmitStoryAsync(storyRequest, authorName, cancellationToken);
+        var story = await _communityApi.SubmitStoryAsync(storyRequest, authorName, cancellationToken);
 
-            return Json(new
-            {
-                success = true,
-                message = "Your story has been submitted successfully!",
-                story = new
-                {
-                    id = story.Id,
-                    title = story.Title,
-                    category = story.Category,
-                },
-            });
-        }
-        catch (Exception ex)
+        return Json(new
         {
-            _logger.LogError(ex, "Error submitting story for user {UserId}", userId);
-            return StatusCode(502, new { success = false, error = "Failed to submit story." });
-        }
+            success = true,
+            message = "Your story has been submitted successfully!",
+            story = new
+            {
+                id = story.Id,
+                title = story.Title,
+                category = story.Category,
+            },
+        });
     }
 
     /// <summary>
@@ -279,38 +217,19 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> ToggleStoryLike([FromBody] StoryLikeRequest request, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized(new { success = false, error = "You must be logged in to like stories." });
-        }
-
         if (request.StoryId <= 0)
         {
             return BadRequest(new { success = false, error = "Story ID is required." });
         }
 
-        try
-        {
-            var result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, cancellationToken);
+        var result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, cancellationToken);
 
-            return Json(new
-            {
-                success = result.Success,
-                likes = result.NewLikeCount,
-                isLiked = result.IsLiked,
-            });
-        }
-        catch (Exception ex)
+        return Json(new
         {
-            _logger.LogError(ex, "Error toggling story like for story {StoryId} by user {UserId}", request.StoryId, userId);
-            return StatusCode(502, new { success = false, error = "Failed to toggle like." });
-        }
-    }
-
-    private string? GetUserId()
-    {
-        return User.FindFirstValue(ClaimTypes.NameIdentifier);
+            success = result.Success,
+            likes = result.NewLikeCount,
+            isLiked = result.IsLiked,
+        });
     }
 
     // =========================================================================

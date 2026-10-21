@@ -6,6 +6,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Admin;
 using PersonalFinance.Web.Models;
 using ApiException = Refit.ApiException;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -107,7 +108,7 @@ public class AdminController : Controller
         }
         catch (ApiException ex)
         {
-            TempData["AdminError"] = await ReadErrorAsync(ex);
+            TempData["AdminError"] = ApiErrorMessages.FromApiException(ex);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -116,23 +117,5 @@ public class AdminController : Controller
         }
 
         return RedirectToAction(nameof(Index));
-    }
-
-    private async Task<string> ReadErrorAsync(ApiException ex)
-    {
-        try
-        {
-            var error = await ex.GetContentAsAsync<AdminErrorDto>();
-            if (!string.IsNullOrWhiteSpace(error?.Error))
-            {
-                return error.Error;
-            }
-        }
-        catch (Exception parseEx)
-        {
-            _logger.LogDebug(parseEx, "Could not parse admin API error body.");
-        }
-
-        return "The operation was rejected.";
     }
 }
