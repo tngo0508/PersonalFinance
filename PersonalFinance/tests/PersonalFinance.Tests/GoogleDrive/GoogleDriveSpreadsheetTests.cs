@@ -9,12 +9,11 @@ using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
-using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Controllers;
 
 namespace PersonalFinance.Tests.GoogleDrive;
 
-public class GoogleDriveHelperTests
+public class GoogleDriveSpreadsheetTests
 {
     private static AppDbContext CreateTestDbContext()
     {
@@ -40,7 +39,7 @@ public class GoogleDriveHelperTests
     [InlineData("127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
     public void ExtractFolderId_WithValidInputs_ExtractsCorrectId(string input, string expectedId)
     {
-        var result = GoogleDriveHelper.ExtractFolderId(input);
+        var result = GoogleDriveMetadata.ExtractFolderId(input);
         Assert.Equal(expectedId, result);
     }
 
@@ -52,7 +51,7 @@ public class GoogleDriveHelperTests
     [InlineData("https://google.com/search?q=test")]
     public void ExtractFolderId_WithInvalidInputs_ReturnsNull(string? input)
     {
-        var result = GoogleDriveHelper.ExtractFolderId(input);
+        var result = GoogleDriveMetadata.ExtractFolderId(input);
         Assert.Null(result);
     }
 
@@ -67,7 +66,7 @@ public class GoogleDriveHelperTests
     [InlineData(1073741824L, "1 GB")]
     public void FormatBytes_FormatsCorrectly(long? bytes, string expected)
     {
-        var result = GoogleDriveHelper.FormatBytes(bytes);
+        var result = GoogleDriveMetadata.FormatBytes(bytes);
         Assert.Equal(expected, result);
     }
 
@@ -87,7 +86,7 @@ public class GoogleDriveHelperTests
     public void ResolveTypeInfo_IdentifiesExpectedTypes(string mimeType, string filename, string expectedCategory,
         bool expectedIsFolder)
     {
-        var (category, _, isFolder) = GoogleDriveHelper.ResolveTypeInfo(mimeType, filename);
+        var (category, _, isFolder) = GoogleDriveMetadata.ResolveTypeInfo(mimeType, filename);
         Assert.Equal(expectedCategory, category);
         Assert.Equal(expectedIsFolder, isFolder);
     }
@@ -310,47 +309,8 @@ public class GoogleDriveHelperTests
     public void IsMonthlyBudgetSpreadsheet_EvaluatesCorrectly(string? fileName, string? fileType, string? mimeType,
         bool expected)
     {
-        var result = GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(fileName, fileType, mimeType);
+        var result = GoogleDriveMetadata.IsMonthlyBudgetSpreadsheet(fileName, fileType, mimeType);
         Assert.Equal(expected, result);
-    }
-
-    [Fact]
-    public void GenerateMonthlyBudgetReport_ReturnsTwelveMonthsWithValidTotals()
-    {
-        // Act
-        var report = GoogleDriveHelper.GenerateMonthlyBudgetReport("Monthly budget 2026.xlsx", "file-123");
-
-        // Assert
-        Assert.NotNull(report);
-        Assert.Equal("Monthly budget 2026.xlsx", report.FileName);
-        Assert.Equal("file-123", report.FileId);
-        Assert.Equal(2026, report.Year);
-        Assert.Equal(12, report.Months.Count);
-        Assert.True(report.TotalAnnualIncome > 0);
-        Assert.True(report.TotalAnnualExpenses > 0);
-        Assert.Equal(report.TotalAnnualIncome - report.TotalAnnualExpenses, report.TotalAnnualSavings);
-        Assert.True(report.AverageSavingsRate > 0);
-
-        for (int i = 0; i < 12; i++)
-        {
-            var month = report.Months[i];
-            Assert.Equal(i + 1, month.MonthNumber);
-            Assert.False(string.IsNullOrWhiteSpace(month.MonthName));
-            Assert.True(month.ActualIncome > 0);
-            Assert.True(month.ActualExpenses > 0);
-            Assert.NotEmpty(month.Categories);
-            Assert.Equal(month.ActualIncome - month.ActualExpenses, month.NetSavings);
-            Assert.False(string.IsNullOrWhiteSpace(month.Status));
-
-            foreach (var cat in month.Categories)
-            {
-                Assert.False(string.IsNullOrWhiteSpace(cat.CategoryName));
-                Assert.True(cat.BudgetedAmount > 0);
-                Assert.True(cat.ActualAmount > 0);
-                Assert.Equal(cat.BudgetedAmount - cat.ActualAmount, cat.Variance);
-                Assert.False(string.IsNullOrWhiteSpace(cat.Status));
-            }
-        }
     }
 
     [Fact]
@@ -358,7 +318,7 @@ public class GoogleDriveHelperTests
     {
         var csv =
             "\"Category\",\"Planned Amount\",\"Actual Amount\"\n\"Housing, Rent & HOA\",\"$1,500.00\",\"$1,550.00\"\n\"Groceries \"\"Supermarket\"\"\",\"$650.00\",\"$680.00\"";
-        var table = GoogleDriveHelper.ParseCsvTable(csv);
+        var table = BudgetSpreadsheetParser.ParseCsvTable(csv);
 
         Assert.Equal(3, table.Count);
         Assert.Equal("Category", table[0][0]);
@@ -385,7 +345,7 @@ Utilities,300,280
 Entertainment,400,450";
 
         var report =
-            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget 2026.xlsx", "drive-file-999");
+            BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget 2026.xlsx", "drive-file-999");
 
         Assert.NotNull(report);
         Assert.Equal("Monthly budget 2026.xlsx", report.FileName);
@@ -423,7 +383,8 @@ Entertainment,400,450";
         var handler =
             new DelegatingTestHandler((req, ct) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)));
         var httpClient = new HttpClient(handler);
-        var service = new SpreadsheetReaderService(httpClient, configuration, dbContext,
+        var service = new SpreadsheetReaderService(
+            new GoogleDriveFileSource(httpClient, configuration, dbContext, NullLogger<GoogleDriveFileSource>.Instance),
             NullLogger<SpreadsheetReaderService>.Instance);
 
         var report = await service.GetSpreadsheetBudgetReportAsync("sample-sheet-budget-1", "Monthly budget 2026.xlsx");
@@ -461,7 +422,8 @@ Food,800,750";
         });
 
         var httpClient = new HttpClient(handler);
-        var service = new SpreadsheetReaderService(httpClient, configuration, dbContext,
+        var service = new SpreadsheetReaderService(
+            new GoogleDriveFileSource(httpClient, configuration, dbContext, NullLogger<GoogleDriveFileSource>.Instance),
             NullLogger<SpreadsheetReaderService>.Instance);
 
         var report = await service.GetSpreadsheetBudgetReportAsync("live-sheet-123", "Monthly budget 2026.gsheet");
@@ -496,7 +458,7 @@ Food,800,750";
         }
 
         ms.Position = 0;
-        var report = GoogleDriveHelper.ParseXlsxBudgetReport(ms, "Monthly budget 2026.xlsx", "drive-xlsx-100");
+        var report = BudgetSpreadsheetParser.ParseXlsxBudgetReport(ms, "Monthly budget 2026.xlsx", "drive-xlsx-100");
 
         Assert.NotNull(report);
         Assert.Equal("Monthly budget 2026.xlsx", report.FileName);
@@ -557,7 +519,7 @@ Food,800,750";
 
         ms.Position = 0;
         var report =
-            GoogleDriveHelper.ParseXlsxBudgetReport(ms, "Monthly budget - September 2026.xlsx", "multi-sheet-1");
+            BudgetSpreadsheetParser.ParseXlsxBudgetReport(ms, "Monthly budget - September 2026.xlsx", "multi-sheet-1");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
@@ -580,7 +542,7 @@ Food,800,750";
     [Fact]
     public void ParseCsvTransactions_WithSideBySideExpenseAndIncomeTables_ReadsBothSections()
     {
-        var result = GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleTransactionsCsv(),
+        var result = BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleTransactionsCsv(),
             "Monthly budget 2026.xlsx", "sample-tx");
 
         Assert.Null(result.ErrorMessage);
@@ -604,7 +566,7 @@ Food,800,750";
         var csv =
             "Date,Description,Amount\n2026-09-01,Paycheck,2500.00\n2026-09-03,Netflix,-15.99\n2026-09-04,Groceries,(80.00)\nTotal,,2404.01";
 
-        var result = GoogleDriveHelper.ParseCsvTransactions(csv);
+        var result = BudgetSpreadsheetParser.ParseCsvTransactions(csv);
 
         Assert.Equal(3, result.Transactions.Count);
         Assert.Equal(2500m, result.TotalIncome);
@@ -617,7 +579,7 @@ Food,800,750";
     [Fact]
     public void ParseCsvTransactions_WithoutTransactionTable_ReturnsErrorMessage()
     {
-        var result = GoogleDriveHelper.ParseCsvTransactions(GoogleDriveHelper.GetSampleMonthlyBudgetSpreadsheetCsv());
+        var result = BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleMonthlyBudgetSpreadsheetCsv());
 
         Assert.Empty(result.Transactions);
         Assert.NotNull(result.ErrorMessage);
@@ -656,7 +618,7 @@ Food,800,750";
         }
 
         ms.Position = 0;
-        var result = GoogleDriveHelper.ParseXlsxTransactions(ms, "Monthly budget.xlsx", "xlsx-tx-1");
+        var result = BudgetSpreadsheetParser.ParseXlsxTransactions(ms, "Monthly budget.xlsx", "xlsx-tx-1");
 
         Assert.Equal("Transactions", result.SheetName);
         Assert.Equal(3, result.Transactions.Count);
@@ -684,34 +646,8 @@ Food,800,750";
     [InlineData("Monthly budget.xlsx", null)]
     public void DetectMonthFromText_DetectsExpectedMonth(string input, int? expectedMonth)
     {
-        var result = GoogleDriveHelper.DetectMonthFromText(input);
+        var result = BudgetSpreadsheetParser.DetectMonthFromText(input);
         Assert.Equal(expectedMonth, result);
-    }
-
-    [Fact]
-    public void GenerateMonthlyBudgetReport_WithSingleMonthName_ReturnsOnlyThatMonth()
-    {
-        // Act
-        var report =
-            GoogleDriveHelper.GenerateMonthlyBudgetReport("Monthly budget - September 2026.xlsx", "file-sep-123");
-
-        // Assert
-        Assert.NotNull(report);
-        Assert.Equal("Monthly budget - September 2026.xlsx", report.FileName);
-        Assert.Equal("file-sep-123", report.FileId);
-        Assert.Equal(2026, report.Year);
-        Assert.True(report.IsSingleMonth);
-        Assert.Equal("September", report.SingleMonthName);
-        Assert.Single(report.Months);
-
-        var sepMonth = report.Months[0];
-        Assert.Equal(9, sepMonth.MonthNumber);
-        Assert.Equal("September", sepMonth.MonthName);
-        Assert.True(sepMonth.ActualIncome > 0);
-        Assert.True(sepMonth.ActualExpenses > 0);
-        Assert.NotEmpty(sepMonth.Categories);
-        Assert.Equal(report.TotalAnnualIncome, sepMonth.ActualIncome);
-        Assert.Equal(report.TotalAnnualExpenses, sepMonth.ActualExpenses);
     }
 
     [Fact]
@@ -727,7 +663,7 @@ Rent,1500,1500
 Food,650,620";
 
         var report =
-            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+            BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
                 "file-sep-456");
 
         Assert.NotNull(report);
@@ -760,7 +696,7 @@ Dining & Entertainment,400.00,370.00,30.00
 Total Expenses,3000.00,2900.00,100.00";
 
         var report =
-            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+            BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
                 "file-sep-789");
 
         Assert.NotNull(report);
@@ -815,7 +751,7 @@ Utilities, 250, 220, 30, , Dividend, 200, 300, 100
 Total Expenses, 2050, 2000, 50, , Total Income, 5200, 5500, 300";
 
         var report =
-            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+            BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
                 "file-sep-side");
 
         Assert.NotNull(report);
@@ -855,7 +791,7 @@ Date, Amount, Description, Category
 2026-09-18, 150.00, Safeway, Groceries";
 
         var report =
-            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+            BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
                 "file-tx-table");
 
         Assert.NotNull(report);
@@ -896,7 +832,7 @@ Dining & Entertainment,500.00,470.00,30.00
 Personal & Miscellaneous,300.00,100.00,200.00
 Total Expenses,3800.00,3500.00,300.00";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+        var report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
             "file-increase-savings");
 
         Assert.NotNull(report);
@@ -946,7 +882,7 @@ Groceries & Food,1000.00,1200.00,-200.00
 Utilities,500.00,800.00,-300.00
 Total Expenses,3500.00,4000.00,-500.00";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+        var report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
             "file-decrease-savings");
 
         Assert.NotNull(report);
@@ -991,7 +927,7 @@ Housing & Rent,1800.00,1800.00,0.00
 Total Expenses,1800.00,1800.00,0.00";
 
         var report =
-            GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - October 2026",
+            BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - October 2026",
                 "file-year-amount");
 
         Assert.Equal(2026, report.Year);
@@ -1010,7 +946,7 @@ EXPENSES,Planned,Actual,Difference
 Housing & Rent,1800.00,1800.00,0.00
 Total Expenses,1800.00,1800.00,0.00";
 
-        var report = GoogleDriveHelper.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget", "file-no-year");
+        var report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget", "file-no-year");
 
         Assert.Equal(2026, report.Year);
     }

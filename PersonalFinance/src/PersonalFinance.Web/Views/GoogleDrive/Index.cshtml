@@ -26,8 +26,7 @@
 }
 
 @functions {
-    private static bool IsMonthlyBudget(GoogleDriveFileDto file) =>
-        GoogleDriveHelper.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
+    private static bool IsMonthlyBudget(GoogleDriveFileDto file) => file.IsMonthlyBudgetSpreadsheet;
 
     private static bool IsSpreadsheet(GoogleDriveFileDto file) =>
         IsMonthlyBudget(file) || (!file.IsFolder && file.FileType == "Spreadsheet");

@@ -20,6 +20,12 @@ public class MonthlyBudgetReportDto
     public decimal? EndingBalance => Months.LastOrDefault(m => m.EndingBalance.HasValue)?.EndingBalance;
     public string DataSource { get; set; } = "Google Drive Spreadsheet (Actual Data)";
     public bool IsLiveSpreadsheetData { get; set; } = true;
+
+    /// <summary>
+    /// Why the report could not be produced (file unreachable, no budget table, ...). Set only when <see cref="Months"/> is empty.
+    /// </summary>
+    public string? ErrorMessage { get; set; }
+
     public int ParsedRowCount { get; set; }
     public bool IsSingleMonth => Months.Count == 1;
     public string? SingleMonthName => Months.Count == 1 ? Months[0].MonthName : null;

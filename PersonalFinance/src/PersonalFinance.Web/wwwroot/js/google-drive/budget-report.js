@@ -603,7 +603,7 @@
                     if (seq !== budgetRequestSeq) { return; } // a newer request superseded this one
 
                     if (!data || !data.months || data.months.length === 0) {
-                        $('#budgetErrorMessage').text('No monthly budget data was found in this spreadsheet. Make sure it has income, expense, or transaction rows.');
+                        $('#budgetErrorMessage').text((data && data.errorMessage) || 'No monthly budget data was found in this spreadsheet. Make sure it has income, expense, or transaction rows.');
                         showBudgetState('error');
                         return;
                     }

@@ -5,17 +5,16 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
-namespace PersonalFinance.Shared.Helpers;
+namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
-/// Utility functions for parsing Google Drive URLs, resolving MIME types, and formatting file sizes.
+/// Reads monthly budget reports and transaction logs from spreadsheet content (CSV text or XLSX workbooks).
+/// Pure, in-process parsing: downloading is <see cref="IGoogleDriveFileSource"/>'s job.
+/// When nothing usable is found it returns an unavailable result (no months or transactions, an
+/// <c>ErrorMessage</c>, and <c>IsLiveSpreadsheetData = false</c>); it never invents figures.
 /// </summary>
-public static class GoogleDriveHelper
+public static class BudgetSpreadsheetParser
 {
-    private static readonly Regex FolderUrlRegex = new(
-        @"(?:folders\/|id=|file\/d\/)([a-zA-Z0-9_-]{15,})",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
     private static readonly string[] MonthNames = new[]
     {
         "January", "February", "March", "April", "May", "June",
@@ -29,295 +28,19 @@ public static class GoogleDriveHelper
     };
 
     /// <summary>
-    /// Extracts the Google Drive Folder ID from a full link or returns the string if already an ID.
-    /// Supports formats:
-    /// - https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link
-    /// - https://drive.google.com/drive/u/0/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_
-    /// - https://drive.google.com/open?id=127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_
-    /// - 127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_
+    /// A report for a spreadsheet that could not be read: no months, not live data, and the reason.
     /// </summary>
-    public static string? ExtractFolderId(string? input)
+    public static MonthlyBudgetReportDto Unavailable(string? fileName, string? fileId, string reason)
     {
-        if (string.IsNullOrWhiteSpace(input))
+        return new MonthlyBudgetReportDto
         {
-            return null;
-        }
-
-        var trimmed = input.Trim();
-
-        // Match regex patterns
-        var match = FolderUrlRegex.Match(trimmed);
-        if (match.Success && match.Groups[1].Value.Length >= 15)
-        {
-            return match.Groups[1].Value;
-        }
-
-        // If input contains no slashes or query params and is between 15 and 100 valid base64url characters
-        if (Regex.IsMatch(trimmed, @"^[a-zA-Z0-9_-]{15,100}$"))
-        {
-            return trimmed;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Formats raw byte count into a human-readable string (e.g. 1.25 MB, 450 KB).
-    /// </summary>
-    public static string FormatBytes(long? bytes)
-    {
-        if (!bytes.HasValue || bytes.Value < 0)
-        {
-            return "-";
-        }
-
-        if (bytes.Value == 0)
-        {
-            return "0 B";
-        }
-
-        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-        int order = 0;
-        double size = bytes.Value;
-
-        while (size >= 1024 && order < suffixes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-
-        return $"{size:0.##} {suffixes[order]}";
-    }
-
-    /// <summary>
-    /// Resolves human-friendly file type description and Bootstrap badge color from MIME type and filename.
-    /// </summary>
-    public static (string FileType, string BadgeClass, bool IsFolder) ResolveTypeInfo(string? mimeType,
-        string? fileName)
-    {
-        var mime = mimeType?.ToLowerInvariant() ?? string.Empty;
-        var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
-
-        if (mime == "application/vnd.google-apps.folder")
-        {
-            return ("Folder", "bg-primary", true);
-        }
-
-        if (mime == "application/vnd.google-apps.spreadsheet" || ext is ".xlsx" or ".xls" or ".csv")
-        {
-            return ("Spreadsheet", "bg-success", false);
-        }
-
-        if (mime == "application/vnd.google-apps.document" || ext is ".docx" or ".doc" or ".odt")
-        {
-            return ("Document", "bg-primary", false);
-        }
-
-        if (mime == "application/vnd.google-apps.presentation" || ext is ".pptx" or ".ppt")
-        {
-            return ("Presentation", "bg-warning text-dark", false);
-        }
-
-        if (mime == "application/pdf" || ext == ".pdf")
-        {
-            return ("PDF Document", "bg-danger", false);
-        }
-
-        if (mime.StartsWith("image/") || ext is ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".svg")
-        {
-            return ("Image", "bg-info text-dark", false);
-        }
-
-        if (mime.StartsWith("video/") || ext is ".mp4" or ".mov" or ".avi" or ".mkv")
-        {
-            return ("Video", "bg-dark text-white", false);
-        }
-
-        if (mime.StartsWith("audio/") || ext is ".mp3" or ".wav" or ".ogg" or ".m4a")
-        {
-            return ("Audio", "bg-secondary", false);
-        }
-
-        if (mime is "application/zip" or "application/x-tar" or "application/x-rar-compressed"
-                or "application/x-7z-compressed" ||
-            ext is ".zip" or ".tar" or ".gz" or ".7z" or ".rar")
-        {
-            return ("Archive", "bg-secondary", false);
-        }
-
-        if (mime.StartsWith("text/") || ext is ".txt" or ".md" or ".json" or ".xml" or ".yml" or ".yaml" or ".sql")
-        {
-            return ("Text File", "bg-light text-dark border", false);
-        }
-
-        return ("File", "bg-secondary", false);
-    }
-
-    /// <summary>
-    /// Checks whether a given file qualifies as a "Monthly budget" spreadsheet.
-    /// Matches any spreadsheet whose name starts with "Monthly budget" (case-insensitive).
-    /// </summary>
-    public static bool IsMonthlyBudgetSpreadsheet(string? fileName, string? fileType, string? mimeType = null)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            return false;
-        }
-
-        var trimmedName = fileName.Trim();
-        if (!trimmedName.StartsWith("Monthly budget", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        if (string.Equals(fileType, "Spreadsheet", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        var ext = Path.GetExtension(trimmedName).ToLowerInvariant();
-        if (ext is ".xlsx" or ".xls" or ".csv" or ".gsheet")
-        {
-            return true;
-        }
-
-        var mime = mimeType?.ToLowerInvariant() ?? string.Empty;
-        if (mime is "application/vnd.google-apps.spreadsheet" or
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" or
-            "application/vnd.ms-excel" or
-            "text/csv")
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Generates a structured monthly budget summary report and category dataset for a spreadsheet.
-    /// Used as fallback and baseline projection.
-    /// </summary>
-    public static MonthlyBudgetReportDto GenerateMonthlyBudgetReport(string? fileName, string? fileId = null)
-    {
-        var cleanName = string.IsNullOrWhiteSpace(fileName) ? "Monthly budget.xlsx" : fileName.Trim();
-        var yearMatch = Regex.Match(cleanName, @"\b(20\d{2})\b");
-        var year = yearMatch.Success && int.TryParse(yearMatch.Value, out var parsedYear)
-            ? parsedYear
-            : DateTime.UtcNow.Year;
-        var singleMonth = DetectMonthFromText(cleanName);
-
-        // Seed deterministically based on file name or year for stable report data
-        var seed = Math.Abs(cleanName.GetHashCode());
-        var title = singleMonth.HasValue
-            ? $"Monthly Budget Summary ({MonthNames[singleMonth.Value - 1]} {year})"
-            : $"Monthly Budget Summary ({year})";
-
-        var report = new MonthlyBudgetReportDto
-        {
-            FileName = cleanName,
+            FileName = fileName ?? string.Empty,
             FileId = fileId,
-            Title = title,
-            Year = year,
-            DataSource = "Google Drive Budget Summary",
-            IsLiveSpreadsheetData = false
+            Title = "Budget report unavailable",
+            DataSource = "Unavailable",
+            IsLiveSpreadsheetData = false,
+            ErrorMessage = reason
         };
-
-        var monthsList = new List<MonthlyBudgetMonthSummaryDto>();
-        var startMonth = singleMonth ?? 1;
-        var endMonth = singleMonth ?? 12;
-
-        for (int m = startMonth; m <= endMonth; m++)
-        {
-            var monthName = MonthNames[m - 1];
-            // Seasonal budget variations (e.g. higher utilities in winter/summer, holiday bonus in Dec/Jun)
-            var incomeBonus = (m == 6 || m == 12) ? 500m : 0m;
-            var budgetedIncome = 5500m;
-            var actualIncome = 5500m + incomeBonus + ((seed + m * 37) % 7) * 25m;
-
-            var utilitySeasonal = (m is 1 or 2 or 7 or 8 or 12) ? 45m : 0m;
-            var diningSeasonal = (m is 7 or 12) ? 60m : 0m;
-            var varFactor = ((seed + m * 53) % 11) - 5; // -5 to +5 multiplier
-
-            var categories = new List<MonthlyBudgetCategoryItemDto>
-            {
-                new()
-                {
-                    CategoryName = "Housing & Rent",
-                    BudgetedAmount = 1500m,
-                    ActualAmount = 1500m,
-                    ColorHex = AssignCategoryColor("Housing & Rent")
-                },
-                new()
-                {
-                    CategoryName = "Groceries & Food",
-                    BudgetedAmount = 650m,
-                    ActualAmount = 650m + varFactor * 8m,
-                    ColorHex = AssignCategoryColor("Groceries & Food")
-                },
-                new()
-                {
-                    CategoryName = "Utilities & Internet",
-                    BudgetedAmount = 320m,
-                    ActualAmount = 320m + utilitySeasonal + varFactor * 5m,
-                    ColorHex = AssignCategoryColor("Utilities & Internet")
-                },
-                new()
-                {
-                    CategoryName = "Transportation & Gas",
-                    BudgetedAmount = 450m,
-                    ActualAmount = 450m + varFactor * 6m,
-                    ColorHex = AssignCategoryColor("Transportation & Gas")
-                },
-                new()
-                {
-                    CategoryName = "Healthcare & Insurance",
-                    BudgetedAmount = 300m,
-                    ActualAmount = 300m,
-                    ColorHex = AssignCategoryColor("Healthcare & Insurance")
-                },
-                new()
-                {
-                    CategoryName = "Dining & Entertainment",
-                    BudgetedAmount = 400m,
-                    ActualAmount = 400m + diningSeasonal + varFactor * 7m,
-                    ColorHex = AssignCategoryColor("Dining & Entertainment")
-                },
-                new()
-                {
-                    CategoryName = "Savings & Investments",
-                    BudgetedAmount = 1000m,
-                    ActualAmount = 1000m + (incomeBonus > 0 ? 300m : 0m) + varFactor * 10m,
-                    ColorHex = AssignCategoryColor("Savings & Investments")
-                },
-                new()
-                {
-                    CategoryName = "Personal & Miscellaneous",
-                    BudgetedAmount = 250m,
-                    ActualAmount = 250m + varFactor * 4m,
-                    ColorHex = AssignCategoryColor("Personal & Miscellaneous")
-                }
-            };
-
-            var budgetedExpenses = categories.Sum(c => c.BudgetedAmount);
-            var actualExpenses = categories.Sum(c => c.ActualAmount);
-
-            monthsList.Add(new MonthlyBudgetMonthSummaryDto
-            {
-                MonthNumber = m,
-                MonthName = monthName,
-                BudgetedIncome = budgetedIncome,
-                ActualIncome = actualIncome,
-                BudgetedExpenses = budgetedExpenses,
-                ActualExpenses = actualExpenses,
-                Categories = categories
-            });
-        }
-
-        report.Months = monthsList;
-        report.TotalAnnualIncome = monthsList.Sum(m => m.ActualIncome);
-        report.TotalAnnualExpenses = monthsList.Sum(m => m.ActualExpenses);
-
-        return report;
     }
 
     /// <summary>
@@ -331,13 +54,13 @@ public static class GoogleDriveHelper
     {
         if (string.IsNullOrWhiteSpace(contentOrCsv))
         {
-            return GenerateMonthlyBudgetReport(fileName, fileId);
+            return Unavailable(fileName, fileId, "The spreadsheet is empty.");
         }
 
         var rows = ParseCsvTable(contentOrCsv);
         if (rows.Count == 0)
         {
-            return GenerateMonthlyBudgetReport(fileName, fileId);
+            return Unavailable(fileName, fileId, "The spreadsheet has no rows.");
         }
 
         return ParseSpreadsheetRows(rows, fileName, fileId, dataSource);
@@ -364,7 +87,7 @@ public static class GoogleDriveHelper
             var sheetEntries = GetWorksheetEntriesWithNames(archive);
             if (sheetEntries.Count == 0)
             {
-                return GenerateMonthlyBudgetReport(fileName, fileId);
+                return Unavailable(fileName, fileId, "The workbook has no worksheets.");
             }
 
             var summarySheet = sheetEntries.FirstOrDefault(s => IsSummarySheetName(s.SheetName));
@@ -396,14 +119,14 @@ public static class GoogleDriveHelper
 
             if (allRows.Count == 0)
             {
-                return GenerateMonthlyBudgetReport(fileName, fileId);
+                return Unavailable(fileName, fileId, "The workbook's sheets are empty.");
             }
 
             return ParseSpreadsheetRows(allRows, fileName, fileId, dataSource);
         }
-        catch
+        catch (Exception ex) when (ex is InvalidDataException or System.Xml.XmlException)
         {
-            return GenerateMonthlyBudgetReport(fileName, fileId);
+            return Unavailable(fileName, fileId, "The file is not a readable Excel workbook.");
         }
     }
 
@@ -526,32 +249,6 @@ public static class GoogleDriveHelper
         return transactions;
     }
 
-    /// <summary>
-    /// Provides sample transactions CSV laid out like the Transactions sheet of Google's Monthly budget template.
-    /// </summary>
-    public static string GetSampleTransactionsCsv()
-    {
-        return @"Transactions
-
-Expenses,,,,,Income
-Date,Amount,Description,Category,,Date,Amount,Description,Category
-9/1/2026,1500.00,September rent,Housing & Rent,,9/1/2026,3000.00,Employer direct deposit,Paycheck 1
-9/2/2026,84.12,Trader Joe's,Groceries & Food,,9/15/2026,2650.00,Employer direct deposit,Paycheck 2
-9/3/2026,62.40,Shell gas station,Transportation & Gas,,9/30/2026,320.00,Brokerage dividends,Investment Returns
-9/5/2026,155.00,Electric & water bill,Utilities & Internet
-9/7/2026,58.75,Dinner with friends,Dining & Entertainment
-9/9/2026,300.00,Health insurance premium,Healthcare & Insurance
-9/10/2026,1150.00,Transfer to savings,Savings & Investments
-9/12/2026,212.30,Costco,Groceries & Food
-9/14/2026,155.00,Internet & phone,Utilities & Internet
-9/18/2026,96.50,Concert tickets,Dining & Entertainment
-9/20/2026,180.60,Car service,Transportation & Gas
-9/22/2026,230.00,Clothing & household,Personal & Miscellaneous
-9/24/2026,388.58,Whole Foods,Groceries & Food
-9/27/2026,284.75,Restaurants & takeout,Dining & Entertainment
-9/29/2026,182.00,Gas & parking,Transportation & Gas";
-    }
-
     private static List<TransactionTableLayout> DetectTransactionTables(List<List<string>> rows, int headerRow)
     {
         var tables = new List<TransactionTableLayout>();
@@ -593,6 +290,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
     }
 
     // Looks a few rows above the header, within the table's columns, for an "Expenses" / "Income" section label
+
     private static string? FindSectionType(List<List<string>> rows, int headerRow, int startCol, int endCol)
     {
         for (int r = headerRow - 1; r >= Math.Max(0, headerRow - 3); r--)
@@ -644,6 +342,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
     }
 
     // Unlabelled tables with signed amounts (bank-export style): negatives are spending, positives are income
+
     private static void ApplySignBasedTypes(List<TransactionTableLayout> tables)
     {
         foreach (var table in tables.Where(t => t.SectionType == null && t.TypeCol < 0))
@@ -659,6 +358,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
     }
 
     // XLSX stores dates as OLE Automation serial numbers unless the cell holds text
+
     private static DateTime? ParseSheetDate(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
@@ -1079,7 +779,7 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
 
         if (!hasAnyParsedData)
         {
-            return GenerateMonthlyBudgetReport(fileName, fileId);
+            return Unavailable(fileName, fileId, "No monthly budget table was found. The sheet needs income and expense rows with month columns, or a Summary sheet.");
         }
 
         var monthsList = new List<MonthlyBudgetMonthSummaryDto>();
@@ -1151,38 +851,12 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
                 }
             }
 
-            // Ensure categories match expense amounts
-            if (cats.Count == 0 && aExp > 0)
-            {
-                cats = CreateDefaultCategoriesForExpense(aExp, bExp > 0 ? bExp : aExp);
-            }
-            else if (cats.Count > 0 && aExp == 0 && bExp == 0)
+            // Category rows without totals: the totals are the category sums.
+            // (Totals without category rows keep an empty breakdown; categories are never estimated.)
+            if (cats.Count > 0 && aExp == 0 && bExp == 0)
             {
                 bExp = cats.Sum(c => c.BudgetedAmount);
                 aExp = cats.Sum(c => c.ActualAmount);
-            }
-
-            // If still empty in full year view, copy from active month
-            if (bInc == 0 && aInc == 0 && bExp == 0 && aExp == 0 && !fileNameMonth.HasValue)
-            {
-                var fallbackMonth = explicitIncomeSummary.FirstOrDefault(kv => kv.Value.HasValue);
-                if (fallbackMonth.Value.HasValue)
-                {
-                    bInc = fallbackMonth.Value.Value.Budget;
-                    aInc = fallbackMonth.Value.Value.Actual;
-                }
-
-                var fallbackExp = explicitExpenseSummary.FirstOrDefault(kv => kv.Value.HasValue);
-                if (fallbackExp.Value.HasValue)
-                {
-                    bExp = fallbackExp.Value.Value.Budget;
-                    aExp = fallbackExp.Value.Value.Actual;
-                }
-
-                if (cats.Count == 0 && aExp > 0)
-                {
-                    cats = CreateDefaultCategoriesForExpense(aExp, bExp);
-                }
             }
 
             // Create monthly budget summary
@@ -1633,34 +1307,6 @@ Date,Amount,Description,Category,,Date,Amount,Description,Category
     }
 
     /// <summary>
-    /// Provides standard sample CSV content matching Google Sheets / Excel Monthly Budget spreadsheets.
-    /// </summary>
-    public static string GetSampleMonthlyBudgetSpreadsheetCsv()
-    {
-        return @"Monthly budget - September 2026
-
-STARTING BALANCE,1500.00,1500.00
-ENDING BALANCE,2380.00,2430.00
-
-INCOME,Planned,Actual,Difference
-Paycheck 1,3000.00,3000.00,0.00
-Paycheck 2,2500.00,2650.00,150.00
-Investment Returns,250.00,320.00,70.00
-Total Income,5750.00,5970.00,220.00
-
-EXPENSES,Planned,Actual,Difference
-Housing & Rent,1500.00,1500.00,0.00
-Groceries & Food,650.00,685.00,-35.00
-Utilities & Internet,320.00,310.00,10.00
-Transportation & Gas,450.00,425.00,25.00
-Healthcare & Insurance,300.00,300.00,0.00
-Dining & Entertainment,400.00,440.00,-40.00
-Savings & Investments,1000.00,1150.00,-150.00
-Personal & Miscellaneous,250.00,230.00,20.00
-Total Expenses,4870.00,5040.00,-170.00";
-    }
-
-    /// <summary>
     /// Assigns consistent and attractive chart colors according to category keywords.
     /// </summary>
     public static string AssignCategoryColor(string categoryName)
@@ -1773,50 +1419,6 @@ Total Expenses,4870.00,5040.00,-170.00";
                firstCol.StartsWith("Increase in", StringComparison.OrdinalIgnoreCase) ||
                firstCol.StartsWith("Decrease in", StringComparison.OrdinalIgnoreCase) ||
                firstCol.StartsWith("Change in", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static List<MonthlyBudgetCategoryItemDto> CreateDefaultCategoriesForExpense(decimal actualExp,
-        decimal budgetedExp)
-    {
-        var ratio = budgetedExp > 0 ? (actualExp / budgetedExp) : 1m;
-        return new List<MonthlyBudgetCategoryItemDto>
-        {
-            new()
-            {
-                CategoryName = "Housing & Rent", BudgetedAmount = budgetedExp * 0.35m, ActualAmount = actualExp * 0.35m,
-                ColorHex = AssignCategoryColor("Housing")
-            },
-            new()
-            {
-                CategoryName = "Groceries & Food", BudgetedAmount = budgetedExp * 0.15m,
-                ActualAmount = actualExp * 0.15m, ColorHex = AssignCategoryColor("Groceries")
-            },
-            new()
-            {
-                CategoryName = "Utilities & Internet", BudgetedAmount = budgetedExp * 0.10m,
-                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Utilities")
-            },
-            new()
-            {
-                CategoryName = "Transportation & Gas", BudgetedAmount = budgetedExp * 0.10m,
-                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Transportation")
-            },
-            new()
-            {
-                CategoryName = "Healthcare & Insurance", BudgetedAmount = budgetedExp * 0.10m,
-                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Healthcare")
-            },
-            new()
-            {
-                CategoryName = "Dining & Entertainment", BudgetedAmount = budgetedExp * 0.10m,
-                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Dining")
-            },
-            new()
-            {
-                CategoryName = "Personal & Other", BudgetedAmount = budgetedExp * 0.10m,
-                ActualAmount = actualExp * 0.10m, ColorHex = AssignCategoryColor("Personal")
-            }
-        };
     }
 
     private static int GetColumnIndexFromCellRef(string cellRef)

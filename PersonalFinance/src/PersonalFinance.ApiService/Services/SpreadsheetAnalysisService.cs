@@ -321,6 +321,16 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 };
             }
 
+            // Only months actually read from the sheet are ever saved as snapshots.
+            if (budgetReport.Months.Count == 0)
+            {
+                return new SyncSpreadsheetBudgetResult
+                {
+                    Success = false,
+                    ErrorMessage = budgetReport.ErrorMessage ?? "No budget data could be read from the spreadsheet."
+                };
+            }
+
             var conflicts = new List<MonthConflictInfo>();
             foreach (var month in budgetReport.Months)
             {

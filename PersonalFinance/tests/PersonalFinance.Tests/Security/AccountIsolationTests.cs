@@ -141,8 +141,9 @@ public class AccountIsolationTests
             requestedUris.Add(request.RequestUri!.ToString());
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         });
-        return new SpreadsheetReaderService(new HttpClient(handler), new ConfigurationBuilder().Build(), db,
-            NullLogger<SpreadsheetReaderService>.Instance);
+        var fileSource = new GoogleDriveFileSource(new HttpClient(handler), new ConfigurationBuilder().Build(), db,
+            NullLogger<GoogleDriveFileSource>.Instance);
+        return new SpreadsheetReaderService(fileSource, NullLogger<SpreadsheetReaderService>.Instance);
     }
 
     private static DefaultHttpContext HttpContextFor(string userId)

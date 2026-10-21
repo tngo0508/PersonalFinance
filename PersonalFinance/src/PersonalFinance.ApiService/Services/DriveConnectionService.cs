@@ -39,7 +39,7 @@ public class DriveConnectionService : IDriveConnectionService
         CancellationToken cancellationToken = default)
     {
         var rawInput = request.FolderUrl;
-        var folderId = GoogleDriveHelper.ExtractFolderId(rawInput);
+        var folderId = GoogleDriveMetadata.ExtractFolderId(rawInput);
 
         if (string.IsNullOrWhiteSpace(folderId))
         {
@@ -52,9 +52,7 @@ public class DriveConnectionService : IDriveConnectionService
             };
         }
 
-        var apiKey = !string.IsNullOrWhiteSpace(request.ApiKey)
-            ? request.ApiKey.Trim()
-            : _configuration["GoogleDrive:ApiKey"]?.Trim();
+        var apiKey = GoogleDriveApiKey.Resolve(request.ApiKey, _configuration);
 
         // If an API key is available, attempt live fetch via Google Drive API v3
         if (!string.IsNullOrWhiteSpace(apiKey))
@@ -215,7 +213,7 @@ public class DriveConnectionService : IDriveConnectionService
             throw new ArgumentException("UserId is required to connect a Google Drive.", nameof(userId));
         }
 
-        var folderId = GoogleDriveHelper.ExtractFolderId(request.FolderUrl);
+        var folderId = GoogleDriveMetadata.ExtractFolderId(request.FolderUrl);
         if (string.IsNullOrWhiteSpace(folderId))
         {
             throw new ArgumentException("Invalid Google Drive folder URL or Folder ID.", nameof(request));
@@ -360,11 +358,7 @@ public class DriveConnectionService : IDriveConnectionService
         bool forceRefresh,
         CancellationToken cancellationToken)
     {
-        var apiKey = CredentialProtector.Decrypt(connection.EncryptedApiKey);
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            apiKey = _configuration["GoogleDrive:ApiKey"]?.Trim();
-        }
+        var apiKey = GoogleDriveApiKey.Resolve(CredentialProtector.Decrypt(connection.EncryptedApiKey), _configuration);
 
         GoogleDriveFolderResponseDto liveResponse;
 
@@ -506,7 +500,7 @@ public class DriveConnectionService : IDriveConnectionService
             LastSyncedAtUtc = connection.LastSyncedAtUtc,
             CachedFilesCount = activeFiles.Count,
             TotalSizeBytes = totalBytes,
-            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalBytes)
+            TotalSizeFormatted = GoogleDriveMetadata.FormatBytes(totalBytes)
         };
     }
 
@@ -533,7 +527,8 @@ public class DriveConnectionService : IDriveConnectionService
                 ThumbnailLink = f.ThumbnailLink,
                 FileType = f.FileType,
                 IconBadgeClass = f.IconBadgeClass,
-                IsFolder = f.IsFolder
+                IsFolder = f.IsFolder,
+                IsMonthlyBudgetSpreadsheet = GoogleDriveMetadata.IsMonthlyBudgetSpreadsheet(f.Name, f.FileType, f.MimeType)
             })
             .ToList();
 
@@ -547,7 +542,7 @@ public class DriveConnectionService : IDriveConnectionService
             FolderName = connection.Name,
             Files = activeFiles,
             TotalSizeBytes = totalBytes,
-            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalBytes),
+            TotalSizeFormatted = GoogleDriveMetadata.FormatBytes(totalBytes),
             ErrorMessage = connection.ErrorMessage,
             WarningMessage = warningMessage,
             IsDemoData = isDemoData ?? string.IsNullOrEmpty(connection.EncryptedApiKey)
@@ -640,7 +635,7 @@ public class DriveConnectionService : IDriveConnectionService
                     var iconLink = fileElem.TryGetProperty("iconLink", out var iconProp) ? iconProp.GetString() : null;
                     var thumbnailLink = fileElem.TryGetProperty("thumbnailLink", out var thumbProp) ? thumbProp.GetString() : null;
 
-                    var (fileType, badgeClass, isFolder) = GoogleDriveHelper.ResolveTypeInfo(mimeType, name);
+                    var (fileType, badgeClass, isFolder) = GoogleDriveMetadata.ResolveTypeInfo(mimeType, name);
 
                     files.Add(new GoogleDriveFileDto
                     {
@@ -648,7 +643,7 @@ public class DriveConnectionService : IDriveConnectionService
                         Name = name,
                         MimeType = mimeType,
                         Size = size,
-                        SizeFormatted = GoogleDriveHelper.FormatBytes(size),
+                        SizeFormatted = GoogleDriveMetadata.FormatBytes(size),
                         CreatedTime = createdTime,
                         ModifiedTime = modifiedTime,
                         WebViewLink = webViewLink,
@@ -656,7 +651,8 @@ public class DriveConnectionService : IDriveConnectionService
                         ThumbnailLink = thumbnailLink,
                         FileType = fileType,
                         IconBadgeClass = badgeClass,
-                        IsFolder = isFolder
+                        IsFolder = isFolder,
+                        IsMonthlyBudgetSpreadsheet = GoogleDriveMetadata.IsMonthlyBudgetSpreadsheet(name, fileType, mimeType)
                     });
                 }
             }
@@ -680,7 +676,7 @@ public class DriveConnectionService : IDriveConnectionService
             FolderName = folderName ?? "Google Drive Folder",
             Files = files,
             TotalSizeBytes = totalBytes,
-            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalBytes),
+            TotalSizeFormatted = GoogleDriveMetadata.FormatBytes(totalBytes),
             IsDemoData = false,
             WarningMessage = emptyWarning
         };
@@ -699,7 +695,7 @@ public class DriveConnectionService : IDriveConnectionService
                 Name = "Annual_Financial_Report_2025.pdf",
                 MimeType = "application/pdf",
                 Size = 2_450_000,
-                SizeFormatted = GoogleDriveHelper.FormatBytes(2_450_000),
+                SizeFormatted = GoogleDriveMetadata.FormatBytes(2_450_000),
                 CreatedTime = DateTime.UtcNow.AddDays(-14),
                 ModifiedTime = DateTime.UtcNow.AddDays(-2),
                 WebViewLink = $"https://drive.google.com/file/d/sample-doc-1/view",
@@ -713,7 +709,7 @@ public class DriveConnectionService : IDriveConnectionService
                 Name = "Monthly budget 2026.xlsx",
                 MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 Size = 1_350_000,
-                SizeFormatted = GoogleDriveHelper.FormatBytes(1_350_000),
+                SizeFormatted = GoogleDriveMetadata.FormatBytes(1_350_000),
                 CreatedTime = DateTime.UtcNow.AddDays(-20),
                 ModifiedTime = DateTime.UtcNow.AddHours(-12),
                 WebViewLink = "https://drive.google.com/file/d/sample-sheet-budget-1/view",
@@ -727,7 +723,7 @@ public class DriveConnectionService : IDriveConnectionService
                 Name = "Monthly budget - September 2026.xlsx",
                 MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 Size = 920_000,
-                SizeFormatted = GoogleDriveHelper.FormatBytes(920_000),
+                SizeFormatted = GoogleDriveMetadata.FormatBytes(920_000),
                 CreatedTime = DateTime.UtcNow.AddDays(-10),
                 ModifiedTime = DateTime.UtcNow.AddHours(-4),
                 WebViewLink = "https://drive.google.com/file/d/sample-sheet-budget-sep/view",
@@ -741,7 +737,7 @@ public class DriveConnectionService : IDriveConnectionService
                 Name = "Household_Budget_Model.xlsx",
                 MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 Size = 1_120_000,
-                SizeFormatted = GoogleDriveHelper.FormatBytes(1_120_000),
+                SizeFormatted = GoogleDriveMetadata.FormatBytes(1_120_000),
                 CreatedTime = DateTime.UtcNow.AddDays(-30),
                 ModifiedTime = DateTime.UtcNow.AddHours(-18),
                 WebViewLink = $"https://drive.google.com/file/d/sample-sheet-1/view",
@@ -769,7 +765,7 @@ public class DriveConnectionService : IDriveConnectionService
                 Name = "Investment_Portfolio_Q4_Chart.png",
                 MimeType = "image/png",
                 Size = 850_000,
-                SizeFormatted = GoogleDriveHelper.FormatBytes(850_000),
+                SizeFormatted = GoogleDriveMetadata.FormatBytes(850_000),
                 CreatedTime = DateTime.UtcNow.AddDays(-7),
                 ModifiedTime = DateTime.UtcNow.AddDays(-1),
                 WebViewLink = $"https://drive.google.com/file/d/sample-img-1/view",
@@ -793,6 +789,12 @@ public class DriveConnectionService : IDriveConnectionService
             }
         };
 
+        foreach (var file in sampleFiles)
+        {
+            file.IsMonthlyBudgetSpreadsheet =
+                GoogleDriveMetadata.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
+        }
+
         var totalBytes = sampleFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
 
         return new GoogleDriveFolderResponseDto
@@ -803,7 +805,7 @@ public class DriveConnectionService : IDriveConnectionService
             FolderName = "Financial Documents (Preview)",
             Files = sampleFiles,
             TotalSizeBytes = totalBytes,
-            TotalSizeFormatted = GoogleDriveHelper.FormatBytes(totalBytes),
+            TotalSizeFormatted = GoogleDriveMetadata.FormatBytes(totalBytes),
             IsDemoData = true,
             WarningMessage = warningMessage
         };
