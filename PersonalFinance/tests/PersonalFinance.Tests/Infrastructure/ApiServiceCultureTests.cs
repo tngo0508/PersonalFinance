@@ -122,7 +122,7 @@ public class ApiServiceCultureTests : IDisposable
         var budgets = await service.SearchAsync(UserId, "2026-10");
         var goals = await service.SearchAsync(UserId, "emergency");
 
-        Assert.Equal("Food - $1,234.56 (Expense)", Assert.Single(transactions.Transactions).Description);
+        Assert.Equal("Oct 1, 2026 - Food - $1,234.56 (Expense)",Assert.Single(transactions.Transactions).Description);
         Assert.Equal("Monthly income: $5,000.00", Assert.Single(budgets.BudgetItems).Description);
         Assert.Equal("Target: $2,500.50", Assert.Single(goals.SavingsGoals).Description);
     }

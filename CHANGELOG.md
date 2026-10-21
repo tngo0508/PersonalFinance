@@ -86,6 +86,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Global Search Returns Results**: The top-bar search now finds the signed-in Account's synced transactions and Savings Goals on Azure SQL; before, every search failed silently (#92).
+  - Matching is a case-insensitive "contains" that EF Core translates to SQL; LIKE wildcards in the query (`%`, `_`, `[`) match literally.
+  - The result groups are read one after another, because one `DbContext` does not allow concurrent queries.
+  - Queries are trimmed, cut to 100 characters, and ignored below 2 characters. Results have deterministic order and caps: 10 newest transactions, 5 goals by name.
+  - Transaction results show the date and link to that month in Analysis.
+  - The Search DTOs are one shared set used by the API Contract and the Service.
+  - A new test translates every search query to Azure SQL without a database, which the in-memory tests cannot do.
+
 - **Unavailable State on Every Page**: Budget Planner, Net Worth, Savings Goals and Community show the Unavailable State when their data cannot be loaded, instead of defaults or an empty page.
   - Budget Planner and Net Worth no longer show default values after a failed load, so a user cannot save the defaults over their real data.
   - Savings Goals and Net Worth error messages no longer include exception text, and errors after a redirect now reach the page.
