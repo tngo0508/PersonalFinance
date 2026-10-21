@@ -94,7 +94,7 @@ public class ApiServiceCultureTests : IDisposable
     }
 
     [Fact]
-    public async Task Search_AfterApplyDefault_ShowsDollarAmountsForTransactionsBudgetsAndGoals()
+    public async Task Search_AfterApplyDefault_ShowsDollarAmountsForTransactionsAndGoals()
     {
         StartInInvariantCulture();
         AppCulture.ApplyDefault();
@@ -108,22 +108,14 @@ public class ApiServiceCultureTests : IDisposable
             Category = "Food",
             Type = "Expense"
         });
-        db.UserBudgetAllocations.Add(new UserBudgetAllocation
-        {
-            UserId = UserId,
-            Period = "2026-10",
-            MonthlyIncome = 5_000m
-        });
         db.SavingsGoals.Add(NewGoal());
         await db.SaveChangesAsync();
-        var service = new SearchService(db, new BudgetDataSourceService(db));
+        var service = new SearchService(db, new BudgetDataSourceService(db), TimeProvider.System);
 
         var transactions = await service.SearchAsync(UserId, "culture");
-        var budgets = await service.SearchAsync(UserId, "2026-10");
         var goals = await service.SearchAsync(UserId, "emergency");
 
-        Assert.Equal("Oct 1, 2026 - Food - $1,234.56 (Expense)",Assert.Single(transactions.Transactions).Description);
-        Assert.Equal("Monthly income: $5,000.00", Assert.Single(budgets.BudgetItems).Description);
+        Assert.Equal("Oct 1, 2026 - Food - $1,234.56 (Expense)", Assert.Single(transactions.Transactions).Description);
         Assert.Equal("Target: $2,500.50", Assert.Single(goals.SavingsGoals).Description);
     }
 

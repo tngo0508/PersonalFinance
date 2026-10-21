@@ -23,7 +23,7 @@ public class SearchController : Controller
     }
 
     /// <summary>
-    /// Searches the signed-in Account's transactions, budget items and savings goals.
+    /// Searches the signed-in Account's transactions, Budget Categories and Savings Goals.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] string? q, CancellationToken cancellationToken = default)

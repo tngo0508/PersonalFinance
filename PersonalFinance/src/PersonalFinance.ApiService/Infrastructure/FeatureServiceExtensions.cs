@@ -1,4 +1,5 @@
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenAI;
 using PersonalFinance.ApiService.Services;
 
@@ -49,6 +50,7 @@ public static class FeatureServiceExtensions
         services.AddScoped<IWatchlistService, WatchlistService>();
         services.AddScoped<ICommunityService, CommunityService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ISearchService, SearchService>();
         return services;
     }

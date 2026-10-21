@@ -8,11 +8,12 @@
      * never "no results".
      */
     window.SearchModule = (function () {
+        // Matches SearchService.MinQueryLength on the server.
         const minQueryLength = 2;
         const debounceMs = 300;
         const groups = [
             { key: 'transactions', label: 'Transactions' },
-            { key: 'budgetItems', label: 'Budgets' },
+            { key: 'categories', label: 'Budget Categories' },
             { key: 'savingsGoals', label: 'Savings Goals' }
         ];
 
@@ -60,12 +61,12 @@
 
             input.addEventListener('input', onInput);
             input.addEventListener('keydown', onKeyDown);
-            retryButton.addEventListener('click', function () {
+            retryButton.addEventListener('click', () => {
                 search(lastQuery);
                 input.focus();
             });
 
-            document.addEventListener('click', function (e) {
+            document.addEventListener('click', (e) => {
                 if (!input.contains(e.target) && !dropdown.contains(e.target)) {
                     close();
                 }
@@ -86,7 +87,7 @@
                 return;
             }
 
-            debounceTimer = setTimeout(function () {
+            debounceTimer = setTimeout(() => {
                 search(query);
             }, debounceMs);
         }
@@ -132,13 +133,13 @@
             currentRequest = request;
 
             try {
-                const response = await fetch('/api/Search?q=' + encodeURIComponent(query), {
+                const response = await fetch(`/api/Search?q=${encodeURIComponent(query)}`, {
                     headers: { Accept: 'application/json' },
                     signal: request.signal
                 });
 
                 if (!response.ok) {
-                    throw new Error('Search failed with status ' + response.status);
+                    throw new Error(`Search failed with status ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -167,18 +168,16 @@
 
         /**
          * Render the grouped results as listbox options.
-         * @param {Object} data - Search results keyed by group (transactions, budgetItems, savingsGoals).
+         * @param {Object} data - Search results keyed by group (transactions, categories, savingsGoals).
          * @param {string} query - The query the results are for.
          * @returns {void}
          */
         function showResults (data, query) {
             clearList();
 
-            groups.forEach(function (group) {
+            groups.forEach((group) => {
                 const items = (data && Array.isArray(data[group.key])) ? data[group.key] : [];
-                const safeItems = items.filter(function (item) {
-                    return isSameSiteUrl(item.url);
-                });
+                const safeItems = items.filter((item) => isSameSiteUrl(item.url));
 
                 if (safeItems.length === 0) {
                     return;
@@ -186,7 +185,7 @@
 
                 const groupEl = document.createElement('div');
                 groupEl.setAttribute('role', 'group');
-                const headingId = 'searchGroup-' + group.key;
+                const headingId = `searchGroup-${group.key}`;
                 groupEl.setAttribute('aria-labelledby', headingId);
 
                 const heading = document.createElement('div');
@@ -195,7 +194,7 @@
                 heading.textContent = group.label;
                 groupEl.appendChild(heading);
 
-                safeItems.forEach(function (item) {
+                safeItems.forEach((item) => {
                     groupEl.appendChild(createOption(item, options.length));
                 });
 
@@ -203,12 +202,12 @@
             });
 
             if (options.length === 0) {
-                showMessage('No results for "' + query + '"', false);
+                showMessage(`No results for "${query}"`, false);
                 return;
             }
 
             message.hidden = true;
-            announce(options.length === 1 ? '1 result' : options.length + ' results');
+            announce(options.length === 1 ? '1 result' : `${options.length} results`);
             open();
         }
 
@@ -220,7 +219,7 @@
          */
         function createOption (item, index) {
             const option = document.createElement('a');
-            option.id = 'searchOption-' + index;
+            option.id = `searchOption-${index}`;
             option.className = 'search-result-item';
             option.setAttribute('role', 'option');
             option.setAttribute('aria-selected', 'false');
@@ -239,7 +238,7 @@
                 option.appendChild(description);
             }
 
-            option.addEventListener('mousemove', function () {
+            option.addEventListener('mousemove', () => {
                 setActive(index);
             });
 
@@ -276,11 +275,7 @@
          * @returns {void}
          */
         function setActive (index) {
-            if (activeIndex >= 0 && options[activeIndex]) {
-                options[activeIndex].classList.remove('is-active');
-                options[activeIndex].setAttribute('aria-selected', 'false');
-            }
-
+            clearActive();
             activeIndex = index;
             const option = options[index];
             option.classList.add('is-active');
@@ -290,14 +285,28 @@
         }
 
         /**
+         * Remove the highlight from the active option, if any.
+         * @returns {void}
+         */
+        function clearActive () {
+            const option = options[activeIndex];
+            if (option) {
+                option.classList.remove('is-active');
+                option.setAttribute('aria-selected', 'false');
+            }
+
+            activeIndex = -1;
+            input.removeAttribute('aria-activedescendant');
+        }
+
+        /**
          * Remove all options and the highlight.
          * @returns {void}
          */
         function clearList () {
+            clearActive();
             list.replaceChildren();
             options = [];
-            activeIndex = -1;
-            input.removeAttribute('aria-activedescendant');
         }
 
         /**
@@ -316,13 +325,7 @@
         function close () {
             dropdown.hidden = true;
             input.setAttribute('aria-expanded', 'false');
-            if (activeIndex >= 0 && options[activeIndex]) {
-                options[activeIndex].classList.remove('is-active');
-                options[activeIndex].setAttribute('aria-selected', 'false');
-            }
-
-            activeIndex = -1;
-            input.removeAttribute('aria-activedescendant');
+            clearActive();
         }
 
         /**
