@@ -86,6 +86,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Unavailable State on Every Page**: Budget Planner, Net Worth, Savings Goals and Community show the Unavailable State when their data cannot be loaded, instead of defaults or an empty page.
+  - Budget Planner and Net Worth no longer show default values after a failed load, so a user cannot save the defaults over their real data.
+  - Savings Goals and Net Worth error messages no longer include exception text, and errors after a redirect now reach the page.
+  - The Savings Goals validation summary was never displayed; it now is.
+  - `GetBudgetData` answers with a JSON error instead of an empty budget; deleting Net Worth parameters reports a failure instead of ignoring it.
+
 - **Dashboard After Sign-In**: The Dashboard no longer shows empty data when ApiService is still starting after being idle.
   - When the summary cannot be loaded, the Dashboard shows the Unavailable State ("We couldn't load your dashboard") with a Retry button, instead of empty sections and setup cards.
   - Opening the Login page sends a throttled, anonymous `/alive` ping that wakes ApiService while the user signs in.

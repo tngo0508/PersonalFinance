@@ -27,14 +27,15 @@ public class BudgetController : Controller
 
     /// <summary>
     /// Displays the Budget Planner page with form, pie chart, and allocation summary.
-    /// Loads saved budget data from the ApiService if available, otherwise uses defaults.
+    /// Loads the saved budget from the ApiService; a user with no saved budget gets the defaults.
+    /// When the ApiService is unavailable, shows the Unavailable State instead of the defaults, so the user
+    /// cannot save the defaults over their real budget.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
         var model = new BudgetViewModel();
 
-        // Try to load saved budget from the API service
         try
         {
             var saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
@@ -54,9 +55,10 @@ public class BudgetController : Controller
                 model.Miscellaneous = saved.Allocations.Miscellaneous;
             }
         }
-        catch
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // If the API is unavailable, fall back to default values
+            _logger.LogWarning(ex, "Failed to load the budget; rendering the Unavailable State instead.");
+            return this.UnavailableView("Budget Planner", "We couldn't load your budget", "Budget");
         }
 
         return View(model);
@@ -108,43 +110,33 @@ public class BudgetController : Controller
     }
 
     /// <summary>
-    /// Returns JSON budget data for AJAX-based chart updates.
+    /// Returns JSON budget data for AJAX-based chart updates. A failure answers with an error
+    /// (see <see cref="JsonApiErrorsAttribute"/>), never with an empty budget.
     /// </summary>
     [HttpGet]
+    [JsonApiErrors]
     public async Task<IActionResult> GetBudgetData(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
+        var saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
 
-            if (saved == null || saved.Allocations == null)
-            {
-                return Json(new
-                {
-                    monthlyIncome = 0m,
-                    allocations = new decimal[0],
-                    labels = new string[0]
-                });
-            }
-
-            var categories = BudgetPlannerCategories.AllocationAmounts(saved.Allocations);
-
-            return Json(new
-            {
-                monthlyIncome = saved.MonthlyIncome,
-                allocations = categories.Select(c => c.Amount),
-                labels = categories.Select(c => c.Name)
-            });
-        }
-        catch
+        if (saved == null || saved.Allocations == null)
         {
             return Json(new
             {
                 monthlyIncome = 0m,
-                allocations = new decimal[0],
-                labels = new string[0]
+                allocations = Array.Empty<decimal>(),
+                labels = Array.Empty<string>()
             });
         }
+
+        var categories = BudgetPlannerCategories.AllocationAmounts(saved.Allocations);
+
+        return Json(new
+        {
+            monthlyIncome = saved.MonthlyIncome,
+            allocations = categories.Select(c => c.Amount),
+            labels = categories.Select(c => c.Name)
+        });
     }
 
     /// <summary>

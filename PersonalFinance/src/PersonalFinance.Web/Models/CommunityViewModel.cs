@@ -6,11 +6,6 @@ namespace PersonalFinance.Web.Models;
 public sealed class CommunityViewModel
 {
     /// <summary>
-    /// Gets or sets any error message to display on the page.
-    /// </summary>
-    public string? ErrorMessage { get; set; }
-
-    /// <summary>
     /// Gets or sets the list of active polls for community engagement.
     /// </summary>
     public List<CommunityPoll> ActivePolls { get; set; } = new();

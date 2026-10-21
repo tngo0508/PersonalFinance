@@ -1,0 +1,11 @@
+@model PersonalFinance.Web.Models.UnavailableStateViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@* Unavailable State page: shown instead of a page whose data could not be loaded. It never renders the page's
+   form or defaults, so the user cannot mistake them for their data or save over it. *@
+<div class="unavailable-page">
+    <h1 class="unavailable-page__title">@Model.PageTitle</h1>
+    <partial name="_UnavailableState" model="Model"/>
+</div>
