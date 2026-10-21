@@ -150,3 +150,7 @@ dotnet_diagnostic.IDE0130.severity = none
 [**/tests/**/*.cs]
 # xUnit test names use underscores: Method_Scenario_Expected.
 dotnet_diagnostic.CA1707.severity = none
+
+# Shared test helpers stay in the root PersonalFinance.Tests namespace so every feature folder sees them.
+[**/tests/PersonalFinance.Tests/TestSupport/*.cs]
+dotnet_diagnostic.IDE0130.severity = none
