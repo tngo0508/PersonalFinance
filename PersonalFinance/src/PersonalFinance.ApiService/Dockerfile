@@ -28,8 +28,9 @@ ARG BUILD_CONFIGURATION=Release
 ARG RUNTIME_IDENTIFIER=linux-x64
 WORKDIR /src
 
-# Copy Directory.Packages.props for Central Package Management (CPM) caching
-COPY ["PersonalFinance/Directory.Packages.props", "PersonalFinance/"]
+# Copy the shared MSBuild files: Directory.Build.props (TargetFramework, Nullable, analyzers) and
+# Directory.Packages.props (Central Package Management). Without them restore fails with NETSDK1013.
+COPY ["PersonalFinance/Directory.Build.props", "PersonalFinance/Directory.Packages.props", "PersonalFinance/"]
 
 # Copy project files for granular restore layer caching
 COPY ["PersonalFinance/src/PersonalFinance.Shared/PersonalFinance.Shared.csproj", "PersonalFinance/src/PersonalFinance.Shared/"]
