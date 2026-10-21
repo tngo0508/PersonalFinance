@@ -1,10 +1,15 @@
 @using System.Security.Claims
-@using PersonalFinance.Web.Infrastructure
+@using PersonalFinance.Web.Models
 @{
     ViewData["Title"] = "Dashboard";
     var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? string.Empty;
     var displayName = User.FindFirst(ClaimTypes.GivenName)?.Value
                       ?? (email.Contains('@') ? email[..email.IndexOf('@')] : email);
+    var unavailable = new UnavailableStateViewModel
+    {
+        Heading = "We couldn't load your dashboard",
+        RetryController = "Dashboard"
+    };
 }
 
 @section Styles {
@@ -21,16 +26,5 @@
         </h1>
     </header>
 
-    <section class="dash-setup-card" role="status" aria-labelledby="dash-unavailable-title">
-        <span class="dash-setup-card__icon" aria-hidden="true"><i data-lucide="cloud-off"></i></span>
-        <div class="dash-setup-card__body">
-            <h2 id="dash-unavailable-title" class="dash-setup-card__title">We couldn't load your dashboard</h2>
-            <p class="dash-setup-card__text">
-                Your data is safe. @JsonApiErrorsFilter.UnavailableMessage
-            </p>
-        </div>
-        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary btn-sm dash-setup-card__action">
-            Retry
-        </a>
-    </section>
+    <partial name="_UnavailableState" model="unavailable"/>
 </div>

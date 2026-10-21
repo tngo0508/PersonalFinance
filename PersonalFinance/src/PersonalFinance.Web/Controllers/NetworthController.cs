@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Web.Controllers;
@@ -26,14 +27,15 @@ public class NetworthController : Controller
 
     /// <summary>
     /// Displays the Net Worth projection dashboard with scenario comparison and charts.
-    /// Loads saved parameters from the ApiService if available, otherwise uses defaults.
+    /// Loads the saved parameters from the ApiService; a user with no saved parameters gets the defaults.
+    /// When the ApiService is unavailable, shows the Unavailable State instead of the defaults, so the user
+    /// cannot save the defaults over their real parameters.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
         var model = new NetWorthViewModel();
 
-        // Try to load saved parameters from the API service
         try
         {
             var saved = await _netWorthApi.LoadParametersAsync(cancellationToken);
@@ -44,13 +46,13 @@ public class NetworthController : Controller
                 model.ApplySaved(saved);
             }
         }
-        catch
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // If the API is unavailable, fall back to default values
+            _logger.LogWarning(ex, "Failed to load Net Worth parameters; rendering the Unavailable State instead.");
+            return Unavailable();
         }
 
-        model.Projection = await _netWorthApi.CalculateProjectionAsync(model.ToProjectionRequest(), cancellationToken);
-        return View(model);
+        return await IndexWithProjectionAsync(model, cancellationToken);
     }
 
     /// <summary>
@@ -77,8 +79,7 @@ public class NetworthController : Controller
 
         if (!ModelState.IsValid)
         {
-            model.Projection = await _netWorthApi.CalculateProjectionAsync(request, CancellationToken.None);
-            return View("Index", model);
+            return await IndexWithProjectionAsync(model, CancellationToken.None);
         }
 
         try
@@ -89,9 +90,8 @@ public class NetworthController : Controller
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogError(ex, "Saving Net Worth parameters failed.");
-            ModelState.AddModelError("", "Failed to save parameters. Please try again.");
-            model.Projection = await _netWorthApi.CalculateProjectionAsync(request, CancellationToken.None);
-            return View("Index", model);
+            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, "Failed to save parameters. Please try again."));
+            return await IndexWithProjectionAsync(model, CancellationToken.None);
         }
 
         return RedirectToAction(nameof(Index));
@@ -106,13 +106,37 @@ public class NetworthController : Controller
     {
         try
         {
+            // ApiService answers success when there is nothing to delete, so any failure here is real.
             await _netWorthApi.DeleteParametersAsync(HttpContext.RequestAborted);
         }
-        catch
+        catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
-            // Silently ignore — parameters may not exist
+            _logger.LogError(ex, "Deleting Net Worth parameters failed.");
+            TempData["SaveError"] = ApiErrorMessages.ForUser(ex, "Failed to clear your saved parameters. Please try again.");
         }
 
         return RedirectToAction(nameof(Index));
     }
+
+    /// <summary>
+    /// Renders the Index view with a fresh projection, or the Unavailable State when the projection fails.
+    /// </summary>
+    private async Task<IActionResult> IndexWithProjectionAsync(NetWorthViewModel model,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            model.Projection = await _netWorthApi.CalculateProjectionAsync(model.ToProjectionRequest(), cancellationToken);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to calculate the Net Worth projection; rendering the Unavailable State instead.");
+            return Unavailable();
+        }
+
+        return View(nameof(Index), model);
+    }
+
+    private ViewResult Unavailable() =>
+        this.UnavailableView("Net Worth Projection", "We couldn't load your net worth projection", "Networth");
 }

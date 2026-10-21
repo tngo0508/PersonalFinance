@@ -31,6 +31,7 @@ public sealed class CommunityController : Controller
 
     /// <summary>
     /// Displays the Community page with interactive polls, quick stats, and relatable case studies.
+    /// When the ApiService is unavailable, shows the Unavailable State instead of an empty page.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
@@ -42,12 +43,10 @@ public sealed class CommunityController : Controller
             var model = MapToViewModel(response);
             return View(model);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error loading community data for user {UserId}", userId);
-            var model = new CommunityViewModel();
-            model.ErrorMessage = "Unable to load community data at this time.";
-            return View(model);
+            return this.UnavailableView("Community", "We couldn't load the community page", "Community");
         }
     }
 
