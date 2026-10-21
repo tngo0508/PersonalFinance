@@ -146,6 +146,11 @@ follows the kind of its category.
 The choice between the synced Google Sheet data and Budget Tracker data that Analysis and the Dashboard budget views
 display. The source applies to a whole view and is never mixed within one month.
 
+### Global Search
+The search in the top bar for signed-in users. It finds the user's own records by text: transactions from their current
+Data Source, and their Savings Goals. Selecting a result opens the page that holds it.
+_Avoid_: page search, navigation search (finding app pages by name is a different feature)
+
 ### Community
 Social features including polls, stories, comments, and likes. System-defined polls are shared across users; user-generated content (stories, comments) is user-owned.
 

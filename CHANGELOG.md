@@ -86,6 +86,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Global Search Follows the Data Source**: Budget Tracker users now find their Budget Transactions in Global Search; transactions come only from the user's current Data Source (#93).
+  - Budget Transactions match on description or Budget Category name. A deleted category still names the past transactions that used it.
+  - Budget Tracker results open that month in the Budget Tracker. Google Sheet results still open that month in Analysis.
+  - Switching the Data Source changes the results immediately. Savings Goals are searched for either source.
+  - ADR 0002 §3 is amended, and **Global Search** is added to the glossary.
+
 - **Global Search Returns Results**: The top-bar search now finds the signed-in Account's synced transactions and Savings Goals on Azure SQL; before, every search failed silently (#92).
   - Matching is a case-insensitive "contains" that EF Core translates to SQL; LIKE wildcards in the query (`%`, `_`, `[`) match literally.
   - The result groups are read one after another, because one `DbContext` does not allow concurrent queries.

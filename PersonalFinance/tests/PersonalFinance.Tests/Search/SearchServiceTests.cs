@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.BudgetTracker;
+using PersonalFinance.Shared.Enums;
 using Xunit;
 
 namespace PersonalFinance.Tests.Search;
@@ -43,6 +45,160 @@ public class SearchServiceTests
         TargetAmount = 1_000m
     };
 
+    private static SearchService CreateService(AppDbContext db) => new(db, new BudgetDataSourceService(db));
+
+    private static BudgetCategory Category(string name, BudgetCategoryKind kind = BudgetCategoryKind.Expense,
+        string userId = UserId) => new()
+    {
+        UserId = userId,
+        Name = name,
+        Kind = kind
+    };
+
+    private static BudgetTransaction TrackerTransaction(string description, DateOnly date, BudgetCategory category,
+        string userId = UserId) => new()
+    {
+        UserId = userId,
+        Date = date,
+        Amount = 18.25m,
+        Description = description,
+        Category = category
+    };
+
+    private static UserBudgetSourcePreference Prefer(BudgetDataSource source) => new()
+    {
+        UserId = UserId,
+        Source = source
+    };
+
+    [Fact]
+    public async Task SearchAsync_BudgetTrackerSource_MatchesTransactionDescriptionAndLinksToTrackerMonth()
+    {
+        await using var db = CreateContext();
+        db.BudgetTransactions.Add(TrackerTransaction("Costco run", new DateOnly(2026, 8, 20), Category("Food")));
+        await db.SaveChangesAsync();
+
+        var result = Assert.Single((await CreateService(db).SearchAsync(UserId, "COSTCO")).Transactions);
+
+        Assert.Equal("Costco run", result.Title);
+        Assert.Equal("/BudgetTracker?year=2026&month=8", result.Url);
+        Assert.Equal(new DateTime(2026, 8, 20), result.Date);
+        Assert.Equal(18.25m, result.Amount);
+        Assert.Contains("Food", result.Description);
+        Assert.Contains("Expense", result.Description);
+    }
+
+    [Fact]
+    public async Task SearchAsync_BudgetTrackerSource_MatchesTransactionsByCategoryName()
+    {
+        await using var db = CreateContext();
+        var groceries = Category("Groceries");
+        db.BudgetTransactions.AddRange(
+            TrackerTransaction("Weekly shop", new DateOnly(2026, 10, 4), groceries),
+            TrackerTransaction("Bus pass", new DateOnly(2026, 10, 5), Category("Transport")));
+        await db.SaveChangesAsync();
+
+        var results = await CreateService(db).SearchAsync(UserId, "grocer");
+
+        Assert.Equal("Weekly shop", Assert.Single(results.Transactions).Title);
+    }
+
+    [Fact]
+    public async Task SearchAsync_BudgetTrackerSource_DeletedCategoryStillNamesItsPastTransactions()
+    {
+        await using var db = CreateContext();
+        var deletedCategory = Category("Gym");
+        deletedCategory.IsDeleted = true;
+        db.BudgetTransactions.Add(TrackerTransaction("Monthly fee", new DateOnly(2026, 6, 1), deletedCategory));
+        await db.SaveChangesAsync();
+
+        var results = await CreateService(db).SearchAsync(UserId, "gym");
+
+        Assert.Equal("Monthly fee", Assert.Single(results.Transactions).Title);
+    }
+
+    [Fact]
+    public async Task SearchAsync_BudgetTrackerSource_ExcludesDeletedTransactionsAndOtherAccounts()
+    {
+        await using var db = CreateContext();
+        var deleted = TrackerTransaction("Costco deleted", new DateOnly(2026, 10, 2), Category("Food"));
+        deleted.IsDeleted = true;
+        db.BudgetTransactions.AddRange(
+            TrackerTransaction("Costco mine", new DateOnly(2026, 10, 1), Category("Food")),
+            TrackerTransaction("Costco theirs", new DateOnly(2026, 10, 1),
+                Category("Food", userId: OtherUserId), OtherUserId),
+            deleted);
+        await db.SaveChangesAsync();
+
+        var results = await CreateService(db).SearchAsync(UserId, "costco");
+
+        Assert.Equal("Costco mine", Assert.Single(results.Transactions).Title);
+    }
+
+    [Fact]
+    public async Task SearchAsync_DefaultsToGoogleSheetWhenSyncedDataExists_AndNeverMixesSources()
+    {
+        await using var db = CreateContext();
+        db.SpreadsheetTransactionRecords.Add(Transaction("Costco sheet", new DateTime(2026, 10, 1)));
+        db.BudgetTransactions.Add(TrackerTransaction("Costco tracker", new DateOnly(2026, 10, 2), Category("Food")));
+        await db.SaveChangesAsync();
+
+        var result = Assert.Single((await CreateService(db).SearchAsync(UserId, "costco")).Transactions);
+
+        Assert.Equal("Costco sheet", result.Title);
+        Assert.StartsWith("/Analysis?", result.Url);
+    }
+
+    [Theory]
+    [InlineData(BudgetDataSource.BudgetTracker, "Costco tracker")]
+    [InlineData(BudgetDataSource.GoogleSheet, "Costco sheet")]
+    public async Task SearchAsync_FollowsTheStoredDataSourcePreference(BudgetDataSource source, string expected)
+    {
+        await using var db = CreateContext();
+        db.SpreadsheetTransactionRecords.Add(Transaction("Costco sheet", new DateTime(2026, 10, 1)));
+        db.BudgetTransactions.Add(TrackerTransaction("Costco tracker", new DateOnly(2026, 10, 2), Category("Food")));
+        db.UserBudgetSourcePreferences.Add(Prefer(source));
+        await db.SaveChangesAsync();
+
+        var results = await CreateService(db).SearchAsync(UserId, "costco");
+
+        Assert.Equal(expected, Assert.Single(results.Transactions).Title);
+    }
+
+    [Fact]
+    public async Task SearchAsync_SwitchingDataSource_ChangesResultsImmediately()
+    {
+        await using var db = CreateContext();
+        db.SpreadsheetTransactionRecords.Add(Transaction("Costco sheet", new DateTime(2026, 10, 1)));
+        db.BudgetTransactions.Add(TrackerTransaction("Costco tracker", new DateOnly(2026, 10, 2), Category("Food")));
+        await db.SaveChangesAsync();
+        var dataSource = new BudgetDataSourceService(db);
+        var service = new SearchService(db, dataSource);
+
+        var before = await service.SearchAsync(UserId, "costco");
+        await dataSource.SetDataSourcePreferenceAsync(UserId,
+            new SetBudgetDataSourceRequest { Source = BudgetDataSource.BudgetTracker });
+        var after = await service.SearchAsync(UserId, "costco");
+
+        Assert.Equal("Costco sheet", Assert.Single(before.Transactions).Title);
+        Assert.Equal("Costco tracker", Assert.Single(after.Transactions).Title);
+    }
+
+    [Theory]
+    [InlineData(BudgetDataSource.BudgetTracker)]
+    [InlineData(BudgetDataSource.GoogleSheet)]
+    public async Task SearchAsync_SearchesSavingsGoalsForEitherDataSource(BudgetDataSource source)
+    {
+        await using var db = CreateContext();
+        db.SavingsGoals.Add(Goal("Emergency fund"));
+        db.UserBudgetSourcePreferences.Add(Prefer(source));
+        await db.SaveChangesAsync();
+
+        var results = await CreateService(db).SearchAsync(UserId, "emergency");
+
+        Assert.Single(results.SavingsGoals);
+    }
+
     [Theory]
     [InlineData("costco")]
     [InlineData("COSTCO")]
@@ -53,7 +209,7 @@ public class SearchServiceTests
         db.SpreadsheetTransactionRecords.Add(Transaction("Costco Wholesale", new DateTime(2026, 10, 3)));
         await db.SaveChangesAsync();
 
-        var results = await new SearchService(db).SearchAsync(UserId, query);
+        var results = await CreateService(db).SearchAsync(UserId, query);
 
         Assert.Equal("Costco Wholesale", Assert.Single(results.Transactions).Title);
     }
@@ -65,7 +221,7 @@ public class SearchServiceTests
         db.SpreadsheetTransactionRecords.Add(Transaction("Weekly shop", new DateTime(2026, 10, 3), "Groceries"));
         await db.SaveChangesAsync();
 
-        var results = await new SearchService(db).SearchAsync(UserId, "grocer");
+        var results = await CreateService(db).SearchAsync(UserId, "grocer");
 
         Assert.Equal("Weekly shop", Assert.Single(results.Transactions).Title);
     }
@@ -77,7 +233,7 @@ public class SearchServiceTests
         db.SpreadsheetTransactionRecords.Add(Transaction("Costco", new DateTime(2026, 9, 14)));
         await db.SaveChangesAsync();
 
-        var result = Assert.Single((await new SearchService(db).SearchAsync(UserId, "costco")).Transactions);
+        var result = Assert.Single((await CreateService(db).SearchAsync(UserId, "costco")).Transactions);
 
         Assert.Equal(new DateTime(2026, 9, 14), result.Date);
         Assert.Equal(42.50m, result.Amount);
@@ -96,7 +252,7 @@ public class SearchServiceTests
 
         await db.SaveChangesAsync();
 
-        var results = await new SearchService(db).SearchAsync(UserId, "coffee");
+        var results = await CreateService(db).SearchAsync(UserId, "coffee");
 
         Assert.Equal(SearchService.MaxTransactions, results.Transactions.Count);
         Assert.Equal("Coffee 12", results.Transactions[0].Title);
@@ -118,7 +274,7 @@ public class SearchServiceTests
         db.SavingsGoals.AddRange(Goal("Costco membership", userId: OtherUserId), deletedGoal);
         await db.SaveChangesAsync();
 
-        var results = await new SearchService(db).SearchAsync(UserId, "costco");
+        var results = await CreateService(db).SearchAsync(UserId, "costco");
 
         Assert.Equal("Costco mine", Assert.Single(results.Transactions).Title);
         Assert.Empty(results.SavingsGoals);
@@ -135,7 +291,7 @@ public class SearchServiceTests
             Goal("Vacation 2"), Goal("Vacation 3"), Goal("Vacation 4"), Goal("Vacation 5"));
         await db.SaveChangesAsync();
 
-        var results = await new SearchService(db).SearchAsync(UserId, "vacation");
+        var results = await CreateService(db).SearchAsync(UserId, "vacation");
 
         Assert.Equal(SearchService.MaxSavingsGoals, results.SavingsGoals.Count);
         Assert.Equal(["Car", "Vacation", "Vacation 2", "Vacation 3", "Vacation 4"],
@@ -155,7 +311,7 @@ public class SearchServiceTests
         db.SavingsGoals.Add(Goal("Car"));
         await db.SaveChangesAsync();
 
-        var results = await new SearchService(db).SearchAsync(UserId, query!);
+        var results = await CreateService(db).SearchAsync(UserId, query!);
 
         Assert.Empty(results.Transactions);
         Assert.Empty(results.BudgetItems);
@@ -173,7 +329,7 @@ public class SearchServiceTests
             Transaction(wildcardOnly, new DateTime(2026, 10, 1)));
         await db.SaveChangesAsync();
 
-        var results = await new SearchService(db).SearchAsync(UserId, query);
+        var results = await CreateService(db).SearchAsync(UserId, query);
 
         Assert.Equal(literal, Assert.Single(results.Transactions).Title);
     }
@@ -185,7 +341,7 @@ public class SearchServiceTests
         db.SpreadsheetTransactionRecords.Add(Transaction("Costco", new DateTime(2026, 10, 1)));
         await db.SaveChangesAsync();
 
-        var results = await new SearchService(db).SearchAsync(UserId, "  costco  ");
+        var results = await CreateService(db).SearchAsync(UserId, "  costco  ");
 
         Assert.Single(results.Transactions);
     }
@@ -218,12 +374,13 @@ public class SearchServiceTests
             .UseSqlServer("Server=localhost;Database=PersonalFinance_SearchCheck;Trusted_Connection=True;TrustServerCertificate=True;")
             .Options;
         using var db = new AzureSqlAppDbContext(options);
-        var service = new SearchService(db);
+        var service = CreateService(db);
         var pattern = SearchService.ToContainsPattern("50%_[x]")!;
 
         var queries = new[]
         {
-            service.TransactionsQuery(UserId, pattern).ToQueryString(),
+            service.SheetTransactionsQuery(UserId, pattern).ToQueryString(),
+            service.TrackerTransactionsQuery(UserId, pattern).ToQueryString(),
             service.BudgetItemsQuery(UserId, pattern).ToQueryString(),
             service.SavingsGoalsQuery(UserId, pattern).ToQueryString()
         };
