@@ -28,10 +28,10 @@ public class SpreadsheetReaderService : ISpreadsheetReader
 
     /// <inheritdoc />
     public async Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(
+        string userId,
         string fileId,
         string? fileName = null,
         int? connectionId = null,
-        string? userId = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(fileId))
@@ -47,7 +47,7 @@ public class SpreadsheetReaderService : ISpreadsheetReader
         }
 
         MonthlyBudgetReportDto? unreadable = null;
-        await foreach (var download in _fileSource.DownloadAsync(fileId, fileName, connectionId, userId, cancellationToken))
+        await foreach (var download in _fileSource.DownloadAsync(userId, fileId, fileName, connectionId, cancellationToken))
         {
             var report = download.Format == SpreadsheetFormat.Xlsx
                 ? BudgetSpreadsheetParser.ParseXlsxBudgetReport(new MemoryStream(download.Content), download.FileName,
@@ -73,10 +73,10 @@ public class SpreadsheetReaderService : ISpreadsheetReader
 
     /// <inheritdoc />
     public async Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(
+        string userId,
         string fileId,
         string? fileName = null,
         int? connectionId = null,
-        string? userId = null,
         CancellationToken cancellationToken = default)
     {
         if (IsSampleFile(fileId))
@@ -86,7 +86,7 @@ public class SpreadsheetReaderService : ISpreadsheetReader
         }
 
         SpreadsheetTransactionsDto? unreadable = null;
-        await foreach (var download in _fileSource.DownloadAsync(fileId, fileName, connectionId, userId, cancellationToken))
+        await foreach (var download in _fileSource.DownloadAsync(userId, fileId, fileName, connectionId, cancellationToken))
         {
             var result = download.Format == SpreadsheetFormat.Xlsx
                 ? BudgetSpreadsheetParser.ParseXlsxTransactions(new MemoryStream(download.Content), download.FileName,

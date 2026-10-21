@@ -72,12 +72,11 @@
     }
 
     async function apiFetch (url, options) {
-        const tokenMeta = document.querySelector('meta[name="__RequestVerificationToken"]');
         const res = await fetch(url, {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'RequestVerificationToken': tokenMeta ? tokenMeta.getAttribute('content') || '' : ''
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
             },
             ...options
         });

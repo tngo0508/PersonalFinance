@@ -77,8 +77,24 @@
         return isNaN(num) ? defaultValue : num;
     }
 
+    /**
+     * Get the antiforgery token to send as the RequestVerificationToken header on state-changing requests:
+     * the form field inside container (or the page) if present, otherwise the layout's meta tag.
+     * @param {ParentNode} [container] - Element to look in first for a __RequestVerificationToken form field.
+     * @returns {string} The token, or an empty string when the page has none.
+     */
+    function getAntiForgeryToken (container) {
+        const input = (container || document).querySelector('input[name="__RequestVerificationToken"]');
+        if (input && input.value) {
+            return input.value;
+        }
+        const meta = document.querySelector('meta[name="__RequestVerificationToken"]');
+        return meta ? meta.getAttribute('content') || '' : '';
+    }
+
     // Expose utilities on the global object
     global.PFUtils = {
+        getAntiForgeryToken: getAntiForgeryToken,
         escapeHtml: escapeHtml,
         formatCurrency: formatCurrency,
         formatCurrencyCents: formatCurrencyCents,

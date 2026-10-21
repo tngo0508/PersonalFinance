@@ -135,7 +135,9 @@ Follow the existing Budget Tracker feature as the reference implementation.
    JavaScript only calls Web: a `fetch('/api/X...')` needs a Web controller routed at `api/X` with `[Authorize]` and
    `[JsonApiErrors]` (`Web/WebApiRouteTests` checks this), and state-changing calls send the
    `RequestVerificationToken` header from the layout's `__RequestVerificationToken` meta tag.
-8. **Tests** in `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/`.
+8. **Tests** in `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/`. Services are tested with the EF Core InMemory
+   provider; endpoint authorization can be tested over HTTP against the real pipeline with `WebApplicationFactory`
+   (see `Security/ApiServiceInternalKeyHttpTests`).
 9. Bump `AppVersion` and add a `CHANGELOG.md` entry (see [`CONTRIBUTING.md`](../CONTRIBUTING.md)).
 
 Coding rules for each of these steps are in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).

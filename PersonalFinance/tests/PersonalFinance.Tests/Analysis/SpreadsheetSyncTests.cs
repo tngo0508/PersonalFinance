@@ -36,12 +36,12 @@ public class SpreadsheetSyncTests
 
     private sealed class FixedReportReader(MonthlyBudgetReportDto report) : ISpreadsheetReader
     {
-        public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string fileId, string? fileName = null,
-            int? connectionId = null, string? userId = null, CancellationToken cancellationToken = default) =>
+        public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string userId, string fileId,
+            string? fileName = null, int? connectionId = null, CancellationToken cancellationToken = default) =>
             Task.FromResult(report);
 
-        public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string fileId, string? fileName = null,
-            int? connectionId = null, string? userId = null, CancellationToken cancellationToken = default) =>
+        public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string userId, string fileId,
+            string? fileName = null, int? connectionId = null, CancellationToken cancellationToken = default) =>
             Task.FromResult(new SpreadsheetTransactionsDto());
     }
 

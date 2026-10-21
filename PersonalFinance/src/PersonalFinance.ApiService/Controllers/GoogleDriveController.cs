@@ -203,7 +203,7 @@ public class GoogleDriveController : ControllerBase
         }
 
         var report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
-            fileId, fileName, connectionId, User.GetUserId(), cancellationToken);
+            User.GetUserId(), fileId, fileName, connectionId, cancellationToken);
         return Ok(report);
     }
 
@@ -225,7 +225,7 @@ public class GoogleDriveController : ControllerBase
         }
 
         var transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
-            fileId, fileName, connectionId, User.GetUserId(), cancellationToken);
+            User.GetUserId(), fileId, fileName, connectionId, cancellationToken);
         return Ok(transactions);
     }
 }

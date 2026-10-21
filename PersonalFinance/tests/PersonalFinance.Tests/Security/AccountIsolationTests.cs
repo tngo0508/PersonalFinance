@@ -12,7 +12,6 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Data.Helpers;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.Helpers;
-using PersonalFinance.Tests.GoogleDrive;
 using ApiGoogleDriveController = PersonalFinance.ApiService.Controllers.GoogleDriveController;
 
 namespace PersonalFinance.Tests.Security;
@@ -60,16 +59,16 @@ public class AccountIsolationTests
 
     [Theory]
     [InlineData("intruder")]
-    [InlineData(null)]
-    public async Task SpreadsheetReader_WithAnotherAccountsConnectionId_NeverUsesThatAccountsApiKey(string? callerUserId)
+    [InlineData("")]
+    public async Task SpreadsheetReader_WithAnotherAccountsConnectionId_NeverUsesThatAccountsApiKey(string callerUserId)
     {
         await using var db = CreateDb();
         var connectionId = await SeedConnectionAsync(db, "owner");
         var requestedUris = new List<string>();
         var reader = CreateReader(db, requestedUris);
 
-        await reader.GetSpreadsheetBudgetReportAsync("file-1", "Budget.xlsx", connectionId, callerUserId);
-        await reader.GetSpreadsheetTransactionsAsync("file-1", "Budget.xlsx", connectionId, callerUserId);
+        await reader.GetSpreadsheetBudgetReportAsync(callerUserId, "file-1", "Budget.xlsx", connectionId);
+        await reader.GetSpreadsheetTransactionsAsync(callerUserId, "file-1", "Budget.xlsx", connectionId);
 
         Assert.DoesNotContain(requestedUris, uri => uri.Contains(OwnerApiKey, StringComparison.Ordinal));
     }
@@ -82,7 +81,7 @@ public class AccountIsolationTests
         var requestedUris = new List<string>();
         var reader = CreateReader(db, requestedUris);
 
-        await reader.GetSpreadsheetBudgetReportAsync("file-1", "Budget.xlsx", connectionId, "owner");
+        await reader.GetSpreadsheetBudgetReportAsync("owner", "file-1", "Budget.xlsx", connectionId);
 
         Assert.Contains(requestedUris, uri => uri.Contains(OwnerApiKey, StringComparison.Ordinal));
     }
@@ -207,13 +206,11 @@ public class AccountIsolationTests
 
     private sealed class NoOpSpreadsheetReader : ISpreadsheetReader
     {
-        public Task<PersonalFinance.Shared.DTOs.SpreadsheetAnalysis.MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(
-            string fileId, string? fileName = null, int? connectionId = null, string? userId = null,
+        public Task<PersonalFinance.Shared.DTOs.SpreadsheetAnalysis.MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string userId, string fileId, string? fileName = null, int? connectionId = null,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
-        public Task<PersonalFinance.Shared.DTOs.SpreadsheetAnalysis.SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(
-            string fileId, string? fileName = null, int? connectionId = null, string? userId = null,
+        public Task<PersonalFinance.Shared.DTOs.SpreadsheetAnalysis.SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string userId, string fileId, string? fileName = null, int? connectionId = null,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

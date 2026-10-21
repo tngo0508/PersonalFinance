@@ -14,7 +14,7 @@ public sealed class SummaryStatisticsDto
     public decimal TotalIncome { get; set; }
     public decimal TotalExpenses { get; set; }
     public decimal NetSavings { get; set; }
-    public double SavingsRate { get; set; }
+    public decimal SavingsRate { get; set; }
     public int SnapshotCount { get; set; }
 }
 
@@ -80,7 +80,7 @@ public sealed class MonthlyTrendPointDto
     public decimal Income { get; set; }
     public decimal Expenses { get; set; }
     public decimal NetSavings { get; set; }
-    public double SavingsRate { get; set; }
+    public decimal SavingsRate { get; set; }
 }
 
 /// <summary>

@@ -12,15 +12,15 @@ public interface IGoogleDriveFileSource
     /// caller that can use the first result never triggers the others. Downloads that fail are skipped; an empty
     /// sequence means the file could not be downloaded at all.
     /// </summary>
+    /// <param name="userId">Owning Account; only its own connections (and their API keys) are used.</param>
     /// <param name="fileId">Google Drive file id.</param>
     /// <param name="fileName">Name shown to the user; the cached name is used when omitted.</param>
     /// <param name="connectionId">Connection whose API key to use; it must belong to <paramref name="userId"/>.</param>
-    /// <param name="userId">Owning Account. Without it only the configured default API key is used.</param>
     IAsyncEnumerable<SpreadsheetDownload> DownloadAsync(
+        string userId,
         string fileId,
         string? fileName,
         int? connectionId,
-        string? userId,
         CancellationToken cancellationToken = default);
 }
 

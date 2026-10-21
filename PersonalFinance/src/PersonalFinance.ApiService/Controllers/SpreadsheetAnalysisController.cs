@@ -152,7 +152,7 @@ public class SpreadsheetAnalysisController : ControllerBase
 
         var userId = User.GetUserId();
         var report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
-            fileId, fileName, connectionId, userId, cancellationToken);
+            userId, fileId, fileName, connectionId, cancellationToken);
         return Ok(report);
     }
 
@@ -175,7 +175,7 @@ public class SpreadsheetAnalysisController : ControllerBase
 
         var userId = User.GetUserId();
         var transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
-            fileId, fileName, connectionId, userId, cancellationToken);
+            userId, fileId, fileName, connectionId, cancellationToken);
         return Ok(transactions);
     }
 }

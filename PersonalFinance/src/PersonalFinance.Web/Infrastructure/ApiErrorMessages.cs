@@ -10,6 +10,21 @@ namespace PersonalFinance.Web.Infrastructure;
 public static class ApiErrorMessages
 {
     /// <summary>
+    /// The message a page shows when a call to ApiService fails: ApiService's own message for a rejected request
+    /// (4xx), "temporarily unavailable" when it cannot be reached, otherwise <paramref name="fallback"/>.
+    /// Never the exception text.
+    /// </summary>
+    public static string ForUser(Exception ex, string fallback)
+    {
+        return ex switch
+        {
+            ApiException api when (int)api.StatusCode < 500 => FromApiException(api),
+            HttpRequestException or TimeoutException or TaskCanceledException => JsonApiErrorsFilter.UnavailableMessage,
+            _ => fallback
+        };
+    }
+
+    /// <summary>
     /// Extracts a user-friendly error message from an ApiException payload.
     /// Avoids exposing raw HTML, non-JSON backend payloads, or 5xx server internals.
     /// </summary>

@@ -47,7 +47,7 @@ public sealed class BudgetTrendRecordData
     public decimal NetSavings => Income - Expenses;
 
     /// <summary>Actual Savings Rate (see <see cref="FinanceMetrics.ActualSavingsRatePercent"/>).</summary>
-    public double SavingsRate => FinanceMetrics.ActualSavingsRatePercent(Income, Expenses);
+    public decimal SavingsRate => FinanceMetrics.ActualSavingsRatePercent(Income, Expenses);
 }
 
 /// <summary>

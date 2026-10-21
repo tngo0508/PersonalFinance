@@ -124,7 +124,7 @@ public static class BudgetSpreadsheetParser
 
             return ParseSpreadsheetRows(allRows, fileName, fileId, dataSource);
         }
-        catch (Exception ex) when (ex is InvalidDataException or System.Xml.XmlException)
+        catch (Exception ex) when (IsUnreadableWorkbook(ex))
         {
             return Unavailable(fileName, fileId, "The file is not a readable Excel workbook.");
         }
@@ -177,7 +177,7 @@ public static class BudgetSpreadsheetParser
 
             result.ErrorMessage = "No transactions table was found. Add a sheet with Date and Amount column headers.";
         }
-        catch
+        catch (Exception ex) when (IsUnreadableWorkbook(ex))
         {
             result.ErrorMessage = "The spreadsheet could not be read as an Excel workbook.";
         }
@@ -1071,9 +1071,9 @@ public static class BudgetSpreadsheetParser
                     }
                 }
             }
-            catch
+            catch (Exception ex) when (IsUnreadableWorkbook(ex))
             {
-                // Fallback to direct worksheet lookup
+                // Malformed workbook.xml or relationships: fall back to the direct worksheet lookup below.
             }
         }
 
@@ -1419,6 +1419,14 @@ public static class BudgetSpreadsheetParser
                firstCol.StartsWith("Increase in", StringComparison.OrdinalIgnoreCase) ||
                firstCol.StartsWith("Decrease in", StringComparison.OrdinalIgnoreCase) ||
                firstCol.StartsWith("Change in", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// True for errors that mean "this file is not a readable XLSX workbook". Anything else is a bug and propagates.
+    /// </summary>
+    private static bool IsUnreadableWorkbook(Exception ex)
+    {
+        return ex is InvalidDataException or System.Xml.XmlException;
     }
 
     private static int GetColumnIndexFromCellRef(string cellRef)

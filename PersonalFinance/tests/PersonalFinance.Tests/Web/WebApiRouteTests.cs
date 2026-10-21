@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -39,7 +40,7 @@ public partial class WebApiRouteTests
     }
 
     [Fact]
-    public void JsonApiErrors_LeavesARequestTheBrowserCancelledUnhandled()
+    public void JsonApiErrorsFilter_LeavesARequestTheBrowserCancelledUnhandled()
     {
         var httpContext = new DefaultHttpContext();
         using var aborted = new CancellationTokenSource();
@@ -50,7 +51,7 @@ public partial class WebApiRouteTests
             Exception = new OperationCanceledException()
         };
 
-        new JsonApiErrorsAttribute().OnException(context);
+        new JsonApiErrorsFilter(NullLogger<JsonApiErrorsFilter>.Instance).OnException(context);
 
         Assert.False(context.ExceptionHandled);
         Assert.Null(context.Result);

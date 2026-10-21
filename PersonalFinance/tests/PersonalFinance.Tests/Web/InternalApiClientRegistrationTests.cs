@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Tests.GoogleDrive;
 using PersonalFinance.Web.Infrastructure;
 using Refit;
 

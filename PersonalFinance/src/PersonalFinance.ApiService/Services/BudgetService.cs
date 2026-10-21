@@ -42,19 +42,7 @@ public class BudgetService : IBudgetService
 
         return new BudgetAllocationResponseDto
         {
-            Allocations = new BudgetAllocationsDto
-            {
-                Housing = budget.HousingAmount,
-                Food = budget.FoodAmount,
-                Transportation = budget.TransportationAmount,
-                Utilities = budget.UtilitiesAmount,
-                Insurance = budget.InsuranceAmount,
-                Healthcare = budget.HealthcareAmount,
-                Savings = budget.SavingsAmount,
-                DebtRepayment = budget.DebtRepaymentAmount,
-                Entertainment = budget.EntertainmentAmount,
-                Miscellaneous = budget.MiscellaneousAmount
-            },
+            Allocations = budget.ToAllocationsDto(),
             MonthlyIncome = budget.MonthlyIncome
         };
     }

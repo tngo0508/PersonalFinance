@@ -5,6 +5,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -173,7 +174,7 @@ public class DashboardService : IDashboardService
 
         // All ten categories in Budget-page order. Zero categories stay in the list so the totals are honest;
         // the view decides what to draw. Percent is always derived from the stored dollar amount.
-        var allocations = BudgetPlannerCategories.AllocationAmounts(budget)
+        var allocations = BudgetPlannerCategories.AllocationAmounts(budget.ToAllocationsDto())
             .Select(category => new BudgetAllocationDto
             {
                 Name = category.Name,
@@ -223,9 +224,7 @@ public class DashboardService : IDashboardService
     {
         var goals = await _dbContext.SavingsGoals
             .AsNoTracking()
-            .Where(g => g.UserId == userId)
-            .OrderByDescending(g => g.CreatedAt)
-            .ThenByDescending(g => g.Id)
+            .NewestFirstFor(userId)
             .Take(ListedGoalCount)
             .Select(g => new
             {

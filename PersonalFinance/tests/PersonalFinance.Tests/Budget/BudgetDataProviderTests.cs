@@ -542,14 +542,14 @@ public class BudgetDataProviderTests
                 Assert.Equal(3000m, first.Income);
                 Assert.Equal(2000m, first.Expenses);
                 Assert.Equal(1000m, first.NetSavings);
-                Assert.Equal(33.3, first.SavingsRate);
+                Assert.Equal(33.3m, first.SavingsRate);
             },
             second =>
             {
                 Assert.Equal(10, second.MonthNumber);
                 Assert.Equal(2500m, second.Income);
                 Assert.Equal(1500m, second.Expenses);
-                Assert.Equal(40.0, second.SavingsRate);
+                Assert.Equal(40.0m, second.SavingsRate);
             },
             third =>
             {
@@ -616,14 +616,14 @@ public class BudgetDataProviderTests
                 Assert.Equal(1000m, october.Income);
                 Assert.Equal(250m, october.Expenses);
                 Assert.Equal(750m, october.NetSavings);
-                Assert.Equal(75.0, october.SavingsRate);
+                Assert.Equal(75.0m, october.SavingsRate);
             },
             november =>
             {
                 Assert.Equal(11, november.MonthNumber);
                 Assert.Equal(500m, november.Income);
                 Assert.Equal(0m, november.Expenses);
-                Assert.Equal(100.0, november.SavingsRate);
+                Assert.Equal(100.0m, november.SavingsRate);
             });
         Assert.Empty(await readPath.GetTrendRecordsAsync(UserId, 2025));
     }

@@ -17,19 +17,6 @@
     let pendingDeleteAction = null;
 
     /**
-     * Retrieves the anti-forgery token from the page.
-     * @returns {string} CSRF token value.
-     */
-    function getCsrfToken () {
-        const input = document.querySelector('input[name="__RequestVerificationToken"]');
-        if (input && input.value) {
-            return input.value;
-        }
-        const meta = document.querySelector('meta[name="__RequestVerificationToken"]');
-        return meta ? meta.getAttribute('content') || '' : '';
-    }
-
-    /**
      * Formats a decimal number into USD currency string with 2 decimal places.
      * @param {number|null} num - Number to format.
      * @returns {string} Formatted currency.
@@ -664,7 +651,7 @@
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
-                            'RequestVerificationToken': getCsrfToken(),
+                            'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                             'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: JSON.stringify({ amount: newVal })
@@ -929,7 +916,7 @@
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'RequestVerificationToken': getCsrfToken(),
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
@@ -1043,7 +1030,7 @@
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': getCsrfToken(),
+                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
@@ -1127,7 +1114,7 @@
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'RequestVerificationToken': getCsrfToken(),
+                        'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({ amount: null })
@@ -1313,7 +1300,7 @@
                 const response = await fetch(`/BudgetTracker/DeleteCategory?id=${row.categoryId}`, {
                     method: 'DELETE',
                     headers: {
-                        'RequestVerificationToken': getCsrfToken(),
+                        'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
@@ -1377,7 +1364,7 @@
                 const response = await fetch(`/BudgetTracker/DeleteTransaction?id=${tx.id}`, {
                     method: 'DELETE',
                     headers: {
-                        'RequestVerificationToken': getCsrfToken(),
+                        'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
@@ -1601,7 +1588,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': getCsrfToken(),
+                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
@@ -1673,7 +1660,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': getCsrfToken(),
+                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
@@ -1736,7 +1723,7 @@
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'RequestVerificationToken': getCsrfToken(),
+                        'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({ amount: amount })
@@ -1820,7 +1807,7 @@
                 method: method,
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': getCsrfToken(),
+                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify(payload)

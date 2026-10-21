@@ -492,15 +492,14 @@ public class AiAssistantService : IAiAssistantService
             if (budget != null)
             {
                 context.MonthlyIncome = budget.MonthlyIncome;
-                context.BudgetAllocations = BudgetPlannerCategories.AllocationAmounts(budget)
+                context.BudgetAllocations = BudgetPlannerCategories.AllocationAmounts(budget.ToAllocationsDto())
                     .ToDictionary(c => c.Name, c => (double)BudgetHelper.ToPercent(budget.MonthlyIncome, c.Amount));
             }
 
             // Get savings goals
             var savingsGoals = await _dbContext.SavingsGoals
                 .AsNoTracking()
-                .Where(s => s.UserId == userId)
-                .OrderBy(s => s.Id)
+                .NewestFirstFor(userId)
                 .ToListAsync(cancellationToken);
 
             if (savingsGoals.Count > 0)

@@ -7,7 +7,7 @@ using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Models;
 
-namespace PersonalFinance.Tests.Dashboard;
+namespace PersonalFinance.Tests.NetWorth;
 
 /// <summary>
 /// The Net Worth parameters are mapped by hand (ADR 0001); these tests make sure every parameter survives each
@@ -78,7 +78,7 @@ public class NetWorthMappingAndMetricsTests
     [InlineData(5200, 3100, 40.4)]
     [InlineData(0, 100, 0)]
     public void ActualSavingsRate_IsIncomeLeftAfterExpenses_RoundedToOneDecimal(decimal income, decimal expenses,
-        double expected)
+        decimal expected)
     {
         Assert.Equal(expected, FinanceMetrics.ActualSavingsRatePercent(income, expenses));
     }

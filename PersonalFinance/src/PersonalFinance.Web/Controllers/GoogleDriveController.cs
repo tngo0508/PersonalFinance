@@ -87,20 +87,11 @@ public class GoogleDriveController : Controller
                 }
             }
         }
-        catch (Refit.ApiException apiEx)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogError(apiEx, "ApiService returned HTTP {StatusCode} while loading Google Drive connections for user {UserId}", apiEx.StatusCode, userId);
-            model.ErrorMessage = "Unable to load your Google Drive connections. Please try again in a moment.";
-        }
-        catch (HttpRequestException httpEx)
-        {
-            _logger.LogWarning(httpEx, "Unable to reach ApiService while loading Google Drive connections for user {UserId}", userId);
-            model.ErrorMessage = "The service is temporarily unavailable. Please try again in a moment.";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading Google Drive connections for user {UserId}", userId);
-            model.ErrorMessage = "An error occurred while loading your Google Drive connections. Please try again.";
+            _logger.LogError(ex, "Loading Google Drive connections failed for user {UserId}", userId);
+            model.ErrorMessage = ApiErrorMessages.ForUser(ex,
+                "Unable to load your Google Drive connections. Please try again in a moment.");
         }
 
         return View(model);
@@ -150,10 +141,11 @@ public class GoogleDriveController : Controller
                 TempData["ErrorMessage"] = syncResponse.ErrorMessage ?? "Synchronization completed with warnings.";
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error synchronizing connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = "Failed to synchronize Google Drive files. Please check your credentials.";
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex,
+                "Failed to synchronize Google Drive files. Please check your credentials.");
         }
 
         return RedirectToAction(nameof(Index), new { connectionId = id });
@@ -192,10 +184,11 @@ public class GoogleDriveController : Controller
                 TempData["ErrorMessage"] = updated.ErrorMessage ?? "Credentials could not be verified.";
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error re-authenticating connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = "Failed to update Google Drive credentials. Please try again.";
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex,
+                "Failed to update Google Drive credentials. Please try again.");
         }
 
         return RedirectToAction(nameof(Index), new { connectionId = id });
@@ -218,10 +211,10 @@ public class GoogleDriveController : Controller
             await _googleDriveApi.DeleteConnectionAsync(id, cancellationToken);
             TempData["StatusMessage"] = "Google Drive connection and cached data removed successfully.";
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error deleting connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = "Failed to delete Google Drive connection.";
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex, "Failed to delete Google Drive connection.");
         }
 
         return RedirectToAction(nameof(Index));
@@ -295,33 +288,21 @@ public class GoogleDriveController : Controller
             TempData["StatusMessage"] = $"Connected to '{connection.Name}' and cached {connection.CachedFilesCount} items.";
             return RedirectToAction(nameof(Index), new { connectionId = connection.Id });
         }
-        catch (Refit.ApiException apiEx)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogError(apiEx, "ApiService returned HTTP {StatusCode} when connecting Google Drive.", apiEx.StatusCode);
-            model.ErrorMessage = ApiErrorMessages.FromApiException(apiEx);
-            model.ShowConnectForm = true;
-        }
-        catch (HttpRequestException httpEx)
-        {
-            _logger.LogError(httpEx, "Unable to reach ApiService backend.");
-            model.ErrorMessage = "Unable to connect to the ApiService backend. Please verify that the API service is running.";
-            model.ShowConnectForm = true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error occurred during Google Drive connect request.");
-            model.ErrorMessage = "An unexpected error occurred while connecting Google Drive.";
+            _logger.LogError(ex, "Connecting a Google Drive folder failed.");
+            model.ErrorMessage = ApiErrorMessages.ForUser(ex, "An unexpected error occurred while connecting Google Drive.");
             model.ShowConnectForm = true;
         }
 
-        // Re-load existing connections for display on error
+        // Re-load existing connections for display on error; the connect error is already shown.
         try
         {
             model.Connections = await _googleDriveApi.GetUserConnectionsAsync(cancellationToken) ?? new List<GoogleDriveConnectionDto>();
         }
-        catch
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // Ignore secondary error
+            _logger.LogWarning(ex, "Reloading Google Drive connections after a failed connect also failed.");
         }
 
         return View("Index", model);

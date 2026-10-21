@@ -311,7 +311,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             try
             {
                 budgetReport = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
-                    fileId, fileName, connectionId, userId, cancellationToken);
+                    userId, fileId, fileName, connectionId, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -421,7 +421,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             try
             {
                 transactionsDto = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
-                    fileId, fileName, connectionId, userId, cancellationToken);
+                    userId, fileId, fileName, connectionId, cancellationToken);
             }
             catch
             {

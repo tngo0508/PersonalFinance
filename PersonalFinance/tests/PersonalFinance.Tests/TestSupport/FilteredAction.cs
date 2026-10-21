@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -22,7 +23,7 @@ public static class FilteredAction
             var actionContext = new ActionContext(controller.HttpContext, controller.RouteData ?? new(),
                 controller.ControllerContext.ActionDescriptor ?? new ActionDescriptor());
             var context = new ExceptionContext(actionContext, []) { Exception = ex };
-            new JsonApiErrorsAttribute().OnException(context);
+            new JsonApiErrorsFilter(NullLogger<JsonApiErrorsFilter>.Instance).OnException(context);
             if (!context.ExceptionHandled)
             {
                 throw;

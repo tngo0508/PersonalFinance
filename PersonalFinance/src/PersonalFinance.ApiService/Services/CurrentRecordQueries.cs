@@ -3,8 +3,8 @@ using PersonalFinance.Data.Entities;
 namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
-/// The one definition of "the Account's current record" for settings that can have several rows, so the Dashboard,
-/// the AI Assistant and any later reader show the same figures. Use with <c>FirstOrDefaultAsync</c>.
+/// The one definition of "the Account's current record" for settings that can have several rows, and of the order an
+/// Account's records are listed in, so the Dashboard, the AI Assistant and the feature pages show the same data.
 /// </summary>
 public static class CurrentRecordQueries
 {
@@ -18,6 +18,17 @@ public static class CurrentRecordQueries
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.UpdatedAtUtc)
             .ThenByDescending(p => p.Id);
+    }
+
+    /// <summary>
+    /// The Account's Savings Goals, newest first (deterministic: <c>Id</c> breaks ties).
+    /// </summary>
+    public static IQueryable<SavingsGoal> NewestFirstFor(this IQueryable<SavingsGoal> goals, string userId)
+    {
+        return goals
+            .Where(g => g.UserId == userId)
+            .OrderByDescending(g => g.CreatedAt)
+            .ThenByDescending(g => g.Id);
     }
 
     /// <summary>
