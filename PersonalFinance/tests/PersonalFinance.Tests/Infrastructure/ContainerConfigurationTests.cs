@@ -29,6 +29,24 @@ public class ContainerConfigurationTests
         Assert.Contains(".env", content);
     }
 
+    [Theory]
+    [InlineData("PersonalFinance.ApiService")]
+    [InlineData("PersonalFinance.Web")]
+    public void Dockerfile_CopiesSharedMsBuildFilesBeforeRestore(string project)
+    {
+        // TargetFramework lives in PersonalFinance/Directory.Build.props; a Docker build context without it
+        // fails restore with NETSDK1013 ("The TargetFramework value '' was not recognized").
+        var solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        var dockerfile = File.ReadAllText(Path.Combine(solutionRoot, "PersonalFinance", "src", project, "Dockerfile"));
+        var restoreAt = dockerfile.IndexOf("dotnet restore", StringComparison.Ordinal);
+
+        foreach (var file in new[] { "PersonalFinance/Directory.Build.props", "PersonalFinance/Directory.Packages.props" })
+        {
+            var copiedAt = dockerfile.IndexOf(file, StringComparison.Ordinal);
+            Assert.True(copiedAt >= 0 && copiedAt < restoreAt, $"{project} Dockerfile must COPY {file} before dotnet restore.");
+        }
+    }
+
     [Fact]
     public void ApiService_Dockerfile_ExistsAndHasProperConfiguration()
     {
