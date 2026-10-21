@@ -1,4 +1,4 @@
-﻿namespace PersonalFinance.Shared.Constants;
+namespace PersonalFinance.Shared.Constants;
 
 /// <summary>
 /// Centralized application version metadata adhering strictly to Semantic Versioning (SemVer 2.0.0).

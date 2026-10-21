@@ -216,9 +216,9 @@ public class BudgetDataProviderTests
     {
         await using var db = CreateContext();
         var catFood = new BudgetCategory
-            { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
+        { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         var catPay = new BudgetCategory
-            { Id = 2, UserId = UserId, Name = "Paycheck", Kind = BudgetCategoryKind.Income, SortOrder = 10 };
+        { Id = 2, UserId = UserId, Name = "Paycheck", Kind = BudgetCategoryKind.Income, SortOrder = 10 };
         db.BudgetCategories.AddRange(catFood, catPay);
 
         var plan = new MonthlyBudgetPlan
@@ -238,22 +238,38 @@ public class BudgetDataProviderTests
         db.BudgetTransactions.AddRange(
             new BudgetTransaction
             {
-                Id = 1, UserId = UserId, CategoryId = 1, Date = new DateOnly(2026, 10, 5), Amount = 120m,
+                Id = 1,
+                UserId = UserId,
+                CategoryId = 1,
+                Date = new DateOnly(2026, 10, 5),
+                Amount = 120m,
                 Description = "Groceries"
             },
             new BudgetTransaction
             {
-                Id = 2, UserId = UserId, CategoryId = 1, Date = new DateOnly(2026, 10, 10), Amount = 80m,
+                Id = 2,
+                UserId = UserId,
+                CategoryId = 1,
+                Date = new DateOnly(2026, 10, 10),
+                Amount = 80m,
                 Description = "Dining"
             },
             new BudgetTransaction
             {
-                Id = 3, UserId = UserId, CategoryId = 2, Date = new DateOnly(2026, 10, 1), Amount = 3200m,
+                Id = 3,
+                UserId = UserId,
+                CategoryId = 2,
+                Date = new DateOnly(2026, 10, 1),
+                Amount = 3200m,
                 Description = "Salary"
             },
             new BudgetTransaction
             {
-                Id = 4, UserId = UserId, CategoryId = 1, Date = new DateOnly(2026, 11, 1), Amount = 50m,
+                Id = 4,
+                UserId = UserId,
+                CategoryId = 1,
+                Date = new DateOnly(2026, 11, 1),
+                Amount = 50m,
                 Description = "November spend"
             });
         await db.SaveChangesAsync();
@@ -281,7 +297,7 @@ public class BudgetDataProviderTests
     {
         await using var db = CreateContext();
         var catFood = new BudgetCategory
-            { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
+        { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         db.BudgetCategories.Add(catFood);
 
         var plan = new MonthlyBudgetPlan
@@ -324,15 +340,23 @@ public class BudgetDataProviderTests
     {
         await using var db = CreateContext();
         var catActive = new BudgetCategory
-            { Id = 1, UserId = UserId, Name = "Active Cat", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
+        { Id = 1, UserId = UserId, Name = "Active Cat", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         var catArchivedWithLine = new BudgetCategory
         {
-            Id = 2, UserId = UserId, Name = "Archived With Line", Kind = BudgetCategoryKind.Expense, SortOrder = 20,
+            Id = 2,
+            UserId = UserId,
+            Name = "Archived With Line",
+            Kind = BudgetCategoryKind.Expense,
+            SortOrder = 20,
             IsDeleted = true
         };
         var catArchivedEmpty = new BudgetCategory
         {
-            Id = 3, UserId = UserId, Name = "Archived Empty", Kind = BudgetCategoryKind.Expense, SortOrder = 30,
+            Id = 3,
+            UserId = UserId,
+            Name = "Archived Empty",
+            Kind = BudgetCategoryKind.Expense,
+            SortOrder = 30,
             IsDeleted = true
         };
         db.BudgetCategories.AddRange(catActive, catArchivedWithLine, catArchivedEmpty);
@@ -368,9 +392,9 @@ public class BudgetDataProviderTests
     {
         await using var db = CreateContext();
         var catFood = new BudgetCategory
-            { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
+        { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         var catPay = new BudgetCategory
-            { Id = 2, UserId = UserId, Name = "Paycheck", Kind = BudgetCategoryKind.Income, SortOrder = 10 };
+        { Id = 2, UserId = UserId, Name = "Paycheck", Kind = BudgetCategoryKind.Income, SortOrder = 10 };
         db.BudgetCategories.AddRange(catFood, catPay);
 
         db.BudgetTransactions.AddRange(
@@ -460,22 +484,41 @@ public class BudgetDataProviderTests
         db.SpreadsheetBudgetSnapshots.AddRange(
             new SpreadsheetBudgetSnapshot
             {
-                UserId = UserId, ConnectionId = 1, Year = 2026, MonthNumber = 10, MonthName = "October",
-                ActualIncome = 3000m, ActualExpenses = 2000m
+                UserId = UserId,
+                ConnectionId = 1,
+                Year = 2026,
+                MonthNumber = 10,
+                MonthName = "October",
+                ActualIncome = 3000m,
+                ActualExpenses = 2000m
             },
             new SpreadsheetBudgetSnapshot
             {
-                UserId = UserId, ConnectionId = 2, Year = 2026, MonthNumber = 10, MonthName = "October",
-                ActualIncome = 2500m, ActualExpenses = 1500m
+                UserId = UserId,
+                ConnectionId = 2,
+                Year = 2026,
+                MonthNumber = 10,
+                MonthName = "October",
+                ActualIncome = 2500m,
+                ActualExpenses = 1500m
             },
             new SpreadsheetBudgetSnapshot
             {
-                UserId = UserId, ConnectionId = 1, Year = 2026, MonthNumber = 11, MonthName = "November",
-                ActualIncome = 0m, ActualExpenses = 100m
+                UserId = UserId,
+                ConnectionId = 1,
+                Year = 2026,
+                MonthNumber = 11,
+                MonthName = "November",
+                ActualIncome = 0m,
+                ActualExpenses = 100m
             },
             new SpreadsheetBudgetSnapshot
             {
-                UserId = OtherUserId, ConnectionId = 3, Year = 2026, MonthNumber = 10, MonthName = "October",
+                UserId = OtherUserId,
+                ConnectionId = 3,
+                Year = 2026,
+                MonthNumber = 10,
+                MonthName = "October",
                 ActualIncome = 999m
             });
         await db.SaveChangesAsync();
@@ -523,8 +566,12 @@ public class BudgetDataProviderTests
         await using var db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
-            UserId = UserId, ConnectionId = 1, Year = 2026, MonthNumber = 9,
-            MonthName = "September", ActualIncome = 999m
+            UserId = UserId,
+            ConnectionId = 1,
+            Year = 2026,
+            MonthNumber = 9,
+            MonthName = "September",
+            ActualIncome = 999m
         });
         var expense = new BudgetCategory { UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense };
         var income = new BudgetCategory { UserId = UserId, Name = "Paycheck", Kind = BudgetCategoryKind.Income };
@@ -533,7 +580,9 @@ public class BudgetDataProviderTests
 
         db.MonthlyBudgetPlans.Add(new MonthlyBudgetPlan
         {
-            UserId = UserId, Year = 2026, Month = 10,
+            UserId = UserId,
+            Year = 2026,
+            Month = 10,
             Lines = new List<MonthlyBudgetLine>
             {
                 new() { UserId = UserId, CategoryId = expense.Id, PlannedAmount = 500m, ActualOverride = 250m },
@@ -542,11 +591,11 @@ public class BudgetDataProviderTests
         });
         db.BudgetTransactions.AddRange(
             new BudgetTransaction
-                { UserId = UserId, CategoryId = expense.Id, Date = new DateOnly(2026, 10, 5), Amount = 999m },
+            { UserId = UserId, CategoryId = expense.Id, Date = new DateOnly(2026, 10, 5), Amount = 999m },
             new BudgetTransaction
-                { UserId = UserId, CategoryId = income.Id, Date = new DateOnly(2026, 10, 5), Amount = 1000m },
+            { UserId = UserId, CategoryId = income.Id, Date = new DateOnly(2026, 10, 5), Amount = 1000m },
             new BudgetTransaction
-                { UserId = UserId, CategoryId = income.Id, Date = new DateOnly(2026, 11, 1), Amount = 500m });
+            { UserId = UserId, CategoryId = income.Id, Date = new DateOnly(2026, 11, 1), Amount = 500m });
         await db.SaveChangesAsync();
 
         var (provider, sourceService, _, _) = CreateServices(db);
@@ -692,7 +741,7 @@ public class BudgetDataProviderTests
         });
 
         var otherCat = new BudgetCategory
-            { Id = 10, UserId = OtherUserId, Name = "OtherCat", Kind = BudgetCategoryKind.Expense };
+        { Id = 10, UserId = OtherUserId, Name = "OtherCat", Kind = BudgetCategoryKind.Expense };
         db.BudgetCategories.Add(otherCat);
         db.MonthlyBudgetPlans.Add(new MonthlyBudgetPlan
         {
@@ -906,15 +955,23 @@ public class BudgetDataProviderTests
         await using var db = CreateContext();
 
         var activeCat = new BudgetCategory
-            { Id = 1, UserId = UserId, Name = "Active Rent", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
+        { Id = 1, UserId = UserId, Name = "Active Rent", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         var archivedZeroCat = new BudgetCategory
         {
-            Id = 2, UserId = UserId, Name = "Archived Zero", Kind = BudgetCategoryKind.Expense, SortOrder = 20,
+            Id = 2,
+            UserId = UserId,
+            Name = "Archived Zero",
+            Kind = BudgetCategoryKind.Expense,
+            SortOrder = 20,
             IsDeleted = true
         };
         var archivedWithDataCat = new BudgetCategory
         {
-            Id = 3, UserId = UserId, Name = "Archived With Data", Kind = BudgetCategoryKind.Expense, SortOrder = 30,
+            Id = 3,
+            UserId = UserId,
+            Name = "Archived With Data",
+            Kind = BudgetCategoryKind.Expense,
+            SortOrder = 30,
             IsDeleted = true
         };
 
@@ -959,7 +1016,7 @@ public class BudgetDataProviderTests
     {
         await using var db = CreateContext();
         var snapshot = new SpreadsheetBudgetSnapshot
-            { UserId = UserId, Year = 2026, MonthNumber = 10, ConnectionId = 1 };
+        { UserId = UserId, Year = 2026, MonthNumber = 10, ConnectionId = 1 };
         db.SpreadsheetBudgetSnapshots.Add(snapshot);
 
         db.SpreadsheetTransactionRecords.AddRange(
@@ -1050,27 +1107,42 @@ public class BudgetDataProviderTests
         db.BudgetTransactions.AddRange(
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = food.Id, Date = new DateOnly(2026, 10, 5), Amount = 230m,
+                UserId = UserId,
+                CategoryId = food.Id,
+                Date = new DateOnly(2026, 10, 5),
+                Amount = 230m,
                 Description = "Groceries"
             },
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = food.Id, Date = new DateOnly(2026, 10, 12), Amount = 70m,
+                UserId = UserId,
+                CategoryId = food.Id,
+                Date = new DateOnly(2026, 10, 12),
+                Amount = 70m,
                 Description = "Snacks"
             },
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = home.Id, Date = new DateOnly(2026, 10, 1), Amount = 999m,
+                UserId = UserId,
+                CategoryId = home.Id,
+                Date = new DateOnly(2026, 10, 1),
+                Amount = 999m,
                 Description = "Ignored by override"
             },
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = paycheck.Id, Date = new DateOnly(2026, 10, 15), Amount = 4200m,
+                UserId = UserId,
+                CategoryId = paycheck.Id,
+                Date = new DateOnly(2026, 10, 15),
+                Amount = 4200m,
                 Description = "Salary"
             },
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = archivedExpense.Id, Date = new DateOnly(2026, 10, 20), Amount = 150m,
+                UserId = UserId,
+                CategoryId = archivedExpense.Id,
+                Date = new DateOnly(2026, 10, 20),
+                Amount = 150m,
                 Description = "Historical trip"
             }
         );
@@ -1114,9 +1186,9 @@ public class BudgetDataProviderTests
         await using var db = CreateContext();
 
         var expenseOther = new BudgetCategory
-            { Id = 1, UserId = UserId, Name = "Other", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
+        { Id = 1, UserId = UserId, Name = "Other", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         var incomeOther = new BudgetCategory
-            { Id = 2, UserId = UserId, Name = "Other", Kind = BudgetCategoryKind.Income, SortOrder = 10 };
+        { Id = 2, UserId = UserId, Name = "Other", Kind = BudgetCategoryKind.Income, SortOrder = 10 };
         db.BudgetCategories.AddRange(expenseOther, incomeOther);
 
         db.MonthlyBudgetPlans.Add(new MonthlyBudgetPlan
@@ -1135,12 +1207,18 @@ public class BudgetDataProviderTests
         db.BudgetTransactions.AddRange(
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = 1, Date = new DateOnly(2026, 10, 5), Amount = 75m,
+                UserId = UserId,
+                CategoryId = 1,
+                Date = new DateOnly(2026, 10, 5),
+                Amount = 75m,
                 Description = "Misc expense"
             },
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = 2, Date = new DateOnly(2026, 10, 15), Amount = 600m,
+                UserId = UserId,
+                CategoryId = 2,
+                Date = new DateOnly(2026, 10, 15),
+                Amount = 600m,
                 Description = "Misc income"
             }
         );
@@ -1170,7 +1248,7 @@ public class BudgetDataProviderTests
 
         // 1. Sheet transactions
         var snapshot = new SpreadsheetBudgetSnapshot
-            { UserId = UserId, Year = 2026, MonthNumber = 10, ConnectionId = 1 };
+        { UserId = UserId, Year = 2026, MonthNumber = 10, ConnectionId = 1 };
         db.SpreadsheetBudgetSnapshots.Add(snapshot);
         for (int i = 1; i <= 10; i++)
         {
@@ -1189,7 +1267,7 @@ public class BudgetDataProviderTests
 
         // 2. Tracker transactions
         var category = new BudgetCategory
-            { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 1 };
+        { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 1 };
         db.BudgetCategories.Add(category);
         for (int i = 1; i <= 10; i++)
         {

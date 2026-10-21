@@ -29,7 +29,8 @@ public class AiQuotaServiceTests
             .UseInMemoryDatabase($"PersistentQuota_{Guid.NewGuid():N}").Options;
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["OpenAI:DailyMessageLimit"] = "1", ["OpenAI:MonthlyBudgetUsd"] = "2",
+            ["OpenAI:DailyMessageLimit"] = "1",
+            ["OpenAI:MonthlyBudgetUsd"] = "2",
             ["OpenAI:BudgetWarningThreshold"] = "0.5"
         }).Build();
         await using (var first = new AppDbContext(options))

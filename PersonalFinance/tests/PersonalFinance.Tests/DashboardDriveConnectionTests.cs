@@ -45,7 +45,10 @@ public class DashboardDriveConnectionTests
         await using var db = CreateContext();
         db.GoogleDriveConnections.Add(new GoogleDriveConnection
         {
-            UserId = UserId, FolderId = "folder", IsValid = false, SyncStatus = "NeedsReauth"
+            UserId = UserId,
+            FolderId = "folder",
+            IsValid = false,
+            SyncStatus = "NeedsReauth"
         });
         await db.SaveChangesAsync();
 
@@ -82,7 +85,10 @@ public class DashboardDriveConnectionTests
         await using var db = CreateContext();
         db.GoogleDriveConnections.Add(new GoogleDriveConnection
         {
-            UserId = UserId, FolderId = "folder", IsDeleted = true, DeletedAt = DateTime.UtcNow
+            UserId = UserId,
+            FolderId = "folder",
+            IsDeleted = true,
+            DeletedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
 

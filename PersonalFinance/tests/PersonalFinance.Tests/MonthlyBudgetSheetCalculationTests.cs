@@ -61,17 +61,26 @@ public class MonthlyBudgetSheetCalculationTests
         db.BudgetTransactions.AddRange(
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = food.Id, Date = new DateOnly(2026, 10, 5), Amount = 120.50m,
+                UserId = UserId,
+                CategoryId = food.Id,
+                Date = new DateOnly(2026, 10, 5),
+                Amount = 120.50m,
                 Description = "Groceries"
             },
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = food.Id, Date = new DateOnly(2026, 10, 18), Amount = 79.50m,
+                UserId = UserId,
+                CategoryId = food.Id,
+                Date = new DateOnly(2026, 10, 18),
+                Amount = 79.50m,
                 Description = "Dining out"
             },
             new BudgetTransaction
             {
-                UserId = UserId, CategoryId = paycheck.Id, Date = new DateOnly(2026, 10, 15), Amount = 4200m,
+                UserId = UserId,
+                CategoryId = paycheck.Id,
+                Date = new DateOnly(2026, 10, 15),
+                Amount = 4200m,
                 Description = "Salary"
             }
         );
@@ -112,25 +121,37 @@ public class MonthlyBudgetSheetCalculationTests
         // Overspend on food: planned 300, actual 350 -> diff -50 (negative = over budget)
         db.BudgetTransactions.Add(new BudgetTransaction
         {
-            UserId = UserId, CategoryId = food.Id, Date = new DateOnly(2026, 10, 1), Amount = 350m,
+            UserId = UserId,
+            CategoryId = food.Id,
+            Date = new DateOnly(2026, 10, 1),
+            Amount = 350m,
             Description = "Costco"
         });
         // Underspend on utilities: planned 200, actual 150 -> diff +50 (positive = under budget)
         db.BudgetTransactions.Add(new BudgetTransaction
         {
-            UserId = UserId, CategoryId = utilities.Id, Date = new DateOnly(2026, 10, 10), Amount = 150m,
+            UserId = UserId,
+            CategoryId = utilities.Id,
+            Date = new DateOnly(2026, 10, 10),
+            Amount = 150m,
             Description = "Electric"
         });
         // Earned more on paycheck: planned 3000, actual 3200 -> diff +200 (positive = earned more than planned)
         db.BudgetTransactions.Add(new BudgetTransaction
         {
-            UserId = UserId, CategoryId = paycheck.Id, Date = new DateOnly(2026, 10, 15), Amount = 3200m,
+            UserId = UserId,
+            CategoryId = paycheck.Id,
+            Date = new DateOnly(2026, 10, 15),
+            Amount = 3200m,
             Description = "Salary"
         });
         // Earned less on bonus: planned 1000, actual 600 -> diff -400 (negative = earned less than planned)
         db.BudgetTransactions.Add(new BudgetTransaction
         {
-            UserId = UserId, CategoryId = bonus.Id, Date = new DateOnly(2026, 10, 20), Amount = 600m,
+            UserId = UserId,
+            CategoryId = bonus.Id,
+            Date = new DateOnly(2026, 10, 20),
+            Amount = 600m,
             Description = "Partial bonus"
         });
         await db.SaveChangesAsync();
@@ -183,7 +204,10 @@ public class MonthlyBudgetSheetCalculationTests
         // Transaction sum is 100
         db.BudgetTransactions.Add(new BudgetTransaction
         {
-            UserId = UserId, CategoryId = food.Id, Date = new DateOnly(2026, 10, 5), Amount = 100m,
+            UserId = UserId,
+            CategoryId = food.Id,
+            Date = new DateOnly(2026, 10, 5),
+            Amount = 100m,
             Description = "Market"
         });
         await db.SaveChangesAsync();
@@ -220,7 +244,10 @@ public class MonthlyBudgetSheetCalculationTests
         // Transactions totaling 150
         db.BudgetTransactions.Add(new BudgetTransaction
         {
-            UserId = UserId, CategoryId = food.Id, Date = new DateOnly(2026, 10, 12), Amount = 150m,
+            UserId = UserId,
+            CategoryId = food.Id,
+            Date = new DateOnly(2026, 10, 12),
+            Amount = 150m,
             Description = "Restaurant"
         });
         await db.SaveChangesAsync();

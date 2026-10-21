@@ -35,19 +35,19 @@ public class DashboardProjectionTests
     private static NetWorthParameters Parameters(decimal balance = 100_000m, decimal savings = 20_000m,
         decimal spending = 40_000m, int currentAge = 35, int retirementAge = 60, decimal baseRoi = 7m,
         decimal conservativeRoi = 4m, decimal aggressiveRoi = 10m, decimal aggressiveSavings = 30_000m) => new()
-    {
-        UserId = UserId,
-        StartingBalance = balance,
-        AnnualSavings = savings,
-        AnnualIncome = 80_000m,
-        AnnualSpending = spending,
-        CurrentAge = currentAge,
-        RetirementAge = retirementAge,
-        BaseRoi = baseRoi,
-        ConservativeRoi = conservativeRoi,
-        AggressiveRoi = aggressiveRoi,
-        AggressiveSavings = aggressiveSavings
-    };
+        {
+            UserId = UserId,
+            StartingBalance = balance,
+            AnnualSavings = savings,
+            AnnualIncome = 80_000m,
+            AnnualSpending = spending,
+            CurrentAge = currentAge,
+            RetirementAge = retirementAge,
+            BaseRoi = baseRoi,
+            ConservativeRoi = conservativeRoi,
+            AggressiveRoi = aggressiveRoi,
+            AggressiveSavings = aggressiveSavings
+        };
 
     private static NetWorthProjectionDto NetWorthPageProjection(NetWorthParameters p) =>
         NetWorthProjectionService.ComputeProjection(new NetWorthProjectionRequestDto

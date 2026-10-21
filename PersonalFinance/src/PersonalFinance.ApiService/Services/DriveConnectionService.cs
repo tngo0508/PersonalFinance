@@ -376,7 +376,7 @@ public class DriveConnectionService : IDriveConnectionService
             catch (HttpRequestException httpEx) when (httpEx.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.BadRequest)
             {
                 _logger.LogWarning(httpEx, "Google Drive API returned credential error HTTP {StatusCode} for connection {ConnectionId}.", httpEx.StatusCode, connection.Id);
-                
+
                 connection.IsValid = false;
                 connection.SyncStatus = "NeedsReauth";
                 connection.ErrorMessage = "Google credentials are invalid or expired. Please re-authenticate or update your API key.";
@@ -616,7 +616,7 @@ public class DriveConnectionService : IDriveConnectionService
                     var id = fileElem.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? string.Empty : string.Empty;
                     var name = fileElem.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "Untitled" : "Untitled";
                     var mimeType = fileElem.TryGetProperty("mimeType", out var mimeProp) ? mimeProp.GetString() ?? string.Empty : string.Empty;
-                    
+
                     long? size = null;
                     if (fileElem.TryGetProperty("size", out var sizeProp) && long.TryParse(sizeProp.GetString(), out var parsedSize))
                     {

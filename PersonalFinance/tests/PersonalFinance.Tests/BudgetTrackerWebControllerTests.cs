@@ -475,7 +475,7 @@ public class BudgetTrackerWebControllerTests
         var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var result = await controller.CreateCategory(new SaveCategoryRequest
-            { Name = "Utilities", Kind = BudgetCategoryKind.Expense });
+        { Name = "Utilities", Kind = BudgetCategoryKind.Expense });
 
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status409Conflict, objectResult.StatusCode);
@@ -488,7 +488,7 @@ public class BudgetTrackerWebControllerTests
         var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var request = new SaveCategoryRequest
-            { Name = "Utilities & Gas", Kind = BudgetCategoryKind.Expense, SortOrder = 2 };
+        { Name = "Utilities & Gas", Kind = BudgetCategoryKind.Expense, SortOrder = 2 };
         var result = await controller.UpdateCategory(5, request);
 
         var jsonResult = Assert.IsType<JsonResult>(result);

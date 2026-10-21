@@ -65,25 +65,25 @@ public class BudgetTrackerValidatorTests
         var validator = new SaveCategoryRequestValidator();
 
         Assert.True(validator.Validate(new SaveCategoryRequest
-            { Name = "Groceries", Kind = BudgetCategoryKind.Expense, SortOrder = 1 }).IsValid);
+        { Name = "Groceries", Kind = BudgetCategoryKind.Expense, SortOrder = 1 }).IsValid);
 
         // Empty / whitespace name
         Assert.False(validator.Validate(new SaveCategoryRequest
-            { Name = "", Kind = BudgetCategoryKind.Expense, SortOrder = 1 }).IsValid);
+        { Name = "", Kind = BudgetCategoryKind.Expense, SortOrder = 1 }).IsValid);
         Assert.False(validator.Validate(new SaveCategoryRequest
-            { Name = "   ", Kind = BudgetCategoryKind.Expense, SortOrder = 1 }).IsValid);
+        { Name = "   ", Kind = BudgetCategoryKind.Expense, SortOrder = 1 }).IsValid);
 
         // Name exceeding 100 characters
         Assert.False(validator.Validate(new SaveCategoryRequest
-            { Name = new string('A', 101), Kind = BudgetCategoryKind.Expense, SortOrder = 1 }).IsValid);
+        { Name = new string('A', 101), Kind = BudgetCategoryKind.Expense, SortOrder = 1 }).IsValid);
 
         // Invalid enum
         Assert.False(validator.Validate(new SaveCategoryRequest
-            { Name = "Valid", Kind = (BudgetCategoryKind)99, SortOrder = 1 }).IsValid);
+        { Name = "Valid", Kind = (BudgetCategoryKind)99, SortOrder = 1 }).IsValid);
 
         // Negative sort order
         Assert.False(validator.Validate(new SaveCategoryRequest
-            { Name = "Valid", Kind = BudgetCategoryKind.Income, SortOrder = -1 }).IsValid);
+        { Name = "Valid", Kind = BudgetCategoryKind.Income, SortOrder = -1 }).IsValid);
     }
 
     [Fact]

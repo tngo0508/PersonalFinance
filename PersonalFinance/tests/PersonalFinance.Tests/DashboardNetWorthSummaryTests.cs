@@ -34,15 +34,15 @@ public class DashboardNetWorthSummaryTests
 
     private static NetWorthParameters Parameters(decimal balance = 100_000m, decimal spending = 40_000m,
         decimal income = 80_000m, decimal savings = 20_000m, string userId = UserId) => new()
-    {
-        UserId = userId,
-        StartingBalance = balance,
-        AnnualSpending = spending,
-        AnnualIncome = income,
-        AnnualSavings = savings,
-        CurrentAge = 35,
-        RetirementAge = 60
-    };
+        {
+            UserId = userId,
+            StartingBalance = balance,
+            AnnualSpending = spending,
+            AnnualIncome = income,
+            AnnualSavings = savings,
+            CurrentAge = 35,
+            RetirementAge = 60
+        };
 
     [Fact]
     public async Task FiTarget_IsAnnualSpendingTimesTwentyFive()

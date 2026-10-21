@@ -190,7 +190,7 @@ public class BudgetTrackerControllerTests
 
             // Explicitly set to GoogleSheet
             var setResult = await controller.SetDataSource(new SetBudgetDataSourceRequest
-                { Source = BudgetDataSource.GoogleSheet });
+            { Source = BudgetDataSource.GoogleSheet });
             var okSetResult = Assert.IsType<OkObjectResult>(setResult);
             var dtoSet = Assert.IsType<BudgetDataSourceDto>(okSetResult.Value);
             Assert.Equal(BudgetDataSource.GoogleSheet, dtoSet.Source);

@@ -129,13 +129,23 @@ public class DashboardGoalsOverviewTests
         db.SpreadsheetTransactionRecords.AddRange(
             new SpreadsheetTransactionRecord
             {
-                Id = 1, UserId = UserId, Description = "Old expense", Category = "Food", Amount = 5m,
-                Type = "Expense", Date = new DateTime(2025, 12, 1, 0, 0, 0, DateTimeKind.Utc)
+                Id = 1,
+                UserId = UserId,
+                Description = "Old expense",
+                Category = "Food",
+                Amount = 5m,
+                Type = "Expense",
+                Date = new DateTime(2025, 12, 1, 0, 0, 0, DateTimeKind.Utc)
             },
             new SpreadsheetTransactionRecord
             {
-                Id = 2, UserId = UserId, Description = "New income", Category = "Salary", Amount = 50m,
-                Type = "Income", Date = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)
+                Id = 2,
+                UserId = UserId,
+                Description = "New income",
+                Category = "Salary",
+                Amount = 50m,
+                Type = "Income",
+                Date = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)
             });
         await db.SaveChangesAsync();
 
@@ -164,7 +174,12 @@ public class DashboardGoalsOverviewTests
         db.SavingsGoals.AddRange(Enumerable.Range(1, 4).Select(i => Goal(i, 100m, 10m)));
         db.SpreadsheetTransactionRecords.AddRange(Enumerable.Range(1, 6).Select(i => new SpreadsheetTransactionRecord
         {
-            Id = i, UserId = UserId, Description = $"Tx {i}", Category = "Food", Amount = 5m, Type = "Expense",
+            Id = i,
+            UserId = UserId,
+            Description = $"Tx {i}",
+            Category = "Food",
+            Amount = 5m,
+            Type = "Expense",
             Date = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i).AddHours(12)
         }));
         await db.SaveChangesAsync();
@@ -186,12 +201,22 @@ public class DashboardGoalsOverviewTests
         db.SpreadsheetTransactionRecords.AddRange(
             new SpreadsheetTransactionRecord
             {
-                Id = 1, UserId = UserId, Description = "Tx A", Category = "Food", Amount = 5m, Type = "Expense",
+                Id = 1,
+                UserId = UserId,
+                Description = "Tx A",
+                Category = "Food",
+                Amount = 5m,
+                Type = "Expense",
                 Date = date
             },
             new SpreadsheetTransactionRecord
             {
-                Id = 2, UserId = UserId, Description = "Tx B", Category = "Food", Amount = 5m, Type = "Expense",
+                Id = 2,
+                UserId = UserId,
+                Description = "Tx B",
+                Category = "Food",
+                Amount = 5m,
+                Type = "Expense",
                 Date = date
             });
         await db.SaveChangesAsync();

@@ -231,7 +231,7 @@ public class GoogleDrivePersistenceTests
         Assert.Equal(2, syncResult.Files.Count);
 
         var dbConnAfter = await dbContext.GoogleDriveConnections.Include(c => c.CachedFiles).FirstAsync(c => c.Id == conn.Id);
-        
+
         // f1 updated
         var f1 = dbConnAfter.CachedFiles.FirstOrDefault(f => f.DriveFileId == "f1");
         Assert.NotNull(f1);

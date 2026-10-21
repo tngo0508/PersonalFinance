@@ -48,11 +48,17 @@ public class AiAssistantServiceTests
     {
         db.SavingsGoals.Add(new SavingsGoal
         {
-            UserId = UserId, Name = "Emergency Fund", TargetAmount = 10000m, CurrentAmount = 2500m
+            UserId = UserId,
+            Name = "Emergency Fund",
+            TargetAmount = 10000m,
+            CurrentAmount = 2500m
         });
         db.SavingsGoals.Add(new SavingsGoal
         {
-            UserId = OtherUserId, Name = "Secret Yacht", TargetAmount = 99999m, CurrentAmount = 1m
+            UserId = OtherUserId,
+            Name = "Secret Yacht",
+            TargetAmount = 99999m,
+            CurrentAmount = 1m
         });
         await db.SaveChangesAsync();
     }
@@ -181,8 +187,13 @@ public class AiAssistantServiceTests
         await using var db = CreateContext();
         db.NetWorthParameters.Add(new NetWorthParameters
         {
-            UserId = UserId, AnnualIncome = 120000m, AnnualSpending = 60000m, AnnualSavings = 30000m,
-            StartingBalance = 50000m, CurrentAge = 35, RetirementAge = 60
+            UserId = UserId,
+            AnnualIncome = 120000m,
+            AnnualSpending = 60000m,
+            AnnualSavings = 30000m,
+            StartingBalance = 50000m,
+            CurrentAge = 35,
+            RetirementAge = 60
         });
         await db.SaveChangesAsync();
         var outputs = new Dictionary<string, string?>();
@@ -349,7 +360,9 @@ public class AiAssistantServiceTests
         await using var db = CreateContext();
         var fake = new FakeChatClient((_, _) => Reply("Article summary", new UsageDetails
         {
-            InputTokenCount = 1000, OutputTokenCount = 100, CachedInputTokenCount = 500
+            InputTokenCount = 1000,
+            OutputTokenCount = 100,
+            CachedInputTokenCount = 500
         }));
         var service = CreateService(db, fake, settings: new() { ["OpenAI:MaxTokens"] = "123" });
         var result = await service.SummarizeArticleAsync(UserId,
