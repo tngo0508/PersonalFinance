@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 
@@ -11,11 +12,14 @@ public class LoginModel : PageModel
 {
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly ILogger<LoginModel> _logger;
+    private readonly IApiServiceWarmer _apiServiceWarmer;
 
-    public LoginModel(SignInManager<IdentityUser> signInManager, ILogger<LoginModel> logger)
+    public LoginModel(SignInManager<IdentityUser> signInManager, ILogger<LoginModel> logger,
+        IApiServiceWarmer apiServiceWarmer)
     {
         _signInManager = signInManager;
         _logger = logger;
+        _apiServiceWarmer = apiServiceWarmer;
     }
 
     [BindProperty]
@@ -44,6 +48,9 @@ public class LoginModel : PageModel
 
     public async Task OnGetAsync(string? returnUrl = null)
     {
+        // Start ApiService while the user types, so the Dashboard after sign-in does not hit a cold container.
+        _ = _apiServiceWarmer.WarmUpAsync();
+
         if (!string.IsNullOrEmpty(ErrorMessage))
         {
             ModelState.AddModelError(string.Empty, ErrorMessage);

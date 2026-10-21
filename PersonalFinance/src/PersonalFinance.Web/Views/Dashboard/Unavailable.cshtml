@@ -1,0 +1,36 @@
+@using System.Security.Claims
+@using PersonalFinance.Web.Infrastructure
+@{
+    ViewData["Title"] = "Dashboard";
+    var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? string.Empty;
+    var displayName = User.FindFirst(ClaimTypes.GivenName)?.Value
+                      ?? (email.Contains('@') ? email[..email.IndexOf('@')] : email);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true"/>
+}
+
+@* Unavailable State: the summary could not be loaded. Never fall back to empty sections or setup cards here,
+   because those tell a returning user their data is gone. *@
+<div class="dash">
+    <header class="dash-header">
+        <p class="dash-header__eyebrow">Dashboard</p>
+        <h1 class="dash-header__title">
+            @(string.IsNullOrWhiteSpace(displayName) ? "Welcome back" : $"Welcome back, {displayName}")
+        </h1>
+    </header>
+
+    <section class="dash-setup-card" role="status" aria-labelledby="dash-unavailable-title">
+        <span class="dash-setup-card__icon" aria-hidden="true"><i data-lucide="cloud-off"></i></span>
+        <div class="dash-setup-card__body">
+            <h2 id="dash-unavailable-title" class="dash-setup-card__title">We couldn't load your dashboard</h2>
+            <p class="dash-setup-card__text">
+                Your data is safe. @JsonApiErrorsFilter.UnavailableMessage
+            </p>
+        </div>
+        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary btn-sm dash-setup-card__action">
+            Retry
+        </a>
+    </section>
+</div>

@@ -86,6 +86,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Dashboard After Sign-In**: The Dashboard no longer shows empty data when ApiService is still starting after being idle.
+  - When the summary cannot be loaded, the Dashboard shows the Unavailable State ("We couldn't load your dashboard") with a Retry button, instead of empty sections and setup cards.
+  - Opening the Login page sends a throttled, anonymous `/alive` ping that wakes ApiService while the user signs in.
+
 - **Notification Bell, Global Search and Safe Error Messages**: The notification bell and global search work again, and Web never shows raw ApiService responses or exception text.
   - The app shell called `/api/Notification` and `/api/Search` on Web, which had no such endpoints (every page logged 404s); new Web controllers forward them to ApiService, and marking notifications read sends the antiforgery token.
   - The Budget Planner no longer shows the raw ApiService response body or the exception message when a save fails.
