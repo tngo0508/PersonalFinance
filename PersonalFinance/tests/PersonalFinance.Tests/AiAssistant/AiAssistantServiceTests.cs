@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Enums;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -7,7 +9,6 @@ using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.AiAssistant;
-using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 namespace PersonalFinance.Tests.AiAssistant;
 
@@ -29,14 +30,15 @@ public class AiAssistantServiceTests
     }
 
     private static AiAssistantService CreateService(AppDbContext db, IChatClient? chatClient,
-        ISpreadsheetReader? reader = null, Dictionary<string, string?>? settings = null)
+        IBudgetDataProvider? budgetData = null, Dictionary<string, string?>? settings = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(settings ?? new Dictionary<string, string?>())
             .Build();
 
-        return new AiAssistantService(db, reader ?? new FakeSpreadsheetReader(), new AllowAllRateLimiter(),
-            new AiQuotaService(db), NullLogger<AiAssistantService>.Instance, configuration, chatClient);
+        return new AiAssistantService(db, new AllowAllRateLimiter(), new AiQuotaService(db),
+            NullLogger<AiAssistantService>.Instance, configuration,
+            budgetData ?? TestBudgetDataProviderFactory.Create(db), chatClient);
     }
 
     private static AiChatRequestDto Request(string message)
@@ -101,6 +103,32 @@ public class AiAssistantServiceTests
             ["get_budget_summary", "get_net_worth_details", "get_recent_transactions", "get_savings_goals"],
             toolNames);
         Assert.Equal(400, fake.LastOptions.MaxOutputTokens);
+    }
+
+    [Fact]
+    public async Task SendChatMessageAsync_SnapshotUsesTheLatestBudgetPeriod_LikeTheDashboard()
+    {
+        // Arrange: the older Period was edited more recently; "current" still means the latest Period.
+        await using var db = CreateContext();
+        db.UserBudgetAllocations.AddRange(
+            new UserBudgetAllocation
+            {
+                UserId = UserId, Period = "2026-09", MonthlyIncome = 4100m, UpdatedAt = DateTime.UtcNow
+            },
+            new UserBudgetAllocation
+            {
+                UserId = UserId, Period = "2026-10", MonthlyIncome = 5200m, UpdatedAt = DateTime.UtcNow.AddDays(-5)
+            });
+        await db.SaveChangesAsync();
+        var fake = new FakeChatClient((_, _) => Reply("ok"));
+        var service = CreateService(db, fake);
+
+        // Act
+        await service.SendChatMessageAsync(UserId, Request("How is my budget?"));
+
+        // Assert
+        var snapshot = fake.LastMessages.Last(m => m.Role == ChatRole.System).Text;
+        Assert.Contains("\"MonthlyIncome\":5200", snapshot);
     }
 
     [Fact]
@@ -227,33 +255,11 @@ public class AiAssistantServiceTests
     {
         // Arrange
         await using var db = CreateContext();
-        var connection = new GoogleDriveConnection { UserId = UserId, IsValid = true, FolderId = "f", FolderUrl = "u" };
-        db.GoogleDriveConnections.Add(connection);
-        await db.SaveChangesAsync();
-        db.GoogleDriveCachedFiles.Add(new GoogleDriveCachedFile
-        {
-            ConnectionId = connection.Id,
-            DriveFileId = "file-1",
-            Name = "Budget.xlsx",
-            MimeType = "application/vnd.google-apps.spreadsheet",
-            ModifiedTime = DateTime.UtcNow
-        });
-        await db.SaveChangesAsync();
-
-        var reader = new FakeSpreadsheetReader
-        {
-            Transactions = new SpreadsheetTransactionsDto
-            {
-                FileName = "Budget.xlsx",
-                Transactions =
-                [
-                    Tx("2026-03-04", 45.10m, "Grocery Store", "Food"),
-                    Tx("2026-03-10", 12.00m, "Bakery", "Food"),
-                    Tx("2026-03-12", 900.00m, "Landlord", "Housing"),
-                    Tx("2026-02-01", 30.00m, "Old Market", "Food")
-                ]
-            }
-        };
+        var budgetData = new FakeBudgetData(
+            Tx("2026-03-04", 45.10m, "Grocery Store", "Food"),
+            Tx("2026-03-10", 12.00m, "Bakery", "Food"),
+            Tx("2026-03-12", 900.00m, "Landlord", "Housing"),
+            Tx("2026-02-01", 30.00m, "Old Market", "Food"));
 
         string? filtered = null;
         string? limited = null;
@@ -265,10 +271,15 @@ public class AiAssistantServiceTests
                 ["category"] = "Food",
                 ["startDate"] = "2026-03-01"
             }))?.ToString();
-            limited = (await tool.InvokeAsync(new AIFunctionArguments { ["limit"] = 1 }))?.ToString();
+            limited = (await tool.InvokeAsync(new AIFunctionArguments
+            {
+                ["startDate"] = "2026-01-01",
+                ["endDate"] = "2026-03-31",
+                ["limit"] = 1
+            }))?.ToString();
             return Reply("done");
         });
-        var service = CreateService(db, fake, reader);
+        var service = CreateService(db, fake, budgetData);
 
         // Act
         await service.SendChatMessageAsync(UserId, Request("How much on food in March?"));
@@ -393,15 +404,15 @@ public class AiAssistantServiceTests
         Assert.True(string.Join("", first).Length < 4000);
     }
 
-    private static SpreadsheetTransactionDto Tx(string date, decimal amount, string description, string category)
+    private static BudgetTransactionData Tx(string date, decimal amount, string description, string category)
     {
-        return new SpreadsheetTransactionDto
+        return new BudgetTransactionData
         {
-            Date = DateTime.Parse(date, System.Globalization.CultureInfo.InvariantCulture),
+            Date = DateTime.Parse(date, CultureInfo.InvariantCulture),
             Amount = amount,
             Description = description,
             Category = category,
-            Type = SpreadsheetTransactionDto.ExpenseType
+            Type = "Expense"
         };
     }
 
@@ -447,22 +458,31 @@ public class AiAssistantServiceTests
         }
     }
 
-    private sealed class FakeSpreadsheetReader : ISpreadsheetReader
+    /// <summary>Budget data provider whose transactions honour the requested date range, like the real readers.</summary>
+    private sealed class FakeBudgetData(params BudgetTransactionData[] transactions) : IBudgetDataProvider
     {
-        public SpreadsheetTransactionsDto Transactions { get; init; } = new();
+        public Task<List<BudgetTransactionData>> GetTransactionsAsync(string userId, DateOnly from, DateOnly to,
+            int? take = null, CancellationToken ct = default) =>
+            Task.FromResult(transactions
+                .Where(t => DateOnly.FromDateTime(t.Date) >= from && DateOnly.FromDateTime(t.Date) <= to)
+                .OrderByDescending(t => t.Date)
+                .ToList());
 
-        public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string fileId, string? fileName = null,
-            int? connectionId = null, string? userId = null, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new MonthlyBudgetReportDto());
-        }
+        public Task<List<BudgetMonthData>> GetMonthsAsync(string userId, int year, CancellationToken ct = default) =>
+            Task.FromResult(new List<BudgetMonthData>());
 
-        public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string fileId,
-            string? fileName = null, int? connectionId = null, string? userId = null,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Transactions);
-        }
+        public Task<BudgetMonthData?> GetMonthAsync(string userId, int year, int month, CancellationToken ct = default) =>
+            Task.FromResult<BudgetMonthData?>(null);
+
+        public Task<List<BudgetTrendRecordData>> GetTrendRecordsAsync(string userId, int year,
+            CancellationToken ct = default) =>
+            Task.FromResult(new List<BudgetTrendRecordData>());
+
+        public Task<List<int>> GetAvailableYearsAsync(string userId, CancellationToken ct = default) =>
+            Task.FromResult(new List<int>());
+
+        public Task<BudgetDataSource> GetActiveSourceAsync(string userId, CancellationToken ct = default) =>
+            Task.FromResult(BudgetDataSource.BudgetTracker);
     }
 
     private sealed class AllowAllRateLimiter : IRateLimiterService

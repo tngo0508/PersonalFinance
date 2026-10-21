@@ -27,11 +27,10 @@ public class AiAssistantService : IAiAssistantService
     private const int MaxHistoryMessages = 10;
     private const int MaxHistoryMessageLength = 2000;
 
-    private readonly IBudgetDataProvider? _budgetDataProvider;
+    private readonly IBudgetDataProvider _budgetDataProvider;
     private readonly IChatClient? _chatClient;
     private readonly IConfiguration _configuration;
     private readonly AppDbContext _dbContext;
-    private readonly ISpreadsheetReader _spreadsheetReader;
     private readonly ILogger<AiAssistantService> _logger;
     private readonly string _modelName;
     private readonly PersonalFinance.ApiService.Infrastructure.IRateLimiterService _rateLimiterService;
@@ -39,18 +38,16 @@ public class AiAssistantService : IAiAssistantService
 
     public AiAssistantService(
         AppDbContext dbContext,
-        ISpreadsheetReader spreadsheetReader,
         PersonalFinance.ApiService.Infrastructure.IRateLimiterService rateLimiterService,
         IAiQuotaService quotaService,
         ILogger<AiAssistantService> logger,
         IConfiguration configuration,
-        IChatClient? chatClient = null,
-        IBudgetDataProvider? budgetDataProvider = null)
+        IBudgetDataProvider budgetDataProvider,
+        IChatClient? chatClient = null)
     {
         _budgetDataProvider = budgetDataProvider;
         _chatClient = chatClient;
         _dbContext = dbContext;
-        _spreadsheetReader = spreadsheetReader;
         _rateLimiterService = rateLimiterService;
         _quotaService = quotaService;
         _logger = logger;
@@ -77,7 +74,7 @@ public class AiAssistantService : IAiAssistantService
         try
         {
             // Compact, stable system prompt (cache-friendly); data is fetched on demand through tools
-            var snapshot = await GetUserFinancialContextAsync(userId, cancellationToken, includeSpreadsheet: false);
+            var snapshot = await GetUserFinancialContextAsync(userId, cancellationToken);
             var messages = new List<AiMessage>
             {
                 new(ChatRole.System, BuildCompactSystemPrompt()),
@@ -207,22 +204,12 @@ public class AiAssistantService : IAiAssistantService
     private List<AITool> CreateFinancialTools(string userId, CancellationToken cancellationToken)
     {
         UserFinancialContext? overview = null;
-        UserFinancialContext? budget = null;
-        UserFinancialContext? transactions = null;
 
         async Task<UserFinancialContext> LoadOverviewAsync() =>
-            overview ??= await GetUserFinancialContextAsync(userId, cancellationToken, includeSpreadsheet: false);
-
-        async Task<UserFinancialContext> LoadBudgetAsync() =>
-            budget ??= await GetUserFinancialContextAsync(userId, cancellationToken, includeTransactions: false);
+            overview ??= await GetUserFinancialContextAsync(userId, cancellationToken);
 
         async Task<UserFinancialContext> LoadTransactionsAsync(string? startDate, string? endDate)
         {
-            if (_budgetDataProvider is null)
-            {
-                return transactions ??= await GetUserFinancialContextAsync(userId, cancellationToken, includeBudget: false);
-            }
-
             var from = TryParseDate(startDate) ?? DateTime.UtcNow.Date.AddDays(-90);
             var to = TryParseDate(endDate) ?? DateTime.UtcNow.Date;
             if (from > to || (to - from).TotalDays > 366)
@@ -247,11 +234,6 @@ public class AiAssistantService : IAiAssistantService
 
         async Task<string> GetBudgetAsync(string? month)
         {
-            if (_budgetDataProvider is null)
-            {
-                return FormatBudgetSummary(await LoadBudgetAsync(), month);
-            }
-
             var monthNumber = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.Month :
                 int.TryParse(month, out var number) ? number :
                 Array.FindIndex(CultureInfo.InvariantCulture.DateTimeFormat.MonthNames,
@@ -291,90 +273,6 @@ public class AiAssistantService : IAiAssistantService
                 "get_net_worth_details",
                 "Returns the user's income, spending, savings, net worth and retirement parameters.")
         ];
-    }
-
-    private static string FormatBudgetSummary(UserFinancialContext context, string? month)
-    {
-        var sb = new StringBuilder();
-
-        if (context.MonthlyIncome > 0)
-        {
-            sb.AppendLine($"Monthly income: ${context.MonthlyIncome:N0}");
-        }
-
-        if (context.BudgetAllocations is { Count: > 0 })
-        {
-            sb.AppendLine("Budget allocations (% of monthly income):");
-            foreach (var (category, percent) in context.BudgetAllocations)
-            {
-                sb.AppendLine($"- {category}: {percent:F1}%");
-            }
-        }
-
-        if (context.BudgetReportSummary != null)
-        {
-            var br = context.BudgetReportSummary;
-            sb.AppendLine(
-                $"Budget report {br.Year}: income ${br.TotalAnnualIncome:N0}, expenses ${br.TotalAnnualExpenses:N0}, " +
-                $"savings ${br.TotalAnnualSavings:N0}, avg savings rate {br.AverageSavingsRate:F1}%, " +
-                $"{br.OverBudgetMonths} over-budget and {br.UnderBudgetMonths} under-budget months of {br.MonthCount}.");
-        }
-
-        if (context.TopSpendingCategories is { Count: > 0 })
-        {
-            sb.AppendLine("Top spending categories: " + string.Join(", ",
-                context.TopSpendingCategories.Select(kvp => $"{kvp.Key} ${kvp.Value:N0}")));
-        }
-
-        if (context.OverBudgetCategories is { Count: > 0 })
-        {
-            sb.AppendLine("Categories that went over budget: " + string.Join(", ", context.OverBudgetCategories));
-        }
-
-        if (context.MonthlyBudgetDetails is { Count: > 0 })
-        {
-            var detail = FindMonth(context.MonthlyBudgetDetails, month);
-            if (detail != null)
-            {
-                sb.AppendLine($"{detail.MonthName}: status {detail.Status}, " +
-                              $"income budgeted ${detail.BudgetedIncome:N0} / actual ${detail.ActualIncome:N0}, " +
-                              $"expenses budgeted ${detail.BudgetedExpenses:N0} / actual ${detail.ActualExpenses:N0}, " +
-                              $"net savings ${detail.NetSavings:N0}, savings rate {detail.SavingsRate:F1}%.");
-                foreach (var cat in detail.Categories)
-                {
-                    sb.AppendLine(
-                        $"- {cat.CategoryName}: budgeted ${cat.BudgetedAmount:N0}, actual ${cat.ActualAmount:N0}, " +
-                        $"variance ${cat.Variance:N0} ({cat.PercentageUsed:F1}% used, {cat.Status})");
-                }
-            }
-            else
-            {
-                sb.AppendLine("No budget detail found for that month. Available months: " +
-                              string.Join(", ", context.MonthlyBudgetDetails.Select(m => m.MonthName)));
-            }
-        }
-
-        return sb.Length == 0
-            ? "The user has not set up a budget or connected a budget spreadsheet yet."
-            : sb.ToString();
-    }
-
-    private static MonthlyBudgetDetail? FindMonth(List<MonthlyBudgetDetail> months, string? month)
-    {
-        if (string.IsNullOrWhiteSpace(month))
-        {
-            return months.FirstOrDefault(m => m.MonthNumber == DateTime.UtcNow.Month);
-        }
-
-        var trimmed = month.Trim();
-        if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
-        {
-            return months.FirstOrDefault(m => m.MonthNumber == number);
-        }
-
-        return months.FirstOrDefault(m =>
-            m.MonthName.StartsWith(trimmed, StringComparison.OrdinalIgnoreCase) ||
-            trimmed.StartsWith(m.MonthName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string FormatTransactions(UserFinancialContext context, string? startDate, string? endDate,
@@ -562,8 +460,7 @@ public class AiAssistantService : IAiAssistantService
     /// Gets the user's financial context from the database.
     /// </summary>
     private async Task<UserFinancialContext> GetUserFinancialContextAsync(string userId,
-        CancellationToken cancellationToken, bool includeSpreadsheet = true,
-        bool includeBudget = true, bool includeTransactions = true)
+        CancellationToken cancellationToken)
     {
         var context = new UserFinancialContext();
 
@@ -572,7 +469,8 @@ public class AiAssistantService : IAiAssistantService
             // Get net worth parameters
             var netWorthParams = await _dbContext.NetWorthParameters
                 .AsNoTracking()
-                .FirstOrDefaultAsync(n => n.UserId == userId, cancellationToken);
+                .CurrentFor(userId)
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (netWorthParams != null)
             {
@@ -600,8 +498,8 @@ public class AiAssistantService : IAiAssistantService
             // Get budget allocations
             var budget = await _dbContext.UserBudgetAllocations
                 .AsNoTracking()
-                .OrderByDescending(b => b.UpdatedAt ?? b.CreatedAt)
-                .FirstOrDefaultAsync(b => b.UserId == userId, cancellationToken);
+                .CurrentFor(userId)
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (budget != null)
             {
@@ -641,12 +539,6 @@ public class AiAssistantService : IAiAssistantService
                     TargetDate = s.TargetDate
                 }).ToList();
             }
-
-            // Get budget report and transaction data from connected Google Drive spreadsheets
-            if (includeSpreadsheet)
-            {
-                await GetSpreadsheetDataAsync(userId, context, cancellationToken, includeBudget, includeTransactions);
-            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -654,206 +546,6 @@ public class AiAssistantService : IAiAssistantService
         }
 
         return context;
-    }
-
-    /// <summary>
-    ///     Fetches budget report and transaction data from the user's connected Google Drive spreadsheets.
-    /// </summary>
-    private async Task GetSpreadsheetDataAsync(string userId, UserFinancialContext context,
-        CancellationToken cancellationToken, bool includeBudget, bool includeTransactions)
-    {
-        try
-        {
-            // Find the user's latest valid Google Drive connection with a spreadsheet
-            var connection = await _dbContext.GoogleDriveConnections
-                .AsNoTracking()
-                .OrderByDescending(c => c.LastSyncedAtUtc ?? c.CreatedAt)
-                .FirstOrDefaultAsync(c => c.UserId == userId && c.IsValid, cancellationToken);
-
-            if (connection == null) return;
-
-            // Find spreadsheet files in the cached files
-            var spreadsheetFiles = await _dbContext.GoogleDriveCachedFiles
-                .AsNoTracking()
-                .Where(f => f.ConnectionId == connection.Id && !f.IsFolder && !f.IsTrashed
-                            && (f.MimeType.Contains("spreadsheet") || f.MimeType.Contains("sheet")
-                                                                   || f.Name.EndsWith(".xlsx",
-                                                                       StringComparison.OrdinalIgnoreCase)
-                                                                   || f.Name.EndsWith(".xls",
-                                                                       StringComparison.OrdinalIgnoreCase)
-                                                                   || f.Name.EndsWith(".csv",
-                                                                       StringComparison.OrdinalIgnoreCase)))
-                .OrderByDescending(f => f.ModifiedTime ?? f.LastFetchedUtc)
-                .ToListAsync(cancellationToken);
-
-            if (spreadsheetFiles.Count == 0) return;
-
-            // Use the most recently modified spreadsheet
-            var latestSpreadsheet = spreadsheetFiles[0];
-            var fileId = latestSpreadsheet.DriveFileId;
-            var fileName = latestSpreadsheet.Name;
-
-            // Fetch only the data requested by this tool.
-            if (includeBudget)
-                try
-                {
-                    var budgetReport = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
-                        fileId, fileName, connection.Id, userId, cancellationToken);
-
-                    if (budgetReport != null && budgetReport.Months.Count > 0)
-                    {
-                        context.BudgetReportSummary = new BudgetReportSummary
-                        {
-                            FileName = budgetReport.FileName,
-                            Year = budgetReport.Year,
-                            TotalAnnualIncome = budgetReport.TotalAnnualIncome,
-                            TotalAnnualExpenses = budgetReport.TotalAnnualExpenses,
-                            TotalAnnualSavings = budgetReport.TotalAnnualSavings,
-                            AverageSavingsRate = budgetReport.AverageSavingsRate,
-                            MonthCount = budgetReport.Months.Count,
-                            OverBudgetMonths = budgetReport.Months.Count(m => m.Status == "Over Budget"),
-                            UnderBudgetMonths = budgetReport.Months.Count(m => m.Status == "Under Budget"),
-                            HighestExpenseMonth = budgetReport.Months.OrderByDescending(m => m.ActualExpenses)
-                                .FirstOrDefault()?.MonthName,
-                            HighestExpenseAmount = budgetReport.Months.OrderByDescending(m => m.ActualExpenses)
-                                .FirstOrDefault()?.ActualExpenses,
-                            LowestExpenseMonth = budgetReport.Months.OrderBy(m => m.ActualExpenses).FirstOrDefault()
-                                ?.MonthName,
-                            LowestExpenseAmount = budgetReport.Months.OrderBy(m => m.ActualExpenses).FirstOrDefault()
-                                ?.ActualExpenses
-                        };
-
-                        // Store detailed monthly budget data for month-specific queries
-                        context.MonthlyBudgetDetails = budgetReport.Months.Select(m => new MonthlyBudgetDetail
-                        {
-                            MonthName = m.MonthName,
-                            MonthNumber = m.MonthNumber,
-                            BudgetedIncome = m.BudgetedIncome,
-                            ActualIncome = m.ActualIncome,
-                            BudgetedExpenses = m.BudgetedExpenses,
-                            ActualExpenses = m.ActualExpenses,
-                            NetSavings = m.NetSavings,
-                            SavingsRate = m.SavingsRate,
-                            ExpenseVariance = m.ExpenseVariance,
-                            Status = m.Status,
-                            Categories = m.Categories.Select(c => new BudgetCategoryDetail
-                            {
-                                CategoryName = c.CategoryName,
-                                BudgetedAmount = c.BudgetedAmount,
-                                ActualAmount = c.ActualAmount,
-                                Variance = c.Variance,
-                                PercentageUsed = c.PercentageUsed,
-                                Status = c.Status
-                            }).ToList()
-                        }).ToList();
-
-                        // Get top spending categories across all months
-                        var categoryTotals = new Dictionary<string, decimal>();
-                        foreach (var month in budgetReport.Months)
-                            foreach (var category in month.Categories)
-                            {
-                                if (!categoryTotals.ContainsKey(category.CategoryName))
-                                    categoryTotals[category.CategoryName] = 0;
-
-                                categoryTotals[category.CategoryName] += category.ActualAmount;
-                            }
-
-                        context.TopSpendingCategories = categoryTotals
-                            .OrderByDescending(kvp => kvp.Value)
-                            .Take(5)
-                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-                        // Get categories that are over budget
-                        var overBudgetCategories = new List<string>();
-                        foreach (var month in budgetReport.Months)
-                            foreach (var category in month.Categories)
-                                if (category.Status == "Over Budget" &&
-                                    !overBudgetCategories.Contains(category.CategoryName))
-                                    overBudgetCategories.Add(category.CategoryName);
-
-                        context.OverBudgetCategories = overBudgetCategories;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to fetch budget report for user {UserId} from file {FileId}", userId,
-                        fileId);
-                }
-
-            // Fetch transactions
-            if (includeTransactions)
-                try
-                {
-                    var transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
-                        fileId, fileName, connection.Id, userId, cancellationToken);
-
-                    if (transactions != null && transactions.Transactions.Count > 0)
-                    {
-                        context.TransactionSummary = new TransactionSummary
-                        {
-                            FileName = transactions.FileName,
-                            TransactionCount = transactions.Transactions.Count,
-                            TotalExpenses = transactions.TotalExpenses,
-                            TotalIncome = transactions.TotalIncome,
-                            FirstDate = transactions.FirstDate,
-                            LastDate = transactions.LastDate,
-                            AverageTransactionAmount = transactions.Transactions.Count > 0
-                                ? transactions.Transactions.Average(t => t.Amount)
-                                : 0m
-                        };
-
-                        // Get top transaction categories by total amount
-                        var transactionCategoryTotals = transactions.Transactions
-                            .Where(t => t.Type == SpreadsheetTransactionDto.ExpenseType)
-                            .GroupBy(t => t.Category)
-                            .OrderByDescending(g => g.Sum(t => t.Amount))
-                            .Take(5)
-                            .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount));
-
-                        context.TopTransactionCategories = transactionCategoryTotals;
-
-                        // Get recent large transactions (top 5 by amount)
-                        var largeTransactions = transactions.Transactions
-                            .OrderByDescending(t => t.Amount)
-                            .Take(5)
-                            .Select(t => new LargeTransactionInfo
-                            {
-                                Date = t.Date?.ToString("yyyy-MM-dd") ?? t.DateText,
-                                Amount = t.Amount,
-                                Description = t.Description,
-                                Category = t.Category
-                            }).ToList();
-
-                        context.LargeTransactions = largeTransactions;
-
-                        // Store all transactions for detailed month-specific queries
-                        context.AllTransactions = transactions.Transactions
-                            .Select(t => new LargeTransactionInfo
-                            {
-                                Date = t.Date?.ToString("yyyy-MM-dd") ?? t.DateText,
-                                Amount = t.Amount,
-                                Description = t.Description,
-                                Category = t.Category,
-                                Type = t.Type
-                            }).ToList();
-
-                        // Count transactions by type
-                        context.IncomeTransactionCount =
-                            transactions.Transactions.Count(t => t.Type == SpreadsheetTransactionDto.IncomeType);
-                        context.ExpenseTransactionCount =
-                            transactions.Transactions.Count(t => t.Type == SpreadsheetTransactionDto.ExpenseType);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to fetch transactions for user {UserId} from file {FileId}", userId,
-                        fileId);
-                }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogWarning(ex, "Failed to retrieve spreadsheet data for user {UserId}", userId);
-        }
     }
 
     /// <summary>
@@ -872,56 +564,8 @@ public class AiAssistantService : IAiAssistantService
         public Dictionary<string, double>? BudgetAllocations { get; set; }
         public List<SavingsGoalInfo>? SavingsGoals { get; set; }
 
-        // Budget report data from Google Drive spreadsheets
-        public BudgetReportSummary? BudgetReportSummary { get; set; }
-        public Dictionary<string, decimal>? TopSpendingCategories { get; set; }
-        public List<string>? OverBudgetCategories { get; set; }
-        public List<MonthlyBudgetDetail>? MonthlyBudgetDetails { get; set; }
-
-        // Transaction data from Google Drive spreadsheets
-        public TransactionSummary? TransactionSummary { get; set; }
-        public Dictionary<string, decimal>? TopTransactionCategories { get; set; }
-        public List<LargeTransactionInfo>? LargeTransactions { get; set; }
-        public int IncomeTransactionCount { get; set; }
-        public int ExpenseTransactionCount { get; set; }
+        // Transactions for the get_recent_transactions tool, read through IBudgetDataProvider (ADR 0002)
         public List<LargeTransactionInfo>? AllTransactions { get; set; }
-
-        public bool HasAnyData => AnnualIncome > 0 || AnnualSpending > 0 || CurrentNetWorth > 0 || MonthlyIncome > 0
-                                  || BudgetReportSummary != null || TransactionSummary != null;
-    }
-
-    /// <summary>
-    ///     Summary of the budget report from a Google Drive spreadsheet.
-    /// </summary>
-    private class BudgetReportSummary
-    {
-        public string FileName { get; set; } = string.Empty;
-        public int Year { get; set; }
-        public decimal TotalAnnualIncome { get; set; }
-        public decimal TotalAnnualExpenses { get; set; }
-        public decimal TotalAnnualSavings { get; set; }
-        public double AverageSavingsRate { get; set; }
-        public int MonthCount { get; set; }
-        public int OverBudgetMonths { get; set; }
-        public int UnderBudgetMonths { get; set; }
-        public string? HighestExpenseMonth { get; set; }
-        public decimal? HighestExpenseAmount { get; set; }
-        public string? LowestExpenseMonth { get; set; }
-        public decimal? LowestExpenseAmount { get; set; }
-    }
-
-    /// <summary>
-    ///     Summary of transactions from a Google Drive spreadsheet.
-    /// </summary>
-    private class TransactionSummary
-    {
-        public string FileName { get; set; } = string.Empty;
-        public int TransactionCount { get; set; }
-        public decimal TotalExpenses { get; set; }
-        public decimal TotalIncome { get; set; }
-        public DateTime? FirstDate { get; set; }
-        public DateTime? LastDate { get; set; }
-        public decimal AverageTransactionAmount { get; set; }
     }
 
     /// <summary>
@@ -934,37 +578,6 @@ public class AiAssistantService : IAiAssistantService
         public string Description { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
-    }
-
-    /// <summary>
-    ///     Detailed budget data for a single month.
-    /// </summary>
-    private class MonthlyBudgetDetail
-    {
-        public string MonthName { get; set; } = string.Empty;
-        public int MonthNumber { get; set; }
-        public decimal BudgetedIncome { get; set; }
-        public decimal ActualIncome { get; set; }
-        public decimal BudgetedExpenses { get; set; }
-        public decimal ActualExpenses { get; set; }
-        public decimal NetSavings { get; set; }
-        public double SavingsRate { get; set; }
-        public decimal ExpenseVariance { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public List<BudgetCategoryDetail> Categories { get; set; } = new();
-    }
-
-    /// <summary>
-    ///     Detailed budget data for a single category within a month.
-    /// </summary>
-    private class BudgetCategoryDetail
-    {
-        public string CategoryName { get; set; } = string.Empty;
-        public decimal BudgetedAmount { get; set; }
-        public decimal ActualAmount { get; set; }
-        public decimal Variance { get; set; }
-        public double PercentageUsed { get; set; }
-        public string Status { get; set; } = string.Empty;
     }
 
     /// <summary>
