@@ -49,7 +49,7 @@ public class DashboardWebControllerTests
     }
 
     [Fact]
-    public async Task Index_WhenApiFails_LogsFailureAndRendersEmptySummary()
+    public async Task Index_WhenApiFails_LogsFailureAndRendersUnavailableState()
     {
         var logger = new RecordingLogger<DashboardController>();
         var controller = CreateController(
@@ -57,12 +57,10 @@ public class DashboardWebControllerTests
 
         var result = await controller.Index();
 
+        // Never the empty summary: that would show setup cards to a user whose data is only unreachable.
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<DashboardSummaryDto>(viewResult.Model);
-        Assert.Null(model.NetWorth);
-        Assert.Null(model.Budget);
-        Assert.Empty(model.SavingsGoals);
-        Assert.Empty(model.RecentActivity);
+        Assert.Equal(DashboardController.UnavailableViewName, viewResult.ViewName);
+        Assert.Null(viewResult.Model);
         var entry = Assert.Single(logger.Entries, e => e.Level >= LogLevel.Warning);
         Assert.IsType<HttpRequestException>(entry.Exception);
     }
@@ -80,7 +78,7 @@ public class DashboardWebControllerTests
     }
 
     [Fact]
-    public async Task Index_WhenApiTimesOutWithoutCallerCancellation_RendersEmptySummary()
+    public async Task Index_WhenApiTimesOutWithoutCallerCancellation_RendersUnavailableState()
     {
         var logger = new RecordingLogger<DashboardController>();
         var controller = CreateController(
@@ -89,8 +87,7 @@ public class DashboardWebControllerTests
         var result = await controller.Index(CancellationToken.None);
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<DashboardSummaryDto>(viewResult.Model);
-        Assert.Null(model.NetWorth);
+        Assert.Equal(DashboardController.UnavailableViewName, viewResult.ViewName);
         var entry = Assert.Single(logger.Entries, e => e.Level >= LogLevel.Warning);
         Assert.IsType<TaskCanceledException>(entry.Exception);
     }

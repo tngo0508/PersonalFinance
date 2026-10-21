@@ -40,6 +40,10 @@ public static class InternalApiClientExtensions
         services.AddInternalApiClient<ISpreadsheetAnalysisApi>(apiBaseUrl);
         services.AddInternalApiClient<IWatchlistApi>(apiBaseUrl);
 
+        // Anonymous liveness ping from the Login page, so ApiService is awake by the time the Dashboard loads.
+        services.AddHttpClient(ApiServiceWarmer.HttpClientName, client => client.BaseAddress = apiBaseUrl);
+        services.AddSingleton<IApiServiceWarmer, ApiServiceWarmer>();
+
         return services;
     }
 

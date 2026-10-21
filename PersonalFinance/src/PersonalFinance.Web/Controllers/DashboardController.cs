@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Shared.DTOs.Dashboard;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -12,6 +11,9 @@ namespace PersonalFinance.Web.Controllers;
 [Authorize]
 public class DashboardController : Controller
 {
+    /// <summary>View shown when the summary cannot be loaded.</summary>
+    public const string UnavailableViewName = "Unavailable";
+
     private readonly IDashboardApi _dashboardApi;
     private readonly ILogger<DashboardController> _logger;
 
@@ -23,7 +25,8 @@ public class DashboardController : Controller
 
     /// <summary>
     /// Displays the Dashboard home page with financial overview.
-    /// When the API is unavailable, the page still renders with an empty summary so every section shows its empty state.
+    /// When the API is unavailable (for example while ApiService is still starting), the page shows the
+    /// Unavailable State with a Retry link, never the empty state a user with no data would see.
     /// </summary>
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
@@ -34,8 +37,8 @@ public class DashboardController : Controller
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Failed to load the dashboard summary; rendering an empty summary instead.");
-            return View(new DashboardSummaryDto());
+            _logger.LogWarning(ex, "Failed to load the dashboard summary; rendering the Unavailable State instead.");
+            return View(UnavailableViewName);
         }
     }
 }

@@ -92,6 +92,10 @@ _Avoid_: Home page (ambiguous with Dashboard)
 The signed-in user's overview page, summarizing net worth, budget, savings goals, and recent activity. Signed-in visitors to `/` are redirected here.
 _Avoid_: Home page, home
 
+### Unavailable State
+What a page or section shows when its data could not be loaded. It tells the user their data is temporarily unreachable and offers a retry. It is never shown as an empty state, because an empty state means the user has no data yet.
+_Avoid_: showing an empty state or setup prompts after a failed load
+
 ### Budget
 Monthly budget allocation and tracking. Compares planned spending against actual spending from spreadsheet data.
 
