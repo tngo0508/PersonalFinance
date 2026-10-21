@@ -12,6 +12,7 @@ using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
 using CreateNotificationRequestDto = PersonalFinance.ApiService.Services.CreateNotificationRequestDto;
 using NotificationDto = PersonalFinance.ApiService.Services.NotificationDto;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.Tests.Analysis;
 

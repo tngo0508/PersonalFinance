@@ -34,8 +34,11 @@ public static class InternalApiClientExtensions
         services.AddInternalApiClient<IGoogleDriveApi>(apiBaseUrl, TimeSpan.FromSeconds(35));
         services.AddInternalApiClient<INetWorthApi>(apiBaseUrl);
         services.AddInternalApiClient<INotificationApi>(apiBaseUrl);
-        services.AddInternalApiClient<IPersonalFinanceApi>(apiBaseUrl);
+        services.AddInternalApiClient<IBudgetPlannerApi>(apiBaseUrl);
+        services.AddInternalApiClient<ISavingsGoalsApi>(apiBaseUrl);
         services.AddInternalApiClient<ISearchApi>(apiBaseUrl);
+        services.AddInternalApiClient<ISpreadsheetAnalysisApi>(apiBaseUrl);
+        services.AddInternalApiClient<IWatchlistApi>(apiBaseUrl);
 
         return services;
     }

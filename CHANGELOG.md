@@ -30,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `SpreadsheetReaderService` tries each download in turn and keeps the first with data; its tests use a fake file source instead of matching Google URLs.
   - `GoogleDriveFileDto.IsMonthlyBudgetSpreadsheet` is set by ApiService, so the Google Drive page no longer calls a parser helper.
 
+- **Web Error Handling and Feature Contracts**: Web JSON actions share one error translator, and each feature has its own Refit contract.
+  - `[JsonApiErrors]` turns ApiService failures into `{ "error": ... }` with the right status code (ApiService's own, 502 when unreachable, 500 otherwise); it replaces 23 hand-written try/catch blocks (Budget Tracker, Community, AI Assistant, Google Drive).
+  - `IPersonalFinanceApi` (four features in one contract, DTOs declared inline) is split into `ISavingsGoalsApi`, `IWatchlistApi`, `IBudgetPlannerApi` and `ISpreadsheetAnalysisApi`, with DTOs under `Shared/DTOs/<Feature>/`.
+  - Removed the Web `PersonalFinanceController`: its savings-goal, budget and watchlist-check endpoints had no callers, and it skipped antiforgery validation. The News watchlist now uses `/api/Watchlist`, which validates the antiforgery token.
+
+- **AI Assistant Reads Budget Data Through the Provider**: The AI Assistant's tools read budgets and transactions only through `IBudgetDataProvider` (ADR 0002), and it uses the same "current" Net Worth parameters and budget Period as the Dashboard.
+  - Removed the legacy path that downloaded Google Drive spreadsheets live during a chat (about 380 lines).
+
 - **AI Assistant Experience**: Redesigned the chat with a roomier indigo panel, focused starter cards, readable conversations, and an accessible multiline composer.
   - Preserve visible follow-up messages and restore failed questions for retry.
   - Add keyboard controls, loading feedback, safe response formatting, and mobile navigation clearance.
@@ -60,6 +68,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `max_completion_tokens` is applied to all requests (configurable via `OpenAI:MaxTokens`, default 400).
 
 ### Fixed
+
+- **Notification Bell, Global Search and Safe Error Messages**: The notification bell and global search work again, and Web never shows raw ApiService responses or exception text.
+  - The app shell called `/api/Notification` and `/api/Search` on Web, which had no such endpoints (every page logged 404s); new Web controllers forward them to ApiService, and marking notifications read sends the antiforgery token.
+  - The Budget Planner no longer shows the raw ApiService response body or the exception message when a save fails.
+  - A test fails when JavaScript calls an `/api/` path that has no signed-in-only Web controller.
 
 - **Budget Reports Show Only Real Spreadsheet Data**: When a Google Drive spreadsheet cannot be read, the Budget Report now explains why instead of showing a made-up 12-month budget, and a sync never saves invented months.
   - Removed the invented fallback report (ApiService reader, Web controller, and parser) that looked like real data and could be stored as snapshots, feeding Analysis, the Dashboard and the AI Assistant.

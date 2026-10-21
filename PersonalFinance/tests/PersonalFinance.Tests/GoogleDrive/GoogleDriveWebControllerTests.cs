@@ -189,7 +189,7 @@ public class GoogleDriveWebControllerTests
             ControllerContext = CreateControllerContext("test-user-123")
         };
 
-        var result = await controller.MonthlyBudgetReport("Monthly budget 2026.xlsx", "file-123");
+        var result = await FilteredAction.InvokeAsync(controller, () => controller.MonthlyBudgetReport("Monthly budget 2026.xlsx", "file-123"));
 
         var status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status502BadGateway, status.StatusCode);

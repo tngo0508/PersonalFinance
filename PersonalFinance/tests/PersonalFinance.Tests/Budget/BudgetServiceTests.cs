@@ -2,8 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
-using BudgetAllocationsDto = PersonalFinance.Shared.Contracts.BudgetAllocationsDto;
-using SaveBudgetRequestDto = PersonalFinance.Shared.Contracts.SaveBudgetRequestDto;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.Tests.Budget;
 

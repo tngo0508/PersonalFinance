@@ -5,6 +5,7 @@ using PersonalFinance.ApiService.Validators;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using FluentValidation;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.ApiService.Controllers;
 

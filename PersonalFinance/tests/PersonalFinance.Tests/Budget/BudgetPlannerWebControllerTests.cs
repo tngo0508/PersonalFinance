@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.Tests.Budget;
 
@@ -13,7 +15,7 @@ namespace PersonalFinance.Tests.Budget;
 /// </summary>
 public class BudgetPlannerWebControllerTests
 {
-    private static BudgetController CreateController(IPersonalFinanceApi api)
+    private static BudgetController CreateController(IBudgetPlannerApi api)
     {
         var identity = new ClaimsIdentity(new List<Claim>
         {
@@ -24,7 +26,7 @@ public class BudgetPlannerWebControllerTests
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
         var tempData = new TempDataDictionary(httpContext, new TestTempDataProvider());
 
-        return new BudgetController(api)
+        return new BudgetController(api, NullLogger<BudgetController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = tempData
@@ -34,7 +36,7 @@ public class BudgetPlannerWebControllerTests
     [Fact]
     public async Task Save_WhenAllocationsAreLessThanMonthlyIncome_SavesSuccessfully()
     {
-        var fakeApi = new FakePersonalFinanceApi();
+        var fakeApi = new FakeBudgetPlannerApi();
         var controller = CreateController(fakeApi);
         var model = new BudgetViewModel
         {
@@ -73,7 +75,7 @@ public class BudgetPlannerWebControllerTests
     [Fact]
     public async Task Index_WhenBudgetLoadedFromApi_PopulatesAllCategoriesIncludingTransportation()
     {
-        var fakeApi = new FakePersonalFinanceApi
+        var fakeApi = new FakeBudgetPlannerApi
         {
             BudgetResponse = new BudgetResponseDto
             {
@@ -115,7 +117,7 @@ public class BudgetPlannerWebControllerTests
     [Fact]
     public async Task Save_WhenAllocationsExceedMonthlyIncome_SavesBudgetAndSetsWarning()
     {
-        var fakeApi = new FakePersonalFinanceApi();
+        var fakeApi = new FakeBudgetPlannerApi();
         var controller = CreateController(fakeApi);
         var model = new BudgetViewModel
         {
@@ -139,7 +141,7 @@ public class BudgetPlannerWebControllerTests
     [Fact]
     public async Task Save_WhenMonthlyIncomeIsZeroOrNegative_ReturnsViewWithError()
     {
-        var fakeApi = new FakePersonalFinanceApi();
+        var fakeApi = new FakeBudgetPlannerApi();
         var controller = CreateController(fakeApi);
         var model = new BudgetViewModel
         {
@@ -185,34 +187,10 @@ public class BudgetPlannerWebControllerTests
     }
 }
 
-public class FakePersonalFinanceApi : IPersonalFinanceApi
+public class FakeBudgetPlannerApi : IBudgetPlannerApi
 {
     public SaveBudgetRequestDto? SavedRequest { get; private set; }
     public BudgetResponseDto BudgetResponse { get; set; } = new();
-
-    public Task<List<SavingsGoalDto>> GetSavingsGoalsAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult(new List<SavingsGoalDto>());
-
-    public Task<CreateSavingsGoalResponseDto> CreateSavingsGoalAsync(CreateSavingsGoalRequestDto request, CancellationToken cancellationToken = default)
-        => Task.FromResult(new CreateSavingsGoalResponseDto { Success = true });
-
-    public Task<UpdateSavingsGoalResponseDto> UpdateSavingsGoalAsync(int id, UpdateSavingsGoalRequestDto request, CancellationToken cancellationToken = default)
-        => Task.FromResult(new UpdateSavingsGoalResponseDto { Success = true });
-
-    public Task<DeleteSavingsGoalResponseDto> DeleteSavingsGoalAsync(int id, CancellationToken cancellationToken = default)
-        => Task.FromResult(new DeleteSavingsGoalResponseDto { Success = true });
-
-    public Task<List<SavedArticleDto>> GetWatchlistAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult(new List<SavedArticleDto>());
-
-    public Task<SaveArticleResponseDto> SaveArticleAsync(SaveArticleRequestDto request, CancellationToken cancellationToken = default)
-        => Task.FromResult(new SaveArticleResponseDto { Success = true });
-
-    public Task<RemoveArticleResponseDto> RemoveArticleAsync(int id, CancellationToken cancellationToken = default)
-        => Task.FromResult(new RemoveArticleResponseDto { Success = true });
-
-    public Task<CheckArticleSavedResponseDto> CheckArticleSavedAsync(string url, CancellationToken cancellationToken = default)
-        => Task.FromResult(new CheckArticleSavedResponseDto());
 
     public Task<BudgetResponseDto> GetBudgetAsync(string period, CancellationToken cancellationToken = default)
         => Task.FromResult(BudgetResponse);
@@ -222,18 +200,6 @@ public class FakePersonalFinanceApi : IPersonalFinanceApi
         SavedRequest = request;
         return Task.FromResult(new SaveBudgetResponseDto { Success = true });
     }
-
-    public Task<AnalysisDashboardDto> GetAnalysisDashboardAsync(int? year = null, int? month = null, CancellationToken cancellationToken = default)
-        => Task.FromResult(new AnalysisDashboardDto());
-
-    public Task<SyncSpreadsheetResponseDto> SyncSpreadsheetAsync(SyncSpreadsheetRequestDto request, CancellationToken cancellationToken = default)
-        => Task.FromResult(new SyncSpreadsheetResponseDto());
-
-    public Task<List<int>> GetAvailableYearsAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult(new List<int>());
-
-    public Task<List<int>> GetAvailableMonthsAsync(int year, CancellationToken cancellationToken = default)
-        => Task.FromResult(new List<int>());
 }
 
 public class TestTempDataProvider : ITempDataProvider

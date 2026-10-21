@@ -63,9 +63,7 @@ public class DashboardService : IDashboardService
     {
         var parameters = await _dbContext.NetWorthParameters
             .AsNoTracking()
-            .Where(p => p.UserId == userId)
-            .OrderByDescending(p => p.UpdatedAtUtc)
-            .ThenByDescending(p => p.Id)
+            .CurrentFor(userId)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (parameters is null)
@@ -179,9 +177,7 @@ public class DashboardService : IDashboardService
     {
         var budget = await _dbContext.UserBudgetAllocations
             .AsNoTracking()
-            .Where(b => b.UserId == userId)
-            .OrderByDescending(b => b.Period)
-            .ThenByDescending(b => b.Id)
+            .CurrentFor(userId)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (budget is null)

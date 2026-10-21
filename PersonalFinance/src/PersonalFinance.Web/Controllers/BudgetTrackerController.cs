@@ -1,19 +1,19 @@
-using System.Net;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models;
-using ApiException = Refit.ApiException;
 
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Budget Tracker feature.
 /// Handles page rendering and acts as a secure, anti-forgery-protected gateway to the Refit API client.
+/// JSON actions let <see cref="JsonApiErrorsAttribute"/> turn ApiService failures into error responses.
 /// </summary>
 [Authorize]
+[JsonApiErrors]
 public class BudgetTrackerController : Controller
 {
     private readonly IBudgetTrackerApi _budgetTrackerApi;
@@ -77,26 +77,8 @@ public class BudgetTrackerController : Controller
         [FromQuery] int month,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var sheet = await _budgetTrackerApi.GetSheetAsync(year, month, cancellationToken);
-            return Json(sheet);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error fetching budget sheet for {Year}-{Month}", year, month);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error fetching budget sheet for {Year}-{Month}", year, month);
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = "An error occurred while loading the budget sheet." });
-        }
+        var sheet = await _budgetTrackerApi.GetSheetAsync(year, month, cancellationToken);
+        return Json(sheet);
     }
 
     /// <summary>
@@ -113,25 +95,8 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid month initialization request." });
         }
 
-        try
-        {
-            var sheet = await _budgetTrackerApi.InitializeMonthAsync(request, cancellationToken);
-            return Json(sheet);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error initializing month {Year}-{Month}", request.Year, request.Month);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error initializing month {Year}-{Month}", request.Year, request.Month);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to initialize month." });
-        }
+        var sheet = await _budgetTrackerApi.InitializeMonthAsync(request, cancellationToken);
+        return Json(sheet);
     }
 
     /// <summary>
@@ -151,28 +116,8 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid planned amount request." });
         }
 
-        try
-        {
-            var sheet = await _budgetTrackerApi.SetPlannedAsync(year, month, categoryId, request, cancellationToken);
-            return Json(sheet);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error setting planned amount for {Year}-{Month} Category {CategoryId}", year,
-                month, categoryId);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error setting planned amount for {Year}-{Month} Category {CategoryId}",
-                year, month, categoryId);
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = "Failed to update planned amount." });
-        }
+        var sheet = await _budgetTrackerApi.SetPlannedAsync(year, month, categoryId, request, cancellationToken);
+        return Json(sheet);
     }
 
     /// <summary>
@@ -192,29 +137,9 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid actual override request." });
         }
 
-        try
-        {
-            var sheet = await _budgetTrackerApi.SetActualOverrideAsync(year, month, categoryId, request,
-                cancellationToken);
-            return Json(sheet);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error setting actual override for {Year}-{Month} Category {CategoryId}", year,
-                month, categoryId);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error setting actual override for {Year}-{Month} Category {CategoryId}",
-                year, month, categoryId);
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = "Failed to update actual override." });
-        }
+        var sheet = await _budgetTrackerApi.SetActualOverrideAsync(year, month, categoryId, request,
+            cancellationToken);
+        return Json(sheet);
     }
 
     /// <summary>
@@ -225,25 +150,8 @@ public class BudgetTrackerController : Controller
         [FromQuery] bool includeArchived = false,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var categories = await _budgetTrackerApi.GetCategoriesAsync(includeArchived, cancellationToken);
-            return Json(categories);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error fetching categories");
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error fetching categories");
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to load categories." });
-        }
+        var categories = await _budgetTrackerApi.GetCategoriesAsync(includeArchived, cancellationToken);
+        return Json(categories);
     }
 
     /// <summary>
@@ -260,25 +168,8 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid category request." });
         }
 
-        try
-        {
-            var category = await _budgetTrackerApi.CreateCategoryAsync(request, cancellationToken);
-            return Json(category);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error creating category {Name}", request.Name);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error creating category {Name}", request.Name);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to create category." });
-        }
+        var category = await _budgetTrackerApi.CreateCategoryAsync(request, cancellationToken);
+        return Json(category);
     }
 
     /// <summary>
@@ -296,25 +187,8 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid category update request." });
         }
 
-        try
-        {
-            var category = await _budgetTrackerApi.UpdateCategoryAsync(id, request, cancellationToken);
-            return Json(category);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error updating category {Id}", id);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error updating category {Id}", id);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to update category." });
-        }
+        var category = await _budgetTrackerApi.UpdateCategoryAsync(id, request, cancellationToken);
+        return Json(category);
     }
 
     /// <summary>
@@ -326,25 +200,8 @@ public class BudgetTrackerController : Controller
         [FromQuery] int id,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await _budgetTrackerApi.DeleteCategoryAsync(id, cancellationToken);
-            return NoContent();
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error deleting category {Id}", id);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error deleting category {Id}", id);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Failed to delete category." });
-        }
+        await _budgetTrackerApi.DeleteCategoryAsync(id, cancellationToken);
+        return NoContent();
     }
 
     /// <summary>
@@ -361,26 +218,8 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid transaction request." });
         }
 
-        try
-        {
-            var transaction = await _budgetTrackerApi.CreateTransactionAsync(request, cancellationToken);
-            return Json(transaction);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error creating transaction");
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error creating transaction");
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = "Failed to create transaction." });
-        }
+        var transaction = await _budgetTrackerApi.CreateTransactionAsync(request, cancellationToken);
+        return Json(transaction);
     }
 
     /// <summary>
@@ -398,26 +237,8 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid transaction update request." });
         }
 
-        try
-        {
-            var transaction = await _budgetTrackerApi.UpdateTransactionAsync(id, request, cancellationToken);
-            return Json(transaction);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error updating transaction {Id}", id);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error updating transaction {Id}", id);
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = "Failed to update transaction." });
-        }
+        var transaction = await _budgetTrackerApi.UpdateTransactionAsync(id, request, cancellationToken);
+        return Json(transaction);
     }
 
     /// <summary>
@@ -429,26 +250,8 @@ public class BudgetTrackerController : Controller
         [FromQuery] int id,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await _budgetTrackerApi.DeleteTransactionAsync(id, cancellationToken);
-            return NoContent();
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error deleting transaction {Id}", id);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error deleting transaction {Id}", id);
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = "Failed to delete transaction." });
-        }
+        await _budgetTrackerApi.DeleteTransactionAsync(id, cancellationToken);
+        return NoContent();
     }
 
     /// <summary>
@@ -457,26 +260,8 @@ public class BudgetTrackerController : Controller
     [HttpGet]
     public async Task<IActionResult> GetDataSource(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var preference = await _budgetTrackerApi.GetDataSourceAsync(cancellationToken);
-            return Json(preference);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error fetching budget data source preference");
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error fetching budget data source preference");
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = "An error occurred while loading data source preference." });
-        }
+        var preference = await _budgetTrackerApi.GetDataSourceAsync(cancellationToken);
+        return Json(preference);
     }
 
     /// <summary>
@@ -493,147 +278,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid data source preference request." });
         }
 
-        try
-        {
-            var updated = await _budgetTrackerApi.SetDataSourceAsync(request, cancellationToken);
-            return Json(updated);
-        }
-        catch (ApiException ex)
-        {
-            _logger.LogWarning(ex, "API error setting budget data source preference to {Source}", request.Source);
-            return StatusCode((int)ex.StatusCode, new { error = GetApiErrorMessage(ex) });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error setting budget data source preference");
-            return StatusCode(StatusCodes.Status500InternalServerError,
-                new { error = "Failed to update data source preference." });
-        }
-    }
-
-    /// <summary>
-    /// Extracts a user-friendly error message from an ApiException payload.
-    /// Avoids exposing raw HTML, non-JSON backend payloads, or 5xx server internals.
-    /// </summary>
-    public static string GetApiErrorMessage(ApiException ex)
-    {
-        if ((int)ex.StatusCode >= 500)
-        {
-            return "A server error occurred. Please try again.";
-        }
-
-        if (!string.IsNullOrWhiteSpace(ex.Content))
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(ex.Content);
-                var root = doc.RootElement;
-
-                if (root.ValueKind == JsonValueKind.Object)
-                {
-                    // 1. Direct single error property
-                    if (root.TryGetProperty("error", out var errorProp) && errorProp.GetString() is { } errorMsg &&
-                        !string.IsNullOrWhiteSpace(errorMsg))
-                    {
-                        return errorMsg;
-                    }
-
-                    // 2. Errors collection (array of messages or object dictionary of arrays)
-                    if (root.TryGetProperty("errors", out var errorsProp))
-                    {
-                        var errorList = new List<string>();
-
-                        if (errorsProp.ValueKind == JsonValueKind.Array)
-                        {
-                            foreach (var item in errorsProp.EnumerateArray())
-                            {
-                                if (item.ValueKind == JsonValueKind.String && item.GetString() is { } str &&
-                                    !string.IsNullOrWhiteSpace(str))
-                                {
-                                    errorList.Add(str);
-                                }
-                                else if (item.ValueKind == JsonValueKind.Object)
-                                {
-                                    if (item.TryGetProperty("errorMessage", out var em) &&
-                                        em.GetString() is { } emStr && !string.IsNullOrWhiteSpace(emStr))
-                                    {
-                                        errorList.Add(emStr);
-                                    }
-                                    else if (item.TryGetProperty("message", out var m) && m.GetString() is { } mStr &&
-                                             !string.IsNullOrWhiteSpace(mStr))
-                                    {
-                                        errorList.Add(mStr);
-                                    }
-                                }
-                            }
-                        }
-                        else if (errorsProp.ValueKind == JsonValueKind.Object)
-                        {
-                            foreach (var prop in errorsProp.EnumerateObject())
-                            {
-                                if (prop.Value.ValueKind == JsonValueKind.Array)
-                                {
-                                    foreach (var item in prop.Value.EnumerateArray())
-                                    {
-                                        if (item.GetString() is { } msg && !string.IsNullOrWhiteSpace(msg))
-                                        {
-                                            errorList.Add(msg);
-                                        }
-                                    }
-                                }
-                                else if (prop.Value.ValueKind == JsonValueKind.String &&
-                                         prop.Value.GetString() is { } singleMsg &&
-                                         !string.IsNullOrWhiteSpace(singleMsg))
-                                {
-                                    errorList.Add(singleMsg);
-                                }
-                            }
-                        }
-
-                        if (errorList.Count > 0)
-                        {
-                            return string.Join("; ", errorList);
-                        }
-                    }
-
-                    // 3. Detail property
-                    if (root.TryGetProperty("detail", out var detailProp) && detailProp.GetString() is { } detailMsg &&
-                        !string.IsNullOrWhiteSpace(detailMsg))
-                    {
-                        return detailMsg;
-                    }
-
-                    // 4. Message property
-                    if (root.TryGetProperty("message", out var messageProp) &&
-                        messageProp.GetString() is { } messageMsg && !string.IsNullOrWhiteSpace(messageMsg))
-                    {
-                        return messageMsg;
-                    }
-
-                    // 5. Title property
-                    if (root.TryGetProperty("title", out var titleProp) && titleProp.GetString() is { } titleMsg &&
-                        !string.IsNullOrWhiteSpace(titleMsg))
-                    {
-                        return titleMsg;
-                    }
-                }
-            }
-            catch
-            {
-                return "An error occurred while processing the request.";
-            }
-        }
-
-        return ex.StatusCode switch
-        {
-            HttpStatusCode.NotFound => "The requested resource was not found.",
-            HttpStatusCode.Conflict => "A conflict occurred while processing the request.",
-            HttpStatusCode.BadRequest => "The request was invalid.",
-            _ => "An error occurred while processing the request."
-        };
+        var updated = await _budgetTrackerApi.SetDataSourceAsync(request, cancellationToken);
+        return Json(updated);
     }
 }

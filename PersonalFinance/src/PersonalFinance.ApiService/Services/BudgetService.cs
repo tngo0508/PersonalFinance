@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.ApiService.Services;
 

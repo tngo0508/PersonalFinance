@@ -167,29 +167,43 @@
          * @param {number} id - Notification ID.
          * @returns {void}
          */
-        function markAsRead (id) {
-            fetch('/api/Notification/' + id + '/read', { method: 'POST' })
-                .then(function () {
-                    loadUnreadCount();
-                })
-                .catch(function () {
-                    // Silently fail
-                });
+        async function markAsRead (id) {
+            try {
+                await postNotificationAction('/api/Notification/' + id + '/read');
+                loadUnreadCount();
+            } catch {
+                // Silently fail
+            }
         }
 
         /**
          * Mark all notifications as read.
          * @returns {void}
          */
-        function markAllRead () {
-            fetch('/api/Notification/mark-all-read', { method: 'POST' })
-                .then(function () {
-                    loadUnreadCount();
-                    loadNotifications();
-                })
-                .catch(function () {
-                    // Silently fail
-                });
+        async function markAllRead () {
+            try {
+                await postNotificationAction('/api/Notification/mark-all-read');
+                loadUnreadCount();
+                loadNotifications();
+            } catch {
+                // Silently fail
+            }
+        }
+
+        /**
+         * POST a notification action with the page's antiforgery token.
+         * @param {string} url - Endpoint to call.
+         * @returns {Promise<void>}
+         */
+        async function postNotificationAction (url) {
+            const tokenMeta = document.querySelector('meta[name="__RequestVerificationToken"]');
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': tokenMeta ? tokenMeta.getAttribute('content') || '' : '' }
+            });
+            if (!response.ok) {
+                throw new Error('Notification request failed: ' + response.status);
+            }
         }
 
         /**

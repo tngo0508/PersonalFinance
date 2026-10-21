@@ -1,22 +1,23 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.SavingsGoals;
 
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Savings Goals feature.
 /// Allows users to create, update, and delete savings goals.
-/// All data persistence is delegated to the ApiService via the IPersonalFinanceApi Refit client.
+/// All data persistence is delegated to the ApiService via the ISavingsGoalsApi Refit client.
 /// </summary>
 [Authorize]
 public class SavingsGoalsController : Controller
 {
-    private readonly IPersonalFinanceApi _personalFinanceApi;
+    private readonly ISavingsGoalsApi _savingsGoalsApi;
 
-    public SavingsGoalsController(IPersonalFinanceApi personalFinanceApi)
+    public SavingsGoalsController(ISavingsGoalsApi savingsGoalsApi)
     {
-        _personalFinanceApi = personalFinanceApi;
+        _savingsGoalsApi = savingsGoalsApi;
     }
 
     /// <summary>
@@ -27,7 +28,7 @@ public class SavingsGoalsController : Controller
     {
         try
         {
-            var goals = await _personalFinanceApi.GetSavingsGoalsAsync(cancellationToken);
+            var goals = await _savingsGoalsApi.GetSavingsGoalsAsync(cancellationToken);
             ViewData["Goals"] = goals;
         }
         catch
@@ -54,7 +55,7 @@ public class SavingsGoalsController : Controller
         if (string.IsNullOrWhiteSpace(name) || targetAmount <= 0)
         {
             ModelState.AddModelError("", "Please enter a goal name and a valid target amount.");
-            var goals = await _personalFinanceApi.GetSavingsGoalsAsync(cancellationToken);
+            var goals = await _savingsGoalsApi.GetSavingsGoalsAsync(cancellationToken);
             ViewData["Goals"] = goals;
             return View("Index");
         }
@@ -70,13 +71,13 @@ public class SavingsGoalsController : Controller
 
         try
         {
-            await _personalFinanceApi.CreateSavingsGoalAsync(request, cancellationToken);
+            await _savingsGoalsApi.CreateSavingsGoalAsync(request, cancellationToken);
             TempData["Success"] = "Savings goal created!";
         }
         catch (Exception ex)
         {
             ModelState.AddModelError("", $"Failed to create goal: {ex.Message}");
-            var goals = await _personalFinanceApi.GetSavingsGoalsAsync(cancellationToken);
+            var goals = await _savingsGoalsApi.GetSavingsGoalsAsync(cancellationToken);
             ViewData["Goals"] = goals;
             return View("Index");
         }
@@ -103,7 +104,7 @@ public class SavingsGoalsController : Controller
 
         try
         {
-            await _personalFinanceApi.UpdateSavingsGoalAsync(id, request, cancellationToken);
+            await _savingsGoalsApi.UpdateSavingsGoalAsync(id, request, cancellationToken);
             TempData["Success"] = "Goal updated!";
         }
         catch (Exception ex)
@@ -125,7 +126,7 @@ public class SavingsGoalsController : Controller
     {
         try
         {
-            await _personalFinanceApi.DeleteSavingsGoalAsync(id, cancellationToken);
+            await _savingsGoalsApi.DeleteSavingsGoalAsync(id, cancellationToken);
             TempData["Success"] = "Goal deleted.";
         }
         catch (Exception ex)

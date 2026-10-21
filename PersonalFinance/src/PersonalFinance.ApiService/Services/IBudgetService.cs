@@ -1,4 +1,5 @@
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.ApiService.Services;
 

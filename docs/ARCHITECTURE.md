@@ -76,7 +76,7 @@ Responsibilities per step:
 
 | Step | Owns | Never does |
 |---|---|---|
-| Web controller (`Web/Controllers/`) | Builds view models, returns views or JSON, `[ValidateAntiForgeryToken]` on form posts. | Business rules, EF Core access, injecting ApiService Services. |
+| Web controller (`Web/Controllers/`) | Builds view models, returns views or JSON, `[ValidateAntiForgeryToken]` on form posts. JSON actions carry `[JsonApiErrors]` instead of try/catch; view actions show their own error message. | Business rules, EF Core access, injecting ApiService Services, showing raw ApiService responses or exception messages. |
 | Refit Contract (`Shared/Contracts/`) | The HTTP shape between Web and ApiService. | Logic. |
 | ApiService controller (`ApiService/Controllers/`) | Binding, calling a Validator, delegating to one Service, mapping results to status codes. | Business rules or queries. |
 | Validator (`ApiService/Validators/`) | FluentValidation rules for one request DTO. | Database access. |
@@ -132,6 +132,9 @@ Follow the existing Budget Tracker feature as the reference implementation.
 6. **Refit Contract** in `PersonalFinance.Shared/Contracts/I<Feature>Api.cs`; add one line to `AddInternalApiClients` in
    `Web/Infrastructure/InternalApiClientExtensions.cs` (`Web/InternalApiClientRegistrationTests` fails if you forget).
 7. **Web controller, view model and Razor view** in `PersonalFinance.Web/`; JavaScript in `wwwroot/js/<feature>/`.
+   JavaScript only calls Web: a `fetch('/api/X...')` needs a Web controller routed at `api/X` with `[Authorize]` and
+   `[JsonApiErrors]` (`Web/WebApiRouteTests` checks this), and state-changing calls send the
+   `RequestVerificationToken` header from the layout's `__RequestVerificationToken` meta tag.
 8. **Tests** in `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/`.
 9. Bump `AppVersion` and add a `CHANGELOG.md` entry (see [`CONTRIBUTING.md`](../CONTRIBUTING.md)).
 

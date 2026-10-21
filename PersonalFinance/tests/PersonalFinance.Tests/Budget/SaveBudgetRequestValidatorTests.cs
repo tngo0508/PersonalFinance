@@ -1,5 +1,6 @@
 using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.Tests.Budget;
 
