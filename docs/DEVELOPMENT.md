@@ -32,14 +32,16 @@ The solution uses a Clean Architecture pattern integrated with **.NET Aspire**:
 ```
 PersonalFinanceApp/
 ├── PersonalFinance.sln                      # Solution configuration
-├── PersonalFinance.db                       # Shared SQLite database (git-ignored)
 ├── CHANGELOG.md                             # Release changelog
 ├── README.md                                # General project documentation
 ├── docs/
+│   ├── ARCHITECTURE.md                      # Projects, request flow, feature checklist
 │   ├── DEVELOPMENT.md                       # Developer guidelines (this document)
 │   ├── deployment.md                        # Deployment guide
 │   └── IDENTITY_SCHEMA.md                   # Identity schema documentation
 └── PersonalFinance/
+    ├── Directory.Build.props                # Shared build settings and analyzers
+    ├── Directory.Packages.props             # Central NuGet package versions
     ├── src/
     │   ├── PersonalFinance.AppHost/         # .NET Aspire orchestrator & dashboard
     │   ├── PersonalFinance.ServiceDefaults/ # Aspire telemetry, health checks & resilience
@@ -59,9 +61,9 @@ PersonalFinanceApp/
 | `PersonalFinance.ServiceDefaults` | Shared OpenTelemetry metrics, distributed tracing, health endpoints (`/health`, `/alive`), and HTTP resilience. | OpenTelemetry, Polly |
 | `PersonalFinance.Web` | Frontend web UI, Identity, file explorer, budget reports, transactions viewer, net worth projections. | MVC, Razor Pages, Identity, Bootstrap 5, Chart.js, Refit |
 | `PersonalFinance.ApiService` | Backend REST API: Google Drive integration, budget reports, transactions, net worth projections, OpenAPI & Scalar docs (`/scalar/v1`). | ASP.NET Core Controllers, Scalar |
-| `PersonalFinance.Data` | EF Core persistence with provider-specific migrations (SQLite + SQL Server/Azure SQL), Identity stores, Data Protection keys. | EF Core 10, SQLite, SQL Server |
+| `PersonalFinance.Data` | EF Core persistence with Azure SQL migrations, Identity stores, Data Protection keys. InMemory provider for tests and CI e2e. | EF Core 10, SQL Server |
 | `PersonalFinance.Shared` | Shared DTOs, API interfaces (`IGoogleDriveApi`, `INetWorthApi`), parsing algorithms (`GoogleDriveHelper`), AES-256 helpers. | Refit, System.Security.Cryptography |
-| `PersonalFinance.Tests` | Automated unit and integration test suite (104+ tests). | xUnit, Moq, FluentAssertions |
+| `PersonalFinance.Tests` | Automated unit and integration test suite (500+ tests). | xUnit, EF Core InMemory |
 
 ---
 
@@ -235,7 +237,7 @@ To interact with Google Drive folders without entering a key in the web interfac
 dotnet user-secrets set "GoogleDrive:ApiKey" "<YOUR_GOOGLE_API_KEY>" --project PersonalFinance/src/PersonalFinance.ApiService
 ```
 
-*Note: Individual users can also supply and save their own API key via `/GoogleDrive`, where it is AES-256 encrypted before being persisted into SQLite.*
+*Note: Individual users can also supply and save their own API key via `/GoogleDrive`, where it is AES-256 encrypted before being persisted to the database.*
 
 ---
 
@@ -421,7 +423,7 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<serve
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server-name>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.ApiService
 ```
 
-*Note: For standard local SQLite development, no User Secrets are needed; `DatabasePathHelper` automatically resolves `"Data Source=PersonalFinance.db"` dynamically to the root repository folder.*
+*Note: To try the UI without a database, use `InMemory:Dev` as the connection string for both projects (see "Database Providers" in section 5). Data is lost on restart.*
 
 #### 2. Design-Time EF Core CLI Tooling (`AppDbContextFactory`)
 Design-time tools (like `dotnet ef migrations add` and `dotnet ef database update`) resolve the database connection string using `DesignTimeDbContextFactoryHelper.ResolveConnectionString()`:
@@ -488,31 +490,18 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 ### ASP.NET Core Identity Schema Documentation
 For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetRoleClaims`, `AspNetUserLogins`, `AspNetUserTokens`), foreign key relationships, and integration with application tables (`GoogleDriveConnections`, `GoogleDriveCachedFiles`, `DataProtectionKeys`), see [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md).
 
-### Environment-Driven Database Provider Switching
-The application supports both **Microsoft Azure SQL Database (Basic tier, ~$5/month)** (primary production path) and **SQLite** (local dev or Azure Files mounted volume fallback):
-- **Automatic Detection**: If the connection string contains SQL Server indicators (`Server=`, `database.windows.net`, `Data Source=tcp:`, `Initial Catalog=`, etc.), `DatabaseProviderHelper` automatically selects the `SqlServer` provider with exponential backoff connection resilience (`EnableRetryOnFailure`). Otherwise, it defaults to `Sqlite`.
-- **Explicit Override**: Specify `"Database:Provider": "SqlServer"` or `"Database:Provider": "Sqlite"` in configuration or set the `DATABASE_PROVIDER` environment variable.
-- **DI wiring**: `AddAppDbContext` registers `AppDbContext` with a provider-specific implementation (`SqlServerAppDbContext` or `SqliteAppDbContext`) so EF Core discovers the matching migration set at runtime.
+### Database Providers
+`DatabaseProviderHelper` (in `PersonalFinance.Data`) supports two providers:
 
-### Provider-Specific EF Core Migrations (required for Azure SQL)
-A single shared migration history is **not** used. SQLite-scaffolded migrations bake store types like `TEXT`/`INTEGER` into designers and omit `maxLength` on Identity keys; replaying them on SQL Server yields invalid `nvarchar(max)` primary keys/indexes.
-
-Instead, each provider has its own migration set and model snapshot:
-
-| Provider | Context type | Migrations folder |
+| Provider | When it is used | Migrations |
 |---|---|---|
-| SQLite | `SqliteAppDbContext` | `PersonalFinance.Data/Migrations/Sqlite` |
-| SQL Server / Azure SQL | `SqlServerAppDbContext` | `PersonalFinance.Data/Migrations/SqlServer` |
+| Azure SQL (`AzureSqlAppDbContext`) | Default for every environment. | `PersonalFinance.Data/Migrations/AzureSql` |
+| EF Core InMemory | The connection string starts with `InMemory:` (or is `:memory:`), or `Database:Provider` / the `DATABASE_PROVIDER` environment variable is `InMemory`. Used by the CI e2e job and for trying the UI without a database. | None (schema is created from the model) |
 
-Identity string keys/FKs are explicitly bounded in `AppDbContext.OnModelCreating` (`Id`/`UserId`/`RoleId` = 450, login/token providers = 128) so SQL Server scaffolding emits `nvarchar(450)` / `nvarchar(128)`.
-
-**Note:** After switching to provider-specific migrations, delete any local `PersonalFinance.db` once and let startup recreate it (migration IDs changed).
+There is no SQLite provider any more. Identity string keys/FKs are explicitly bounded in `AppDbContext.OnModelCreating` (`Id`/`UserId`/`RoleId` = 450, login/token providers = 128) so SQL Server scaffolding emits `nvarchar(450)` / `nvarchar(128)`.
 
 ### Data Protection Keyring Persistence
 To ensure authentication cookies and antiforgery tokens remain valid across container restarts and scale-to-zero cycles in Azure Container Apps, Data Protection keys are stored directly in `AppDbContext` via `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` (`DataProtectionKeys` table).
-
-### SQLite Solution-Level Path Resolution
-To avoid separate SQLite database files being created in each project subfolder during development, `DatabasePathHelper.ResolveConnectionString()` dynamically resolves `"Data Source=PersonalFinance.db"` to the root repository folder (`C:\workdir\repos\PersonalFinanceApp\PersonalFinance.db`).
 
 ### Automated Migrations & Cold-Start Resilience
 - Pending migrations and starter sample data are automatically applied on startup via `app.MigrateAndSeedDatabaseAsync()` using the active provider's migration set.
@@ -520,27 +509,20 @@ To avoid separate SQLite database files being created in each project subfolder 
 - Dedicated migration execution: Run `dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --migrate-only` or set `MIGRATE_ONLY=true` for ACA Jobs or initialization containers.
 
 ### EF Core CLI Commands
-Run all EF Core commands from the solution root. **Always pass `--context`** so the correct provider migration set is updated:
+Run all EF Core commands from the repository root. The design-time factory (`AppDbContextFactory.cs`) reads the connection string from `--connection-string`, then `ConnectionStrings__DefaultConnection`, then falls back to a local SQL Server default.
 
 ```bash
-# Add a SQLite migration
-dotnet ef migrations add <MigrationName> --context SqliteAppDbContext --output-dir Migrations/Sqlite --project PersonalFinance/src/PersonalFinance.Data
+# Add an Azure SQL migration (inspect the generated file before committing)
+dotnet ef migrations add <MigrationName> --context AzureSqlAppDbContext --output-dir Migrations/AzureSql --project PersonalFinance/src/PersonalFinance.Data
 
-# Add a SQL Server / Azure SQL migration (keep both sets in sync for schema changes)
-dotnet ef migrations add <MigrationName> --context SqlServerAppDbContext --output-dir Migrations/SqlServer --project PersonalFinance/src/PersonalFinance.Data
+# Apply migrations to a database you are authorized to change (never production without explicit approval)
+dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string "Server=...;Database=...;..."
 
-# Apply SQLite migrations
-dotnet ef database update --context SqliteAppDbContext --project PersonalFinance/src/PersonalFinance.Data
+# Generate an idempotent SQL script for review
+dotnet ef migrations script --idempotent --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -o azuresql.sql
 
-# Apply SQL Server migrations
-dotnet ef database update --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string "Server=...;Database=...;..."
-
-# Generate idempotent SQL Server script (validates nvarchar(450) keys without a live server)
-dotnet ef migrations script --idempotent --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data -o sqlserver.sql
-
-# List migrations per provider
-dotnet ef migrations list --context SqliteAppDbContext --project PersonalFinance/src/PersonalFinance.Data
-dotnet ef migrations list --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data
+# List migrations
+dotnet ef migrations list --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data
 ```
 
 ---
@@ -563,9 +545,9 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 - `BrevoEmailSenderTests`: Tests Brevo REST API dispatch, payload serialization, error responses, and HTML email assembly.
 - `EmailTemplateHelperTests`: Tests custom HTML email templates, parameter escaping, CTA button styling, and fallback URL rendering.
 - `GoogleDriveHelperTests`: Tests URL parsing, multi-sheet OpenXML budget parsing, balance extraction, category categorization, transaction parsing (`ParseXlsxTransactions`, `ParseCsvTransactions`), side-by-side table detection, Excel serial date conversion, and total row filtering.
-- `GoogleDrivePersistenceTests`: Tests SQLite connection storage, file caching, incremental sync, and AES encryption.
+- `GoogleDrivePersistenceTests`: Tests connection storage, file caching, incremental sync, and AES encryption.
 - `GoogleDriveWebControllerTests`: Tests controller actions for budget reports, transactions, error handling, and spreadsheet source resolution.
-- `DatabasePersistenceAndMigrationTests`: Provider switching, provider-specific migration sets, SQLite migrate/seed pipeline, SQL Server migration script inspection (`nvarchar(450)` keys), and Data Protection key persistence.
+- `DatabasePersistenceAndMigrationTests`: Provider switching, provider-specific migration sets, migrate/seed pipeline, SQL Server migration script inspection (`nvarchar(450)` keys), and Data Protection key persistence.
 - `ServiceDefaultsTests`: Validates OpenTelemetry providers, health check registration, and Aspire defaults.
 - `GitHubActionsDeploymentWorkflowTests`: Validates CI/CD workflow configuration including job timeouts, concurrency settings, `paths-ignore`, per-image cache scopes, deploy gating, and `promote-latest` behavior.
 - `ModelValidationConventionTests`: Fails when `[Required]` is placed on a `bool` property (it is always satisfied, so it never rejects an unchecked box).
@@ -611,7 +593,7 @@ Ensure `PersonalFinance.AppHost/Properties/launchSettings.json` specifies `DOTNE
 **Symptom:**
 Navigating to account pages or confirming email results in an error message: `Unable to load user with ID 'ac88844f-...'`.
 **Cause:**
-The browser contains an existing authentication cookie (`.AspNetCore.Identity.Application`) referencing a user ID from a previous or recreated SQLite database file (`PersonalFinance.db`).
+The browser contains an existing authentication cookie (`.AspNetCore.Identity.Application`) referencing a user ID from a previous or recreated database (for example, an `InMemory:` store after a restart).
 **Resolution:**
 1. Clear browser cookies for `localhost:7200` (or open an Incognito / Private window).
 2. Register a new user account at `/Identity/Account/Register`.
@@ -649,22 +631,7 @@ Google Drive folder returns 404 or 403 error in the explorer UI.
 
 ---
 
-### 5. SQLite Database Locked or Schema Out of Sync
-**Symptom:**
-`Microsoft.Data.Sqlite.SqliteException: SQLite Error 5: 'database is locked'.`
-**Cause:**
-Multiple processes holding write locks or active connections during intensive migrations.
-**Resolution:**
-1. Stop running instances of `PersonalFinance.AppHost`, `PersonalFinance.Web`, and `PersonalFinance.ApiService`.
-2. Apply pending migrations directly using the CLI:
-   ```bash
-   dotnet ef database update --project PersonalFinance/src/PersonalFinance.Data
-   ```
-3. Restart via `PersonalFinance.AppHost`.
-
----
-
-### 6. Google OAuth: `Error 400: redirect_uri_mismatch`
+### 5. Google OAuth: `Error 400: redirect_uri_mismatch`
 **Symptom:**
 Clicking "Continue with Google" opens a Google error page displaying:
 ```
@@ -683,7 +650,7 @@ The redirect URI sent by the application (e.g., `https://localhost:7200/signin-g
 
 ---
 
-### 7. Google Cloud Console: `Invalid Origin: URIs must not contain a path or end with "/"`
+### 6. Google Cloud Console: `Invalid Origin: URIs must not contain a path or end with "/"`
 **Symptom:**
 Google Cloud Console rejects entering a URL into the **Authorized JavaScript origins** field.
 **Cause:**
@@ -694,7 +661,7 @@ A full callback path (e.g., `/signin-google`) or a trailing slash was entered in
 
 ---
 
-### 8. External Login Button Not Appearing on Login / Register Pages
+### 7. External Login Button Not Appearing on Login / Register Pages
 **Symptom:**
 The "or continue with" divider and Google sign-in buttons are missing from `/Identity/Account/Login` and `/Identity/Account/Register`.
 **Cause:**
@@ -713,7 +680,7 @@ The application conditionally hides external login options when `Authentication:
 
 ---
 
-### 9. Google Sign-In Error: `Account with this email already exists but has not been confirmed`
+### 8. Google Sign-In Error: `Account with this email already exists but has not been confirmed`
 **Symptom:**
 Signing in with Google fails with the validation error: *"An account with this email address already exists but has not been confirmed. Please confirm your email address first."*
 **Cause:**
@@ -810,7 +777,7 @@ Deploy the full stack to Azure Container Apps:
 | `Brevo:ApiKey` | `brevo-api-key` / `Brevo__ApiKey` | Brevo REST API Key for email confirmation |
 | `Brevo:SenderEmail` | `Brevo__SenderEmail` | Brevo verified sender email |
 | `GoogleDrive:ApiKey` | `google-drive-api-key` / `GoogleDrive__ApiKey` | Google Drive API v3 public folder access |
-| `ConnectionStrings:DefaultConnection` | `db-connection-string` / `ConnectionStrings__DefaultConnection` | Azure SQL or SQLite connection string |
+| `ConnectionStrings:DefaultConnection` | `db-connection-string` / `ConnectionStrings__DefaultConnection` | Azure SQL connection string |
 | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` | Forwarded headers for SSL termination behind ACA ingress |
 
 ---
@@ -858,7 +825,7 @@ Configure the following secrets in GitHub Repository Settings &rarr; **Secrets a
 | `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 Client Secret | `GOCSPX-...` |
 | `BREVO_API_KEY` | Brevo REST API Key for email verification | `xkeysib-...` |
 | `GOOGLE_DRIVE_API_KEY` | Google Drive API v3 Key | `AIzaSy...` |
-| `CUSTOM_CONNECTION_STRING` | *(Optional)* Connection string for external DB / mounted SQLite | `Data Source=tcp:sqlserver...` |
+| `CUSTOM_CONNECTION_STRING` | *(Optional)* Connection string for an external database | `Data Source=tcp:sqlserver...` |
 | `SQL_ADMIN_PASSWORD` | *(Optional)* Password for Azure SQL Basic tier | `P@ssw0rd12345!` |
 
 #### Repository Variables (`vars.*`)
@@ -948,9 +915,9 @@ Endpoints validated:
 
 #### 1. Google Drive Folder Exploration & Caching Flow
 1. **User Connection**: Authenticated user submits a Google Drive folder link or ID and API key on `/GoogleDrive`.
-2. **Security & Persistence**: The connection configuration is encrypted via `CredentialProtector` (AES-256) and saved in SQLite (`GoogleDriveConnection`).
+2. **Security & Persistence**: The connection configuration is encrypted via `CredentialProtector` (AES-256) and saved in the database (`GoogleDriveConnection`).
 3. **Fetching & Caching**: `PersonalFinance.ApiService` queries Google Drive API v3, normalizes metadata (size, MIME category, timestamps), and persists records to `GoogleDriveCachedFile`.
-4. **Subsequent Access**: On repeat visits, metadata is served immediately from the local SQLite cache without triggering external API calls, providing near-instant page loads.
+4. **Subsequent Access**: On repeat visits, metadata is served immediately from the database cache without triggering external API calls, providing near-instant page loads.
 5. **Incremental Sync**: The manual "Sync / Refresh" button detects new, updated, or removed files, updating only changed records.
 
 #### 2. Monthly Budget Report & Analytics Flow
@@ -979,12 +946,12 @@ Endpoints validated:
 ### Detailed Feature Descriptions
 
 #### Google Drive Folder Explorer & Persistent Caching
-Allows users to connect, manage, and cache Google Drive folders with persistent SQLite storage so they only need to connect a folder once and avoid repeated API requests (`/GoogleDrive`).
-- **Persistent SQLite Storage**: Google Drive folder connections (`GoogleDriveConnection`) and file metadata (`GoogleDriveCachedFile`) are saved in SQLite.
+Allows users to connect, manage, and cache Google Drive folders with persistent database storage so they only need to connect a folder once and avoid repeated API requests (`/GoogleDrive`).
+- **Persistent Storage**: Google Drive folder connections (`GoogleDriveConnection`) and file metadata (`GoogleDriveCachedFile`) are saved in the database.
 - **Subsequent Login Auto-Loading**: Saved configurations load automatically upon login, skipping setup flows and serving cached data with zero external API calls.
 - **Multiple Drives Support**: Users can connect multiple Google Drive folders simultaneously, switch between them seamlessly, and add new drives without overwriting existing ones.
 - **Incremental Synchronization & Manual Refresh**: Smart synchronization updates modified files, inserts new items, and removes deleted files without re-downloading unchanged metadata. Users can trigger manual sync via the "Sync / Refresh" button.
-- **Credential Security & Re-authentication**: API credentials and tokens are AES-encrypted in SQLite, masked in UI outputs (`AIza...8xY2`), never logged in plaintext, and isolated by authenticated user. Expired credentials prompt an in-place re-authentication modal.
+- **Credential Security & Re-authentication**: API credentials and tokens are AES-encrypted in the database, masked in UI outputs (`AIza...8xY2`), never logged in plaintext, and isolated by authenticated user. Expired credentials prompt an in-place re-authentication modal.
 - **Universal URL Parsing**: Supports standard folder URLs, shortened/view URLs, and raw folder IDs via `GoogleDriveHelper`.
 - **Interactive DataTables & Grid Views**: Real-time category filtering (Sheets, Docs, PDFs, Images, Slides, Folders), sorting by name, size (raw byte sorting), creation/modification dates, and pagination.
 - **Direct Access**: Clickable links to open files/folders directly in Google Drive, plus quick clipboard copy actions.
@@ -1077,125 +1044,6 @@ dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web
 
 ---
 
-### Database Configuration (SQLite)
-
-The application uses **SQLite** as its lightweight, zero-configuration database engine.
-
-- **Unified Solution Database**: During local development, all projects (`ApiService`, `Web`, and EF Core CLI tooling) dynamically resolve the database file to the **solution root** (`PersonalFinance.db`) via `DatabasePathHelper.ResolveConnectionString()`. This prevents fragmented, duplicate databases from forming inside individual project subfolders.
-- **Connection String**: `"Data Source=PersonalFinance.db"` configured in `appsettings.json`.
-- **Automatic Migration**: When running in `Development` mode, both `ApiService` and `Web` automatically apply pending migrations on startup via `db.Database.Migrate()`.
-
-#### Git & Database File Exclusions
-
-SQLite database instances (`*.db`, `*.sqlite`, `*.db-wal`, `*.db-shm`) are excluded from Git version control via `.gitignore`.
-- **Reasoning**: SQLite database files are binary, causing repository bloat and merge conflicts. Additionally, committing database files risks exposing sensitive authentication credentials or user data.
-- **Workflow**: Schema definitions and migrations are tracked in source code (`PersonalFinance.Data/Migrations/`), enabling reproducible database instances across environments.
-
----
-
-### Entity Framework Core Code-First Workflow (Legacy SQLite-Only)
-
-> **Note**: This section documents the original SQLite-only Code-First workflow. The current project uses provider-specific migrations (SQLite + SQL Server). See Section 5 above for the current workflow.
-
-The project follows the **Code-First** approach: database schemas are defined in C# models and evolved using EF Core Migrations.
-
-#### 1. Prerequisites (One-Time Setup)
-
-Install or update the EF Core command-line global tool:
-
-```bash
-dotnet tool install --global dotnet-ef
-# Or update if already installed:
-dotnet tool update --global dotnet-ef
-```
-
-#### 2. Design-Time DbContext Factory
-
-To streamline CLI operations across multi-project architectures, `PersonalFinance.Data` includes an `IDesignTimeDbContextFactory<AppDbContext>` (`AppDbContextFactory.cs`). This allows running EF Core commands directly against the data project without having to specify `--startup-project`.
-
-#### 3. Step-by-Step Code-First Workflow
-
-##### Step A: Define or Update Entity Models
-Create or modify entity classes under `PersonalFinance/src/PersonalFinance.Data/Entities/`:
-
-```csharp
-namespace PersonalFinance.Data.Entities;
-
-public class Transaction
-{
-    public int Id { get; set; }
-    public string Description { get; set; } = string.Empty;
-    public decimal Amount { get; set; }
-    public DateTime DateUtc { get; set; }
-    public string Category { get; set; } = string.Empty;
-}
-```
-
-##### Step B: Register Entities in `AppDbContext`
-Add the corresponding `DbSet<T>` and configure constraints inside `PersonalFinance/src/PersonalFinance.Data/AppDbContext.cs`:
-
-```csharp
-public DbSet<Transaction> Transactions => Set<Transaction>();
-
-protected override void OnModelCreating(ModelBuilder modelBuilder)
-{
-    base.OnModelCreating(modelBuilder);
-
-    modelBuilder.Entity<Transaction>(entity =>
-    {
-        entity.HasKey(t => t.Id);
-        entity.Property(t => t.Description).IsRequired().HasMaxLength(250);
-        entity.Property(t => t.Amount).HasPrecision(18, 2);
-        entity.HasIndex(t => t.DateUtc);
-    });
-}
-```
-
-##### Step C: Add a Migration
-Generate a new migration by running the following command from the repository root:
-
-```bash
-dotnet ef migrations add <DescriptiveMigrationName> --project PersonalFinance/src/PersonalFinance.Data
-```
-
-*Example:*
-```bash
-dotnet ef migrations add AddTransactionEntity --project PersonalFinance/src/PersonalFinance.Data
-```
-
-This generates C# migration files under `PersonalFinance/src/PersonalFinance.Data/Migrations/`.
-
-##### Step D: Apply Migration to Database
-Apply pending migrations to the SQLite database:
-
-```bash
-dotnet ef database update --project PersonalFinance/src/PersonalFinance.Data
-```
-
-Alternatively, launching `PersonalFinance.ApiService` or `PersonalFinance.Web` in `Development` mode will automatically apply migrations via `db.Database.Migrate()`.
-
-#### 4. Working with JetBrains Rider EF Core Tools
-
-If using JetBrains Rider:
-1. Open the **Entity Framework Core** tool window.
-2. Set **Migrations project**: `PersonalFinance.Data`.
-3. Set **Startup project**: `PersonalFinance.ApiService` (or `PersonalFinance.Web`).
-4. Set **DbContext class**: `AppDbContext`.
-5. Execute **Add Migration** or **Update Database** directly from the IDE UI.
-
-#### 5. Common EF Core CLI Commands Reference
-
-| Action | Command |
-|---|---|
-| **Add New Migration** | `dotnet ef migrations add <Name> --project PersonalFinance/src/PersonalFinance.Data` |
-| **Apply All Migrations** | `dotnet ef database update --project PersonalFinance/src/PersonalFinance.Data` |
-| **Rollback to Specific Migration** | `dotnet ef database update <TargetMigrationName> --project PersonalFinance/src/PersonalFinance.Data` |
-| **Remove Last Unapplied Migration** | `dotnet ef migrations remove --project PersonalFinance/src/PersonalFinance.Data` |
-| **Generate SQL Script** | `dotnet ef migrations script --project PersonalFinance/src/PersonalFinance.Data -o migration.sql` |
-| **List Migrations** | `dotnet ef migrations list --project PersonalFinance/src/PersonalFinance.Data` |
-
----
-
 ### Running the Application (Detailed)
 
 #### Run via .NET Aspire AppHost (Recommended)
@@ -1229,7 +1077,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 ### Security, Resilience & Observability (Detailed)
 
 - **Secrets Management**: Sensitive credentials (such as Brevo email API keys and Google Drive API keys) are kept out of source control using `.NET User Secrets` during development.
-- **Credential Encryption**: User-submitted Google API keys are encrypted using AES-256 (`CredentialProtector`) prior to SQLite persistence and masked (`AIza...8xY2`) in UI outputs.
+- **Credential Encryption**: User-submitted Google API keys are encrypted using AES-256 (`CredentialProtector`) prior to persistence and masked (`AIza...8xY2`) in UI outputs.
 - **Identity & Email Verification**: User authentication is enforced via ASP.NET Core Identity with mandatory email verification (`RequireConfirmedAccount = true`) delivered via Brevo REST API and responsive HTML templates.
 - **Resilience Pipelines**: Outgoing HTTP calls to `ApiService` and external Google APIs leverage `Microsoft.Extensions.Http.Resilience` for automatic exponential backoff, retry handling, and circuit breakers.
 - **Logging**: Structured, high-contrast logging configured across all services via Serilog and `AnsiConsoleTheme.Code`.

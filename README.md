@@ -6,6 +6,7 @@
 
 A modular, multi-tier personal finance management application built on **.NET 10** with a **layered architecture** and **.NET Aspire**. Connect Google Drive folders, analyze budget spreadsheets, and plan for financial independence — all from a responsive, self-hosted web interface.
 
+> **New contributor?** Start with [CONTRIBUTING.md](CONTRIBUTING.md), then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).  
 > **Developer Guide**: Local setup, secrets management, EF Core migrations, OAuth configuration, and troubleshooting — see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).  
 > **Deployment Guide**: Azure Container Apps, Docker, CI/CD pipelines, and Infrastructure as Code — see [docs/deployment.md](docs/deployment.md).  
 > **Changelog**: Version history and release notes — see [CHANGELOG.md](CHANGELOG.md).
@@ -62,17 +63,18 @@ The solution follows a **layered architecture** pattern with clear separation of
 
 1. **UI Layer** (`PersonalFinance.Web`) — MVC controllers, Razor views, Identity, and UI-specific services. Communicates with the API via typed Refit clients.
 2. **API Service Layer** (`PersonalFinance.ApiService`) — REST API endpoints, business logic, and service implementations. Uses direct service injection via built-in .NET DI.
-3. **Data Layer** (`PersonalFinance.Data`) — EF Core `ApplicationDbContext`, entity definitions, and migrations.
+3. **Data Layer** (`PersonalFinance.Data`) — EF Core `AppDbContext`, entity definitions, and migrations.
 4. **Shared Layer** (`PersonalFinance.Shared`) — DTOs, Refit API contracts, constants, and shared utilities referenced by all layers.
 
 ### Dependency Flow
 
 ```
-PersonalFinance.Web  ──depends on──>  PersonalFinance.ApiService  ──depends on──>  PersonalFinance.Data
-         │                                    │                                    ▲
-         └──────── depends on ────────────────┘                                    │
-              PersonalFinance.Shared  ──referenced by all layers───────────────────┘
+PersonalFinance.Web  ──HTTP (Refit)──>  PersonalFinance.ApiService  ──references──>  PersonalFinance.Data
+PersonalFinance.Shared  ── referenced by every project (DTOs, Refit contracts, constants)
 ```
+
+Web references `PersonalFinance.Data` only for ASP.NET Core Identity and consent records. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the request flow and where new code goes.
 
 ### Key Principles
 
@@ -88,7 +90,7 @@ PersonalFinance.Web  ──depends on──>  PersonalFinance.ApiService  ──
 |---|---|
 | `PersonalFinance.Web` | UI layer — MVC controllers, Razor views, Bootstrap/Chart.js frontend, Refit API clients |
 | `PersonalFinance.ApiService` | API layer — REST endpoints, business logic services, validators, direct DI |
-| `PersonalFinance.Data` | Data layer — EF Core `ApplicationDbContext`, entities, Azure SQL migrations |
+| `PersonalFinance.Data` | Data layer — EF Core `AppDbContext`, entities, Azure SQL migrations |
 | `PersonalFinance.Shared` | Shared — DTOs, Refit contracts, constants, cross-cutting utilities |
 | `PersonalFinance.AppHost` | .NET Aspire orchestrator — service discovery, telemetry, dashboard (local dev) |
 | `PersonalFinance.ServiceDefaults` | Shared defaults — OpenTelemetry, health checks, HTTP resilience |
@@ -104,6 +106,8 @@ For the rationale behind key design choices, see:
 
 - [ADR-0001](docs/adr/0001-standardize-cqrs-feature-organization.md) — Direct service injection over MediatR/CQRS; permissive license policy
 - [ADR-0002](docs/adr/0002-budget-tracker-separate-from-spreadsheet-data.md) — Budget Tracker data stored in separate entities
+- [ADR-0003](docs/adr/0003-networth-reset-randomize-frontend-only.md) — Net Worth Reset and Randomize are frontend-only
+- [ADR-0004](docs/adr/0004-rbac-roles-from-database-and-policy-checks.md) — RBAC: roles read from the database, code checks policies
 
 For detailed setup instructions, secrets management, and EF Core migrations, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
 
@@ -120,8 +124,8 @@ For detailed setup instructions, secrets management, and EF Core migrations, see
 
 ```bash
 # Clone the repository
-git clone https://github.com/tngo0508/PersonalFinanceApp.git
-cd PersonalFinanceApp
+git clone https://github.com/tngo0508/PersonalFinance.git
+cd PersonalFinance
 
 # Configure user secrets (required for database and API access)
 # See docs/DEVELOPMENT.md for detailed setup instructions
@@ -157,7 +161,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.AppHost
 | **Containerization** | Multi-stage Dockerfiles, chiseled non-root images |
 | **CI/CD** | GitHub Actions, GHCR, Azure OIDC (passwordless) |
 | **Infrastructure** | Azure Bicep IaC, Container Apps (Consumption, scale-to-zero) |
-| **Testing** | xUnit, Moq, FluentAssertions (104+ tests) |
+| **Testing** | xUnit with EF Core InMemory (500+ tests), Playwright e2e |
 
 ---
 
@@ -193,10 +197,10 @@ For complete deployment instructions, see [**docs/deployment.md**](docs/deployme
 
 ```bash
 # Run all tests
-dotnet test
+dotnet test PersonalFinance.sln
 
 # Run with detailed output
-dotnet test --logger "console;verbosity=normal"
+dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 ```
 
 The test suite covers URL parsing, MIME type resolution, budget CSV analytics, persistence caching, controller actions, external authentication, email templates, service defaults, and CI/CD pipeline validation.
@@ -206,12 +210,7 @@ The test suite covers URL parsing, MIME type resolution, budget CSV analytics, p
 ## Contributing
 
 Contributions are welcome. For significant changes, open an issue first to discuss the proposed approach.
-
-1. Fork the repository.
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes: `git commit -m "Add my feature"`
-4. Push to the branch: `git push origin feature/my-feature`
-5. Open a Pull Request against the `main` branch.
+Setup, verification commands and the pull request checklist are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
