@@ -184,14 +184,14 @@ try
 
     // 10. Root Info & Version Endpoint (Instant Runtime Verification)
     app.MapGet("/", () => Results.Ok(new
-        {
-            Application = AppVersion.ApplicationName,
-            Version = AppVersion.Current,
-            FullVersion = AppVersion.FullVersion,
-            Environment = app.Environment.EnvironmentName,
-            Status = "Online",
-            TimestampUtc = DateTime.UtcNow
-        }))
+    {
+        Application = AppVersion.ApplicationName,
+        Version = AppVersion.Current,
+        FullVersion = AppVersion.FullVersion,
+        Environment = app.Environment.EnvironmentName,
+        Status = "Online",
+        TimestampUtc = DateTime.UtcNow
+    }))
         .WithName("GetVersionInfo")
         .WithSummary("Returns current API service version and runtime status")
         .WithTags("System");

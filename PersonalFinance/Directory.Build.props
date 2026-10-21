@@ -1,0 +1,21 @@
+<Project>
+  <!--
+    Shared MSBuild settings for every project under PersonalFinance/.
+    Project files only declare what is specific to them (SDK, references, UserSecretsId, ...).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Code-quality analyzers and .editorconfig style rules run during build. -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!--
+      Warnings do not fail the build yet. Once the existing warning count reaches zero,
+      enable this in CI with: dotnet build -p:EnforceWarningsAsErrors=true
+    -->
+    <TreatWarningsAsErrors Condition="'$(EnforceWarningsAsErrors)' == 'true'">true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

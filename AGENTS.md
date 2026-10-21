@@ -12,6 +12,7 @@ Short, always-loaded rules for AI agents. The full detail lives in [`docs/CODING
 ## Read first
 
 - [`GLOSSARY.md`](GLOSSARY.md) — canonical terms (Service, DTO, Entity) and domain concepts.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — request flow, identity flow, and the add-a-feature checklist.
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records.
 - `PersonalFinance/tests/PersonalFinance.Tests/` — xUnit tests using `UseInMemoryDatabase`. Add tests here, following existing patterns (e.g. `DashboardServiceTests.cs`).
 
