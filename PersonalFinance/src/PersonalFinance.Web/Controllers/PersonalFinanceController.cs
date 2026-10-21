@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs;
 
@@ -29,13 +29,6 @@ public class PersonalFinanceController : ControllerBase
         _logger = logger;
     }
 
-    private string GetCurrentUserId()
-    {
-        return User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.Identity?.Name
-               ?? "default-user";
-    }
-
     // =========================================================================
     // Savings Goals
     // =========================================================================
@@ -53,7 +46,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting savings goals for user {UserId}", GetCurrentUserId());
+            _logger.LogError(ex, "Error getting savings goals for user {UserId}", User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to load savings goals." });
         }
     }
@@ -71,7 +64,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating savings goal for user {UserId}", GetCurrentUserId());
+            _logger.LogError(ex, "Error creating savings goal for user {UserId}", User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to create goal." });
         }
     }
@@ -93,7 +86,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating savings goal {GoalId} for user {UserId}", id, GetCurrentUserId());
+            _logger.LogError(ex, "Error updating savings goal {GoalId} for user {UserId}", id, User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to update goal." });
         }
     }
@@ -115,7 +108,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting savings goal {GoalId} for user {UserId}", id, GetCurrentUserId());
+            _logger.LogError(ex, "Error deleting savings goal {GoalId} for user {UserId}", id, User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to delete goal." });
         }
     }
@@ -137,7 +130,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting watchlist for user {UserId}", GetCurrentUserId());
+            _logger.LogError(ex, "Error getting watchlist for user {UserId}", User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to load watchlist." });
         }
     }
@@ -155,7 +148,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving article for user {UserId}", GetCurrentUserId());
+            _logger.LogError(ex, "Error saving article for user {UserId}", User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to save article." });
         }
     }
@@ -177,7 +170,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing article {ArticleId} for user {UserId}", id, GetCurrentUserId());
+            _logger.LogError(ex, "Error removing article {ArticleId} for user {UserId}", id, User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to remove article." });
         }
     }
@@ -195,7 +188,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking article saved status for user {UserId}", GetCurrentUserId());
+            _logger.LogError(ex, "Error checking article saved status for user {UserId}", User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to check article status." });
         }
     }
@@ -217,7 +210,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting budget for period {Period} and user {UserId}", period, GetCurrentUserId());
+            _logger.LogError(ex, "Error getting budget for period {Period} and user {UserId}", period, User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to load budget." });
         }
     }
@@ -235,7 +228,7 @@ public class PersonalFinanceController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving budget for user {UserId}", GetCurrentUserId());
+            _logger.LogError(ex, "Error saving budget for user {UserId}", User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to save budget." });
         }
     }

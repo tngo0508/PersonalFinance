@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using PersonalFinance.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
@@ -38,7 +38,7 @@ public class SpreadsheetAnalysisController : ControllerBase
         [FromQuery] int? month,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         var availableYears = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
         var activeSource = await _analysisService.GetActiveSourceAsync(userId, cancellationToken);
 
@@ -88,7 +88,7 @@ public class SpreadsheetAnalysisController : ControllerBase
         [FromBody] SyncSpreadsheetRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         _logger.LogInformation("User {UserId} requested sync for spreadsheet {FileId}", userId, request.FileId);
 
         var result = await _analysisService.SyncSpreadsheetBudgetAsync(userId, request.ConnectionId, request.FileId,
@@ -117,7 +117,7 @@ public class SpreadsheetAnalysisController : ControllerBase
     [HttpGet("years")]
     public async Task<IActionResult> GetAvailableYears(CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         var years = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
         return Ok(years);
     }
@@ -128,16 +128,9 @@ public class SpreadsheetAnalysisController : ControllerBase
     [HttpGet("months/{year}")]
     public async Task<IActionResult> GetAvailableMonths(int year, CancellationToken cancellationToken = default)
     {
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         var months = await _analysisService.GetAvailableMonthsAsync(userId, year, cancellationToken);
         return Ok(months);
-    }
-
-    private string GetCurrentUserId()
-    {
-        return User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.Identity?.Name
-               ?? "default-user";
     }
 
     /// <summary>
@@ -157,7 +150,7 @@ public class SpreadsheetAnalysisController : ControllerBase
             return BadRequest("fileId or fileName is required.");
         }
 
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         var report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
             fileId, fileName, connectionId, userId, cancellationToken);
         return Ok(report);
@@ -180,7 +173,7 @@ public class SpreadsheetAnalysisController : ControllerBase
             return BadRequest("fileId is required.");
         }
 
-        var userId = GetCurrentUserId();
+        var userId = User.GetUserId();
         var transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
             fileId, fileName, connectionId, userId, cancellationToken);
         return Ok(transactions);

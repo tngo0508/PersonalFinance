@@ -23,9 +23,9 @@ public interface IDriveConnectionService
     Task<GoogleDriveFolderResponseDto> GetConnectionFilesAsync(int connectionId, string userId, bool forceRefresh = false, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Connects and persists a new or existing Google Drive folder connection.
+    /// Connects and persists a new or existing Google Drive folder connection owned by <paramref name="userId"/>.
     /// </summary>
-    Task<GoogleDriveConnectionDto> ConnectDriveAsync(ConnectGoogleDriveRequestDto request, CancellationToken cancellationToken = default);
+    Task<GoogleDriveConnectionDto> ConnectDriveAsync(string userId, ConnectGoogleDriveRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Synchronizes a connected Google Drive folder with database cache incrementally.

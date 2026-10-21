@@ -1,8 +1,8 @@
-using System.Security.Claims;
 using System.Net;
 using ApiException = Refit.ApiException;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
@@ -29,13 +29,6 @@ public class AiAssistantController : ControllerBase
     {
         _aiAssistantApi = aiAssistantApi;
         _logger = logger;
-    }
-
-    private string GetCurrentUserId()
-    {
-        return User.FindFirstValue(ClaimTypes.NameIdentifier)
-               ?? User.Identity?.Name
-               ?? "default-user";
     }
 
     /// <summary>
@@ -65,7 +58,7 @@ public class AiAssistantController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error sending chat message to AI assistant for user {UserId}", GetCurrentUserId());
+            _logger.LogError(ex, "Error sending chat message to AI assistant for user {UserId}", User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway,
                 new { error = "Failed to get response from AI assistant." });
         }
@@ -95,7 +88,7 @@ public class AiAssistantController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error summarizing news article for user {UserId}", GetCurrentUserId());
+            _logger.LogError(ex, "Error summarizing news article for user {UserId}", User.GetUserId());
             return StatusCode(StatusCodes.Status502BadGateway, new { error = "Failed to generate summary." });
         }
     }

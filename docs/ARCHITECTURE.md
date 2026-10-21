@@ -83,15 +83,21 @@ There is no mediator: ApiService controllers inject Service interfaces directly
 ## Identity: how an Account reaches ApiService
 
 1. The browser signs in to Web with ASP.NET Core Identity (cookie).
-2. `Web/Services/UserIdForwardingHandler.cs` is attached to Refit clients in `Web/Program.cs`. It adds the Account id as
-   `X-User-Id` and the shared secret as `X-Internal-Key` to every outgoing call.
+2. `Web/Services/UserIdForwardingHandler.cs` is attached to every Refit client in `Web/Program.cs`. It adds the signed-in
+   Account id as `X-User-Id` (nothing for signed-out visitors) and the shared secret as `X-Internal-Key`.
 3. `ApiService/Infrastructure/XUserIdAuthenticationHandler.cs` checks the shared secret, loads the Account's Roles from
    the Identity tables, and builds a `ClaimsPrincipal`.
-4. Controllers marked `[Authorize]` read the Account id from `User` (`ClaimTypes.NameIdentifier`). Admin endpoints use
+4. Every ApiService controller is marked `[Authorize]` and reads the Account id with `User.GetUserId()`
+   (`PersonalFinance.Shared/Helpers/ClaimsPrincipalExtensions.cs`). Admin endpoints use
    `[Authorize(Policy = AppPolicies.RequireAdmin)]`, never Role names ([ADR 0004](adr/0004-rbac-roles-from-database-and-policy-checks.md)).
 
-New ApiService controllers must follow step 4 (see `BudgetTrackerController` for the pattern). Some older controllers
-still read the `X-User-Id` header directly; those are being moved onto the claims-based path.
+Rules for new code:
+
+- Never read the `X-User-Id` header in a controller, and never accept a user id from the query string or request body.
+  The Account always comes from `User.GetUserId()`.
+- Every ApiService controller needs `[Authorize]` (or a deliberate `[AllowAnonymous]`);
+  `Security/AccountIsolationTests` fails the build otherwise.
+- Pass the Account id into Services and filter every query by it, including lookups by id.
 
 ## Data rules
 

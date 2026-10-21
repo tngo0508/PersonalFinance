@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using PersonalFinance.Shared.Helpers;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +9,7 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// RESTful API controller for the Budget Tracker feature: monthly sheets, categories, transactions, and data source preference.
-/// All operations are isolated and scoped to the user identified via the forwarded X-User-Id header.
+/// All operations are isolated and scoped to the user identified by the authenticated Account (see XUserIdAuthenticationHandler).
 /// </summary>
 [Authorize]
 [ApiController]
@@ -46,17 +46,6 @@ public class BudgetTrackerController : ControllerBase
         _setDataSourceValidator = setDataSourceValidator;
     }
 
-    private string GetUserId()
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name;
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            throw new UnauthorizedAccessException("User identity is missing.");
-        }
-
-        return userId;
-    }
-
     /// <summary>
     /// Gets the monthly budget sheet for the specified year and month.
     /// </summary>
@@ -71,7 +60,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { error = "Invalid year or month." });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var sheet = await _budgetService.GetSheetAsync(userId, year, month, ct);
         return Ok(sheet);
     }
@@ -91,7 +80,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var sheet = await _budgetService.InitializeMonthAsync(userId, request, ct);
         return Ok(sheet);
     }
@@ -117,7 +106,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var sheet = await _budgetService.SetPlannedAsync(userId, year, month, categoryId, request, ct);
@@ -150,7 +139,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var sheet = await _budgetService.SetActualOverrideAsync(userId, year, month, categoryId, request, ct);
@@ -170,7 +159,7 @@ public class BudgetTrackerController : ControllerBase
     public async Task<IActionResult> GetCategories([FromQuery] bool includeArchived = false,
         CancellationToken ct = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var categories = await _budgetService.GetCategoriesAsync(userId, includeArchived, ct);
         return Ok(categories);
     }
@@ -191,7 +180,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var created = await _budgetService.CreateCategoryAsync(userId, request, ct);
@@ -220,7 +209,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var updated = await _budgetService.UpdateCategoryAsync(userId, id, request, ct);
@@ -248,7 +237,7 @@ public class BudgetTrackerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteCategory(int id, CancellationToken ct = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             await _budgetService.DeleteCategoryAsync(userId, id, ct);
@@ -276,7 +265,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var created = await _budgetService.CreateTransactionAsync(userId, request, ct);
@@ -308,7 +297,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var updated = await _budgetService.UpdateTransactionAsync(userId, id, request, ct);
@@ -332,7 +321,7 @@ public class BudgetTrackerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteTransaction(int id, CancellationToken ct = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             await _budgetService.DeleteTransactionAsync(userId, id, ct);
@@ -351,7 +340,7 @@ public class BudgetTrackerController : ControllerBase
     [ProducesResponseType(typeof(BudgetDataSourceDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDataSource(CancellationToken ct = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var preference = await _dataSourceService.GetDataSourcePreferenceAsync(userId, ct);
         return Ok(preference);
     }
@@ -371,7 +360,7 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var preference = await _dataSourceService.SetDataSourcePreferenceAsync(userId, request, ct);
         return Ok(preference);
     }

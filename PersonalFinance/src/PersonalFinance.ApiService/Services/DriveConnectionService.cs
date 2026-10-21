@@ -206,12 +206,13 @@ public class DriveConnectionService : IDriveConnectionService
 
     /// <inheritdoc />
     public async Task<GoogleDriveConnectionDto> ConnectDriveAsync(
+        string userId,
         ConnectGoogleDriveRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.UserId))
+        if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentException("UserId is required to connect a Google Drive.", nameof(request));
+            throw new ArgumentException("UserId is required to connect a Google Drive.", nameof(userId));
         }
 
         var folderId = GoogleDriveHelper.ExtractFolderId(request.FolderUrl);
@@ -223,7 +224,7 @@ public class DriveConnectionService : IDriveConnectionService
         // Check if connection for this user and folder already exists
         var existing = await _dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
-            .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.FolderId == folderId, cancellationToken);
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.FolderId == folderId, cancellationToken);
 
         GoogleDriveConnection connection;
 
@@ -249,7 +250,7 @@ public class DriveConnectionService : IDriveConnectionService
         {
             connection = new GoogleDriveConnection
             {
-                UserId = request.UserId,
+                UserId = userId,
                 FolderId = folderId,
                 FolderUrl = request.FolderUrl,
                 Name = !string.IsNullOrWhiteSpace(request.ConnectionName) ? request.ConnectionName.Trim() : "Google Drive Folder",

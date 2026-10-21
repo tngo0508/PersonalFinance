@@ -24,11 +24,14 @@ public sealed class UserIdForwardingHandler : DelegatingHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier)
-                   ?? _httpContextAccessor.HttpContext?.User?.Identity?.Name
-                   ?? "anonymous";
+        // Signed-out visitors are not forwarded as an Account, so ApiService answers 401 instead of
+        // serving data for a shared placeholder id.
+        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            request.Headers.Add("X-User-Id", userId);
+        }
 
-        request.Headers.Add("X-User-Id", userId);
         if (!string.IsNullOrEmpty(_internalKey))
         {
             request.Headers.Add(InternalKeyHeader, _internalKey);

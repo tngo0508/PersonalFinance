@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Validators;
@@ -10,6 +12,7 @@ namespace PersonalFinance.ApiService.Controllers;
 /// Delegates projection computation to <see cref="NetWorthProjectionService"/> and
 /// parameter CRUD to <see cref="INetWorthParametersService"/>.
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -54,7 +57,7 @@ public class NetWorthController : ControllerBase
             return BadRequest(error);
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var result = await _parametersService.SaveAsync(userId, request, HttpContext.RequestAborted);
         return Ok(result);
     }
@@ -66,7 +69,7 @@ public class NetWorthController : ControllerBase
     [ProducesResponseType(typeof(NetWorthParametersDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> LoadParameters()
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var parameters = await _parametersService.LoadAsync(userId, HttpContext.RequestAborted);
 
         if (parameters == null)
@@ -84,27 +87,9 @@ public class NetWorthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeleteParameters()
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         await _parametersService.DeleteAsync(userId, HttpContext.RequestAborted);
         return NoContent();
     }
 
-    /// <summary>
-    /// Extracts the authenticated user ID from the Authorization bearer token or falls back to a default.
-    /// </summary>
-    private string GetUserId()
-    {
-        // In a real deployment, the API would authenticate via JWT bearer tokens.
-        // For now, accept the user ID from a header set by the Web frontend (forwarded identity).
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
-        {
-            var value = userId.First();
-            if (!string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-        }
-
-        return "anonymous";
-    }
 }

@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.ApiService.Validators;
 using Microsoft.AspNetCore.Mvc;
@@ -8,8 +10,9 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// API controller for budget allocation endpoints.
-/// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
+/// All endpoints are scoped to the current user identified by the authenticated Account (see XUserIdAuthenticationHandler).
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -25,23 +28,6 @@ public class BudgetController : ControllerBase
     }
 
     /// <summary>
-    /// Returns the current user's ID from the X-User-Id header forwarded by the Web proxy.
-    /// </summary>
-    private string GetUserId()
-    {
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
-        {
-            var value = userId.First();
-            if (!string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-        }
-
-        return "anonymous";
-    }
-
-    /// <summary>
     /// Gets the current user's budget allocation (defaults to current period).
     /// </summary>
     [HttpGet]
@@ -49,7 +35,7 @@ public class BudgetController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetBudgetCurrent(CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var budget = await _budgetService.GetBudgetAsync(userId, "current", cancellationToken);
 
         if (budget is null)
@@ -84,7 +70,7 @@ public class BudgetController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetBudget(string period, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
 
         var budget = await _budgetService.GetBudgetAsync(userId, period, cancellationToken);
 
@@ -128,7 +114,7 @@ public class BudgetController : ControllerBase
             return BadRequest(validationResult.Errors.Select(e => new { e.ErrorCode, e.ErrorMessage }));
         }
 
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         await _budgetService.SaveBudgetAsync(userId, request, cancellationToken);
         return Ok(new { success = true });
     }

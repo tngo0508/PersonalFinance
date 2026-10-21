@@ -32,6 +32,7 @@ The application needs admin-only pages and API endpoints, and must later support
 - **`User` role (replaces "no User role").** Requested later: `AppRoles.User` is a built-in role seeded at startup and assigned to every new account (password and external-login registration). Policies still check named policies, never role names, so restrictive roles remain possible. A failed assignment is logged and not fatal; an Admin can assign the role in the Admin page.
 - **One-time backfill.** Existing accounts get `User` only when the seeder first creates the role, using a database-side anti-join. Later startups do not re-add it, so an Admin's removal of `User` is permanent.
 - **Spoofable `X-User-Id` closed.** Reading roles from the database did not authenticate the caller; the shared secret (decision 4) does. ApiService also now calls `UseAuthentication()` before `UseAuthorization()`.
+- **Claims-only Account identity (2026-10-21).** Eight controllers still read the raw `X-User-Id` header, and Google Drive took `userId` from the query string or body, so the shared secret protected only some endpoints. Every ApiService controller now carries `[Authorize]` and reads the Account from claims (`User.GetUserId()`); a convention test enforces the attribute. Web no longer forwards a placeholder id for signed-out visitors.
 - **Last-Admin protection** is serialized in-process. It is not safe across multiple ApiService instances, which is acceptable at current scale.
 
 ## Related Decisions

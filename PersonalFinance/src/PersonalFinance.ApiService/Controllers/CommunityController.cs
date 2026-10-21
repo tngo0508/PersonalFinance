@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.DTOs.Community;
@@ -6,8 +8,9 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// RESTful API controller for community features: polls, comments, stories, and likes.
-/// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
+/// All endpoints are scoped to the current user identified by the authenticated Account (see XUserIdAuthenticationHandler).
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -21,23 +24,6 @@ public class CommunityController : ControllerBase
     }
 
     /// <summary>
-    /// Returns the current user's ID from the X-User-Id header forwarded by the Web proxy.
-    /// </summary>
-    private string GetUserId()
-    {
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
-        {
-            var value = userId.First();
-            if (!string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-        }
-
-        return "anonymous";
-    }
-
-    /// <summary>
     /// Gets the full community data (polls, stats, stories, comments) for a user.
     /// </summary>
     [HttpGet]
@@ -45,7 +31,7 @@ public class CommunityController : ControllerBase
     public async Task<ActionResult<CommunityResponseDto>> GetCommunity(
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var response = await _communityService.GetCommunityAsync(userId, cancellationToken);
         return Ok(response);
     }
@@ -60,7 +46,7 @@ public class CommunityController : ControllerBase
         [FromBody] CommunityVoteRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var result = await _communityService.VoteAsync(userId, request, cancellationToken);
         if (!result.Success)
         {
@@ -81,7 +67,7 @@ public class CommunityController : ControllerBase
         [FromQuery] string authorName,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var comment =
@@ -103,7 +89,7 @@ public class CommunityController : ControllerBase
         int commentId,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var result = await _communityService.ToggleCommentLikeAsync(userId, commentId, cancellationToken);
@@ -146,7 +132,7 @@ public class CommunityController : ControllerBase
         [FromQuery] string authorName,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var story = await _communityService.SubmitStoryAsync(userId, request, authorName ?? string.Empty,
@@ -168,7 +154,7 @@ public class CommunityController : ControllerBase
         int storyId,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         try
         {
             var result = await _communityService.ToggleStoryLikeAsync(userId, storyId, cancellationToken);
@@ -188,7 +174,7 @@ public class CommunityController : ControllerBase
     public async Task<ActionResult<List<CommunityStoryDto>>> GetStories(
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var response = await _communityService.GetCommunityAsync(userId, cancellationToken);
         return Ok(response.Stories ?? new List<CommunityStoryDto>());
     }
@@ -203,7 +189,7 @@ public class CommunityController : ControllerBase
         int storyId,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var story = await _communityService.GetStoryByIdAsync(userId, storyId, cancellationToken);
         if (story == null)
             return NotFound();

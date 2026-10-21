@@ -213,6 +213,7 @@ try
             client.BaseAddress = new Uri(apiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(35);
         })
+        .AddHttpMessageHandler<UserIdForwardingHandler>()
         .AddStandardResilienceHandler();
 
     builder.Services.AddRefitClient<INetWorthApi>()

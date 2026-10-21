@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -5,8 +7,9 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// API controller for notification endpoints.
-/// All endpoints are scoped to the current user identified via the X-User-Id header forwarded by the Web proxy.
+/// All endpoints are scoped to the current user identified by the authenticated Account (see XUserIdAuthenticationHandler).
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
@@ -20,30 +23,13 @@ public class NotificationController : ControllerBase
     }
 
     /// <summary>
-    /// Returns the current user's ID from the X-User-Id header forwarded by the Web proxy.
-    /// </summary>
-    private string GetUserId()
-    {
-        if (Request.Headers.TryGetValue("X-User-Id", out var userId))
-        {
-            var value = userId.First();
-            if (!string.IsNullOrEmpty(value))
-            {
-                return value;
-            }
-        }
-
-        return "anonymous";
-    }
-
-    /// <summary>
     /// Gets all notifications for the current user.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNotifications(CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var notifications = await _notificationService.GetNotificationsAsync(userId, cancellationToken);
         return Ok(notifications);
     }
@@ -55,7 +41,7 @@ public class NotificationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUnreadCount(CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var count = await _notificationService.GetUnreadCountAsync(userId, cancellationToken);
         return Ok(new { count });
     }
@@ -68,7 +54,7 @@ public class NotificationController : ControllerBase
     public async Task<IActionResult> CreateNotification([FromBody] CreateNotificationRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var id = await _notificationService.CreateNotificationAsync(userId, request, cancellationToken);
         return CreatedAtAction(nameof(GetNotifications), new { id });
     }
@@ -81,7 +67,7 @@ public class NotificationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkAsRead(int id, CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         var success = await _notificationService.MarkAsReadAsync(userId, id, cancellationToken);
 
         if (!success)
@@ -99,7 +85,7 @@ public class NotificationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken = default)
     {
-        var userId = GetUserId();
+        var userId = User.GetUserId();
         await _notificationService.MarkAllAsReadAsync(userId, cancellationToken);
         return Ok(new { success = true });
     }

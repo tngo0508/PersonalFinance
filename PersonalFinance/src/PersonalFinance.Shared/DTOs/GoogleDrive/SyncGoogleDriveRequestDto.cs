@@ -7,7 +7,5 @@ public class SyncGoogleDriveRequestDto
 {
     public int ConnectionId { get; set; }
 
-    public string UserId { get; set; } = string.Empty;
-
     public bool ForceRefresh { get; set; } = true;
 }

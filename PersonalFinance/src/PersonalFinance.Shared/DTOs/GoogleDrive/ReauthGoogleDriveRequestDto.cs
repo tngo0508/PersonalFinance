@@ -7,7 +7,5 @@ public class ReauthGoogleDriveRequestDto
 {
     public int ConnectionId { get; set; }
 
-    public string UserId { get; set; } = string.Empty;
-
     public string? ApiKey { get; set; }
 }

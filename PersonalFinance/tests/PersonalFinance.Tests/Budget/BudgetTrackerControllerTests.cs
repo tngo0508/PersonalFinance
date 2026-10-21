@@ -50,7 +50,6 @@ public class BudgetTrackerControllerTests
             };
             var identity = new ClaimsIdentity(claims, "TestAuth");
             httpContext.User = new ClaimsPrincipal(identity);
-            httpContext.Request.Headers["X-User-Id"] = userId;
         }
 
         controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
@@ -66,12 +65,13 @@ public class BudgetTrackerControllerTests
     }
 
     [Fact]
-    public async Task GetSheet_WithoutUserIdentity_ThrowsUnauthorizedAccessException()
+    public async Task GetSheet_WithoutUserIdentity_Throws()
     {
+        // [Authorize] stops anonymous requests before the action runs; reaching it without an Account is a bug.
         var (controller, db) = CreateController(userId: null);
         await using (db)
         {
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.GetSheet(2026, 10));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => controller.GetSheet(2026, 10));
         }
     }
 
