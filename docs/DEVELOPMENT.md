@@ -62,7 +62,7 @@ PersonalFinanceApp/
 | `PersonalFinance.Web` | Frontend web UI, Identity, file explorer, budget reports, transactions viewer, net worth projections. | MVC, Razor Pages, Identity, Bootstrap 5, Chart.js, Refit |
 | `PersonalFinance.ApiService` | Backend REST API: Google Drive integration, budget reports, transactions, net worth projections, OpenAPI & Scalar docs (`/scalar/v1`). | ASP.NET Core Controllers, Scalar |
 | `PersonalFinance.Data` | EF Core persistence with Azure SQL migrations, Identity stores, Data Protection keys. InMemory provider for tests and CI e2e. | EF Core 10, SQL Server |
-| `PersonalFinance.Shared` | Shared DTOs, API interfaces (`IGoogleDriveApi`, `INetWorthApi`), parsing algorithms (`GoogleDriveHelper`), AES-256 helpers. | Refit, System.Security.Cryptography |
+| `PersonalFinance.Shared` | Shared DTOs, API interfaces (`IGoogleDriveApi`, `INetWorthApi`), constants and shared helpers. | Refit, System.Security.Cryptography |
 | `PersonalFinance.Tests` | Automated unit and integration test suite (500+ tests). | xUnit, EF Core InMemory |
 
 ---
@@ -550,7 +550,7 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 - `ExternalAuthenticationTests`: Tests Google OAuth scheme registration, option configuration, custom claim extraction (`urn:google:picture`, `urn:google:locale`), API-aware 401/403 status code redirects, user auto-provisioning with confirmed emails, and secure account linking.
 - `BrevoEmailSenderTests`: Tests Brevo REST API dispatch, payload serialization, error responses, and HTML email assembly.
 - `EmailTemplateHelperTests`: Tests custom HTML email templates, parameter escaping, CTA button styling, and fallback URL rendering.
-- `GoogleDriveHelperTests`: Tests URL parsing, multi-sheet OpenXML budget parsing, balance extraction, category categorization, transaction parsing (`ParseXlsxTransactions`, `ParseCsvTransactions`), side-by-side table detection, Excel serial date conversion, and total row filtering.
+- `GoogleDriveSpreadsheetTests`: Tests URL parsing, multi-sheet OpenXML budget parsing, balance extraction, category categorization, transaction parsing (`ParseXlsxTransactions`, `ParseCsvTransactions`), side-by-side table detection, Excel serial date conversion, and total row filtering.
 - `GoogleDrivePersistenceTests`: Tests connection storage, file caching, incremental sync, and AES encryption.
 - `GoogleDriveWebControllerTests`: Tests controller actions for budget reports, transactions, error handling, and spreadsheet source resolution.
 - `DatabasePersistenceAndMigrationTests`: Provider switching, provider-specific migration sets, migrate/seed pipeline, SQL Server migration script inspection (`nvarchar(450)` keys), and Data Protection key persistence.
@@ -928,15 +928,15 @@ Endpoints validated:
 
 #### 2. Monthly Budget Report & Analytics Flow
 1. **Spreadsheet Discovery**: User clicks "View Budget Report" on any Google Sheet or spreadsheet CSV in their Drive.
-2. **Fetch & Conversion**: `ApiService` exports the spreadsheet via Google Drive API (or uses cached CSV data) and passes the raw content to `GoogleDriveHelper`.
-3. **Parsing Engine**: `GoogleDriveHelper` automatically detects single-month and full-year multi-month budget formats, parses planned vs. actual income/expenses, extracts category allocations, and computes starting/ending balances.
-4. **Analytics Delivery**: A structured `MonthlyBudgetReportDto` is returned through the typed Refit client to the frontend.
+2. **Fetch & Conversion**: `GoogleDriveFileSource` (ApiService) downloads the spreadsheet: a Google Sheet as an XLSX export, then a CSV export; any other file as stored. `SpreadsheetReaderService` parses each download in turn and keeps the first one that contains budget data.
+3. **Parsing Engine**: `BudgetSpreadsheetParser` automatically detects single-month and full-year multi-month budget formats, parses planned vs. actual income/expenses, extracts category allocations, and computes starting/ending balances.
+4. **Analytics Delivery**: A structured `MonthlyBudgetReportDto` is returned through the typed Refit client to the frontend. When the sheet cannot be downloaded or has no budget table, the report has no months, `IsLiveSpreadsheetData = false` and an `ErrorMessage`, which the page shows. Figures are never estimated or invented: months missing from the sheet stay empty, and a month with totals but no category rows has no category breakdown. A sync never saves such a report as snapshots.
 5. **Interactive Visualization**: The web client renders KPI summary cards (Total Income, Total Expenses, Net Surplus/Deficit, Savings Rate), Chart.js comparison charts, and category variance progress bars with print support.
 
 #### 3. Spreadsheet Transactions Viewer Flow
 1. **Transaction Discovery**: User clicks "Transactions" on any Google Sheet or spreadsheet in their Drive.
 2. **Fetch & Export**: `ApiService` exports the spreadsheet as XLSX (all sheets available) via Google Drive API, with CSV fallback.
-3. **Parsing Engine**: `GoogleDriveHelper.ParseXlsxTransactions` scans sheets for tables with `Date` and `Amount` headers. It supports side-by-side tables (e.g., Google's Monthly budget template with Expenses and Income), section labels that set transaction type, `Type` columns, signed amounts, Excel serial date conversion, and skips "Total…" rows. Sheets named "Transactions" are prioritized.
+3. **Parsing Engine**: `BudgetSpreadsheetParser.ParseXlsxTransactions` scans sheets for tables with `Date` and `Amount` headers. It supports side-by-side tables (e.g., Google's Monthly budget template with Expenses and Income), section labels that set transaction type, `Type` columns, signed amounts, Excel serial date conversion, and skips "Total…" rows. Sheets named "Transactions" are prioritized.
 4. **Analytics Delivery**: A structured `SpreadsheetTransactionsDto` is returned through the `IGoogleDriveApi.GetSpreadsheetTransactionsAsync` Refit method to the frontend.
 5. **Interactive Visualization**: The web client renders a searchable, sortable table with category chips, income marked with green "+", spending-over-time charts (daily or monthly), top category rankings, live filtered totals, and CSV export.
 
@@ -958,7 +958,7 @@ Allows users to connect, manage, and cache Google Drive folders with persistent 
 - **Multiple Drives Support**: Users can connect multiple Google Drive folders simultaneously, switch between them seamlessly, and add new drives without overwriting existing ones.
 - **Incremental Synchronization & Manual Refresh**: Smart synchronization updates modified files, inserts new items, and removes deleted files without re-downloading unchanged metadata. Users can trigger manual sync via the "Sync / Refresh" button.
 - **Credential Security & Re-authentication**: API credentials and tokens are AES-encrypted in the database, masked in UI outputs (`AIza...8xY2`), never logged in plaintext, and isolated by authenticated user. Expired credentials prompt an in-place re-authentication modal.
-- **Universal URL Parsing**: Supports standard folder URLs, shortened/view URLs, and raw folder IDs via `GoogleDriveHelper`.
+- **Universal URL Parsing**: Supports standard folder URLs, shortened/view URLs, and raw folder IDs via `GoogleDriveMetadata.ExtractFolderId`.
 - **Interactive DataTables & Grid Views**: Real-time category filtering (Sheets, Docs, PDFs, Images, Slides, Folders), sorting by name, size (raw byte sorting), creation/modification dates, and pagination.
 - **Direct Access**: Clickable links to open files/folders directly in Google Drive, plus quick clipboard copy actions.
 
@@ -974,7 +974,7 @@ Transforms raw budget spreadsheets stored in Google Drive into structured, actio
 
 #### Spreadsheet Transactions Viewer
 View, search, and filter transaction data extracted from Google Sheets spreadsheets (`/GoogleDrive` → Transactions action).
-- **Smart Table Detection**: `GoogleDriveHelper.ParseXlsxTransactions` automatically finds tables with `Date` and `Amount` headers across all sheets. Sheets named "Transactions" are read first.
+- **Smart Table Detection**: `BudgetSpreadsheetParser.ParseXlsxTransactions` automatically finds tables with `Date` and `Amount` headers across all sheets. Sheets named "Transactions" are read first.
 - **Side-by-Side Tables**: Supports Google's Monthly budget template format where Expenses and Income tables appear side by side.
 - **Type Resolution**: Uses section labels above tables, `Type` columns, or signed amounts to determine income vs. expense.
 - **Excel Date Conversion**: Handles Excel serial dates (e.g., 45292 → 2024-01-15).

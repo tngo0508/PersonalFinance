@@ -69,4 +69,9 @@ public class GoogleDriveFileDto
     /// Indicates whether this item is a directory/folder.
     /// </summary>
     public bool IsFolder { get; set; }
+
+    /// <summary>
+    /// True for a "Monthly budget" spreadsheet that the Budget Report can read.
+    /// </summary>
+    public bool IsMonthlyBudgetSpreadsheet { get; set; }
 }

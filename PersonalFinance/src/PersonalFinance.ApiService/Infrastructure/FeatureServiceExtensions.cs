@@ -28,7 +28,8 @@ public static class FeatureServiceExtensions
     public static IServiceCollection AddGoogleDriveFeature(this IServiceCollection services)
     {
         services.AddHttpClient<IDriveConnectionService, DriveConnectionService>(client => client.Timeout = GoogleDriveTimeout);
-        services.AddHttpClient<ISpreadsheetReader, SpreadsheetReaderService>(client => client.Timeout = GoogleDriveTimeout);
+        services.AddHttpClient<IGoogleDriveFileSource, GoogleDriveFileSource>(client => client.Timeout = GoogleDriveTimeout);
+        services.AddScoped<ISpreadsheetReader, SpreadsheetReaderService>();
         services.AddScoped<ISpreadsheetAnalysisService, SpreadsheetAnalysisService>();
         return services;
     }

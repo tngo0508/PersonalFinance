@@ -75,7 +75,7 @@ flowchart TB
     end
     subgraph libs["Class libraries (compiled into both images)"]
         data["PersonalFinance.Data<br/>AppDbContext, migrations,<br/>MigrateAndSeedDatabaseAsync"]
-        shared["PersonalFinance.Shared<br/>DTOs, IGoogleDriveApi (Refit contract),<br/>GoogleDriveHelper"]
+        shared["PersonalFinance.Shared<br/>DTOs, IGoogleDriveApi (Refit contract),<br/>helpers"]
         sd["PersonalFinance.ServiceDefaults<br/>OpenTelemetry, /health, /alive,<br/>resilience, service discovery"]
     end
     subgraph localonly["Local development only"]

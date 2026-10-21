@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Refit clients no longer add a second standard resilience handler on top of the one `AddServiceDefaults()` already applies, so retries are no longer nested.
   - Removed the redundant `AddUserSecrets` call, which put user secrets above environment variables; configuration precedence is the ASP.NET Core default again.
 
+- **Google Drive Ingestion Modules**: The 1,846-line `GoogleDriveHelper` in Shared is replaced by focused ApiService modules, so Web no longer carries the spreadsheet parser.
+  - `GoogleDriveFileSource` downloads spreadsheets (export/download URLs, API key choice, Account-scoped connection lookup); `BudgetSpreadsheetParser` parses CSV/XLSX; `GoogleDriveMetadata` and `SampleSpreadsheets` hold the small helpers.
+  - `SpreadsheetReaderService` tries each download in turn and keeps the first with data; its tests use a fake file source instead of matching Google URLs.
+  - `GoogleDriveFileDto.IsMonthlyBudgetSpreadsheet` is set by ApiService, so the Google Drive page no longer calls a parser helper.
+
 - **AI Assistant Experience**: Redesigned the chat with a roomier indigo panel, focused starter cards, readable conversations, and an accessible multiline composer.
   - Preserve visible follow-up messages and restore failed questions for retry.
   - Add keyboard controls, loading feedback, safe response formatting, and mobile navigation clearance.
@@ -55,6 +60,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `max_completion_tokens` is applied to all requests (configurable via `OpenAI:MaxTokens`, default 400).
 
 ### Fixed
+
+- **Budget Reports Show Only Real Spreadsheet Data**: When a Google Drive spreadsheet cannot be read, the Budget Report now explains why instead of showing a made-up 12-month budget, and a sync never saves invented months.
+  - Removed the invented fallback report (ApiService reader, Web controller, and parser) that looked like real data and could be stored as snapshots, feeding Analysis, the Dashboard and the AI Assistant.
+  - Months missing from a sheet stay empty instead of copying another month, and a month with totals but no category rows no longer gets an estimated category split.
+  - `MonthlyBudgetReportDto.ErrorMessage` carries the reason; the Budget Report modal shows it.
+  - Google Drive download URLs (which include the API key) are no longer written to the logs.
 
 - **Account Isolation in ApiService**: Every ApiService endpoint now identifies the Account from authenticated claims, so a spoofed `X-User-Id` header or a foreign `connectionId` can no longer reach another Account's data.
   - Budget, Community, Dashboard, NetWorth, Notification, SavingsGoals, Search and Watchlist controllers read the raw header (skipping the `X-Internal-Key` check); they now require `[Authorize]` and use `User.GetUserId()`.

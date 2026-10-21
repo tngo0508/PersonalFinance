@@ -227,38 +227,31 @@ public class GoogleDriveController : Controller
     }
 
     /// <summary>
-    /// Generates a monthly budget summary report and chart data by reading the spreadsheet from Google Drive.
+    /// Returns the monthly budget report read from the spreadsheet on Google Drive. When the sheet cannot be read the
+    /// report has no months and an <c>errorMessage</c>; figures are never made up.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> MonthlyBudgetReport(
-        [FromQuery] string fileName,
+        [FromQuery] string? fileName = null,
         [FromQuery] string? fileId = null,
         [FromQuery] int? connectionId = null,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(fileName) && string.IsNullOrWhiteSpace(fileId))
+        if (string.IsNullOrWhiteSpace(fileId))
         {
-            return BadRequest(new { error = "File name or file ID is required." });
+            return BadRequest(new { error = "File ID is required." });
         }
 
         try
         {
-            if (!string.IsNullOrWhiteSpace(fileId))
-            {
-                var report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, cancellationToken);
-                if (report != null)
-                {
-                    return Json(report);
-                }
-            }
+            var report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, cancellationToken);
+            return Json(report);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read spreadsheet from Google Drive for fileId '{FileId}', using fallback summary.", fileId);
+            _logger.LogError(ex, "Failed to read the budget report from spreadsheet '{FileId}'.", fileId);
+            return StatusCode(StatusCodes.Status502BadGateway, new { error = "The spreadsheet could not be read. Please try again." });
         }
-
-        var fallbackReport = GoogleDriveHelper.GenerateMonthlyBudgetReport(fileName, fileId);
-        return Json(fallbackReport);
     }
 
     /// <summary>
