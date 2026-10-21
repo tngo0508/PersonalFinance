@@ -4,6 +4,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Web.Models;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -126,24 +127,13 @@ public class BudgetController : Controller
                 });
             }
 
-            var alloc = saved.Allocations;
-            var labels = new[]
-            {
-                "Housing", "Food", "Transportation", "Utilities", "Insurance",
-                "Healthcare", "Savings", "Debt Repayment", "Entertainment", "Miscellaneous"
-            };
-            var values = new[]
-            {
-                alloc.Housing, alloc.Food, alloc.Transportation, alloc.Utilities,
-                alloc.Insurance, alloc.Healthcare, alloc.Savings, alloc.DebtRepayment,
-                alloc.Entertainment, alloc.Miscellaneous
-            };
+            var categories = BudgetPlannerCategories.AllocationAmounts(saved.Allocations);
 
             return Json(new
             {
                 monthlyIncome = saved.MonthlyIncome,
-                allocations = values,
-                labels = labels
+                allocations = categories.Select(c => c.Amount),
+                labels = categories.Select(c => c.Name)
             });
         }
         catch

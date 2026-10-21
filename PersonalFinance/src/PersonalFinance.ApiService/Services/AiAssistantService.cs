@@ -492,7 +492,7 @@ public class AiAssistantService : IAiAssistantService
             if (budget != null)
             {
                 context.MonthlyIncome = budget.MonthlyIncome;
-                context.BudgetAllocations = BudgetPlannerCategories.AllocationAmounts(budget)
+                context.BudgetAllocations = BudgetPlannerCategories.AllocationAmounts(budget.ToAllocationsDto())
                     .ToDictionary(c => c.Name, c => (double)BudgetHelper.ToPercent(budget.MonthlyIncome, c.Amount));
             }
 

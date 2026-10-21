@@ -14,18 +14,11 @@
         'healthcare', 'savings', 'debtRepayment', 'entertainment', 'miscellaneous'
     ];
 
-    const categoryLabels = {
-        housing: 'Housing',
-        food: 'Food',
-        transportation: 'Transportation',
-        utilities: 'Utilities',
-        insurance: 'Insurance',
-        healthcare: 'Healthcare',
-        savings: 'Savings',
-        debtRepayment: 'Debt Repayment',
-        entertainment: 'Entertainment',
-        miscellaneous: 'Miscellaneous'
-    };
+    // Display labels derived from the keys ("debtRepayment" -> "Debt Repayment"), matching BudgetPlannerCategories.
+    const categoryLabels = Object.fromEntries(categories.map(function (key) {
+        const spaced = key.replace(/([A-Z])/g, ' $1');
+        return [key, spaced.charAt(0).toUpperCase() + spaced.slice(1)];
+    }));
 
     const categoryColors = [
         '#0078d4', '#00b7c3', '#71b307', '#d83b01', '#8764b8',
@@ -715,20 +708,8 @@
         if (!str) {
             return str;
         }
-        // Explicit mapping from camelCase JS keys to PascalCase C# property names
-        const map = {
-            housing: 'Housing',
-            food: 'Food',
-            transportation: 'Transportation',
-            utilities: 'Utilities',
-            insurance: 'Insurance',
-            healthcare: 'Healthcare',
-            savings: 'Savings',
-            debtRepayment: 'DebtRepayment',
-            entertainment: 'Entertainment',
-            miscellaneous: 'Miscellaneous'
-        };
-        return map[str] || str;
+        // camelCase JS key -> PascalCase C# property name ("debtRepayment" -> "DebtRepayment")
+        return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
     /**
