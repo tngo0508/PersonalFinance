@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Contributor Onboarding and Build Standards**: New contributors get a CONTRIBUTING guide, an accurate architecture guide, and shared build, style and analyzer settings.
+  - Add `CONTRIBUTING.md` (clone, configure, run, verify, PR checklist) and `docs/ARCHITECTURE.md` (projects, request and identity flow, add-a-feature checklist).
+  - Remove the stale `docs/CQRS_ARCHITECTURE.md` (MediatR, rejected by ADR 0001) and outdated SQLite instructions; document the `InMemory:` connection-string mode.
+  - Add `PersonalFinance/Directory.Build.props` (shared target framework, nullable, `latest-recommended` analyzers as warnings) and a root `.editorconfig`; apply `dotnet format whitespace`.
+  - Group `PersonalFinance.Tests` into feature folders; remove the unused `PersonalFinance.slnx`.
+  - CI reports formatting drift with a non-blocking `dotnet format --verify-no-changes` step.
+
 - **AI Assistant Experience**: Redesigned the chat with a roomier indigo panel, focused starter cards, readable conversations, and an accessible multiline composer.
   - Preserve visible follow-up messages and restore failed questions for retry.
   - Add keyboard controls, loading feedback, safe response formatting, and mobile navigation clearance.

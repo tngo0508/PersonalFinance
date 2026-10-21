@@ -89,6 +89,12 @@ jobs:
       - name: Build solution (Release)
         run: dotnet build PersonalFinance.sln --configuration Release --no-restore
 
+      # Reports .editorconfig formatting drift without failing the build (fix locally with `dotnet format`).
+      # Make it blocking by removing continue-on-error once main is clean.
+      - name: Check code formatting (non-blocking)
+        continue-on-error: true
+        run: dotnet format whitespace PersonalFinance.sln --verify-no-changes --no-restore --exclude PersonalFinance/src/PersonalFinance.Web/wwwroot/lib PersonalFinance/src/PersonalFinance.Data/Migrations
+
       - name: Execute test suite
         run: dotnet test PersonalFinance.sln --configuration Release --no-build --verbosity normal
 
