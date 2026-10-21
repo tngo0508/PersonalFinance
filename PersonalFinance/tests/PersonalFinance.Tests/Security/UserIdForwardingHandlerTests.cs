@@ -35,7 +35,7 @@ public class UserIdForwardingHandlerTests
         HttpRequestMessage? captured = null;
         var handler = new UserIdForwardingHandler(accessor, configuration)
         {
-            InnerHandler = new GoogleDrive.DelegatingTestHandler((request, _) =>
+            InnerHandler = new DelegatingTestHandler((request, _) =>
             {
                 captured = request;
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));

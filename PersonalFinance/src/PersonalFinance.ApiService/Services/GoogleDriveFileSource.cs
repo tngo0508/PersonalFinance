@@ -33,10 +33,10 @@ public class GoogleDriveFileSource : IGoogleDriveFileSource
 
     /// <inheritdoc />
     public async IAsyncEnumerable<SpreadsheetDownload> DownloadAsync(
+        string userId,
         string fileId,
         string? fileName,
         int? connectionId,
-        string? userId,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var connection = await FindOwnConnectionAsync(fileId, connectionId, userId, cancellationToken);
@@ -92,10 +92,10 @@ public class GoogleDriveFileSource : IGoogleDriveFileSource
 
     /// <summary>
     /// Finds the Account's connection for the file. A connection (and its stored API key) is only ever resolved
-    /// for the Account that owns it; without an Account none is used.
+    /// for the Account that owns it; a blank Account id (a bug upstream) resolves none.
     /// </summary>
     private async Task<GoogleDriveConnection?> FindOwnConnectionAsync(
-        string fileId, int? connectionId, string? userId, CancellationToken cancellationToken)
+        string fileId, int? connectionId, string userId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {

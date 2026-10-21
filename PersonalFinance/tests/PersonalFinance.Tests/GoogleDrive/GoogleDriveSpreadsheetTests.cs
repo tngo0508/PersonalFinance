@@ -376,67 +376,6 @@ Entertainment,400,450";
     }
 
     [Fact]
-    public async Task SpreadsheetReaderService_GetSpreadsheetBudgetReportAsync_ForSampleFile_ReturnsParsedActualData()
-    {
-        using var dbContext = CreateTestDbContext();
-        var configuration = new ConfigurationBuilder().Build();
-        var handler =
-            new DelegatingTestHandler((req, ct) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)));
-        var httpClient = new HttpClient(handler);
-        var service = new SpreadsheetReaderService(
-            new GoogleDriveFileSource(httpClient, configuration, dbContext, NullLogger<GoogleDriveFileSource>.Instance),
-            NullLogger<SpreadsheetReaderService>.Instance);
-
-        var report = await service.GetSpreadsheetBudgetReportAsync("sample-sheet-budget-1", "Monthly budget 2026.xlsx");
-
-        Assert.NotNull(report);
-        Assert.Equal("Monthly budget 2026.xlsx", report.FileName);
-        Assert.Equal("sample-sheet-budget-1", report.FileId);
-        Assert.True(report.IsLiveSpreadsheetData);
-        Assert.Contains("Actual Sample Data", report.DataSource);
-        Assert.Equal(12, report.Months.Count);
-        Assert.True(report.TotalAnnualIncome > 0);
-        Assert.True(report.TotalAnnualExpenses > 0);
-    }
-
-    [Fact]
-    public async Task SpreadsheetReaderService_GetSpreadsheetBudgetReportAsync_WithLiveGoogleSheetExport_ParsesLiveCsv()
-    {
-        using var dbContext = CreateTestDbContext();
-        var configuration = new ConfigurationBuilder().Build();
-
-        var csvFromGoogle = @"Monthly budget 2026
-INCOME,Planned,Actual
-Consulting,8000,8500
-EXPENSES,Planned,Actual
-Housing,2000,2000
-Food,800,750";
-
-        var handler = new DelegatingTestHandler((req, ct) =>
-        {
-            var msg = new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(csvFromGoogle, Encoding.UTF8, "text/csv")
-            };
-            return Task.FromResult(msg);
-        });
-
-        var httpClient = new HttpClient(handler);
-        var service = new SpreadsheetReaderService(
-            new GoogleDriveFileSource(httpClient, configuration, dbContext, NullLogger<GoogleDriveFileSource>.Instance),
-            NullLogger<SpreadsheetReaderService>.Instance);
-
-        var report = await service.GetSpreadsheetBudgetReportAsync("live-sheet-123", "Monthly budget 2026.gsheet");
-
-        Assert.NotNull(report);
-        Assert.Equal("live-sheet-123", report.FileId);
-        Assert.Contains("Live Spreadsheet", report.DataSource);
-        var m1 = report.Months[0];
-        Assert.Equal(8500m, m1.ActualIncome);
-        Assert.Equal(2750m, m1.ActualExpenses);
-    }
-
-    [Fact]
     public void ParseXlsxBudgetReport_WithOpenXmlSpreadsheet_ParsesActualDataCorrectly()
     {
         using var ms = new MemoryStream();
@@ -949,24 +888,5 @@ Total Expenses,1800.00,1800.00,0.00";
         var report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget", "file-no-year");
 
         Assert.Equal(2026, report.Year);
-    }
-}
-
-/// <summary>
-/// Simple mock delegating handler for testing HttpClient responses without external networks.
-/// </summary>
-public class DelegatingTestHandler : HttpMessageHandler
-{
-    private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _handler;
-
-    public DelegatingTestHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler)
-    {
-        _handler = handler;
-    }
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-        CancellationToken cancellationToken)
-    {
-        return _handler(request, cancellationToken);
     }
 }

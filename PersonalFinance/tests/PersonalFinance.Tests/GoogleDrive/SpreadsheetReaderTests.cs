@@ -15,7 +15,7 @@ public class SpreadsheetReaderTests
     {
         var reader = CreateReader();
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("file-1", "Monthly budget 2026.xlsx", 7, "account-1");
+        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026.xlsx", 7);
 
         Assert.Empty(report.Months);
         Assert.False(report.IsLiveSpreadsheetData);
@@ -28,7 +28,7 @@ public class SpreadsheetReaderTests
     {
         var reader = CreateReader(Csv("Shopping list\nMilk,Eggs,Bread"));
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("file-1", "Monthly budget 2026.csv");
+        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026.csv");
 
         Assert.Empty(report.Months);
         Assert.False(report.IsLiveSpreadsheetData);
@@ -42,7 +42,7 @@ public class SpreadsheetReaderTests
             new SpreadsheetDownload("Monthly budget 2026", SpreadsheetFormat.Xlsx, "not a zip"u8.ToArray(), "XLSX export"),
             Csv("Month,Planned Income,Actual Income,Planned Expenses,Actual Expenses\nMarch,5000,5200,3000,3100"));
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("file-1", "Monthly budget 2026");
+        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026");
 
         Assert.Equal(5200m, report.TotalAnnualIncome);
         Assert.Equal("CSV export", report.DataSource);
@@ -53,7 +53,7 @@ public class SpreadsheetReaderTests
     {
         var reader = CreateReader(Csv("Month,Planned Income,Actual Income,Planned Expenses,Actual Expenses\nMarch,5000,5200,3000,3100"));
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("file-1", "Budget 2026.csv");
+        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Budget 2026.csv");
 
         var march = Assert.Single(report.Months, m => m.MonthNumber == 3);
         Assert.Equal(5200m, march.ActualIncome);
@@ -66,7 +66,7 @@ public class SpreadsheetReaderTests
     {
         var reader = CreateReader(Csv("Month,Planned Income,Actual Income,Planned Expenses,Actual Expenses\nMarch,5000,5200,3000,3100"));
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("file-1", "Budget 2026.csv");
+        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Budget 2026.csv");
 
         Assert.All(report.Months.Where(m => m.MonthNumber != 3), m =>
         {
@@ -78,11 +78,25 @@ public class SpreadsheetReaderTests
     }
 
     [Fact]
+    public async Task SampleFile_IsParsedFromTheBuiltInSampleWithoutDownloading()
+    {
+        var reader = CreateReader();
+
+        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "sample-sheet-budget-1",
+            "Monthly budget 2026.xlsx");
+
+        Assert.Equal("sample-sheet-budget-1", report.FileId);
+        Assert.Equal(12, report.Months.Count);
+        Assert.Contains("Sample Data", report.DataSource);
+        Assert.True(report.TotalAnnualIncome > 0);
+    }
+
+    [Fact]
     public async Task UndownloadableFile_TransactionsSayWhy()
     {
         var reader = CreateReader();
 
-        var transactions = await reader.GetSpreadsheetTransactionsAsync("file-1", "Monthly budget 2026.xlsx");
+        var transactions = await reader.GetSpreadsheetTransactionsAsync("account-1", "file-1", "Monthly budget 2026.xlsx");
 
         Assert.Empty(transactions.Transactions);
         Assert.False(transactions.IsLiveSpreadsheetData);
@@ -97,8 +111,8 @@ public class SpreadsheetReaderTests
 
     private sealed class FakeFileSource(IReadOnlyList<SpreadsheetDownload> downloads) : IGoogleDriveFileSource
     {
-        public async IAsyncEnumerable<SpreadsheetDownload> DownloadAsync(string fileId, string? fileName,
-            int? connectionId, string? userId, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<SpreadsheetDownload> DownloadAsync(string userId, string fileId,
+            string? fileName, int? connectionId, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             foreach (var download in downloads)
             {

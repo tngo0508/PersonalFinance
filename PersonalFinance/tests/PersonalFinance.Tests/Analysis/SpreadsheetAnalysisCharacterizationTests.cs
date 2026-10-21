@@ -774,13 +774,11 @@ public class SpreadsheetAnalysisCharacterizationTests
 
     private sealed class FakeSpreadsheetReader : ISpreadsheetReader
     {
-        public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(
-            string fileId, string? fileName = null, int? connectionId = null, string? userId = null,
+        public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string userId, string fileId, string? fileName = null, int? connectionId = null,
             CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
 
-        public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(
-            string fileId, string? fileName = null, int? connectionId = null, string? userId = null,
+        public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string userId, string fileId, string? fileName = null, int? connectionId = null,
             CancellationToken cancellationToken = default) =>
             throw new NotImplementedException();
     }
