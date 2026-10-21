@@ -62,7 +62,9 @@ public sealed class NetWorthParametersService : INetWorthParametersService
     public async Task<NetWorthParametersDto?> LoadAsync(string userId, CancellationToken cancellationToken = default)
     {
         var parameters = await _dbContext.NetWorthParameters
-            .FirstOrDefaultAsync(e => e.UserId == userId, cancellationToken);
+            .AsNoTracking()
+            .CurrentFor(userId)
+            .FirstOrDefaultAsync(cancellationToken);
 
         return parameters?.ToDto();
     }

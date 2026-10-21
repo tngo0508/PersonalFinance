@@ -442,7 +442,7 @@
                 '<th scope="col" class="text-end">Planned spending</th>' +
                 '<th scope="col" class="text-end">Spent</th>' +
                 '<th scope="col" class="text-end">Net saved</th>' +
-                '<th scope="col" class="text-end">Savings rate</th>' +
+                '<th scope="col" class="text-end">Actual savings rate</th>' +
                 '<th scope="col">Status</th>' +
                 '<th scope="col" class="text-end"><span class="visually-hidden">Open</span></th>' +
                 '</tr></thead><tbody>';

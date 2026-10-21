@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The Net Worth page renders the Savings Rate from the parameters instead of a hardcoded 29.5%, and the projection table only in JavaScript (the Razor copy repeated the highlight rules).
   - `BudgetPlannerCategories` lists the ten Budget Planner categories once for the Dashboard and the AI Assistant.
   - A failed Net Worth save no longer shows the exception message.
+  - The Budget Report and Analysis label budget-month figures "Actual savings rate"; the Net Worth page loads its parameters with the same current-record rule as the Dashboard.
 
 - **AI Assistant Reads Budget Data Through the Provider**: The AI Assistant's tools read budgets and transactions only through `IBudgetDataProvider` (ADR 0002), and it uses the same "current" Net Worth parameters and budget Period as the Dashboard.
   - Removed the legacy path that downloaded Google Drive spreadsheets live during a chat (about 380 lines).

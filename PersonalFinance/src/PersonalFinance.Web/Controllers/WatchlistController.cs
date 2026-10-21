@@ -36,6 +36,7 @@ public class WatchlistController : Controller
     /// Saves an article to the Watchlist.
     /// </summary>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Save([FromBody] SaveArticleRequestDto request,
         CancellationToken cancellationToken = default)
     {
@@ -47,6 +48,7 @@ public class WatchlistController : Controller
     /// Removes an article from the Watchlist.
     /// </summary>
     [HttpDelete("{id:int}")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Remove(int id, CancellationToken cancellationToken = default)
     {
         var result = await _watchlistApi.RemoveArticleAsync(id, cancellationToken);
