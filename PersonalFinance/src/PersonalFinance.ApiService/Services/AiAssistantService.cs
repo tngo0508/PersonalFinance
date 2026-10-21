@@ -499,8 +499,7 @@ public class AiAssistantService : IAiAssistantService
             // Get savings goals
             var savingsGoals = await _dbContext.SavingsGoals
                 .AsNoTracking()
-                .Where(s => s.UserId == userId)
-                .OrderBy(s => s.Id)
+                .NewestFirstFor(userId)
                 .ToListAsync(cancellationToken);
 
             if (savingsGoals.Count > 0)

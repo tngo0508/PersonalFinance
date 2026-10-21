@@ -7,7 +7,7 @@ using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Models;
 
-namespace PersonalFinance.Tests.Dashboard;
+namespace PersonalFinance.Tests.NetWorth;
 
 /// <summary>
 /// The Net Worth parameters are mapped by hand (ADR 0001); these tests make sure every parameter survives each

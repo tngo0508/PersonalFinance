@@ -223,9 +223,7 @@ public class DashboardService : IDashboardService
     {
         var goals = await _dbContext.SavingsGoals
             .AsNoTracking()
-            .Where(g => g.UserId == userId)
-            .OrderByDescending(g => g.CreatedAt)
-            .ThenByDescending(g => g.Id)
+            .NewestFirstFor(userId)
             .Take(ListedGoalCount)
             .Select(g => new
             {

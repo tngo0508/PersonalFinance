@@ -30,8 +30,7 @@ public class SavingsGoalService : ISavingsGoalService
     {
         var goals = await _dbContext.SavingsGoals
             .AsNoTracking()
-            .Where(g => g.UserId == userId)
-            .OrderByDescending(g => g.CreatedAt)
+            .NewestFirstFor(userId)
             .Select(g => new SavingsGoalResponseDto
             {
                 Id = g.Id,

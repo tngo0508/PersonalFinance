@@ -41,6 +41,7 @@ public sealed class NetWorthParametersService : INetWorthParametersService
 
             existing.Apply(parameters);
             existing.UpdatedAt = DateTime.UtcNow;
+            existing.UpdatedAtUtc = existing.UpdatedAt.Value;
         }
         else
         {
