@@ -304,7 +304,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('meta[name="__RequestVerificationToken"]')?.content || ''
+                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
                 },
                 body: JSON.stringify({
                     message: message,

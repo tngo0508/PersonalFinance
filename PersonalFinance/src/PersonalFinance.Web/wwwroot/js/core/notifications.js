@@ -196,10 +196,9 @@
          * @returns {Promise<void>}
          */
         async function postNotificationAction (url) {
-            const tokenMeta = document.querySelector('meta[name="__RequestVerificationToken"]');
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'RequestVerificationToken': tokenMeta ? tokenMeta.getAttribute('content') || '' : '' }
+                headers: { 'RequestVerificationToken': window.PFUtils.getAntiForgeryToken() }
             });
             if (!response.ok) {
                 throw new Error('Notification request failed: ' + response.status);

@@ -17,11 +17,6 @@
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    function getAntiForgeryToken () {
-        const meta = document.querySelector('meta[name="__RequestVerificationToken"]');
-        return meta ? meta.content : '';
-    }
-
     // --- Poll Voting ---
     document.addEventListener('click', function (e) {
         const btn = e.target.closest('.community-poll-option-btn');
@@ -49,7 +44,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'RequestVerificationToken': getAntiForgeryToken()
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
             },
             body: JSON.stringify({ pollCode: pollCode, optionId: optionId })
         })
@@ -236,7 +231,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'RequestVerificationToken': getAntiForgeryToken()
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
             },
             body: JSON.stringify({ commentId: commentId })
         })
@@ -301,7 +296,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'RequestVerificationToken': getAntiForgeryToken()
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
             },
             body: JSON.stringify({ pollCode: pollCode, text: text })
         })
@@ -356,7 +351,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'RequestVerificationToken': getAntiForgeryToken()
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
             },
             body: JSON.stringify({ storyId: storyId, text: text })
         })
@@ -420,7 +415,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'RequestVerificationToken': getAntiForgeryToken()
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
             },
             body: JSON.stringify({ storyId: storyId })
         })
@@ -581,7 +576,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'RequestVerificationToken': getAntiForgeryToken()
+                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
                 },
                 body: JSON.stringify({
                     title: title.value.trim(),

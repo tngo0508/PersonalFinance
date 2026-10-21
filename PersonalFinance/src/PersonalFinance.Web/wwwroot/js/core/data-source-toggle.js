@@ -2,23 +2,6 @@
     'use strict';
 
     /**
-     * Retrieves the anti-forgery token from a container or document meta tag.
-     * @param {HTMLElement} container - The toggle container element.
-     * @returns {string} The anti-forgery token.
-     */
-    function getVerificationToken (container) {
-        const input = container.querySelector('input[name="__RequestVerificationToken"]');
-        if (input && input.value) {
-            return input.value;
-        }
-        const meta = document.querySelector('meta[name="__RequestVerificationToken"]');
-        if (meta && meta.content) {
-            return meta.content;
-        }
-        return '';
-    }
-
-    /**
      * Handles data source button click and posts preference to server.
      * @param {Event} event - The click event.
      * @returns {Promise<void>}
@@ -39,7 +22,7 @@
             return;
         }
 
-        const token = getVerificationToken(container);
+        const token = window.PFUtils.getAntiForgeryToken(container);
         const buttons = container.querySelectorAll('.data-source-btn');
         buttons.forEach(function (btn) {
             btn.disabled = true;
