@@ -143,8 +143,8 @@ dotnet_diagnostic.CA2007.severity = none
 # CA1848 (LoggerMessage delegates) is a perf optimisation; structured logging via ILogger is fine here.
 dotnet_diagnostic.CA1848.severity = suggestion
 
-# Aspire template convention: extension methods live in Microsoft.Extensions.Hosting.
-[**/PersonalFinance.ServiceDefaults/Extensions.cs]
+# Aspire template convention: ServiceDefaults extension methods live in Microsoft.Extensions.Hosting.
+[**/PersonalFinance.ServiceDefaults/*Extensions.cs]
 dotnet_diagnostic.IDE0130.severity = none
 
 [**/tests/**/*.cs]

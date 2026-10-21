@@ -79,6 +79,11 @@ The project separates configuration into:
 
 ---
 
+### Configuration Precedence
+Both apps use the standard ASP.NET Core order, lowest to highest: `appsettings.json`, `appsettings.{Environment}.json`,
+user secrets (Development only), environment variables, command-line arguments. An environment variable such as
+`ConnectionStrings__DefaultConnection=InMemory:Dev` therefore overrides the connection string in your user secrets.
+
 ### Setting Up User Secrets on a New Machine
 
 When cloning this repository on a new machine, run the following commands to configure development user secrets. Replace each placeholder value with your actual credential.
@@ -403,7 +408,8 @@ Rather than relying on default boilerplate scaffolding, the `ExternalLogin` flow
 ##### 3. Key Files Reference
 - `PersonalFinance/src/PersonalFinance.Web/Areas/Identity/Pages/Account/ExternalLogin.cshtml`: Razor Page view.
 - `PersonalFinance/src/PersonalFinance.Web/Areas/Identity/Pages/Account/ExternalLogin.cshtml.cs`: Page model and authentication handlers.
-- `PersonalFinance/src/PersonalFinance.Web/Program.cs`: External authentication provider configuration and API redirect handling.
+- `PersonalFinance/src/PersonalFinance.Web/Program.cs`: External authentication provider configuration.
+- `PersonalFinance/src/PersonalFinance.Web/Infrastructure/ApiAwareCookieRedirects.cs`: 401/403 instead of login redirects for API and fetch requests.
 - `PersonalFinance/tests/PersonalFinance.Tests/ExternalAuthenticationTests.cs`: Unit test coverage for claims mapping and provisioning logic.
 
 ---

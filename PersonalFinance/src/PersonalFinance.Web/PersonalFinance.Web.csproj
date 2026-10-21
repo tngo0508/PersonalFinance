@@ -20,12 +20,6 @@
         <!-- HTTP Client Resilience Pipeline (Retries, Circuit Breaker, Rate Limiter) -->
         <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
 
-        <!-- Serilog Logging -->
-        <PackageReference Include="Serilog.AspNetCore" />
-        <PackageReference Include="Serilog.Sinks.Async" />
-        <PackageReference Include="Serilog.Sinks.Console" />
-        <PackageReference Include="Serilog.Sinks.File" />
-
         <!-- LibMan Client-Side Library Manager Build Tool -->
         <PackageReference Include="Microsoft.Web.LibraryManager.Build" />
     </ItemGroup>
