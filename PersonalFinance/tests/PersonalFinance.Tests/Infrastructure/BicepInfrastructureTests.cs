@@ -312,7 +312,7 @@ $paramArgs | ConvertTo-Json -Compress
                 Assert.Equal("environmentName=pf-prod", token);
             }
 
-            if (token.Contains("="))
+            if (token.Contains('='))
             {
                 Assert.DoesNotContain(" ", token.Trim());
             }

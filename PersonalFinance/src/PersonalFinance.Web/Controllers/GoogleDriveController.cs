@@ -53,7 +53,7 @@ public class GoogleDriveController : Controller
             model.Connections = connections ?? new List<GoogleDriveConnectionDto>();
 
             // 2. Handle explicit "Add New Drive" request
-            if (addNew || (!model.Connections.Any() && string.IsNullOrWhiteSpace(folderUrl)))
+            if (addNew || (model.Connections.Count == 0 && string.IsNullOrWhiteSpace(folderUrl)))
             {
                 model.ShowConnectForm = true;
                 return View(model);
@@ -68,7 +68,7 @@ public class GoogleDriveController : Controller
             }
 
             // 4. Subsequent login or normal view: Select connection and load from database cache
-            if (model.Connections.Any())
+            if (model.Connections.Count > 0)
             {
                 var selectedId = connectionId.HasValue && model.Connections.Any(c => c.Id == connectionId.Value)
                     ? connectionId.Value

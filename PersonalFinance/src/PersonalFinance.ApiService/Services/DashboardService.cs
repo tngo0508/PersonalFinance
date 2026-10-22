@@ -132,14 +132,14 @@ public class DashboardService : IDashboardService
         CancellationToken cancellationToken)
     {
         var years = await _budgetDataProvider.GetAvailableYearsAsync(userId, cancellationToken);
-        if (!years.Any())
+        if (years.Count == 0)
         {
             return null;
         }
 
         var latestYear = years.Max();
         var months = await _budgetDataProvider.GetMonthsAsync(userId, latestYear, cancellationToken);
-        if (!months.Any())
+        if (months.Count == 0)
         {
             return null;
         }

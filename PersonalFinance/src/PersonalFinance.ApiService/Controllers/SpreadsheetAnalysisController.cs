@@ -42,7 +42,7 @@ public class SpreadsheetAnalysisController : ControllerBase
         var availableYears = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
         var activeSource = await _analysisService.GetActiveSourceAsync(userId, cancellationToken);
 
-        if (!availableYears.Any())
+        if (availableYears.Count == 0)
         {
             return Ok(new AnalysisDashboardResult
             {
