@@ -55,6 +55,13 @@ public static class FeatureServiceExtensions
         return services;
     }
 
+    /// <summary>The To-do List: short items an Account wants to get done.</summary>
+    public static IServiceCollection AddTodoFeature(this IServiceCollection services)
+    {
+        services.AddScoped<ITodoService, TodoService>();
+        return services;
+    }
+
     /// <summary>Feedback that Accounts send to the operator.</summary>
     public static IServiceCollection AddFeedbackFeature(this IServiceCollection services)
     {

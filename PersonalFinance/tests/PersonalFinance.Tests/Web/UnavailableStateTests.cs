@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
+using PersonalFinance.Shared.DTOs.Todos;
 using PersonalFinance.Tests.Budget;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
@@ -132,6 +133,28 @@ public class UnavailableStateTests
         Assert.IsType<RedirectToActionResult>(result);
         var error = Assert.IsType<string>(controller.TempData["Error"]);
         Assert.DoesNotContain(ExceptionText, error);
+    }
+
+    [Fact]
+    public async Task TodosIndex_WhenApiFails_RendersUnavailableStateInsteadOfEmptyList()
+    {
+        var (api, _) = ApiProxy.Create<ITodoApi>();
+        var controller = WithContext(new TodosController(api, NullLogger<TodosController>.Instance));
+
+        var result = await controller.Index();
+
+        AssertUnavailable(result, "Todos");
+    }
+
+    [Fact]
+    public async Task TodosCreate_WhenApiFails_LetsJsonApiErrorsAnswer()
+    {
+        var (api, _) = ApiProxy.Create<ITodoApi>();
+        var controller = WithContext(new TodosController(api, NullLogger<TodosController>.Instance));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            controller.Create(new CreateTodoRequest { Title = "Call the bank" }));
+        Assert.True(typeof(TodosController).IsDefined(typeof(JsonApiErrorsAttribute), inherit: true));
     }
 
     [Fact]

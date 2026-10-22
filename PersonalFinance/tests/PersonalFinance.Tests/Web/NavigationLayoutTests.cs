@@ -37,6 +37,7 @@ public class NavigationLayoutTests
             typeof(BudgetTrackerController),
             typeof(BudgetController),
             typeof(SavingsGoalsController),
+            typeof(TodosController),
             typeof(AnalysisController),
             typeof(InvestmentCalculatorController),
             typeof(NewsController),
@@ -101,6 +102,17 @@ public class NavigationLayoutTests
         Assert.True(footerLink >= 0, "The footer should link to Feedback.");
         Assert.True(footer.LastIndexOf("@if (isSignedIn)", footerLink, StringComparison.Ordinal) >= 0,
             "The footer Feedback link should only be shown to signed-in Accounts.");
+    }
+
+    [Fact]
+    public void LayoutSidebar_LinksToTheTodoList()
+    {
+        var content = ReadView("Shared", "_Layout.cshtml");
+        var sidebar = content[content.IndexOf("<aside", StringComparison.Ordinal)..content.IndexOf("</aside>", StringComparison.Ordinal)];
+
+        var link = sidebar.IndexOf("asp-controller=\"Todos\" asp-action=\"Index\"", StringComparison.Ordinal);
+        Assert.True(link >= 0, "The sidebar should link to the To-do List.");
+        Assert.Contains("To-do List", sidebar[link..]);
     }
 
     [Fact]

@@ -176,6 +176,11 @@ Connection to Google Drive for spreadsheet synchronization. Manages OAuth connec
 ### Savings Goals
 Target savings goals tracking with progress monitoring.
 
+### To-do
+A short item a signed-in Account wants to get done, with an optional due date. It is open until marked done, and can
+be reopened. Only its Account sees it. Listed on the To-do List page; `TodoItem` in code.
+_Avoid_: Task (clashes with `System.Threading.Tasks.Task`), Reminder (implies an alert)
+
 ### Watchlist
 Item tracking and article watchlist for financial news and interests.
 

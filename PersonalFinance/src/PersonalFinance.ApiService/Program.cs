@@ -50,6 +50,7 @@ try
         .AddNetWorthFeature()
         .AddDashboardFeatures()
         .AddFeedbackFeature()
+        .AddTodoFeature()
         .AddAdminFeature()
         .AddAiAssistantFeature(builder.Configuration);
 

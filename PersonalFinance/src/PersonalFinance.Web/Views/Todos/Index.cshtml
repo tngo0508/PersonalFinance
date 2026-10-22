@@ -1,0 +1,51 @@
+@using PersonalFinance.Shared.Constants
+@model PersonalFinance.Web.Models.TodoListViewModel
+@{
+    ViewData["Title"] = "To-do List";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/todos.css" asp-append-version="true"/>
+}
+
+@* The list is rendered by js/todos/todo-list.js from the JSON below, so adding (and later completing, editing or
+   deleting) a To-do re-renders the same way as the first load. *@
+<div class="todo-page" id="todoPage" data-create-url="@Url.Action("Create", "Todos")">
+    <header class="todo-header">
+        <h1 class="todo-title">To-do List</h1>
+        <p class="todo-subtitle">Keep track of the things you want to get done, with an optional due date.</p>
+    </header>
+
+    <form class="todo-add" id="todoAddForm" novalidate
+          data-max-length="@TodoLimits.TitleMaxLength"
+          data-msg-required="@TodoMessages.TitleRequired"
+          data-msg-too-long="@TodoMessages.TitleTooLong">
+        @Html.AntiForgeryToken()
+        <div class="todo-add__field todo-add__field--title">
+            <label for="todoTitle" class="form-label">To-do</label>
+            <input type="text" id="todoTitle" name="title" class="form-control" autocomplete="off"
+                   placeholder="e.g., Renew car insurance" aria-describedby="todoAddError"/>
+        </div>
+        <div class="todo-add__field todo-add__field--date">
+            <label for="todoDueDate" class="form-label">Due date <span class="todo-optional">(optional)</span></label>
+            <input type="date" id="todoDueDate" name="dueDate" class="form-control"/>
+        </div>
+        <button type="submit" class="btn btn-primary todo-add__btn" id="todoAddBtn">Add</button>
+        <p class="todo-add__error" id="todoAddError" role="alert" hidden></p>
+    </form>
+
+    <ul class="todo-list" id="todoList" aria-label="Open To-dos"></ul>
+
+    <div class="todo-empty" id="todoEmpty" hidden>
+        <h2 class="todo-empty__title">No To-dos yet</h2>
+        <p class="todo-empty__text">Write down the first thing you want to get done, and give it a due date if it
+            has one.</p>
+        <button type="button" class="btn btn-outline-primary" id="todoEmptyAddBtn">Add your first To-do</button>
+    </div>
+</div>
+
+<script type="application/json" id="todo-data">@Json.Serialize(Model.Todos)</script>
+
+@section Scripts {
+    <script src="~/js/todos/todo-list.js" asp-append-version="true"></script>
+}

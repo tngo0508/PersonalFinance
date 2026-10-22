@@ -141,6 +141,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<Feedback> Feedback => Set<Feedback>();
 
     /// <summary>
+    /// To-do table set — short items an Account wants to get done, with an optional due date.
+    /// </summary>
+    public DbSet<TodoItem> TodoItems => Set<TodoItem>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -170,6 +175,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Feedback>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<TodoItem>().HasQueryFilter(e => !e.IsDeleted);
 
         // Configure AiUsageRecord entity — usage records are never soft-deleted
         builder.Entity<AiUsageRecord>(entity =>
@@ -615,6 +621,16 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.Status).IsRequired();
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
+        });
+
+        // Configure TodoItem entity — the To-do List reads one Account's To-dos, split by open or completed
+        builder.Entity<TodoItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(TodoLimits.TitleMaxLength);
+            entity.Property(e => e.DueDate).HasColumnType("date");
+            entity.HasIndex(e => new { e.UserId, e.CompletedAt });
         });
     }
 }
