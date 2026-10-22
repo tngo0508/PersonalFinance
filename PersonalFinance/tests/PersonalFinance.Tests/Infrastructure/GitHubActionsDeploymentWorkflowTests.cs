@@ -107,6 +107,26 @@ public class GitHubActionsDeploymentWorkflowTests
     }
 
     [Fact]
+    public void DeploymentWorkflow_SetupDotNetSteps_UseTheSdkPinnedInGlobalJson()
+    {
+        var root = FindProjectRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+
+        // The repo-root global.json pins the SDK, so CI and local builds run the same analyzers (#125)
+        Assert.True(File.Exists(Path.Combine(root, "global.json")), "global.json must exist at the repository root.");
+
+        var setupSteps = Regex.Matches(workflow, @"uses: actions/setup-dotnet@v4\s+with:\s+(?<input>[^\r\n]+)");
+        Assert.NotEmpty(setupSteps);
+        foreach (Match step in setupSteps)
+        {
+            Assert.Equal("global-json-file: global.json", step.Groups["input"].Value.Trim());
+        }
+
+        Assert.DoesNotContain("dotnet-version:", workflow);
+        Assert.DoesNotContain("DOTNET_VERSION", workflow);
+    }
+
+    [Fact]
     public void DeploymentWorkflow_FullSolutionBuilds_FailOnAnyWarning()
     {
         var root = FindProjectRoot();

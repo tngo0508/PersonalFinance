@@ -116,7 +116,7 @@ For detailed setup instructions, secrets management, and EF Core migrations, see
 ## Quick Start
 
 ### Prerequisites
-- **.NET 10 SDK** (v10.0.100 or higher)
+- **.NET 10 SDK**: the version pinned in [`global.json`](global.json) (10.0.402 or a later 10.0.4xx patch)
 - **Git**
 - Optional: **Docker Desktop** for containerized deployment
 

@@ -119,7 +119,10 @@ public class GoogleDriveController : Controller
         CancellationToken cancellationToken = default)
     {
         var userId = User.GetUserId();
-        _logger.LogInformation("User {UserId} requested manual sync for Google Drive connection {ConnectionId}", userId, id);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} requested manual sync for Google Drive connection {ConnectionId}", userId, id);
+        }
 
         try
         {
@@ -162,7 +165,10 @@ public class GoogleDriveController : Controller
         CancellationToken cancellationToken = default)
     {
         var userId = User.GetUserId();
-        _logger.LogInformation("User {UserId} re-authenticating Google Drive connection {ConnectionId}", userId, id);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} re-authenticating Google Drive connection {ConnectionId}", userId, id);
+        }
 
         try
         {
@@ -204,7 +210,10 @@ public class GoogleDriveController : Controller
         CancellationToken cancellationToken = default)
     {
         var userId = User.GetUserId();
-        _logger.LogInformation("User {UserId} deleting Google Drive connection {ConnectionId}", userId, id);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} deleting Google Drive connection {ConnectionId}", userId, id);
+        }
 
         try
         {

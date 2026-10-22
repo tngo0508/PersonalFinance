@@ -88,7 +88,10 @@ public class CommunityService : ICommunityService
             else
             {
                 existingVote.OptionId = request.OptionId;
-                _logger.LogInformation("User changed vote: UserId={UserId}, PollId={PollId}, OptionId={OptionId}", userId, poll.Id, request.OptionId);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("User changed vote: UserId={UserId}, PollId={PollId}, OptionId={OptionId}", userId, poll.Id, request.OptionId);
+                }
             }
         }
         else
@@ -100,7 +103,10 @@ public class CommunityService : ICommunityService
                 OptionId = request.OptionId,
             };
             await _dbContext.CommunityPollVotes.AddAsync(vote, cancellationToken);
-            _logger.LogInformation("New vote recorded: UserId={UserId}, PollId={PollId}, OptionId={OptionId}", userId, poll.Id, request.OptionId);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("New vote recorded: UserId={UserId}, PollId={PollId}, OptionId={OptionId}", userId, poll.Id, request.OptionId);
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -177,7 +183,10 @@ public class CommunityService : ICommunityService
         await _dbContext.CommunityComments.AddAsync(comment, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("New comment added: CommentId={CommentId}, UserId={UserId}", comment.Id, userId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("New comment added: CommentId={CommentId}, UserId={UserId}", comment.Id, userId);
+        }
 
         return new CommunityCommentDto
         {
@@ -315,7 +324,10 @@ public class CommunityService : ICommunityService
         await _dbContext.CommunityStories.AddAsync(story, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("New story submitted: StoryId={StoryId}, UserId={UserId}", story.Id, userId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("New story submitted: StoryId={StoryId}, UserId={UserId}", story.Id, userId);
+        }
 
         return new CommunityStoryDto
         {

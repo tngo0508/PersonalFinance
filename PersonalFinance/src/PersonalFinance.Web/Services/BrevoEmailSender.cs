@@ -60,7 +60,10 @@ public class BrevoEmailSender : IEmailSender
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Email sent successfully to {ToEmail} via Brevo API.", email);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("Email sent successfully to {ToEmail} via Brevo API.", email);
+                }
             }
             else
             {

@@ -9,7 +9,7 @@ This guide gets you from a fresh clone to a merged pull request. Deeper material
 
 ## 1. Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0): the version pinned in [`global.json`](global.json) (10.0.402 or a later 10.0.4xx patch). CI uses the same file.
 - [Node.js](https://nodejs.org/) 20+ (ESLint, pre-commit hook, Playwright e2e tests)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) for the local SQL Server database, or the in-memory mode below to try the app without one
 - An IDE that reads `.editorconfig`: Rider, Visual Studio, or VS Code with C# Dev Kit

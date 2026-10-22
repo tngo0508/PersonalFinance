@@ -87,7 +87,10 @@ public class XUserIdAuthenticationHandler : AuthenticationHandler<Authentication
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
-        _logger.LogDebug("Authenticated user {UserId} via X-User-Id header.", userId);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Authenticated user {UserId} via X-User-Id header.", userId);
+        }
         return AuthenticateResult.Success(ticket);
     }
 }

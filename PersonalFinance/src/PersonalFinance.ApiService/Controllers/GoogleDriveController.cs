@@ -51,7 +51,10 @@ public class GoogleDriveController : ControllerBase
             });
         }
 
-        _logger.LogInformation("Processing Google Drive explore request for input '{Url}'", request.FolderUrl);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Processing Google Drive explore request for input '{Url}'", request.FolderUrl);
+        }
 
         var result = await _driveConnectionService.GetFolderFilesAsync(request, cancellationToken);
         if (!result.Success && string.IsNullOrEmpty(result.FolderId))

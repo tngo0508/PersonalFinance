@@ -143,7 +143,10 @@ public class AiAssistantService : IAiAssistantService
             await _quotaService.RecordUsageAsync(userId, "chat",
                 promptTokens, completionTokens, cachedPromptTokens, estimatedCost);
 
-            _logger.LogInformation("User {UserId} sent a message to AI assistant. Model: {Model}", userId, _modelName);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("User {UserId} sent a message to AI assistant. Model: {Model}", userId, _modelName);
+            }
 
             return new AiChatResponseDto
             {
@@ -437,7 +440,10 @@ public class AiAssistantService : IAiAssistantService
             await _quotaService.RecordUsageAsync(userId, "summarize", promptTokens, completionTokens, cachedTokens,
                 AiQuotaService.CalculateEstimatedCost(promptTokens, completionTokens, cachedTokens));
 
-            _logger.LogInformation("User {UserId} summarized a news article. Model: {Model}", userId, _modelName);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("User {UserId} summarized a news article. Model: {Model}", userId, _modelName);
+            }
 
             return new NewsArticleSummaryResponseDto
             {

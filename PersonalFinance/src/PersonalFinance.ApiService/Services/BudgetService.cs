@@ -80,7 +80,10 @@ public class BudgetService : IBudgetService
         budget.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("User {UserId} saved budget for period {Period}", userId, period);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} saved budget for period {Period}", userId, period);
+        }
 
         // Check for budget alerts after saving
         await CheckBudgetAlertsAsync(userId, period, cancellationToken);

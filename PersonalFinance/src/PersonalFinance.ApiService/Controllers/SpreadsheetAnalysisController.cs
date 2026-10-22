@@ -89,7 +89,10 @@ public class SpreadsheetAnalysisController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var userId = User.GetUserId();
-        _logger.LogInformation("User {UserId} requested sync for spreadsheet {FileId}", userId, request.FileId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} requested sync for spreadsheet {FileId}", userId, request.FileId);
+        }
 
         var result = await _analysisService.SyncSpreadsheetBudgetAsync(userId, request.ConnectionId, request.FileId,
             request.FileName, request.Overwrite ?? false, cancellationToken);

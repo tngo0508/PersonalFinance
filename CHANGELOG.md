@@ -143,6 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Budget period keys and counters are formatted and parsed with the invariant culture, and the savings goal target date is parsed as invariant ISO `yyyy-MM-dd`; relative-time labels and the figures in AI Assistant prompts use the app culture (en-US), so a host locale change no longer alters them.
   - Aspire is upgraded from 13.6.1 to 13.6.3, which removes the vulnerable MessagePack version (moderate severity, NU1902); the AppHost now resolves MessagePack 2.5.307.
   - Both full-solution Release builds in the deploy workflow pass `-p:EnforceWarningsAsErrors=true`, so a warning fails CI; a test checks the flag stays on.
+  - The .NET SDK is pinned to 10.0.402 (latest patch) in a repo-root `global.json`, and every `setup-dotnet` step in CI installs it from that file, so newer analyzers (such as CA1873) can't break CI before they reach local builds; a test checks the workflow keeps using it.
+  - The 35 Information and Debug log calls that SDK 10.0.402 flags (database migration, RBAC seeding, ApiService services and controllers, Web controllers, external login and the Brevo email sender) are wrapped in `IsEnabled` checks, so their arguments are only evaluated when the log is written (CA1873); messages and levels are unchanged.
   - The hardcoded AES key and static IV in credential protection are tracked in #133; CA5351 is suppressed on that line until then, so stored Google Drive connections keep working.
 
 - **Startup Failure Exit Code**: The ApiService and Web app now exit with code 1 when startup fails, so a failed `--migrate-only` run no longer looks successful (#108).
