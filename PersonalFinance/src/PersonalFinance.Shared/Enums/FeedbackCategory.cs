@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace PersonalFinance.Shared.Enums;
 
 /// <summary>
 /// The kind of Feedback an Account sends.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum FeedbackCategory
 {
     /// <summary>

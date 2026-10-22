@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace PersonalFinance.Shared.Enums;
 
 /// <summary>
 /// Where a piece of Feedback is in the Admin's triage. New Feedback starts as <see cref="New"/>.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum FeedbackStatus
 {
     /// <summary>
