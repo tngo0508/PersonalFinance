@@ -89,6 +89,22 @@ public class NavigationLayoutTests
     }
 
     [Fact]
+    public void LayoutView_LinksSignedInAccountsToFeedback_FromTheSidebarAndTheFooter()
+    {
+        var content = File.ReadAllText(Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web",
+            "Views", "Shared", "_Layout.cshtml"));
+
+        var sidebar = content[content.IndexOf("<aside", StringComparison.Ordinal)..content.IndexOf("</aside>", StringComparison.Ordinal)];
+        Assert.Contains("asp-controller=\"Feedback\"", sidebar);
+
+        var footer = content[content.IndexOf("<footer", StringComparison.Ordinal)..content.IndexOf("</footer>", StringComparison.Ordinal)];
+        var footerLink = footer.IndexOf("asp-controller=\"Feedback\"", StringComparison.Ordinal);
+        Assert.True(footerLink >= 0, "The footer should link to Feedback.");
+        Assert.True(footer.LastIndexOf("@if (isSignedIn)", footerLink, StringComparison.Ordinal) >= 0,
+            "The footer Feedback link should only be shown to signed-in Accounts.");
+    }
+
+    [Fact]
     public void SidebarCss_DefinesRequiredResponsiveAndCollapsedDimensions()
     {
         var cssPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "css",

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.Data;
 
@@ -135,6 +136,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<AiUsageRecord> AiUsageRecords => Set<AiUsageRecord>();
 
     /// <summary>
+    /// Feedback table set — Bug, Idea and Other messages Accounts send to the operator.
+    /// </summary>
+    public DbSet<Feedback> Feedback => Set<Feedback>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -163,6 +169,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         modelBuilder.Entity<BudgetTransaction>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Feedback>().HasQueryFilter(e => !e.IsDeleted);
 
         // Configure AiUsageRecord entity — usage records are never soft-deleted
         modelBuilder.Entity<AiUsageRecord>(entity =>
@@ -595,6 +602,19 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.PolicyVersion).IsRequired().HasMaxLength(50);
             entity.Property(e => e.IpAddress).HasMaxLength(45);
             entity.HasIndex(e => e.UserId);
+        });
+
+        // Configure Feedback entity — the Admin inbox lists by status, newest first
+        modelBuilder.Entity<Feedback>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Category).IsRequired();
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(FeedbackLimits.MessageMaxLength);
+            entity.Property(e => e.PageUrl).HasMaxLength(FeedbackLimits.PageUrlMaxLength);
+            entity.Property(e => e.Status).IsRequired();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.Status, e.CreatedAt });
         });
     }
 }

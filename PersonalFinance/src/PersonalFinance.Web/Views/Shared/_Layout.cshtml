@@ -122,7 +122,11 @@
                     <span class="sidebar-link-icon"><i data-lucide="folder-open"></i></span>
                     <span class="sidebar-link-text">Google Drive</span>
                 </a>
-            </div>
+                <a class="sidebar-link @(currentController == "Feedback" ? "active" : "")"
+                   asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@Context.Request.Path">
+                    <span class="sidebar-link-icon"><i data-lucide="message-square"></i></span>
+                    <span class="sidebar-link-text">Send feedback</span>
+                </a>            </div>
 
             @if (isAdmin)
             {
@@ -217,7 +221,10 @@
                         <li><a asp-area="" asp-controller="Legal" asp-action="Disclaimer">Disclaimer</a></li>
                         <li><a asp-area="" asp-controller="Legal" asp-action="Cookies">Cookies</a></li>
                         <li><a asp-area="" asp-controller="Legal" asp-action="Contact">Contact</a></li>
-                    </ul>
+                        @if (isSignedIn)
+                        {
+                            <li><a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@Context.Request.Path">Send feedback</a></li>
+                        }                    </ul>
                 </div>
             </div>
         </div>
