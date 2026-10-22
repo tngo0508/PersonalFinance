@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The development guide has a "Local SQL Server (Docker)" section and the settings needed to run the e2e suites with the projects started separately.
   - A unit test shows a local SQL Server connection string selects the same provider and migration set as Azure SQL.
   - Verified on macOS (Apple Silicon): from `db:reset`, the ApiService applies all 16 migrations and seeds data, and the Playwright UI and API suites pass.
+  - A new `sql-server-migrations` CI job starts SQL Server with `npm run db:up` and a random per-run `sa` password, runs the ApiService with `--migrate-only` twice (the second run must apply nothing), dumps the container and ApiService logs on failure and always runs `db:down`; the Azure deployment now waits for it.
 
 ### Changed
 
