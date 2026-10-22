@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A unit test shows a local SQL Server connection string selects the same provider and migration set as Azure SQL.
   - The docs and agent rules now treat local SQL Server as a supported development target: production is Azure SQL, only T-SQL and EF features both support may be used, and local tooling never points at production. The README and contributing guide drop the "Azure SQL only" wording, the development guide fixes the `SqlServerAppDbContext` reference, moves the dev Azure SQL scripts to an alternative section and adds a Windows verification checklist, and the provider, DbContext and fallback connection string doc comments mention local SQL Server.
   - Verified on macOS (Apple Silicon): from `db:reset`, the ApiService applies all 16 migrations and seeds data, and the Playwright UI and API suites pass.
+  - A new `sql-server-migrations` CI job starts SQL Server with `npm run db:up` and a random per-run `sa` password, runs the ApiService with `--migrate-only` twice (the second run must apply nothing), dumps the container and ApiService logs on failure and always runs `db:down`; the Azure deployment now waits for it.
 
 ### Changed
 

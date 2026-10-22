@@ -307,6 +307,109 @@ jobs:
           sleep 2
 
   # ============================================================================
+  # 1d. MIGRATIONS ON A REAL SQL SERVER (runs in parallel)
+  # Starts SQL Server 2022 with the developers' compose.yaml and npm db:* scripts,
+  # then runs the ApiService's production `--migrate-only` path twice: the first
+  # run applies every migration and seeds data, the second must apply nothing.
+  # A migration that SQL Server rejects fails here, before it can reach Azure SQL.
+  # ============================================================================
+  sql-server-migrations:
+    name: Migrations on SQL Server 2022
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }} SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Build ApiService (Release)
+        run: dotnet build PersonalFinance/src/PersonalFinance.ApiService --configuration Release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Throwaway sa password generated for this run only (no repository secret).
+      # "Aa1!" guarantees SQL Server's complexity rules; the hex part makes it random.
+      - name: Write .env with a random sa password
+        run: |
+          SA_PASSWORD="Aa1!$(openssl rand -hex 16)"
+          echo "::add-mask::${SA_PASSWORD}"
+          printf 'MSSQL_SA_PASSWORD=%s\nSQL_HOST_PORT=1433\n' "${SA_PASSWORD}" > .env
+
+      - name: Start SQL Server (npm run db:up)
+        run: npm run db:up
+
+      - name: Apply migrations twice with --migrate-only
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+        run: |
+          set -a; . ./.env; set +a
+          export ConnectionStrings__DefaultConnection="Server=localhost,${SQL_HOST_PORT};Database=PersonalFinance;User ID=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False"
+
+          # Program.cs logs startup failures and still exits 0, so check the log as well as the exit code.
+          migrate() {
+            local run="$1" log=".migrate-$1.log" status=0
+            echo "Migration run ${run} (logs -> ${log})"
+            dotnet run --project PersonalFinance/src/PersonalFinance.ApiService \
+              --configuration Release --no-build --no-launch-profile \
+              -- --migrate-only > "${log}" 2>&1 || status=$?
+            grep -E "Applying [0-9]+ pending migration|schema is up to date|migration task finished" "${log}" || true
+            if [ "${status}" -ne 0 ]; then
+              echo "::error::Migration run ${run} exited with code ${status}."
+              return 1
+            fi
+            if ! grep -q "Database migration task finished (--migrate-only); exiting." "${log}"; then
+              echo "::error::Migration run ${run} did not finish migrating and seeding."
+              return 1
+            fi
+          }
+
+          migrate 1
+          if ! grep -qE "Applying [0-9]+ pending migration" .migrate-1.log; then
+            echo "::error::The first run applied no migrations to the empty database."
+            exit 1
+          fi
+
+          migrate 2
+          if ! grep -q "Database schema is up to date (no pending migrations)." .migrate-2.log; then
+            echo "::error::The second run applied migrations again; they are not idempotent."
+            exit 1
+          fi
+          echo "All migrations applied on SQL Server 2022, and a second run applied nothing."
+
+      - name: Dump SQL Server and ApiService logs on failure
+        if: failure()
+        run: |
+          echo "----- docker compose ps -----"
+          docker compose ps -a || true
+          echo "----- SQL Server container logs -----"
+          docker compose logs --no-color --tail 300 sqlserver || true
+          for log in .migrate-1.log .migrate-2.log; do
+            if [ -f "${log}" ]; then
+              echo "----- Tail 300 lines of ${log} -----"
+              tail -n 300 "${log}"
+            fi
+          done
+
+      - name: Stop SQL Server (npm run db:down)
+        if: always()
+        run: npm run db:down || true
+
+  # ============================================================================
   # 1b. VALIDATE INFRASTRUCTURE TEMPLATES (runs in parallel with build-and-test)
   # ============================================================================
   validate-infra:
@@ -407,7 +510,7 @@ jobs:
   # ============================================================================
   deploy-azure:
     name: Deploy to Azure Container Apps
-    needs: [build-and-test, validate-infra, build-and-push-containers]
+    needs: [build-and-test, sql-server-migrations, validate-infra, build-and-push-containers]
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && inputs.dry_run != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
