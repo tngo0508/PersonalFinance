@@ -1,0 +1,139 @@
+/* ==========================================================================
+   Account settings (Identity Manage pages): ledger theme inside the signed-in
+   app shell. Account/Manage/_Layout.cshtml renders the .account-page shell;
+   tokens and the shared form, link and button styles come from ledger.css.
+   ========================================================================== */
+
+.account-page {
+    max-width: 960px;
+    color: var(--lp-ink);
+    font-family: var(--lp-font);
+}
+
+.account-page__header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--lp-rule);
+}
+
+.account-page__title {
+    margin: 0 0 0.35rem;
+    color: var(--lp-ink);
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.account-page__subtitle {
+    margin: 0;
+    color: var(--lp-ink-soft);
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+.account-page__body {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 3rem;
+    align-items: start;
+}
+
+.account-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.account-nav__link {
+    display: block;
+    padding: 8px 12px;
+    border-left: 2px solid transparent;
+    border-radius: 0 6px 6px 0;
+    color: var(--lp-ink-soft);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.account-nav__link:hover {
+    background: var(--lp-surface);
+    color: var(--lp-ink);
+}
+
+.account-nav__link[aria-current="page"] {
+    border-left-color: var(--lp-ledger);
+    background: var(--lp-ledger-wash);
+    color: var(--lp-ledger-deep);
+    font-weight: 600;
+}
+
+.account-nav__link:focus-visible {
+    outline: 2px solid var(--lp-ledger);
+    outline-offset: 2px;
+}
+
+.account-page__content {
+    max-width: 560px;
+}
+
+/* Each built-in Manage page starts with an <h3> title */
+.account-page__content h3 {
+    margin: 0 0 1.25rem;
+    color: var(--lp-ink);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.account-page__content h4,
+.account-page__content h5 {
+    margin-top: 1.5rem;
+    color: var(--lp-ink);
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.account-page__content p {
+    color: var(--lp-ink-soft);
+    line-height: 1.55;
+}
+
+/* Personal data: the Download form sits directly above the Delete button */
+.account-page__content #download-data {
+    margin-bottom: 0.75rem;
+}
+
+/* Built-in pages lay forms out in .col-md-* columns, sized for a full-width page */
+.account-page__content .row > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+}
+
+@media (max-width: 767.98px) {
+    .account-page__body {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+    }
+
+    /* Sections become a scrollable tab row */
+    .account-nav {
+        flex-direction: row;
+        gap: 4px;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--lp-rule);
+    }
+
+    .account-nav__link {
+        padding: 8px 10px;
+        border-bottom: 2px solid transparent;
+        border-left: 0;
+        border-radius: 0;
+        white-space: nowrap;
+    }
+
+    .account-nav__link[aria-current="page"] {
+        border-bottom-color: var(--lp-ledger);
+        background: none;
+    }
+}

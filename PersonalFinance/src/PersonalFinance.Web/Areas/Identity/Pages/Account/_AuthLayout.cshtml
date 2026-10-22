@@ -1,0 +1,33 @@
+@*
+    Shell for every Identity Account page, including the built-in ones (forgot and reset password,
+    confirm email, lockout, sign out, ...) that are not scaffolded into this project.
+    Account settings (Manage/) uses its own layout.
+*@
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ledger.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true"/>
+}
+
+<div class="auth-page">
+    <a class="auth-page__brand" asp-area="" asp-controller="Home" asp-action="Index">
+        <span class="auth-page__brand-mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M1 13.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 0-1H2V2.5a.5.5 0 0 0-1 0v11z"/>
+                <path d="M4.5 11a.5.5 0 0 1-.354-.854l3-3a.5.5 0 0 1 .708 0L9.5 8.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0L7.5 8.207l-2.646 2.647A.5.5 0 0 1 4.5 11z"/>
+            </svg>
+        </span>
+        <span class="auth-page__brand-name">PersonalFinance</span>
+    </a>
+
+    <div class="auth-page__body">
+        @RenderBody()
+    </div>
+</div>
+
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

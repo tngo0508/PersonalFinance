@@ -1,6 +1,7 @@
 /* ==========================================================================
-   Auth pages (Sign in, Register): no card wrapper, ledger theme.
-   Colour and font tokens come from ledger.css, which loads first.
+   Identity pages (Sign in, Register, password reset, ...): no card wrapper,
+   ledger theme. Account/_AuthLayout.cshtml renders the .auth-page shell; tokens
+   and the shared form, link and button styles come from ledger.css.
    ========================================================================== */
 
 .auth-page {
@@ -37,19 +38,45 @@
     color: #fff;
 }
 
-.auth-page__title {
-    margin: 0;
+.auth-page__body {
+    margin-top: 1.5rem;
+}
+
+/* Built-in Identity pages use a plain <h1>; style it like the scaffolded page titles */
+.auth-page__title,
+.auth-page__body h1 {
+    margin: 0 0 0.5rem;
     color: var(--lp-ink);
     font-size: clamp(1.75rem, 4vw, 2.1rem);
     font-weight: 600;
     letter-spacing: -0.02em;
 }
 
-.auth-page__subtitle {
+.auth-page__subtitle,
+.auth-page__body h2 {
     margin: 0;
     color: var(--lp-ink-soft);
     font-size: 1rem;
+    font-weight: 400;
     line-height: 1.55;
+}
+
+.auth-page__body h3 {
+    color: var(--lp-ink);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.auth-page__body hr {
+    margin: 1.5rem 0;
+    border-color: var(--lp-rule);
+    opacity: 1;
+}
+
+/* Built-in pages lay forms out in .col-md-* columns, sized for a full-width page */
+.auth-page__body .row > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
 }
 
 .auth-page__form {
@@ -65,96 +92,7 @@
 
 .auth-page__form .form-control {
     padding: 10px 14px;
-    border: 1px solid var(--lp-rule);
-    border-radius: 6px;
-    color: var(--lp-ink);
     font-size: 1rem;
-}
-
-.auth-page__form .form-control::placeholder {
-    color: var(--lp-muted);
-}
-
-.auth-page__form .form-control:focus {
-    border-color: var(--lp-ledger);
-    outline: 2px solid var(--lp-ledger);
-    outline-offset: 0;
-    box-shadow: 0 0 0 4px var(--lp-ledger-wash);
-}
-
-/* ASP.NET marks errors with these classes, not Bootstrap's .is-invalid, so show them explicitly */
-.auth-page__form .form-control.input-validation-error {
-    border-color: var(--app-accent-negative);
-}
-
-.auth-page__form .invalid-feedback.field-validation-error {
-    display: block;
-    color: var(--app-accent-negative);
-    font-size: 0.875rem;
-}
-
-/* Muted border keeps the unchecked box visible (3:1 against white) */
-.auth-page__form .form-check-input {
-    border-color: var(--lp-muted);
-    background-color: var(--lp-paper);
-}
-
-.auth-page__form .form-check-input:checked {
-    border-color: var(--lp-ledger);
-    background-color: var(--lp-ledger);
-}
-
-.auth-page__form .form-check-input:focus {
-    border-color: var(--lp-ledger);
-    outline: 2px solid var(--lp-ledger);
-    outline-offset: 0;
-    box-shadow: 0 0 0 4px var(--lp-ledger-wash);
-}
-
-.auth-page a:not(.btn):not(.auth-page__brand) {
-    color: var(--lp-ledger);
-    font-weight: 500;
-}
-
-.auth-page a:not(.btn):not(.auth-page__brand):hover {
-    color: var(--lp-ledger-deep);
-    text-decoration: underline;
-}
-
-.auth-page .text-muted {
-    color: var(--lp-muted) !important;
-}
-
-.auth-page .btn-primary {
-    --bs-btn-bg: var(--lp-ledger);
-    --bs-btn-border-color: var(--lp-ledger);
-    --bs-btn-hover-bg: var(--lp-ledger-deep);
-    --bs-btn-hover-border-color: var(--lp-ledger-deep);
-    --bs-btn-active-bg: var(--lp-ledger-deep);
-    --bs-btn-active-border-color: var(--lp-ledger-deep);
-    --bs-btn-disabled-bg: var(--lp-ledger);
-    --bs-btn-disabled-border-color: var(--lp-ledger);
-    border-radius: 6px;
-    font-weight: 600;
-}
-
-.auth-page .btn-outline-secondary {
-    --bs-btn-color: var(--lp-ink);
-    --bs-btn-border-color: var(--lp-ink-soft);
-    --bs-btn-hover-color: var(--lp-ink);
-    --bs-btn-hover-bg: var(--lp-surface);
-    --bs-btn-hover-border-color: var(--lp-ink-soft);
-    --bs-btn-active-color: var(--lp-ink);
-    --bs-btn-active-bg: var(--lp-surface);
-    --bs-btn-active-border-color: var(--lp-ink-soft);
-    border-radius: 6px;
-    font-weight: 500;
-}
-
-.auth-page .btn:focus-visible {
-    outline: 2px solid var(--lp-ledger);
-    outline-offset: 2px;
-    box-shadow: none;
 }
 
 .auth-page__note {
