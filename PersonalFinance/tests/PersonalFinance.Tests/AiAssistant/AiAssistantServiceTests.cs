@@ -395,6 +395,44 @@ public class AiAssistantServiceTests
     }
 
     [Fact]
+    public async Task SummarizeArticleAsync_TruncatesLongDescriptionTo4000CharactersWithEllipsis()
+    {
+        await using var db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply("Article summary"));
+        var service = CreateService(db, fake);
+        var description = new string('a', 3999) + "bc";
+
+        await service.SummarizeArticleAsync(UserId,
+            new PersonalFinance.Shared.DTOs.News.NewsArticleSummaryRequestDto
+            {
+                Title = "Finance news",
+                Description = description
+            });
+
+        var userMessage = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
+        Assert.EndsWith("Description: " + new string('a', 3999) + "b...", userMessage);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_KeepsDescriptionOf4000CharactersUnchanged()
+    {
+        await using var db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply("Article summary"));
+        var service = CreateService(db, fake);
+        var description = new string('a', 4000);
+
+        await service.SummarizeArticleAsync(UserId,
+            new PersonalFinance.Shared.DTOs.News.NewsArticleSummaryRequestDto
+            {
+                Title = "Finance news",
+                Description = description
+            });
+
+        var userMessage = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
+        Assert.EndsWith("Description: " + description, userMessage);
+    }
+
+    [Fact]
     public async Task SendChatMessageAsync_UnchangedDataProducesIdenticalCompactSnapshots()
     {
         await using var db = CreateContext();

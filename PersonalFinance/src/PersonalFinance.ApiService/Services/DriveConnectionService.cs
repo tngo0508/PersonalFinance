@@ -342,7 +342,7 @@ public class DriveConnectionService : IDriveConnectionService
         }
 
         // Purge cached files
-        if (connection.CachedFiles.Any())
+        if (connection.CachedFiles.Count > 0)
         {
             _dbContext.GoogleDriveCachedFiles.RemoveRange(connection.CachedFiles);
         }

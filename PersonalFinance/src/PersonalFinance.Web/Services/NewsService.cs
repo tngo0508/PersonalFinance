@@ -228,11 +228,11 @@ public sealed class NewsService : INewsService
 
         if (!string.IsNullOrEmpty(options.Search))
         {
-            var query = options.Search.ToLowerInvariant();
+            var query = options.Search;
             filtered = filtered.Where(a =>
-                a.Title.ToLowerInvariant().Contains(query) ||
-                a.Description.ToLowerInvariant().Contains(query) ||
-                a.Source.ToLowerInvariant().Contains(query));
+                a.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                a.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                a.Source.Contains(query, StringComparison.OrdinalIgnoreCase));
         }
 
         return filtered.ToList();

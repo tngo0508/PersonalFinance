@@ -1395,9 +1395,9 @@ public static class BudgetSpreadsheetParser
             .Trim();
 
         // Handle negative formatted in parentheses e.g. (150.00) -> -150.00
-        if (clean.StartsWith("(") && clean.EndsWith(")"))
+        if (clean.StartsWith('(') && clean.EndsWith(')'))
         {
-            clean = "-" + clean.Substring(1, clean.Length - 2);
+            clean = string.Concat("-", clean.AsSpan(1, clean.Length - 2));
         }
 
         return decimal.TryParse(clean, NumberStyles.Number | NumberStyles.AllowCurrencySymbol,

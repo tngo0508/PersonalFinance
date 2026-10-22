@@ -410,7 +410,7 @@ public class AiAssistantService : IAiAssistantService
             var description = string.IsNullOrEmpty(request.Description)
                 ? string.Empty
                 : request.Description.Length > 4000
-                    ? request.Description.Substring(0, 4000) + "..."
+                    ? string.Concat(request.Description.AsSpan(0, 4000), "...")
                     : request.Description;
 
             // Build the system prompt — news only, no financial advice
