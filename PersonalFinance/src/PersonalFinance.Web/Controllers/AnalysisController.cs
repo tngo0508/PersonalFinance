@@ -117,7 +117,7 @@ public class AnalysisController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private AnalysisDashboardViewModel MapToViewModel(AnalysisDashboardDto result)
+    private static AnalysisDashboardViewModel MapToViewModel(AnalysisDashboardDto result)
     {
         var model = new AnalysisDashboardViewModel
         {

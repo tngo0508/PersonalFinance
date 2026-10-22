@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 
 namespace PersonalFinance.Shared.Constants;
 
@@ -19,9 +20,11 @@ public static class FeedbackMessages
     /// </summary>
     public const string MessageTooLongFormat = "Message must be {1:N0} characters or fewer.";
 
+    private static readonly CompositeFormat MessageTooLongCompositeFormat = CompositeFormat.Parse(MessageTooLongFormat);
+
     /// <summary>Shown when the message is longer than <see cref="FeedbackLimits.MessageMaxLength"/>.</summary>
-    public static readonly string MessageTooLong =
-        string.Format(CultureInfo.InvariantCulture, MessageTooLongFormat, null, FeedbackLimits.MessageMaxLength);
+    public static readonly string MessageTooLong = string.Format(
+        CultureInfo.InvariantCulture, MessageTooLongCompositeFormat, null, FeedbackLimits.MessageMaxLength);
 
     /// <summary>Shown when the page is longer than <see cref="FeedbackLimits.PageUrlMaxLength"/>.</summary>
     public static readonly string PageTooLong = string.Create(CultureInfo.InvariantCulture,

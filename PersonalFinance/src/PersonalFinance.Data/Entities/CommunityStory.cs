@@ -48,7 +48,7 @@ public class CommunityStory : AuditableEntity
     /// <summary>
     /// Gets or sets a value indicating whether the story is featured/pinned.
     /// </summary>
-    public bool IsFeatured { get; set; } = false;
+    public bool IsFeatured { get; set; }
 
     /// <summary>
     /// Gets or sets the date and time the story was published.
