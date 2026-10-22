@@ -59,6 +59,7 @@ public static class FeatureServiceExtensions
     public static IServiceCollection AddFeedbackFeature(this IServiceCollection services)
     {
         services.AddScoped<IFeedbackService, FeedbackService>();
+        services.AddKeyedSingleton(FeedbackService.RateLimiterKey, (_, _) => FeedbackService.CreateRateLimiter());
         return services;
     }
 

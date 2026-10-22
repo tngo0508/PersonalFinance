@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Constants;
@@ -24,6 +25,12 @@ public class FeedbackController : Controller
     /// The confirmation shown after Feedback is sent.
     /// </summary>
     public const string SentMessage = "Thanks! Your feedback was sent.";
+
+    /// <summary>
+    /// The message shown when the Account has sent too much Feedback too quickly (ApiService answered 429).
+    /// </summary>
+    public const string RateLimitedMessage =
+        "You've sent a lot of feedback recently. Please try again later; your message is still here.";
 
     private readonly IFeedbackApi _feedbackApi;
     private readonly ILogger<FeedbackController> _logger;
@@ -67,6 +74,11 @@ public class FeedbackController : Controller
         try
         {
             await _feedbackApi.SubmitAsync(request, HttpContext.RequestAborted);
+        }
+        catch (Refit.ApiException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            ModelState.AddModelError(string.Empty, RateLimitedMessage);
+            return View(nameof(Index), model);
         }
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
