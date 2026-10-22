@@ -6,6 +6,11 @@
   </PropertyGroup>
 
     <ItemGroup>
+        <!-- Lets the tests translate SearchService queries to Azure SQL without a database -->
+        <InternalsVisibleTo Include="PersonalFinance.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- Project References -->
         <ProjectReference Include="..\PersonalFinance.ServiceDefaults\PersonalFinance.ServiceDefaults.csproj" />
         <ProjectReference Include="..\PersonalFinance.Shared\PersonalFinance.Shared.csproj" />
