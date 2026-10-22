@@ -310,12 +310,12 @@ public class AiAssistantService : IAiAssistantService
             .Sum(x => x.Transaction.Amount);
 
         var sb = new StringBuilder();
-        sb.AppendLine(
+        sb.AppendLine(AppCulture.Default,
             $"{rows.Count} matching transactions (expenses ${expenseTotal:N2}, income ${incomeTotal:N2}); " +
             $"showing newest {Math.Min(rowLimit, rows.Count)}:");
         foreach (var (transaction, _) in rows.Take(rowLimit))
         {
-            sb.AppendLine(
+            sb.AppendLine(AppCulture.Default,
                 $"- {transaction.Date}: ${transaction.Amount:N2} {transaction.Type} - {transaction.Description} ({transaction.Category})");
         }
 
@@ -339,15 +339,19 @@ public class AiAssistantService : IAiAssistantService
         var sb = new StringBuilder();
         foreach (var goal in context.SavingsGoals)
         {
-            var status = goal.IsCompleted ? "completed" : $"{goal.ProgressPercent:F1}% complete";
-            var target = goal.TargetDate.HasValue ? $", target date {goal.TargetDate.Value:yyyy-MM-dd}" : string.Empty;
+            var status = goal.IsCompleted
+                ? "completed"
+                : string.Create(AppCulture.Default, $"{goal.ProgressPercent:F1}% complete");
+            var target = goal.TargetDate.HasValue
+                ? string.Create(CultureInfo.InvariantCulture, $", target date {goal.TargetDate.Value:yyyy-MM-dd}")
+                : string.Empty;
             if (!goal.IsCompleted && goal.TargetDate.HasValue && goal.TargetDate.Value.Date > DateTime.UtcNow.Date)
             {
                 var months = Math.Max(1, (goal.TargetDate.Value.Year - DateTime.UtcNow.Year) * 12 +
                     goal.TargetDate.Value.Month - DateTime.UtcNow.Month);
-                sb.AppendLine($"Required monthly savings to target (no investment growth assumed): ${Math.Max(0m, goal.TargetAmount - goal.CurrentAmount) / months:N2}");
+                sb.AppendLine(AppCulture.Default, $"Required monthly savings to target (no investment growth assumed): ${Math.Max(0m, goal.TargetAmount - goal.CurrentAmount) / months:N2}");
             }
-            sb.AppendLine($"- {goal.Name}: ${goal.CurrentAmount:N0} of ${goal.TargetAmount:N0} ({status}){target}");
+            sb.AppendLine(AppCulture.Default, $"- {goal.Name}: ${goal.CurrentAmount:N0} of ${goal.TargetAmount:N0} ({status}){target}");
         }
 
         return sb.ToString();
@@ -362,19 +366,19 @@ public class AiAssistantService : IAiAssistantService
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Annual income: ${context.AnnualIncome:N0}");
-        sb.AppendLine($"Annual spending: ${context.AnnualSpending:N0}");
-        sb.AppendLine($"Annual savings: ${context.AnnualSavings:N0}");
-        sb.AppendLine($"Starting/current net worth: ${context.CurrentNetWorth:N0}");
+        sb.AppendLine(AppCulture.Default, $"Annual income: ${context.AnnualIncome:N0}");
+        sb.AppendLine(AppCulture.Default, $"Annual spending: ${context.AnnualSpending:N0}");
+        sb.AppendLine(AppCulture.Default, $"Annual savings: ${context.AnnualSavings:N0}");
+        sb.AppendLine(AppCulture.Default, $"Starting/current net worth: ${context.CurrentNetWorth:N0}");
         if (context.CurrentAge > 0 && context.RetirementAge > 0)
         {
-            sb.AppendLine($"Age {context.CurrentAge}, retirement target age {context.RetirementAge} " +
+            sb.AppendLine(AppCulture.Default, $"Age {context.CurrentAge}, retirement target age {context.RetirementAge} " +
                           $"({Math.Max(0, context.RetirementAge - context.CurrentAge)} years to go)");
         }
 
         if (context.Projection is { } projection)
         {
-            sb.AppendLine($"FI target: ${projection.FiTarget:N0}; projected retirement balances (not guaranteed): " +
+            sb.AppendLine(AppCulture.Default, $"FI target: ${projection.FiTarget:N0}; projected retirement balances (not guaranteed): " +
                 $"base ${projection.Base.FinalNetWorth:N0}, conservative ${projection.Conservative.FinalNetWorth:N0}, " +
                 $"aggressive ${projection.Aggressive.FinalNetWorth:N0}.");
         }

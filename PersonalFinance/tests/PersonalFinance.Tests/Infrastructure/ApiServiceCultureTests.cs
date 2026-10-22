@@ -1,10 +1,15 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.DTOs.AiAssistant;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 
 namespace PersonalFinance.Tests.Infrastructure;
@@ -141,6 +146,109 @@ public class ApiServiceCultureTests : IDisposable
         Assert.DoesNotContain(CurrencySymbolOfInvariantCulture, notification.Message);
     }
 
+    /// <summary>Switches the current culture as if the host ran under a non-US locale.</summary>
+    private static void StartInCulture(string cultureName)
+    {
+        var culture = CultureInfo.GetCultureInfo(cultureName);
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("th-TH")]
+    public async Task SaveBudget_WithoutPeriod_StoresInvariantYearMonthKeyUnderAnyCulture(string cultureName)
+    {
+        StartInCulture(cultureName);
+        await using var db = CreateContext();
+        var service = new BudgetService(db, NullLogger<BudgetService>.Instance, new CapturingNotificationService(),
+            TestBudgetDataProviderFactory.Create(db));
+
+        await service.SaveBudgetAsync(UserId, new SaveBudgetRequestDto
+        {
+            MonthlyIncome = 5_000m,
+            Allocations = new BudgetAllocationsDto { Housing = 1_500m }
+        });
+
+        var expectedPeriod = DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+        var saved = await service.GetBudgetAsync(UserId, expectedPeriod);
+        Assert.NotNull(saved);
+        Assert.Equal(5_000m, saved.MonthlyIncome);
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("th-TH")]
+    public async Task SaveBudget_WithPeriodKey_ParsesYearAndMonthUnderAnyCulture(string cultureName)
+    {
+        StartInCulture(cultureName);
+        await using var db = CreateContext();
+        db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
+        {
+            UserId = UserId,
+            ConnectionId = 1,
+            Year = 2026,
+            MonthNumber = 3,
+            MonthName = "March",
+            BudgetedExpenses = 1_000m,
+            ActualExpenses = 1_100m,
+            CategoryBreakdownJson = "[]"
+        });
+        await db.SaveChangesAsync();
+        var notifications = new CapturingNotificationService();
+        var service = new BudgetService(db, NullLogger<BudgetService>.Instance, notifications,
+            TestBudgetDataProviderFactory.Create(db));
+
+        await service.SaveBudgetAsync(UserId, new SaveBudgetRequestDto
+        {
+            Period = "2026-03",
+            MonthlyIncome = 5_000m,
+            Allocations = new BudgetAllocationsDto { Housing = 1_500m }
+        });
+
+        var alert = Assert.Single(notifications.Created);
+        Assert.Equal("Budget exceeded", alert.Title);
+        Assert.EndsWith("for 2026-03.", alert.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AiAssistantTools_UnderGermanCulture_ReportFiguresInAppCulture()
+    {
+        StartInCulture("de-DE");
+        await using var db = CreateContext();
+        db.NetWorthParameters.Add(new NetWorthParameters
+        {
+            UserId = UserId,
+            AnnualIncome = 120_000m,
+            AnnualSpending = 60_000m,
+            AnnualSavings = 30_000m,
+            StartingBalance = 50_000m,
+            CurrentAge = 35,
+            RetirementAge = 60
+        });
+        db.SavingsGoals.Add(new SavingsGoal
+        {
+            UserId = UserId,
+            Name = "Emergency Fund",
+            TargetAmount = 10_000m,
+            CurrentAmount = 2_500m
+        });
+        await db.SaveChangesAsync();
+        var outputs = new Dictionary<string, string?>();
+        var chatClient = new ToolInvokingChatClient(outputs, "get_net_worth_details", "get_savings_goals");
+        var service = new AiAssistantService(db, new AllowAllRateLimiter(), new AiQuotaService(db),
+            NullLogger<AiAssistantService>.Instance, new ConfigurationBuilder().Build(),
+            TestBudgetDataProviderFactory.Create(db), chatClient);
+
+        await service.SendChatMessageAsync(UserId, new AiChatRequestDto { Message = "How am I doing?" });
+
+        var netWorth = outputs["get_net_worth_details"];
+        Assert.Contains("Annual income: $120,000", netWorth);
+        Assert.Contains("Annual spending: $60,000", netWorth);
+        Assert.Contains("Starting/current net worth: $50,000", netWorth);
+        Assert.Contains("- Emergency Fund: $2,500 of $10,000 (25.0% complete)", outputs["get_savings_goals"]);
+    }
+
     [Fact]
     public void ApiServiceProgram_AppliesDefaultCultureRightAfterCreateBuilder()
     {
@@ -154,7 +262,7 @@ public class ApiServiceCultureTests : IDisposable
         Assert.True(applyDefault > createBuilder,
             "ApiService Program.cs must call AppCulture.ApplyDefault() right after WebApplication.CreateBuilder(args).");
         Assert.All(lines.Skip(createBuilder + 1).Take(applyDefault - createBuilder - 1),
-            l => Assert.True(string.IsNullOrWhiteSpace(l) || l.TrimStart().StartsWith("//"),
+            l => Assert.True(string.IsNullOrWhiteSpace(l) || l.TrimStart().StartsWith("//", StringComparison.Ordinal),
                 $"Unexpected statement between CreateBuilder and ApplyDefault: {l}"));
     }
 
@@ -173,6 +281,41 @@ public class ApiServiceCultureTests : IDisposable
         }
 
         throw new FileNotFoundException($"Could not find {Path.Combine(relativeSegments)} above the test output.");
+    }
+
+    /// <summary>Fake model that calls the named tools once and records what they return.</summary>
+    private sealed class ToolInvokingChatClient(Dictionary<string, string?> outputs, params string[] toolNames)
+        : IChatClient
+    {
+        public async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            foreach (var name in toolNames)
+            {
+                var tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == name);
+                outputs[name] = (await tool.InvokeAsync(new AIFunctionArguments(), cancellationToken))?.ToString();
+            }
+
+            return new ChatResponse(new ChatMessage(ChatRole.Assistant, "done"))
+            {
+                Usage = new UsageDetails { InputTokenCount = 10, OutputTokenCount = 5 }
+            };
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class AllowAllRateLimiter : IRateLimiterService
+    {
+        public bool TryAllow(string userId) => true;
     }
 
     private sealed class CapturingNotificationService : INotificationService

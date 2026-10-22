@@ -286,7 +286,7 @@ public static class BudgetSpreadsheetParser
     private static bool IsDateHeader(string text)
     {
         var lower = text.Trim().ToLowerInvariant();
-        return lower == "date" || lower.EndsWith(" date");
+        return lower == "date" || lower.EndsWith(" date", StringComparison.Ordinal);
     }
 
     // Looks a few rows above the header, within the table's columns, for an "Expenses" / "Income" section label

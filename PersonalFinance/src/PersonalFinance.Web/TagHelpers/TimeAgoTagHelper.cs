@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.Web.TagHelpers;
 
@@ -56,6 +57,6 @@ public class TimeAgoTagHelper : TagHelper
         if (span.TotalDays < 7)
             return $"{(int)span.TotalDays}d ago";
 
-        return input.ToString("MMM dd, yyyy");
+        return input.ToString("MMM dd, yyyy", AppCulture.Default);
     }
 }

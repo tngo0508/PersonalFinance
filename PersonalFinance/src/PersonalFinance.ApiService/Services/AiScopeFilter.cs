@@ -179,7 +179,8 @@ public class AiScopeFilter : IAiScopeFilter
         // Greeting followed by non-finance content
         foreach (var pattern in GreetingPatterns)
         {
-            if (lowerMessage.StartsWith(pattern + " ") || lowerMessage.StartsWith(pattern + ","))
+            if (lowerMessage.StartsWith(pattern + " ", StringComparison.Ordinal) ||
+                lowerMessage.StartsWith(pattern + ",", StringComparison.Ordinal))
             {
                 // Check if the rest contains finance keywords
                 var rest = lowerMessage[pattern.Length..].Trim();

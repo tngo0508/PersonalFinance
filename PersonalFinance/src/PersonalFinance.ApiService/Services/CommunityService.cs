@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -449,10 +450,10 @@ public class CommunityService : ICommunityService
 
         return new List<CommunityStatDto>
         {
-            new() { Title = "Active Polls", Value = totalPolls.ToString(), Description = "Community polls currently open for voting.", Icon = "📊", ThemeColor = "blue" },
-            new() { Title = "Total Votes Cast", Value = totalVotes.ToString(), Description = "Votes cast across all community polls.", Icon = "🗳️", ThemeColor = "green" },
-            new() { Title = "Community Stories", Value = totalStories.ToString(), Description = "Real-life financial stories shared by the community.", Icon = "📖", ThemeColor = "purple" },
-            new() { Title = "Comments & Discussions", Value = totalComments.ToString(), Description = "Comments shared across polls and stories.", Icon = "💬", ThemeColor = "orange" },
+            new() { Title = "Active Polls", Value = totalPolls.ToString(CultureInfo.InvariantCulture), Description = "Community polls currently open for voting.", Icon = "📊", ThemeColor = "blue" },
+            new() { Title = "Total Votes Cast", Value = totalVotes.ToString(CultureInfo.InvariantCulture), Description = "Votes cast across all community polls.", Icon = "🗳️", ThemeColor = "green" },
+            new() { Title = "Community Stories", Value = totalStories.ToString(CultureInfo.InvariantCulture), Description = "Real-life financial stories shared by the community.", Icon = "📖", ThemeColor = "purple" },
+            new() { Title = "Comments & Discussions", Value = totalComments.ToString(CultureInfo.InvariantCulture), Description = "Comments shared across polls and stories.", Icon = "💬", ThemeColor = "orange" },
         };
     }
 
