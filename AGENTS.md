@@ -14,7 +14,7 @@ Short, always-loaded rules for AI agents. The full detail lives in [`docs/CODING
 - [`GLOSSARY.md`](GLOSSARY.md) — canonical terms (Service, DTO, Entity) and domain concepts.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — request flow, identity flow, and the add-a-feature checklist.
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records.
-- `PersonalFinance/tests/PersonalFinance.Tests/` — xUnit tests using `UseInMemoryDatabase`. Add tests here, following existing patterns (e.g. `DashboardServiceTests.cs`).
+- `PersonalFinance/tests/PersonalFinance.Tests/` — xUnit tests using `UseInMemoryDatabase`. Add tests here, following existing patterns (e.g. `DashboardServiceTests.cs`). InMemory runs queries Azure SQL can't: see step 8 of the add-a-feature checklist in `docs/ARCHITECTURE.md`.
 
 ## Where things live
 
@@ -65,10 +65,8 @@ Only MIT, BSD (2/3-clause) and Apache 2.0 dependencies. Check the license before
 
 ## JavaScript
 
-- Modern JS only: `const`/`let`, never `var`; `async/await` with `try/catch`; no `.then()` chains.
-- 4-space indent, single quotes, semicolons, no trailing commas, `function name ()` spacing, always use curly braces.
+- `npm run lint` enforces syntax and style. Clear its warnings in every file you touch.
 - Use IIFE modules with `'use strict'`; JSDoc public functions; wait for DOM ready; null-check elements.
-- Use `textContent`, never `innerHTML`, for user data. No `eval`.
 - Files live under `wwwroot/js/<feature>/`.
 - When toggling the `hidden` attribute, make sure no CSS `display` rule overrides it (add `.x[hidden] { display: none; }`).
 

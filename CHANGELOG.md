@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Agent Guardrails From the Global Search Retro**: Checks and docs now catch the two kinds of mistake that let the Global Search bug ship.
+  - `TestSupport/AzureSqlTranslation` translates an EF Core query to Azure SQL without a database. `CODING_STANDARDS.md` and the add-a-feature checklist require it for string, date and collation-dependent queries, which the InMemory provider runs in memory.
+  - ESLint warns on string concatenation (`prefer-template`), `function` callbacks (`prefer-arrow-callback`), `.then()` chains and `innerHTML` assignments. The pre-commit hook fixes the first two in every file a commit touches.
+  - AGENTS.md drops the JavaScript style rules ESLint already enforces.
+
 - **Code-Review Follow-Ups**: The remaining code-review findings for the refactor are resolved, and the container images build again.
   - Docker builds copy `Directory.Build.props` (it holds `TargetFramework`); without it `dotnet restore` failed with NETSDK1013 for both images. A test checks both Dockerfiles.
   - The spreadsheet reader and Google Drive file source require the Account id; the parser no longer swallows unexpected errors.

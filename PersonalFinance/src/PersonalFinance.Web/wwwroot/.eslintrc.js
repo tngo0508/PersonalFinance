@@ -82,6 +82,22 @@ module.exports = {
         'wrap-iife': ['error', 'inside'],
         'yoda': ['error', 'never'],
 
+        // --- Modern JS (CODING_STANDARDS.md "JavaScript") ---
+        // Warnings so existing files keep passing; lint-staged runs --fix, which converts the auto-fixable ones
+        // in every file a commit touches.
+        'prefer-template': 'warn',
+        'prefer-arrow-callback': 'warn',
+        'no-restricted-syntax': ['warn',
+            {
+                selector: "CallExpression[callee.property.name='then']",
+                message: 'Use async/await with try/catch instead of .then() chains.'
+            },
+            {
+                selector: "AssignmentExpression[left.property.name='innerHTML']",
+                message: 'Build DOM nodes with textContent (clear with replaceChildren()) instead of assigning innerHTML.'
+            }
+        ],
+
         // --- Potential Bugs ---
         'no-extra-semi': 'error',
         'no-extra-boolean-cast': 'error',
