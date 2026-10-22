@@ -249,4 +249,19 @@ public class BudgetCategoryTests
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             service.DeleteCategoryAsync(OtherUserId, myFirstCategory.Id));
     }
+
+    [Fact]
+    public void DuplicateNameCheck_TranslatesToAzureSql_ComparingLoweredNames()
+    {
+        using var db = AzureSqlTranslation.CreateContext();
+        var query = db.BudgetCategories
+            .Where(c => c.UserId == UserId && c.Kind == BudgetCategoryKind.Expense)
+            .Where(MonthlyBudgetService.NameEqualsIgnoreCase("Groceries"));
+
+        var sql = AzureSqlTranslation.AssertTranslates(query);
+
+        // EF lowers the argument before sending it as a parameter; SQL lowers the column.
+        Assert.Contains("LOWER([b].[Name]) = @", sql, StringComparison.Ordinal);
+        Assert.Contains("N'groceries'", sql, StringComparison.Ordinal);
+    }
 }
