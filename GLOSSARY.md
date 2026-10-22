@@ -154,6 +154,21 @@ _Avoid_: page search, navigation search (finding app pages by name is a differen
 ### Community
 Social features including polls, stories, comments, and likes. System-defined polls are shared across users; user-generated content (stories, comments) is user-owned.
 
+### Feedback
+A message a signed-in Account sends to the operator about the app, with a Feedback Category and the page it was sent
+from. It belongs to the Account that sent it and only Admins read it. It is separate from the Contact page, which is for
+support, data protection requests and security reports.
+_Avoid_: Contact message, Ticket, Review
+
+### Feedback Category
+The kind of Feedback, chosen by the Account: Bug (something is broken), Idea (a suggestion) or Other.
+_Avoid_: Type, topic
+
+### Feedback Status
+Where a piece of Feedback is in the Admin's triage: New (not yet read, the starting status), Reviewed (read) or
+Archived (dealt with).
+_Avoid_: State, resolution
+
 ### Google Drive Integration
 Connection to Google Drive for spreadsheet synchronization. Manages OAuth connections, folder exploration, and file caching.
 

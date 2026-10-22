@@ -82,6 +82,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Linked from the footer on every page and from the Landing Page hero.
   - A "Not financial advice" section links to the Disclaimer.
 
+- **Send Feedback**: Signed-in Accounts can send Feedback (Bug, Idea or Other, up to 2,000 characters) from a "Send feedback" link in the sidebar, the footer and the About page.
+  - The page the Account came from is captured automatically (app-relative paths only) and shown on the form.
+  - Feedback is stored against the Account with status New; it is user-owned and soft-deleted like other records.
+  - New `Feedback` table (migration `AddFeedback`) with an index on status and created date for the Admin inbox.
+  - `IFeedbackService` validates the request with `SubmitFeedbackRequestValidator`; `POST /api/feedback` requires a signed-in Account.
+  - The form keeps the user's input on validation errors, uses an anti-forgery token and Post/Redirect/Get, and shows a friendly message when ApiService fails.
+
 - **Local SQL Server in Docker**: Developers can run the whole app against a local SQL Server 2022 container that uses the same provider and migrations as production Azure SQL.
   - `compose.yaml` at the repo root runs SQL Server 2022 Developer edition (`platform: linux/amd64`, so it runs under Rosetta on Apple Silicon) with a named data volume and a `sqlcmd` healthcheck; it stops with a clear message when `MSSQL_SA_PASSWORD` is missing.
   - `.env.example` lists `MSSQL_SA_PASSWORD` and `SQL_HOST_PORT`; the real `.env` stays gitignored.
