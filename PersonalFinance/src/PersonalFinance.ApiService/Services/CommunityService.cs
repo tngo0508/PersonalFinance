@@ -293,7 +293,7 @@ public class CommunityService : ICommunityService
             throw new ArgumentException("Category is required and must be under 50 characters.");
         }
 
-        var wordCount = trimmedBody.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        var wordCount = trimmedBody.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
         var readTimeMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
 
         var story = new PersonalFinance.Data.Entities.CommunityStory
@@ -410,7 +410,7 @@ public class CommunityService : ICommunityService
     // Private Helpers
     // =========================================================================
 
-    private CommunityPollDto MapPollToDto(CommunityPoll p, string userId)
+    private static CommunityPollDto MapPollToDto(CommunityPoll p, string userId)
     {
         var totalVotes = p.Votes.Count;
         var userVote = userId != null ? p.Votes.FirstOrDefault(v => v.UserId == userId) : null;

@@ -12,6 +12,11 @@ namespace PersonalFinance.ApiService.Services;
 /// </summary>
 public class SheetBudgetMonthReader : IBudgetMonthReader
 {
+    private static readonly JsonSerializerOptions CaseInsensitiveJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly AppDbContext _dbContext;
 
     public SheetBudgetMonthReader(AppDbContext dbContext)
@@ -201,10 +206,7 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
 
         try
         {
-            var items = JsonSerializer.Deserialize<List<CategoryJsonItem>>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var items = JsonSerializer.Deserialize<List<CategoryJsonItem>>(json, CaseInsensitiveJsonOptions);
 
             if (items != null)
             {
