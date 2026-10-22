@@ -84,6 +84,133 @@ Both apps use the standard ASP.NET Core order, lowest to highest: `appsettings.j
 user secrets (Development only), environment variables, command-line arguments. An environment variable such as
 `ConnectionStrings__DefaultConnection=InMemory:Dev` therefore overrides the connection string in your user secrets.
 
+### Local SQL Server (Docker)
+
+The recommended development database is SQL Server 2022 Developer edition in Docker, defined in `compose.yaml` at the
+repo root. It uses the same EF Core provider (`AzureSql` / `AzureSqlAppDbContext`) and the same migrations as
+production Azure SQL; only the connection string differs.
+
+#### Prerequisites
+
+- **Docker Desktop** running.
+- **Windows:** use the WSL2 backend (Settings → General → "Use the WSL 2 based engine").
+- **macOS on Apple Silicon:** turn on Settings → General → "Use Rosetta for x86_64/amd64 emulation on Apple Silicon".
+  The SQL Server image is amd64-only (`compose.yaml` pins `platform: linux/amd64`), so expect a slower first start
+  than on x64.
+
+#### 1. Create `.env`
+
+Copy `.env.example` to `.env` in the repo root and set the `sa` password. `.env` is gitignored; never commit it.
+
+```text
+MSSQL_SA_PASSWORD=<your strong password>
+SQL_HOST_PORT=1433
+```
+
+SQL Server refuses to start with a weak password. It must be **at least 8 characters** and contain characters from
+**at least three** of these four groups: uppercase letters, lowercase letters, digits, and symbols. Avoid `'`, `"` and
+`;` in the password so it stays easy to quote in a connection string.
+
+Change `SQL_HOST_PORT` if something else on your machine already listens on 1433 (for example a native SQL Server on
+Windows).
+
+SQL Server only reads `MSSQL_SA_PASSWORD` the first time it creates the data volume, and the password is then stored in
+the volume. If you change it in `.env` later, the old password stays in effect: `db:up` reports the container as
+unhealthy and the apps fail with `Login failed for user 'sa'`. Run `npm run db:reset` (this deletes the local data),
+then `npm run db:up`.
+
+#### 2. Start, stop and reset the container
+
+```bash
+npm run db:up      # start in the background and wait until SQL Server accepts connections
+npm run db:down    # stop the container; data is kept in the named volume
+npm run db:reset   # stop the container and delete the volume (the next db:up starts from an empty server)
+```
+
+The scripts only call `docker compose`, so they behave the same in PowerShell, cmd and zsh. If `MSSQL_SA_PASSWORD` is
+missing, `db:up` stops with a message saying so.
+
+The container has no restart policy, so it doesn't come back on its own after a reboot or after Docker Desktop restarts.
+Run `npm run db:up` again before starting the app.
+
+#### 3. Point both apps at the container
+
+Put the same connection string in user secrets for the ApiService and the Web project. Other commands in this guide refer to it as `<local connection string>`. Replace `1433` with your
+`SQL_HOST_PORT` and `<password>` with your `MSSQL_SA_PASSWORD`. The single quotes make these commands work unchanged in
+both PowerShell and zsh.
+
+```bash
+dotnet user-secrets set 'ConnectionStrings:DefaultConnection' 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False' --project PersonalFinance/src/PersonalFinance.ApiService
+dotnet user-secrets set 'ConnectionStrings:DefaultConnection' 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False' --project PersonalFinance/src/PersonalFinance.Web
+```
+
+**Switching from the dev Azure SQL database:** `dotnet user-secrets set` overwrites the existing value, so first copy
+the Azure connection string to a key the apps don't read, such as `ConnectionStrings:AzureDevConnection`. Do this for
+both projects:
+
+```bash
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService
+dotnet user-secrets set 'ConnectionStrings:AzureDevConnection' '<the current DefaultConnection value>' --project PersonalFinance/src/PersonalFinance.ApiService
+```
+
+To switch back later, set `ConnectionStrings:DefaultConnection` to the saved `AzureDevConnection` value. The local
+database and the Azure database are separate: accounts and data don't carry over between them.
+
+#### 4. Start the app
+
+Start the app through the AppHost or run the ApiService and Web projects separately (section 4). On its first start
+against the empty server, the ApiService creates the `PersonalFinance` database, applies every migration and seeds the
+starter data; no `dotnet ef` command is needed. To run the e2e preflight against a non-default port, set
+`E2E_DB_PORT` (see "Running the E2E tests locally").
+
+#### Windows verification checklist
+
+Run these in order on Windows (PowerShell) to confirm the whole setup works there. Each step must succeed before the
+next one.
+
+1. **Docker Desktop with WSL2:** Docker Desktop is running with "Use the WSL 2 based engine" turned on, and
+   `docker version` shows both a client and a server.
+2. **`.env`:** copy `.env.example` to `.env` and set `MSSQL_SA_PASSWORD`. If a native SQL Server already listens on
+   1433, set `SQL_HOST_PORT` to a free port such as `14333`.
+3. **`npm run db:up`:** finishes without an error and `docker compose ps` shows the `sqlserver` service as `healthy`.
+4. **User secrets:** run the two `dotnet user-secrets set` commands from step 3 above with your port and password, then
+   check them with `dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService` (and the same for
+   `PersonalFinance.Web`).
+5. **Start the ApiService and Web projects** as in "Running the projects separately" under "Running the E2E tests
+   locally" (set the variables with `$env:NAME = '...'`). The ApiService log shows the migrations applied and the seed
+   data created, and `http://localhost:5200` opens the home page.
+6. **`npm run e2e:preflight`:** passes, with `WEB_URL`, `API_URL` and (for a non-default port) `E2E_DB_PORT` set.
+7. **E2E suites:** `npm run test:e2e` and `npm run test:api` both pass.
+8. **`npm run db:reset`:** stops the container and deletes the volume; the next `npm run db:up` starts from an empty
+   server.
+
+### Alternative: dev Azure SQL database
+
+Use this when you want to test against real Azure SQL. It needs an Azure subscription and the Azure CLI, and the
+Serverless Free Tier database pauses when its monthly free allowance runs out.
+
+`infra/deploy-local-sql.ps1` deploys `infra/local-dev.bicep` (an Azure SQL server and database in
+`rg-personalfinance-dev`), opens the server firewall to your public IP and stores the connection string in user secrets
+for both apps (`-SkipUserSecrets` only prints it):
+
+```powershell
+.\infra\deploy-local-sql.ps1
+```
+
+The connection string has this shape if you set it by hand:
+
+```text
+Server=tcp:<server>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+```
+
+### Alternative: native SQL Server or LocalDB (Windows)
+
+A SQL Server instance or LocalDB installed on Windows works too; put its connection string in user secrets for both apps
+instead of the container's. When no connection string is configured at all, the apps and `dotnet ef` fall back to
+`Server=localhost,1433;Database=PersonalFinance;Trusted_Connection=True;...` (`DatabaseProviderHelper.DefaultSqlConnectionString`).
+That fallback uses Windows authentication, so it only works on Windows with a native SQL Server listening on TCP port
+1433. On macOS, and with the Docker container, always set the connection string.
+
 ### Setting Up User Secrets on a New Machine
 
 When cloning this repository on a new machine, run the following commands to configure development user secrets. Replace each placeholder value with your actual credential.
@@ -91,8 +218,8 @@ When cloning this repository on a new machine, run the following commands to con
 #### PersonalFinance.Web Project
 
 ```bash
-# Azure SQL Database connection string
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.Web
+# Database connection string: set it as in "3. Point both apps at the container" under "Local SQL Server (Docker)"
+# (for Azure SQL see the alternatives)
 
 # Brevo transactional email API key
 dotnet user-secrets set "Brevo:ApiKey" "<YOUR_BREVO_API_KEY>" --project PersonalFinance/src/PersonalFinance.Web
@@ -105,8 +232,8 @@ dotnet user-secrets set "Authentication:Google:ClientSecret" "<YOUR_GOOGLE_CLIEN
 #### PersonalFinance.ApiService Project
 
 ```bash
-# Azure SQL Database connection string
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.ApiService
+# Database connection string: set it as in "3. Point both apps at the container" under "Local SQL Server (Docker)"
+# (for Azure SQL see the alternatives)
 
 # Google Drive API key (default; users can also enter their own key via /GoogleDrive)
 dotnet user-secrets set "GoogleDrive:ApiKey" "<YOUR_GOOGLE_DRIVE_API_KEY>" --project PersonalFinance/src/PersonalFinance.ApiService
@@ -419,15 +546,7 @@ Rather than relying on default boilerplate scaffolding, the `ExternalLogin` flow
 To protect credentials and prevent sensitive database connection strings from being committed to source control or exposed in deployment logs, connection strings are managed securely across development, design-time tooling, and production.
 
 #### 1. Local Development via .NET User Secrets
-For local development against cloud databases or private instances (such as Azure SQL or custom SQL Server), never add passwords to `appsettings.json`. Instead, store the connection string in the .NET User Secrets store for both the Web and ApiService projects:
-
-```bash
-# Set connection string for Web Frontend
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server-name>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.Web
-
-# Set connection string for ApiService Backend
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server-name>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.ApiService
-```
+Never add passwords to `appsettings.json`. Store the connection string in the .NET User Secrets store for both the Web and ApiService projects, whether it points at the local SQL Server container (see "Local SQL Server (Docker)" in this section, with the exact commands), the dev Azure SQL database or a native SQL Server (see the alternatives after it). Never point it at the production database.
 
 *Note: To try the UI without a database, use `InMemory:Dev` as the connection string for both projects (see "Database Providers" in section 5). Data is lost on restart.*
 
@@ -435,11 +554,11 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<serve
 Design-time tools (like `dotnet ef migrations add` and `dotnet ef database update`) resolve the database connection string using `DesignTimeDbContextFactoryHelper.ResolveConnectionString()`:
 1. `--connection-string "<value>"` command-line argument passed to `dotnet ef database update`
 2. `ConnectionStrings__DefaultConnection` or `DefaultConnection` environment variable
-3. Fallback default (`Data Source=PersonalFinance.db`)
+3. Fallback default (`DatabaseProviderHelper.DefaultSqlConnectionString`, Windows authentication on `localhost,1433`; it only works on Windows with a native SQL Server)
 
-Example running EF Core migrations against Azure SQL securely:
+Example applying EF Core migrations to the local SQL Server container (see "EF Core CLI Commands" in section 5 for the full set):
 ```bash
-dotnet ef database update --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string "Server=tcp:...;Database=...;User ID=...;Password=...;"
+dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string '<local connection string>'
 ```
 
 #### 3. Production & CI/CD Pipeline Injection
@@ -501,7 +620,7 @@ For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNet
 
 | Provider | When it is used | Migrations |
 |---|---|---|
-| Azure SQL (`AzureSqlAppDbContext`) | Default for every environment. | `PersonalFinance.Data/Migrations/AzureSql` |
+| Azure SQL (`AzureSqlAppDbContext`) | Default for every environment: production Azure SQL and local SQL Server (the Docker container, a native instance or LocalDB). | `PersonalFinance.Data/Migrations/AzureSql` |
 | EF Core InMemory | The connection string starts with `InMemory:` (or is `:memory:`), or `Database:Provider` / the `DATABASE_PROVIDER` environment variable is `InMemory`. Used by the CI e2e job and for trying the UI without a database. | None (schema is created from the model) |
 
 There is no SQLite provider any more. Identity string keys/FKs are explicitly bounded in `AppDbContext.OnModelCreating` (`Id`/`UserId`/`RoleId` = 450, login/token providers = 128) so SQL Server scaffolding emits `nvarchar(450)` / `nvarchar(128)`.
@@ -515,14 +634,19 @@ To ensure authentication cookies and antiforgery tokens remain valid across cont
 - Dedicated migration execution: Run `dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --migrate-only` or set `MIGRATE_ONLY=true` for ACA Jobs or initialization containers.
 
 ### EF Core CLI Commands
-Run all EF Core commands from the repository root. The design-time factory (`AppDbContextFactory.cs`) reads the connection string from `--connection-string`, then `ConnectionStrings__DefaultConnection`, then falls back to a local SQL Server default.
+Run all EF Core commands from the repository root. The design-time factory (`AppDbContextFactory.cs`) reads the connection string from `--connection-string`, then the `ConnectionStrings__DefaultConnection` environment variable, then falls back to the Windows-only default described in "Alternative: native SQL Server or LocalDB (Windows)". It does not read user secrets, so point it at the local SQL Server container (`npm run db:up`) with an environment variable or `--connection-string`. One migration set serves both the container and production Azure SQL.
 
 ```bash
-# Add an Azure SQL migration (inspect the generated file before committing)
+# Point the EF tools at the local container (zsh; in PowerShell: $env:ConnectionStrings__DefaultConnection = '...')
+export ConnectionStrings__DefaultConnection='<local connection string>'
+
+# Add a migration (inspect the generated file before committing)
 dotnet ef migrations add <MigrationName> --context AzureSqlAppDbContext --output-dir Migrations/AzureSql --project PersonalFinance/src/PersonalFinance.Data
 
 # Apply migrations to a database you are authorized to change (never production without explicit approval)
-dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string "Server=...;Database=...;..."
+dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data
+# ...or pass the connection string explicitly instead of the environment variable
+dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string '<connection string>'
 
 # Generate an idempotent SQL script for review
 dotnet ef migrations script --idempotent --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -o azuresql.sql
@@ -562,7 +686,7 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 
 The Playwright suites in `e2e-tests/` need a running Web app, a running ApiService, and a reachable database. CI runs them automatically; locally, follow these steps in order.
 
-1. **Make the database reachable.** The apps use the `ConnectionStrings:DefaultConnection` user secret (see section 3). Check what it points at with `dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web`. If it targets `localhost,1433`, start whatever provides SQL Server there (for example Docker Desktop and your SQL container, or the local SQL Server service with TCP enabled on 1433). The ApiService applies pending EF Core migrations on startup, so a database that is down shows up as a SQL error 258 (timeout) crash in `DatabaseMigrationExtensions`.
+1. **Make the database reachable.** The apps use the `ConnectionStrings:DefaultConnection` user secret (see section 3). Check what it points at with `dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.Web`. If it targets the local Docker container, run `npm run db:up` (see "Local SQL Server (Docker)" in section 3); otherwise start whatever provides SQL Server there (for example the local SQL Server service with TCP enabled on 1433). The ApiService applies pending EF Core migrations on startup, so a database that is down shows up as a SQL error 258 (timeout) crash in `DatabaseMigrationExtensions`.
 2. **Start the apps.** Run `PersonalFinance.ApiService` (profile ports `7100`/`5100`) and `PersonalFinance.Web` (profile ports `7200`/`5200`), or start both through `PersonalFinance.AppHost`.
 3. **Check everything is up.** `npm run e2e:preflight` fails fast, with a hint, if the database port, Web app or API is unreachable.
 4. **Run the suites.**
@@ -575,7 +699,27 @@ npm run test:e2e   # UI tests (default WEB_URL is http://localhost:5000)
 npm run test:api   # API tests (default API_URL is https://localhost:7100)
 ```
 
-If the database is not on `localhost:1433`, set `E2E_DB_HOST` and `E2E_DB_PORT` for the preflight check.
+If the database is not on `localhost:1433` (for example a container started with a different `SQL_HOST_PORT`), set `E2E_DB_HOST` and `E2E_DB_PORT` for the preflight check.
+
+**Running the projects separately (as CI does).** The full UI suite passes when both apps run over plain HTTP with the
+same settings the CI e2e job uses:
+
+- `E2E_DISABLE_EMAIL_CONFIRMATION=true` on the Web app, so the account registered by Test 9 can sign in without email confirmation.
+- `ApiSettings__BaseUrl=http://localhost:5100` on the Web app. Without the AppHost, nothing resolves the default `https+http://apiservice` address.
+- `--urls http://localhost:<port>` on both apps. Otherwise the ApiService redirects HTTP to HTTPS, and Web-to-API calls fail if the ASP.NET Core dev certificate is not trusted.
+- `ASPNETCORE_ENVIRONMENT=Development` set as an environment variable, not only `--environment`, so the Identity UI static files (jQuery validation) are served.
+
+```bash
+# zsh; in PowerShell set each variable with $env:NAME = '...' first
+export ASPNETCORE_ENVIRONMENT=Development
+dotnet run --project PersonalFinance/src/PersonalFinance.ApiService --no-launch-profile --urls http://localhost:5100
+# second terminal
+export ASPNETCORE_ENVIRONMENT=Development E2E_DISABLE_EMAIL_CONFIRMATION=true ApiSettings__BaseUrl=http://localhost:5100
+dotnet run --project PersonalFinance/src/PersonalFinance.Web --no-launch-profile --urls http://localhost:5200
+# third terminal (E2E_DB_PORT only if SQL_HOST_PORT is not 1433)
+export WEB_URL=http://localhost:5200 API_URL=http://localhost:5100 E2E_DB_PORT=1433
+npm run e2e:preflight && npm run test:e2e && npm run test:api
+```
 
 > **Side effects:** the registration test (Test 9) creates a real user (`e2etest_<timestamp>@example.com`) in whichever database the app uses, and startup applies any pending migrations. Do not run the suites against production.
 
@@ -694,6 +838,16 @@ A local account was previously registered with the same email address via passwo
 **Resolution:**
 1. Navigate to `/Identity/Account/ResendEmailConfirmation` and confirm the local account via the confirmation email.
 2. Once the local email is confirmed, signing in with Google will automatically link the provider to the account.
+
+### 9. Dev Azure SQL Database Paused: `reached the monthly free amount allowance`
+**Symptom:**
+The ApiService fails at startup (or every request fails) with *"This database has reached the monthly free amount allowance for the month of ... and is paused for the remainder of the month."*
+**Cause:**
+`ConnectionStrings:DefaultConnection` in user secrets still points at the dev Azure SQL database (Serverless Free Tier), which Azure pauses once its monthly free allowance runs out. It resumes at 12:00 AM UTC on the first of the next month.
+**Resolution:**
+1. Check where the apps point: `dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService`. A `*.database.windows.net` server is the Azure database.
+2. Switch to the local container: follow "Local SQL Server (Docker)" in section 3, including the note on saving the Azure connection string first.
+3. Alternatively, choose "Continue using database with additional charges" on the database's Compute and Storage tab in the Azure Portal. This resumes the database immediately and bills you for the extra usage.
 
 ---
 

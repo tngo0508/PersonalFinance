@@ -266,13 +266,42 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("cache-from: type=gha,scope=${{ matrix.service }}", workflow);
         Assert.Contains("cache-to: ${{ env.PUSH_IMAGE == 'true' &&", workflow);
 
-        // Deployment still waits for tests, infra validation and both images
-        Assert.Contains("needs: [build-and-test, validate-infra, build-and-push-containers]", workflow);
+        // Deployment still waits for tests, migrations on SQL Server, infra validation and both images
+        Assert.Contains("needs: [build-and-test, sql-server-migrations, validate-infra, build-and-push-containers]", workflow);
 
         // `latest` only moves after a successful deploy + smoke test
         Assert.Contains("promote-latest:", workflow);
         Assert.Contains("needs: [build-and-push-containers, smoke-test]", workflow);
         Assert.DoesNotContain("type=raw,value=latest", workflow);
+    }
+
+    [Fact]
+    public void DeploymentWorkflow_SqlServerMigrationsJob_AppliesMigrationsTwiceWithTheDeveloperScripts()
+    {
+        var root = FindProjectRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+
+        var jobMatch = Regex.Match(workflow, @"\n  sql-server-migrations:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
+        Assert.True(jobMatch.Success, "Could not find sql-server-migrations job in workflow.");
+        var job = jobMatch.Value;
+
+        Assert.Contains("runs-on: ubuntu-latest", job);
+
+        // Same Compose file and npm scripts that developers use, with a password generated in the run
+        Assert.Contains("npm run db:up", job);
+        Assert.Contains("> .env", job);
+        Assert.Contains("openssl rand", job);
+        Assert.DoesNotContain("secrets.", job);
+
+        // The production --migrate-only path, run twice; the second run must apply nothing
+        Assert.Contains("--migrate-only", job);
+        Assert.Contains("migrate 1", job);
+        Assert.Contains("migrate 2", job);
+        Assert.Contains("Database schema is up to date (no pending migrations).", job);
+
+        // Diagnostics on failure, and the container is always stopped
+        Assert.Matches(@"if: failure\(\)\s+run: \|[\s\S]*docker compose logs", job);
+        Assert.Matches(@"if: always\(\)\s+run: npm run db:down", job);
     }
 
     [Fact]

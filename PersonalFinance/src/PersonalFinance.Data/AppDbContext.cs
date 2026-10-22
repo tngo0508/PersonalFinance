@@ -600,8 +600,10 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 }
 
 /// <summary>
-/// Azure SQL-specific AppDbContext used for EF Core migrations under <c>Migrations/AzureSql</c>
-/// and as the DI implementation when the active provider is Azure SQL.
+/// SQL Server AppDbContext used for EF Core migrations under <c>Migrations/AzureSql</c>
+/// and as the DI implementation when the active provider is <see cref="DatabaseProviderType.AzureSql"/>.
+/// One migration set serves both production Azure SQL and local SQL Server in development
+/// (the Docker container from <c>compose.yaml</c>, a native instance or LocalDB).
 /// </summary>
 public sealed class AzureSqlAppDbContext : AppDbContext
 {

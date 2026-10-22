@@ -1,0 +1,27 @@
+# Local SQL Server 2022 (Developer edition) for development.
+# Usage: copy .env.example to .env, set MSSQL_SA_PASSWORD, then `npm run db:up`.
+# See docs/DEVELOPMENT.md, "Local SQL Server (Docker)".
+name: personalfinance
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    # The image is amd64-only; Apple Silicon runs it under Docker Desktop's Rosetta emulation.
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is not set. Copy .env.example to .env and set a strong sa password.}
+    ports:
+      - "${SQL_HOST_PORT:-1433}:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  sqlserver-data:

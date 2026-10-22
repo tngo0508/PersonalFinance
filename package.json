@@ -9,6 +9,9 @@
   "scripts": {
     "lint": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js PersonalFinance/src/PersonalFinance.Web/wwwroot/js/",
     "lint:fix": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js --fix PersonalFinance/src/PersonalFinance.Web/wwwroot/js/",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v",
     "test": "echo \"Error: no test specified\" && exit 1",
     "e2e:preflight": "node e2e-tests/preflight.js",
     "test:e2e": "node e2e-tests/ui-test.js",

@@ -36,7 +36,8 @@ internal static class DesignTimeDbContextFactoryHelper
 }
 
 /// <summary>
-/// Design-time factory for Azure SQL migrations (<c>Migrations/AzureSql</c>).
+/// Design-time factory for the SQL Server migrations in <c>Migrations/AzureSql</c>, which serve both
+/// Azure SQL and local SQL Server.
 /// </summary>
 public sealed class AzureSqlAppDbContextFactory : IDesignTimeDbContextFactory<AzureSqlAppDbContext>
 {

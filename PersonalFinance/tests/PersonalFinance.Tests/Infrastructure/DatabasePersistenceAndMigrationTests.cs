@@ -49,18 +49,55 @@ public class DatabasePersistenceAndMigrationTests
     [Fact]
     public void AddAppDbContext_RegistersAzureSqlImplementation_WhenProviderIsAzureSql()
     {
-        var services = new ServiceCollection();
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
+        AssertRegistersAzureSqlDbContext(new Dictionary<string, string?>
+        {
             {
-                {
-                    "ConnectionStrings:DefaultConnection",
-                    "Server=localhost;Database=PersonalFinance;Trusted_Connection=True;TrustServerCertificate=True;"
-                },
-                { "Database:Provider", "AzureSql" }
-            })
+                "ConnectionStrings:DefaultConnection",
+                "Server=localhost;Database=PersonalFinance;Trusted_Connection=True;TrustServerCertificate=True;"
+            },
+            { "Database:Provider", "AzureSql" }
+        });
+    }
+
+    [Fact]
+    public void LocalSqlServerConnectionString_SelectsSameProviderAndMigrationSetAsAzureSql()
+    {
+        const string localSqlServer =
+            "Server=localhost,14333;Database=PersonalFinance;User ID=sa;Password=not-a-real-password;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False";
+        const string azureSql =
+            "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=PersonalFinance;User ID=admin;Password=x;Encrypt=True;TrustServerCertificate=False;";
+
+        var (localProvider, localMigrations) = ResolveProviderAndMigrations(localSqlServer);
+        var (azureProvider, azureMigrations) = ResolveProviderAndMigrations(azureSql);
+
+        Assert.Equal(DatabaseProviderType.AzureSql, localProvider);
+        Assert.Equal(DatabaseProviderType.AzureSql, azureProvider);
+        Assert.NotEmpty(localMigrations);
+        Assert.Equal(azureMigrations, localMigrations);
+    }
+
+    private static (DatabaseProviderType Provider, List<string> Migrations) ResolveProviderAndMigrations(string connectionString)
+    {
+        var (config, migrations) = AssertRegistersAzureSqlDbContext(new Dictionary<string, string?>
+        {
+            { "ConnectionStrings:DefaultConnection", connectionString }
+        });
+
+        return (DatabaseProviderHelper.DetermineProvider(config, connectionString), migrations);
+    }
+
+    /// <summary>
+    /// Registers the app DbContext from the given settings, asserts it resolves to the
+    /// Azure SQL (SQL Server) implementation, and returns the configuration and migration set.
+    /// </summary>
+    private static (IConfiguration Configuration, List<string> Migrations) AssertRegistersAzureSqlDbContext(
+        Dictionary<string, string?> settings)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(settings)
             .Build();
 
+        var services = new ServiceCollection();
         services.AddAppDbContext(config);
 
         using var serviceProvider = services.BuildServiceProvider();
@@ -70,6 +107,8 @@ public class DatabasePersistenceAndMigrationTests
         Assert.NotNull(dbContext);
         Assert.IsType<AzureSqlAppDbContext>(dbContext);
         Assert.True(dbContext.Database.IsSqlServer());
+
+        return (config, dbContext.Database.GetMigrations().ToList());
     }
 
     [Fact]

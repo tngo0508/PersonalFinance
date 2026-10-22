@@ -1,5 +1,6 @@
 # Git worktrees
 .worktrees/
+.claude/worktrees/
 
 # Junie session plans (session artifacts, not configuration)
 .junie/plans/

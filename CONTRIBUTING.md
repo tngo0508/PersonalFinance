@@ -11,7 +11,7 @@ This guide gets you from a fresh clone to a merged pull request. Deeper material
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js](https://nodejs.org/) 20+ (ESLint, pre-commit hook, Playwright e2e tests)
-- An Azure SQL database for real work, or the in-memory mode below to try the app without one
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) for the local SQL Server database, or the in-memory mode below to try the app without one
 - An IDE that reads `.editorconfig`: Rider, Visual Studio, or VS Code with C# Dev Kit
 - Optional: `dotnet tool install --global dotnet-ef` for migrations
 
@@ -22,10 +22,16 @@ git clone https://github.com/tngo0508/PersonalFinance.git
 cd PersonalFinance
 npm install            # installs the Husky pre-commit hook and Playwright
 
+# Local SQL Server in Docker: copy .env.example to .env and set MSSQL_SA_PASSWORD first
+npm run db:up
+
 # Minimum secrets to start the app (see docs/DEVELOPMENT.md section 3 for every key)
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<Azure SQL connection string>" --project PersonalFinance/src/PersonalFinance.Web
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<Azure SQL connection string>" --project PersonalFinance/src/PersonalFinance.ApiService
+dotnet user-secrets set 'ConnectionStrings:DefaultConnection' '<connection string>' --project PersonalFinance/src/PersonalFinance.Web
+dotnet user-secrets set 'ConnectionStrings:DefaultConnection' '<connection string>' --project PersonalFinance/src/PersonalFinance.ApiService
 ```
+
+The local container's connection string, the password rules and the Apple Silicon setting are in "Local SQL Server
+(Docker)" in `docs/DEVELOPMENT.md`. A dev Azure SQL database is an alternative documented there too.
 
 **No database yet?** Use `InMemory:Dev` as the connection string for both projects. This is the mode CI uses for the
 Playwright e2e run (`DatabaseProviderHelper` detects the `InMemory:` prefix). Data is lost on restart, and Web and
