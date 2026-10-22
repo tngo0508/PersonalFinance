@@ -1,149 +1,147 @@
 @using PersonalFinance.Shared.Constants
 @model LandingPageViewModel
 @{
-    ViewData["Title"] = "Plan your money with clarity";
+    ViewData["Title"] = "Know how much is enough";
 }
 
 @section Styles {
+    <link rel="stylesheet" href="~/css/ledger.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true"/>
 }
 
 <div class="lp-page">
     @* ---------- Hero ---------- *@
     <section class="lp-hero" aria-labelledby="lp-hero-title">
-        <div class="lp-hero__copy lp-reveal">
-            <p class="lp-eyebrow">Personal finance, planned</p>
-            <h1 id="lp-hero-title" class="lp-hero__title">
-                Know your numbers.<br/>
-                <span class="lp-hero__title-accent">Plan your path to financial independence.</span>
-            </h1>
+        <div class="lp-hero__copy">
+            <h1 id="lp-hero-title" class="lp-hero__title">Know how much is enough, and when you will get there.</h1>
             <p class="lp-hero__lead">
-                @AppVersion.ApplicationName brings your net worth projection, monthly budget, and savings goals into
-                one calm workspace, so you can see where you stand today and where your plan leads.
+                @AppVersion.ApplicationName turns your income, spending, and savings into one plan: a target for
+                financial independence, and the age your savings can reach it.
             </p>
             <div class="lp-cta-row">
-                <a class="lp-btn lp-btn--primary" asp-area="Identity" asp-page="/Account/Register">
-                    Create free account
-                    <i data-lucide="arrow-right" aria-hidden="true"></i>
-                </a>
+                <a class="lp-btn lp-btn--primary" asp-area="Identity" asp-page="/Account/Register">Create free account</a>
                 <a class="lp-btn lp-btn--secondary" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
             </div>
-            <p class="lp-hero__note">Free to use. No credit card required.</p>
+            <p class="lp-hero__note">Free to use. No bank logins. Your figures are visible only to you.</p>
         </div>
 
-        @* Decorative product preview: static HTML/CSS with illustrative figures only. *@
-        <div class="lp-preview lp-reveal lp-reveal--delay" aria-hidden="true">
-            <div class="lp-preview__chrome">
-                <span class="lp-preview__dot"></span>
-                <span class="lp-preview__dot"></span>
-                <span class="lp-preview__dot"></span>
-                <span class="lp-preview__title">Dashboard</span>
-                <span class="lp-preview__badge">Sample data</span>
+        @* Illustrative projection. The figures follow the app's own FI rule (25 × annual spending). *@
+        <figure class="lp-plan">
+            <div class="lp-plan__head">
+                <div>
+                    <p class="lp-plan__label">Projected net worth</p>
+                    <p class="lp-plan__figure">$1,041,000 <span>at age 52</span></p>
+                </div>
+                <p class="lp-plan__tag">Sample plan</p>
             </div>
-            <div class="lp-preview__body">
-                <div class="lp-preview__summary">
-                    <div>
-                        <div class="lp-preview__label">Net worth</div>
-                        <div class="lp-preview__figure lp-mono">$248,500</div>
-                    </div>
-                    <div class="lp-preview__fi">
-                        <div class="lp-preview__fi-head">
-                            <span class="lp-preview__label">Progress to FI</span>
-                            <span class="lp-mono">41%</span>
-                        </div>
-                        <div class="lp-preview__bar"><span style="width: 41%"></span></div>
-                        <div class="lp-preview__hint">FI target <span class="lp-mono">$600,000</span></div>
-                    </div>
-                </div>
 
-                <div class="lp-preview__tiles">
-                    <div class="lp-preview__tile">
-                        <div class="lp-preview__label">Savings rate</div>
-                        <div class="lp-preview__tile-value lp-mono">24%</div>
-                    </div>
-                    <div class="lp-preview__tile">
-                        <div class="lp-preview__label">Monthly income</div>
-                        <div class="lp-preview__tile-value lp-mono">$6,200</div>
-                    </div>
-                    <div class="lp-preview__tile">
-                        <div class="lp-preview__label">Goals funded</div>
-                        <div class="lp-preview__tile-value lp-mono">63%</div>
-                    </div>
-                </div>
-
-                <div class="lp-preview__panels">
-                    <div class="lp-preview__panel">
-                        <div class="lp-preview__panel-head">
-                            <span>Projection</span>
-                            <span class="lp-preview__legend">
-                                <span class="lp-preview__swatch lp-preview__swatch--base"></span>Base
-                                <span class="lp-preview__swatch lp-preview__swatch--target"></span>FI target
-                            </span>
-                        </div>
-                        <svg class="lp-preview__chart" viewBox="0 0 240 110" preserveAspectRatio="none" focusable="false">
-                            <line class="lp-chart__grid" x1="0" y1="27.5" x2="240" y2="27.5"/>
-                            <line class="lp-chart__grid" x1="0" y1="55" x2="240" y2="55"/>
-                            <line class="lp-chart__grid" x1="0" y1="82.5" x2="240" y2="82.5"/>
-                            <line class="lp-chart__target" x1="0" y1="34" x2="240" y2="34"/>
-                            <path class="lp-chart__area" d="M0 92 C40 88 80 78 120 62 S200 26 240 10 L240 110 L0 110 Z"/>
-                            <path class="lp-chart__muted" d="M0 92 C40 90 80 84 120 74 S200 52 240 40"/>
-                            <path class="lp-chart__line" d="M0 92 C40 88 80 78 120 62 S200 26 240 10"/>
-                        </svg>
-                    </div>
-                    <div class="lp-preview__panel">
-                        <div class="lp-preview__panel-head"><span>Budget</span></div>
-                        <ul class="lp-preview__budget">
-                            <li><span>Housing</span><span class="lp-preview__track"><span style="width: 30%"></span></span><span class="lp-mono">30%</span></li>
-                            <li><span>Saving</span><span class="lp-preview__track"><span style="width: 20%"></span></span><span class="lp-mono">20%</span></li>
-                            <li><span>Food</span><span class="lp-preview__track"><span style="width: 12%"></span></span><span class="lp-mono">12%</span></li>
-                            <li><span>Transport</span><span class="lp-preview__track"><span style="width: 10%"></span></span><span class="lp-mono">10%</span></li>
-                        </ul>
-                    </div>
-                </div>
+            <div class="lp-plan__chart" aria-hidden="true">
+                <svg viewBox="0 0 600 240" preserveAspectRatio="none" focusable="false">
+                    <line class="lp-plan__grid" x1="0" y1="0" x2="600" y2="0"/>
+                    <line class="lp-plan__grid" x1="0" y1="240" x2="600" y2="240"/>
+                    <path class="lp-plan__area" d="M0 235.2 L20 232.1 L40 228.8 L60 225.4 L80 221.8 L100 218 L120 214 L140 209.8 L160 205.4 L180 200.8 L200 196 L220 190.9 L240 185.5 L260 179.9 L280 174.1 L300 167.9 L320 161.4 L340 154.6 L360 147.4 L380 139.9 L400 132 L420 123.8 L440 115.1 L460 105.9 L480 96.4 L500 86.3 L520 75.7 L540 64.6 L560 53 L580 40.8 L600 27.9 L600 240 L0 240 Z"/>
+                    <line class="lp-plan__target" x1="0" y1="120" x2="600" y2="120"/>
+                    <path class="lp-plan__line" d="M0 235.2 L20 232.1 L40 228.8 L60 225.4 L80 221.8 L100 218 L120 214 L140 209.8 L160 205.4 L180 200.8 L200 196 L220 190.9 L240 185.5 L260 179.9 L280 174.1 L300 167.9 L320 161.4 L340 154.6 L360 147.4 L380 139.9 L400 132 L420 123.8 L440 115.1 L460 105.9 L480 96.4 L500 86.3 L520 75.7 L540 64.6 L560 53 L580 40.8 L600 27.9"/>
+                    <line class="lp-plan__drop" x1="440" y1="115.1" x2="440" y2="240"/>
+                </svg>
+                <span class="lp-plan__marker" style="left: 73.33%; top: 47.96%"></span>
+                <span class="lp-plan__callout" style="left: 73.33%; top: 47.96%">Age 52: financially independent</span>
+                <span class="lp-plan__target-label">FI target $1,000,000</span>
+                <span class="lp-plan__ages">
+                    <span>Age 30</span><span>40</span><span>50</span><span>60</span>
+                </span>
             </div>
-        </div>
+
+            <figcaption class="lp-plan__caption">
+                Sample plan: spending $40,000 a year gives an FI target of $1,000,000. Starting with $40,000 and
+                saving $2,000 a month at a 5% yearly return, net worth reaches that target at age 52.
+            </figcaption>
+        </figure>
     </section>
 
-    @* ---------- Features ---------- *@
-    <section class="lp-section" aria-labelledby="lp-features-title">
+    @* ---------- Mission: how the plan works ---------- *@
+    <section class="lp-section lp-mission" aria-labelledby="lp-mission-title">
         <div class="lp-section__head">
-            <p class="lp-eyebrow">Features</p>
-            <h2 id="lp-features-title" class="lp-section__title">Everything you need to plan, in one place</h2>
-            <p class="lp-section__lead">Each tool works on its own and feeds the bigger picture on your Dashboard.</p>
+            <h2 id="lp-mission-title" class="lp-section__title">How the plan works</h2>
+            <p class="lp-section__lead">
+                Financial independence means your investments can pay for the life you live, so work becomes a
+                choice. We want everyone to see their own path there, without handing over bank logins or paying
+                for advice.
+            </p>
         </div>
-        <ul class="lp-features">
-            @foreach (var feature in Model.Features)
+
+        <dl class="lp-rules">
+            <div class="lp-rule">
+                <dt class="lp-rule__term">Your FI target</dt>
+                <dd class="lp-rule__sum">25 × annual spending</dd>
+                <dd class="lp-rule__text">
+                    At this size, withdrawing about 4% a year covers your spending. Spend $40,000 a year and your
+                    target is $1,000,000.
+                </dd>
+            </div>
+            <div class="lp-rule">
+                <dt class="lp-rule__term">Your growth</dt>
+                <dd class="lp-rule__sum">Savings + return</dd>
+                <dd class="lp-rule__text">
+                    What you save each month and the return you assume set how fast your net worth grows. Try base,
+                    conservative, and aggressive rates side by side.
+                </dd>
+            </div>
+            <div class="lp-rule">
+                <dt class="lp-rule__term">Your FI age</dt>
+                <dd class="lp-rule__sum">Where the lines cross</dd>
+                <dd class="lp-rule__text">
+                    Your projection shows the age your net worth reaches the target. The Dashboard tracks how far
+                    along you are.
+                </dd>
+            </div>
+        </dl>
+    </section>
+
+    @* ---------- Tools ---------- *@
+    <section class="lp-section" aria-labelledby="lp-tools-title">
+        <div class="lp-section__head">
+            <h2 id="lp-tools-title" class="lp-section__title">Three tools build your plan</h2>
+        </div>
+        <ul class="lp-tools">
+            @foreach (var feature in Model.CoreFeatures)
             {
-                <li class="lp-feature">
-                    <span class="lp-feature__icon" aria-hidden="true"><i data-lucide="@feature.Icon"></i></span>
-                    <h3 class="lp-feature__title">@feature.Title</h3>
-                    <p class="lp-feature__text">@feature.Description</p>
+                <li class="lp-tool">
+                    <h3 class="lp-tool__title">@feature.Title</h3>
+                    <p class="lp-tool__text">@feature.Description</p>
+                </li>
+            }
+        </ul>
+
+        <h3 class="lp-more__title">Also included</h3>
+        <ul class="lp-more">
+            @foreach (var feature in Model.MoreFeatures)
+            {
+                <li class="lp-more__item">
+                    <span class="lp-more__name">@feature.Title</span>
+                    <span class="lp-more__text">@feature.Description</span>
                 </li>
             }
         </ul>
     </section>
 
-    @* ---------- How it works ---------- *@
+    @* ---------- Getting started ---------- *@
     <section class="lp-section lp-section--tinted" aria-labelledby="lp-steps-title">
         <div class="lp-section__head">
-            <p class="lp-eyebrow">How it works</p>
-            <h2 id="lp-steps-title" class="lp-section__title">Up and running in three steps</h2>
+            <h2 id="lp-steps-title" class="lp-section__title">Get your first plan in three steps</h2>
         </div>
         <ol class="lp-steps">
             <li class="lp-step">
-                <span class="lp-step__number lp-mono" aria-hidden="true">01</span>
                 <h3 class="lp-step__title">Create your account</h3>
                 <p class="lp-step__text">Register with your email address and choose a password. No payment details are needed.</p>
             </li>
             <li class="lp-step">
-                <span class="lp-step__number lp-mono" aria-hidden="true">02</span>
                 <h3 class="lp-step__title">Add your numbers</h3>
-                <p class="lp-step__text">Enter your net worth, income, and spending, set a monthly budget, and add your savings goals.</p>
+                <p class="lp-step__text">Enter your savings, income, and spending, set a monthly budget, and add your savings goals.</p>
             </li>
             <li class="lp-step">
-                <span class="lp-step__number lp-mono" aria-hidden="true">03</span>
                 <h3 class="lp-step__title">Follow your plan</h3>
-                <p class="lp-step__text">Your Dashboard shows your progress to financial independence and what to do next.</p>
+                <p class="lp-step__text">Your Dashboard shows your progress to your FI target and the age you are on track to reach it.</p>
             </li>
         </ol>
     </section>
@@ -151,28 +149,22 @@
     @* ---------- Privacy ---------- *@
     <section class="lp-section" aria-labelledby="lp-privacy-title">
         <div class="lp-privacy">
-            <span class="lp-privacy__icon" aria-hidden="true"><i data-lucide="shield-check"></i></span>
-            <div>
-                <h2 id="lp-privacy-title" class="lp-privacy__title">Your financial data stays yours</h2>
-                <ul class="lp-privacy__list">
-                    <li>Every figure you enter is tied to your account and shown only to you.</li>
-                    <li>Connections are encrypted with HTTPS.</li>
-                    <li>Google Drive is only accessed when you choose to connect a folder.</li>
-                    <li>No bank logins are needed. You decide exactly what to enter.</li>
-                </ul>
-            </div>
+            <h2 id="lp-privacy-title" class="lp-privacy__title">Your financial data stays yours</h2>
+            <ul class="lp-privacy__list">
+                <li>Every figure you enter is tied to your account and shown only to you.</li>
+                <li>Connections are encrypted with HTTPS.</li>
+                <li>Google Drive is only accessed when you choose to connect a folder.</li>
+                <li>No bank logins are needed. You decide exactly what to enter.</li>
+            </ul>
         </div>
     </section>
 
     @* ---------- Closing call to action ---------- *@
     <section class="lp-closing" aria-labelledby="lp-closing-title">
-        <h2 id="lp-closing-title" class="lp-closing__title">Start planning with a clear picture</h2>
-        <p class="lp-closing__lead">Create a free account and set up your first plan today.</p>
+        <h2 id="lp-closing-title" class="lp-closing__title">Find your FI target today</h2>
+        <p class="lp-closing__lead">Create a free account and see the age your plan reaches it.</p>
         <div class="lp-cta-row lp-cta-row--center">
-            <a class="lp-btn lp-btn--light" asp-area="Identity" asp-page="/Account/Register">
-                Create free account
-                <i data-lucide="arrow-right" aria-hidden="true"></i>
-            </a>
+            <a class="lp-btn lp-btn--light" asp-area="Identity" asp-page="/Account/Register">Create free account</a>
             <a class="lp-btn lp-btn--ghost" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
         </div>
     </section>

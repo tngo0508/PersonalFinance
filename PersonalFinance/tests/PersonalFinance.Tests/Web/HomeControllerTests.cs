@@ -57,12 +57,15 @@ public class HomeControllerTests
         Assert.Null(viewResult.ViewName);
         var model = Assert.IsType<LandingPageViewModel>(viewResult.Model);
         Assert.Equal(
+            new[] { "Net Worth", "Budget", "Savings Goals" },
+            model.CoreFeatures.Select(f => f.Title));
+        Assert.Equal(
             new[]
             {
-                "Net Worth", "Budget", "Savings Goals", "Spreadsheet Analysis", "Investment Calculator",
-                "Finance News", "Community", "Google Drive Integration", "AI Assistant"
+                "Spreadsheet Analysis", "Investment Calculator", "Google Drive Integration", "AI Assistant",
+                "Finance News", "Community"
             },
-            model.Features.Select(f => f.Title));
+            model.MoreFeatures.Select(f => f.Title));
     }
 
     [Fact]

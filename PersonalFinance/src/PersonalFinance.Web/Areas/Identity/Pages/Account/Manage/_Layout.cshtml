@@ -1,0 +1,32 @@
+@*
+    Shell for the built-in Account settings pages (Profile, Email, Password, ...). Overrides the
+    Identity UI default so they keep the app's sidebar layout and use the ledger theme.
+*@
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/ledger.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/account.css" asp-append-version="true"/>
+}
+
+<div class="account-page">
+    <header class="account-page__header">
+        <h1 class="account-page__title">Account settings</h1>
+        <p class="account-page__subtitle">Your sign-in details, security and personal data.</p>
+    </header>
+
+    <div class="account-page__body">
+        <nav class="account-page__nav" aria-label="Account settings">
+            <partial name="_ManageNav"/>
+        </nav>
+        <div class="account-page__content">
+            @RenderBody()
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

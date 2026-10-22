@@ -268,6 +268,43 @@ body:not(:has(#sidebar)) .topbar {
     margin-left: auto;
 }
 
+/* Signed-out top bar: brand on the left, Sign in / Create account on one row */
+.topbar-brand,
+.topbar-brand .sidebar-brand-name {
+    color: #24292f;
+}
+
+.topbar-brand .sidebar-brand-icon {
+    color: var(--app-brand);
+}
+
+.topbar-auth {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.topbar-auth .btn {
+    white-space: nowrap;
+}
+
+@media (max-width: 479.98px) {
+    /* Keep the name for screen readers; the icon still links home */
+    .topbar-brand .sidebar-brand-name {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .topbar-auth .btn {
+        padding: 6px 12px;
+        font-size: 0.875rem;
+    }
+}
+
 .topbar-btn {
     position: relative;
     background: none;

@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Landing Page Redesign**: The homepage now explains what the app is for, financial independence and the age you can reach it, with a calmer financial look.
+  - The hero shows a sample projection chart that crosses the FI target (25 × annual spending) at age 52, with a visible caption describing the figures.
+  - A "How the plan works" section states the mission and the three rules behind every plan: FI target, growth, and FI age.
+  - Net Worth, Budget and Savings Goals lead as the three core tools; the other six features move to an "Also included" list.
+  - New navy, ledger-green and brass palette with IBM Plex Sans, scoped to the landing page; the signed-in app is unchanged.
+  - Removed the fake browser window, all-caps eyebrow labels, entrance animations and decorative icons.
+  - Sign in and Register use the same theme: ledger-green buttons, focus rings and links, navy text and IBM Plex Sans. The shared tokens live in `css/ledger.css`; the auth page styles move from `site.css` to `css/auth.css`.
+  - The Sign in and Register brand link goes to the homepage instead of Google Drive, and Register repeats the "No bank logins" promise under its button.
+  - Account settings (Profile, Email, Password, Two-factor authentication, Personal data) use the same theme inside the signed-in layout, with a section list beside the form that becomes a scrollable tab row on phones (`css/account.css`).
+  - The other Identity pages (forgot and reset password, email confirmation, resend confirmation, external sign-in, lockout, sign out) share one themed shell, `Account/_AuthLayout.cshtml`; the shared form, link and button styles move to `css/ledger.css`.
+
 - **Agent Guardrails From the Global Search Retro**: Checks and docs now catch the two kinds of mistake that let the Global Search bug ship.
   - `TestSupport/AzureSqlTranslation` translates an EF Core query to Azure SQL without a database. `CODING_STANDARDS.md` and the add-a-feature checklist require it for string, date and collation-dependent queries, which the InMemory provider runs in memory.
   - ESLint warns on string concatenation (`prefer-template`), `function` callbacks (`prefer-arrow-callback`), `.then()` chains and `innerHTML` assignments. The pre-commit hook fixes the first two in every file a commit touches.
@@ -90,6 +101,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `max_completion_tokens` is applied to all requests (configurable via `OpenAI:MaxTokens`, default 400).
 
 ### Fixed
+
+- **Sign In and Register Error Messages**: Field errors such as "The Email field is required." now appear under each field with a red border; they were always hidden because ASP.NET marks errors with `field-validation-error`, not Bootstrap's `.is-invalid`.
+
+- **Signed-Out Header on Phones**: The Sign in and Create account buttons stay on one row inside the top bar instead of stacking and being cut off.
+  - Below 480px the buttons are compact and the brand name is visually hidden (still read by screen readers).
+  - "Log in" is renamed "Sign in" in the header, the Sign in page title and related links, matching the Sign in page itself.
 
 - **Budget Categories in Global Search**: Global Search now finds Budget Categories by name from the user's current Data Source, replacing the "Budgets" group that only matched period strings like "2026-10" (#95).
   - Budget Tracker source: Budget Categories by name, excluding deleted ones; the result opens the Budget Tracker at the current month.

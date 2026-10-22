@@ -184,11 +184,11 @@
         }
         else
         {
-            <a class="sidebar-brand text-decoration-none" asp-area="" asp-controller="Home" asp-action="Index" style="color: #24292f;">
-                <span class="sidebar-brand-icon" style="color: var(--app-brand);">
+            <a class="sidebar-brand topbar-brand text-decoration-none" asp-area="" asp-controller="Home" asp-action="Index">
+                <span class="sidebar-brand-icon">
                     <i data-lucide="trending-up"></i>
                 </span>
-                <span class="sidebar-brand-name" style="color: #24292f;">@AppVersion.ApplicationName</span>
+                <span class="sidebar-brand-name">@AppVersion.ApplicationName</span>
             </a>
             <div class="topbar-actions ms-auto">
                 <partial name="_LoginPartial"/>

@@ -1,0 +1,175 @@
+/* ==========================================================================
+   Ledger theme: navy ink, ledger green for growth, brass for the FI target.
+   Loaded by the Landing Page, the Identity pages (Sign in, Register, password
+   reset, ...) and Account settings; the rest of the signed-in app keeps its
+   --app-* theme.
+   ========================================================================== */
+
+:root {
+    --lp-ink: #14283B;
+    --lp-ink-soft: #3D4F5F;
+    --lp-muted: #5B6B78;
+    --lp-ledger: #1D6A50;
+    --lp-ledger-deep: #134A38;
+    --lp-ledger-wash: #E6F0EB;
+    --lp-brass: #8A6A1E;
+    --lp-paper: #FFFFFF;
+    --lp-surface: #F3F6F5;
+    --lp-rule: #D6DEDB;
+    --lp-font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* Header buttons and brand follow the ledger palette */
+.topbar .btn-primary {
+    --bs-btn-bg: var(--lp-ledger);
+    --bs-btn-border-color: var(--lp-ledger);
+    --bs-btn-hover-bg: var(--lp-ledger-deep);
+    --bs-btn-hover-border-color: var(--lp-ledger-deep);
+    --bs-btn-active-bg: var(--lp-ledger-deep);
+    --bs-btn-active-border-color: var(--lp-ledger-deep);
+}
+
+.topbar .btn-outline-primary {
+    --bs-btn-color: var(--lp-ink);
+    --bs-btn-border-color: var(--lp-ink-soft);
+    --bs-btn-hover-color: var(--lp-ink);
+    --bs-btn-hover-bg: var(--lp-surface);
+    --bs-btn-hover-border-color: var(--lp-ink-soft);
+    --bs-btn-active-color: var(--lp-ink);
+    --bs-btn-active-bg: var(--lp-surface);
+    --bs-btn-active-border-color: var(--lp-ink-soft);
+}
+
+.topbar .btn-outline-primary:hover {
+    color: var(--lp-ink);
+}
+
+.topbar .topbar-brand .sidebar-brand-icon {
+    color: var(--lp-ledger);
+}
+
+/* Forms, links and buttons on the Identity pages (auth.css) and Account settings (account.css) */
+:is(.auth-page, .account-page) .form-control {
+    border: 1px solid var(--lp-rule);
+    border-radius: 6px;
+    color: var(--lp-ink);
+}
+
+:is(.auth-page, .account-page) .form-control::placeholder {
+    color: var(--lp-muted);
+}
+
+:is(.auth-page, .account-page) .form-control:focus {
+    border-color: var(--lp-ledger);
+    outline: 2px solid var(--lp-ledger);
+    outline-offset: 0;
+    box-shadow: 0 0 0 4px var(--lp-ledger-wash);
+}
+
+:is(.auth-page, .account-page) .form-floating > label {
+    color: var(--lp-muted);
+}
+
+/* The label stands in for the placeholder until it floats; keep Bootstrap's hidden placeholder */
+:is(.auth-page, .account-page) .form-floating > .form-control::placeholder {
+    color: transparent;
+}
+
+:is(.auth-page, .account-page) .form-floating > .form-control:focus ~ label,
+:is(.auth-page, .account-page) .form-floating > .form-control:not(:placeholder-shown) ~ label {
+    color: var(--lp-ink-soft);
+}
+
+/* ASP.NET marks errors with these classes, not Bootstrap's .is-invalid, so show them explicitly */
+:is(.auth-page, .account-page) .form-control.input-validation-error {
+    border-color: var(--app-accent-negative);
+}
+
+:is(.auth-page, .account-page) .invalid-feedback.field-validation-error {
+    display: block;
+    color: var(--app-accent-negative);
+    font-size: 0.875rem;
+}
+
+/* Muted border keeps the unchecked box visible (3:1 against white) */
+:is(.auth-page, .account-page) .form-check-input {
+    border-color: var(--lp-muted);
+    background-color: var(--lp-paper);
+}
+
+:is(.auth-page, .account-page) .form-check-input:checked {
+    border-color: var(--lp-ledger);
+    background-color: var(--lp-ledger);
+}
+
+:is(.auth-page, .account-page) .form-check-input:focus {
+    border-color: var(--lp-ledger);
+    outline: 2px solid var(--lp-ledger);
+    outline-offset: 0;
+    box-shadow: 0 0 0 4px var(--lp-ledger-wash);
+}
+
+:is(.auth-page, .account-page) a:not(.btn):not(.auth-page__brand):not(.account-nav__link) {
+    color: var(--lp-ledger);
+    font-weight: 500;
+}
+
+:is(.auth-page, .account-page) a:not(.btn):not(.auth-page__brand):not(.account-nav__link):hover {
+    color: var(--lp-ledger-deep);
+    text-decoration: underline;
+}
+
+:is(.auth-page, .account-page) .text-muted {
+    color: var(--lp-muted) !important;
+}
+
+:is(.auth-page, .account-page) .btn-primary {
+    --bs-btn-bg: var(--lp-ledger);
+    --bs-btn-border-color: var(--lp-ledger);
+    --bs-btn-hover-bg: var(--lp-ledger-deep);
+    --bs-btn-hover-border-color: var(--lp-ledger-deep);
+    --bs-btn-active-bg: var(--lp-ledger-deep);
+    --bs-btn-active-border-color: var(--lp-ledger-deep);
+    --bs-btn-disabled-bg: var(--lp-ledger);
+    --bs-btn-disabled-border-color: var(--lp-ledger);
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+:is(.auth-page, .account-page) :is(.btn-outline-secondary, .btn-secondary, .btn-default) {
+    --bs-btn-color: var(--lp-ink);
+    --bs-btn-bg: var(--lp-paper);
+    --bs-btn-border-color: var(--lp-ink-soft);
+    --bs-btn-hover-color: var(--lp-ink);
+    --bs-btn-hover-bg: var(--lp-surface);
+    --bs-btn-hover-border-color: var(--lp-ink-soft);
+    --bs-btn-active-color: var(--lp-ink);
+    --bs-btn-active-bg: var(--lp-surface);
+    --bs-btn-active-border-color: var(--lp-ink-soft);
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+:is(.auth-page, .account-page) .btn-danger {
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+:is(.auth-page, .account-page) .btn:focus-visible {
+    outline: 2px solid var(--lp-ledger);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+/* Identity status messages ("Your profile has been updated", ...); site.css sets these properties directly */
+:is(.auth-page, .account-page) .alert-success {
+    border-color: var(--lp-ledger);
+    background: var(--lp-ledger-wash);
+    color: var(--lp-ledger-deep);
+}
+
+:is(.auth-page, .account-page) .alert-info {
+    border-color: var(--lp-rule);
+    background: var(--lp-surface);
+    color: var(--lp-ink);
+}
