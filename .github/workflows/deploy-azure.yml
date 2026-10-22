@@ -410,7 +410,7 @@ jobs:
         run: npm run db:down || true
 
   # ============================================================================
-  # 1b. VALIDATE INFRASTRUCTURE TEMPLATES (runs in parallel with build-and-test)
+  # 1e. VALIDATE INFRASTRUCTURE TEMPLATES (runs in parallel with build-and-test)
   # ============================================================================
   validate-infra:
     name: Validate Bicep Templates
