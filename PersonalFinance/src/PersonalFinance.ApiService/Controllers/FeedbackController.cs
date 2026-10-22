@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Helpers;
 
@@ -8,7 +9,7 @@ namespace PersonalFinance.ApiService.Controllers;
 
 /// <summary>
 /// API controller for Feedback. Sending Feedback is scoped to the authenticated Account
-/// (see XUserIdAuthenticationHandler).
+/// (see XUserIdAuthenticationHandler); reading the Feedback inbox requires the Admin Policy.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -41,5 +42,17 @@ public class FeedbackController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Lists all Feedback for the Admin inbox, newest first.
+    /// </summary>
+    [HttpGet]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(typeof(List<FeedbackAdminItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> List(CancellationToken cancellationToken = default)
+    {
+        return Ok(await _feedbackService.ListAsync(cancellationToken));
     }
 }

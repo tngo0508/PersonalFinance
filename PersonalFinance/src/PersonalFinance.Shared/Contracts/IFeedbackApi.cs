@@ -13,4 +13,10 @@ public interface IFeedbackApi
     /// </summary>
     [Post("/api/feedback")]
     Task SubmitAsync([Body] SubmitFeedbackRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all Feedback for the Admin inbox, newest first. Requires the Admin Policy.
+    /// </summary>
+    [Get("/api/feedback")]
+    Task<List<FeedbackAdminItemDto>> ListAsync(CancellationToken cancellationToken = default);
 }

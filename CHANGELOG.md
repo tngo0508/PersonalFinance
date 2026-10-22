@@ -89,6 +89,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `IFeedbackService` validates the request with `SubmitFeedbackRequestValidator`; `POST /api/feedback` requires a signed-in Account.
   - The form keeps the user's input on validation errors, uses an anti-forgery token and Post/Redirect/Get, and shows a friendly message when ApiService fails.
 
+- **Admin Feedback Inbox**: Admins read all Feedback in a Feedback inbox linked from the Admin Dashboard, newest first.
+  - Each item shows its Category, status, message, the Account email, the page it was sent from and the date (UTC).
+  - `GET /api/feedback` and the `Admin/Feedback` page both require the Admin Policy; soft-deleted Feedback is left out.
+  - One `AsNoTracking` query joins the Account email, orders by date then id, and is checked against Azure SQL translation.
+  - An empty inbox says "No Feedback yet"; a failed load shows the Unavailable State, whose Retry now reloads the same page.
+
 - **Local SQL Server in Docker**: Developers can run the whole app against a local SQL Server 2022 container that uses the same provider and migrations as production Azure SQL.
   - `compose.yaml` at the repo root runs SQL Server 2022 Developer edition (`platform: linux/amd64`, so it runs under Rosetta on Apple Silicon) with a named data volume and a `sqlcmd` healthcheck; it stops with a clear message when `MSSQL_SA_PASSWORD` is missing.
   - `.env.example` lists `MSSQL_SA_PASSWORD` and `SQL_HOST_PORT`; the real `.env` stays gitignored.

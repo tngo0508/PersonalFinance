@@ -17,11 +17,13 @@ namespace PersonalFinance.Web.Controllers;
 public class AdminController : Controller
 {
     private readonly IAdminApi _adminApi;
+    private readonly IFeedbackApi _feedbackApi;
     private readonly ILogger<AdminController> _logger;
 
-    public AdminController(IAdminApi adminApi, ILogger<AdminController> logger)
+    public AdminController(IAdminApi adminApi, IFeedbackApi feedbackApi, ILogger<AdminController> logger)
     {
         _adminApi = adminApi;
+        _feedbackApi = feedbackApi;
         _logger = logger;
     }
 
@@ -49,6 +51,26 @@ public class AdminController : Controller
         }
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Displays the Feedback inbox: all Feedback, newest first. A failed load shows the Unavailable State,
+    /// never an empty inbox.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Feedback(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var items = await _feedbackApi.ListAsync(cancellationToken);
+            return View(new AdminFeedbackInboxViewModel { Items = items });
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load the Feedback inbox.");
+            return this.UnavailableView("Feedback inbox", "We couldn't load the Feedback inbox", "Admin",
+                nameof(Feedback));
+        }
     }
 
     /// <summary>

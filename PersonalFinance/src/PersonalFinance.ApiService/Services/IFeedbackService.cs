@@ -12,4 +12,9 @@ public interface IFeedbackService
     /// </summary>
     Task<SubmitFeedbackResult> SubmitAsync(string userId, SubmitFeedbackRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all Feedback for the Admin inbox, newest first, with the sending Account's email.
+    /// </summary>
+    Task<List<FeedbackAdminItemDto>> ListAsync(CancellationToken cancellationToken = default);
 }

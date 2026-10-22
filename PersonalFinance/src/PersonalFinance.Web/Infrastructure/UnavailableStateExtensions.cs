@@ -16,13 +16,14 @@ public static class UnavailableStateExtensions
     /// that the user could mistake for their data (or save over it).
     /// </summary>
     public static ViewResult UnavailableView(this Controller controller, string pageTitle, string heading,
-        string retryController)
+        string retryController, string retryAction = "Index")
     {
         return controller.View(UnavailableViewName, new UnavailableStateViewModel
         {
             PageTitle = pageTitle,
             Heading = heading,
-            RetryController = retryController
+            RetryController = retryController,
+            RetryAction = retryAction
         });
     }
 }

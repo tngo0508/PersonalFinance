@@ -1,0 +1,46 @@
+@model PersonalFinance.Web.Models.AdminFeedbackInboxViewModel
+@{
+    ViewData["Title"] = "Feedback inbox";
+}
+
+<div class="py-3">
+    <header class="mb-4">
+        <p class="text-muted text-uppercase small mb-1"><a asp-action="Index">Admin</a></p>
+        <h1 class="h3 mb-1">Feedback inbox</h1>
+        <p class="text-muted mb-0">Feedback from Accounts, newest first.</p>
+    </header>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-muted">No Feedback yet.</div>
+        </div>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var item in Model.Items)
+            {
+                <li class="list-group-item py-3">
+                    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                        <span>
+                            <span class="badge text-bg-secondary">@item.Category</span>
+                            <span class="badge text-bg-light border ms-1">@item.Status</span>
+                        </span>
+                        <time class="text-muted small" datetime="@item.CreatedAt.ToString("o")">
+                            @item.CreatedAt.ToString("yyyy-MM-dd HH:mm") UTC
+                        </time>
+                    </div>
+                    <p class="admin-feedback__message text-break mb-2">@item.Message</p>
+                    <div class="text-muted small text-break">
+                        @(string.IsNullOrEmpty(item.AccountEmail) ? "Account no longer exists" : item.AccountEmail)
+                        @if (!string.IsNullOrEmpty(item.PageUrl))
+                        {
+                            <span class="ms-2">on <code>@item.PageUrl</code></span>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

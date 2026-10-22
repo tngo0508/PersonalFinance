@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Feedback;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
@@ -39,4 +40,28 @@ public class FeedbackService : IFeedbackService
         await _db.SaveChangesAsync(cancellationToken);
         return SubmitFeedbackResult.Success();
     }
+
+    /// <inheritdoc />
+    public Task<List<FeedbackAdminItemDto>> ListAsync(CancellationToken cancellationToken = default) =>
+        AdminListQuery().ToListAsync(cancellationToken);
+
+    /// <summary>
+    /// The Admin inbox query: one round trip, newest first with the id as tie-breaker, soft-deleted Feedback
+    /// excluded by the global query filter. Internal so tests can check it translates to Azure SQL.
+    /// </summary>
+    internal IQueryable<FeedbackAdminItemDto> AdminListQuery() =>
+        from feedback in _db.Feedback.AsNoTracking()
+        join user in _db.Users.AsNoTracking() on feedback.UserId equals user.Id into users
+        from user in users.DefaultIfEmpty()
+        orderby feedback.CreatedAt descending, feedback.Id descending
+        select new FeedbackAdminItemDto
+        {
+            Id = feedback.Id,
+            Category = feedback.Category,
+            Message = feedback.Message,
+            AccountEmail = user == null ? string.Empty : user.Email ?? user.UserName ?? string.Empty,
+            PageUrl = feedback.PageUrl,
+            Status = feedback.Status,
+            CreatedAt = feedback.CreatedAt
+        };
 }

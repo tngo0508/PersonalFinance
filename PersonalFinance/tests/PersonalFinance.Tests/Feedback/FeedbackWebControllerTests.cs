@@ -196,5 +196,8 @@ public class FeedbackWebControllerTests
             Submitted = request;
             return Task.CompletedTask;
         }
+
+        public Task<List<FeedbackAdminItemDto>> ListAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The Admin inbox is not part of sending Feedback.");
     }
 }

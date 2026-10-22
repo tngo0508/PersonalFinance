@@ -360,6 +360,22 @@ public class RbacTests
         Assert.Equal(AppPolicies.RequireAdmin, attribute!.Policy);
     }
 
+    [Theory]
+    [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController), "Feedback")]
+    [InlineData(typeof(PersonalFinance.ApiService.Controllers.FeedbackController), "List")]
+    public void AdminFeedbackInboxEndpoints_RequireTheAdminPolicy(Type controller, string action)
+    {
+        var method = controller.GetMethod(action);
+        Assert.NotNull(method);
+
+        var policies = method!.GetCustomAttributes<AuthorizeAttribute>()
+            .Concat(controller.GetCustomAttributes<AuthorizeAttribute>())
+            .Select(a => a.Policy);
+
+        Assert.Contains(AppPolicies.RequireAdmin, policies);
+        Assert.Null(method.GetCustomAttribute<AllowAnonymousAttribute>());
+    }
+
     private static HttpContext ContextWithPolicy(string policy)
     {
         var context = new DefaultHttpContext();
