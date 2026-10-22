@@ -1,0 +1,171 @@
+/* ==========================================================================
+   Auth pages (Sign in, Register): no card wrapper, ledger theme.
+   Colour and font tokens come from ledger.css, which loads first.
+   ========================================================================== */
+
+.auth-page {
+    max-width: 420px;
+    margin: 4rem auto 0;
+    padding: 0 var(--app-spacing-m);
+    color: var(--lp-ink);
+    font-family: var(--lp-font);
+}
+
+.auth-page__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--lp-ink);
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-page__brand:hover {
+    color: var(--lp-ink);
+    text-decoration: none;
+}
+
+.auth-page__brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--lp-ledger);
+    color: #fff;
+}
+
+.auth-page__title {
+    margin: 0;
+    color: var(--lp-ink);
+    font-size: clamp(1.75rem, 4vw, 2.1rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.auth-page__subtitle {
+    margin: 0;
+    color: var(--lp-ink-soft);
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+.auth-page__form {
+    margin-top: 2rem;
+}
+
+.auth-page__form .form-label {
+    margin-bottom: 6px;
+    color: var(--lp-ink);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.auth-page__form .form-control {
+    padding: 10px 14px;
+    border: 1px solid var(--lp-rule);
+    border-radius: 6px;
+    color: var(--lp-ink);
+    font-size: 1rem;
+}
+
+.auth-page__form .form-control::placeholder {
+    color: var(--lp-muted);
+}
+
+.auth-page__form .form-control:focus {
+    border-color: var(--lp-ledger);
+    outline: 2px solid var(--lp-ledger);
+    outline-offset: 0;
+    box-shadow: 0 0 0 4px var(--lp-ledger-wash);
+}
+
+/* ASP.NET marks errors with these classes, not Bootstrap's .is-invalid, so show them explicitly */
+.auth-page__form .form-control.input-validation-error {
+    border-color: var(--app-accent-negative);
+}
+
+.auth-page__form .invalid-feedback.field-validation-error {
+    display: block;
+    color: var(--app-accent-negative);
+    font-size: 0.875rem;
+}
+
+/* Muted border keeps the unchecked box visible (3:1 against white) */
+.auth-page__form .form-check-input {
+    border-color: var(--lp-muted);
+    background-color: var(--lp-paper);
+}
+
+.auth-page__form .form-check-input:checked {
+    border-color: var(--lp-ledger);
+    background-color: var(--lp-ledger);
+}
+
+.auth-page__form .form-check-input:focus {
+    border-color: var(--lp-ledger);
+    outline: 2px solid var(--lp-ledger);
+    outline-offset: 0;
+    box-shadow: 0 0 0 4px var(--lp-ledger-wash);
+}
+
+.auth-page a:not(.btn):not(.auth-page__brand) {
+    color: var(--lp-ledger);
+    font-weight: 500;
+}
+
+.auth-page a:not(.btn):not(.auth-page__brand):hover {
+    color: var(--lp-ledger-deep);
+    text-decoration: underline;
+}
+
+.auth-page .text-muted {
+    color: var(--lp-muted) !important;
+}
+
+.auth-page .btn-primary {
+    --bs-btn-bg: var(--lp-ledger);
+    --bs-btn-border-color: var(--lp-ledger);
+    --bs-btn-hover-bg: var(--lp-ledger-deep);
+    --bs-btn-hover-border-color: var(--lp-ledger-deep);
+    --bs-btn-active-bg: var(--lp-ledger-deep);
+    --bs-btn-active-border-color: var(--lp-ledger-deep);
+    --bs-btn-disabled-bg: var(--lp-ledger);
+    --bs-btn-disabled-border-color: var(--lp-ledger);
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.auth-page .btn-outline-secondary {
+    --bs-btn-color: var(--lp-ink);
+    --bs-btn-border-color: var(--lp-ink-soft);
+    --bs-btn-hover-color: var(--lp-ink);
+    --bs-btn-hover-bg: var(--lp-surface);
+    --bs-btn-hover-border-color: var(--lp-ink-soft);
+    --bs-btn-active-color: var(--lp-ink);
+    --bs-btn-active-bg: var(--lp-surface);
+    --bs-btn-active-border-color: var(--lp-ink-soft);
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.auth-page .btn:focus-visible {
+    outline: 2px solid var(--lp-ledger);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+.auth-page__note {
+    margin: 0.75rem 0 0;
+    color: var(--lp-muted);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+@media (max-width: 576px) {
+    .auth-page {
+        margin-top: 2rem;
+    }
+}

@@ -1,0 +1,48 @@
+/* ==========================================================================
+   Ledger theme: navy ink, ledger green for growth, brass for the FI target.
+   Loaded only by the signed-out pages (Landing Page, Sign in, Register), so the
+   signed-in app keeps its --app-* theme.
+   ========================================================================== */
+
+:root {
+    --lp-ink: #14283B;
+    --lp-ink-soft: #3D4F5F;
+    --lp-muted: #5B6B78;
+    --lp-ledger: #1D6A50;
+    --lp-ledger-deep: #134A38;
+    --lp-ledger-wash: #E6F0EB;
+    --lp-brass: #8A6A1E;
+    --lp-paper: #FFFFFF;
+    --lp-surface: #F3F6F5;
+    --lp-rule: #D6DEDB;
+    --lp-font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* Header buttons and brand follow the ledger palette */
+.topbar .btn-primary {
+    --bs-btn-bg: var(--lp-ledger);
+    --bs-btn-border-color: var(--lp-ledger);
+    --bs-btn-hover-bg: var(--lp-ledger-deep);
+    --bs-btn-hover-border-color: var(--lp-ledger-deep);
+    --bs-btn-active-bg: var(--lp-ledger-deep);
+    --bs-btn-active-border-color: var(--lp-ledger-deep);
+}
+
+.topbar .btn-outline-primary {
+    --bs-btn-color: var(--lp-ink);
+    --bs-btn-border-color: var(--lp-ink-soft);
+    --bs-btn-hover-color: var(--lp-ink);
+    --bs-btn-hover-bg: var(--lp-surface);
+    --bs-btn-hover-border-color: var(--lp-ink-soft);
+    --bs-btn-active-color: var(--lp-ink);
+    --bs-btn-active-bg: var(--lp-surface);
+    --bs-btn-active-border-color: var(--lp-ink-soft);
+}
+
+.topbar .btn-outline-primary:hover {
+    color: var(--lp-ink);
+}
+
+.topbar .topbar-brand .sidebar-brand-icon {
+    color: var(--lp-ledger);
+}

@@ -1,21 +1,9 @@
 /* ==========================================================================
    Landing Page (lp-*)
-   "Ledger" design: navy ink, ledger green for growth, brass for the FI target.
-   Tokens are scoped to .lp-page so the signed-in app keeps its --app-* theme.
+   Colour and font tokens come from ledger.css, which loads first.
    ========================================================================== */
 
 .lp-page {
-    --lp-ink: #14283B;
-    --lp-ink-soft: #3D4F5F;
-    --lp-muted: #5B6B78;
-    --lp-ledger: #1D6A50;
-    --lp-ledger-deep: #134A38;
-    --lp-ledger-wash: #E6F0EB;
-    --lp-brass: #8A6A1E;
-    --lp-paper: #FFFFFF;
-    --lp-surface: #F3F6F5;
-    --lp-rule: #D6DEDB;
-    --lp-font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
     --lp-max-copy: 34rem;
     --lp-section-gap: clamp(3.5rem, 8vw, 6rem);
 
@@ -107,35 +95,6 @@
 .lp-btn--light:focus-visible,
 .lp-btn--ghost:focus-visible {
     outline-color: #fff;
-}
-
-/* Header buttons follow the landing palette (this file only loads on the Landing Page) */
-.topbar .btn-primary {
-    --bs-btn-bg: #1D6A50;
-    --bs-btn-border-color: #1D6A50;
-    --bs-btn-hover-bg: #134A38;
-    --bs-btn-hover-border-color: #134A38;
-    --bs-btn-active-bg: #134A38;
-    --bs-btn-active-border-color: #134A38;
-}
-
-.topbar .btn-outline-primary {
-    --bs-btn-color: #14283B;
-    --bs-btn-border-color: #3D4F5F;
-    --bs-btn-hover-color: #14283B;
-    --bs-btn-hover-bg: #F3F6F5;
-    --bs-btn-hover-border-color: #3D4F5F;
-    --bs-btn-active-color: #14283B;
-    --bs-btn-active-bg: #F3F6F5;
-    --bs-btn-active-border-color: #3D4F5F;
-}
-
-.topbar .btn-outline-primary:hover {
-    color: #14283B;
-}
-
-.topbar .topbar-brand .sidebar-brand-icon {
-    color: #1D6A50;
 }
 
 /* ==========================================================================

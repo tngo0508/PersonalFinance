@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Net Worth, Budget and Savings Goals lead as the three core tools; the other six features move to an "Also included" list.
   - New navy, ledger-green and brass palette with IBM Plex Sans, scoped to the landing page; the signed-in app is unchanged.
   - Removed the fake browser window, all-caps eyebrow labels, entrance animations and decorative icons.
+  - Sign in and Register use the same theme: ledger-green buttons, focus rings and links, navy text and IBM Plex Sans. The shared tokens live in `css/ledger.css`; the auth page styles move from `site.css` to `css/auth.css`.
+  - The Sign in and Register brand link goes to the homepage instead of Google Drive, and Register repeats the "No bank logins" promise under its button.
 
 - **Agent Guardrails From the Global Search Retro**: Checks and docs now catch the two kinds of mistake that let the Global Search bug ship.
   - `TestSupport/AzureSqlTranslation` translates an EF Core query to Azure SQL without a database. `CODING_STANDARDS.md` and the add-a-feature checklist require it for string, date and collation-dependent queries, which the InMemory provider runs in memory.
@@ -97,6 +99,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `max_completion_tokens` is applied to all requests (configurable via `OpenAI:MaxTokens`, default 400).
 
 ### Fixed
+
+- **Sign In and Register Error Messages**: Field errors such as "The Email field is required." now appear under each field with a red border; they were always hidden because ASP.NET marks errors with `field-validation-error`, not Bootstrap's `.is-invalid`.
 
 - **Signed-Out Header on Phones**: The Sign in and Create account buttons stay on one row inside the top bar instead of stacking and being cut off.
   - Below 480px the buttons are compact and the brand name is visually hidden (still read by screen readers).
