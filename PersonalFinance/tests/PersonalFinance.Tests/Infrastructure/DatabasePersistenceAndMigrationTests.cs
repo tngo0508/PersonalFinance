@@ -73,6 +73,46 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
+    public void LocalSqlServerConnectionString_SelectsSameProviderAndMigrationSetAsAzureSql()
+    {
+        const string localSqlServer =
+            "Server=localhost,14333;Database=PersonalFinance;User ID=sa;Password=Local_Passw0rd!;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False";
+        const string azureSql =
+            "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=PersonalFinance;User ID=admin;Password=x;Encrypt=True;TrustServerCertificate=False;";
+
+        var (localProvider, localMigrations) = ResolveProviderAndMigrations(localSqlServer);
+        var (azureProvider, azureMigrations) = ResolveProviderAndMigrations(azureSql);
+
+        Assert.Equal(DatabaseProviderType.AzureSql, localProvider);
+        Assert.Equal(azureProvider, localProvider);
+        Assert.NotEmpty(localMigrations);
+        Assert.Equal(azureMigrations, localMigrations);
+    }
+
+    private static (DatabaseProviderType Provider, List<string> Migrations) ResolveProviderAndMigrations(string connectionString)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "ConnectionStrings:DefaultConnection", connectionString }
+            })
+            .Build();
+
+        var provider = DatabaseProviderHelper.DetermineProvider(config, connectionString);
+
+        var services = new ServiceCollection();
+        services.AddAppDbContext(config);
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        Assert.IsType<AzureSqlAppDbContext>(dbContext);
+        Assert.True(dbContext.Database.IsSqlServer());
+
+        return (provider, dbContext.Database.GetMigrations().ToList());
+    }
+
+    [Fact]
     public void AppDbContextFactory_CreateDbContext_ConfiguresAzureSqlProvider()
     {
         var factory = new AppDbContextFactory();
