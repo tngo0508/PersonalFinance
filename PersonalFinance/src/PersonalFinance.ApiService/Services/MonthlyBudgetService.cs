@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -523,7 +524,8 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
         var name = request.Name.Trim();
         var duplicate = await _dbContext.BudgetCategories
-            .AnyAsync(c => c.UserId == userId && c.Kind == request.Kind && c.Name.ToLower() == name.ToLower(), ct);
+            .Where(c => c.UserId == userId && c.Kind == request.Kind)
+            .AnyAsync(NameEqualsIgnoreCase(name), ct);
 
         if (duplicate)
         {
@@ -552,7 +554,8 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             }
 
             var existing = await _dbContext.BudgetCategories
-                .AnyAsync(c => c.UserId == userId && c.Kind == request.Kind && c.Name.ToLower() == name.ToLower(), ct);
+                .Where(c => c.UserId == userId && c.Kind == request.Kind)
+                .AnyAsync(NameEqualsIgnoreCase(name), ct);
 
             if (existing)
             {
@@ -593,9 +596,8 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
         var name = request.Name.Trim();
         var duplicate = await _dbContext.BudgetCategories
-            .AnyAsync(
-                c => c.Id != id && c.UserId == userId && c.Kind == category.Kind && c.Name.ToLower() == name.ToLower(),
-                ct);
+            .Where(c => c.Id != id && c.UserId == userId && c.Kind == category.Kind)
+            .AnyAsync(NameEqualsIgnoreCase(name), ct);
 
         if (duplicate)
         {
@@ -837,5 +839,19 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         {
             throw new KeyNotFoundException("Category not found.");
         }
+    }
+
+    /// <summary>
+    /// Matches a category whose name equals <paramref name="name"/>, ignoring case. Used by the duplicate-category
+    /// checks; EF translates it to <c>LOWER([Name]) = @name</c>, sending the argument already lowered.
+    /// </summary>
+    internal static Expression<Func<BudgetCategory, bool>> NameEqualsIgnoreCase(string name)
+    {
+        // CA1304/CA1311/CA1862: the column is lowered by SQL Server (EF translates ToLower() to LOWER()), and the
+        // argument is lowered by EF before it becomes a parameter, under the app culture each host pins at startup.
+        // The suggested ToLowerInvariant() and string.Equals(StringComparison) overloads don't translate to SQL.
+#pragma warning disable CA1304, CA1311, CA1862
+        return c => c.Name.ToLower() == name.ToLower();
+#pragma warning restore CA1304, CA1311, CA1862
     }
 }

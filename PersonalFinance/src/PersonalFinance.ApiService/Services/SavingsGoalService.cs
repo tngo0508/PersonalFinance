@@ -67,7 +67,10 @@ public class SavingsGoalService : ISavingsGoalService
         _dbContext.SavingsGoals.Add(goal);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("User {UserId} created savings goal {GoalId}", userId, goal.Id);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} created savings goal {GoalId}", userId, goal.Id);
+        }
         return goal.Id;
     }
 
@@ -107,7 +110,10 @@ public class SavingsGoalService : ISavingsGoalService
         goal.SoftDelete();
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("User {UserId} deleted savings goal {GoalId}", userId, id);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} deleted savings goal {GoalId}", userId, id);
+        }
         return true;
     }
 

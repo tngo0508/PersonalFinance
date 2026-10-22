@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -87,7 +88,10 @@ public class CommunityService : ICommunityService
             else
             {
                 existingVote.OptionId = request.OptionId;
-                _logger.LogInformation("User changed vote: UserId={UserId}, PollId={PollId}, OptionId={OptionId}", userId, poll.Id, request.OptionId);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("User changed vote: UserId={UserId}, PollId={PollId}, OptionId={OptionId}", userId, poll.Id, request.OptionId);
+                }
             }
         }
         else
@@ -99,7 +103,10 @@ public class CommunityService : ICommunityService
                 OptionId = request.OptionId,
             };
             await _dbContext.CommunityPollVotes.AddAsync(vote, cancellationToken);
-            _logger.LogInformation("New vote recorded: UserId={UserId}, PollId={PollId}, OptionId={OptionId}", userId, poll.Id, request.OptionId);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("New vote recorded: UserId={UserId}, PollId={PollId}, OptionId={OptionId}", userId, poll.Id, request.OptionId);
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -176,7 +183,10 @@ public class CommunityService : ICommunityService
         await _dbContext.CommunityComments.AddAsync(comment, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("New comment added: CommentId={CommentId}, UserId={UserId}", comment.Id, userId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("New comment added: CommentId={CommentId}, UserId={UserId}", comment.Id, userId);
+        }
 
         return new CommunityCommentDto
         {
@@ -292,7 +302,7 @@ public class CommunityService : ICommunityService
             throw new ArgumentException("Category is required and must be under 50 characters.");
         }
 
-        var wordCount = trimmedBody.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        var wordCount = trimmedBody.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
         var readTimeMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
 
         var story = new PersonalFinance.Data.Entities.CommunityStory
@@ -314,7 +324,10 @@ public class CommunityService : ICommunityService
         await _dbContext.CommunityStories.AddAsync(story, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("New story submitted: StoryId={StoryId}, UserId={UserId}", story.Id, userId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("New story submitted: StoryId={StoryId}, UserId={UserId}", story.Id, userId);
+        }
 
         return new CommunityStoryDto
         {
@@ -409,7 +422,7 @@ public class CommunityService : ICommunityService
     // Private Helpers
     // =========================================================================
 
-    private CommunityPollDto MapPollToDto(CommunityPoll p, string userId)
+    private static CommunityPollDto MapPollToDto(CommunityPoll p, string userId)
     {
         var totalVotes = p.Votes.Count;
         var userVote = userId != null ? p.Votes.FirstOrDefault(v => v.UserId == userId) : null;
@@ -449,10 +462,10 @@ public class CommunityService : ICommunityService
 
         return new List<CommunityStatDto>
         {
-            new() { Title = "Active Polls", Value = totalPolls.ToString(), Description = "Community polls currently open for voting.", Icon = "📊", ThemeColor = "blue" },
-            new() { Title = "Total Votes Cast", Value = totalVotes.ToString(), Description = "Votes cast across all community polls.", Icon = "🗳️", ThemeColor = "green" },
-            new() { Title = "Community Stories", Value = totalStories.ToString(), Description = "Real-life financial stories shared by the community.", Icon = "📖", ThemeColor = "purple" },
-            new() { Title = "Comments & Discussions", Value = totalComments.ToString(), Description = "Comments shared across polls and stories.", Icon = "💬", ThemeColor = "orange" },
+            new() { Title = "Active Polls", Value = totalPolls.ToString(CultureInfo.InvariantCulture), Description = "Community polls currently open for voting.", Icon = "📊", ThemeColor = "blue" },
+            new() { Title = "Total Votes Cast", Value = totalVotes.ToString(CultureInfo.InvariantCulture), Description = "Votes cast across all community polls.", Icon = "🗳️", ThemeColor = "green" },
+            new() { Title = "Community Stories", Value = totalStories.ToString(CultureInfo.InvariantCulture), Description = "Real-life financial stories shared by the community.", Icon = "📖", ThemeColor = "purple" },
+            new() { Title = "Comments & Discussions", Value = totalComments.ToString(CultureInfo.InvariantCulture), Description = "Comments shared across polls and stories.", Icon = "💬", ThemeColor = "orange" },
         };
     }
 

@@ -8,7 +8,7 @@ namespace PersonalFinance.Tests.Infrastructure;
 /// so currency formatting must be pinned to en-US at startup.
 /// </summary>
 [Collection("Culture")]
-public class AppCultureTests : IDisposable
+public sealed class AppCultureTests : IDisposable
 {
     private readonly CultureInfo _originalCulture = CultureInfo.CurrentCulture;
     private readonly CultureInfo _originalUiCulture = CultureInfo.CurrentUICulture;
@@ -27,11 +27,11 @@ public class AppCultureTests : IDisposable
     public void ApplyDefault_FromInvariantCulture_FormatsCurrencyWithDollarSign()
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-        Assert.StartsWith("¤", 1234.56m.ToString("C"));
+        Assert.StartsWith("¤", 1234.56m.ToString("C", CultureInfo.CurrentCulture));
 
         AppCulture.ApplyDefault();
 
-        Assert.Equal("$1,234.56", 1234.56m.ToString("C"));
+        Assert.Equal("$1,234.56", 1234.56m.ToString("C", CultureInfo.CurrentCulture));
         Assert.Equal("en-US", CultureInfo.CurrentCulture.Name);
         Assert.Equal("en-US", CultureInfo.CurrentUICulture.Name);
     }
@@ -49,7 +49,7 @@ public class AppCultureTests : IDisposable
         string? cultureName = null;
         var thread = new Thread(() =>
         {
-            formatted = 1234.56m.ToString("C");
+            formatted = 1234.56m.ToString("C", CultureInfo.CurrentCulture);
             cultureName = CultureInfo.CurrentCulture.Name;
         });
 

@@ -70,7 +70,10 @@ public class WatchlistService : IWatchlistService
         _dbContext.SavedArticles.Add(article);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("User {UserId} saved article {ArticleId}", userId, article.Id);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} saved article {ArticleId}", userId, article.Id);
+        }
         return new SaveArticleResultDto { Success = true, AlreadySaved = false, Id = article.Id };
     }
 
@@ -84,7 +87,10 @@ public class WatchlistService : IWatchlistService
         article.SoftDelete();
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("User {UserId} removed article {ArticleId}", userId, id);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} removed article {ArticleId}", userId, id);
+        }
         return true;
     }
 

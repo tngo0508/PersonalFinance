@@ -59,7 +59,10 @@ public class DriveConnectionService : IDriveConnectionService
         {
             try
             {
-                _logger.LogInformation("Querying Google Drive API v3 for folder ID '{FolderId}'...", folderId);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("Querying Google Drive API v3 for folder ID '{FolderId}'...", folderId);
+                }
                 return await FetchLiveFolderFilesAsync(folderId, rawInput, apiKey, cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -139,7 +142,10 @@ public class DriveConnectionService : IDriveConnectionService
         }
 
         // When no API key is configured, return demo/sample file list with informative guidance
-        _logger.LogInformation("No Google Drive API key provided. Returning preview data for folder '{FolderId}'.", folderId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("No Google Drive API key provided. Returning preview data for folder '{FolderId}'.", folderId);
+        }
         return GeneratePreviewResponse(
             folderId,
             rawInput,
@@ -193,12 +199,18 @@ public class DriveConnectionService : IDriveConnectionService
 
         if (!forceRefresh && isCacheFresh)
         {
-            _logger.LogInformation("Serving Google Drive data from database cache for connection {ConnectionId} ('{FolderId}')", connectionId, connection.FolderId);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Serving Google Drive data from database cache for connection {ConnectionId} ('{FolderId}')", connectionId, connection.FolderId);
+            }
             return MapConnectionToFolderResponse(connection);
         }
 
         // Otherwise synchronize with Google Drive
-        _logger.LogInformation("Synchronizing Google Drive data for connection {ConnectionId} ('{FolderId}')...", connectionId, connection.FolderId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Synchronizing Google Drive data for connection {ConnectionId} ('{FolderId}')...", connectionId, connection.FolderId);
+        }
         return await SyncConnectionInternalAsync(connection, forceRefresh, cancellationToken);
     }
 
@@ -342,14 +354,17 @@ public class DriveConnectionService : IDriveConnectionService
         }
 
         // Purge cached files
-        if (connection.CachedFiles.Any())
+        if (connection.CachedFiles.Count > 0)
         {
             _dbContext.GoogleDriveCachedFiles.RemoveRange(connection.CachedFiles);
         }
 
         connection.SoftDelete();
         await _dbContext.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Soft-deleted Google Drive connection {ConnectionId} and purged its database cache.", connectionId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Soft-deleted Google Drive connection {ConnectionId} and purged its database cache.", connectionId);
+        }
         return true;
     }
 
@@ -682,7 +697,7 @@ public class DriveConnectionService : IDriveConnectionService
         };
     }
 
-    private GoogleDriveFolderResponseDto GeneratePreviewResponse(
+    private static GoogleDriveFolderResponseDto GeneratePreviewResponse(
         string folderId,
         string rawInput,
         string warningMessage)

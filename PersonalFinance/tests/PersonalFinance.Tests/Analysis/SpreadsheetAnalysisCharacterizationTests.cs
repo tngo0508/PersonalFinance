@@ -23,6 +23,9 @@ namespace PersonalFinance.Tests.Analysis;
 public class SpreadsheetAnalysisCharacterizationTests
 {
     private const string UserId = "char-user";
+    private static readonly int[] ExpectedYears2026And2025 = [2026, 2025];
+    private static readonly int[] ExpectedMonthsJanuaryAndOctober = [1, 10];
+    private static readonly int[] ExpectedYears2026Only = [2026];
 
     private static AppDbContext CreateContext()
     {
@@ -196,8 +199,8 @@ public class SpreadsheetAnalysisCharacterizationTests
         var months2026 = await service.GetAvailableMonthsAsync(UserId, 2026);
         var mostRecent = await service.GetMostRecentMonthAsync(UserId);
 
-        Assert.Equal(new[] { 2026, 2025 }, years);
-        Assert.Equal(new[] { 1, 10 }, months2026);
+        Assert.Equal(ExpectedYears2026And2025, years);
+        Assert.Equal(ExpectedMonthsJanuaryAndOctober, months2026);
         Assert.Equal((2026, 10), mostRecent);
     }
 
@@ -400,7 +403,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         Assert.Equal(1, stats.SnapshotCount);
 
         var years = await service.GetAvailableYearsAsync(UserId);
-        Assert.Equal(new[] { 2026 }, years);
+        Assert.Equal(ExpectedYears2026Only, years);
     }
 
     [Fact]

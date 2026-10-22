@@ -56,7 +56,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         else
         {
             var months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
-            if (!months.Any()) return null;
+            if (months.Count == 0) return null;
 
             var totalIncome = months.Sum(m => m.ActualIncome);
             var totalExpenses = months.Sum(m => m.ActualExpenses);
@@ -271,7 +271,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         foreach (var year in years.OrderByDescending(y => y))
         {
             var months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
-            if (months.Any())
+            if (months.Count > 0)
             {
                 var latestMonth = months.Max(m => m.Month);
                 return (year, latestMonth);
@@ -359,7 +359,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 }
             }
 
-            if (conflicts.Any() && !overwrite)
+            if (conflicts.Count > 0 && !overwrite)
                 return new SyncSpreadsheetBudgetResult
                 {
                     Success = false,
@@ -518,7 +518,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     private async Task<int> GetMostRecentMonthNumberAsync(string userId, int year, CancellationToken cancellationToken)
     {
         var months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
-        return months.Any() ? months.Max(m => m.Month) : 0;
+        return months.Count > 0 ? months.Max(m => m.Month) : 0;
     }
 
     private async Task<List<WeeklySpendingDto>> CalculateWeeklyTrendAsync(string userId, int year, int month,
@@ -536,7 +536,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             .OrderBy(t => t.Date)
             .ToList();
 
-        if (!expenseTransactions.Any()) return new List<WeeklySpendingDto>();
+        if (expenseTransactions.Count == 0) return new List<WeeklySpendingDto>();
 
         var weeksInMonth = (int)Math.Ceiling(daysInMonth / 7.0);
 
@@ -592,7 +592,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         }).OrderByDescending(c => c.ConsumptionPercent).ToList();
     }
 
-    private string GetMonthName(int monthNumber)
+    private static string GetMonthName(int monthNumber)
     {
         return monthNumber switch
         {
@@ -612,7 +612,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         };
     }
 
-    private string GetCategoryStatus(double percentageUsed)
+    private static string GetCategoryStatus(double percentageUsed)
     {
         if (percentageUsed > 100) return "Over Budget";
 

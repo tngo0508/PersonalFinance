@@ -15,6 +15,8 @@ public class DashboardServiceTests
     private const string UserId = "dashboard-user";
     private const string OtherUserId = "other-user";
 
+    private static readonly string[] ExpectedGoalNamesNewestFirst = ["Newer", "Older"];
+
     private static AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -70,7 +72,7 @@ public class DashboardServiceTests
 
         var summary = await GetSummaryAsync(db);
 
-        Assert.Equal(new[] { "Newer", "Older" }, summary.SavingsGoals.Select(g => g.Name));
+        Assert.Equal(ExpectedGoalNamesNewestFirst, summary.SavingsGoals.Select(g => g.Name));
     }
 
     [Fact]

@@ -28,12 +28,15 @@ public static class DatabaseMigrationExtensions
 
         logger ??= scope.ServiceProvider.GetService<ILogger<AppDbContext>>();
 
-        var providerName = db.Database.ProviderName ?? "Unknown";
-        var targetHost = db.Database.IsRelational() ? db.Database.GetDbConnection().DataSource : "(in-memory)";
-        logger?.LogInformation(
-            "Starting database migration and initialization for provider: {Provider} on target host: {TargetHost}...",
-            providerName,
-            string.IsNullOrWhiteSpace(targetHost) ? "(unspecified/localhost)" : targetHost);
+        if (logger is not null && logger.IsEnabled(LogLevel.Information))
+        {
+            var providerName = db.Database.ProviderName ?? "Unknown";
+            var targetHost = db.Database.IsRelational() ? db.Database.GetDbConnection().DataSource : "(in-memory)";
+            logger.LogInformation(
+                "Starting database migration and initialization for provider: {Provider} on target host: {TargetHost}...",
+                providerName,
+                string.IsNullOrWhiteSpace(targetHost) ? "(unspecified/localhost)" : targetHost);
+        }
 
         for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
@@ -52,10 +55,13 @@ public static class DatabaseMigrationExtensions
                     var pendingMigrations = (await db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
                     if (pendingMigrations.Count > 0)
                     {
-                        logger?.LogInformation(
-                            "Applying {Count} pending migration(s): {Migrations}",
-                            pendingMigrations.Count,
-                            string.Join(", ", pendingMigrations));
+                        if (logger is not null && logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "Applying {Count} pending migration(s): {Migrations}",
+                                pendingMigrations.Count,
+                                string.Join(", ", pendingMigrations));
+                        }
 
                         await db.Database.MigrateAsync(cancellationToken);
                         logger?.LogInformation("Database schema successfully migrated.");
@@ -199,7 +205,10 @@ public static class DatabaseMigrationExtensions
         await db.CommunityPolls.AddRangeAsync(polls, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
-        logger?.LogInformation("Seeded {Count} initial community polls with options.", polls.Count);
+        if (logger is not null && logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Seeded {Count} initial community polls with options.", polls.Count);
+        }
 
         // Seed initial community stories
         await SeedCommunityStoriesAsync(db, logger, cancellationToken);
@@ -274,6 +283,9 @@ public static class DatabaseMigrationExtensions
         await db.CommunityStories.AddRangeAsync(stories, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
-        logger?.LogInformation("Seeded {Count} initial community stories.", stories.Count);
+        if (logger is not null && logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Seeded {Count} initial community stories.", stories.Count);
+        }
     }
 }

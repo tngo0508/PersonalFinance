@@ -7,7 +7,7 @@ This document provides developer guidelines, architectural details, configuratio
 ## 1. Prerequisites & Environment Setup
 
 ### Required SDKs and Tools
-- **.NET 10 SDK** (v10.0.100 preview or higher)
+- **.NET 10 SDK**: the version pinned in the repo-root [`global.json`](../global.json) (10.0.402, rolling forward to later patches in the 10.0.4xx band). CI installs the same SDK from that file.
 - **Entity Framework Core CLI Tools (`dotnet-ef`)**:
   ```bash
   dotnet tool install --global dotnet-ef

@@ -91,7 +91,10 @@ public class ExternalLoginModel : PageModel
         var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
         if (result.Succeeded)
         {
-            _logger.LogInformation("{Name} logged in with {LoginProvider} provider.", info.Principal.Identity?.Name, info.LoginProvider);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("{Name} logged in with {LoginProvider} provider.", info.Principal.Identity?.Name, info.LoginProvider);
+            }
             var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
             if (user != null)
             {
@@ -121,7 +124,10 @@ public class ExternalLoginModel : PageModel
                     var addLoginResult = await _userManager.AddLoginAsync(existingUser, info);
                     if (addLoginResult.Succeeded)
                     {
-                        _logger.LogInformation("Linked {LoginProvider} login to existing user {Email}.", info.LoginProvider, email);
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            _logger.LogInformation("Linked {LoginProvider} login to existing user {Email}.", info.LoginProvider, email);
+                        }
                         await SynchronizeCustomClaimsAsync(existingUser, info.Principal);
                         await _signInManager.SignInAsync(existingUser, isPersistent: false, info.LoginProvider);
                         return LocalRedirect(returnUrl);
@@ -153,7 +159,10 @@ public class ExternalLoginModel : PageModel
                 var addLoginResult = await _userManager.AddLoginAsync(user, info);
                 if (addLoginResult.Succeeded)
                 {
-                    _logger.LogInformation("User created an account using {LoginProvider} provider.", info.LoginProvider);
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation("User created an account using {LoginProvider} provider.", info.LoginProvider);
+                    }
                     await _userManager.AssignDefaultRoleAsync(user, _logger);
                     await SynchronizeCustomClaimsAsync(user, info.Principal);
                     await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
@@ -217,7 +226,10 @@ public class ExternalLoginModel : PageModel
                 var addLoginResult = await _userManager.AddLoginAsync(user, info);
                 if (addLoginResult.Succeeded)
                 {
-                    _logger.LogInformation("User created an unconfirmed account using {LoginProvider} provider.", info.LoginProvider);
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation("User created an unconfirmed account using {LoginProvider} provider.", info.LoginProvider);
+                    }
                     await _userManager.AssignDefaultRoleAsync(user, _logger);
 
                     var userId = await _userManager.GetUserIdAsync(user);

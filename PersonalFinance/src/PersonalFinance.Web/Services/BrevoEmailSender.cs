@@ -23,24 +23,24 @@ public class BrevoEmailSender : IEmailSender
         _httpClient = httpClient ?? new HttpClient();
     }
 
-    public async Task SendEmailAsync(string toEmail, string subject, string htmlMessage)
+    public async Task SendEmailAsync(string email, string subject, string htmlMessage)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
-            _logger.LogWarning("Brevo API key is not configured. Email to {ToEmail} skipped.", toEmail);
+            _logger.LogWarning("Brevo API key is not configured. Email to {ToEmail} skipped.", email);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_options.SenderEmail))
         {
-            _logger.LogWarning("Sender email is not configured. Email to {ToEmail} skipped.", toEmail);
+            _logger.LogWarning("Sender email is not configured. Email to {ToEmail} skipped.", email);
             return;
         }
 
         var payload = new
         {
             sender = new { name = _options.SenderName ?? "PersonalFinance", email = _options.SenderEmail },
-            to = new[] { new { email = toEmail } },
+            to = new[] { new { email } },
             subject = subject,
             htmlContent = htmlMessage
         };
@@ -60,18 +60,21 @@ public class BrevoEmailSender : IEmailSender
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Email sent successfully to {ToEmail} via Brevo API.", toEmail);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("Email sent successfully to {ToEmail} via Brevo API.", email);
+                }
             }
             else
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
                 _logger.LogError("Failed to send email to {ToEmail} via Brevo API. Status: {StatusCode}, Details: {Details}",
-                    toEmail, response.StatusCode, errorBody);
+                    email, response.StatusCode, errorBody);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email to {ToEmail} via Brevo API.", toEmail);
+            _logger.LogError(ex, "Failed to send email to {ToEmail} via Brevo API.", email);
         }
     }
 }

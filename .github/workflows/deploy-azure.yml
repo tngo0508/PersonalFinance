@@ -49,7 +49,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  DOTNET_VERSION: '10.0.x'
   REGISTRY: ghcr.io
   API_IMAGE_NAME: personalfinance-api
   WEB_IMAGE_NAME: personalfinance-web
@@ -70,10 +69,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET ${{ env.DOTNET_VERSION }} SDK
+      - name: Setup .NET SDK (from global.json)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          global-json-file: global.json
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -87,7 +86,7 @@ jobs:
         run: dotnet restore PersonalFinance.sln
 
       - name: Build solution (Release)
-        run: dotnet build PersonalFinance.sln --configuration Release --no-restore
+        run: dotnet build PersonalFinance.sln --configuration Release --no-restore -p:EnforceWarningsAsErrors=true
 
       # Reports .editorconfig formatting drift without failing the build (fix locally with `dotnet format`).
       # Make it blocking by removing continue-on-error once main is clean.
@@ -130,10 +129,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET ${{ env.DOTNET_VERSION }} SDK
+      - name: Setup .NET SDK (from global.json)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          global-json-file: global.json
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -146,7 +145,7 @@ jobs:
       - name: Restore and build solution
         run: |
           dotnet restore PersonalFinance.sln
-          dotnet build PersonalFinance.sln --configuration Release --no-restore
+          dotnet build PersonalFinance.sln --configuration Release --no-restore -p:EnforceWarningsAsErrors=true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -321,10 +320,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET ${{ env.DOTNET_VERSION }} SDK
+      - name: Setup .NET SDK (from global.json)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          global-json-file: global.json
 
       - name: Cache NuGet packages
         uses: actions/cache@v4

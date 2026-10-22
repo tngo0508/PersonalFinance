@@ -16,6 +16,10 @@ public class BudgetDataProviderTests
 {
     private const string UserId = "provider-user";
     private const string OtherUserId = "other-user";
+    private static readonly int[] ExpectedMonthsOctoberAndNovember = [10, 11];
+    private static readonly int[] ExpectedYearsDescending = [2026, 2025, 2024];
+    private static readonly int[] ExpectedMonthsMarchMayNovember = [3, 5, 11];
+    private static readonly int[] ExpectedYears2026Only = [2026];
 
     private static (AppDbContext Context, ConcurrencySimulationInterceptor Interceptor, string DbName)
         CreateContextWithInterceptor()
@@ -524,7 +528,7 @@ public class BudgetDataProviderTests
         await db.SaveChangesAsync();
 
         var (provider, _, _, _) = CreateServices(db);
-        IBudgetDataProvider readPath = provider;
+        BudgetDataProvider readPath = provider;
         var months = await readPath.GetMonthsAsync(UserId, 2026);
         var october = await readPath.GetMonthAsync(UserId, 2026, 10);
         var records = await readPath.GetTrendRecordsAsync(UserId, 2026);
@@ -602,11 +606,11 @@ public class BudgetDataProviderTests
         await sourceService.SetDataSourcePreferenceAsync(UserId,
             new SetBudgetDataSourceRequest { Source = BudgetDataSource.BudgetTracker });
 
-        IBudgetDataProvider readPath = provider;
+        BudgetDataProvider readPath = provider;
         var months = await readPath.GetMonthsAsync(UserId, 2026);
         var records = await readPath.GetTrendRecordsAsync(UserId, 2026);
 
-        Assert.Equal(new[] { 10, 11 }, months.Select(m => m.Month));
+        Assert.Equal(ExpectedMonthsOctoberAndNovember, months.Select(m => m.Month));
         Assert.All(months, m => Assert.Equal(1, m.SourceRecordCount));
         Assert.Collection(records,
             october =>
@@ -686,7 +690,7 @@ public class BudgetDataProviderTests
 
         var years = await trackerReader.GetAvailableYearsAsync(UserId);
 
-        Assert.Equal(new[] { 2026, 2025, 2024 }, years);
+        Assert.Equal(ExpectedYearsDescending, years);
     }
 
     [Fact]
@@ -710,7 +714,7 @@ public class BudgetDataProviderTests
         var months = await trackerReader.GetMonthsAsync(UserId, 2026);
 
         Assert.Equal(3, months.Count);
-        Assert.Equal(new[] { 3, 5, 11 }, months.Select(m => m.Month));
+        Assert.Equal(ExpectedMonthsMarchMayNovember, months.Select(m => m.Month));
     }
 
     [Fact]
@@ -884,7 +888,7 @@ public class BudgetDataProviderTests
         Assert.Equal("Sheet Grocery", txs[0].Description);
 
         var years = await provider.GetAvailableYearsAsync(UserId);
-        Assert.Equal(new[] { 2026 }, years);
+        Assert.Equal(ExpectedYears2026Only, years);
     }
 
     [Fact]
@@ -1345,7 +1349,7 @@ public class BudgetDataProviderTests
         Assert.Null(monthInvalid);
     }
 
-    private class ConcurrencySimulationInterceptor : SaveChangesInterceptor
+    private sealed class ConcurrencySimulationInterceptor : SaveChangesInterceptor
     {
         public Func<AppDbContext, ValueTask>? OnSavingChangesAsync { get; set; }
         public bool ShouldThrow { get; set; }

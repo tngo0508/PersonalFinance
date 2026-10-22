@@ -9,7 +9,7 @@ namespace PersonalFinance.Tests.AiAssistant;
 /// </summary>
 public class AiScopeFilterTests
 {
-    private readonly IAiScopeFilter _filter = new AiScopeFilter();
+    private readonly AiScopeFilter _filter = new();
 
     [Theory]
     [InlineData("How do I bake a cake?")]

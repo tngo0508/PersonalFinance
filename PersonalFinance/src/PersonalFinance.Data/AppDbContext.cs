@@ -145,34 +145,34 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreating(builder);
 
         // Global query filters for soft deletes — automatically exclude soft-deleted records
-        modelBuilder.Entity<NetWorthParameters>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<SavingsGoal>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<SavedArticle>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<UserBudgetAllocation>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<GoogleDriveConnection>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<SpreadsheetBudgetSnapshot>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<SpreadsheetTransactionRecord>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<CommunityStory>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<CommunityComment>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<CommunityCommentLike>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<CommunityStoryLike>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<BudgetCategory>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<MonthlyBudgetPlan>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<MonthlyBudgetLine>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<BudgetTransaction>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<Feedback>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<NetWorthParameters>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<SavingsGoal>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<SavedArticle>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<UserBudgetAllocation>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<GoogleDriveConnection>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<SpreadsheetBudgetSnapshot>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<SpreadsheetTransactionRecord>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityStory>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityComment>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityCommentLike>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityStoryLike>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<BudgetCategory>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<MonthlyBudgetPlan>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<MonthlyBudgetLine>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<BudgetTransaction>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<Feedback>().HasQueryFilter(e => !e.IsDeleted);
 
         // Configure AiUsageRecord entity — usage records are never soft-deleted
-        modelBuilder.Entity<AiUsageRecord>(entity =>
+        builder.Entity<AiUsageRecord>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -187,43 +187,43 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         const int identityKeyMaxLength = 450;
         const int identityLoginTokenMaxLength = 128;
 
-        modelBuilder.Entity<IdentityUser>(entity => { entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength); });
+        builder.Entity<IdentityUser>(entity => { entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength); });
 
-        modelBuilder.Entity<IdentityRole>(entity => { entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength); });
+        builder.Entity<IdentityRole>(entity => { entity.Property(e => e.Id).HasMaxLength(identityKeyMaxLength); });
 
-        modelBuilder.Entity<IdentityUserLogin<string>>(entity =>
+        builder.Entity<IdentityUserLogin<string>>(entity =>
         {
             entity.Property(e => e.LoginProvider).HasMaxLength(identityLoginTokenMaxLength);
             entity.Property(e => e.ProviderKey).HasMaxLength(identityLoginTokenMaxLength);
             entity.Property(e => e.UserId).HasMaxLength(identityKeyMaxLength);
         });
 
-        modelBuilder.Entity<IdentityUserRole<string>>(entity =>
+        builder.Entity<IdentityUserRole<string>>(entity =>
         {
             entity.Property(e => e.UserId).HasMaxLength(identityKeyMaxLength);
             entity.Property(e => e.RoleId).HasMaxLength(identityKeyMaxLength);
         });
 
-        modelBuilder.Entity<IdentityUserToken<string>>(entity =>
+        builder.Entity<IdentityUserToken<string>>(entity =>
         {
             entity.Property(e => e.UserId).HasMaxLength(identityKeyMaxLength);
             entity.Property(e => e.LoginProvider).HasMaxLength(identityLoginTokenMaxLength);
             entity.Property(e => e.Name).HasMaxLength(identityLoginTokenMaxLength);
         });
 
-        modelBuilder.Entity<IdentityUserClaim<string>>(entity =>
+        builder.Entity<IdentityUserClaim<string>>(entity =>
         {
             entity.Property(e => e.UserId).HasMaxLength(identityKeyMaxLength);
         });
 
-        modelBuilder.Entity<IdentityRoleClaim<string>>(entity =>
+        builder.Entity<IdentityRoleClaim<string>>(entity =>
         {
             entity.Property(e => e.RoleId).HasMaxLength(identityKeyMaxLength);
         });
 
 
         // Configure GoogleDriveConnection entity
-        modelBuilder.Entity<GoogleDriveConnection>(entity =>
+        builder.Entity<GoogleDriveConnection>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -245,7 +245,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure GoogleDriveCachedFile entity
-        modelBuilder.Entity<GoogleDriveCachedFile>(entity =>
+        builder.Entity<GoogleDriveCachedFile>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.DriveFileId).IsRequired().HasMaxLength(200);
@@ -263,7 +263,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure NetWorthParameters entity — one record per user
-        modelBuilder.Entity<NetWorthParameters>(entity =>
+        builder.Entity<NetWorthParameters>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -285,7 +285,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // --- Community entities ---
 
         // Configure CommunityPoll entity
-        modelBuilder.Entity<CommunityPoll>(entity =>
+        builder.Entity<CommunityPoll>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.PollCode).IsRequired().HasMaxLength(100);
@@ -307,7 +307,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure CommunityPollOption entity
-        modelBuilder.Entity<CommunityPollOption>(entity =>
+        builder.Entity<CommunityPollOption>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Text).IsRequired().HasMaxLength(200);
@@ -321,7 +321,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure CommunityPollVote entity — one vote per user per poll
-        modelBuilder.Entity<CommunityPollVote>(entity =>
+        builder.Entity<CommunityPollVote>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -330,7 +330,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure CommunityComment entity
-        modelBuilder.Entity<CommunityComment>(entity =>
+        builder.Entity<CommunityComment>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -353,7 +353,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure CommunityCommentLike entity — one like per user per comment
-        modelBuilder.Entity<CommunityCommentLike>(entity =>
+        builder.Entity<CommunityCommentLike>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -362,7 +362,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure CommunityStory entity
-        modelBuilder.Entity<CommunityStory>(entity =>
+        builder.Entity<CommunityStory>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -382,7 +382,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure CommunityStoryLike entity — one like per user per story
-        modelBuilder.Entity<CommunityStoryLike>(entity =>
+        builder.Entity<CommunityStoryLike>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -393,7 +393,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // --- Personal Finance entities ---
 
         // Configure UserBudgetAllocation entity
-        modelBuilder.Entity<UserBudgetAllocation>(entity =>
+        builder.Entity<UserBudgetAllocation>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -415,7 +415,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure SavingsGoal entity
-        modelBuilder.Entity<SavingsGoal>(entity =>
+        builder.Entity<SavingsGoal>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -429,7 +429,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure SavedArticle entity
-        modelBuilder.Entity<SavedArticle>(entity =>
+        builder.Entity<SavedArticle>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -446,7 +446,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // --- Spreadsheet Analysis entities ---
 
         // Configure SpreadsheetBudgetSnapshot entity
-        modelBuilder.Entity<SpreadsheetBudgetSnapshot>(entity =>
+        builder.Entity<SpreadsheetBudgetSnapshot>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -479,7 +479,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure SpreadsheetTransactionRecord entity
-        modelBuilder.Entity<SpreadsheetTransactionRecord>(entity =>
+        builder.Entity<SpreadsheetTransactionRecord>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -508,7 +508,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure Notification entity
-        modelBuilder.Entity<Notification>(entity =>
+        builder.Entity<Notification>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -524,7 +524,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // --- Budget Tracker entities ---
 
         // Configure BudgetCategory entity — unique per user and kind among non-deleted rows
-        modelBuilder.Entity<BudgetCategory>(entity =>
+        builder.Entity<BudgetCategory>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -536,7 +536,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure MonthlyBudgetPlan entity — one plan per user and calendar month among non-deleted rows
-        modelBuilder.Entity<MonthlyBudgetPlan>(entity =>
+        builder.Entity<MonthlyBudgetPlan>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -551,7 +551,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure MonthlyBudgetLine entity — one line per plan and category among non-deleted rows
-        modelBuilder.Entity<MonthlyBudgetLine>(entity =>
+        builder.Entity<MonthlyBudgetLine>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -568,7 +568,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure BudgetTransaction entity — month membership is a date-range query on Date
-        modelBuilder.Entity<BudgetTransaction>(entity =>
+        builder.Entity<BudgetTransaction>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -584,7 +584,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure UserBudgetSourcePreference entity — one preference per user
-        modelBuilder.Entity<UserBudgetSourcePreference>(entity =>
+        builder.Entity<UserBudgetSourcePreference>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -595,7 +595,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure UserConsent entity
-        modelBuilder.Entity<UserConsent>(entity =>
+        builder.Entity<UserConsent>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
@@ -605,7 +605,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         // Configure Feedback entity — the Admin inbox lists by status, newest first
-        modelBuilder.Entity<Feedback>(entity =>
+        builder.Entity<Feedback>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);

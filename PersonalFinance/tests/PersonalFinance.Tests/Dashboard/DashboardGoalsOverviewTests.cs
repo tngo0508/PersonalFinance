@@ -14,6 +14,12 @@ public class DashboardGoalsOverviewTests
     private const string UserId = "goals-user";
     private const string OtherUserId = "other-goals-user";
 
+    private static readonly int[] ExpectedNewestFiveGoalIds = [7, 6, 5, 4, 3];
+    private static readonly string[] ExpectedMixedActivityTitles = ["New income", "Goal 1", "Old expense"];
+    private static readonly string[] ExpectedMixedActivityTypes = ["Income", "SavingsGoal", "Expense"];
+    private static readonly string[] ExpectedCappedActivityTitles = ["Tx 6", "Tx 5", "Tx 4", "Goal 4", "Tx 3"];
+    private static readonly string[] ExpectedSameDateActivityTitles = ["Tx B", "Tx A", "Goal B", "Goal A"];
+
     private static AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -52,7 +58,7 @@ public class DashboardGoalsOverviewTests
 
         var summary = await GetSummaryAsync(db);
 
-        Assert.Equal(new[] { 7, 6, 5, 4, 3 }, summary.SavingsGoals.Select(g => g.Id));
+        Assert.Equal(ExpectedNewestFiveGoalIds, summary.SavingsGoals.Select(g => g.Id));
         Assert.Equal(7, summary.GoalsOverview.TotalCount);
         Assert.Equal(2, summary.GoalsOverview.CompletedCount);
         Assert.Equal(175m, summary.GoalsOverview.TotalSaved);
@@ -151,8 +157,8 @@ public class DashboardGoalsOverviewTests
 
         var summary = await GetSummaryAsync(db);
 
-        Assert.Equal(new[] { "New income", "Goal 1", "Old expense" }, summary.RecentActivity.Select(a => a.Title));
-        Assert.Equal(new[] { "Income", "SavingsGoal", "Expense" }, summary.RecentActivity.Select(a => a.Type));
+        Assert.Equal(ExpectedMixedActivityTitles, summary.RecentActivity.Select(a => a.Title));
+        Assert.Equal(ExpectedMixedActivityTypes, summary.RecentActivity.Select(a => a.Type));
     }
 
     [Fact]
@@ -187,7 +193,7 @@ public class DashboardGoalsOverviewTests
         var summary = await GetSummaryAsync(db);
 
         // Goals are created at midnight on day i, transactions at noon on day i; only three goals are considered.
-        Assert.Equal(new[] { "Tx 6", "Tx 5", "Tx 4", "Goal 4", "Tx 3" }, summary.RecentActivity.Select(a => a.Title));
+        Assert.Equal(ExpectedCappedActivityTitles, summary.RecentActivity.Select(a => a.Title));
     }
 
     [Fact]
@@ -224,6 +230,6 @@ public class DashboardGoalsOverviewTests
         var summary = await GetSummaryAsync(db);
 
         // Same date: transactions before goals, then newest record (highest Id) first within each source.
-        Assert.Equal(new[] { "Tx B", "Tx A", "Goal B", "Goal A" }, summary.RecentActivity.Select(a => a.Title));
+        Assert.Equal(ExpectedSameDateActivityTitles, summary.RecentActivity.Select(a => a.Title));
     }
 }

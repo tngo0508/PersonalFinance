@@ -23,7 +23,7 @@ public class ExternalAuthenticationTests
     {
         public Task SendEmailAsync(string email, string subject, string htmlMessage) => Task.CompletedTask;
     }
-    private class TestWebHostEnvironment : IWebHostEnvironment
+    private sealed class TestWebHostEnvironment : IWebHostEnvironment
     {
         public string WebRootPath { get; set; } = string.Empty;
         public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();

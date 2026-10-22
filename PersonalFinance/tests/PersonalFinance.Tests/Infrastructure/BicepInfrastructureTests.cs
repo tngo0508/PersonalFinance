@@ -306,13 +306,13 @@ $paramArgs | ConvertTo-Json -Compress
         // CRITICAL REGRESSION CHECK: No token should contain space-separated multiple assignments
         foreach (var token in tokens)
         {
-            if (token != "--parameters" && token.StartsWith("environmentName="))
+            if (token != "--parameters" && token.StartsWith("environmentName=", StringComparison.Ordinal))
             {
                 // Must be exactly "environmentName=pf-prod", not "environmentName=pf-prod location=eastus ..."
                 Assert.Equal("environmentName=pf-prod", token);
             }
 
-            if (token.Contains("="))
+            if (token.Contains('='))
             {
                 Assert.DoesNotContain(" ", token.Trim());
             }

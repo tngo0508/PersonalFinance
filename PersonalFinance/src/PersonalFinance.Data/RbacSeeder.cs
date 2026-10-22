@@ -46,7 +46,11 @@ public static class RbacSeeder
                         $"Failed to create role '{role}': {string.Join(", ", created.Errors.Select(e => e.Code))}");
                 }
 
-                logger?.LogInformation("Created role {Role}.", role);
+                if (logger is not null && logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Created role {Role}.", role);
+                }
+
                 userRoleCreated |= role == AppRoles.User;
             }
         }
@@ -60,7 +64,11 @@ public static class RbacSeeder
         var adminEmail = services.GetService<IConfiguration>()?[AdminEmailKey];
         if (string.IsNullOrWhiteSpace(adminEmail))
         {
-            logger?.LogInformation("{Key} is not configured; no Admin grant performed.", AdminEmailKey);
+            if (logger is not null && logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("{Key} is not configured; no Admin grant performed.", AdminEmailKey);
+            }
+
             return;
         }
 

@@ -344,4 +344,22 @@ public class GoogleDrivePersistenceTests
         Assert.EndsWith("7654", masked!);
         Assert.DoesNotContain("TestGoogleDrive", masked!);
     }
+
+    // Ciphertext produced by the current CredentialProtector scheme for a dummy plaintext.
+    // Credentials already stored in the database use this scheme, so it must keep decrypting
+    // until the re-encryption migration in #133 lands.
+    private const string LegacyPlaintext = "AIzaSyLegacyStoredKey_0123456789";
+    private const string LegacyCiphertext = "kvBlKu1EuwUG6tnNbdEd6gB3/EKyLyMMTLERE64Xe7tpy125d5cMl7mzS0KF+izr";
+
+    [Fact]
+    public void CredentialProtector_DecryptsCiphertextStoredByCurrentScheme()
+    {
+        Assert.Equal(LegacyPlaintext, CredentialProtector.Decrypt(LegacyCiphertext));
+    }
+
+    [Fact]
+    public void CredentialProtector_EncryptIsStableForStoredCredentials()
+    {
+        Assert.Equal(LegacyCiphertext, CredentialProtector.Encrypt(LegacyPlaintext));
+    }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -50,7 +51,7 @@ public class BudgetService : IBudgetService
     public async Task SaveBudgetAsync(string userId, SaveBudgetRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var period = request.Period ?? DateTime.UtcNow.ToString("yyyy-MM");
+        var period = request.Period ?? DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture);
 
         var budget = await _dbContext.UserBudgetAllocations
             .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == period, cancellationToken);
@@ -79,7 +80,10 @@ public class BudgetService : IBudgetService
         budget.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("User {UserId} saved budget for period {Period}", userId, period);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User {UserId} saved budget for period {Period}", userId, period);
+        }
 
         // Check for budget alerts after saving
         await CheckBudgetAlertsAsync(userId, period, cancellationToken);
@@ -93,8 +97,8 @@ public class BudgetService : IBudgetService
     {
         try
         {
-            var year = int.Parse(period.Substring(0, 4));
-            var month = int.Parse(period.Substring(5, 2));
+            var year = int.Parse(period.AsSpan(0, 4), CultureInfo.InvariantCulture);
+            var month = int.Parse(period.AsSpan(5, 2), CultureInfo.InvariantCulture);
 
             var monthData = await _budgetDataProvider.GetMonthAsync(userId, year, month, cancellationToken);
             if (monthData == null)

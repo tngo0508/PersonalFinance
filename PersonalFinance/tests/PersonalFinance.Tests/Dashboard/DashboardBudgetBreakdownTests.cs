@@ -17,6 +17,12 @@ public class DashboardBudgetBreakdownTests
     private const string UserId = "budget-user";
     private const string OtherUserId = "other-budget-user";
 
+    private static readonly string[] ExpectedCategoryOrder =
+    [
+        "Housing", "Food", "Transportation", "Utilities", "Insurance", "Healthcare", "Savings",
+        "Debt Repayment", "Entertainment", "Miscellaneous"
+    ];
+
     private static AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -111,13 +117,7 @@ public class DashboardBudgetBreakdownTests
 
         var budget = await GetBudgetAsync(db);
 
-        Assert.Equal(
-            new[]
-            {
-                "Housing", "Food", "Transportation", "Utilities", "Insurance", "Healthcare", "Savings",
-                "Debt Repayment", "Entertainment", "Miscellaneous"
-            },
-            budget!.Allocations.Select(a => a.Name));
+        Assert.Equal(ExpectedCategoryOrder, budget!.Allocations.Select(a => a.Name));
         var entertainment = budget.Allocations.Single(a => a.Name == "Entertainment");
         Assert.Equal(0m, entertainment.Percent);
         Assert.Equal(0m, entertainment.Amount);

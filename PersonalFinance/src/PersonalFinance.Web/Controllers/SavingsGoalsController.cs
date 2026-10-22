@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -58,7 +59,10 @@ public class SavingsGoalsController : Controller
             TargetAmount = targetAmount,
             CurrentAmount = currentAmount,
             Description = description?.Trim(),
-            TargetDate = !string.IsNullOrEmpty(targetDate) ? (DateTime?)DateTime.Parse(targetDate) : null
+            // <input type="date"> always posts ISO yyyy-MM-dd, whatever the browser or host locale.
+            TargetDate = !string.IsNullOrEmpty(targetDate)
+                ? DateTime.ParseExact(targetDate, "yyyy-MM-dd", CultureInfo.InvariantCulture)
+                : null
         };
 
         try

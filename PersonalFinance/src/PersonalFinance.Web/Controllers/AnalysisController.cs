@@ -52,7 +52,10 @@ public class AnalysisController : Controller
         string fileName,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("User requested sync for spreadsheet {FileId}", fileId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User requested sync for spreadsheet {FileId}", fileId);
+        }
 
         var request = new SyncSpreadsheetRequestDto
         {
@@ -96,7 +99,10 @@ public class AnalysisController : Controller
         string fileName,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("User confirmed overwrite for spreadsheet {FileId}", fileId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("User confirmed overwrite for spreadsheet {FileId}", fileId);
+        }
 
         var request = new SyncSpreadsheetRequestDto
         {
@@ -117,7 +123,7 @@ public class AnalysisController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private AnalysisDashboardViewModel MapToViewModel(AnalysisDashboardDto result)
+    private static AnalysisDashboardViewModel MapToViewModel(AnalysisDashboardDto result)
     {
         var model = new AnalysisDashboardViewModel
         {

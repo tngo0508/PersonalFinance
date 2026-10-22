@@ -365,7 +365,7 @@ Gaps to understand (and fix before handling real financial data):
 
 | Tool | Minimum Version | Installation Command / Link | Purpose |
 |---|---|---|---|
-| **.NET SDK** | `10.0.100`+ | [dot.net/download](https://dotnet.microsoft.com/download/dotnet/10.0) | Local compilation & testing |
+| **.NET SDK** | Pinned in `global.json` (`10.0.402`, latest patch) | [dot.net/download](https://dotnet.microsoft.com/download/dotnet/10.0) | Local compilation & testing |
 | **Azure CLI (`az`)** | `2.60.0`+ | `winget install Microsoft.AzureCLI` or [aka.ms/installazurecliwindows](https://aka.ms/installazurecliwindows) | Azure management and Bicep execution |
 | **Bicep CLI** | `0.30.0`+ | `az bicep install` / `az bicep upgrade` | Infrastructure-as-Code compilation |
 | **Docker Desktop / Engine** | `24.0.0`+ | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) | Local container builds and execution |
