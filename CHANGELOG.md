@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Local SQL Server in Docker**: Developers can run the whole app against a local SQL Server 2022 container that uses the same provider and migrations as production Azure SQL.
+  - `compose.yaml` at the repo root runs SQL Server 2022 Developer edition (`platform: linux/amd64`, so it runs under Rosetta on Apple Silicon) with a named data volume and a `sqlcmd` healthcheck; it stops with a clear message when `MSSQL_SA_PASSWORD` is missing.
+  - `.env.example` lists `MSSQL_SA_PASSWORD` and `SQL_HOST_PORT`; the real `.env` stays gitignored.
+  - `npm run db:up`, `db:down` and `db:reset` only call `docker compose`, so they work the same in PowerShell and zsh.
+  - The development guide has a "Local SQL Server (Docker)" section and the settings needed to run the e2e suites with the projects started separately.
+  - A unit test shows a local SQL Server connection string selects the same provider and migration set as Azure SQL.
+  - Verified on macOS (Apple Silicon): from `db:reset`, the ApiService applies all 16 migrations and seeds data, and the Playwright UI and API suites pass.
+
 ### Changed
 
 - **Landing Page Redesign**: The homepage now explains what the app is for, financial independence and the age you can reach it, with a calmer financial look.
