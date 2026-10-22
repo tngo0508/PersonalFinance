@@ -5,8 +5,8 @@ using PersonalFinance.Web.Models;
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
-/// MVC Controller for the root URL. Signed-out visitors see the public Landing Page;
-/// signed-in users are redirected to their Dashboard.
+/// MVC Controller for the root URL and the public About page. Signed-out visitors see the
+/// Landing Page; signed-in users are redirected to their Dashboard.
 /// </summary>
 [AllowAnonymous]
 public class HomeController : Controller
@@ -23,5 +23,14 @@ public class HomeController : Controller
         }
 
         return View(LandingPageViewModel.Create());
+    }
+
+    /// <summary>
+    /// Displays the public About page. It is open to signed-out and signed-in visitors.
+    /// </summary>
+    [HttpGet("/about")]
+    public IActionResult About()
+    {
+        return View();
     }
 }

@@ -86,6 +86,35 @@ public class HomeControllerTests
         Assert.Equal("Dashboard", redirect.ControllerName);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void About_RendersTheAboutPageForSignedOutAndSignedInVisitors(bool signedIn)
+    {
+        // Arrange
+        var controller = new HomeController
+        {
+            ControllerContext = signedIn ? CreateAuthenticatedContext() : CreateAnonymousContext()
+        };
+
+        // Act
+        var result = controller.About();
+
+        // Assert
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Null(viewResult.ViewName);
+    }
+
+    [Fact]
+    public void About_IsServedAtTheAboutRouteWithoutSignIn()
+    {
+        var method = typeof(HomeController).GetMethod(nameof(HomeController.About))!;
+
+        var route = Assert.Single(method.GetCustomAttributes<HttpGetAttribute>());
+        Assert.Equal("/about", route.Template);
+        Assert.Null(method.GetCustomAttribute<AuthorizeAttribute>());
+    }
+
     [Fact]
     public void HomeController_IsOpenToAnonymousVisitors()
     {

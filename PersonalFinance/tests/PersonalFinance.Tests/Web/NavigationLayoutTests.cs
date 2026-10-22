@@ -91,8 +91,7 @@ public class NavigationLayoutTests
     [Fact]
     public void LayoutView_LinksSignedInAccountsToFeedback_FromTheSidebarAndTheFooter()
     {
-        var content = File.ReadAllText(Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web",
-            "Views", "Shared", "_Layout.cshtml"));
+        var content = ReadView("Shared", "_Layout.cshtml");
 
         var sidebar = content[content.IndexOf("<aside", StringComparison.Ordinal)..content.IndexOf("</aside>", StringComparison.Ordinal)];
         Assert.Contains("asp-controller=\"Feedback\"", sidebar);
@@ -102,6 +101,47 @@ public class NavigationLayoutTests
         Assert.True(footerLink >= 0, "The footer should link to Feedback.");
         Assert.True(footer.LastIndexOf("@if (isSignedIn)", footerLink, StringComparison.Ordinal) >= 0,
             "The footer Feedback link should only be shown to signed-in Accounts.");
+    }
+
+    [Fact]
+    public void AboutPage_LinksSignedInAccountsToFeedback()
+    {
+        var about = ReadView("Home", "About.cshtml");
+        var feedbackLink = about.IndexOf("asp-controller=\"Feedback\"", StringComparison.Ordinal);
+
+        Assert.True(feedbackLink >= 0, "The About page should link to Feedback.");
+        Assert.True(about.LastIndexOf("IsAuthenticated", feedbackLink, StringComparison.Ordinal) >= 0,
+            "The About page should only show the Feedback link to signed-in Accounts.");
+    }
+
+    [Fact]
+    public void LayoutFooter_LinksToTheAboutPage()
+    {
+        var footer = ReadView("Shared", "_Layout.cshtml");
+        var footerStart = footer.IndexOf("<footer", StringComparison.Ordinal);
+        Assert.True(footerStart >= 0, "_Layout.cshtml should contain a <footer>.");
+
+        Assert.Contains("asp-controller=\"Home\" asp-action=\"About\"", footer[footerStart..]);
+    }
+
+    [Fact]
+    public void LandingPage_LinksToTheAboutPage()
+    {
+        Assert.Contains("asp-controller=\"Home\" asp-action=\"About\"", ReadView("Home", "Index.cshtml"));
+    }
+
+    [Fact]
+    public void AboutPage_LinksToTheDisclaimer()
+    {
+        Assert.Contains("asp-controller=\"Legal\" asp-action=\"Disclaimer\"", ReadView("Home", "About.cshtml"));
+    }
+
+    private static string ReadView(string folder, string fileName)
+    {
+        var path = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", folder,
+            fileName);
+        Assert.True(File.Exists(path), $"{fileName} not found at {path}");
+        return File.ReadAllText(path);
     }
 
     [Fact]
