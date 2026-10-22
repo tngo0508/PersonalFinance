@@ -1,0 +1,49 @@
+@using PersonalFinance.Shared.Constants
+@using PersonalFinance.Web.Infrastructure
+@{
+    ViewData["Title"] = "About";
+}
+
+<div class="legal-page">
+    <h1 class="legal-page__title">About @AppVersion.ApplicationName</h1>
+
+    <section class="legal-section">
+        <h2>What it is</h2>
+        <p>@AppVersion.ApplicationName is a free web app for planning your path to financial independence. You enter your savings, income and spending, and it turns them into one plan: a target for financial independence and the age your savings can reach it.</p>
+    </section>
+
+    <section class="legal-section">
+        <h2>Why it exists</h2>
+        <p>Most people never work out how much is enough. Spreadsheets get abandoned, and many budgeting apps ask for your bank logins. @AppVersion.ApplicationName keeps the plan simple, lets you decide exactly what to enter, and shows your figures only to you.</p>
+    </section>
+
+    <section class="legal-section">
+        <h2>Who builds it</h2>
+        <p>@AppVersion.ApplicationName is a solo developer project: one person designs, builds and runs it.</p>
+    </section>
+
+    <section class="legal-section">
+        <h2>Core features</h2>
+        <ul>
+            <li><strong>Net Worth</strong>: enter your starting balance, income, spending and savings to project when you can reach financial independence.</li>
+            <li><strong>Budget Planner</strong>: set a monthly budget by category.</li>
+            <li><strong>Budget Tracker</strong>: record what you spend and compare it with your plan.</li>
+            <li><strong>Savings Goals</strong>: set targets and follow your progress.</li>
+            <li><strong>Analysis</strong>: explore your figures and spreadsheets with charts.</li>
+            <li><strong>Community</strong>: share ideas and questions with other users.</li>
+        </ul>
+    </section>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <section class="legal-section">
+            <h2>Tell us what you think</h2>
+            <p>Found a bug or have an idea? <a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">Send feedback</a>.</p>
+        </section>
+    }
+
+    <section class="legal-section">
+        <h2>Not financial advice</h2>
+        <p>@AppVersion.ApplicationName is a planning tool for information and education only. It is not financial, investment, tax or legal advice. Read the <a asp-area="" asp-controller="Legal" asp-action="Disclaimer">Disclaimer</a> before relying on any figure.</p>
+    </section>
+</div>

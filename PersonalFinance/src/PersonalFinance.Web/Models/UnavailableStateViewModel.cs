@@ -11,6 +11,12 @@ public sealed class UnavailableStateViewModel
     /// <summary>Gets what could not be loaded, e.g. "We couldn't load your budget".</summary>
     public string Heading { get; init; } = string.Empty;
 
-    /// <summary>Gets the controller whose Index action the Retry link reloads.</summary>
+    /// <summary>Gets the controller whose action the Retry link reloads.</summary>
     public string RetryController { get; init; } = string.Empty;
+
+    /// <summary>Gets the action the Retry link reloads; Index unless the page is another action.</summary>
+    public string RetryAction { get; init; } = "Index";
+
+    /// <summary>Gets the route values the Retry link keeps, e.g. the inbox's status filter.</summary>
+    public IDictionary<string, string> RetryRouteValues { get; init; } = new Dictionary<string, string>();
 }

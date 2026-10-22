@@ -49,6 +49,7 @@ try
         .AddGoogleDriveFeature()
         .AddNetWorthFeature()
         .AddDashboardFeatures()
+        .AddFeedbackFeature()
         .AddAdminFeature()
         .AddAiAssistantFeature(builder.Configuration);
 

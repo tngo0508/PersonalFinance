@@ -2689,3 +2689,8 @@ button.bgt-rank-row:hover { background: var(--bgt-hover); }
   color: var(--app-text-muted);
   line-height: 1.5;
 }
+
+/* Admin Feedback inbox: keep the line breaks the Account typed (Views/Admin/Feedback.cshtml) */
+.admin-feedback__message {
+  white-space: pre-wrap;
+}

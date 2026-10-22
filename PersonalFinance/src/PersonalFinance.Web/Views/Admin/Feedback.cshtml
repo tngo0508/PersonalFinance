@@ -1,0 +1,95 @@
+@using PersonalFinance.Shared.Enums
+@model PersonalFinance.Web.Models.AdminFeedbackInboxViewModel
+@{
+    ViewData["Title"] = "Feedback inbox";
+    var filters = new (FeedbackStatus? Status, string Label)[]
+    {
+        (null, "Open"),
+        (FeedbackStatus.New, "New"),
+        (FeedbackStatus.Reviewed, "Reviewed"),
+        (FeedbackStatus.Archived, "Archived")
+    };
+    var emptyText = Model.Status switch
+    {
+        null => "No open Feedback. Archived Feedback is under Archived.",
+        _ => $"No {Model.Status} Feedback."
+    };
+}
+
+<div class="py-3">
+    <header class="mb-4">
+        <p class="text-muted text-uppercase small mb-1"><a asp-action="Index">Admin</a></p>
+        <h1 class="h3 mb-1">Feedback inbox</h1>
+        <p class="text-muted mb-0">Feedback from Accounts, newest first. Archived Feedback is hidden unless you choose Archived.</p>
+    </header>
+
+    @if (TempData["AdminMessage"] is string adminMessage)
+    {
+        <div class="alert alert-success" role="status">@adminMessage</div>
+    }
+    @if (TempData["AdminError"] is string adminError)
+    {
+        <div class="alert alert-danger" role="alert">@adminError</div>
+    }
+
+    <nav aria-label="Filter Feedback by status" class="mb-3">
+        <ul class="nav nav-pills">
+            @foreach (var filter in filters)
+            {
+                var active = filter.Status == Model.Status;
+                <li class="nav-item">
+                    <a class="nav-link @(active ? "active" : null)" aria-current="@(active ? "page" : null)"
+                       asp-action="Feedback" asp-route-status="@filter.Status">@filter.Label</a>
+                </li>
+            }
+        </ul>
+    </nav>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-muted">@emptyText</div>
+        </div>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var item in Model.Items)
+            {
+                <li class="list-group-item py-3">
+                    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                        <span>
+                            <span class="badge text-bg-secondary">@item.Category</span>
+                            <span class="badge text-bg-light border ms-1">@item.Status</span>
+                        </span>
+                        <time class="text-muted small" datetime="@item.CreatedAt.ToString("o")">
+                            @item.CreatedAt.ToString("yyyy-MM-dd HH:mm") UTC
+                        </time>
+                    </div>
+                    <p class="admin-feedback__message text-break mb-2">@item.Message</p>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="text-muted small text-break">
+                            @(string.IsNullOrEmpty(item.AccountEmail) ? "Account no longer exists" : item.AccountEmail)
+                            @if (!string.IsNullOrEmpty(item.PageUrl))
+                            {
+                                <span class="ms-2">on <code>@item.PageUrl</code></span>
+                            }
+                        </div>
+                        <form asp-action="ChangeFeedbackStatus" method="post" class="d-flex gap-1">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            @if (Model.Status is not null)
+                            {
+                                <input type="hidden" name="filter" value="@Model.Status" />
+                            }
+                            @foreach (var status in Enum.GetValues<FeedbackStatus>().Where(s => s != item.Status))
+                            {
+                                <button type="submit" name="status" value="@status"
+                                        class="btn btn-sm btn-outline-secondary">Mark @status</button>
+                            }
+                        </form>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

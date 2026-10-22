@@ -9,6 +9,7 @@ namespace PersonalFinance.Tests.Security;
 /// Hosts the real ApiService pipeline in-process (InMemory database, shared secret configured) and checks ADR 0004
 /// over HTTP: an <c>X-User-Id</c> header only authenticates together with the right <c>X-Internal-Key</c>.
 /// </summary>
+[Collection("ApiServiceHost")]
 public class ApiServiceInternalKeyHttpTests : IClassFixture<ApiServiceInternalKeyHttpTests.ApiServiceHost>
 {
     private const string InternalKey = "http-test-shared-secret";

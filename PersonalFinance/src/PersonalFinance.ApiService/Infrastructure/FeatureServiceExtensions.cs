@@ -55,6 +55,15 @@ public static class FeatureServiceExtensions
         return services;
     }
 
+    /// <summary>Feedback that Accounts send to the operator.</summary>
+    public static IServiceCollection AddFeedbackFeature(this IServiceCollection services)
+    {
+        services.AddScoped<IFeedbackService, FeedbackService>();
+        services.AddKeyedSingleton<IRateLimiterService>(FeedbackRateLimit.Key, (_, _) =>
+            new RateLimiterService(FeedbackRateLimit.MaxSubmissionsPerWindow, FeedbackRateLimit.Window));
+        return services;
+    }
+
     /// <summary>Admin-only system information.</summary>
     public static IServiceCollection AddAdminFeature(this IServiceCollection services)
     {

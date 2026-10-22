@@ -7,5 +7,5 @@
         <h2 id="unavailable-state-title" class="unavailable-state__title">@Model.Heading</h2>
         <p class="unavailable-state__text">Your data is safe. @JsonApiErrorsFilter.UnavailableMessage</p>
     </div>
-    <a asp-controller="@Model.RetryController" asp-action="Index" class="btn btn-primary btn-sm">Retry</a>
+    <a asp-controller="@Model.RetryController" asp-action="@Model.RetryAction" asp-all-route-data="@Model.RetryRouteValues" class="btn btn-primary btn-sm">Retry</a>
 </section>

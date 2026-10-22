@@ -1,9 +1,12 @@
+using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Admin;
+using PersonalFinance.Shared.DTOs.Feedback;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Web.Models;
 using ApiException = Refit.ApiException;
 using PersonalFinance.Web.Infrastructure;
@@ -17,11 +20,13 @@ namespace PersonalFinance.Web.Controllers;
 public class AdminController : Controller
 {
     private readonly IAdminApi _adminApi;
+    private readonly IFeedbackApi _feedbackApi;
     private readonly ILogger<AdminController> _logger;
 
-    public AdminController(IAdminApi adminApi, ILogger<AdminController> logger)
+    public AdminController(IAdminApi adminApi, IFeedbackApi feedbackApi, ILogger<AdminController> logger)
     {
         _adminApi = adminApi;
+        _feedbackApi = feedbackApi;
         _logger = logger;
     }
 
@@ -49,6 +54,60 @@ public class AdminController : Controller
         }
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Displays the Feedback inbox, newest first, filtered to <paramref name="status"/> (by default New and
+    /// Reviewed; Archived is hidden). A failed load shows the Unavailable State, never an empty inbox.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Feedback(FeedbackStatus? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var items = await _feedbackApi.ListAsync(status, cancellationToken);
+            return View(new AdminFeedbackInboxViewModel { Items = items, Status = status });
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load the Feedback inbox.");
+            var retryRouteValues = status is null
+                ? new Dictionary<string, string>()
+                : new Dictionary<string, string> { ["status"] = status.Value.ToString() };
+            return this.UnavailableView("Feedback inbox", "We couldn't load the Feedback inbox", "Admin",
+                nameof(Feedback), retryRouteValues);
+        }
+    }
+
+    /// <summary>
+    /// Sets the Feedback Status of one piece of Feedback, then returns to the inbox with the
+    /// <paramref name="filter"/> the Admin was viewing.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeFeedbackStatus(int id, FeedbackStatus status, FeedbackStatus? filter,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _feedbackApi.ChangeStatusAsync(id, new ChangeFeedbackStatusRequest { Status = status },
+                cancellationToken);
+            TempData["AdminMessage"] = $"Feedback marked {status}.";
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            TempData["AdminError"] = "That Feedback no longer exists.";
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to change the Feedback Status.");
+            TempData["AdminError"] = ApiErrorMessages.ForUser(ex, "The status could not be changed. Try again later.");
+        }
+
+        return RedirectToAction(nameof(Feedback), new { status = filter });
     }
 
     /// <summary>

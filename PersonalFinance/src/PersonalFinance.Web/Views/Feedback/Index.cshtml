@@ -1,0 +1,66 @@
+@using System.Globalization
+@using PersonalFinance.Shared.Constants
+@using PersonalFinance.Shared.Enums
+@model FeedbackViewModel
+@{
+    ViewData["Title"] = "Send feedback";
+}
+
+<div class="py-3">
+    <header class="mb-4">
+        <h1 class="h3 mb-1">Send feedback</h1>
+        <p class="text-muted mb-0">
+            Found a bug or have an idea? Tell us here. For support, data protection requests or security reports, use the
+            <a asp-controller="Legal" asp-action="Contact">Contact page</a>.
+        </p>
+    </header>
+
+    @if (TempData[PersonalFinance.Web.Controllers.FeedbackController.SentKey] is string sentMessage)
+    {
+        <div class="alert alert-success" role="status">@sentMessage</div>
+    }
+
+    <div class="card col-lg-8 px-0">
+        <div class="card-body">
+            <form asp-action="Send" method="post" novalidate>
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                }
+                <input type="hidden" asp-for="PageUrl" />
+
+                <fieldset class="mb-3">
+                    <legend class="form-label fs-6">Category</legend>
+                    @foreach (var category in Enum.GetValues<FeedbackCategory>())
+                    {
+                        var id = $"category-{category}";
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" asp-for="Category" id="@id" value="@category" />
+                            <label class="form-check-label" for="@id">@category</label>
+                        </div>
+                    }
+                    <span asp-validation-for="Category" class="text-danger d-block"></span>
+                </fieldset>
+
+                <div class="mb-3">
+                    <label asp-for="Message" class="form-label">Message</label>
+                    <textarea asp-for="Message" class="form-control" rows="6" maxlength="@FeedbackLimits.MessageMaxLength"
+                              aria-describedby="messageHelp"></textarea>
+                    <div id="messageHelp" class="form-text">Up to @FeedbackLimits.MessageMaxLength.ToString("N0", CultureInfo.InvariantCulture) characters.</div>
+                    <span asp-validation-for="Message" class="text-danger"></span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.PageUrl))
+                {
+                    <p class="small text-muted">Sent from page: <code>@Model.PageUrl</code></p>
+                }
+
+                <button type="submit" class="btn btn-primary">Send feedback</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
