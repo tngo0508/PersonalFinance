@@ -9,17 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Local SQL Server in Docker**: Developers can run the whole app against a local SQL Server 2022 container that uses the same provider and migrations as production Azure SQL.
-  - `compose.yaml` at the repo root runs SQL Server 2022 Developer edition (`platform: linux/amd64`, so it runs under Rosetta on Apple Silicon) with a named data volume and a `sqlcmd` healthcheck; it stops with a clear message when `MSSQL_SA_PASSWORD` is missing.
-  - `.env.example` lists `MSSQL_SA_PASSWORD` and `SQL_HOST_PORT`; the real `.env` stays gitignored.
-  - `npm run db:up`, `db:down` and `db:reset` only call `docker compose`, so they work the same in PowerShell and zsh.
-  - The development guide has a "Local SQL Server (Docker)" section and the settings needed to run the e2e suites with the projects started separately.
-  - A unit test shows a local SQL Server connection string selects the same provider and migration set as Azure SQL.
-  - The docs and agent rules treat local SQL Server as a supported development target; production stays Azure SQL, and only T-SQL and EF features both support may be used.
-  - A new `sql-server-migrations` CI job starts SQL Server with `npm run db:up` and a random per-run `sa` password, runs the ApiService with `--migrate-only` twice (the second run must apply nothing), dumps the container and ApiService logs on failure and always runs `db:down`; the Azure deployment now waits for it.
-
 ### Changed
 
 - **Landing Page Redesign**: The homepage now explains what the app is for, financial independence and the age you can reach it, with a calmer financial look.
@@ -86,12 +75,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Preserve visible follow-up messages and restore failed questions for retry.
   - Add keyboard controls, loading feedback, safe response formatting, and mobile navigation clearance.
 
-### Fixed
-
-- **Stale DbContext Reference in the Development Guide**: The development guide names `AzureSqlAppDbContext` in its `dotnet ef database update` command instead of `SqlServerAppDbContext`, which does not exist.
-
-
 ### Added
+
+- **Local SQL Server in Docker**: Developers can run the whole app against a local SQL Server 2022 container that uses the same provider and migrations as production Azure SQL.
+  - `compose.yaml` at the repo root runs SQL Server 2022 Developer edition (`platform: linux/amd64`, so it runs under Rosetta on Apple Silicon) with a named data volume and a `sqlcmd` healthcheck; it stops with a clear message when `MSSQL_SA_PASSWORD` is missing.
+  - `.env.example` lists `MSSQL_SA_PASSWORD` and `SQL_HOST_PORT`; the real `.env` stays gitignored.
+  - `npm run db:up`, `db:down` and `db:reset` only call `docker compose`, so they work the same in PowerShell and zsh.
+  - The development guide has a "Local SQL Server (Docker)" section and the settings needed to run the e2e suites with the projects started separately.
+  - A unit test shows a local SQL Server connection string selects the same provider and migration set as Azure SQL.
+  - The docs and agent rules treat local SQL Server as a supported development target; production stays Azure SQL, and only T-SQL and EF features both support may be used.
+  - A new `sql-server-migrations` CI job starts SQL Server with `npm run db:up` and a random per-run `sa` password, runs the ApiService with `--migrate-only` twice (the second run must apply nothing), dumps the container and ApiService logs on failure and always runs `db:down`; the Azure deployment now waits for it.
 
 - **AI Assistant Finance Scope Protection**: The AI assistant now rejects non-financial queries instantly with a canned refusal, saving OpenAI API tokens.
   - Deterministic keyword-based classifier (`AiScopeFilter`) checks each message before it reaches the LLM.
@@ -116,6 +109,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `max_completion_tokens` is applied to all requests (configurable via `OpenAI:MaxTokens`, default 400).
 
 ### Fixed
+
+- **Stale DbContext Reference in the Development Guide**: The `dotnet ef database update` example named `SqlServerAppDbContext`, which does not exist; it now uses `AzureSqlAppDbContext`.
 
 - **Sign In and Register Error Messages**: Field errors such as "The Email field is required." now appear under each field with a red border; they were always hidden because ASP.NET marks errors with `field-validation-error`, not Bootstrap's `.is-invalid`.
 

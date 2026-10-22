@@ -49,7 +49,7 @@ public class DatabasePersistenceAndMigrationTests
     [Fact]
     public void AddAppDbContext_RegistersAzureSqlImplementation_WhenProviderIsAzureSql()
     {
-        RegisterAzureSqlDbContext(new Dictionary<string, string?>
+        AssertRegistersAzureSqlDbContext(new Dictionary<string, string?>
         {
             {
                 "ConnectionStrings:DefaultConnection",
@@ -71,14 +71,14 @@ public class DatabasePersistenceAndMigrationTests
         var (azureProvider, azureMigrations) = ResolveProviderAndMigrations(azureSql);
 
         Assert.Equal(DatabaseProviderType.AzureSql, localProvider);
-        Assert.Equal(azureProvider, localProvider);
+        Assert.Equal(DatabaseProviderType.AzureSql, azureProvider);
         Assert.NotEmpty(localMigrations);
         Assert.Equal(azureMigrations, localMigrations);
     }
 
     private static (DatabaseProviderType Provider, List<string> Migrations) ResolveProviderAndMigrations(string connectionString)
     {
-        var (config, migrations) = RegisterAzureSqlDbContext(new Dictionary<string, string?>
+        var (config, migrations) = AssertRegistersAzureSqlDbContext(new Dictionary<string, string?>
         {
             { "ConnectionStrings:DefaultConnection", connectionString }
         });
@@ -90,7 +90,7 @@ public class DatabasePersistenceAndMigrationTests
     /// Registers the app DbContext from the given settings, asserts it resolves to the
     /// Azure SQL (SQL Server) implementation, and returns the configuration and migration set.
     /// </summary>
-    private static (IConfiguration Configuration, List<string> Migrations) RegisterAzureSqlDbContext(
+    private static (IConfiguration Configuration, List<string> Migrations) AssertRegistersAzureSqlDbContext(
         Dictionary<string, string?> settings)
     {
         var config = new ConfigurationBuilder()

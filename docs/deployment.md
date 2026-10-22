@@ -110,6 +110,9 @@ flowchart TD
         subgraph job1["build-and-test (≤15 min)"]
             bt["checkout → setup .NET 10 →<br/>NuGet cache → restore → build (Release) →<br/>dotnet test"]
         end
+        subgraph job1c["sql-server-migrations (≤20 min)"]
+            mig["npm run db:up (SQL Server 2022,<br/>random sa password) →<br/>ApiService --migrate-only ×2 →<br/>db:down"]
+        end
         subgraph job1b["validate-infra (≤5 min)"]
             vi["az bicep build<br/>main.bicep + local-dev.bicep<br/>(validates Bicep syntax)"]
         end
@@ -143,7 +146,7 @@ flowchart TD
         latest["docker buildx imagetools create<br/>&lt;short-sha&gt; → latest"]
     end
 
-    bt & vi & pushed -->|"all must succeed"| login
+    bt & mig & vi & pushed -->|"all must succeed"| login
     bicep -->|"outputs: webUrl, webFqdn, apiFqdn"| smoke
     smoke --> latest
 ```
@@ -159,7 +162,7 @@ flowchart TD
 > **Note**: `dry_run` skips pushing and deploying; it does not run an Azure What-If. For a What-If preview use `.\infra\deploy.ps1 -WhatIf` (Section 4).
 
 **Why it is built this way (things worth learning)**:
-- **Parallel, not serial**: the tests, the Bicep check and the two image builds start at the same time. Only `deploy-azure` waits for all of them (`needs: [build-and-test, sql-server-migrations, validate-infra, build-and-push-containers]`), so nothing reaches Azure unless every check passed.
+- **Parallel, not serial**: the tests, the SQL Server migrations check, the Bicep check and the two image builds start at the same time. Only `deploy-azure` waits for all of them (`needs: [build-and-test, sql-server-migrations, validate-infra, build-and-push-containers]`), so nothing reaches Azure unless every check passed.
 - **Cheap PR runs**:
   - A new push to a PR cancels the PR's in-progress run (`concurrency` + `cancel-in-progress`). Runs on `main` queue instead, so a deployment is never cut off halfway.
   - Docs-only changes skip the workflow (`paths-ignore`).

@@ -135,7 +135,7 @@ Run `npm run db:up` again before starting the app.
 
 #### 3. Point both apps at the container
 
-Put the same connection string in user secrets for the ApiService and the Web project. Replace `1433` with your
+Put the same connection string in user secrets for the ApiService and the Web project. Other commands in this guide refer to it as `<local connection string>`. Replace `1433` with your
 `SQL_HOST_PORT` and `<password>` with your `MSSQL_SA_PASSWORD`. The single quotes make these commands work unchanged in
 both PowerShell and zsh.
 
@@ -218,8 +218,8 @@ When cloning this repository on a new machine, run the following commands to con
 #### PersonalFinance.Web Project
 
 ```bash
-# Database connection string: the local SQL Server container (see "Local SQL Server (Docker)"; for Azure SQL see the alternatives)
-dotnet user-secrets set 'ConnectionStrings:DefaultConnection' 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False' --project PersonalFinance/src/PersonalFinance.Web
+# Database connection string: set it as in "3. Point both apps at the container" under "Local SQL Server (Docker)"
+# (for Azure SQL see the alternatives)
 
 # Brevo transactional email API key
 dotnet user-secrets set "Brevo:ApiKey" "<YOUR_BREVO_API_KEY>" --project PersonalFinance/src/PersonalFinance.Web
@@ -232,8 +232,8 @@ dotnet user-secrets set "Authentication:Google:ClientSecret" "<YOUR_GOOGLE_CLIEN
 #### PersonalFinance.ApiService Project
 
 ```bash
-# Database connection string: the local SQL Server container (see "Local SQL Server (Docker)"; for Azure SQL see the alternatives)
-dotnet user-secrets set 'ConnectionStrings:DefaultConnection' 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False' --project PersonalFinance/src/PersonalFinance.ApiService
+# Database connection string: set it as in "3. Point both apps at the container" under "Local SQL Server (Docker)"
+# (for Azure SQL see the alternatives)
 
 # Google Drive API key (default; users can also enter their own key via /GoogleDrive)
 dotnet user-secrets set "GoogleDrive:ApiKey" "<YOUR_GOOGLE_DRIVE_API_KEY>" --project PersonalFinance/src/PersonalFinance.ApiService
@@ -558,7 +558,7 @@ Design-time tools (like `dotnet ef migrations add` and `dotnet ef database updat
 
 Example applying EF Core migrations to the local SQL Server container (see "EF Core CLI Commands" in section 5 for the full set):
 ```bash
-dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False'
+dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string '<local connection string>'
 ```
 
 #### 3. Production & CI/CD Pipeline Injection
@@ -638,7 +638,7 @@ Run all EF Core commands from the repository root. The design-time factory (`App
 
 ```bash
 # Point the EF tools at the local container (zsh; in PowerShell: $env:ConnectionStrings__DefaultConnection = '...')
-export ConnectionStrings__DefaultConnection='Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False'
+export ConnectionStrings__DefaultConnection='<local connection string>'
 
 # Add a migration (inspect the generated file before committing)
 dotnet ef migrations add <MigrationName> --context AzureSqlAppDbContext --output-dir Migrations/AzureSql --project PersonalFinance/src/PersonalFinance.Data
