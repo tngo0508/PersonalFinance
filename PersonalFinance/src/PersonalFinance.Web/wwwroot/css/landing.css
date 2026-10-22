@@ -135,6 +135,15 @@
     font-size: 0.9rem;
 }
 
+.lp-hero__note a {
+    color: var(--lp-ledger);
+    font-weight: 500;
+}
+
+.lp-hero__note a:hover {
+    color: var(--lp-ledger-deep);
+}
+
 /* ==========================================================================
    Sample plan chart
    ========================================================================== */

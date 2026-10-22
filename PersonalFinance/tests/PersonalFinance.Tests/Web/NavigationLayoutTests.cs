@@ -89,6 +89,36 @@ public class NavigationLayoutTests
     }
 
     [Fact]
+    public void LayoutFooter_LinksToTheAboutPage()
+    {
+        var footer = ReadView("Shared", "_Layout.cshtml");
+        var footerStart = footer.IndexOf("<footer", StringComparison.Ordinal);
+        Assert.True(footerStart >= 0, "_Layout.cshtml should contain a <footer>.");
+
+        Assert.Contains("asp-controller=\"Home\" asp-action=\"About\"", footer[footerStart..]);
+    }
+
+    [Fact]
+    public void LandingPage_LinksToTheAboutPage()
+    {
+        Assert.Contains("asp-controller=\"Home\" asp-action=\"About\"", ReadView("Home", "Index.cshtml"));
+    }
+
+    [Fact]
+    public void AboutPage_LinksToTheDisclaimer()
+    {
+        Assert.Contains("asp-controller=\"Legal\" asp-action=\"Disclaimer\"", ReadView("Home", "About.cshtml"));
+    }
+
+    private static string ReadView(string folder, string fileName)
+    {
+        var path = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", folder,
+            fileName);
+        Assert.True(File.Exists(path), $"{fileName} not found at {path}");
+        return File.ReadAllText(path);
+    }
+
+    [Fact]
     public void SidebarCss_DefinesRequiredResponsiveAndCollapsedDimensions()
     {
         var cssPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "css",

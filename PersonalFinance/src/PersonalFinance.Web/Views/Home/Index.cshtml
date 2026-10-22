@@ -22,7 +22,10 @@
                 <a class="lp-btn lp-btn--primary" asp-area="Identity" asp-page="/Account/Register">Create free account</a>
                 <a class="lp-btn lp-btn--secondary" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
             </div>
-            <p class="lp-hero__note">Free to use. No bank logins. Your figures are visible only to you.</p>
+            <p class="lp-hero__note">
+                Free to use. No bank logins. Your figures are visible only to you.
+                <a asp-area="" asp-controller="Home" asp-action="About">About @AppVersion.ApplicationName</a>
+            </p>
         </div>
 
         @* Illustrative projection. The figures follow the app's own FI rule (25 × annual spending). *@
