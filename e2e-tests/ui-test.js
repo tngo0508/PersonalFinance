@@ -218,19 +218,20 @@ const {chromium} = require('playwright');
                 fail('"Sign in" call to action not found');
             }
 
-            const preview = page.locator('.lp-preview[aria-hidden="true"]');
-            const previewText = await preview.first().textContent({timeout: 3000}).catch(() => '');
-            if (previewText && previewText.includes('Sample data')) {
-                pass('Product preview is labelled "Sample data" and hidden from assistive tech');
+            const plan = page.locator('figure.lp-plan');
+            const planCaption = await plan.first().locator('figcaption').textContent({timeout: 3000}).catch(() => '');
+            if (planCaption && planCaption.includes('Sample plan') && planCaption.includes('FI target')) {
+                pass('Sample plan chart has a visible text description of its figures');
             } else {
-                fail('Product preview with "Sample data" label not found');
+                fail('Sample plan chart caption not found');
             }
 
-            const featureCount = await page.locator('.lp-feature').count().catch(() => 0);
-            if (featureCount === 9) {
-                pass('Feature grid lists all 9 features');
+            const coreCount = await page.locator('.lp-tool').count().catch(() => 0);
+            const moreCount = await page.locator('.lp-more__item').count().catch(() => 0);
+            if (coreCount === 3 && moreCount === 6) {
+                pass('Landing Page lists 3 core tools and 6 additional features');
             } else {
-                fail(`Feature grid expected 9 features, found ${featureCount}`);
+                fail(`Expected 3 core tools and 6 additional features, found ${coreCount} and ${moreCount}`);
             }
         } catch (error) {
             fail(`Default route failed: ${error.message}`);

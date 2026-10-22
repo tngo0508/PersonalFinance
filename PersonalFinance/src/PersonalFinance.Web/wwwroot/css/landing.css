@@ -1,29 +1,27 @@
 /* ==========================================================================
    Landing Page (lp-*)
-   "Indigo Ledger" design system — public page for signed-out visitors.
-   Reuses the --app-* tokens defined in site.css.
+   "Ledger" design: navy ink, ledger green for growth, brass for the FI target.
+   Tokens are scoped to .lp-page so the signed-in app keeps its --app-* theme.
    ========================================================================== */
 
 .lp-page {
-    --lp-max-copy: 36rem;
+    --lp-ink: #14283B;
+    --lp-ink-soft: #3D4F5F;
+    --lp-muted: #5B6B78;
+    --lp-ledger: #1D6A50;
+    --lp-ledger-deep: #134A38;
+    --lp-ledger-wash: #E6F0EB;
+    --lp-brass: #8A6A1E;
+    --lp-paper: #FFFFFF;
+    --lp-surface: #F3F6F5;
+    --lp-rule: #D6DEDB;
+    --lp-font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --lp-max-copy: 34rem;
     --lp-section-gap: clamp(3.5rem, 8vw, 6rem);
-    --lp-ink-soft: #374151;
-    color: var(--app-text);
-}
 
-.lp-mono {
-    font-family: var(--app-font-mono);
+    color: var(--lp-ink);
+    font-family: var(--lp-font);
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
-}
-
-.lp-eyebrow {
-    margin: 0 0 0.75rem;
-    color: var(--app-brand);
-    font-size: 0.78rem;
-    font-weight: var(--app-font-weight-semibold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
 }
 
 /* ==========================================================================
@@ -44,66 +42,59 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
     min-height: 44px;
-    padding: 0.65rem 1.25rem;
+    padding: 0.65rem 1.4rem;
     border: 1px solid transparent;
-    border-radius: var(--app-radius-m);
-    font-size: 0.95rem;
-    font-weight: var(--app-font-weight-semibold);
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
     line-height: 1.2;
     text-decoration: none;
 }
 
-.lp-btn svg {
-    width: 16px;
-    height: 16px;
+.lp-btn:hover {
+    text-decoration: none;
 }
 
 .lp-btn:focus-visible {
-    outline: 2px solid var(--app-brand);
+    outline: 2px solid var(--lp-ledger);
     outline-offset: 2px;
-    box-shadow: 0 0 0 4px var(--app-brand-soft);
 }
 
 .lp-btn--primary {
-    background: var(--app-brand);
+    background: var(--lp-ledger);
     color: #fff;
 }
 
-.lp-btn--primary:hover {
-    background: var(--app-brand-hover);
-    color: #fff;
-}
-
+.lp-btn--primary:hover,
 .lp-btn--primary:active {
-    background: var(--app-brand-pressed);
+    background: var(--lp-ledger-deep);
+    color: #fff;
 }
 
 .lp-btn--secondary {
-    background: var(--app-bg);
-    border-color: var(--app-border-hover);
-    color: var(--app-text);
+    background: var(--lp-paper);
+    border-color: var(--lp-ink-soft);
+    color: var(--lp-ink);
 }
 
 .lp-btn--secondary:hover {
-    background: var(--app-surface);
-    border-color: var(--app-text-muted);
-    color: var(--app-text);
+    background: var(--lp-surface);
+    color: var(--lp-ink);
 }
 
 .lp-btn--light {
     background: #fff;
-    color: var(--app-brand-pressed);
+    color: var(--lp-ink);
 }
 
 .lp-btn--light:hover {
-    background: var(--app-brand-soft);
-    color: var(--app-brand-pressed);
+    background: var(--lp-ledger-wash);
+    color: var(--lp-ink);
 }
 
 .lp-btn--ghost {
-    border-color: rgba(255, 255, 255, 0.45);
+    border-color: rgba(255, 255, 255, 0.6);
     color: #fff;
 }
 
@@ -116,7 +107,35 @@
 .lp-btn--light:focus-visible,
 .lp-btn--ghost:focus-visible {
     outline-color: #fff;
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+
+/* Header buttons follow the landing palette (this file only loads on the Landing Page) */
+.topbar .btn-primary {
+    --bs-btn-bg: #1D6A50;
+    --bs-btn-border-color: #1D6A50;
+    --bs-btn-hover-bg: #134A38;
+    --bs-btn-hover-border-color: #134A38;
+    --bs-btn-active-bg: #134A38;
+    --bs-btn-active-border-color: #134A38;
+}
+
+.topbar .btn-outline-primary {
+    --bs-btn-color: #14283B;
+    --bs-btn-border-color: #3D4F5F;
+    --bs-btn-hover-color: #14283B;
+    --bs-btn-hover-bg: #F3F6F5;
+    --bs-btn-hover-border-color: #3D4F5F;
+    --bs-btn-active-color: #14283B;
+    --bs-btn-active-bg: #F3F6F5;
+    --bs-btn-active-border-color: #3D4F5F;
+}
+
+.topbar .btn-outline-primary:hover {
+    color: #14283B;
+}
+
+.topbar .topbar-brand .sidebar-brand-icon {
+    color: #1D6A50;
 }
 
 /* ==========================================================================
@@ -125,10 +144,10 @@
 
 .lp-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     align-items: center;
     gap: clamp(2rem, 5vw, 4rem);
-    padding: clamp(2rem, 6vw, 4.5rem) 0 var(--lp-section-gap);
+    padding: clamp(1.5rem, 5vw, 4rem) 0 var(--lp-section-gap);
 }
 
 .lp-hero__copy {
@@ -137,263 +156,173 @@
 
 .lp-hero__title {
     margin: 0 0 1.25rem;
-    font-size: clamp(2.1rem, 4.4vw, 3.25rem);
-    font-weight: var(--app-font-weight-bold);
+    color: var(--lp-ink);
+    font-size: clamp(2.25rem, 4.6vw, 3.5rem);
+    font-weight: 600;
     line-height: 1.08;
-    letter-spacing: -0.03em;
-    color: var(--app-text);
-}
-
-.lp-hero__title-accent {
-    color: var(--app-brand);
+    letter-spacing: -0.025em;
 }
 
 .lp-hero__lead {
     margin: 0 0 2rem;
-    max-width: 32rem;
     color: var(--lp-ink-soft);
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     line-height: 1.6;
 }
 
 .lp-hero__note {
     margin: 1rem 0 0;
-    color: var(--app-text-muted);
-    font-size: 0.85rem;
+    color: var(--lp-muted);
+    font-size: 0.9rem;
 }
 
 /* ==========================================================================
-   Product preview (decorative, aria-hidden)
+   Sample plan chart
    ========================================================================== */
 
-.lp-preview {
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-l);
-    background: var(--app-bg);
-    box-shadow: var(--app-shadow-16);
-    overflow: hidden;
-    user-select: none;
+.lp-plan {
+    margin: 0;
+    padding: clamp(1.1rem, 2.5vw, 1.75rem);
+    border: 1px solid var(--lp-rule);
+    border-radius: 12px;
+    background: var(--lp-surface);
 }
 
-.lp-preview__chrome {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0.6rem 0.85rem;
-    border-bottom: 1px solid var(--app-border);
-    background: var(--app-surface);
-}
-
-.lp-preview__dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--app-border-hover);
-}
-
-.lp-preview__title {
-    margin-left: 0.5rem;
-    color: var(--app-text-muted);
-    font-size: 0.78rem;
-    font-weight: var(--app-font-weight-medium);
-}
-
-.lp-preview__badge {
-    margin-left: auto;
-    padding: 2px 8px;
-    border: 1px solid var(--app-accent-warning);
-    border-radius: var(--app-radius-s);
-    background: var(--app-accent-warning-soft);
-    color: #92400E;
-    font-size: 0.7rem;
-    font-weight: var(--app-font-weight-semibold);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.lp-preview__body {
-    display: grid;
-    gap: 0.85rem;
-    padding: 1rem;
-    background: var(--app-surface);
-}
-
-.lp-preview__summary,
-.lp-preview__tile,
-.lp-preview__panel {
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    background: var(--app-bg);
-}
-
-.lp-preview__summary {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: end;
-    gap: 1.5rem;
-    padding: 1rem 1.1rem;
-}
-
-.lp-preview__label {
-    color: var(--app-text-muted);
-    font-size: 0.72rem;
-    font-weight: var(--app-font-weight-medium);
-}
-
-.lp-preview__figure {
-    margin-top: 2px;
-    font-size: 1.6rem;
-    font-weight: var(--app-font-weight-medium);
-    line-height: 1.1;
-}
-
-.lp-preview__fi-head {
+.lp-plan__head {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.lp-plan__label {
+    margin: 0 0 0.2rem;
+    color: var(--lp-muted);
+    font-size: 0.9rem;
+}
+
+.lp-plan__figure {
+    margin: 0;
+    color: var(--lp-ink);
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.lp-plan__figure span {
+    color: var(--lp-muted);
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+.lp-plan__tag {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--lp-rule);
+    border-radius: 999px;
+    background: var(--lp-paper);
+    color: var(--lp-muted);
     font-size: 0.8rem;
 }
 
-.lp-preview__bar,
-.lp-preview__track {
-    display: block;
-    height: 6px;
-    border-radius: 999px;
-    background: var(--app-brand-soft);
-    overflow: hidden;
+.lp-plan__chart {
+    position: relative;
+    height: clamp(200px, 24vw, 280px);
 }
 
-.lp-preview__bar {
-    margin: 6px 0;
-}
-
-.lp-preview__bar > span,
-.lp-preview__track > span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--app-brand);
-}
-
-.lp-preview__hint {
-    color: var(--app-text-muted);
-    font-size: 0.7rem;
-}
-
-.lp-preview__tiles {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.85rem;
-}
-
-.lp-preview__tile {
-    padding: 0.7rem 0.85rem;
-}
-
-.lp-preview__tile-value {
-    margin-top: 2px;
-    font-size: 1.05rem;
-    font-weight: var(--app-font-weight-medium);
-}
-
-.lp-preview__panels {
-    display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-    gap: 0.85rem;
-}
-
-.lp-preview__panel {
-    padding: 0.75rem 0.85rem;
-}
-
-.lp-preview__panel-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.6rem;
-    font-size: 0.75rem;
-    font-weight: var(--app-font-weight-semibold);
-}
-
-.lp-preview__legend {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--app-text-muted);
-    font-size: 0.65rem;
-    font-weight: var(--app-font-weight-regular);
-}
-
-.lp-preview__swatch {
-    display: inline-block;
-    width: 10px;
-    height: 2px;
-    margin-left: 6px;
-    background: var(--app-brand);
-}
-
-.lp-preview__swatch--target {
-    background: repeating-linear-gradient(90deg, var(--app-text-muted) 0 3px, transparent 3px 5px);
-}
-
-.lp-preview__chart {
+.lp-plan__chart svg {
     display: block;
     width: 100%;
-    height: 110px;
+    height: 100%;
+    overflow: visible;
 }
 
-.lp-chart__grid {
-    stroke: var(--app-border);
+.lp-plan__grid {
+    stroke: var(--lp-rule);
     stroke-width: 1;
     vector-effect: non-scaling-stroke;
 }
 
-.lp-chart__target {
-    stroke: var(--app-text-muted);
-    stroke-width: 1;
-    stroke-dasharray: 4 3;
-    vector-effect: non-scaling-stroke;
+.lp-plan__area {
+    fill: var(--lp-ledger-wash);
 }
 
-.lp-chart__area {
-    fill: var(--app-brand-soft);
-    opacity: 0.7;
-}
-
-.lp-chart__line,
-.lp-chart__muted {
+.lp-plan__line {
     fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
+    stroke: var(--lp-ledger);
+    stroke-width: 3;
+    stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
 }
 
-.lp-chart__line {
-    stroke: var(--app-brand);
+.lp-plan__target {
+    stroke: var(--lp-brass);
+    stroke-width: 2;
+    stroke-dasharray: 6 5;
+    vector-effect: non-scaling-stroke;
 }
 
-.lp-chart__muted {
-    stroke: var(--app-border-hover);
+.lp-plan__drop {
+    stroke: var(--lp-ink-soft);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+    vector-effect: non-scaling-stroke;
 }
 
-.lp-preview__budget {
-    display: grid;
-    gap: 0.55rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
+.lp-plan__marker {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--lp-ledger);
+    border-radius: 50%;
+    background: var(--lp-paper);
+    transform: translate(-50%, -50%);
 }
 
-.lp-preview__budget li {
-    display: grid;
-    grid-template-columns: 4.5rem minmax(0, 1fr) 2.25rem;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.7rem;
+/* Sits up and to the left of the marker so it never runs off the right edge */
+.lp-plan__callout {
+    position: absolute;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    background: var(--lp-ink);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transform: translate(calc(-100% + 0.75rem), calc(-100% - 0.85rem));
 }
 
-.lp-preview__budget li > span:last-child {
-    text-align: right;
+.lp-plan__target-label {
+    position: absolute;
+    top: calc(50% + 0.4rem);
+    left: 0;
+    color: var(--lp-brass);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.lp-plan__ages {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    color: var(--lp-muted);
+    font-size: 0.8rem;
+}
+
+.lp-plan__caption {
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--lp-rule);
+    color: var(--lp-ink-soft);
+    font-size: 0.9rem;
+    line-height: 1.55;
 }
 
 /* ==========================================================================
@@ -402,14 +331,14 @@
 
 .lp-section {
     padding: var(--lp-section-gap) 0;
-    border-top: 1px solid var(--app-border);
+    border-top: 1px solid var(--lp-rule);
 }
 
 /* Full-bleed tinted background without horizontal overflow */
 .lp-section--tinted {
     border-top-color: transparent;
-    background: var(--app-surface);
-    box-shadow: 0 0 0 100vmax var(--app-surface);
+    background: var(--lp-surface);
+    box-shadow: 0 0 0 100vmax var(--lp-surface);
     clip-path: inset(0 -100vmax);
 }
 
@@ -418,14 +347,15 @@
 }
 
 .lp-section__head {
-    max-width: 40rem;
+    max-width: 42rem;
     margin-bottom: 2.5rem;
 }
 
 .lp-section__title {
     margin: 0 0 0.75rem;
-    font-size: clamp(1.6rem, 3vw, 2.1rem);
-    font-weight: var(--app-font-weight-bold);
+    color: var(--lp-ink);
+    font-size: clamp(1.65rem, 3vw, 2.25rem);
+    font-weight: 600;
     line-height: 1.2;
     letter-spacing: -0.02em;
 }
@@ -433,64 +363,104 @@
 .lp-section__lead {
     margin: 0;
     color: var(--lp-ink-soft);
-    font-size: 1.05rem;
+    font-size: 1.1rem;
+    line-height: 1.65;
+}
+
+/* Mission: the three rules of the plan */
+.lp-rules {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
+    margin: 0;
+}
+
+.lp-rule {
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--lp-ink);
+}
+
+.lp-rule__term {
+    margin-bottom: 0.35rem;
+    color: var(--lp-ledger);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.lp-rule__sum {
+    margin: 0 0 0.75rem;
+    color: var(--lp-ink);
+    font-size: 1.45rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.lp-rule__text {
+    margin: 0;
+    color: var(--lp-ink-soft);
     line-height: 1.6;
 }
 
-/* Feature grid — hairline-ruled cells */
-.lp-features {
+/* Core tools */
+.lp-tools {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
+    margin: 0 0 3.5rem;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-tool__title {
+    margin: 0 0 0.5rem;
+    color: var(--lp-ink);
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.lp-tool__text {
+    margin: 0;
+    color: var(--lp-ink-soft);
+    line-height: 1.6;
+}
+
+/* Also included: ledger rows */
+.lp-more__title {
+    margin: 0 0 0.5rem;
+    color: var(--lp-ink);
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.lp-more {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 2rem;
     margin: 0;
     padding: 0;
     list-style: none;
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-l);
-    overflow: hidden;
-    gap: 1px;
-    background: var(--app-border);
 }
 
-.lp-feature {
-    padding: 1.6rem 1.5rem;
-    background: var(--app-bg);
+.lp-more__item {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--lp-rule);
 }
 
-.lp-feature:hover {
-    background: var(--app-surface);
+.lp-more__name {
+    color: var(--lp-ink);
+    font-weight: 600;
 }
 
-.lp-feature__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    margin-bottom: 1rem;
-    border-radius: var(--app-radius-m);
-    background: var(--app-brand-soft);
-    color: var(--app-brand);
+.lp-more__text {
+    color: var(--lp-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
 }
 
-.lp-feature__icon svg {
-    width: 18px;
-    height: 18px;
-}
-
-.lp-feature__title {
-    margin: 0 0 0.35rem;
-    font-size: 1rem;
-    font-weight: var(--app-font-weight-semibold);
-}
-
-.lp-feature__text {
-    margin: 0;
-    color: var(--app-text-muted);
-    font-size: 0.92rem;
-    line-height: 1.55;
-}
-
-/* How it works */
+/* Getting started: a real sequence, so the steps are numbered */
 .lp-steps {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -498,25 +468,32 @@
     margin: 0;
     padding: 0;
     list-style: none;
+    counter-reset: lp-step;
 }
 
 .lp-step {
-    padding-top: 1.25rem;
-    border-top: 2px solid var(--app-brand);
+    counter-increment: lp-step;
 }
 
-.lp-step__number {
-    display: block;
-    margin-bottom: 0.75rem;
-    color: var(--app-brand);
-    font-size: 0.85rem;
-    font-weight: var(--app-font-weight-medium);
+.lp-step::before {
+    content: counter(lp-step);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin-bottom: 0.9rem;
+    border-radius: 50%;
+    background: var(--lp-ledger);
+    color: #fff;
+    font-weight: 600;
 }
 
 .lp-step__title {
     margin: 0 0 0.4rem;
-    font-size: 1.1rem;
-    font-weight: var(--app-font-weight-semibold);
+    color: var(--lp-ink);
+    font-size: 1.15rem;
+    font-weight: 600;
 }
 
 .lp-step__text {
@@ -527,36 +504,17 @@
 
 /* Privacy */
 .lp-privacy {
-    display: flex;
-    gap: 1.5rem;
     max-width: 48rem;
-    padding: 2rem;
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-l);
-}
-
-.lp-privacy__icon {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--app-radius-m);
-    background: var(--app-accent-positive-soft);
-    color: var(--app-accent-positive);
-}
-
-.lp-privacy__icon svg {
-    width: 22px;
-    height: 22px;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    border-radius: 12px;
+    background: var(--lp-ledger-wash);
 }
 
 .lp-privacy__title {
     margin: 0 0 0.75rem;
-    font-size: 1.3rem;
-    font-weight: var(--app-font-weight-bold);
-    letter-spacing: -0.01em;
+    color: var(--lp-ink);
+    font-size: 1.35rem;
+    font-weight: 600;
 }
 
 .lp-privacy__list {
@@ -568,12 +526,12 @@
     line-height: 1.6;
 }
 
-/* Closing call to action — full-bleed indigo band */
+/* Closing call to action: full-bleed navy band */
 .lp-closing {
     margin-bottom: -3rem;
     padding: clamp(3.5rem, 8vw, 5rem) 1rem;
-    background: var(--app-brand-pressed);
-    box-shadow: 0 0 0 100vmax var(--app-brand-pressed);
+    background: var(--lp-ink);
+    box-shadow: 0 0 0 100vmax var(--lp-ink);
     clip-path: inset(0 -100vmax);
     color: #fff;
     text-align: center;
@@ -581,59 +539,26 @@
 
 .lp-closing__title {
     margin: 0 0 0.75rem;
-    font-size: clamp(1.6rem, 3vw, 2.2rem);
-    font-weight: var(--app-font-weight-bold);
+    color: #fff;
+    font-size: clamp(1.65rem, 3vw, 2.25rem);
+    font-weight: 600;
     letter-spacing: -0.02em;
 }
 
 .lp-closing__lead {
     margin: 0 auto 2rem;
     max-width: 32rem;
-    color: var(--app-brand-soft);
-    font-size: 1.05rem;
+    color: #D3DEE6;
+    font-size: 1.1rem;
 }
 
 /* ==========================================================================
-   Motion — short entrance fade (lightly staggered) and hover/focus transitions,
-   only for users who have not asked to reduce motion. Matches css/dashboard.css.
+   Motion: colour changes on hover/focus only, for users who allow motion
    ========================================================================== */
 
 @media (prefers-reduced-motion: no-preference) {
-    .lp-reveal {
-        animation: lp-fade-up 240ms ease-out both;
-    }
-
-    .lp-reveal--delay {
-        animation-delay: 80ms;
-    }
-
     .lp-btn {
-        transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-    }
-
-    .lp-btn svg {
-        transition: transform 150ms ease;
-    }
-
-    .lp-btn:hover svg,
-    .lp-btn:focus-visible svg {
-        transform: translateX(2px);
-    }
-
-    .lp-feature {
-        transition: background-color 150ms ease;
-    }
-}
-
-@keyframes lp-fade-up {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-
-    to {
-        opacity: 1;
-        transform: none;
+        transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
     }
 }
 
@@ -646,23 +571,16 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .lp-hero__copy {
-        max-width: none;
-    }
-
-    .lp-features {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .lp-more {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
 @media (max-width: 767.98px) {
-    .lp-features,
+    .lp-rules,
+    .lp-tools,
     .lp-steps {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    .lp-steps {
-        gap: 1.75rem;
     }
 
     .lp-cta-row {
@@ -673,18 +591,13 @@
         width: 100%;
     }
 
-    .lp-privacy {
-        flex-direction: column;
-        gap: 1rem;
-        padding: 1.5rem;
+    .lp-more__item {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.2rem;
     }
 
-    .lp-preview__summary {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 0.85rem;
-    }
-
-    .lp-preview__panels {
-        grid-template-columns: minmax(0, 1fr);
+    .lp-plan__head {
+        flex-direction: column-reverse;
+        gap: 0.75rem;
     }
 }

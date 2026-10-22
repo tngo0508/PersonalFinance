@@ -2,7 +2,7 @@
 @model LoginModel
 
 @{
-    ViewData["Title"] = "Log in";
+    ViewData["Title"] = "Sign in";
 }
 
 <div class="auth-page">
@@ -66,7 +66,7 @@
                         <button type="submit"
                                 class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2 py-2"
                                 name="provider" value="@provider.Name"
-                                title="Log in using your @provider.DisplayName account"
+                                title="Sign in using your @provider.DisplayName account"
                                 aria-label="Sign in with @provider.DisplayName">
                             @if (provider.Name.Equals("Google", StringComparison.OrdinalIgnoreCase))
                             {
