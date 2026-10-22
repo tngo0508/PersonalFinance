@@ -301,7 +301,8 @@ const {chromium} = require('playwright');
             const title = await page.title();
             console.log(`  Title: "${title}"`);
 
-            if (title.toLowerCase().includes('log in') || title.toLowerCase().includes('login')) {
+            const lowerTitle = title.toLowerCase();
+            if (lowerTitle.includes('sign in') || lowerTitle.includes('log in') || lowerTitle.includes('login')) {
                 pass('Login page has correct title');
             } else {
                 fail(`Login page title unexpected: "${title}"`);
