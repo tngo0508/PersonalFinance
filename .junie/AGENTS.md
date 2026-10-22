@@ -45,7 +45,7 @@ All paths are under `PersonalFinance/src/` unless noted.
 
 ## Data rules
 
-- Azure SQL via EF Core Code-First. Never hardcode secrets; never assume a local SQL Server is the target.
+- EF Core Code-First. Production is Azure SQL; local development may use SQL Server in Docker (`compose.yaml`, `npm run db:up`). Use only T-SQL and EF features both support. Never point local tooling (`dotnet ef`, e2e runs, user secrets) at production. Never hardcode secrets.
 - User-owned entities inherit `AuditableEntity` and are **soft-deleted** (`IsDeleted`, `DeletedAt`). Never hard-delete them.
 - Money is `decimal` with explicit precision. Never `float`/`double`.
 - Inspect every generated migration. Never reset, drop or apply production migrations without explicit authorization.

@@ -98,7 +98,7 @@ Web references `PersonalFinance.Data` only for ASP.NET Core Identity and consent
 
 ### Database
 
-The application uses **Azure SQL Database** exclusively, accessed through Entity Framework Core Code-First migrations. There is no SQLite or local database option.
+Production runs on **Azure SQL Database**, accessed through Entity Framework Core Code-First migrations. For development, run SQL Server 2022 locally in Docker (`npm run db:up`; see "Local SQL Server (Docker)" in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)). Both use the same EF Core provider and the same migrations; only the connection string differs.
 
 ### Architecture Decision Records
 
@@ -151,7 +151,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.AppHost
 |---|---|
 | **Framework** | .NET 10, ASP.NET Core MVC & Minimal APIs |
 | **Orchestration** | .NET Aspire (service discovery, telemetry, dashboard) |
-| **Database** | Azure SQL Database (development and production) |
+| **Database** | Azure SQL Database (production), SQL Server 2022 in Docker (local development) |
 | **ORM** | Entity Framework Core 10 (Code-First, provider-specific migrations) |
 | **Authentication** | ASP.NET Core Identity, Google OAuth 2.0, Brevo email verification |
 | **API Client** | Refit (typed HTTP client) + Polly (resilience) |

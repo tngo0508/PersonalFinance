@@ -311,7 +311,7 @@ stateDiagram-v2
 
 | Environment | How you start it | Orchestration | Database | Secrets source |
 |---|---|---|---|---|
-| **Local (Aspire)** | `dotnet run --project PersonalFinance/src/PersonalFinance.AppHost` | .NET Aspire AppHost + dashboard | Dev Azure SQL from `infra/deploy-local-sql.ps1` (`rg-personalfinance-dev`) or a local SQL Server | .NET User Secrets |
+| **Local (Aspire)** | `dotnet run --project PersonalFinance/src/PersonalFinance.AppHost` | .NET Aspire AppHost + dashboard | Local SQL Server in Docker (`npm run db:up`), or the dev Azure SQL database from `infra/deploy-local-sql.ps1` (`rg-personalfinance-dev`) | .NET User Secrets |
 | **Local (Docker)** | Section 6 | `docker network` with two containers | Any SQL Server reachable from Docker, passed via `ConnectionStrings__DefaultConnection` | `-e` environment variables |
 | **Azure (production)** | Push to `main` (Section 3), `deploy.ps1` (Section 4) or `azd up` (Section 5) | Azure Container Apps | Azure SQL Basic tier (~$5/month), or `CUSTOM_CONNECTION_STRING` | GitHub secrets → Container App secrets |
 | **Tests** | `dotnet test` | — | EF Core InMemory provider | — |

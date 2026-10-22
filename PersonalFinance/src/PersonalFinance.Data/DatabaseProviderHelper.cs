@@ -12,7 +12,9 @@ namespace PersonalFinance.Data;
 public enum DatabaseProviderType
 {
     /// <summary>
-    /// Microsoft Azure SQL Database (Serverless Free Tier / General Purpose).
+    /// SQL Server engine through the EF Core SQL Server provider: Microsoft Azure SQL Database in production,
+    /// and local SQL Server in development (the Docker container from <c>compose.yaml</c>, a native instance or LocalDB).
+    /// Both use the same migrations; only the connection string differs.
     /// </summary>
     AzureSql,
 
@@ -32,8 +34,10 @@ public static class DatabaseProviderHelper
     public const string DatabaseProviderEnvVar = "DATABASE_PROVIDER";
 
     /// <summary>
-    /// Default fallback SQL Server connection string for local development when unconfigured.
-    /// In development, sensitive credentials should be configured using dotnet user-secrets.
+    /// Default fallback local SQL Server connection string, used when no connection string is configured.
+    /// It uses Windows authentication (<c>Trusted_Connection</c>) on <c>localhost,1433</c>, so it only works on Windows
+    /// with a native SQL Server instance. Everyone else, including users of the local SQL Server Docker container,
+    /// must set <c>ConnectionStrings:DefaultConnection</c> in dotnet user-secrets.
     /// In production/cloud deployments, connection strings should be provided via environment variables or secret stores.
     /// </summary>
     public const string DefaultSqlConnectionString =
@@ -83,7 +87,7 @@ public static class DatabaseProviderHelper
     }
 
     /// <summary>
-    /// Resolves connection string, falling back to the configured default Azure SQL connection string if empty.
+    /// Resolves connection string, falling back to <see cref="DefaultSqlConnectionString"/> if empty.
     /// </summary>
     public static string ResolveConnectionString(string? connectionString)
     {

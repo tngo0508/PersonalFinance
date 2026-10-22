@@ -143,6 +143,54 @@ against the empty server, the ApiService creates the `PersonalFinance` database,
 starter data; no `dotnet ef` command is needed. To run the e2e preflight against a non-default port, set
 `E2E_DB_PORT` (see "Running the E2E tests locally").
 
+#### Windows verification checklist
+
+Run these in order on Windows (PowerShell) to confirm the whole setup works there. Each step must succeed before the
+next one.
+
+1. **Docker Desktop with WSL2:** Docker Desktop is running with "Use the WSL 2 based engine" turned on, and
+   `docker version` shows both a client and a server.
+2. **`.env`:** copy `.env.example` to `.env` and set `MSSQL_SA_PASSWORD`. If a native SQL Server already listens on
+   1433, set `SQL_HOST_PORT` to a free port such as `14333`.
+3. **`npm run db:up`:** finishes without an error and `docker compose ps` shows the `sqlserver` service as `healthy`.
+4. **User secrets:** run the two `dotnet user-secrets set` commands from step 3 above with your port and password, then
+   check them with `dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService` (and the same for
+   `PersonalFinance.Web`).
+5. **Start the ApiService and Web projects** as in "Running the projects separately" under "Running the E2E tests
+   locally" (set the variables with `$env:NAME = '...'`). The ApiService log shows the migrations applied and the seed
+   data created, and `http://localhost:5200` opens the home page.
+6. **`npm run e2e:preflight`:** passes, with `WEB_URL`, `API_URL` and (for a non-default port) `E2E_DB_PORT` set.
+7. **E2E suites:** `npm run test:e2e` and `npm run test:api` both pass.
+8. **`npm run db:reset`:** stops the container and deletes the volume; the next `npm run db:up` starts from an empty
+   server.
+
+### Alternative: dev Azure SQL database
+
+Use this when you want to test against real Azure SQL. It needs an Azure subscription and the Azure CLI, and the
+Serverless Free Tier database pauses when its monthly free allowance runs out.
+
+`infra/deploy-local-sql.ps1` deploys `infra/local-dev.bicep` (an Azure SQL server and database in
+`rg-personalfinance-dev`), opens the server firewall to your public IP and stores the connection string in user secrets
+for both apps (`-SkipUserSecrets` only prints it):
+
+```powershell
+.\infra\deploy-local-sql.ps1
+```
+
+The connection string has this shape if you set it by hand:
+
+```text
+Server=tcp:<server>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+```
+
+### Alternative: native SQL Server or LocalDB (Windows)
+
+A SQL Server instance or LocalDB installed on Windows works too; put its connection string in user secrets for both apps
+instead of the container's. When no connection string is configured at all, the apps and `dotnet ef` fall back to
+`Server=localhost,1433;Database=PersonalFinance;Trusted_Connection=True;...` (`DatabaseProviderHelper.DefaultSqlConnectionString`).
+That fallback uses Windows authentication, so it only works on Windows with a native SQL Server listening on TCP port
+1433. On macOS, and with the Docker container, always set the connection string.
+
 ### Setting Up User Secrets on a New Machine
 
 When cloning this repository on a new machine, run the following commands to configure development user secrets. Replace each placeholder value with your actual credential.
@@ -150,8 +198,8 @@ When cloning this repository on a new machine, run the following commands to con
 #### PersonalFinance.Web Project
 
 ```bash
-# Azure SQL Database connection string
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.Web
+# Database connection string: the local SQL Server container (see "Local SQL Server (Docker)"; for Azure SQL see the alternatives)
+dotnet user-secrets set 'ConnectionStrings:DefaultConnection' 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False' --project PersonalFinance/src/PersonalFinance.Web
 
 # Brevo transactional email API key
 dotnet user-secrets set "Brevo:ApiKey" "<YOUR_BREVO_API_KEY>" --project PersonalFinance/src/PersonalFinance.Web
@@ -164,8 +212,8 @@ dotnet user-secrets set "Authentication:Google:ClientSecret" "<YOUR_GOOGLE_CLIEN
 #### PersonalFinance.ApiService Project
 
 ```bash
-# Azure SQL Database connection string
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.ApiService
+# Database connection string: the local SQL Server container (see "Local SQL Server (Docker)"; for Azure SQL see the alternatives)
+dotnet user-secrets set 'ConnectionStrings:DefaultConnection' 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False' --project PersonalFinance/src/PersonalFinance.ApiService
 
 # Google Drive API key (default; users can also enter their own key via /GoogleDrive)
 dotnet user-secrets set "GoogleDrive:ApiKey" "<YOUR_GOOGLE_DRIVE_API_KEY>" --project PersonalFinance/src/PersonalFinance.ApiService
@@ -478,15 +526,7 @@ Rather than relying on default boilerplate scaffolding, the `ExternalLogin` flow
 To protect credentials and prevent sensitive database connection strings from being committed to source control or exposed in deployment logs, connection strings are managed securely across development, design-time tooling, and production.
 
 #### 1. Local Development via .NET User Secrets
-For local development against cloud databases or private instances (such as Azure SQL or custom SQL Server), never add passwords to `appsettings.json`. Instead, store the connection string in the .NET User Secrets store for both the Web and ApiService projects:
-
-```bash
-# Set connection string for Web Frontend
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server-name>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.Web
-
-# Set connection string for ApiService Backend
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<server-name>.database.windows.net,1433;Initial Catalog=PersonalFinance;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" --project PersonalFinance/src/PersonalFinance.ApiService
-```
+Never add passwords to `appsettings.json`. Store the connection string in the .NET User Secrets store for both the Web and ApiService projects, whether it points at the local SQL Server container (see "Local SQL Server (Docker)" in this section, with the exact commands), the dev Azure SQL database or a native SQL Server (see the alternatives after it). Never point it at the production database.
 
 *Note: To try the UI without a database, use `InMemory:Dev` as the connection string for both projects (see "Database Providers" in section 5). Data is lost on restart.*
 
@@ -494,11 +534,11 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=tcp:<serve
 Design-time tools (like `dotnet ef migrations add` and `dotnet ef database update`) resolve the database connection string using `DesignTimeDbContextFactoryHelper.ResolveConnectionString()`:
 1. `--connection-string "<value>"` command-line argument passed to `dotnet ef database update`
 2. `ConnectionStrings__DefaultConnection` or `DefaultConnection` environment variable
-3. Fallback default (`Data Source=PersonalFinance.db`)
+3. Fallback default (`DatabaseProviderHelper.DefaultSqlConnectionString`, Windows authentication on `localhost,1433`; it only works on Windows with a native SQL Server)
 
-Example running EF Core migrations against Azure SQL securely:
+Example applying EF Core migrations to the local SQL Server container (see "EF Core CLI Commands" in section 5 for the full set):
 ```bash
-dotnet ef database update --context SqlServerAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string "Server=tcp:...;Database=...;User ID=...;Password=...;"
+dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False'
 ```
 
 #### 3. Production & CI/CD Pipeline Injection
@@ -560,7 +600,7 @@ For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNet
 
 | Provider | When it is used | Migrations |
 |---|---|---|
-| Azure SQL (`AzureSqlAppDbContext`) | Default for every environment. | `PersonalFinance.Data/Migrations/AzureSql` |
+| Azure SQL (`AzureSqlAppDbContext`) | Default for every environment: production Azure SQL and local SQL Server (the Docker container, a native instance or LocalDB). | `PersonalFinance.Data/Migrations/AzureSql` |
 | EF Core InMemory | The connection string starts with `InMemory:` (or is `:memory:`), or `Database:Provider` / the `DATABASE_PROVIDER` environment variable is `InMemory`. Used by the CI e2e job and for trying the UI without a database. | None (schema is created from the model) |
 
 There is no SQLite provider any more. Identity string keys/FKs are explicitly bounded in `AppDbContext.OnModelCreating` (`Id`/`UserId`/`RoleId` = 450, login/token providers = 128) so SQL Server scaffolding emits `nvarchar(450)` / `nvarchar(128)`.
@@ -574,14 +614,19 @@ To ensure authentication cookies and antiforgery tokens remain valid across cont
 - Dedicated migration execution: Run `dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --migrate-only` or set `MIGRATE_ONLY=true` for ACA Jobs or initialization containers.
 
 ### EF Core CLI Commands
-Run all EF Core commands from the repository root. The design-time factory (`AppDbContextFactory.cs`) reads the connection string from `--connection-string`, then `ConnectionStrings__DefaultConnection`, then falls back to a local SQL Server default.
+Run all EF Core commands from the repository root. The design-time factory (`AppDbContextFactory.cs`) reads the connection string from `--connection-string`, then the `ConnectionStrings__DefaultConnection` environment variable, then falls back to the Windows-only default described in "Alternative: native SQL Server or LocalDB (Windows)". It does not read user secrets, so point it at the local SQL Server container (`npm run db:up`) with an environment variable or `--connection-string`. One migration set serves both the container and production Azure SQL.
 
 ```bash
-# Add an Azure SQL migration (inspect the generated file before committing)
+# Point the EF tools at the local container (zsh; in PowerShell: $env:ConnectionStrings__DefaultConnection = '...')
+export ConnectionStrings__DefaultConnection='Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False'
+
+# Add a migration (inspect the generated file before committing)
 dotnet ef migrations add <MigrationName> --context AzureSqlAppDbContext --output-dir Migrations/AzureSql --project PersonalFinance/src/PersonalFinance.Data
 
 # Apply migrations to a database you are authorized to change (never production without explicit approval)
-dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string "Server=...;Database=...;..."
+dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data
+# ...or pass the connection string explicitly instead of the environment variable
+dotnet ef database update --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -- --connection-string '<connection string>'
 
 # Generate an idempotent SQL script for review
 dotnet ef migrations script --idempotent --context AzureSqlAppDbContext --project PersonalFinance/src/PersonalFinance.Data -o azuresql.sql

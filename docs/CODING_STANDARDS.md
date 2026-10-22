@@ -130,10 +130,12 @@ Implement and validate the data layer before building dependent application logi
 
 #### Database Architecture
 
-- The application uses **Microsoft Azure SQL Database**, accessed through Entity Framework Core.
+- Production uses **Microsoft Azure SQL Database**, accessed through Entity Framework Core.
+- Local development may use SQL Server 2022 in Docker (`compose.yaml`, `npm run db:up`); a native SQL Server or LocalDB also works. It uses the same EF Core provider, `AzureSqlAppDbContext` and migrations as production; only the connection string differs.
+- Use only T-SQL and EF Core features that both Azure SQL Database and SQL Server support, so code that works locally also works in production.
+- Never point local tooling (`dotnet ef`, e2e runs, user secrets) at the production database.
 - Use the existing EF Core Code-First or database-first approach. Do not introduce a conflicting database management strategy.
 - Use the existing Azure SQL Database connection configuration and dependency injection setup.
-- Do not assume that local SQL Server, SQL Server Express, LocalDB, or a local database is the target database.
 - Do not create a new database or change the configured Azure SQL server, database name, authentication method, or hosting configuration unless explicitly required.
 - Never hardcode database credentials, passwords, access tokens, or connection strings containing secrets.
 - Store secrets in appropriate configuration providers, such as environment variables, Azure Key Vault, or the existing managed identity configuration.
