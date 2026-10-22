@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Web.Infrastructure;
@@ -58,7 +59,7 @@ public class SavingsGoalsController : Controller
             TargetAmount = targetAmount,
             CurrentAmount = currentAmount,
             Description = description?.Trim(),
-            TargetDate = !string.IsNullOrEmpty(targetDate) ? (DateTime?)DateTime.Parse(targetDate) : null
+            TargetDate = !string.IsNullOrEmpty(targetDate) ? (DateTime?)DateTime.Parse(targetDate, AppCulture.Default) : null
         };
 
         try

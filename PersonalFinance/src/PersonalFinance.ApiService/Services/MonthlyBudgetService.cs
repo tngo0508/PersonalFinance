@@ -522,8 +522,12 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         await EnsureDefaultCategoriesAsync(userId, ct);
 
         var name = request.Name.Trim();
+        // CA1304/CA1311: this comparison runs in SQL Server (EF translates ToLower() to LOWER()), so the current
+        // culture never applies. ToLowerInvariant() and StringComparison overloads don't translate to SQL.
+#pragma warning disable CA1304, CA1311
         var duplicate = await _dbContext.BudgetCategories
             .AnyAsync(c => c.UserId == userId && c.Kind == request.Kind && c.Name.ToLower() == name.ToLower(), ct);
+#pragma warning restore CA1304, CA1311
 
         if (duplicate)
         {
@@ -551,8 +555,12 @@ public class MonthlyBudgetService : IMonthlyBudgetService
                 entry.State = EntityState.Detached;
             }
 
+            // CA1304/CA1311: this comparison runs in SQL Server (EF translates ToLower() to LOWER()), so the current
+            // culture never applies. ToLowerInvariant() and StringComparison overloads don't translate to SQL.
+#pragma warning disable CA1304, CA1311
             var existing = await _dbContext.BudgetCategories
                 .AnyAsync(c => c.UserId == userId && c.Kind == request.Kind && c.Name.ToLower() == name.ToLower(), ct);
+#pragma warning restore CA1304, CA1311
 
             if (existing)
             {
@@ -592,10 +600,14 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         }
 
         var name = request.Name.Trim();
+        // CA1304/CA1311: this comparison runs in SQL Server (EF translates ToLower() to LOWER()), so the current
+        // culture never applies. ToLowerInvariant() and StringComparison overloads don't translate to SQL.
+#pragma warning disable CA1304, CA1311
         var duplicate = await _dbContext.BudgetCategories
             .AnyAsync(
                 c => c.Id != id && c.UserId == userId && c.Kind == category.Kind && c.Name.ToLower() == name.ToLower(),
                 ct);
+#pragma warning restore CA1304, CA1311
 
         if (duplicate)
         {
