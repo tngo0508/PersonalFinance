@@ -69,11 +69,15 @@ public class AdminController : Controller
             var items = await _feedbackApi.ListAsync(status, cancellationToken);
             return View(new AdminFeedbackInboxViewModel { Items = items, Status = status });
         }
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Failed to load the Feedback inbox.");
+            var retryRouteValues = status is null
+                ? new Dictionary<string, string>()
+                : new Dictionary<string, string> { ["status"] = status.Value.ToString() };
             return this.UnavailableView("Feedback inbox", "We couldn't load the Feedback inbox", "Admin",
-                nameof(Feedback));
+                nameof(Feedback), retryRouteValues);
         }
     }
 

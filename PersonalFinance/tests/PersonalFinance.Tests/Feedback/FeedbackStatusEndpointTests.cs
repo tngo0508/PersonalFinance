@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
@@ -25,10 +26,11 @@ public class FeedbackStatusEndpointTests
 
     private static FeedbackApiController CreateController(AppDbContext db)
     {
-        var service = new FeedbackService(db, new SubmitFeedbackRequestValidator(),
-            FeedbackService.CreateRateLimiter());
+        var service = new FeedbackService(db,
+            new RateLimiterService(5, TimeSpan.FromHours(1)));
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "admin-user")], "TestAuthType");
-        return new FeedbackApiController(service, new ChangeFeedbackStatusRequestValidator())
+        return new FeedbackApiController(service, new SubmitFeedbackRequestValidator(),
+            new ChangeFeedbackStatusRequestValidator())
         {
             ControllerContext = new ControllerContext
             {
@@ -78,8 +80,8 @@ public class FeedbackStatusEndpointTests
             new ChangeFeedbackStatusRequest { Status = (FeedbackStatus)99 });
 
         Assert.IsType<BadRequestObjectResult>(result);
-        var item = Assert.Single(await new FeedbackService(db, new SubmitFeedbackRequestValidator(),
-            FeedbackService.CreateRateLimiter()).ListAsync(FeedbackStatus.New));
+        var item = Assert.Single(await new FeedbackService(db,
+            new RateLimiterService(5, TimeSpan.FromHours(1))).ListAsync(FeedbackStatus.New));
         Assert.Equal(id, item.Id);
     }
 

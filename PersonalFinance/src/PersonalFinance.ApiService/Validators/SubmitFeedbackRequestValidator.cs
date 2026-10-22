@@ -6,7 +6,8 @@ using PersonalFinance.Shared.Helpers;
 namespace PersonalFinance.ApiService.Validators;
 
 /// <summary>
-/// Validator for a request to send Feedback.
+/// Validator for a request to send Feedback. <c>NotEmpty</c> also rejects a whitespace-only message, which would be
+/// stored empty once trimmed.
 /// </summary>
 public class SubmitFeedbackRequestValidator : AbstractValidator<SubmitFeedbackRequest>
 {
@@ -14,19 +15,19 @@ public class SubmitFeedbackRequestValidator : AbstractValidator<SubmitFeedbackRe
     {
         RuleFor(x => x.Category)
             .IsInEnum()
-            .WithMessage("Choose a category: Bug, Idea or Other.");
+            .WithMessage(FeedbackMessages.UnknownCategory);
 
         RuleFor(x => x.Message)
             .NotEmpty()
-            .WithMessage("Message is required.")
+            .WithMessage(FeedbackMessages.MessageRequired)
             .MaximumLength(FeedbackLimits.MessageMaxLength)
-            .WithMessage("Message must be 2,000 characters or fewer.");
+            .WithMessage(FeedbackMessages.MessageTooLong);
 
         RuleFor(x => x.PageUrl)
             .MaximumLength(FeedbackLimits.PageUrlMaxLength)
-            .WithMessage("Page must be 500 characters or fewer.")
+            .WithMessage(FeedbackMessages.PageTooLong)
             .Must(AppRelativePath.IsValid)
-            .WithMessage("Page must be a path within the app.")
+            .WithMessage(FeedbackMessages.PageNotAppRelative)
             .When(x => !string.IsNullOrEmpty(x.PageUrl));
     }
 }

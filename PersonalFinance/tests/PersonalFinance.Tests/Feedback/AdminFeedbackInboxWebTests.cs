@@ -77,6 +77,37 @@ public class AdminFeedbackInboxWebTests
     }
 
     [Fact]
+    public async Task Feedback_WhenTheApiFails_RetryKeepsTheStatusFilter()
+    {
+        var (api, _) = ApiProxy.Create<IFeedbackApi>();
+
+        var result = await CreateController(api).Feedback(FeedbackStatus.Archived);
+
+        var model = Assert.IsType<UnavailableStateViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(nameof(FeedbackStatus.Archived), model.RetryRouteValues["status"]);
+    }
+
+    [Fact]
+    public async Task Feedback_WhenTheApiFailsWithoutAFilter_RetryHasNoStatus()
+    {
+        var (api, _) = ApiProxy.Create<IFeedbackApi>();
+
+        var result = await CreateController(api).Feedback();
+
+        var model = Assert.IsType<UnavailableStateViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Empty(model.RetryRouteValues);
+    }
+
+    [Fact]
+    public async Task Feedback_WhenAnUnexpectedErrorOccurs_DoesNotHideIt()
+    {
+        var (api, proxy) = ApiProxy.Create<IFeedbackApi>();
+        proxy.Throws(nameof(IFeedbackApi.ListAsync), new InvalidOperationException("bug"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => CreateController(api).Feedback());
+    }
+
+    [Fact]
     public async Task Feedback_WhenTheRequestIsCancelled_DoesNotSwallowTheCancellation()
     {
         using var cts = new CancellationTokenSource();

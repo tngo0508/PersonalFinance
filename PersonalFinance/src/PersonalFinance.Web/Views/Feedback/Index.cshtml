@@ -1,3 +1,4 @@
+@using System.Globalization
 @using PersonalFinance.Shared.Constants
 @using PersonalFinance.Shared.Enums
 @model FeedbackViewModel
@@ -45,7 +46,7 @@
                     <label asp-for="Message" class="form-label">Message</label>
                     <textarea asp-for="Message" class="form-control" rows="6" maxlength="@FeedbackLimits.MessageMaxLength"
                               aria-describedby="messageHelp"></textarea>
-                    <div id="messageHelp" class="form-text">Up to 2,000 characters.</div>
+                    <div id="messageHelp" class="form-text">Up to @FeedbackLimits.MessageMaxLength.ToString("N0", CultureInfo.InvariantCulture) characters.</div>
                     <span asp-validation-for="Message" class="text-danger"></span>
                 </div>
 

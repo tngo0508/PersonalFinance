@@ -16,4 +16,7 @@ public sealed class UnavailableStateViewModel
 
     /// <summary>Gets the action the Retry link reloads; Index unless the page is another action.</summary>
     public string RetryAction { get; init; } = "Index";
+
+    /// <summary>Gets the route values the Retry link keeps, e.g. the inbox's status filter.</summary>
+    public IDictionary<string, string> RetryRouteValues { get; init; } = new Dictionary<string, string>();
 }

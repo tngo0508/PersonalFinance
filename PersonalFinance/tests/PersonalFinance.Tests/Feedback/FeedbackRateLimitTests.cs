@@ -8,6 +8,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using FeedbackApiController = PersonalFinance.ApiService.Controllers.FeedbackController;
@@ -25,7 +26,8 @@ public class FeedbackRateLimitTests
     private static FeedbackApiController CreateController(IFeedbackService service)
     {
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "TestAuthType");
-        return new FeedbackApiController(service, new ChangeFeedbackStatusRequestValidator())
+        return new FeedbackApiController(service, new SubmitFeedbackRequestValidator(),
+            new ChangeFeedbackStatusRequestValidator())
         {
             ControllerContext = new ControllerContext
             {
@@ -63,7 +65,7 @@ public class FeedbackRateLimitTests
 
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status429TooManyRequests, objectResult.StatusCode);
-        Assert.Contains(SubmitFeedbackResult.RateLimitedMessage, objectResult.Value!.ToString());
+        Assert.Contains(FeedbackMessages.RateLimited, objectResult.Value!.ToString());
 
         await using var check = provider.CreateAsyncScope();
         Assert.Equal(5, await check.ServiceProvider.GetRequiredService<AppDbContext>().Feedback.CountAsync());
@@ -75,7 +77,7 @@ public class FeedbackRateLimitTests
         using var provider = BuildProvider();
 
         var shared = provider.GetRequiredService<IRateLimiterService>();
-        var feedback = provider.GetRequiredKeyedService<IRateLimiterService>(FeedbackService.RateLimiterKey);
+        var feedback = provider.GetRequiredKeyedService<IRateLimiterService>(FeedbackRateLimit.Key);
 
         Assert.NotSame(shared, feedback);
     }

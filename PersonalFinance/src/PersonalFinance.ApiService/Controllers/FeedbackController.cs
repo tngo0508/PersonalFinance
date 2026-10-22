@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
@@ -22,17 +21,21 @@ public class FeedbackController : ControllerBase
 {
     private readonly IValidator<ChangeFeedbackStatusRequest> _changeStatusValidator;
     private readonly IFeedbackService _feedbackService;
+    private readonly IValidator<SubmitFeedbackRequest> _submitValidator;
 
     public FeedbackController(IFeedbackService feedbackService,
+        IValidator<SubmitFeedbackRequest> submitValidator,
         IValidator<ChangeFeedbackStatusRequest> changeStatusValidator)
     {
         _feedbackService = feedbackService;
+        _submitValidator = submitValidator;
         _changeStatusValidator = changeStatusValidator;
     }
 
     /// <summary>
-    /// Sends Feedback as the current Account. It is stored with status New. An Account that has sent
-    /// too much Feedback within the last hour gets 429 and nothing is stored.
+    /// Sends Feedback as the current Account. It is stored with status New. An invalid request gets 400 and does
+    /// not count toward the limit; an Account that has sent too much Feedback within the last hour gets 429 and
+    /// nothing is stored.
     /// </summary>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -42,17 +45,16 @@ public class FeedbackController : ControllerBase
     public async Task<IActionResult> Submit([FromBody] SubmitFeedbackRequest request,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var result = await _feedbackService.SubmitAsync(userId, request, cancellationToken);
-        if (result.RateLimited)
+        var validation = await _submitValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
         {
-            return StatusCode(StatusCodes.Status429TooManyRequests,
-                new { error = SubmitFeedbackResult.RateLimitedMessage });
+            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        if (!result.Succeeded)
+        var result = await _feedbackService.SubmitAsync(User.GetUserId(), request, cancellationToken);
+        if (result.RateLimited)
         {
-            return BadRequest(new { errors = result.Errors });
+            return StatusCode(StatusCodes.Status429TooManyRequests, new { error = FeedbackMessages.RateLimited });
         }
 
         return NoContent();
@@ -72,7 +74,7 @@ public class FeedbackController : ControllerBase
     {
         if (status is not null && !Enum.IsDefined(status.Value))
         {
-            return BadRequest(new { errors = new[] { ChangeFeedbackStatusRequestValidator.UnknownStatusMessage } });
+            return BadRequest(new { errors = new[] { FeedbackMessages.UnknownStatus } });
         }
 
         return Ok(await _feedbackService.ListAsync(status, cancellationToken));

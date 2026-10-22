@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
@@ -60,6 +61,8 @@ public class FeedbackWebControllerTests
 
     [Theory]
     [InlineData("/Budget", "/Budget")]
+    [InlineData("/Budget?month=10", "/Budget?month=10")]
+    [InlineData("/Feedback/Send", null)]
     [InlineData("https://evil.example/phish", null)]
     [InlineData("//evil.example", null)]
     [InlineData(null, null)]
@@ -135,7 +138,7 @@ public class FeedbackWebControllerTests
         Assert.Equal(nameof(FeedbackController.Index), view.ViewName);
         Assert.Same(model, view.Model);
         var error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
-        Assert.Equal(FeedbackController.RateLimitedMessage, error.ErrorMessage);
+        Assert.Equal(FeedbackMessages.RateLimited, error.ErrorMessage);
         Assert.Null(controller.TempData[FeedbackController.SentKey]);
     }
 
@@ -155,9 +158,29 @@ public class FeedbackWebControllerTests
         Assert.False(string.IsNullOrWhiteSpace(error.ErrorMessage));
     }
 
+    [Fact]
+    public async Task Send_WhenAnUnexpectedErrorOccurs_DoesNotHideIt()
+    {
+        var controller = CreateController(new FakeFeedbackApi { Failure = new InvalidOperationException("bug") });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.Send(ValidModel()));
+    }
+
+    [Fact]
+    public async Task Send_WhenTheRequestIsCancelled_DoesNotSwallowTheCancellation()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        var controller = CreateController(new FakeFeedbackApi { Failure = new TaskCanceledException() });
+        controller.HttpContext.RequestAborted = cts.Token;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Send(ValidModel()));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
+    [InlineData("\t\r\n ")]
     public void ViewModel_RejectsAnEmptyMessage(string message)
     {
         var model = ValidModel();
@@ -172,7 +195,8 @@ public class FeedbackWebControllerTests
         var model = ValidModel();
         model.Message = new string('a', 2001);
 
-        Assert.Contains(Validate(model), r => r.MemberNames.Contains(nameof(FeedbackViewModel.Message)));
+        var error = Assert.Single(Validate(model), r => r.MemberNames.Contains(nameof(FeedbackViewModel.Message)));
+        Assert.Equal("Message must be 2,000 characters or fewer.", error.ErrorMessage);
     }
 
     [Fact]

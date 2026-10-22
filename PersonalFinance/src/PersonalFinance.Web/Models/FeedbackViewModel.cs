@@ -9,11 +9,11 @@ namespace PersonalFinance.Web.Models;
 /// </summary>
 public class FeedbackViewModel
 {
-    [EnumDataType(typeof(FeedbackCategory), ErrorMessage = "Choose a category: Bug, Idea or Other.")]
+    [EnumDataType(typeof(FeedbackCategory), ErrorMessage = FeedbackMessages.UnknownCategory)]
     public FeedbackCategory Category { get; set; } = FeedbackCategory.Bug;
 
-    [Required(ErrorMessage = "Message is required.")]
-    [StringLength(FeedbackLimits.MessageMaxLength, ErrorMessage = "Message must be 2,000 characters or fewer.")]
+    [Required(ErrorMessage = FeedbackMessages.MessageRequired)]
+    [StringLength(FeedbackLimits.MessageMaxLength, ErrorMessage = FeedbackMessages.MessageTooLongFormat)]
     public string Message { get; set; } = string.Empty;
 
     /// <summary>

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Enums;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
@@ -24,7 +24,7 @@ public class FeedbackInboxServiceTests
     }
 
     private static FeedbackService CreateService(AppDbContext db) =>
-        new(db, new SubmitFeedbackRequestValidator(), FeedbackService.CreateRateLimiter());
+        new(db, new RateLimiterService(5, TimeSpan.FromHours(1)));
 
     private static FeedbackEntity Feedback(string message, DateTime createdAt, string userId = "user-1") => new()
     {

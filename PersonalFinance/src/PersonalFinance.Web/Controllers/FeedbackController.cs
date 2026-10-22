@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
-using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models;
 
@@ -26,12 +25,6 @@ public class FeedbackController : Controller
     /// </summary>
     public const string SentMessage = "Thanks! Your feedback was sent.";
 
-    /// <summary>
-    /// The message shown when the Account has sent too much Feedback too quickly (ApiService answered 429).
-    /// </summary>
-    public const string RateLimitedMessage =
-        "You've sent a lot of feedback recently. Please try again later; your message is still here.";
-
     private readonly IFeedbackApi _feedbackApi;
     private readonly ILogger<FeedbackController> _logger;
 
@@ -43,13 +36,12 @@ public class FeedbackController : Controller
 
     /// <summary>
     /// Shows the Send feedback form. <paramref name="from"/> is the page the Account came from; it is kept only
-    /// when it is an app-relative path.
+    /// when <see cref="FeedbackSourcePage.Accept"/> accepts it (app-relative, bounded, not this page).
     /// </summary>
     [HttpGet]
     public IActionResult Index(string? from = null)
     {
-        var pageUrl = AppRelativePath.IsValid(from) && from!.Length <= FeedbackLimits.PageUrlMaxLength ? from : null;
-        return View(new FeedbackViewModel { PageUrl = pageUrl });
+        return View(new FeedbackViewModel { PageUrl = FeedbackSourcePage.Accept(from) });
     }
 
     /// <summary>
@@ -77,10 +69,11 @@ public class FeedbackController : Controller
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
         {
-            ModelState.AddModelError(string.Empty, RateLimitedMessage);
+            ModelState.AddModelError(string.Empty, FeedbackMessages.RateLimited);
             return View(nameof(Index), model);
         }
-        catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
+        catch (Exception ex) when ((ex is Refit.ApiException or HttpRequestException or TaskCanceledException)
+                                   && !HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Sending feedback failed.");
             ModelState.AddModelError(string.Empty,

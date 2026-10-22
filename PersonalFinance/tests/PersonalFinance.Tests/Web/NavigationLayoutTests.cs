@@ -114,6 +114,35 @@ public class NavigationLayoutTests
             "The About page should only show the Feedback link to signed-in Accounts.");
     }
 
+    [Theory]
+    [InlineData("Shared", "_Layout.cshtml")]
+    [InlineData("Home", "About.cshtml")]
+    public void FeedbackLinks_CaptureTheSourcePageThroughFeedbackSourcePage(string folder, string fileName)
+    {
+        var view = ReadView(folder, fileName);
+
+        Assert.DoesNotContain("asp-route-from=\"@Context.Request.Path\"", view);
+        Assert.Contains("asp-route-from=\"@FeedbackSourcePage.From(Context.Request)\"", view);
+    }
+
+    [Fact]
+    public void AboutPage_DescribesNetWorthAsTheGlossaryDefinesIt()
+    {
+        var about = ReadView("Home", "About.cshtml");
+
+        Assert.DoesNotContain("assets and liabilities", about);
+        Assert.Contains("financial independence", about[about.IndexOf("<strong>Net Worth</strong>", StringComparison.Ordinal)..]);
+    }
+
+    [Fact]
+    public void FeedbackForm_HelpTextUsesTheSharedMessageLimit()
+    {
+        var form = ReadView("Feedback", "Index.cshtml");
+
+        Assert.DoesNotContain("2,000", form);
+        Assert.Contains("FeedbackLimits.MessageMaxLength", form[form.IndexOf("id=\"messageHelp\"", StringComparison.Ordinal)..]);
+    }
+
     [Fact]
     public void LayoutFooter_LinksToTheAboutPage()
     {

@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Authorization
 @using PersonalFinance.Shared.Constants
+@using PersonalFinance.Web.Infrastructure
 <!DOCTYPE html>
 @inject IAntiforgery Antiforgery
 @inject IAuthorizationService AuthorizationService
@@ -123,10 +124,11 @@
                     <span class="sidebar-link-text">Google Drive</span>
                 </a>
                 <a class="sidebar-link @(currentController == "Feedback" ? "active" : "")"
-                   asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@Context.Request.Path">
+                   asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">
                     <span class="sidebar-link-icon"><i data-lucide="message-square"></i></span>
                     <span class="sidebar-link-text">Send feedback</span>
-                </a>            </div>
+                </a>
+            </div>
 
             @if (isAdmin)
             {
@@ -224,8 +226,9 @@
                         <li><a asp-area="" asp-controller="Legal" asp-action="Contact">Contact</a></li>
                         @if (isSignedIn)
                         {
-                            <li><a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@Context.Request.Path">Send feedback</a></li>
-                        }                    </ul>
+                            <li><a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">Send feedback</a></li>
+                        }
+                    </ul>
                 </div>
             </div>
         </div>

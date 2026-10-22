@@ -1,4 +1,5 @@
 @using PersonalFinance.Shared.Constants
+@using PersonalFinance.Web.Infrastructure
 @{
     ViewData["Title"] = "About";
 }
@@ -24,7 +25,7 @@
     <section class="legal-section">
         <h2>Core features</h2>
         <ul>
-            <li><strong>Net Worth</strong>: track your assets and liabilities over time.</li>
+            <li><strong>Net Worth</strong>: enter your starting balance, income, spending and savings to project when you can reach financial independence.</li>
             <li><strong>Budget Planner</strong>: set a monthly budget by category.</li>
             <li><strong>Budget Tracker</strong>: record what you spend and compare it with your plan.</li>
             <li><strong>Savings Goals</strong>: set targets and follow your progress.</li>
@@ -37,7 +38,7 @@
     {
         <section class="legal-section">
             <h2>Tell us what you think</h2>
-            <p>Found a bug or have an idea? <a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@Context.Request.Path">Send feedback</a>.</p>
+            <p>Found a bug or have an idea? <a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">Send feedback</a>.</p>
         </section>
     }
 

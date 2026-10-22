@@ -9,7 +9,8 @@ namespace PersonalFinance.ApiService.Services;
 public interface IFeedbackService
 {
     /// <summary>
-    /// Validates and stores Feedback for <paramref name="userId"/> with status New.
+    /// Stores Feedback for <paramref name="userId"/> with status New, unless the Account has hit the submission
+    /// limit. The caller validates <paramref name="request"/> first, so invalid requests never count toward it.
     /// </summary>
     Task<SubmitFeedbackResult> SubmitAsync(string userId, SubmitFeedbackRequest request,
         CancellationToken cancellationToken = default);

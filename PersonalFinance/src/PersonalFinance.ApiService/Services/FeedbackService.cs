@@ -1,4 +1,3 @@
-using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
@@ -13,51 +12,19 @@ namespace PersonalFinance.ApiService.Services;
 /// </summary>
 public class FeedbackService : IFeedbackService
 {
-    /// <summary>
-    /// DI key of the Feedback rate limiter, kept separate from the shared <see cref="IRateLimiterService"/> used by
-    /// other features so their limits are unchanged.
-    /// </summary>
-    public const string RateLimiterKey = "Feedback";
-
-    /// <summary>
-    /// Most Feedback entries an Account may send within <see cref="RateLimitWindow"/>.
-    /// </summary>
-    public const int MaxSubmissionsPerWindow = 5;
-
-    /// <summary>
-    /// The sliding window for <see cref="MaxSubmissionsPerWindow"/>.
-    /// </summary>
-    public static readonly TimeSpan RateLimitWindow = TimeSpan.FromHours(1);
-
     private readonly AppDbContext _db;
     private readonly IRateLimiterService _rateLimiter;
-    private readonly IValidator<SubmitFeedbackRequest> _validator;
 
-    public FeedbackService(AppDbContext db, IValidator<SubmitFeedbackRequest> validator,
-        [FromKeyedServices(RateLimiterKey)] IRateLimiterService rateLimiter)
+    public FeedbackService(AppDbContext db, [FromKeyedServices(FeedbackRateLimit.Key)] IRateLimiterService rateLimiter)
     {
         _db = db;
-        _validator = validator;
         _rateLimiter = rateLimiter;
     }
-
-    /// <summary>
-    /// Creates the rate limiter for Feedback: <see cref="MaxSubmissionsPerWindow"/> per Account per
-    /// <see cref="RateLimitWindow"/>.
-    /// </summary>
-    public static IRateLimiterService CreateRateLimiter() =>
-        new RateLimiterService(MaxSubmissionsPerWindow, RateLimitWindow);
 
     /// <inheritdoc />
     public async Task<SubmitFeedbackResult> SubmitAsync(string userId, SubmitFeedbackRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validation = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid)
-        {
-            return SubmitFeedbackResult.Invalid(validation.Errors.Select(e => e.ErrorMessage).ToList());
-        }
-
         if (!_rateLimiter.TryAllow(userId))
         {
             return SubmitFeedbackResult.TooManyRequests();

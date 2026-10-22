@@ -83,22 +83,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A "Not financial advice" section links to the Disclaimer.
 
 - **Send Feedback**: Signed-in Accounts can send Feedback (Bug, Idea or Other, up to 2,000 characters) from a "Send feedback" link in the sidebar, the footer and the About page.
-  - The page the Account came from is captured automatically (app-relative paths only) and shown on the form.
+  - The page the Account came from is captured automatically and shown on the form: its app-relative path and query string, at most 500 characters, and never the Send feedback page itself.
   - Feedback is stored against the Account with status New; it is user-owned and soft-deleted like other records.
   - New `Feedback` table (migration `AddFeedback`) with an index on status and created date for the Admin inbox.
-  - `IFeedbackService` validates the request with `SubmitFeedbackRequestValidator`; `POST /api/feedback` requires a signed-in Account.
+  - `POST /api/feedback` requires a signed-in Account and validates the request with `SubmitFeedbackRequestValidator` (an empty or whitespace-only message is rejected) before `IFeedbackService` stores it. Feedback messages and limits have one source each (`FeedbackMessages`, `FeedbackLimits`).
   - The form keeps the user's input on validation errors, uses an anti-forgery token and Post/Redirect/Get, and shows a friendly message when ApiService fails.
 
 - **Admin Feedback Inbox**: Admins read all Feedback in a Feedback inbox linked from the Admin Dashboard, newest first.
   - Each item shows its Category, status, message, the Account email, the page it was sent from and the date (UTC).
   - `GET /api/feedback` and the `Admin/Feedback` page both require the Admin Policy; soft-deleted Feedback is left out.
   - One `AsNoTracking` query joins the Account email, orders by date then id, and is checked against Azure SQL translation.
-  - An empty inbox says "No Feedback yet"; a failed load shows the Unavailable State, whose Retry now reloads the same page.
+  - An empty inbox says so for the chosen filter (for example "No open Feedback"); a failed load shows the Unavailable State, whose Retry now reloads the same page and filter.
 
 - **Feedback Rate Limit**: An Account can send at most 5 Feedback entries per hour; the 6th gets a friendly "try again later" message instead of being stored.
   - `POST /api/feedback` returns 429 and stores nothing; the limit is per Account, so other Accounts are unaffected.
-  - Feedback has its own keyed `RateLimiterService` instance (5 per sliding hour), so the AI Assistant's shared limiter keeps its limits.
-  - Only valid submissions count toward the limit, and the Web form keeps the user's input when it is reached.
+  - Feedback has its own keyed `RateLimiterService` instance (5 per sliding hour, set in `FeedbackRateLimit`), so the AI Assistant's shared limiter keeps its limits.
+  - Only valid submissions count toward the limit (the endpoint validates before the service is called), and the Web form keeps the user's input when it is reached.
 
 - **Feedback Status Triage**: Admins mark Feedback as New, Reviewed or Archived from the Feedback inbox and filter the inbox by status.
   - The inbox opens on "Open" (New and Reviewed); Archived Feedback is hidden unless the Archived filter is chosen.
