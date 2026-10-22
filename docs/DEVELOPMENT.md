@@ -631,7 +631,7 @@ To ensure authentication cookies and antiforgery tokens remain valid across cont
 ### Automated Migrations & Cold-Start Resilience
 - Pending migrations and starter sample data are automatically applied on startup via `app.MigrateAndSeedDatabaseAsync()` using the active provider's migration set.
 - Built-in retry logic (5 retries with exponential backoff) handles Azure SQL Serverless auto-pause wake-up latencies (~10-30s cold starts) without crashing container startup.
-- Dedicated migration execution: Run `dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --migrate-only` or set `MIGRATE_ONLY=true` for ACA Jobs or initialization containers.
+- Dedicated migration execution: Run `dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --migrate-only` or set `MIGRATE_ONLY=true` for ACA Jobs or initialization containers. It exits 0 on success and non-zero if startup or migration fails.
 
 ### EF Core CLI Commands
 Run all EF Core commands from the repository root. The design-time factory (`AppDbContextFactory.cs`) reads the connection string from `--connection-string`, then the `ConnectionStrings__DefaultConnection` environment variable, then falls back to the Windows-only default described in "Alternative: native SQL Server or LocalDB (Windows)". It does not read user secrets, so point it at the local SQL Server container (`npm run db:up`) with an environment variable or `--connection-string`. One migration set serves both the container and production Azure SQL.

@@ -110,6 +110,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Startup Failure Exit Code**: The ApiService and Web app now exit with code 1 when startup fails, so a failed `--migrate-only` run no longer looks successful (#108).
+  - The fatal "Application terminated unexpectedly." log line and the log flush are unchanged.
+  - A clean shutdown, a successful `--migrate-only` run and EF design-time tooling (`dotnet ef`, which aborts the host) still exit 0; a cancellation counts as shutdown only after the host has started stopping.
+  - The `sql-server-migrations` CI job now fails on the exit code and checks the `__EFMigrationsHistory` row count (the second run must not change it) instead of searching for exact log lines.
+
 - **Stale DbContext Reference in the Development Guide**: The `dotnet ef database update` example named `SqlServerAppDbContext`, which does not exist; it now uses `AzureSqlAppDbContext`.
 
 - **Sign In and Register Error Messages**: Field errors such as "The Email field is required." now appear under each field with a red border; they were always hidden because ASP.NET marks errors with `field-validation-error`, not Bootstrap's `.is-invalid`.

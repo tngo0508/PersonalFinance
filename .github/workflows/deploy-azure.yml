@@ -360,7 +360,7 @@ jobs:
           set -a; . ./.env; set +a
           export ConnectionStrings__DefaultConnection="Server=localhost,${SQL_HOST_PORT};Database=PersonalFinance;User ID=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False"
 
-          # Program.cs logs startup failures and still exits 0, so check the log as well as the exit code.
+          # A failed run exits non-zero; the grep only surfaces the key log lines for diagnostics.
           migrate() {
             local run="$1" log=".migrate-$1.log" status=0
             echo "Migration run ${run} (logs -> ${log})"
@@ -372,21 +372,28 @@ jobs:
               echo "::error::Migration run ${run} exited with code ${status}."
               return 1
             fi
-            if ! grep -q "Database migration task finished (--migrate-only); exiting." "${log}"; then
-              echo "::error::Migration run ${run} did not finish migrating and seeding."
-              return 1
-            fi
+          }
+
+          # Rows in __EFMigrationsHistory: the database's own record of applied migrations.
+          applied_migrations() {
+            docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd \
+              -S localhost -U sa -P "${MSSQL_SA_PASSWORD}" -C -b -h -1 -W \
+              -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM PersonalFinance.dbo.__EFMigrationsHistory" | tr -d '[:space:]'
           }
 
           migrate 1
-          if ! grep -qE "Applying [0-9]+ pending migration" .migrate-1.log; then
+          first=$(applied_migrations)
+          echo "Migrations recorded after run 1: ${first}"
+          if [ -z "${first}" ] || [ "${first}" -eq 0 ]; then
             echo "::error::The first run applied no migrations to the empty database."
             exit 1
           fi
 
           migrate 2
-          if ! grep -q "Database schema is up to date (no pending migrations)." .migrate-2.log; then
-            echo "::error::The second run applied migrations again; they are not idempotent."
+          second=$(applied_migrations)
+          echo "Migrations recorded after run 2: ${second}"
+          if [ "${second}" != "${first}" ]; then
+            echo "::error::The second run applied migrations again (${first} -> ${second}); they are not idempotent."
             exit 1
           fi
           echo "All migrations applied on SQL Server 2022, and a second run applied nothing."

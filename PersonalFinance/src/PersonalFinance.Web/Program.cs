@@ -17,6 +17,9 @@ using Serilog;
 // Console logging until the host is built, so startup and DI failures are captured.
 Log.Logger = LoggingExtensions.CreateBootstrapLogger();
 
+// Captured once the host is built, so a cancellation during shutdown is not reported as a crash.
+var applicationStopping = CancellationToken.None;
+
 try
 {
     Log.Information("Starting {AppName} (v{Version})...", AppVersion.ApplicationName, AppVersion.Current);
@@ -127,6 +130,7 @@ try
     builder.Services.AddProblemDetails();
 
     var app = builder.Build();
+    applicationStopping = app.Lifetime.ApplicationStopping;
 
     app.UseSerilogRequestLogging();
     app.MapDefaultEndpoints();
@@ -153,10 +157,17 @@ try
     app.MapRazorPages();
 
     await app.MigrateAndRunAsync(args);
+    return StartupExit.Success;
+}
+catch (Exception ex) when (StartupExit.IsShutdown(ex, applicationStopping))
+{
+    return StartupExit.Success;
 }
 catch (Exception ex)
 {
+    // Non-zero exit so --migrate-only jobs, containers and CI see the failure.
     Log.Fatal(ex, "Application terminated unexpectedly.");
+    return StartupExit.Failure;
 }
 finally
 {
