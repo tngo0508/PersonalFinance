@@ -114,6 +114,11 @@ SQL Server refuses to start with a weak password. It must be **at least 8 charac
 Change `SQL_HOST_PORT` if something else on your machine already listens on 1433 (for example a native SQL Server on
 Windows).
 
+SQL Server only reads `MSSQL_SA_PASSWORD` the first time it creates the data volume, and the password is then stored in
+the volume. If you change it in `.env` later, the old password stays in effect: `db:up` reports the container as
+unhealthy and the apps fail with `Login failed for user 'sa'`. Run `npm run db:reset` (this deletes the local data),
+then `npm run db:up`.
+
 #### 2. Start, stop and reset the container
 
 ```bash
@@ -125,6 +130,9 @@ npm run db:reset   # stop the container and delete the volume (the next db:up st
 The scripts only call `docker compose`, so they behave the same in PowerShell, cmd and zsh. If `MSSQL_SA_PASSWORD` is
 missing, `db:up` stops with a message saying so.
 
+The container has no restart policy, so it doesn't come back on its own after a reboot or after Docker Desktop restarts.
+Run `npm run db:up` again before starting the app.
+
 #### 3. Point both apps at the container
 
 Put the same connection string in user secrets for the ApiService and the Web project. Replace `1433` with your
@@ -135,6 +143,18 @@ both PowerShell and zsh.
 dotnet user-secrets set 'ConnectionStrings:DefaultConnection' 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False' --project PersonalFinance/src/PersonalFinance.ApiService
 dotnet user-secrets set 'ConnectionStrings:DefaultConnection' 'Server=localhost,1433;Database=PersonalFinance;User ID=sa;Password=<password>;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False' --project PersonalFinance/src/PersonalFinance.Web
 ```
+
+**Switching from the dev Azure SQL database:** `dotnet user-secrets set` overwrites the existing value, so first copy
+the Azure connection string to a key the apps don't read, such as `ConnectionStrings:AzureDevConnection`. Do this for
+both projects:
+
+```bash
+dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService
+dotnet user-secrets set 'ConnectionStrings:AzureDevConnection' '<the current DefaultConnection value>' --project PersonalFinance/src/PersonalFinance.ApiService
+```
+
+To switch back later, set `ConnectionStrings:DefaultConnection` to the saved `AzureDevConnection` value. The local
+database and the Azure database are separate: accounts and data don't carry over between them.
 
 #### 4. Start the app
 
@@ -818,6 +838,16 @@ A local account was previously registered with the same email address via passwo
 **Resolution:**
 1. Navigate to `/Identity/Account/ResendEmailConfirmation` and confirm the local account via the confirmation email.
 2. Once the local email is confirmed, signing in with Google will automatically link the provider to the account.
+
+### 9. Dev Azure SQL Database Paused: `reached the monthly free amount allowance`
+**Symptom:**
+The ApiService fails at startup (or every request fails) with *"This database has reached the monthly free amount allowance for the month of ... and is paused for the remainder of the month."*
+**Cause:**
+`ConnectionStrings:DefaultConnection` in user secrets still points at the dev Azure SQL database (Serverless Free Tier), which Azure pauses once its monthly free allowance runs out. It resumes at 12:00 AM UTC on the first of the next month.
+**Resolution:**
+1. Check where the apps point: `dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService`. A `*.database.windows.net` server is the Azure database.
+2. Switch to the local container: follow "Local SQL Server (Docker)" in section 3, including the note on saving the Azure connection string first.
+3. Alternatively, choose "Continue using database with additional charges" on the database's Compute and Storage tab in the Azure Portal. This resumes the database immediately and bills you for the extra usage.
 
 ---
 
