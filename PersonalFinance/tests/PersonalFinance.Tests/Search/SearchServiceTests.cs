@@ -460,21 +460,17 @@ public class SearchServiceTests
     [Fact]
     public void AllSearchQueries_TranslateToAzureSql()
     {
-        // Translate only; no database is contacted. Same approach as the Azure SQL migration-script tests.
-        var options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
-            .UseSqlServer("Server=localhost;Database=PersonalFinance_SearchCheck;Trusted_Connection=True;TrustServerCertificate=True;")
-            .Options;
-        using var db = new AzureSqlAppDbContext(options);
+        using var db = AzureSqlTranslation.CreateContext();
         var service = CreateService(db);
         var pattern = SearchService.ToContainsPattern("50%_[x]")!;
 
         var queries = new[]
         {
-            service.SheetTransactionsQuery(UserId, pattern).ToQueryString(),
-            service.TrackerTransactionsQuery(UserId, pattern).ToQueryString(),
-            service.TrackerCategoriesQuery(UserId, pattern).ToQueryString(),
-            service.SheetCategoriesQuery(UserId, pattern).ToQueryString(),
-            service.SavingsGoalsQuery(UserId, pattern).ToQueryString()
+            AzureSqlTranslation.AssertTranslates(service.SheetTransactionsQuery(UserId, pattern)),
+            AzureSqlTranslation.AssertTranslates(service.TrackerTransactionsQuery(UserId, pattern)),
+            AzureSqlTranslation.AssertTranslates(service.TrackerCategoriesQuery(UserId, pattern)),
+            AzureSqlTranslation.AssertTranslates(service.SheetCategoriesQuery(UserId, pattern)),
+            AzureSqlTranslation.AssertTranslates(service.SavingsGoalsQuery(UserId, pattern))
         };
 
         Assert.All(queries, sql =>

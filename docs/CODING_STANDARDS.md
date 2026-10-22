@@ -378,6 +378,7 @@ Do not consider a feature complete merely because the code compiles.
 
 - Add or update unit tests for business rules, calculations, handlers, and validation.
 - Add integration tests for important database operations, endpoint behavior, and persistence where appropriate.
+- A new or changed EF Core query that uses string, date, or collation-dependent operations has an Azure SQL translation guard: build it through the service's `IQueryable`-returning method and pass it to `AzureSqlTranslation.AssertTranslates` (`tests/PersonalFinance.Tests/TestSupport/`). The InMemory provider runs untranslatable queries in memory, so service tests alone pass queries that fail on Azure SQL.
 - Test boundary conditions, invalid inputs, missing records, duplicate submissions, and relevant failure scenarios.
 - For financial calculations, test representative values, zero values, negative values where permitted, rounding behavior, and edge cases.
 - Follow the existing test framework and conventions.
