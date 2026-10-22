@@ -297,7 +297,11 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("--migrate-only", job);
         Assert.Contains("migrate 1", job);
         Assert.Contains("migrate 2", job);
-        Assert.Contains("Database schema is up to date (no pending migrations).", job);
+
+        // Success is the exit code, and "applied nothing" is the migration history row count, not log wording (#108)
+        Assert.Contains("exited with code ${status}", job);
+        Assert.Contains("__EFMigrationsHistory", job);
+        Assert.DoesNotContain("grep -q", job);
 
         // Diagnostics on failure, and the container is always stopped
         Assert.Matches(@"if: failure\(\)\s+run: \|[\s\S]*docker compose logs", job);
