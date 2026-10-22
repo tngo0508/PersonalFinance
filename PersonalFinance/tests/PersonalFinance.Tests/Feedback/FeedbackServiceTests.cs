@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
@@ -23,7 +24,79 @@ public class FeedbackServiceTests
     }
 
     private static IFeedbackService CreateService(AppDbContext db) =>
-        new FeedbackService(db, new SubmitFeedbackRequestValidator());
+        CreateService(db, FeedbackService.CreateRateLimiter());
+
+    private static IFeedbackService CreateService(AppDbContext db, IRateLimiterService rateLimiter) =>
+        new FeedbackService(db, new SubmitFeedbackRequestValidator(), rateLimiter);
+
+    private static SubmitFeedbackRequest ValidRequest() =>
+        new() { Category = FeedbackCategory.Idea, Message = "Add CSV export." };
+
+    [Fact]
+    public async Task Submit_TheSixthWithinAnHour_IsRateLimited_AndNotStored()
+    {
+        await using var db = CreateContext();
+        var service = CreateService(db);
+
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.True((await service.SubmitAsync(UserId, ValidRequest())).Succeeded);
+        }
+
+        var sixth = await service.SubmitAsync(UserId, ValidRequest());
+
+        Assert.False(sixth.Succeeded);
+        Assert.True(sixth.RateLimited);
+        Assert.Contains(SubmitFeedbackResult.RateLimitedMessage, sixth.Errors);
+        Assert.Equal(5, await db.Feedback.CountAsync());
+    }
+
+    [Fact]
+    public async Task Submit_AnotherAccount_IsNotAffectedByTheLimit()
+    {
+        await using var db = CreateContext();
+        var service = CreateService(db);
+        for (var i = 0; i < 5; i++)
+        {
+            await service.SubmitAsync(UserId, ValidRequest());
+        }
+
+        var other = await service.SubmitAsync("other-user", ValidRequest());
+
+        Assert.True(other.Succeeded);
+        Assert.Equal(6, await db.Feedback.CountAsync());
+    }
+
+    [Fact]
+    public async Task Submit_InvalidFeedback_DoesNotUseUpTheLimit()
+    {
+        await using var db = CreateContext();
+        var service = CreateService(db);
+        for (var i = 0; i < 5; i++)
+        {
+            await service.SubmitAsync(UserId, new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "" });
+        }
+
+        var result = await service.SubmitAsync(UserId, ValidRequest());
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Submit_WhenTheWindowHasPassed_IsAcceptedAgain()
+    {
+        await using var db = CreateContext();
+        var service = CreateService(db, new RateLimiterService(5, TimeSpan.FromMilliseconds(50)));
+        for (var i = 0; i < 5; i++)
+        {
+            await service.SubmitAsync(UserId, ValidRequest());
+        }
+
+        await Task.Delay(120);
+        var result = await service.SubmitAsync(UserId, ValidRequest());
+
+        Assert.True(result.Succeeded);
+    }
 
     [Fact]
     public async Task Submit_StoresFeedbackForTheAccount_WithStatusNew()

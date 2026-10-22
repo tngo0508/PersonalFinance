@@ -89,6 +89,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `IFeedbackService` validates the request with `SubmitFeedbackRequestValidator`; `POST /api/feedback` requires a signed-in Account.
   - The form keeps the user's input on validation errors, uses an anti-forgery token and Post/Redirect/Get, and shows a friendly message when ApiService fails.
 
+- **Feedback Rate Limit**: An Account can send at most 5 Feedback entries per hour; the 6th gets a friendly "try again later" message instead of being stored.
+  - `POST /api/feedback` returns 429 and stores nothing; the limit is per Account, so other Accounts are unaffected.
+  - Feedback has its own keyed `RateLimiterService` instance (5 per sliding hour), so the AI Assistant's shared limiter keeps its limits.
+  - Only valid submissions count toward the limit, and the Web form keeps the user's input when it is reached.
+
 - **Local SQL Server in Docker**: Developers can run the whole app against a local SQL Server 2022 container that uses the same provider and migrations as production Azure SQL.
   - `compose.yaml` at the repo root runs SQL Server 2022 Developer edition (`platform: linux/amd64`, so it runs under Rosetta on Apple Silicon) with a named data volume and a `sqlcmd` healthcheck; it stops with a clear message when `MSSQL_SA_PASSWORD` is missing.
   - `.env.example` lists `MSSQL_SA_PASSWORD` and `SQL_HOST_PORT`; the real `.env` stays gitignored.

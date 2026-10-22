@@ -24,17 +24,25 @@ public class FeedbackController : ControllerBase
     }
 
     /// <summary>
-    /// Sends Feedback as the current Account. It is stored with status New.
+    /// Sends Feedback as the current Account. It is stored with status New. An Account that has sent
+    /// too much Feedback within the last hour gets 429 and nothing is stored.
     /// </summary>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Submit([FromBody] SubmitFeedbackRequest request,
         CancellationToken cancellationToken = default)
     {
         var userId = User.GetUserId();
         var result = await _feedbackService.SubmitAsync(userId, request, cancellationToken);
+        if (result.RateLimited)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests,
+                new { error = SubmitFeedbackResult.RateLimitedMessage });
+        }
+
         if (!result.Succeeded)
         {
             return BadRequest(new { errors = result.Errors });

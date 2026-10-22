@@ -120,6 +120,25 @@ public class FeedbackWebControllerTests
         Assert.Equal("Message must be 2,000 characters or fewer.", error.ErrorMessage);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("""{"error":"You've sent a lot of feedback recently. Please try again later."}""")]
+    public async Task Send_WhenRateLimited_ShowsATryAgainLaterMessageAndKeepsTheInput(string content)
+    {
+        var failure = await CreateApiExceptionAsync(HttpStatusCode.TooManyRequests, content);
+        var controller = CreateController(new FakeFeedbackApi { Failure = failure });
+        var model = ValidModel();
+
+        var result = await controller.Send(model);
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Equal(nameof(FeedbackController.Index), view.ViewName);
+        Assert.Same(model, view.Model);
+        var error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
+        Assert.Equal(FeedbackController.RateLimitedMessage, error.ErrorMessage);
+        Assert.Null(controller.TempData[FeedbackController.SentKey]);
+    }
+
     [Fact]
     public async Task Send_WhenTheApiIsUnreachable_ShowsAFriendlyMessageWithoutExceptionDetails()
     {
