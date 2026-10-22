@@ -363,6 +363,8 @@ public class RbacTests
     [Theory]
     [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController), "Feedback")]
     [InlineData(typeof(PersonalFinance.ApiService.Controllers.FeedbackController), "List")]
+    [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController), "ChangeFeedbackStatus")]
+    [InlineData(typeof(PersonalFinance.ApiService.Controllers.FeedbackController), "ChangeStatus")]
     public void AdminFeedbackInboxEndpoints_RequireTheAdminPolicy(Type controller, string action)
     {
         var method = controller.GetMethod(action);

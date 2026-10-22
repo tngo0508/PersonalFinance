@@ -84,6 +84,6 @@ public class AdminFeedbackInboxWebTests
         var (api, proxy) = ApiProxy.Create<IFeedbackApi>();
         proxy.Throws(nameof(IFeedbackApi.ListAsync), new OperationCanceledException(cts.Token));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Feedback(cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Feedback(cancellationToken: cts.Token));
     }
 }

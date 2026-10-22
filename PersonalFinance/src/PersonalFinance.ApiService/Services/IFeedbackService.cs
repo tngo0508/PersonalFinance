@@ -1,4 +1,5 @@
 using PersonalFinance.Shared.DTOs.Feedback;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -14,7 +15,16 @@ public interface IFeedbackService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists all Feedback for the Admin inbox, newest first, with the sending Account's email.
+    /// Lists Feedback for the Admin inbox, newest first, with the sending Account's email. With a
+    /// <paramref name="status"/>, only Feedback with that Feedback Status; without one, New and Reviewed
+    /// Feedback (Archived is hidden unless asked for).
     /// </summary>
-    Task<List<FeedbackAdminItemDto>> ListAsync(CancellationToken cancellationToken = default);
+    Task<List<FeedbackAdminItemDto>> ListAsync(FeedbackStatus? status = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sets the Feedback Status of the Feedback with <paramref name="id"/>. Returns false when no such
+    /// Feedback exists (soft-deleted Feedback counts as not existing).
+    /// </summary>
+    Task<bool> ChangeStatusAsync(int id, FeedbackStatus status, CancellationToken cancellationToken = default);
 }

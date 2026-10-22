@@ -166,7 +166,8 @@ _Avoid_: Type, topic
 
 ### Feedback Status
 Where a piece of Feedback is in the Admin's triage: New (not yet read, the starting status), Reviewed (read) or
-Archived (dealt with).
+Archived (dealt with, and hidden from the Feedback inbox unless the Admin asks for it). An Admin can move Feedback
+between any of the three, including back to New.
 _Avoid_: State, resolution
 
 ### Google Drive Integration

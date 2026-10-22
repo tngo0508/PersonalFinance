@@ -100,6 +100,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Feedback has its own keyed `RateLimiterService` instance (5 per sliding hour), so the AI Assistant's shared limiter keeps its limits.
   - Only valid submissions count toward the limit, and the Web form keeps the user's input when it is reached.
 
+- **Feedback Status Triage**: Admins mark Feedback as New, Reviewed or Archived from the Feedback inbox and filter the inbox by status.
+  - The inbox opens on "Open" (New and Reviewed); Archived Feedback is hidden unless the Archived filter is chosen.
+  - `GET /api/feedback?status=` filters the list; `PUT /api/feedback/{id}/status` changes the status, returns 404 for unknown or soft-deleted Feedback and 400 for an unknown status. Both require the Admin Policy.
+  - The inbox's "Mark ..." buttons post with an anti-forgery token and return to the same filter with a confirmation or a friendly error.
+  - The filtered inbox query is checked against Azure SQL translation.
+
 - **Local SQL Server in Docker**: Developers can run the whole app against a local SQL Server 2022 container that uses the same provider and migrations as production Azure SQL.
   - `compose.yaml` at the repo root runs SQL Server 2022 Developer edition (`platform: linux/amd64`, so it runs under Rosetta on Apple Silicon) with a named data volume and a `sqlcmd` healthcheck; it stops with a clear message when `MSSQL_SA_PASSWORD` is missing.
   - `.env.example` lists `MSSQL_SA_PASSWORD` and `SQL_HOST_PORT`; the real `.env` stays gitignored.

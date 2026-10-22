@@ -216,7 +216,12 @@ public class FeedbackWebControllerTests
             return Task.CompletedTask;
         }
 
-        public Task<List<FeedbackAdminItemDto>> ListAsync(CancellationToken cancellationToken = default) =>
+        public Task<List<FeedbackAdminItemDto>> ListAsync(FeedbackStatus? status = null,
+            CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("The Admin inbox is not part of sending Feedback.");
+
+        public Task ChangeStatusAsync(int id, ChangeFeedbackStatusRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Feedback Status triage is not part of sending Feedback.");
     }
 }

@@ -1,8 +1,11 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Feedback;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
@@ -17,11 +20,14 @@ namespace PersonalFinance.ApiService.Controllers;
 [Produces("application/json")]
 public class FeedbackController : ControllerBase
 {
+    private readonly IValidator<ChangeFeedbackStatusRequest> _changeStatusValidator;
     private readonly IFeedbackService _feedbackService;
 
-    public FeedbackController(IFeedbackService feedbackService)
+    public FeedbackController(IFeedbackService feedbackService,
+        IValidator<ChangeFeedbackStatusRequest> changeStatusValidator)
     {
         _feedbackService = feedbackService;
+        _changeStatusValidator = changeStatusValidator;
     }
 
     /// <summary>
@@ -53,14 +59,45 @@ public class FeedbackController : ControllerBase
     }
 
     /// <summary>
-    /// Lists all Feedback for the Admin inbox, newest first.
+    /// Lists Feedback for the Admin inbox, newest first. With <paramref name="status"/>, only Feedback with
+    /// that Feedback Status; without one, Archived Feedback is hidden.
     /// </summary>
     [HttpGet]
     [Authorize(Policy = AppPolicies.RequireAdmin)]
     [ProducesResponseType(typeof(List<FeedbackAdminItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> List(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> List([FromQuery] FeedbackStatus? status = null,
+        CancellationToken cancellationToken = default)
     {
-        return Ok(await _feedbackService.ListAsync(cancellationToken));
+        if (status is not null && !Enum.IsDefined(status.Value))
+        {
+            return BadRequest(new { errors = new[] { ChangeFeedbackStatusRequestValidator.UnknownStatusMessage } });
+        }
+
+        return Ok(await _feedbackService.ListAsync(status, cancellationToken));
+    }
+
+    /// <summary>
+    /// Sets the Feedback Status of one piece of Feedback. Unknown (or soft-deleted) Feedback returns 404.
+    /// </summary>
+    [HttpPut("{id:int}/status")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ChangeStatus(int id, [FromBody] ChangeFeedbackStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var validation = await _changeStatusValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+        }
+
+        return await _feedbackService.ChangeStatusAsync(id, request.Status, cancellationToken)
+            ? NoContent()
+            : NotFound();
     }
 }
