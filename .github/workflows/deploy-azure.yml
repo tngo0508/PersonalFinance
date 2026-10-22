@@ -87,7 +87,7 @@ jobs:
         run: dotnet restore PersonalFinance.sln
 
       - name: Build solution (Release)
-        run: dotnet build PersonalFinance.sln --configuration Release --no-restore
+        run: dotnet build PersonalFinance.sln --configuration Release --no-restore -p:EnforceWarningsAsErrors=true
 
       # Reports .editorconfig formatting drift without failing the build (fix locally with `dotnet format`).
       # Make it blocking by removing continue-on-error once main is clean.
@@ -146,7 +146,7 @@ jobs:
       - name: Restore and build solution
         run: |
           dotnet restore PersonalFinance.sln
-          dotnet build PersonalFinance.sln --configuration Release --no-restore
+          dotnet build PersonalFinance.sln --configuration Release --no-restore -p:EnforceWarningsAsErrors=true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

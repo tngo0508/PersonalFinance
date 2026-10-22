@@ -107,6 +107,21 @@ public class GitHubActionsDeploymentWorkflowTests
     }
 
     [Fact]
+    public void DeploymentWorkflow_FullSolutionBuilds_FailOnAnyWarning()
+    {
+        var root = FindProjectRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+
+        // Every full-solution build turns on the warnings-as-errors switch in Directory.Build.props (#132)
+        var solutionBuilds = Regex.Matches(workflow, @"dotnet build PersonalFinance\.sln[^\r\n]*");
+        Assert.Equal(2, solutionBuilds.Count);
+        foreach (Match build in solutionBuilds)
+        {
+            Assert.Contains("-p:EnforceWarningsAsErrors=true", build.Value);
+        }
+    }
+
+    [Fact]
     public void DeploymentWorkflow_DeployStage_MapsAllExpectedBicepParameters()
     {
         var root = FindProjectRoot();

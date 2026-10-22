@@ -139,6 +139,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Build warnings:** A clean build of the whole solution, tests included, now reports zero warnings, and CI fails on any new one (#125).
+  - Budget period keys, counters and AI Assistant prompt structure are formatted and parsed with the invariant culture; relative-time labels, savings goal dates and figures the assistant repeats use the app culture (en-US), so a host locale change no longer alters them.
+  - Aspire is upgraded from 13.6.1 to 13.6.3, which removes the vulnerable MessagePack version (moderate severity, NU1902); the AppHost now resolves MessagePack 2.5.307.
+  - Both full-solution Release builds in the deploy workflow pass `-p:EnforceWarningsAsErrors=true`, so a warning fails CI; a test checks the flag stays on.
+  - The hardcoded AES key and static IV in credential protection are tracked in #133; CA5351 is suppressed on that line until then, so stored Google Drive connections keep working.
+
 - **Startup Failure Exit Code**: The ApiService and Web app now exit with code 1 when startup fails, so a failed `--migrate-only` run no longer looks successful (#108).
   - The fatal "Application terminated unexpectedly." log line and the log flush are unchanged.
   - A clean shutdown, a successful `--migrate-only` run and EF design-time tooling (`dotnet ef`, which aborts the host) still exit 0; a cancellation counts as shutdown only after the host has started stopping.
