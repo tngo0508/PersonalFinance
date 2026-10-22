@@ -86,6 +86,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Global Search Dropdown**: The search dropdown now shows the Unavailable State with a retry when a search fails, instead of failing silently, and works fully from the keyboard and with screen readers (#94).
+  - "No results for ..." appears only when a search succeeded with no matches.
+  - Up/Down move through results, Enter opens the highlighted one, Esc closes the list and keeps the text.
+  - The input is an ARIA combobox with a listbox of options; a polite live region announces the result count.
+  - Only the latest query's response is shown; earlier requests are cancelled.
+  - Results are built with `textContent`, and only same-site links are rendered. The module uses `async/await`.
+
 - **Global Search Follows the Data Source**: Budget Tracker users now find their Budget Transactions in Global Search; transactions come only from the user's current Data Source (#93).
   - Budget Transactions match on description or Budget Category name. A deleted category still names the past transactions that used it.
   - Budget Tracker results open that month in the Budget Tracker. Google Sheet results still open that month in Analysis.

@@ -340,11 +340,12 @@ body:not(:has(#sidebar)) .topbar {
     max-height: 400px;
     overflow-y: auto;
     z-index: 1040;
-    display: none;
 }
 
-.search-results-dropdown.show {
-    display: block;
+.search-results-dropdown[hidden],
+.search-empty[hidden],
+.search-empty .btn[hidden] {
+    display: none;
 }
 
 .search-results-source {
@@ -366,8 +367,21 @@ body:not(:has(#sidebar)) .topbar {
     transition: background 0.1s ease;
 }
 
-.search-result-item:hover {
+.search-result-item:hover,
+.search-result-item.is-active {
     background: #f6f8fa;
+}
+
+.search-result-item.is-active {
+    box-shadow: inset 3px 0 0 var(--app-brand);
+}
+
+.search-message-text {
+    margin: 0;
+}
+
+.search-message-text + button {
+    margin-top: 8px;
 }
 
 .search-result-title {

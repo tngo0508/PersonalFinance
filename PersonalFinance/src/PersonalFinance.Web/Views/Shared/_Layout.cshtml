@@ -156,8 +156,17 @@
                     <i data-lucide="search"></i>
                 </span>
                 <input type="text" id="topbarSearchInput" class="topbar-search-input"
-                       placeholder="Search transactions, budgets, goals..." aria-label="Search">
-                <div id="searchResultsDropdown" class="search-results-dropdown"></div>
+                       placeholder="Search transactions, budgets, goals..." aria-label="Search"
+                       role="combobox" aria-autocomplete="list" aria-expanded="false"
+                       aria-controls="searchResultsList" autocomplete="off">
+                <div id="searchResultsDropdown" class="search-results-dropdown" hidden>
+                    <div id="searchResultsList" role="listbox" aria-label="Search results"></div>
+                    <div id="searchMessage" class="search-empty" hidden>
+                        <p id="searchMessageText" class="search-message-text"></p>
+                        <button type="button" id="searchRetryButton" class="btn btn-sm btn-outline-secondary" hidden>Try again</button>
+                    </div>
+                </div>
+                <div id="searchStatus" class="visually-hidden" role="status" aria-live="polite"></div>
             </div>
 
             <!-- Actions -->
