@@ -47,10 +47,14 @@ The source is resolved at read time. If the user has no stored preference, the s
 has synced sheet data and the Budget Tracker otherwise. A preference is stored only when the user explicitly switches
 the source.
 
-### 3. Sync code and global search are unchanged
+### 3. Sync code reads the synced tables directly; Global Search follows the Data Source
 
-Google sync methods and global search continue to read and write the synced tables directly. They are not routed through
-the provider.
+Google sync methods continue to read and write the synced tables directly. They are not routed through the provider.
+
+_Amended 2026-10-21 (#93):_ Global Search originally read only the synced tables, so a Budget Tracker user could never
+find their transactions. It now resolves the user's Data Source with the same rule as the provider and searches only
+that source's transactions. It does not read through the provider, because it needs the source decision but not month
+data.
 
 ## Consequences
 

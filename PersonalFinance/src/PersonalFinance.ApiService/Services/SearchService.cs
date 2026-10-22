@@ -2,11 +2,13 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Search;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
-/// Service for unified search across transactions, budgets, and savings goals.
+/// Global Search across transactions, budgets, and savings goals. Transactions come only from the user's active Data
+/// Source (Google Sheet or Budget Tracker), so results never mix the two.
 /// </summary>
 public class SearchService : ISearchService
 {
@@ -23,10 +25,12 @@ public class SearchService : ISearchService
     private const string LikeEscape = "\\";
 
     private readonly AppDbContext _dbContext;
+    private readonly IBudgetDataSourceService _dataSourceService;
 
-    public SearchService(AppDbContext dbContext)
+    public SearchService(AppDbContext dbContext, IBudgetDataSourceService dataSourceService)
     {
         _dbContext = dbContext;
+        _dataSourceService = dataSourceService;
     }
 
     public async Task<SearchResultsDto> SearchAsync(string userId, string query,
@@ -38,10 +42,15 @@ public class SearchService : ISearchService
             return new SearchResultsDto();
         }
 
+        var source = await _dataSourceService.GetActiveSourceAsync(userId, cancellationToken);
+        var transactionsQuery = source == BudgetDataSource.BudgetTracker
+            ? TrackerTransactionsQuery(userId, pattern)
+            : SheetTransactionsQuery(userId, pattern);
+
         // One DbContext does not support concurrent operations, so the groups are read one after another.
         return new SearchResultsDto
         {
-            Transactions = await TransactionsQuery(userId, pattern).ToListAsync(cancellationToken),
+            Transactions = await transactionsQuery.ToListAsync(cancellationToken),
             BudgetItems = await BudgetItemsQuery(userId, pattern).ToListAsync(cancellationToken),
             SavingsGoals = await SavingsGoalsQuery(userId, pattern).ToListAsync(cancellationToken)
         };
@@ -73,7 +82,33 @@ public class SearchService : ISearchService
         return $"%{escaped}%";
     }
 
-    internal IQueryable<SearchResultItemDto> TransactionsQuery(string userId, string pattern)
+    internal IQueryable<SearchResultItemDto> TrackerTransactionsQuery(string userId, string pattern)
+    {
+        // Filters are ignored so a deleted Budget Category still names the past transactions that used it, as in
+        // the Budget Tracker itself; the transaction's own soft delete is checked explicitly.
+        return _dbContext.BudgetTransactions
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(t => t.UserId == userId && !t.IsDeleted &&
+                        (EF.Functions.Like(t.Description, pattern, LikeEscape) ||
+                         EF.Functions.Like(t.Category!.Name, pattern, LikeEscape)))
+            .OrderByDescending(t => t.Date)
+            .ThenByDescending(t => t.Id)
+            .Take(MaxTransactions)
+            .Select(t => new SearchResultItemDto
+            {
+                Id = t.Id.ToString(CultureInfo.InvariantCulture),
+                Title = t.Description,
+                Description =
+                    $"{t.Date:MMM d, yyyy} - {t.Category!.Name} - {t.Amount:C} ({t.Category!.Kind})",
+                Source = "Transaction",
+                Url = $"/BudgetTracker?year={t.Date.Year}&month={t.Date.Month}",
+                Date = t.Date.ToDateTime(TimeOnly.MinValue),
+                Amount = t.Amount
+            });
+    }
+
+    internal IQueryable<SearchResultItemDto> SheetTransactionsQuery(string userId, string pattern)
     {
         return _dbContext.SpreadsheetTransactionRecords
             .AsNoTracking()

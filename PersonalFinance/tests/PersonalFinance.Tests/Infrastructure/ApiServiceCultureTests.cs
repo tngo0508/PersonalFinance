@@ -116,7 +116,7 @@ public class ApiServiceCultureTests : IDisposable
         });
         db.SavingsGoals.Add(NewGoal());
         await db.SaveChangesAsync();
-        var service = new SearchService(db);
+        var service = new SearchService(db, new BudgetDataSourceService(db));
 
         var transactions = await service.SearchAsync(UserId, "culture");
         var budgets = await service.SearchAsync(UserId, "2026-10");
