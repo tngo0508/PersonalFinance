@@ -8,7 +8,7 @@ namespace PersonalFinance.Tests.Infrastructure;
 /// so currency formatting must be pinned to en-US at startup.
 /// </summary>
 [Collection("Culture")]
-public class AppCultureTests : IDisposable
+public sealed class AppCultureTests : IDisposable
 {
     private readonly CultureInfo _originalCulture = CultureInfo.CurrentCulture;
     private readonly CultureInfo _originalUiCulture = CultureInfo.CurrentUICulture;

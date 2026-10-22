@@ -378,7 +378,7 @@ public class RbacTests
         Assert.Null(method.GetCustomAttribute<AllowAnonymousAttribute>());
     }
 
-    private static HttpContext ContextWithPolicy(string policy)
+    private static DefaultHttpContext ContextWithPolicy(string policy)
     {
         var context = new DefaultHttpContext();
         context.SetEndpoint(new Endpoint(

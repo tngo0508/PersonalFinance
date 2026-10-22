@@ -325,7 +325,7 @@ public class MonthlyBudgetConcurrencyTests
         }
     }
 
-    private class ConcurrencySimulationInterceptor : SaveChangesInterceptor
+    private sealed class ConcurrencySimulationInterceptor : SaveChangesInterceptor
     {
         public Func<AppDbContext, ValueTask>? OnSavingChangesAsync { get; set; }
         public bool ShouldThrow { get; set; }

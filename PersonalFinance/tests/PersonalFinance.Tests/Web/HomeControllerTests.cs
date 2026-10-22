@@ -11,6 +11,14 @@ namespace PersonalFinance.Tests.Web;
 
 public class HomeControllerTests
 {
+    private static readonly string[] ExpectedCoreFeatureTitles = ["Net Worth", "Budget", "Savings Goals"];
+
+    private static readonly string[] ExpectedMoreFeatureTitles =
+    [
+        "Spreadsheet Analysis", "Investment Calculator", "Google Drive Integration", "AI Assistant",
+        "Finance News", "Community"
+    ];
+
     private static ControllerContext CreateAnonymousContext()
     {
         return new ControllerContext
@@ -56,16 +64,8 @@ public class HomeControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Null(viewResult.ViewName);
         var model = Assert.IsType<LandingPageViewModel>(viewResult.Model);
-        Assert.Equal(
-            new[] { "Net Worth", "Budget", "Savings Goals" },
-            model.CoreFeatures.Select(f => f.Title));
-        Assert.Equal(
-            new[]
-            {
-                "Spreadsheet Analysis", "Investment Calculator", "Google Drive Integration", "AI Assistant",
-                "Finance News", "Community"
-            },
-            model.MoreFeatures.Select(f => f.Title));
+        Assert.Equal(ExpectedCoreFeatureTitles, model.CoreFeatures.Select(f => f.Title));
+        Assert.Equal(ExpectedMoreFeatureTitles, model.MoreFeatures.Select(f => f.Title));
     }
 
     [Fact]

@@ -20,7 +20,7 @@ namespace PersonalFinance.Tests.Infrastructure;
 /// <see cref="AppCulture.ApplyDefault"/> runs at startup.
 /// </summary>
 [Collection("Culture")]
-public class ApiServiceCultureTests : IDisposable
+public sealed class ApiServiceCultureTests : IDisposable
 {
     private const string UserId = "culture-user";
     private const string CurrencySymbolOfInvariantCulture = "¤";
