@@ -682,7 +682,7 @@ public class DriveConnectionService : IDriveConnectionService
         };
     }
 
-    private GoogleDriveFolderResponseDto GeneratePreviewResponse(
+    private static GoogleDriveFolderResponseDto GeneratePreviewResponse(
         string folderId,
         string rawInput,
         string warningMessage)

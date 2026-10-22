@@ -592,7 +592,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         }).OrderByDescending(c => c.ConsumptionPercent).ToList();
     }
 
-    private string GetMonthName(int monthNumber)
+    private static string GetMonthName(int monthNumber)
     {
         return monthNumber switch
         {
@@ -612,7 +612,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         };
     }
 
-    private string GetCategoryStatus(double percentageUsed)
+    private static string GetCategoryStatus(double percentageUsed)
     {
         if (percentageUsed > 100) return "Over Budget";
 
