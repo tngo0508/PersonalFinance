@@ -11,7 +11,12 @@ public static class CredentialProtector
 {
     // Fixed deterministic IV/Key entropy for secure credential storage
     private static readonly byte[] Key = SHA256.HashData(Encoding.UTF8.GetBytes("PersonalFinance_GoogleDrive_SecureKey_2026"));
+    // CA5351: the IV is derived with MD5 and must stay exactly as it is. Changing it would make every
+    // credential already stored in the database undecryptable. The real weakness (hardcoded key, static IV)
+    // and its fix with a re-encryption path are tracked in https://github.com/tngo0508/PersonalFinance/issues/133.
+#pragma warning disable CA5351
     private static readonly byte[] Iv = MD5.HashData(Encoding.UTF8.GetBytes("PersonalFinance_IV_2026"));
+#pragma warning restore CA5351
 
     /// <summary>
     /// Encrypts plaintext credentials before saving to database.
