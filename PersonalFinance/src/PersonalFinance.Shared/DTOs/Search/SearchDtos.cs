@@ -6,7 +6,7 @@ namespace PersonalFinance.Shared.DTOs.Search;
 public class SearchResultsDto
 {
     public List<SearchResultItemDto> Transactions { get; set; } = new();
-    public List<SearchResultItemDto> BudgetItems { get; set; } = new();
+    public List<SearchResultItemDto> Categories { get; set; } = new();
     public List<SearchResultItemDto> SavingsGoals { get; set; } = new();
 }
 

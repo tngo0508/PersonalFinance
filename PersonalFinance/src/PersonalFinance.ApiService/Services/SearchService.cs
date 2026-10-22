@@ -7,30 +7,33 @@ using PersonalFinance.Shared.Enums;
 namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
-/// Global Search across transactions, budgets, and savings goals. Transactions come only from the user's active Data
-/// Source (Google Sheet or Budget Tracker), so results never mix the two.
+/// Global Search across transactions, Budget Categories, and Savings Goals. Transactions and categories come only
+/// from the user's active Data Source (Google Sheet or Budget Tracker), so results never mix the two.
 /// </summary>
 public class SearchService : ISearchService
 {
     /// <summary>Queries shorter than this (after trimming) return no results.</summary>
-    public const int MinQueryLength = 2;
+    internal const int MinQueryLength = 2;
 
     /// <summary>Longer queries are cut to this length before searching.</summary>
-    public const int MaxQueryLength = 100;
+    internal const int MaxQueryLength = 100;
 
     internal const int MaxTransactions = 10;
-    internal const int MaxBudgetItems = 5;
+    internal const int MaxCategories = 5;
     internal const int MaxSavingsGoals = 5;
 
     private const string LikeEscape = "\\";
 
     private readonly AppDbContext _dbContext;
     private readonly IBudgetDataSourceService _dataSourceService;
+    private readonly TimeProvider _timeProvider;
 
-    public SearchService(AppDbContext dbContext, IBudgetDataSourceService dataSourceService)
+    public SearchService(AppDbContext dbContext, IBudgetDataSourceService dataSourceService,
+        TimeProvider timeProvider)
     {
         _dbContext = dbContext;
         _dataSourceService = dataSourceService;
+        _timeProvider = timeProvider;
     }
 
     public async Task<SearchResultsDto> SearchAsync(string userId, string query,
@@ -43,15 +46,19 @@ public class SearchService : ISearchService
         }
 
         var source = await _dataSourceService.GetActiveSourceAsync(userId, cancellationToken);
-        var transactionsQuery = source == BudgetDataSource.BudgetTracker
+        var isTracker = source == BudgetDataSource.BudgetTracker;
+        var transactionsQuery = isTracker
             ? TrackerTransactionsQuery(userId, pattern)
             : SheetTransactionsQuery(userId, pattern);
+        var categoriesQuery = isTracker
+            ? TrackerCategoriesQuery(userId, pattern)
+            : SheetCategoriesQuery(userId, pattern);
 
         // One DbContext does not support concurrent operations, so the groups are read one after another.
         return new SearchResultsDto
         {
             Transactions = await transactionsQuery.ToListAsync(cancellationToken),
-            BudgetItems = await BudgetItemsQuery(userId, pattern).ToListAsync(cancellationToken),
+            Categories = await categoriesQuery.ToListAsync(cancellationToken),
             SavingsGoals = await SavingsGoalsQuery(userId, pattern).ToListAsync(cancellationToken)
         };
     }
@@ -130,22 +137,58 @@ public class SearchService : ISearchService
             });
     }
 
-    internal IQueryable<SearchResultItemDto> BudgetItemsQuery(string userId, string pattern)
+    /// <summary>
+    /// Budget Categories by name. Deleted categories are left out (the soft-delete filter applies). The link opens
+    /// the current month in the Budget Tracker.
+    /// </summary>
+    internal IQueryable<SearchResultItemDto> TrackerCategoriesQuery(string userId, string pattern)
     {
-        return _dbContext.UserBudgetAllocations
+        var url = $"/BudgetTracker?{CurrentMonthQuery()}";
+        return _dbContext.BudgetCategories
             .AsNoTracking()
-            .Where(b => b.UserId == userId && EF.Functions.Like(b.Period, pattern, LikeEscape))
-            .OrderByDescending(b => b.Period)
-            .ThenByDescending(b => b.Id)
-            .Take(MaxBudgetItems)
-            .Select(b => new SearchResultItemDto
+            .Where(c => c.UserId == userId && EF.Functions.Like(c.Name, pattern, LikeEscape))
+            .OrderBy(c => c.Name)
+            .ThenBy(c => c.Id)
+            .Take(MaxCategories)
+            .Select(c => new SearchResultItemDto
             {
-                Id = b.Id.ToString(CultureInfo.InvariantCulture),
-                Title = $"Budget for {b.Period}",
-                Description = $"Monthly income: {b.MonthlyIncome:C}",
-                Source = "Budget",
-                Url = $"/Budget?period={b.Period}"
+                Id = c.Id.ToString(CultureInfo.InvariantCulture),
+                Title = c.Name,
+                Description = $"{c.Kind} category",
+                Source = "Category",
+                Url = url
             });
+    }
+
+    /// <summary>
+    /// The distinct category names on synced Google Sheet transactions. The link opens the current month in
+    /// Analysis.
+    /// </summary>
+    internal IQueryable<SearchResultItemDto> SheetCategoriesQuery(string userId, string pattern)
+    {
+        var url = $"/Analysis?{CurrentMonthQuery()}";
+        return _dbContext.SpreadsheetTransactionRecords
+            .AsNoTracking()
+            .Where(t => t.UserId == userId && EF.Functions.Like(t.Category, pattern, LikeEscape))
+            .Select(t => t.Category)
+            .Distinct()
+            .OrderBy(name => name)
+            .Take(MaxCategories)
+            .Select(name => new SearchResultItemDto
+            {
+                Id = name,
+                Title = name,
+                Description = "Google Sheet category",
+                Source = "Category",
+                Url = url
+            });
+    }
+
+    /// <summary>The current UTC month as a query string, as the Budget Tracker page defaults to it.</summary>
+    private string CurrentMonthQuery()
+    {
+        var now = _timeProvider.GetUtcNow();
+        return string.Create(CultureInfo.InvariantCulture, $"year={now.Year}&month={now.Month}");
     }
 
     internal IQueryable<SearchResultItemDto> SavingsGoalsQuery(string userId, string pattern)

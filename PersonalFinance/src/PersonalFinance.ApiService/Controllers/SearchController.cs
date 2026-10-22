@@ -22,7 +22,7 @@ public class SearchController : ControllerBase
     }
 
     /// <summary>
-    /// Searches across transactions, budgets, and savings goals.
+    /// Searches across transactions, Budget Categories, and Savings Goals.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]

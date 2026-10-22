@@ -9,7 +9,7 @@ namespace PersonalFinance.Shared.Contracts;
 public interface ISearchApi
 {
     /// <summary>
-    /// Searches across transactions, budgets, and savings goals.
+    /// Searches across transactions, Budget Categories, and Savings Goals.
     /// </summary>
     [Get("/api/Search")]
     Task<SearchResultsDto> SearchAsync([Query] string q, CancellationToken cancellationToken = default);

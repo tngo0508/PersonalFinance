@@ -86,6 +86,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Budget Categories in Global Search**: Global Search now finds Budget Categories by name from the user's current Data Source, replacing the "Budgets" group that only matched period strings like "2026-10" (#95).
+  - Budget Tracker source: Budget Categories by name, excluding deleted ones; the result opens the Budget Tracker at the current month.
+  - Google Sheet source: the distinct category names on synced transactions; the result opens the current month in Analysis.
+  - At most 5 categories, ordered by name. The response group is now `categories` instead of `budgetItems`.
+
 - **Global Search Dropdown**: The search dropdown now shows the Unavailable State with a retry when a search fails, instead of failing silently, and works fully from the keyboard and with screen readers (#94).
   - "No results for ..." appears only when a search succeeded with no matches.
   - Up/Down move through results, Enter opens the highlighted one, Esc closes the list and keeps the text.

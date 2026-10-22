@@ -3,12 +3,12 @@ using PersonalFinance.Shared.DTOs.Search;
 namespace PersonalFinance.ApiService.Services;
 
 /// <summary>
-/// Service for unified search across transactions, budgets, and savings goals.
+/// Service for unified search across transactions, Budget Categories, and Savings Goals.
 /// </summary>
 public interface ISearchService
 {
     /// <summary>
-    /// Searches across transactions, budgets, and savings goals for the given query.
+    /// Searches across transactions, Budget Categories, and Savings Goals for the given query.
     /// </summary>
     Task<SearchResultsDto> SearchAsync(string userId, string query, CancellationToken cancellationToken = default);
 }
