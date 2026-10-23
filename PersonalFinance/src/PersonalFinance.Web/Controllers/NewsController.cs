@@ -49,8 +49,7 @@ public sealed class NewsController : Controller
 
         try
         {
-            NewsFeedDto feed = await TryGetNewsAsync(query, cancellationToken)
-                ?? await GetFilterOptionsWithoutArticlesAsync(cancellationToken);
+            NewsFeedDto feed = await GetNewsAsync(query, cancellationToken);
 
             model.Sources = feed.Sources;
             model.Categories = feed.Categories;
@@ -78,12 +77,12 @@ public sealed class NewsController : Controller
     {
         try
         {
-            NewsFeedDto? feed = await TryGetNewsAsync(query, cancellationToken);
+            NewsFeedDto feed = await GetNewsAsync(query, cancellationToken);
 
             return Json(new NewsRefreshResponse
             {
                 Success = true,
-                Articles = feed?.Articles ?? [],
+                Articles = feed.Articles,
                 LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime,
             });
         }
@@ -100,10 +99,11 @@ public sealed class NewsController : Controller
     }
 
     /// <summary>
-    /// Reads the feed, or returns <see langword="null"/> when ApiService rejects the filters (for example, an overlong
-    /// search): filters no article can match find nothing, rather than showing the page as unavailable.
+    /// Reads the feed. When ApiService rejects the filters (for example, an overlong search), its 400 body is the feed
+    /// with no articles and the filter options, so filters no article can match find nothing rather than showing the
+    /// page as unavailable.
     /// </summary>
-    private async Task<NewsFeedDto?> TryGetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken)
+    private async Task<NewsFeedDto> GetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken)
     {
         try
         {
@@ -112,17 +112,7 @@ public sealed class NewsController : Controller
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
         {
             _logger.LogInformation("ApiService rejected the news filters; showing no articles");
-            return null;
+            return await ex.GetContentAsAsync<NewsFeedDto>() ?? new NewsFeedDto();
         }
-    }
-
-    /// <summary>
-    /// Reads the unfiltered feed for its filter options, so the page can still offer them, and drops its articles.
-    /// </summary>
-    private async Task<NewsFeedDto> GetFilterOptionsWithoutArticlesAsync(CancellationToken cancellationToken)
-    {
-        NewsFeedDto feed = await _newsApi.GetNewsAsync(new NewsQueryDto(), cancellationToken);
-        feed.Articles = [];
-        return feed;
     }
 }

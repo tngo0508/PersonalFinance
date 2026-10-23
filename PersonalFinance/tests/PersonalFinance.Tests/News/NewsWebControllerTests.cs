@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,10 @@ public class NewsWebControllerTests
     {
         public Exception? Failure { get; init; }
 
-        /// <summary>Answers any filtered query with 400, as ApiService does for an overlong filter.</summary>
+        /// <summary>
+        /// Answers any filtered query with 400 and the filter options in the body, as ApiService does for an overlong
+        /// filter.
+        /// </summary>
         public bool RejectFilters { get; init; }
 
         public List<NewsQueryDto> Queries { get; } = [];
@@ -44,8 +48,20 @@ public class NewsWebControllerTests
 
             if (RejectFilters && (query.Category ?? query.Source ?? query.Search) is not null)
             {
+                var rejected = new NewsFeedDto
+                {
+                    Errors = ["The length of 'Search' must be 100 characters or fewer."],
+                    Categories = Feed.Categories,
+                    Sources = Feed.Sources,
+                    PersonalFinanceCategories = Feed.PersonalFinanceCategories,
+                };
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(rejected, JsonSerializerOptions.Web),
+                        Encoding.UTF8, "application/json")
+                };
                 throw await ApiException.Create(new HttpRequestMessage(HttpMethod.Get, "https://api.local/api/News"),
-                    HttpMethod.Get, new HttpResponseMessage(HttpStatusCode.BadRequest), new RefitSettings());
+                    HttpMethod.Get, response, new RefitSettings());
             }
 
             return Feed;
@@ -97,8 +113,10 @@ public class NewsWebControllerTests
         Assert.Empty(model.Articles);
         Assert.Null(model.ErrorMessage);
         Assert.Equal("BBC Business", Assert.Single(model.Sources).Name);
+        Assert.Equal(["General", "Investing"], model.Categories);
         Assert.Equal("too long", model.SearchQuery);
         Assert.False(model.IsLoading);
+        Assert.Single(api.Queries);
     }
 
     [Fact]
@@ -135,6 +153,7 @@ public class NewsWebControllerTests
 
         Assert.True(response.Success);
         Assert.Empty(response.Articles!);
+        Assert.Single(api.Queries);
     }
 
     [Fact]

@@ -82,6 +82,18 @@ public class NewsServiceTests
     }
 
     [Fact]
+    public async Task GetFilterOptionsAsync_ReturnsTheOptionsOfTheWholeFeed_WithoutArticles()
+    {
+        NewsFeedDto options = await CreateService(new StubFeedHandler()).GetFilterOptionsAsync();
+
+        Assert.Empty(options.Articles);
+        Assert.Empty(options.Errors);
+        Assert.Equal(["Debt", "General"], options.Categories);
+        Assert.Contains(options.Sources, s => s.Name == "BBC Business");
+        Assert.Equal(5, options.PersonalFinanceCategories.Count);
+    }
+
+    [Fact]
     public async Task GetNewsAsync_ReadsTheFeedsOnce_AcrossRequestsSharingTheCache()
     {
         var handler = new StubFeedHandler();

@@ -9,7 +9,8 @@ using NewsApiController = PersonalFinance.ApiService.Features.Watchlist.NewsCont
 namespace PersonalFinance.Tests.News;
 
 /// <summary>
-/// The ApiService <c>GET /api/News</c> endpoint: signed-in only, and its filters are validated before the feed is read.
+/// The ApiService <c>GET /api/News</c> endpoint: signed-in only, and its filters are validated before the feed is
+/// read. Rejected filters answer 400 with the reasons and the filter options, so the caller needs no second request.
 /// </summary>
 public class NewsEndpointTests
 {
@@ -23,6 +24,9 @@ public class NewsEndpointTests
             LastQuery = query;
             return Task.FromResult(Feed);
         }
+
+        public Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new NewsFeedDto { Sources = [new NewsSourceDto { Name = "BBC Business" }], Categories = ["General"] });
     }
 
     [Fact]
@@ -47,7 +51,7 @@ public class NewsEndpointTests
     [InlineData("category")]
     [InlineData("source")]
     [InlineData("search")]
-    public async Task Get_OverlongFilter_ReturnsBadRequest_WithoutReadingTheFeed(string filter)
+    public async Task Get_OverlongFilter_ReturnsBadRequest_WithTheReasonAndTheFilterOptions_WithoutFiltering(string filter)
     {
         var service = new FakeNewsService();
         string overlong = new('x', NewsQueryDtoValidator.MaxFilterLength + 1);
@@ -60,7 +64,11 @@ public class NewsEndpointTests
 
         IActionResult result = await new NewsApiController(service, new NewsQueryDtoValidator()).Get(query);
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        NewsFeedDto body = Assert.IsType<NewsFeedDto>(Assert.IsType<BadRequestObjectResult>(result).Value);
+        Assert.NotEmpty(body.Errors);
+        Assert.Empty(body.Articles);
+        Assert.Equal("BBC Business", Assert.Single(body.Sources).Name);
+        Assert.Equal(["General"], body.Categories);
         Assert.Null(service.LastQuery);
     }
 }
