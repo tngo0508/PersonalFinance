@@ -18,10 +18,10 @@ internal sealed class NewsService : INewsService
     private static readonly IReadOnlyList<NewsSourceDto> Sources =
     [
         new() { Name = "NPR Personal Finance", Url = "https://feeds.npr.org/510305/podcast.xml", Category = NewsTopics.Budgeting },
-        new() { Name = "CNN Business", Url = "https://rss.cnn.com/rss/money_latest.rss", Category = NewsTopics.Budgeting },
-        new() { Name = "Investopedia", Url = "https://www.investopedia.com/news/rssFeedType.latest/rss", Category = NewsTopics.Investing },
+        new() { Name = "NerdWallet", Url = "https://www.nerdwallet.com/blog/feed/", Category = NewsTopics.Budgeting },
         new() { Name = "MarketWatch", Url = "https://feeds.content.dowjones.io/public/rss/mw_topstories", Category = NewsTopics.Investing },
-        new() { Name = "Forbes Finance", Url = "https://feeds.feedburner.com/Forbes/finance-wires", Category = NewsTopics.Retirement },
+        new() { Name = "CNBC Investing", Url = "https://www.cnbc.com/id/15839069/device/rss/rss.html", Category = NewsTopics.Investing },
+        new() { Name = "Retirement Researcher", Url = "https://retirementresearcher.com/feed/", Category = NewsTopics.Retirement },
         new() { Name = "BBC Business", Url = "http://feeds.bbci.co.uk/news/business/rss.xml", Category = NewsTopics.General },
     ];
 

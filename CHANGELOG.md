@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.20] - 2026-10-23
+
+### Fixed
+
+- **Dead News Feeds Replaced**: three of the six Finance News sources had stopped working in production and are replaced, so every topic shows articles again (#183).
+  - CNN Business (Budgeting) failed its HTTPS handshake and has published nothing since 2018: replaced by NerdWallet.
+  - Investopedia (Investing) answered 402 Payment Required: replaced by CNBC Investing.
+  - Forbes Finance (Retirement) answered 404, which left the Retirement topic always empty: replaced by Retirement Researcher.
+  - An article is now always filed under its source's topic. The new feeds tag their items with their own categories ("Mortgages", "Annuities"), which used to take precedence and would never match the topic filter.
+
 ## [4.2.19] - 2026-10-23
 
 ### Changed

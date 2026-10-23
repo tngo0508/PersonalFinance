@@ -1,8 +1,9 @@
 namespace PersonalFinance.ApiService.Features.Watchlist;
 
 /// <summary>
-/// The topics a finance news source is filed under. The feeds send no category of their own, so an article's topic is
-/// its source's, and the News page offers as filters only the topics some configured source covers.
+/// The topics a finance news source is filed under. An article's topic is always its source's: categories a feed puts
+/// on its own items (NerdWallet's "Mortgages", say) are ignored, so the topic filter matches every article. The News
+/// page offers as filters only the topics some configured source covers.
 /// </summary>
 internal static class NewsTopics
 {

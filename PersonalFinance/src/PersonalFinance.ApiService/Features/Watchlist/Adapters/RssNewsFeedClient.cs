@@ -62,7 +62,8 @@ internal sealed class RssNewsFeedClient : INewsFeedClient
     }
 
     /// <summary>
-    /// Maps one RSS <c>item</c> to an article; the source's category stands in for a missing <c>category</c>.
+    /// Maps one RSS <c>item</c> to an article, filed under its source's topic (see <see cref="NewsTopics"/>); the
+    /// item's own <c>category</c> elements are ignored.
     /// </summary>
     private NewsArticleDto ToArticle(XElement item, NewsSourceDto source) => new()
     {
@@ -72,7 +73,7 @@ internal sealed class RssNewsFeedClient : INewsFeedClient
         Source = source.Name,
         ImageUrl = ImageUrl(item),
         PublishedAt = PublishedAt(ElementValue(item, "pubDate")),
-        Category = (item.Element("category")?.Value ?? source.Category).Trim(),
+        Category = source.Category,
     };
 
     private static string ElementValue(XElement item, string name) => item.Element(name)?.Value ?? string.Empty;
