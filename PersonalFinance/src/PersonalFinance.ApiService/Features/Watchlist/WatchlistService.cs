@@ -12,13 +12,16 @@ namespace PersonalFinance.ApiService.Features.Watchlist;
 internal sealed class WatchlistService : IWatchlistService
 {
     private readonly AppDbContext _dbContext;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<WatchlistService> _logger;
 
     public WatchlistService(
         AppDbContext dbContext,
+        TimeProvider timeProvider,
         ILogger<WatchlistService> logger)
     {
         _dbContext = dbContext;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -44,30 +47,43 @@ internal sealed class WatchlistService : IWatchlistService
         return articles;
     }
 
+    /// <summary>
+    /// Saves the article, or updates its notes when the Account already has it. An article the Account removed is
+    /// restored rather than added again: (UserId, Url) is unique across removed rows too.
+    /// </summary>
     public async Task<SaveArticleResultDto> SaveArticleAsync(string userId, SaveArticleRequestDto request, CancellationToken cancellationToken = default)
     {
         SavedArticle? existing = await _dbContext.SavedArticles
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(a => a.UserId == userId && a.Url == request.Url, cancellationToken);
 
-        if (existing is not null)
+        if (existing is { IsDeleted: false })
         {
             existing.Notes = request.Notes ?? existing.Notes;
             await _dbContext.SaveChangesAsync(cancellationToken);
             return new SaveArticleResultDto { Success = true, AlreadySaved = true, Id = existing.Id };
         }
 
-        var article = new SavedArticle
-        {
-            UserId = userId,
-            Title = request.Title,
-            Url = request.Url,
-            Source = request.Source,
-            Category = request.Category,
-            Notes = request.Notes,
-            ImageUrl = request.ImageUrl
-        };
+        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+        SavedArticle article = existing ?? new SavedArticle { UserId = userId, Url = request.Url, CreatedAt = now };
+        article.Title = request.Title;
+        article.Source = request.Source;
+        article.Category = request.Category;
+        article.Notes = request.Notes;
+        article.ImageUrl = request.ImageUrl;
+        article.SavedAtUtc = now;
 
-        _dbContext.SavedArticles.Add(article);
+        if (existing is null)
+        {
+            _dbContext.SavedArticles.Add(article);
+        }
+        else
+        {
+            article.IsDeleted = false;
+            article.DeletedAt = null;
+            article.UpdatedAt = now;
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
