@@ -134,7 +134,7 @@ public class DeletionPagesTests
     {
         var api = new FakeAccountDeletionApi();
         var page = new CancelDeletionModel(api, NullLogger<CancelDeletionModel>.Instance)
-            { Token = "cancel-token-123" };
+        { Token = "cancel-token-123" };
 
         page.OnGet();
 
@@ -313,7 +313,7 @@ public class DeletionPagesTests
             RequestCalls++;
             return RequestFailure is null
                 ? Task.FromResult(new DeletionRequestAcceptedDto
-                    { CancelToken = "cancel-token-123", PurgeAfterUtc = PurgeAfter })
+                { CancelToken = "cancel-token-123", PurgeAfterUtc = PurgeAfter })
                 : Task.FromException<DeletionRequestAcceptedDto>(RequestFailure);
         }
 

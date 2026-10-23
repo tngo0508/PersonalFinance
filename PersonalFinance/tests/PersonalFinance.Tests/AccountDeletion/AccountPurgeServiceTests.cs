@@ -41,11 +41,11 @@ public class AccountPurgeServiceTests
         db.Roles.Add(new IdentityRole { Id = "role-user", Name = AppRoles.User });
         db.UserRoles.Add(new IdentityUserRole<string> { UserId = UserId, RoleId = "role-user" });
         db.UserClaims.Add(new IdentityUserClaim<string>
-            { UserId = UserId, ClaimType = "urn:google:picture", ClaimValue = "p" });
+        { UserId = UserId, ClaimType = "urn:google:picture", ClaimValue = "p" });
         db.UserLogins.Add(new IdentityUserLogin<string>
-            { UserId = UserId, LoginProvider = "Google", ProviderKey = "g-1", ProviderDisplayName = "Google" });
+        { UserId = UserId, LoginProvider = "Google", ProviderKey = "g-1", ProviderDisplayName = "Google" });
         db.UserTokens.Add(new IdentityUserToken<string>
-            { UserId = UserId, LoginProvider = "[AspNetUserStore]", Name = "AuthenticatorKey", Value = "k" });
+        { UserId = UserId, LoginProvider = "[AspNetUserStore]", Name = "AuthenticatorKey", Value = "k" });
         var deletedEarlier = new SavingsGoal { UserId = UserId, Name = "Deleted in March" };
         deletedEarlier.SoftDelete();
         db.SavingsGoals.Add(deletedEarlier);
@@ -201,7 +201,7 @@ public class AccountPurgeServiceTests
             seed.Users.Add(new IdentityUser { Id = UserId });
             var liveLike = new CommunityStory { UserId = OtherUserId, AuthorName = "a", Title = "live", Likes = 5 };
             var unlikedEarlier = new CommunityStory
-                { UserId = OtherUserId, AuthorName = "a", Title = "unliked", Likes = 5 };
+            { UserId = OtherUserId, AuthorName = "a", Title = "unliked", Likes = 5 };
             var earlierLike = new CommunityStoryLike { UserId = UserId, Story = unlikedEarlier };
             earlierLike.SoftDelete();
             seed.CommunityStoryLikes.AddRange(new CommunityStoryLike { UserId = UserId, Story = liveLike },

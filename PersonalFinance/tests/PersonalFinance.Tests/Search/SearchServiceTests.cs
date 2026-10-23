@@ -28,14 +28,14 @@ public class SearchServiceTests
 
     private static SpreadsheetTransactionRecord Transaction(string description, DateTime date,
         string category = "Food", string userId = UserId) => new()
-    {
-        UserId = userId,
-        Date = date,
-        Amount = 42.50m,
-        Description = description,
-        Category = category,
-        Type = "Expense"
-    };
+        {
+            UserId = userId,
+            Date = date,
+            Amount = 42.50m,
+            Description = description,
+            Category = category,
+            Type = "Expense"
+        };
 
     private static SavingsGoal Goal(string name, string? description = null, string userId = UserId) => new()
     {
@@ -58,21 +58,21 @@ public class SearchServiceTests
 
     private static BudgetCategory Category(string name, BudgetCategoryKind kind = BudgetCategoryKind.Expense,
         string userId = UserId) => new()
-    {
-        UserId = userId,
-        Name = name,
-        Kind = kind
-    };
+        {
+            UserId = userId,
+            Name = name,
+            Kind = kind
+        };
 
     private static BudgetTransaction TrackerTransaction(string description, DateOnly date, BudgetCategory category,
         string userId = UserId) => new()
-    {
-        UserId = userId,
-        Date = date,
-        Amount = 18.25m,
-        Description = description,
-        Category = category
-    };
+        {
+            UserId = userId,
+            Date = date,
+            Amount = 18.25m,
+            Description = description,
+            Category = category
+        };
 
     private static UserBudgetSourcePreference Prefer(BudgetDataSource source) => new()
     {

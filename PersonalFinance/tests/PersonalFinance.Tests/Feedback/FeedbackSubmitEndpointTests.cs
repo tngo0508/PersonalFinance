@@ -60,7 +60,9 @@ public class FeedbackSubmitEndpointTests
 
         var result = await CreateController(db).Submit(new SubmitFeedbackRequest
         {
-            Category = FeedbackCategory.Idea, Message = "Add CSV export.", PageUrl = "/Budget?month=10"
+            Category = FeedbackCategory.Idea,
+            Message = "Add CSV export.",
+            PageUrl = "/Budget?month=10"
         });
 
         Assert.IsType<NoContentResult>(result);
@@ -88,7 +90,8 @@ public class FeedbackSubmitEndpointTests
 
         var errors = await AssertBadRequestAsync(db, new SubmitFeedbackRequest
         {
-            Category = FeedbackCategory.Idea, Message = new string('a', 2001)
+            Category = FeedbackCategory.Idea,
+            Message = new string('a', 2001)
         });
 
         Assert.Contains("Message must be 2,000 characters or fewer.", errors);
@@ -101,7 +104,8 @@ public class FeedbackSubmitEndpointTests
 
         var result = await CreateController(db).Submit(new SubmitFeedbackRequest
         {
-            Category = FeedbackCategory.Other, Message = new string('a', 2000)
+            Category = FeedbackCategory.Other,
+            Message = new string('a', 2000)
         });
 
         Assert.IsType<NoContentResult>(result);
@@ -130,7 +134,9 @@ public class FeedbackSubmitEndpointTests
 
         var errors = await AssertBadRequestAsync(db, new SubmitFeedbackRequest
         {
-            Category = FeedbackCategory.Bug, Message = "Hi", PageUrl = "/" + new string('a', 500)
+            Category = FeedbackCategory.Bug,
+            Message = "Hi",
+            PageUrl = "/" + new string('a', 500)
         });
 
         Assert.Contains("Page must be 500 characters or fewer.", errors);

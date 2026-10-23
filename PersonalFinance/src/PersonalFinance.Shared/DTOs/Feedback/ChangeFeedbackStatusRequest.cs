@@ -1,4 +1,4 @@
-﻿using PersonalFinance.Shared.Enums;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Shared.DTOs.Feedback;
 

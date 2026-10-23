@@ -28,20 +28,20 @@ public static class UserDataSeed
         var plan = new MonthlyBudgetPlan { UserId = userId, Year = 2026, Month = 3 };
         db.MonthlyBudgetLines.Add(new MonthlyBudgetLine { UserId = userId, Plan = plan, Category = category, PlannedAmount = 50m });
         db.BudgetTransactions.Add(new BudgetTransaction
-            { UserId = userId, Category = category, Date = new DateOnly(2026, 3, 2), Description = $"{marker} coffee" });
+        { UserId = userId, Category = category, Date = new DateOnly(2026, 3, 2), Description = $"{marker} coffee" });
 
         var connection = new GoogleDriveConnection { UserId = userId, Name = $"{marker} folder", FolderId = "f", FolderUrl = "u" };
         var snapshot = new SpreadsheetBudgetSnapshot
-            { UserId = userId, Connection = connection, FileName = $"{marker}.xlsx", FileId = "file", CategoryBreakdownJson = "{}" };
+        { UserId = userId, Connection = connection, FileName = $"{marker}.xlsx", FileId = "file", CategoryBreakdownJson = "{}" };
         db.SpreadsheetTransactionRecords.Add(new SpreadsheetTransactionRecord
-            { UserId = userId, Snapshot = snapshot, Connection = connection, Description = $"{marker} rent" });
+        { UserId = userId, Snapshot = snapshot, Connection = connection, Description = $"{marker} rent" });
 
         db.SavingsGoals.Add(new SavingsGoal { UserId = userId, Name = $"{marker} goal" });
         db.SavedArticles.Add(new SavedArticle { UserId = userId, Title = $"{marker} article", Url = "https://example.com" });
 
         var story = new CommunityStory { UserId = userId, AuthorName = marker, Title = $"{marker} story" };
         var comment = new CommunityComment
-            { UserId = userId, AuthorName = marker, Text = $"{marker} comment", CaseStudyTitle = $"{marker} case study" };
+        { UserId = userId, AuthorName = marker, Text = $"{marker} comment", CaseStudyTitle = $"{marker} case study" };
         db.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = userId, Story = story });
         db.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = userId, Comment = comment });
         var poll = new CommunityPoll { PollCode = $"{marker}-poll", Question = $"{marker} question?" };

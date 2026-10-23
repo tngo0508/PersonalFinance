@@ -38,11 +38,15 @@ public class DataExportServiceTests
         db.Roles.Add(new IdentityRole { Id = "role-user", Name = "User" });
         db.UserRoles.Add(new IdentityUserRole<string> { UserId = UserId, RoleId = "role-user" });
         db.UserLogins.Add(new IdentityUserLogin<string>
-            { UserId = UserId, LoginProvider = "Google", ProviderKey = "g-1", ProviderDisplayName = "Google" });
+        { UserId = UserId, LoginProvider = "Google", ProviderKey = "g-1", ProviderDisplayName = "Google" });
         db.UserConsents.Add(new UserConsent
         {
-            UserId = UserId, PolicyVersion = "1.0", AcceptedTerms = true, AcceptedPrivacy = true,
-            IpAddress = "203.0.113.7", CreatedAt = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc)
+            UserId = UserId,
+            PolicyVersion = "1.0",
+            AcceptedTerms = true,
+            AcceptedPrivacy = true,
+            IpAddress = "203.0.113.7",
+            CreatedAt = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc)
         });
         db.SavingsGoals.Add(new SavingsGoal { UserId = UserId, Name = "Emergency fund", TargetAmount = 10_000m });
         await db.SaveChangesAsync();
@@ -149,12 +153,12 @@ public class DataExportServiceTests
         var category = new BudgetCategory { UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense };
         var plan = new MonthlyBudgetPlan { UserId = UserId, Year = 2026, Month = 3 };
         var deletedTransaction = new BudgetTransaction
-            { UserId = UserId, Category = category, Date = new DateOnly(2026, 3, 1), Description = "Deleted" };
+        { UserId = UserId, Category = category, Date = new DateOnly(2026, 3, 1), Description = "Deleted" };
         var deletedLine = new MonthlyBudgetLine { UserId = UserId, Plan = plan, Category = category, PlannedAmount = 9m };
         deletedTransaction.SoftDelete();
         deletedLine.SoftDelete();
         db.BudgetTransactions.AddRange(deletedTransaction, new BudgetTransaction
-            { UserId = UserId, Category = category, Date = new DateOnly(2026, 3, 2), Description = "Live" });
+        { UserId = UserId, Category = category, Date = new DateOnly(2026, 3, 2), Description = "Live" });
         db.MonthlyBudgetLines.Add(deletedLine);
         await db.SaveChangesAsync();
 
@@ -172,7 +176,7 @@ public class DataExportServiceTests
         db.BudgetCategories.Add(category);
         await db.SaveChangesAsync();
         db.BudgetTransactions.Add(new BudgetTransaction
-            { UserId = UserId, CategoryId = category.Id, Date = new DateOnly(2026, 3, 1), Amount = 12.34m });
+        { UserId = UserId, CategoryId = category.Id, Date = new DateOnly(2026, 3, 1), Amount = 12.34m });
         category.SoftDelete();
         await db.SaveChangesAsync();
 
@@ -190,8 +194,12 @@ public class DataExportServiceTests
         await using var db = CreateContext();
         db.GoogleDriveConnections.Add(new GoogleDriveConnection
         {
-            UserId = UserId, Name = "Budget folder", FolderId = "folder", FolderUrl = "https://drive.example/folder",
-            EncryptedApiKey = "encrypted-secret-key", MaskedApiKey = "AIza****cret"
+            UserId = UserId,
+            Name = "Budget folder",
+            FolderId = "folder",
+            FolderUrl = "https://drive.example/folder",
+            EncryptedApiKey = "encrypted-secret-key",
+            MaskedApiKey = "AIza****cret"
         });
         await db.SaveChangesAsync();
 
