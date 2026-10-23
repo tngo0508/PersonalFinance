@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.10] - 2026-10-23
+
+### Changed
+
+- **Web Uses the Classic MVC Layout**: `PersonalFinance.Web` moves from Feature folders back to `Controllers/`, `Models/<Controller>/` and `Views/<Controller>/`, so a page's controller, view model and views are found from one another by name (ADR 0008, #170).
+  - Every controller is in `Controllers/`, including the JSON-only ones and `NotificationController` (from `Infrastructure/`). View models sit in `Models/<Controller>/`, named after the controller that renders them: the Budget Planner's in `Models/Budget/`, the Landing Page's in `Models/Home/`, the Feedback inbox's in `Models/Admin/`.
+  - `UserConsentService` and `NewsService` are in `Services/`, `TimeAgoTagHelper` in `TagHelpers/`. `Infrastructure/` keeps only host plumbing. `NewsService` moves to ApiService in #171.
+  - The two Web `Add<Feature>Feature()` extensions are gone; their registrations are inline in `Program.cs`.
+  - `Views/_ViewImports.cshtml` imports every `Models.*` namespace, so views name their model without qualification.
+  - A new `WebMvcLayoutTests` fails the build when a Web type sits outside these folders, a controller is outside `Controllers/`, or a `Views/` folder has no controller of that name. `FeatureLayoutTests` now checks the Feature rules for ApiService only.
+  - AGENTS.md, CONTRIBUTING.md, ARCHITECTURE.md (with a Feature to Web controller map) and the coding standards describe the new layout.
+  - No behaviour, route, view or contract change.
+
 ## [4.2.9] - 2026-10-23
 
 ### Changed

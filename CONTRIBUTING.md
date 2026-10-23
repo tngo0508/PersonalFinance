@@ -72,10 +72,10 @@ Code style is defined in `.editorconfig` and checked during build. To fix format
 | Business logic, EF Core queries | `PersonalFinance.ApiService/Features/<Feature>/` |
 | Request validation | `PersonalFinance.ApiService/Features/<Feature>/Validators/` (FluentValidation) |
 | REST endpoint | `PersonalFinance.ApiService/Features/<Feature>/` |
-| Code two or more Features share | `PersonalFinance.ApiService/Infrastructure/`, `PersonalFinance.Web/Infrastructure/` |
+| Code two or more Features share | `PersonalFinance.ApiService/Infrastructure/` |
 | DTOs and Refit Contracts | `PersonalFinance.Shared/DTOs/<Feature>/`, `PersonalFinance.Shared/Contracts/` |
 | Entities and migrations | `PersonalFinance.Data/Entities/`, `PersonalFinance.Data/Migrations/AzureSql/` |
-| Pages, view models, JavaScript | `PersonalFinance.Web/Features/<Feature>/`, `Views/<Controller>/`, `wwwroot/js/<feature>/` |
+| Pages, view models, JavaScript | `PersonalFinance.Web/Controllers/`, `Models/<Controller>/`, `Views/<Controller>/`, `wwwroot/js/<feature>/` |
 | Tests | `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/` |
 
 The step-by-step feature checklist is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#adding-a-feature-checklist).

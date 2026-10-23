@@ -8,8 +8,9 @@ using PersonalFinance.Web.Infrastructure;
 namespace PersonalFinance.Tests.Architecture;
 
 /// <summary>
-/// The Feature layout of ADR 0007: ApiService and Web are organized by Feature, a file's namespace says where it
-/// lives, and one Feature depends on another only through its interface.
+/// The Feature layout of ADR 0007: ApiService is organized by Feature, a file's namespace says where it lives (in
+/// ApiService and Web), and one Feature depends on another only through its interface. Web's MVC layout (ADR 0008) is
+/// checked by <see cref="WebMvcLayoutTests"/>.
 /// </summary>
 public class FeatureLayoutTests
 {
@@ -29,11 +30,11 @@ public class FeatureLayoutTests
     private static Assembly AssemblyOf(string project) =>
         project == "PersonalFinance.ApiService" ? ApiServiceAssembly : WebAssembly;
 
-    [Theory]
-    [MemberData(nameof(Projects))]
-    public void EveryType_LivesInAFeatureOrInInfrastructure(string project)
+    [Fact]
+    public void EveryApiServiceType_LivesInAFeatureOrInInfrastructure()
     {
-        List<string> misplaced = SourceTypes(AssemblyOf(project))
+        const string project = "PersonalFinance.ApiService";
+        List<string> misplaced = SourceTypes(ApiServiceAssembly)
             .Where(t => !IsAllowedNamespace(project, t.Namespace!))
             .Select(t => t.FullName!)
             .Order(StringComparer.Ordinal)
@@ -74,11 +75,11 @@ public class FeatureLayoutTests
             $"Files whose namespace does not match their folder in {project}:\n  " + string.Join("\n  ", mismatches));
     }
 
-    [Theory]
-    [MemberData(nameof(Projects))]
-    public void ConstructorParameters_CrossingIntoAnotherFeature_AreInterfaces(string project)
+    [Fact]
+    public void ApiServiceConstructorParameters_CrossingIntoAnotherFeature_AreInterfaces()
     {
-        Assembly assembly = AssemblyOf(project);
+        const string project = "PersonalFinance.ApiService";
+        Assembly assembly = ApiServiceAssembly;
         var violations = new List<string>();
 
         foreach (Type type in SourceTypes(assembly).Where(t => !t.IsInterface))
@@ -116,9 +117,7 @@ public class FeatureLayoutTests
     }
 
     private static bool IsAllowedNamespace(string project, string ns) =>
-        ns == $"{project}.Infrastructure"
-        || FeatureOf(project, ns) is not null
-        || (project == "PersonalFinance.Web" && ns.StartsWith("PersonalFinance.Web.Areas.", StringComparison.Ordinal));
+        ns == $"{project}.Infrastructure" || FeatureOf(project, ns) is not null;
 
     private static string? FeatureOf(string project, string ns)
     {
@@ -133,7 +132,7 @@ public class FeatureLayoutTests
     }
 
     /// <summary>Hand-written, top-level types; compiler, Razor and embedded-attribute output is left out.</summary>
-    private static IEnumerable<Type> SourceTypes(Assembly assembly) =>
+    internal static IEnumerable<Type> SourceTypes(Assembly assembly) =>
         assembly.GetTypes().Where(t =>
             !t.IsNested
             && t.Namespace is not null

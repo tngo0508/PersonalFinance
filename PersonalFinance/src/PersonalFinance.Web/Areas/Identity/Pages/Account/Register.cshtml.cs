@@ -11,8 +11,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
-using PersonalFinance.Web.Features.Legal;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 
