@@ -64,6 +64,14 @@ public static class FeatureServiceExtensions
         return services;
     }
 
+    /// <summary>The Data Export an Account downloads from the Personal data page.</summary>
+    public static IServiceCollection AddDataExportFeature(this IServiceCollection services)
+    {
+        services.AddScoped<IDataExportService, DataExportService>();
+        services.TryAddSingleton(TimeProvider.System);
+        return services;
+    }
+
     /// <summary>Admin-only system information.</summary>
     public static IServiceCollection AddAdminFeature(this IServiceCollection services)
     {

@@ -77,6 +77,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Data Export**: An Account can download all of its data as one JSON file from Account settings > Personal data (#141).
+  - Covers the account and its consents, Net Worth, Budget Planner, Budget Tracker, synced spreadsheet data, Google Drive connections, savings goals, saved articles, Community posts, likes and votes, Feedback, notifications and AI Assistant usage.
+  - Only live records: soft-deleted rows are left out. Secrets never appear (password hash, security stamp, Google Drive API keys).
+  - Replaces the Identity UI default download, which held only the sign-in fields. New `GET /api/data-export` endpoint and `IDataExportApi` contract.
+
 - **About Page**: A public About page at `/about` explains what Personal Finance is, why it exists, who builds it and its core features, for signed-out and signed-in visitors.
   - Served by `HomeController`; it needs no sign-in and makes no API call.
   - Linked from the footer on every page and from the Landing Page hero.
@@ -138,6 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `max_completion_tokens` is applied to all requests (configurable via `OpenAI:MaxTokens`, default 400).
 
 ### Fixed
+
+- **Account Deletion No Longer Orphans Data**: The built-in Delete personal data page deleted only the sign-in Account and left all of its financial data behind, so it now deletes nothing and points to the Contact page until the Deletion Request (#142) replaces it.
 
 - **Build warnings:** A clean build of the whole solution, tests included, now reports zero warnings, and CI fails on any new one (#125).
   - Budget period keys and counters are formatted and parsed with the invariant culture, and the savings goal target date is parsed as invariant ISO `yyyy-MM-dd`; relative-time labels and the figures in AI Assistant prompts use the app culture (en-US), so a host locale change no longer alters them.

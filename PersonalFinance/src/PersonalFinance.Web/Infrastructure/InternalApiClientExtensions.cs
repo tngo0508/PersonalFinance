@@ -30,6 +30,7 @@ public static class InternalApiClientExtensions
         services.AddInternalApiClient<IBudgetTrackerApi>(apiBaseUrl);
         services.AddInternalApiClient<ICommunityApi>(apiBaseUrl);
         services.AddInternalApiClient<IDashboardApi>(apiBaseUrl);
+        services.AddInternalApiClient<IDataExportApi>(apiBaseUrl);
         services.AddInternalApiClient<IFeedbackApi>(apiBaseUrl);
         // Spreadsheet downloads from Google Drive can be slow.
         services.AddInternalApiClient<IGoogleDriveApi>(apiBaseUrl, TimeSpan.FromSeconds(35));
