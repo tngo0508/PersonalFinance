@@ -20,10 +20,12 @@ with an enforced complexity ceiling.
 
 1. **ApiService and Web are organized by Feature.** Each Feature (GLOSSARY.md) owns `Features/<Feature>/` in both
    projects: NetWorth, BudgetPlanner, BudgetTracker, Analysis, GoogleDrive, SavingsGoals, Community, Watchlist,
-   AiAssistant, Feedback, Admin, AccountLifecycle, Search and Dashboard. The same name is used in `Shared/DTOs/` and in
-   the test project. `Infrastructure/` holds only code that two or more Features use (authentication handler, rate
-   limiter, culture, DI helpers); code used by one Feature lives in that Feature. `Data` and `Shared` keep their
-   current layout.
+   AiAssistant, Feedback, Admin, AccountLifecycle, Search and Dashboard, plus three Web-only Features added when the
+   Web move (#160) found pages that fit none of these: LandingPage, Legal (including Consent) and InvestmentCalculator.
+   The same name is used in `Shared/DTOs/` and in the test project. `Infrastructure/` holds only code that two or
+   more Features use (authentication handler, rate limiter, culture, DI helpers), or that serves the host rather than
+   any Feature (the Identity area's email sender, authorization and cookie handlers); code used by one Feature lives
+   in that Feature. `Data` and `Shared` keep their current layout.
 2. **A Feature folder has a fixed anatomy.** At its root: the controller, `<Feature>Feature.cs` with
    `Add<Feature>Feature()`, and each service interface beside its implementation. Subfolders come only from a fixed
    set and exist only when needed: `Domain/` (pure logic with no EF Core or HTTP dependency), `Validators/`, and
@@ -72,6 +74,10 @@ with an enforced complexity ceiling.
   2026-10-22 review follows in separate PRs.
 - Making validators `internal` silently unregisters them unless `AddValidatorsFromAssemblyContaining<Program>()` is
   given `includeInternalTypes: true`. Controllers must stay `public` for MVC discovery.
+- Applying rule 1 during the move (#159, #160): Notifications is raised by several Features and read from every page,
+  so it lives in `Infrastructure/` with its controller. Controllers keep the names their routes and view folders come
+  from, so the Landing Page's controller is `HomeController` and the Watchlist's news feed is `NewsController`;
+  renaming them would change URLs and move views, which rule 5 rules out.
 - Dashboard, Search and AI Assistant are Features that read other Features' data; rule 3 allows that through
   `AppDbContext` or the other Feature's interface. Helpers that several Features share, such as the Data Source
   provider, move to `Infrastructure/` under rule 1; their behaviour and ADR 0002 are unaffected.

@@ -24,10 +24,11 @@ All paths are under `PersonalFinance/src/` unless noted.
 |---|---|
 | A Feature's API controller, services, validators, DI registration ([ADR 0007](docs/adr/0007-feature-folders-with-interface-only-dependencies.md)) | `PersonalFinance.ApiService/Features/<Feature>/` |
 | What two or more Features share: the Data Source provider (ADR 0002), the projection and mapping helpers, auth, rate limiting, Notifications | `PersonalFinance.ApiService/Infrastructure/` |
-| A Feature's MVC controller, view models, UI services (Feedback moved, the rest still in `{Controllers,Models,Services}`); Razor views | `PersonalFinance.Web/Features/<Feature>/`, `Views/<Controller>/` |
-| Legal pages (privacy, terms, disclaimer, cookies, contact) | `PersonalFinance.Web/Controllers/LegalController.cs`, `Views/Legal/` |
+| A Feature's MVC controller, view models, UI services; Razor views stay put | `PersonalFinance.Web/Features/<Feature>/`, `Views/<Controller>/` |
+| What two or more Web Features share: the user-id forwarding handler, Refit client registration, Unavailable State, email, Notifications | `PersonalFinance.Web/Infrastructure/` |
+| Legal pages (privacy, terms, disclaimer, cookies, contact) | `PersonalFinance.Web/Features/Legal/`, `Views/Legal/` |
 | Footer, cookie banner, layout | `PersonalFinance.Web/Views/Shared/` (`_Layout`, `_CookieBanner`) |
-| Registration + consent | `PersonalFinance.Web/Areas/Identity/Pages/Account/Register*`, `Services/UserConsentService.cs` |
+| Registration + consent | `PersonalFinance.Web/Areas/Identity/Pages/Account/Register*`, `Features/Legal/UserConsentService.cs` |
 | Client JavaScript (by feature) | `PersonalFinance.Web/wwwroot/js/{core,networth,budget,dashboard,...}` |
 | Global CSS | `PersonalFinance.Web/wwwroot/css/site.css` |
 | Entities, DbContext, migrations | `PersonalFinance.Data/{Entities,Migrations/AzureSql}` |

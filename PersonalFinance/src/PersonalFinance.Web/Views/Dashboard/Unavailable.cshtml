@@ -1,5 +1,5 @@
 @using System.Security.Claims
-@using PersonalFinance.Web.Models
+@using PersonalFinance.Web.Infrastructure
 @{
     ViewData["Title"] = "Dashboard";
     var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? string.Empty;

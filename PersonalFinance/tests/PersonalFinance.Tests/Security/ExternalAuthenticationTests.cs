@@ -383,7 +383,7 @@ public class ExternalAuthenticationTests
             userStore,
             NullLogger<ExternalLoginModel>.Instance,
             new NoOpEmailSender(),
-            Microsoft.Extensions.Options.Options.Create(new PersonalFinance.Web.Services.BrevoOptions()));
+            Microsoft.Extensions.Options.Options.Create(new PersonalFinance.Web.Infrastructure.BrevoOptions()));
 
         IActionResult result = model.OnGet();
         RedirectToPageResult redirectResult = Assert.IsType<RedirectToPageResult>(result);

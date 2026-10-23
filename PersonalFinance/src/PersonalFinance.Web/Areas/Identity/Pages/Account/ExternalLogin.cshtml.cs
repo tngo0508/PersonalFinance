@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
-using PersonalFinance.Web.Services;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 

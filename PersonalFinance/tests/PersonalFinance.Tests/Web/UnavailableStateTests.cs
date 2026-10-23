@@ -8,10 +8,11 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Tests.Budget;
-using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Features.Community;
+using PersonalFinance.Web.Features.NetWorth;
+using PersonalFinance.Web.Features.SavingsGoals;
 using PersonalFinance.Web.Infrastructure;
-using PersonalFinance.Web.Models;
-using BudgetController = PersonalFinance.Web.Controllers.BudgetController;
+using BudgetController = PersonalFinance.Web.Features.BudgetPlanner.BudgetController;
 
 namespace PersonalFinance.Tests.Web;
 

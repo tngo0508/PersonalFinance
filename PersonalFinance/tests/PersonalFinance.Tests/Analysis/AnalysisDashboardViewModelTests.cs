@@ -1,4 +1,4 @@
-using PersonalFinance.Web.Models;
+using PersonalFinance.Web.Features.Analysis;
 
 namespace PersonalFinance.Tests.Analysis;
 

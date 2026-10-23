@@ -2,7 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using PersonalFinance.Web.Services;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Tests.Security;
 

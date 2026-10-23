@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Web.Infrastructure;
 

@@ -1,4 +1,4 @@
-using PersonalFinance.Web.Services;
+using PersonalFinance.Web.Infrastructure;
 using Xunit;
 
 namespace PersonalFinance.Tests.Web;

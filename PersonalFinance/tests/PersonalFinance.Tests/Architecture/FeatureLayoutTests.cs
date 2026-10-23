@@ -18,7 +18,8 @@ public class FeatureLayoutTests
     public static readonly IReadOnlyList<string> Features =
     [
         "NetWorth", "BudgetPlanner", "BudgetTracker", "Analysis", "GoogleDrive", "SavingsGoals", "Community",
-        "Watchlist", "AiAssistant", "Feedback", "Admin", "AccountLifecycle", "Search", "Dashboard"
+        "Watchlist", "AiAssistant", "Feedback", "Admin", "AccountLifecycle", "Search", "Dashboard", "LandingPage", "Legal",
+        "InvestmentCalculator"
     ];
 
     /// <summary>
@@ -27,10 +28,6 @@ public class FeatureLayoutTests
     /// </summary>
     private static readonly HashSet<string> LegacyNamespaces = new(StringComparer.Ordinal)
     {
-        "PersonalFinance.Web.Controllers",
-        "PersonalFinance.Web.Models",
-        "PersonalFinance.Web.Services",
-        "PersonalFinance.Web.TagHelpers"
     };
 
     private static readonly Assembly ApiServiceAssembly = typeof(InfrastructureServiceExtensions).Assembly;

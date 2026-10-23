@@ -7,10 +7,9 @@ using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
-using PersonalFinance.Web.Controllers;
-using PersonalFinance.Web.Models;
+using PersonalFinance.Web.Features.GoogleDrive;
 using Xunit;
-using GoogleDriveController = PersonalFinance.Web.Controllers.GoogleDriveController;
+using GoogleDriveController = PersonalFinance.Web.Features.GoogleDrive.GoogleDriveController;
 
 namespace PersonalFinance.Tests.GoogleDrive;
 

@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
-using PersonalFinance.Web.Services;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Tests.AccountDeletion;
 

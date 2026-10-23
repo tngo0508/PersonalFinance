@@ -23,7 +23,6 @@ using PersonalFinance.Shared.DTOs.AccountDeletion;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
 using PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 using PersonalFinance.Web.Infrastructure;
-using PersonalFinance.Web.Services;
 using Refit;
 
 namespace PersonalFinance.Tests.AccountDeletion;

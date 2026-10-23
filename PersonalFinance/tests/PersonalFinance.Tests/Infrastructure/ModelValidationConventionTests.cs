@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
-using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Features.Legal;
 
 namespace PersonalFinance.Tests.Infrastructure;
 
