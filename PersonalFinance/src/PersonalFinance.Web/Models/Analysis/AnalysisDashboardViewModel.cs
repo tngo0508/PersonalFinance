@@ -63,6 +63,9 @@ public class AnalysisDashboardViewModel
     // Category insights
     public List<CategoryInsightViewModel> Categories { get; set; } = new();
 
+    // Money Flow: one month of income moving into categories and savings; null when the month has no data
+    public MoneyFlowViewModel? MoneyFlow { get; set; }
+
     // Variance rankings
     public List<VarianceRankingViewModel> VarianceRankings { get; set; } = new();
 

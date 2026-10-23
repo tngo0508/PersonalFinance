@@ -213,7 +213,9 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             MonthName = GetMonthName(targetMonth),
             Categories = categoryList,
             TotalSpent = totalSpent,
-            TotalBudgeted = totalBudgeted
+            TotalBudgeted = totalBudgeted,
+            ActualIncome = monthData.ActualIncome,
+            ActualExpenses = monthData.ActualExpenses
         };
     }
 

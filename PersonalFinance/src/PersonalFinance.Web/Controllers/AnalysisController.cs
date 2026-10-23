@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Web.Models.Analysis;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -198,6 +199,8 @@ public class AnalysisController : Controller
                     PercentageUsed = c.PercentageUsed,
                     Status = c.Status
                 }).ToList();
+
+        model.MoneyFlow = MoneyFlowBuilder.Build(result.Categories);
 
         if (result.Variance != null)
             model.VarianceRankings = result.Variance.Rankings

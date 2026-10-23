@@ -103,6 +103,14 @@
       "files": [
         "marked.min.js"
       ]
+    },
+    {
+      "library": "chartjs-chart-sankey@0.19.1",
+      "provider": "jsdelivr",
+      "destination": "wwwroot/lib/chartjs-chart-sankey",
+      "files": [
+        "dist/chartjs-chart-sankey.min.js"
+      ]
     }
   ]
 }

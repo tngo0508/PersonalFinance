@@ -87,6 +87,12 @@ public class CategoryInsightsDto
     public List<CategoryBreakdownDto> Categories { get; set; } = new();
     public decimal TotalSpent { get; set; }
     public decimal TotalBudgeted { get; set; }
+
+    /// <summary>The month's actual income, even when no month was requested (the summary then covers the year).</summary>
+    public decimal ActualIncome { get; set; }
+
+    /// <summary>The month's actual expenses, from the same month as <see cref="Categories"/>.</summary>
+    public decimal ActualExpenses { get; set; }
 }
 
 public class CategoryBreakdownDto

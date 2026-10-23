@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.3.0] - 2026-10-23
+
+### Added
+
+- **Money Flow on the Analysis page**: a new "Where your money went" chart shows one month of actual income flowing into each spending category and into savings, with a table of the same figures (#203).
+  - In a month where spending exceeded income, the Shortfall and the income flow into one Spending total, and a note says how much more was spent than earned.
+  - Categories under 3% of the month are grouped into "Other" in the chart; the table always lists every category. Spending a synced Google Sheet doesn't assign to a category shows as "Uncategorized".
+  - On phones the table comes first, then the chart.
+  - The chart uses the `chartjs-chart-sankey` 0.19.1 plugin (MIT) on the existing Chart.js.
+  - The Analysis API's category insights now also carry that month's own income and expenses, because with no month selected the page's summary totals cover the whole year.
+
 ## [4.2.20] - 2026-10-23
 
 ### Fixed
