@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.8] - 2026-10-23
+
+### Changed
+
+- **Feature Layout Contract**: the architecture tests now allow no exceptions, and the project documents describe only the Feature layout (ADR 0007, #161).
+  - The legacy allow-list and its `LegacyAllowList_NamesOnlyNamespacesStillInUse` test are deleted from `FeatureLayoutTests`; every ApiService and Web type must live in a `Features.<Feature>` or `Infrastructure` namespace.
+  - `docs/CODING_STANDARDS.md`, `docs/ARCHITECTURE.md`, `GLOSSARY.md`, `CONTRIBUTING.md` and `README.md` describe `Features/<Feature>/` with its fixed anatomy and `Infrastructure/`, with the Feedback Feature as the exemplar; the type-based folders are mentioned only in ADR 0001's superseded section.
+  - A pull request template (`.github/pull_request_template.md`) carries the Done checklist from AGENTS.md. `CODEOWNERS` stays deferred until a second owner exists.
+  - No behaviour, route or contract change.
+
 ## [4.2.7] - 2026-10-23
 
 ### Changed

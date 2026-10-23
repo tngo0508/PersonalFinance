@@ -42,7 +42,7 @@ All paths are under `PersonalFinance/src/` unless noted.
 - **Layers:** `Web` -> `ApiService` -> `Data`; `Shared` is referenced by all. `Data` references neither `Web` nor `ApiService`. `ApiService` has no MVC/Razor dependency.
 - **Web controllers** stay thin: call Refit API clients (e.g. `INetWorthApi`), build view models, return views. They never hold business logic and never inject ApiService services.
 - **ApiService controllers** inject service interfaces directly via DI. No MediatR, no mediator layer (ADR 0001).
-- **Services** own business logic and EF Core data access. Controllers do validation via `Validators/`, then delegate.
+- **Services** own business logic and EF Core data access. Controllers do validation via the Feature's `Validators/`, then delegate.
 - Use constructor injection. No `new` for services. Register new services in `Program.cs`.
 - Pass dedicated ViewModels to views, never EF entities.
 

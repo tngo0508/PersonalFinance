@@ -9,8 +9,7 @@ namespace PersonalFinance.Tests.Architecture;
 
 /// <summary>
 /// The Feature layout of ADR 0007: ApiService and Web are organized by Feature, a file's namespace says where it
-/// lives, and one Feature depends on another only through its interface. The type-based namespaces that ADR 0001 §3
-/// chose are tolerated through <see cref="LegacyNamespaces"/> while the move is in progress.
+/// lives, and one Feature depends on another only through its interface.
 /// </summary>
 public class FeatureLayoutTests
 {
@@ -21,14 +20,6 @@ public class FeatureLayoutTests
         "Watchlist", "AiAssistant", "Feedback", "Admin", "AccountLifecycle", "Search", "Dashboard", "LandingPage", "Legal",
         "InvestmentCalculator"
     ];
-
-    /// <summary>
-    /// Namespaces from the type-based layout that ADR 0007 replaces. Each migrate ticket (#157 to #160) deletes the
-    /// entries it empties, and #161 deletes the list. Nothing is ever added here.
-    /// </summary>
-    private static readonly HashSet<string> LegacyNamespaces = new(StringComparer.Ordinal)
-    {
-    };
 
     private static readonly Assembly ApiServiceAssembly = typeof(InfrastructureServiceExtensions).Assembly;
     private static readonly Assembly WebAssembly = typeof(InternalApiClientExtensions).Assembly;
@@ -51,20 +42,6 @@ public class FeatureLayoutTests
         Assert.True(misplaced.Count == 0,
             $"Types outside Features.<Feature> and Infrastructure in {project} (ADR 0007):\n  " +
             string.Join("\n  ", misplaced));
-    }
-
-    [Fact]
-    public void LegacyAllowList_NamesOnlyNamespacesStillInUse()
-    {
-        // A migrate ticket that empties a legacy namespace must also delete its entry, so the list only shrinks.
-        HashSet<string> inUse = SourceTypes(ApiServiceAssembly).Concat(SourceTypes(WebAssembly))
-            .Select(t => t.Namespace!)
-            .ToHashSet(StringComparer.Ordinal);
-
-        List<string> stale = LegacyNamespaces.Where(ns => !inUse.Contains(ns)).Order(StringComparer.Ordinal).ToList();
-
-        Assert.True(stale.Count == 0,
-            "Legacy namespaces with no types left; remove them from the allow-list:\n  " + string.Join("\n  ", stale));
     }
 
     [Theory]
@@ -141,8 +118,7 @@ public class FeatureLayoutTests
     private static bool IsAllowedNamespace(string project, string ns) =>
         ns == $"{project}.Infrastructure"
         || FeatureOf(project, ns) is not null
-        || (project == "PersonalFinance.Web" && ns.StartsWith("PersonalFinance.Web.Areas.", StringComparison.Ordinal))
-        || LegacyNamespaces.Contains(ns);
+        || (project == "PersonalFinance.Web" && ns.StartsWith("PersonalFinance.Web.Areas.", StringComparison.Ordinal));
 
     private static string? FeatureOf(string project, string ns)
     {

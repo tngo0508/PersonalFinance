@@ -69,12 +69,13 @@ Code style is defined in `.editorconfig` and checked during build. To fix format
 
 | Change | Location |
 |---|---|
-| Business logic, EF Core queries | `PersonalFinance.ApiService/Services/` |
-| Request validation | `PersonalFinance.ApiService/Validators/` (FluentValidation) |
-| REST endpoint | `PersonalFinance.ApiService/Controllers/` |
+| Business logic, EF Core queries | `PersonalFinance.ApiService/Features/<Feature>/` |
+| Request validation | `PersonalFinance.ApiService/Features/<Feature>/Validators/` (FluentValidation) |
+| REST endpoint | `PersonalFinance.ApiService/Features/<Feature>/` |
+| Code two or more Features share | `PersonalFinance.ApiService/Infrastructure/`, `PersonalFinance.Web/Infrastructure/` |
 | DTOs and Refit Contracts | `PersonalFinance.Shared/DTOs/<Feature>/`, `PersonalFinance.Shared/Contracts/` |
 | Entities and migrations | `PersonalFinance.Data/Entities/`, `PersonalFinance.Data/Migrations/AzureSql/` |
-| Pages, view models, JavaScript | `PersonalFinance.Web/{Controllers,Models,Views}`, `wwwroot/js/<feature>/` |
+| Pages, view models, JavaScript | `PersonalFinance.Web/Features/<Feature>/`, `Views/<Controller>/`, `wwwroot/js/<feature>/` |
 | Tests | `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/` |
 
 The step-by-step feature checklist is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#adding-a-feature-checklist).
@@ -94,6 +95,7 @@ The step-by-step feature checklist is in [`docs/ARCHITECTURE.md`](docs/ARCHITECT
 6. Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages (`feat:`, `fix:`, `docs:`,
    `refactor:`, `test:`, `chore:`).
 7. In the PR description, list what changed, any database changes, and the exact commands you ran with their results.
+   The pull request template (`.github/pull_request_template.md`) carries these sections and this checklist.
 
 ## Non-negotiables
 
