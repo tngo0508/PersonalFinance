@@ -1,0 +1,348 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway, never merge. Branch: prototype/money-map. Ticket: #198 (map #193).
+  Question: what should the Money Map's Flow View and Plan View look and feel like?
+  Three structurally different variants, switchable via ?variant=A|B|C, and sample data via ?data=normal|shortfall|sheet.
+  Assumption: a standalone page using the app's real CSS (Bootstrap + site.css) instead of a route in the running app,
+  because no placement is decided yet and the app needs a database to run. Open this file directly in a browser.
+  Sample numbers only; no API calls, no persistence.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · Money Map</title>
+<link rel="stylesheet" href="../lib/bootstrap/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="../css/site.css">
+<script src="../lib/chartjs/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-sankey@0.19.1/dist/chartjs-chart-sankey.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.34.4/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@4.0.1/dist/cytoscape-dagre.min.js"></script>
+<style>
+  body { background: var(--app-surface, #F9FAFB); padding-bottom: 96px; }
+  .proto-banner { background: #111827; color: #FDE68A; font: 600 12px/1.4 system-ui; padding: 6px 16px; }
+  .mm-chart { position: relative; height: 420px; }
+  .mm-chart.compact { height: 300px; }
+  .mm-cy { height: 420px; border: 1px solid var(--app-border, #E5E7EB); border-radius: 8px; background: #fff; }
+  .mm-panel { border: 1px solid var(--app-border, #E5E7EB); border-radius: 8px; background: #fff; padding: 16px; min-height: 200px; }
+  .mm-note { border-left: 4px solid var(--app-accent-negative, #DC2626); background: var(--app-accent-negative-soft, #FEE2E2); padding: 10px 14px; border-radius: 6px; }
+  .mm-headline { font-size: 1.25rem; }
+  .mm-num { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .mm-sheet { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #D1D5DB; box-shadow: 0 -8px 16px rgba(0,0,0,.1); padding: 16px 20px 88px; z-index: 1040; }
+  .mm-sheet[hidden] { display: none; }
+  .mm-calc { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .mm-calc .card { height: 100%; }
+  .mm-chip { display: inline-block; background: var(--app-brand-soft, #E0E7FF); color: #3730A3; border-radius: 999px; padding: 1px 8px; margin: 1px 2px; font-size: .85em; }
+  .mm-mock-nav { font-size: .85rem; color: #6B7280; }
+  .proto-bar { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; gap: 8px; align-items: center;
+    background: #111827; color: #fff; border-radius: 999px; padding: 6px 10px; box-shadow: 0 8px 24px rgba(0,0,0,.35); font: 13px system-ui; white-space: nowrap; }
+  .proto-bar button { background: #374151; color: #fff; border: 0; border-radius: 999px; width: 30px; height: 30px; }
+  .proto-bar select { background: #374151; color: #fff; border: 0; border-radius: 999px; padding: 4px 8px; }
+  @media (max-width: 575px) { .proto-bar { font-size: 11px; gap: 4px; max-width: calc(100vw - 16px); } .proto-bar select { max-width: 120px; } }
+</style>
+</head>
+<body>
+<div class="proto-banner">PROTOTYPE · sample data · not the real app (Money Map, ticket #198)</div>
+<main class="container py-4" id="root"></main>
+
+<div class="proto-bar" role="toolbar" aria-label="Prototype switcher">
+  <button type="button" id="prev" aria-label="Previous variant">‹</button>
+  <span id="variantLabel"></span>
+  <button type="button" id="next" aria-label="Next variant">›</button>
+  <select id="dataSel" aria-label="Sample data">
+    <option value="normal">Normal month</option>
+    <option value="shortfall">Shortfall month</option>
+    <option value="sheet">Sheet month (uncategorized)</option>
+  </select>
+</div>
+
+<script>
+'use strict';
+// ---------- sample data ----------
+const MONTHS = {
+  normal:    { label: 'September 2026', source: 'Budget Tracker', income: 5200, expenses: null,
+               categories: { Rent: 1800, Groceries: 612, Transport: 340, Dining: 260, Utilities: 210, Insurance: 180, Gifts: 60, Subscriptions: 45, Haircut: 30 } },
+  shortfall: { label: 'December 2026', source: 'Budget Tracker', income: 3100, expenses: null,
+               categories: { Rent: 1800, Gifts: 640, Groceries: 520, Travel: 280, Utilities: 120, Subscriptions: 60 } },
+  sheet:     { label: 'August 2026', source: 'Google Sheet', income: 4800, expenses: 3950,
+               categories: { Housing: 1700, Food: 900, Car: 500, Fun: 380, Phone: 70, Books: 50 } }
+};
+const NW = { income: 85000, spending: 48000, savings: 22000, balance: 180000, age: 34, roi: { Base: 7, Conservative: 5, Aggressive: 9 } };
+
+const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+const pct = (n, d) => d ? (n / d * 100).toFixed(1) + '%' : '0%';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- Flow View model (rules from ticket #196) ----------
+function flowModel(m) {
+  const catSum = Object.values(m.categories).reduce((a, b) => a + b, 0);
+  const expenses = m.expenses ?? catSum;
+  const shortfall = Math.max(0, expenses - m.income);
+  const saved = Math.max(0, m.income - expenses);
+  const totalFlow = m.income + shortfall;
+  const shareBase = shortfall > 0 ? expenses : m.income;
+  const rows = Object.entries(m.categories).map(([name, amount]) => ({ name, amount }));
+  if (expenses - catSum > 0) rows.push({ name: 'Uncategorized', amount: expenses - catSum, special: true });
+  const graphRows = [];
+  let other = 0;
+  rows.forEach(r => { if (!r.special && r.amount < totalFlow * 0.03) other += r.amount; else graphRows.push(r); });
+  graphRows.sort((a, b) => b.amount - a.amount);
+  if (other > 0) graphRows.push({ name: 'Other', amount: other, special: true });
+  if (saved > 0) graphRows.push({ name: 'Saved', amount: saved, special: true });
+  const tableRows = rows.slice().sort((a, b) => b.amount - a.amount);
+  if (saved > 0) tableRows.push({ name: 'Saved', amount: saved, special: true });
+  return { ...m, expenses, shortfall, saved, totalFlow, shareBase, graphRows, tableRows };
+}
+
+function flowLinks(f) {
+  // Split each right-hand node proportionally between Income and Shortfall.
+  const links = [];
+  const sources = [['Income', f.income], ['Shortfall', f.shortfall]].filter(s => s[1] > 0);
+  f.graphRows.forEach(r => sources.forEach(([src, amt]) => {
+    const flow = r.amount * (amt / f.totalFlow);
+    if (flow > 0.5) links.push({ from: src, to: r.name, flow });
+  }));
+  return links;
+}
+
+const COLORS = { Income: '#4F46E5', Shortfall: '#DC2626', Saved: '#059669', Other: '#9CA3AF', Uncategorized: '#D97706' };
+const colorOf = k => COLORS[k] || '#6366F1';
+
+let charts = [];
+let cys = [];
+function destroyAll() { charts.forEach(c => c.destroy()); charts = []; cys.forEach(c => c.destroy()); cys = []; }
+
+function renderSankey(canvas, f, opts = {}) {
+  const narrow = window.innerWidth < 576;
+  const labels = {};
+  const nodeAmount = { Income: f.income, Shortfall: f.shortfall };
+  f.graphRows.forEach(r => { nodeAmount[r.name] = r.amount; });
+  Object.keys(nodeAmount).forEach(k => {
+    labels[k] = opts.short ? k : `${k} · ${fmt(nodeAmount[k])}` + (k === 'Income' || k === 'Shortfall' ? '' : ` · ${pct(nodeAmount[k], f.shareBase)}`);
+  });
+  const priority = {};
+  f.graphRows.forEach((r, i) => { priority[r.name] = i; });
+  const chart = new Chart(canvas, {
+    type: 'sankey',
+    data: { datasets: [{
+      data: flowLinks(f),
+      labels,
+      priority,
+      column: { Income: 0, Shortfall: 0 },
+      colorFrom: c => colorOf(c.dataset.data[c.dataIndex].from),
+      colorTo: c => colorOf(c.dataset.data[c.dataIndex].to),
+      colorMode: 'gradient',
+      size: 'max',
+      nodePadding: 14,
+      orientation: narrow ? 'vertical' : 'horizontal'
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: c => { const d = c.dataset.data[c.dataIndex]; return `${d.from} → ${d.to}: ${fmt(d.flow)} (${pct(d.flow, f.shareBase)})`; }
+      } } }
+    }
+  });
+  charts.push(chart);
+}
+
+function flowTable(f) {
+  return `<table class="table table-sm align-middle mb-0"><caption class="visually-hidden">Where your money went, ${esc(f.label)}</caption>
+    <thead><tr><th scope="col">Category</th><th scope="col" class="text-end">Amount</th><th scope="col" class="text-end">Share of ${f.shortfall > 0 ? 'spending' : 'income'}</th></tr></thead>
+    <tbody>${f.tableRows.map(r => `<tr><th scope="row" class="fw-normal">${esc(r.name)}</th><td class="text-end mm-num">${fmt(r.amount)}</td><td class="text-end mm-num">${pct(r.amount, f.shareBase)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><th>Income</th><td class="text-end mm-num">${fmt(f.income)}</td><td></td></tr>${f.shortfall > 0 ? `<tr class="text-danger"><th>Shortfall</th><td class="text-end mm-num">${fmt(f.shortfall)}</td><td></td></tr>` : ''}</tfoot></table>`;
+}
+const shortfallNote = f => f.shortfall > 0 ? `<p class="mm-note mb-3">You spent <strong>${fmt(f.shortfall)}</strong> more than you earned in ${esc(f.label.split(' ')[0])}.</p>` : '';
+const monthPicker = f => `<select class="form-select form-select-sm w-auto d-inline-block" aria-label="Month"><option>${esc(f.label)}</option><option>Earlier months…</option></select>`;
+const analysisLink = f => `<a href="#" class="small">See ${esc(f.label)} in Analysis →</a>`;
+
+// ---------- Plan View model (rules from ticket #197) ----------
+function fiAge(roi) {
+  let b = NW.balance; const target = NW.spending * 25;
+  for (let y = 0; y <= 60; y++) { if (b >= target) return { age: NW.age + y, years: y }; b = b * (1 + roi / 100) + NW.savings; }
+  return null;
+}
+function planNodes() {
+  const target = NW.spending * 25;
+  const base = fiAge(NW.roi.Base);
+  return [
+    { id: 'income', label: 'Annual Income', value: fmt(NW.income), kind: 'entered' },
+    { id: 'spending', label: 'Annual Spending', value: fmt(NW.spending), kind: 'entered' },
+    { id: 'savings', label: 'Annual Savings', value: fmt(NW.savings), kind: 'entered' },
+    { id: 'balance', label: 'Starting Balance', value: fmt(NW.balance), kind: 'entered' },
+    { id: 'age', label: 'Current Age', value: String(NW.age), kind: 'entered' },
+    { id: 'roi', label: 'Base Return', value: NW.roi.Base + '%', kind: 'entered' },
+    { id: 'rate', label: 'Savings Rate', value: pct(NW.savings, NW.income), kind: 'computed',
+      formula: `${fmt(NW.savings)} ÷ ${fmt(NW.income)} = ${pct(NW.savings, NW.income)}`, from: ['savings', 'income'] },
+    { id: 'target', label: 'FI Target', value: fmt(target), kind: 'computed',
+      formula: `${fmt(NW.spending)} × 25 = ${fmt(target)}`, from: ['spending'] },
+    { id: 'progress', label: 'Progress to FI', value: pct(NW.balance, target), kind: 'computed',
+      formula: `${fmt(NW.balance)} ÷ ${fmt(target)} = ${pct(NW.balance, target)}`, from: ['balance', 'target'] },
+    { id: 'fi', label: 'FI Age', value: base ? `${base.age} (in ${base.years} yrs)` : '—', kind: 'computed',
+      formula: `Grow ${fmt(NW.balance)} at ${NW.roi.Base}% a year, adding ${fmt(NW.savings)} a year, until it reaches ${fmt(target)}`,
+      scenarios: Object.entries(NW.roi).map(([k, r]) => { const a = fiAge(r); return `${k} (${r}%): ${a ? 'age ' + a.age : 'not reached'}`; }),
+      from: ['balance', 'savings', 'roi', 'age', 'target'] }
+  ];
+}
+function nodePanel(n) {
+  if (!n) return '<p class="text-muted mb-0">Select a figure to see how it is calculated.</p>';
+  return `<h3 class="h6 mb-1">${esc(n.label)}</h3><p class="mm-num fs-4 mb-2">${esc(n.value)}</p>` +
+    (n.kind === 'computed'
+      ? `<p class="small mb-2"><span class="text-muted">How it's calculated:</span><br>${esc(n.formula)}</p>` +
+        (n.scenarios ? `<ul class="small mb-0">${n.scenarios.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : '')
+      : `<p class="small text-muted mb-2">You entered this on the Net Worth page.</p><a href="#" class="btn btn-sm btn-outline-primary">Edit on Net Worth page</a>`);
+}
+function planTable(nodes) {
+  return `<table class="table table-sm align-middle mb-0"><caption class="visually-hidden">How your Net Worth figures are calculated</caption>
+    <thead><tr><th scope="col">Figure</th><th scope="col" class="text-end">Value</th><th scope="col">How it's calculated</th></tr></thead>
+    <tbody>${nodes.map(n => `<tr><th scope="row" class="fw-normal">${esc(n.label)}</th><td class="text-end mm-num">${esc(n.value)}</td><td class="small">${n.kind === 'computed' ? esc(n.formula) + (n.scenarios ? '<br>' + n.scenarios.map(esc).join(' · ') : '') : '<a href="#">Edit on Net Worth page</a>'}</td></tr>`).join('')}</tbody></table>`;
+}
+function renderCy(container, nodes, onSelect) {
+  const elements = [];
+  nodes.forEach(n => {
+    elements.push({ data: { id: n.id, label: `${n.label}\n${n.value}` }, classes: n.kind });
+    (n.from || []).forEach(src => elements.push({ data: { id: src + '-' + n.id, source: src, target: n.id } }));
+  });
+  const cy = cytoscape({
+    container, elements,
+    userZoomingEnabled: false, userPanningEnabled: false, autoungrabify: true, boxSelectionEnabled: false,
+    layout: { name: 'dagre', rankDir: 'LR', nodeSep: 18, rankSep: 70, nodeDimensionsIncludeLabels: true, padding: 16 },
+    style: [
+      { selector: 'node', style: { shape: 'round-rectangle', label: 'data(label)', 'text-wrap': 'wrap', 'text-valign': 'center', 'text-halign': 'center',
+        width: 'label', height: 'label', padding: '10px', 'font-size': 12, 'font-family': 'system-ui', 'border-width': 1 } },
+      { selector: 'node.entered', style: { 'background-color': '#F3F4F6', 'border-color': '#D1D5DB', color: '#111827' } },
+      { selector: 'node.computed', style: { 'background-color': '#E0E7FF', 'border-color': '#4F46E5', color: '#312E81', 'font-weight': 600 } },
+      { selector: 'node:selected', style: { 'border-width': 3, 'border-color': '#059669' } },
+      { selector: 'edge', style: { width: 1.5, 'line-color': '#9CA3AF', 'target-arrow-color': '#9CA3AF', 'target-arrow-shape': 'triangle',
+        'curve-style': 'taxi', 'taxi-direction': 'rightward' } },
+      { selector: 'edge.hl', style: { 'line-color': '#4F46E5', 'target-arrow-color': '#4F46E5', width: 2.5 } }
+    ]
+  });
+  cy.on('tap', 'node', e => {
+    cy.edges().removeClass('hl');
+    e.target.incomers('edge').addClass('hl');
+    onSelect(nodes.find(n => n.id === e.target.id()));
+  });
+  cys.push(cy);
+  return cy;
+}
+
+// ---------- Variant A: Money Map page with Flow / Plan tabs ----------
+function variantA(root, f) {
+  const nodes = planNodes();
+  const tab = sessionTab;
+  root.innerHTML = `
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+      <h1 class="h3 mb-0">Money Map</h1>
+      ${tab === 'flow' ? monthPicker(f) : ''}
+    </div>
+    <ul class="nav nav-tabs mb-3" role="tablist">
+      <li class="nav-item"><button class="nav-link ${tab === 'flow' ? 'active' : ''}" data-tab="flow" role="tab">Flow</button></li>
+      <li class="nav-item"><button class="nav-link ${tab === 'plan' ? 'active' : ''}" data-tab="plan" role="tab">Plan</button></li>
+    </ul>
+    <div id="pane"></div>`;
+  root.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { sessionTab = b.dataset.tab; render(); }));
+  const pane = root.querySelector('#pane');
+  if (tab === 'flow') {
+    pane.innerHTML = `${shortfallNote(f)}<div class="card mb-3"><div class="card-body">
+      <p class="text-muted small mb-2">${esc(f.label)} · from your ${esc(f.source)}</p>
+      <div class="mm-chart"><canvas aria-hidden="true"></canvas></div>
+      <div class="mt-2">${analysisLink(f)}</div></div></div>
+      <div class="card"><div class="card-body">${flowTable(f)}</div></div>`;
+    renderSankey(pane.querySelector('canvas'), f);
+  } else {
+    pane.innerHTML = `<div class="row g-3 mb-3"><div class="col-lg-8"><div class="mm-cy" aria-hidden="true"></div></div>
+      <div class="col-lg-4"><div class="mm-panel" id="panel">${nodePanel(null)}</div></div></div>
+      <div class="card"><div class="card-body">${planTable(nodes)}</div></div>`;
+    renderCy(pane.querySelector('.mm-cy'), nodes, n => { pane.querySelector('#panel').innerHTML = nodePanel(n); });
+  }
+}
+let sessionTab = 'flow';
+
+// ---------- Variant B: one scrolling story, bottom sheet for details ----------
+function variantB(root, f) {
+  const nodes = planNodes();
+  const headline = f.shortfall > 0
+    ? `In ${esc(f.label.split(' ')[0])} you earned <strong>${fmt(f.income)}</strong> and spent <strong>${fmt(f.expenses)}</strong>, <span class="text-danger">${fmt(f.shortfall)} more than you earned</span>.`
+    : `In ${esc(f.label.split(' ')[0])} you earned <strong>${fmt(f.income)}</strong>, spent <strong>${fmt(f.expenses)}</strong> and saved <strong class="text-success">${fmt(f.saved)} (${pct(f.saved, f.income)})</strong>.`;
+  root.innerHTML = `
+    <h1 class="h3">Your money, ${esc(f.label)} ${monthPicker(f)}</h1>
+    <p class="mm-headline mb-3">${headline}</p>
+    <div class="mm-chart mb-2" style="height:520px"><canvas aria-hidden="true"></canvas></div>
+    <details class="mb-5"><summary>Show as a table</summary><div class="mt-2">${flowTable(f)}</div></details>
+    <h2 class="h4">What drives your FI age</h2>
+    <p class="text-muted">Grey boxes are what you entered; blue boxes are calculated from them. Tap a box.</p>
+    <div class="mm-cy mb-2" style="height:460px" aria-hidden="true"></div>
+    <details><summary>Show as a table</summary><div class="mt-2">${planTable(nodes)}</div></details>
+    <div class="mm-sheet" id="sheet" hidden><button type="button" class="btn-close float-end" aria-label="Close"></button><div id="sheetBody"></div></div>`;
+  renderSankey(root.querySelector('canvas'), f);
+  const sheet = root.querySelector('#sheet');
+  sheet.querySelector('.btn-close').addEventListener('click', () => { sheet.hidden = true; });
+  renderCy(root.querySelector('.mm-cy'), nodes, n => { root.querySelector('#sheetBody').innerHTML = nodePanel(n); sheet.hidden = false; });
+}
+
+// ---------- Variant C: no Money Map page — embedded in Analysis + Net Worth, Plan View as HTML (no Cytoscape) ----------
+function variantC(root, f) {
+  const nodes = planNodes();
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const computed = nodes.filter(n => n.kind === 'computed');
+  root.innerHTML = `
+    <p class="mm-mock-nav mb-1">Mock of the Analysis page ›</p>
+    <div class="card mb-4"><div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <h2 class="h5 mb-0">Where your money went</h2>
+        <div class="btn-group btn-group-sm" role="group" aria-label="View">
+          <button class="btn btn-outline-secondary ${cView === 'chart' ? 'active' : ''}" data-v="chart">Chart</button>
+          <button class="btn btn-outline-secondary ${cView === 'table' ? 'active' : ''}" data-v="table">Table</button>
+        </div>
+      </div>
+      ${shortfallNote(f)}
+      ${cView === 'chart' ? '<div class="mm-chart compact"><canvas aria-hidden="true"></canvas></div>' : flowTable(f)}
+    </div></div>
+    <p class="mm-mock-nav mb-1">Mock of the Net Worth page ›</p>
+    <div class="card"><div class="card-body">
+      <h2 class="h5">How this is calculated</h2>
+      <div class="mm-calc">${computed.map(n => `
+        <div class="card"><div class="card-body p-3">
+          <div class="text-muted small">${esc(n.label)}</div>
+          <div class="mm-num fs-5 mb-1">${esc(n.value)}</div>
+          <div class="small mb-1">from ${n.from.map(id => `<span class="mm-chip" title="${esc(byId[id].value)}">${esc(byId[id].label)}</span>`).join('')}</div>
+          <div class="small text-muted">${esc(n.formula)}</div>
+          ${n.scenarios ? `<div class="small mt-1">${n.scenarios.map(esc).join('<br>')}</div>` : ''}
+        </div></div>`).join('')}
+      </div>
+      <p class="small text-muted mt-2 mb-0">Change any input in the form above to update these.</p>
+    </div></div>`;
+  root.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { cView = b.dataset.v; render(); }));
+  if (cView === 'chart') renderSankey(root.querySelector('canvas'), f, { short: false });
+}
+let cView = 'chart';
+
+// ---------- switcher ----------
+const VARIANTS = [['A', 'Money Map page, tabs', variantA], ['B', 'One scrolling story', variantB], ['C', 'Embedded, no graph library for Plan', variantC]];
+function params() { const p = new URLSearchParams(location.search); return { v: p.get('variant') || 'A', d: p.get('data') || 'normal' }; }
+function setParams(v, d) { const p = new URLSearchParams(location.search); p.set('variant', v); p.set('data', d); history.replaceState(null, '', '?' + p); render(); }
+function render() {
+  destroyAll();
+  const { v, d } = params();
+  const entry = VARIANTS.find(x => x[0] === v) || VARIANTS[0];
+  const f = flowModel(MONTHS[d] || MONTHS.normal);
+  document.getElementById('variantLabel').textContent = `${entry[0]} (${entry[1]})`;
+  document.getElementById('dataSel').value = d;
+  entry[2](document.getElementById('root'), f);
+  console.log('[prototype] state', { variant: entry[0], data: d, flow: f, plan: planNodes() });
+}
+function step(dir) { const { v, d } = params(); const i = VARIANTS.findIndex(x => x[0] === v); setParams(VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length][0], d); }
+document.getElementById('prev').addEventListener('click', () => step(-1));
+document.getElementById('next').addEventListener('click', () => step(1));
+document.getElementById('dataSel').addEventListener('change', e => setParams(params().v, e.target.value));
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'ArrowRight') step(1);
+});
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 250); });
+document.addEventListener('DOMContentLoaded', render);
+</script>
+</body>
+</html>
