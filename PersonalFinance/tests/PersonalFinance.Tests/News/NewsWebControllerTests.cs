@@ -56,9 +56,9 @@ public class NewsWebControllerTests
 
     private static NewsController CreateController(INewsApi api) =>
         new(api, new FixedTimeProvider(Now), NullLogger<NewsController>.Instance)
-    {
-        ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
-    };
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
 
     private static NewsViewModel ViewModelOf(IActionResult result) =>
         Assert.IsType<NewsViewModel>(Assert.IsType<ViewResult>(result).Model);
