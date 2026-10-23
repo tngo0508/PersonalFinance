@@ -123,8 +123,8 @@ never both.
 _Avoid_: deficit, negative savings, overspend
 
 ### Plan View
-The Money Map view of how the Net Worth parameters, the budget, the Savings Rate, the FI Target and Savings Goals
-depend on each other.
+The Money Map view of how the Net Worth figures depend on each other: which entered values produce the Savings Rate,
+the FI Target, Progress to FI and the age at which the user reaches it.
 _Avoid_: plan graph, dependency map
 
 ### Landing Page
