@@ -25,6 +25,12 @@ public interface ITodoService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Soft-deletes one of the Account's To-dos, open or completed. Returns <c>false</c> when it does not exist, is
+    /// already deleted or belongs to another Account.
+    /// </summary>
+    Task<bool> DeleteTodoAsync(string userId, int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Replaces the title (trimmed) and due date of one of the Account's To-dos; a <c>null</c> due date makes it
     /// undated. Returns <c>null</c> when the To-do does not exist, is deleted or belongs to another Account. The
     /// request must already be valid.

@@ -65,6 +65,18 @@ public class TodosController : Controller
     }
 
     /// <summary>
+    /// Deletes a To-do (ApiService soft-deletes it) and returns the refreshed open list. Another Account's id fails
+    /// with 404, reported through <see cref="JsonApiErrorsAttribute"/>.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken = default)
+    {
+        await _todoApi.DeleteTodoAsync(id, cancellationToken);
+        return Json(await _todoApi.GetOpenTodosAsync(cancellationToken));
+    }
+
+    /// <summary>
     /// Edits a To-do's title and due date and returns the refreshed open list, re-sorted. ApiService validates the
     /// title and answers 404 for another Account's To-do; both reach the page through
     /// <see cref="JsonApiErrorsAttribute"/>.

@@ -11,6 +11,7 @@
 @* The list is rendered by js/todos/todo-list.js from the JSON below, so adding (and later completing, editing or
    deleting) a To-do re-renders the same way as the first load. *@
 <div class="todo-page" id="todoPage" data-create-url="@Url.Action("Create", "Todos")"
+     data-delete-url="@Url.Action("Delete", "Todos")"
      data-update-url="@Url.Action("Update", "Todos")">
     <header class="todo-header">
         <h1 class="todo-title">To-do List</h1>
@@ -35,6 +36,7 @@
         <p class="todo-add__error" id="todoAddError" role="alert" hidden></p>
     </form>
 
+    <p class="todo-list__error" id="todoListError" role="alert" hidden></p>
     <ul class="todo-list" id="todoList" aria-label="Open To-dos"></ul>
 
     <div class="todo-empty" id="todoEmpty" hidden>
@@ -45,8 +47,28 @@
     </div>
 </div>
 
+<div class="modal fade" id="todoDeleteModal" tabindex="-1" aria-labelledby="todoDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="todoDeleteModalLabel">Delete To-do?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cancel"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">&ldquo;<span id="todoDeleteTitle"></span>&rdquo; will be removed from your To-do
+                    List.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="todoDeleteConfirmBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script type="application/json" id="todo-data">@Json.Serialize(Model.Todos)</script>
 
 @section Scripts {
+    <script src="~/js/todos/todo-due-status.js" asp-append-version="true"></script>
     <script src="~/js/todos/todo-list.js" asp-append-version="true"></script>
 }

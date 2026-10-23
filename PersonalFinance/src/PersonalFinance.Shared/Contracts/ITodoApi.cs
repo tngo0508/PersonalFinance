@@ -27,6 +27,12 @@ public interface ITodoApi
     Task<TodoItemDto> CreateTodoAsync([Body] CreateTodoRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Soft-deletes one of the Account's To-dos; an unknown, deleted or another Account's id fails with 404.
+    /// </summary>
+    [Delete("/api/todos/{id}")]
+    Task DeleteTodoAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Edits a To-do's title and due date (a <c>null</c> due date clears it). An invalid title fails with 400 and
     /// the messages in <c>errors</c>; another Account's id fails with 404.
     /// </summary>

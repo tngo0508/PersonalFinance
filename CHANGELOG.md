@@ -81,6 +81,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Linked from the sidebar under My Finances; signed-out visitors are sent to sign in.
   - Add a To-do with Enter or the Add button; the title is trimmed, required and at most 200 characters, with a visible error when it is not.
   - Open To-dos are listed by due date, undated last, then oldest first; an empty list invites the first To-do, and a failed load shows the Unavailable State with Retry.
+  - Open To-dos due before today show an "Overdue" badge and those due today a "Due today" badge, worked out in the browser from the Account's local date; completed To-dos are never marked.
+  - Delete a To-do, open or completed, after confirming in a dialog; it is soft-deleted and leaves the list, and a failed delete keeps the list and shows an error (`DELETE api/todos/{id}`, 404 for another Account's To-do).
   - Edit a To-do's title and due date in place (Save, or Cancel/Escape), including clearing the due date; the title follows the same rules as adding, the list re-sorts after a save, and a failed save keeps the editor open with an error (`PUT api/todos/{id}`, 404 for another Account's To-do).
   - New `TodoItems` table (migration `AddTodoItem`, schema change: major version 4.0.0), soft-deleted like every user-owned record; ApiService serves `api/todos` through `ITodoApi`, and another Account's To-do returns 404.
 

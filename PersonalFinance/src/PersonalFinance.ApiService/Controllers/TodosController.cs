@@ -74,6 +74,20 @@ public class TodosController : ControllerBase
     }
 
     /// <summary>
+    /// Soft-deletes one of the current Account's To-dos, open or completed. Unknown, already deleted or another
+    /// Account's To-dos return 404.
+    /// </summary>
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken = default)
+    {
+        var deleted = await _todoService.DeleteTodoAsync(User.GetUserId(), id, cancellationToken);
+        return deleted ? NoContent() : NotFound();
+    }
+
+    /// <summary>
     /// Edits the title and due date of one of the current Account's To-dos (a <c>null</c> due date clears it). An
     /// invalid title gets 400 with the messages in <c>errors</c>; unknown, deleted or another Account's To-dos
     /// return 404.

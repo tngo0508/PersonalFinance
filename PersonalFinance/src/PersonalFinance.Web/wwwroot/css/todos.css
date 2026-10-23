@@ -110,6 +110,58 @@
     white-space: nowrap;
 }
 
+/* --- Due status (Overdue / Due today), derived in the browser; the label text carries the meaning --- */
+
+.todo-item__status {
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--app-radius-s);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.todo-item__status--overdue {
+    color: var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+}
+
+.todo-item__status--due-today {
+    color: var(--app-text);
+    background: var(--app-accent-warning-soft);
+}
+
+/* Keep the due date and its badge together on the right. */
+.todo-item[data-due-status] .todo-item__title {
+    flex: 1 1 auto;
+}
+
+/* --- Delete --- */
+.todo-item__delete {
+    margin-left: auto;
+    padding: 0.125rem 0.5rem;
+    border: none;
+    border-radius: var(--app-radius-s);
+    background: transparent;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.todo-item__delete:hover,
+.todo-item__delete:focus-visible {
+    color: var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+}
+
+.todo-list__error {
+    margin: 0 0 0.75rem;
+    color: var(--app-accent-negative);
+    font-size: var(--app-font-size-small);
+}
+
+.todo-list__error[hidden] {
+    display: none;
+}
+
 /* --- Edit --- */
 
 .todo-item__edit {

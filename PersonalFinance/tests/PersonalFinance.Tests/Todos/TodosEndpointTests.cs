@@ -179,6 +179,60 @@ public class TodosEndpointTests
     }
 
     [Fact]
+    public async Task Delete_SoftDeletesTheTodo_AndItLeavesTheList()
+    {
+        await using var db = CreateContext();
+        var created = await CreateAsync(db, "Cancel the gym");
+        await CreateAsync(db, "Keep me");
+
+        var result = await CreateController(db).Delete(created.Id);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Equal("Keep me", Assert.Single(await ListAsync(db)).Title);
+        Assert.IsType<NotFoundResult>(await CreateController(db).Get(created.Id));
+        var row = await db.TodoItems.IgnoreQueryFilters().SingleAsync(t => t.Id == created.Id);
+        Assert.True(row.IsDeleted);
+        Assert.NotNull(row.DeletedAt);
+    }
+
+    [Fact]
+    public async Task Delete_ACompletedTodo_SoftDeletesIt()
+    {
+        await using var db = CreateContext();
+        var done = new TodoItem { UserId = UserId, Title = "Done", CompletedAt = DateTime.UtcNow };
+        db.TodoItems.Add(done);
+        await db.SaveChangesAsync();
+
+        var result = await CreateController(db).Delete(done.Id);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.IsType<NotFoundResult>(await CreateController(db).Get(done.Id));
+    }
+
+    [Fact]
+    public async Task Delete_AnotherAccountsTodo_Returns404_AndKeepsIt()
+    {
+        await using var db = CreateContext();
+        var theirs = await CreateAsync(db, "Someone else's", "other-user");
+
+        var result = await CreateController(db).Delete(theirs.Id);
+
+        Assert.IsType<NotFoundResult>(result);
+        Assert.Equal("Someone else's", Assert.Single(await ListAsync(db, "other-user")).Title);
+    }
+
+    [Fact]
+    public async Task Delete_AnAlreadyDeletedOrUnknownTodo_Returns404()
+    {
+        await using var db = CreateContext();
+        var created = await CreateAsync(db, "Once");
+        await CreateController(db).Delete(created.Id);
+
+        Assert.IsType<NotFoundResult>(await CreateController(db).Delete(created.Id));
+        Assert.IsType<NotFoundResult>(await CreateController(db).Delete(999));
+    }
+
+    [Fact]
     public async Task Update_ChangesTheTitleAndDueDate_Trimmed()
     {
         await using var db = CreateContext();

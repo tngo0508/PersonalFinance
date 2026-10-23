@@ -8,6 +8,7 @@ using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Todos;
 using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Tests.Web;
@@ -72,6 +73,40 @@ public class TodosControllerTests
     {
         Assert.NotNull(typeof(TodosController).GetMethod(nameof(TodosController.Create))!
             .GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
+    }
+
+    [Fact]
+    public async Task Delete_DeletesTheTodo_AndReturnsTheRefreshedList()
+    {
+        var (api, proxy) = ApiProxy.Create<ITodoApi>();
+        proxy.Returns(nameof(ITodoApi.DeleteTodoAsync), null);
+        proxy.Returns(nameof(ITodoApi.GetOpenTodosAsync), new List<TodoItemDto> { new() { Id = 8, Title = "Keep me" } });
+
+        var result = await WithContext(new TodosController(api, NullLogger<TodosController>.Instance)).Delete(7);
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.Equal(8, Assert.Single(Assert.IsType<List<TodoItemDto>>(json.Value)).Id);
+        Assert.Equal([nameof(ITodoApi.DeleteTodoAsync), nameof(ITodoApi.GetOpenTodosAsync)], proxy.Calls);
+    }
+
+    [Fact]
+    public async Task Delete_WhenApiServiceFails_LetsJsonApiErrorsReportIt_WithoutReloadingTheList()
+    {
+        var (api, proxy) = ApiProxy.Create<ITodoApi>();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            WithContext(new TodosController(api, NullLogger<TodosController>.Instance)).Delete(7));
+
+        Assert.Equal([nameof(ITodoApi.DeleteTodoAsync)], proxy.Calls);
+        Assert.NotNull(typeof(TodosController).GetCustomAttribute<JsonApiErrorsAttribute>());
+    }
+
+    [Fact]
+    public void Delete_IsAPost_ThatRequiresTheAntiforgeryToken()
+    {
+        var method = typeof(TodosController).GetMethod(nameof(TodosController.Delete))!;
+        Assert.NotNull(method.GetCustomAttribute<HttpPostAttribute>());
+        Assert.NotNull(method.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
     }
 
     [Fact]
