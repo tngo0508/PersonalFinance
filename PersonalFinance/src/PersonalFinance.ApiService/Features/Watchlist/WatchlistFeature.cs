@@ -1,3 +1,5 @@
+using PersonalFinance.ApiService.Features.Watchlist.Adapters;
+
 namespace PersonalFinance.ApiService.Features.Watchlist;
 
 /// <summary>
@@ -6,10 +8,15 @@ namespace PersonalFinance.ApiService.Features.Watchlist;
 /// </summary>
 internal static class WatchlistFeature
 {
-    /// <summary>The Account's Watchlist.</summary>
+    private static readonly TimeSpan NewsFeedTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>The Account's Watchlist, and the news feed its articles are found in.</summary>
     public static IServiceCollection AddWatchlistFeature(this IServiceCollection services)
     {
         services.AddScoped<IWatchlistService, WatchlistService>();
+        services.AddMemoryCache();
+        services.AddScoped<INewsService, NewsService>();
+        services.AddHttpClient<INewsFeedClient, RssNewsFeedClient>(client => client.Timeout = NewsFeedTimeout);
         return services;
     }
 }

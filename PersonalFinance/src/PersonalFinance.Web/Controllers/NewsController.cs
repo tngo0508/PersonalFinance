@@ -1,28 +1,34 @@
+using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.Watchlist;
 using PersonalFinance.Web.Models.News;
-using PersonalFinance.Web.Services;
+using ApiException = Refit.ApiException;
 
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Finance News page.
-/// Delegates all business logic to <see cref="INewsService"/> and prepares view models.
+/// Reads the news feed from ApiService through <see cref="INewsApi"/> and prepares view models.
 /// </summary>
 [Authorize]
 public sealed class NewsController : Controller
 {
-    private readonly INewsService _newsService;
+    private readonly INewsApi _newsApi;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<NewsController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NewsController"/> class.
     /// </summary>
-    /// <param name="newsService">Service for fetching and filtering finance news.</param>
+    /// <param name="newsApi">ApiService client for the finance news feed.</param>
+    /// <param name="timeProvider">Clock for the page's last-refreshed time.</param>
     /// <param name="logger">Logger for this controller.</param>
-    public NewsController(INewsService newsService, ILogger<NewsController> logger)
+    public NewsController(INewsApi newsApi, TimeProvider timeProvider, ILogger<NewsController> logger)
     {
-        _newsService = newsService;
+        _newsApi = newsApi;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -31,40 +37,26 @@ public sealed class NewsController : Controller
     /// Supports filtering by category, source, and search query.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Index(
-        [FromQuery] string? category,
-        [FromQuery] string? source,
-        [FromQuery] string? search,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Index([FromQuery] NewsQueryDto query, CancellationToken cancellationToken = default)
     {
-        var options = new NewsQueryOptions
-        {
-            Category = category,
-            Source = source,
-            Search = search,
-        };
-
         var model = new NewsViewModel
         {
-            SelectedCategory = category,
-            SelectedSource = source,
-            SearchQuery = search,
+            SelectedCategory = query.Category,
+            SelectedSource = query.Source,
+            SearchQuery = query.Search,
             IsLoading = true,
         };
 
         try
         {
-            // Fetch all articles (unfiltered) to populate categories list
-            List<NewsArticle> allArticles = await _newsService.GetFinanceNewsAsync(cancellationToken: cancellationToken);
+            NewsFeedDto feed = await TryGetNewsAsync(query, cancellationToken)
+                ?? await GetFilterOptionsWithoutArticlesAsync(cancellationToken);
 
-            // Fetch filtered articles via the service
-            List<NewsArticle> filteredArticles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
-
-            model.Sources = _newsService.GetAvailableSources();
-            model.Categories = allArticles.Select(a => a.Category).Distinct().OrderBy(c => c).ToList();
-            model.PersonalFinanceCategories = _newsService.GetPersonalFinanceCategories();
-            model.Articles = filteredArticles;
-            model.LastRefreshed = DateTime.UtcNow;
+            model.Sources = feed.Sources;
+            model.Categories = feed.Categories;
+            model.PersonalFinanceCategories = feed.PersonalFinanceCategories;
+            model.Articles = feed.Articles;
+            model.LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime;
             model.IsLoading = false;
         }
         catch (Exception ex)
@@ -82,28 +74,17 @@ public sealed class NewsController : Controller
     /// </summary>
     [HttpGet]
     [Produces("application/json")]
-    public async Task<IActionResult> Refresh(
-        [FromQuery] string? category,
-        [FromQuery] string? source,
-        [FromQuery] string? search,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Refresh([FromQuery] NewsQueryDto query, CancellationToken cancellationToken = default)
     {
-        var options = new NewsQueryOptions
-        {
-            Category = category,
-            Source = source,
-            Search = search,
-        };
-
         try
         {
-            List<NewsArticle> articles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
+            NewsFeedDto? feed = await TryGetNewsAsync(query, cancellationToken);
 
             return Json(new NewsRefreshResponse
             {
                 Success = true,
-                Articles = articles,
-                LastRefreshed = DateTime.UtcNow,
+                Articles = feed?.Articles ?? [],
+                LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime,
             });
         }
         catch (Exception ex)
@@ -116,5 +97,32 @@ public sealed class NewsController : Controller
                 Error = "Failed to refresh news.",
             });
         }
+    }
+
+    /// <summary>
+    /// Reads the feed, or returns <see langword="null"/> when ApiService rejects the filters (for example, an overlong
+    /// search): filters no article can match find nothing, rather than showing the page as unavailable.
+    /// </summary>
+    private async Task<NewsFeedDto?> TryGetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _newsApi.GetNewsAsync(query, cancellationToken);
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
+        {
+            _logger.LogInformation("ApiService rejected the news filters; showing no articles");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads the unfiltered feed for its filter options, so the page can still offer them, and drops its articles.
+    /// </summary>
+    private async Task<NewsFeedDto> GetFilterOptionsWithoutArticlesAsync(CancellationToken cancellationToken)
+    {
+        NewsFeedDto feed = await _newsApi.GetNewsAsync(new NewsQueryDto(), cancellationToken);
+        feed.Articles = [];
+        return feed;
     }
 }
