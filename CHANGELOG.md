@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Privacy Policy and Terms Describe Account Deletion**: The legal pages now say how deleting an account really works, instead of promising a soft delete processed within 30 days (#144).
+  - Privacy Policy: data is hidden at once, the emailed link cancels it for 30 days, and everything is erased within 31 days of the request; Community stories and comments stay as "Deleted User"; only a record of when is kept; backups expire within 7 days.
+  - Both pages point to the Personal data page, where users download their data and delete their account themselves; the Contact page stays for other requests.
+
 - **Landing Page Redesign**: The homepage now explains what the app is for, financial independence and the age you can reach it, with a calmer financial look.
   - The hero shows a sample projection chart that crosses the FI target (25 × annual spending) at age 52, with a visible caption describing the figures.
   - A "How the plan works" section states the mission and the three rules behind every plan: FI target, growth, and FI age.
