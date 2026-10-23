@@ -1,3 +1,5 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Infrastructure;
@@ -18,10 +20,12 @@ namespace PersonalFinance.ApiService.Features.Watchlist;
 public class WatchlistController : ControllerBase
 {
     private readonly IWatchlistService _watchlistService;
+    private readonly IValidator<SaveArticleRequestDto> _saveValidator;
 
-    public WatchlistController(IWatchlistService watchlistService)
+    public WatchlistController(IWatchlistService watchlistService, IValidator<SaveArticleRequestDto> saveValidator)
     {
         _watchlistService = watchlistService;
+        _saveValidator = saveValidator;
     }
 
     /// <summary>
@@ -38,14 +42,22 @@ public class WatchlistController : ControllerBase
     }
 
     /// <summary>
-    /// Saves an article to the user's watchlist.
+    /// Saves an article to the user's watchlist. An article with a missing or overlong field, or an address that is
+    /// not http(s), answers 400 with the reasons and is not saved.
     /// </summary>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveArticle([FromBody] SaveArticleRequestDto request,
         CancellationToken cancellationToken = default)
     {
+        ValidationResult validation = await _saveValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+        }
+
         string userId = User.GetUserId();
         SaveArticleResultDto result = await _watchlistService.SaveArticleAsync(userId, request, cancellationToken);
         return Ok(new { success = result.Success, alreadySaved = result.AlreadySaved, id = result.Id });

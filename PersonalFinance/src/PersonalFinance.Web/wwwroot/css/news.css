@@ -517,6 +517,12 @@
   fill: #107c10;
 }
 
+.finance-hub-save-btn.save-failed {
+  background: #fde7e9;
+  border-color: #c24f4f;
+  color: #5c1a1a;
+}
+
 .finance-hub-read-more {
   color: #107c10;
   text-decoration: none;
