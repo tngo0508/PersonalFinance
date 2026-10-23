@@ -108,6 +108,20 @@ income`), from the Budget Tracker or synced Google Sheet data. Shown in the Budg
 properties keep the name `SavingsRate` / `AverageSavingsRate` for the JavaScript that reads them.)
 _Avoid_: calling it "Savings Rate" in new code or UI text without the "Actual" qualifier.
 
+### Money Flow
+The chart on the Analysis page showing one month of actual income moving into spending categories and savings.
+_Avoid_: Sankey (a chart type, not the concept), cash flow (overloaded), Money Map
+
+### Shortfall
+The amount by which a month's actual expenses exceed its actual income. A month has either a Shortfall or savings,
+never both.
+_Avoid_: deficit, negative savings, overspend
+
+### FI Breakdown
+The panel on the Net Worth page showing how the Savings Rate, the FI Target, Progress to FI and the age at which the
+user reaches FI are calculated from the values the user entered.
+_Avoid_: plan graph, Plan View, dependency map
+
 ### Landing Page
 The public page served at `/` to signed-out visitors. It explains the product and leads to registration or sign-in.
 _Avoid_: Home page (ambiguous with Dashboard)
