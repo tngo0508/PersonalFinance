@@ -57,7 +57,7 @@ try
     // HTTP: controllers, FluentValidation validators, RFC 7807 ProblemDetails, OpenAPI document.
     builder.Services.AddControllers()
         .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true);
-    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+    builder.Services.AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true);
     builder.Services.AddProblemDetails();
     builder.Services.AddOpenApi(options =>
     {
