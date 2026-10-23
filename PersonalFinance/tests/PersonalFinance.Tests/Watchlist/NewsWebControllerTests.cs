@@ -13,7 +13,7 @@ using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.News;
 using Refit;
 
-namespace PersonalFinance.Tests.News;
+namespace PersonalFinance.Tests.Watchlist;
 
 /// <summary>
 /// The Web Finance News page reads the feed from ApiService through <see cref="INewsApi"/>. Filters ApiService

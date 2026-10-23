@@ -7,7 +7,7 @@ using PersonalFinance.ApiService.Features.Watchlist;
 using PersonalFinance.ApiService.Features.Watchlist.Adapters;
 using PersonalFinance.Shared.DTOs.Watchlist;
 
-namespace PersonalFinance.Tests.News;
+namespace PersonalFinance.Tests.Watchlist;
 
 /// <summary>
 /// The ApiService news feed of the Watchlist Feature: RSS articles are filtered by category, source and free text,

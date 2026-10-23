@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.16] - 2026-10-23
+
+### Changed
+
+- **News Tests Under Their Feature**: the Finance News tests move from `tests/News/` to `tests/Watchlist/`, the Feature the news feed belongs to, and the add-a-feature checklist in `docs/ARCHITECTURE.md` now states the conventions the code follows (#179).
+  - Step 6: one Refit contract per ApiService controller, named after it (`NewsController` → `INewsApi`), as all 17 contracts already are, instead of one `I<Feature>Api` per Feature.
+  - Step 8: a Web controller's tests sit in its Feature's test folder; `tests/Web/` holds only tests of cross-cutting Web behaviour. Moving the older folders is tracked in #185, and tests for the saved-articles Watchlist in #186.
+  - Only file moves and namespaces change; the test count is unchanged.
+
 ## [4.2.15] - 2026-10-23
 
 ### Fixed
