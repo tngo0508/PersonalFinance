@@ -47,8 +47,8 @@ deletion alone. The original #65 asked for soft deletion only.
 - New user-owned entities must be covered by the Deletion Request, the cancel restore and the Purge, or erasure
   silently misses them.
 - The Purge must be safe when several ApiService replicas run it at once.
-- A daily runner purges up to a day after the Grace Period ends. The Privacy Policy text (#144) must state a timeline
-  that this meets.
+- A daily runner purges up to a day after the Grace Period ends, so erasure completes within 31 days of the Deletion
+  Request. The Privacy Policy's "within 30 days" becomes "within 31 days" (#144); the Grace Period stays 30 days.
 
 ## Related Decisions
 
