@@ -18,6 +18,8 @@ namespace PersonalFinance.Tests.NetWorth;
 /// </summary>
 public class FiBreakdownBuilderTests
 {
+    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+
     private static NetWorthProjectionDto Project(decimal balance = 180_000m, decimal savings = 22_000m,
         decimal income = 85_000m, decimal spending = 48_000m, int currentAge = 34, int retirementAge = 65,
         decimal baseRoi = 7m, decimal conservativeRoi = 6m, decimal aggressiveRoi = 10m,
@@ -167,8 +169,7 @@ public class FiBreakdownBuilderTests
         IActionResult result = await controller.Calculate(new NetWorthViewModel());
 
         JsonResult json = Assert.IsType<JsonResult>(result);
-        using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(json.Value,
-            new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(json.Value, WebJson));
         JsonElement root = document.RootElement;
         // The existing scripts keep reading the projection at the top level...
         Assert.Equal(1_200_000m, root.GetProperty("fiTarget").GetDecimal());

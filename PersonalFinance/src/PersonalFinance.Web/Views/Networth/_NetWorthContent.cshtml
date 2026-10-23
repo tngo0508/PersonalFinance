@@ -399,10 +399,7 @@
         </div>
 
         <!-- FI Breakdown: how the calculated figures come from the inputs -->
-        @if (projection is not null)
-        {
-            <partial name="_FiBreakdown" model="FiBreakdownBuilder.Build(projection)" />
-        }
+        <partial name="_FiBreakdown" model="FiBreakdownBuilder.Build(projection!)" />
 
         <!-- Charts Section -->
         <div class="row g-3 mb-4">
