@@ -1,6 +1,4 @@
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.DTOs.Search;
 
 namespace PersonalFinance.ApiService.Features.Search;

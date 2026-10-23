@@ -1,13 +1,11 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
-using CreateNotificationRequestDto = PersonalFinance.ApiService.Services.CreateNotificationRequestDto;
+using CreateNotificationRequestDto = PersonalFinance.ApiService.Infrastructure.CreateNotificationRequestDto;
 
 namespace PersonalFinance.ApiService.Features.BudgetPlanner;
 

@@ -1,5 +1,3 @@
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Enums;
 

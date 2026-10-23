@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.NetWorth;
-using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;

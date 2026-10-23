@@ -1,4 +1,4 @@
-using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Features.AiAssistant;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 

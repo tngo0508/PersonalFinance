@@ -1,6 +1,5 @@
 using System.Reflection;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;

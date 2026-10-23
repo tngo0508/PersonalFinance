@@ -8,9 +8,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PersonalFinance.ApiService.Features.Admin;
 using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Admin;
@@ -353,7 +353,7 @@ public class RbacTests
 
     [Theory]
     [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController))]
-    [InlineData(typeof(PersonalFinance.ApiService.Controllers.AdminController))]
+    [InlineData(typeof(PersonalFinance.ApiService.Features.Admin.AdminController))]
     public void AdminControllers_CarryTheRequireAdminPolicy(Type controller)
     {
         AuthorizeAttribute? attribute = controller.GetCustomAttribute<AuthorizeAttribute>();

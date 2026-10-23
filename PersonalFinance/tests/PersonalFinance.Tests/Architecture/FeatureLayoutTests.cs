@@ -27,16 +27,13 @@ public class FeatureLayoutTests
     /// </summary>
     private static readonly HashSet<string> LegacyNamespaces = new(StringComparer.Ordinal)
     {
-        "PersonalFinance.ApiService.Controllers",
-        "PersonalFinance.ApiService.Services",
-        "PersonalFinance.ApiService.Validators",
         "PersonalFinance.Web.Controllers",
         "PersonalFinance.Web.Models",
         "PersonalFinance.Web.Services",
         "PersonalFinance.Web.TagHelpers"
     };
 
-    private static readonly Assembly ApiServiceAssembly = typeof(FeatureServiceExtensions).Assembly;
+    private static readonly Assembly ApiServiceAssembly = typeof(InfrastructureServiceExtensions).Assembly;
     private static readonly Assembly WebAssembly = typeof(InternalApiClientExtensions).Assembly;
 
     public static TheoryData<string> Projects => new() { "PersonalFinance.ApiService", "PersonalFinance.Web" };

@@ -20,9 +20,9 @@ repo root.
 | `PersonalFinance.Tests` | xUnit tests using the EF Core InMemory provider. |
 
 `Program.cs` in Web and ApiService is a short, commented list of what each app uses; the details live in extension
-methods (`ServiceDefaults/LoggingExtensions.cs`, `ApiService/Infrastructure/FeatureServiceExtensions.cs`,
-`Web/Infrastructure/`, and `MigrateAndRunAsync` in `Data/DatabaseMigrationExtensions.cs`, which also handles
-`--migrate-only`).
+methods (`ServiceDefaults/LoggingExtensions.cs`, `ApiService/Infrastructure/InfrastructureServiceExtensions.cs`,
+each Feature's `ApiService/Features/<Feature>/<Feature>Feature.cs`, `Web/Infrastructure/`, and `MigrateAndRunAsync` in
+`Data/DatabaseMigrationExtensions.cs`, which also handles `--migrate-only`).
 
 Shared build settings (target framework, nullable, analyzers) are in `PersonalFinance/Directory.Build.props`;
 package versions are in `PersonalFinance/Directory.Packages.props` (central package management); code style is in the

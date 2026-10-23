@@ -1,5 +1,5 @@
 using FluentValidation.Results;
-using PersonalFinance.ApiService.Validators;
+using PersonalFinance.ApiService.Features.AccountLifecycle.Validators;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
 

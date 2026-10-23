@@ -1,7 +1,5 @@
 using PersonalFinance.ApiService.Features.GoogleDrive.Adapters;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 
 namespace PersonalFinance.ApiService.Features.GoogleDrive;
 

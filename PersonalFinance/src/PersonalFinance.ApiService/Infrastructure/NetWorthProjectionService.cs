@@ -1,5 +1,3 @@
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.DTOs.NetWorth;
 
 namespace PersonalFinance.ApiService.Infrastructure;
