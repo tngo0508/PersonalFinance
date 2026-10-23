@@ -163,6 +163,28 @@ public class SpreadsheetAnalysisCharacterizationTests
         Assert.Equal("Within Budget", insights.Categories[1].Status);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(10)]
+    public async Task GetCategoryInsightsAsync_CarriesTheMonthsOwnIncomeAndExpenses(int? month)
+    {
+        // With no month selected the summary sums the year, so Money Flow needs the insights' own month totals.
+        await using AppDbContext db = CreateContext();
+        db.SpreadsheetBudgetSnapshots.Add(CreateSnapshot(month: 1, monthName: "January", actualIncome: 9000m,
+            actualExpenses: 8000m));
+        db.SpreadsheetBudgetSnapshots.Add(CreateSnapshot(actualIncome: 5500m, actualExpenses: 3800m));
+        await db.SaveChangesAsync();
+
+        SpreadsheetAnalysisService service = CreateService(db);
+        PersonalFinance.ApiService.Features.Analysis.CategoryInsightsDto? insights =
+            await service.GetCategoryInsightsAsync(UserId, 2026, month);
+
+        Assert.NotNull(insights);
+        Assert.Equal(10, insights.MonthNumber);
+        Assert.Equal(5500m, insights.ActualIncome);
+        Assert.Equal(3800m, insights.ActualExpenses);
+    }
+
     [Fact]
     public async Task GetBudgetVarianceAsync_RanksCategoriesByVariance()
     {

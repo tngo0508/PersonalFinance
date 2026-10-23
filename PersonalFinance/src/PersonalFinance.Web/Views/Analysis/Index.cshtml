@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using System.Text.Json.Serialization
 @using PersonalFinance.Shared.Enums
 @model AnalysisDashboardViewModel
 
@@ -259,6 +260,77 @@
             </div>
         }
 
+        <!-- Money Flow: where this month's income went -->
+        @if (Model.MoneyFlow is { } flow)
+        {
+            var sourceLabel = Model.ActiveSource == BudgetDataSource.BudgetTracker ? "Budget Tracker" : "Google Sheet";
+            var shareHeading = flow.HasShortfall ? "Share of spending" : "Share of income";
+            <section class="analysis-section money-flow mb-4" aria-labelledby="moneyFlowTitle">
+                <h2 class="analysis-section__title" id="moneyFlowTitle">Where your money went</h2>
+                <p class="text-muted small mb-3">@flow.MonthLabel · from your @sourceLabel</p>
+                @if (flow.HasShortfall)
+                {
+                    <p class="money-flow__note mb-3">
+                        You spent <strong>$@flow.Shortfall.ToString("N0")</strong> more than you earned in @flow.MonthName.
+                    </p>
+                }
+                <div class="d-flex flex-column gap-3">
+                    <div class="analysis-chart-card order-2 order-sm-1">
+                        <div class="money-flow__canvas">
+                            <canvas id="moneyFlowChart" aria-hidden="true"></canvas>
+                        </div>
+                    </div>
+                    <div class="table-responsive order-1 order-sm-2">
+                        <table class="table align-middle analysis-table money-flow__table mb-0">
+                            <caption class="visually-hidden">Where your money went, @flow.MonthLabel</caption>
+                            <thead>
+                            <tr>
+                                <th scope="col">Category</th>
+                                <th scope="col" class="text-end">Amount</th>
+                                <th scope="col" class="text-end">@shareHeading</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var row in flow.TableRows)
+                            {
+                                var swatchClass = row.ColorSlot is { } slot
+                                    ? $"money-flow__swatch--slot-{slot}"
+                                    : $"money-flow__swatch--{row.Kind.ToString().ToLowerInvariant()}";
+                                <tr>
+                                    <th scope="row" class="fw-normal">
+                                        <span class="money-flow__swatch @(row.InOther ? "money-flow__swatch--other" : swatchClass)" aria-hidden="true"></span>
+                                        @row.Name
+                                        @if (row.InOther)
+                                        {
+                                            <span class="text-muted small">(in Other)</span>
+                                        }
+                                    </th>
+                                    <td class="text-end">$@row.Amount.ToString("N0")</td>
+                                    <td class="text-end">@row.SharePercent.ToString("F1")%</td>
+                                </tr>
+                            }
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <th scope="row">Income</th>
+                                <td class="text-end fw-semibold">$@flow.Income.ToString("N0")</td>
+                                <td></td>
+                            </tr>
+                            @if (flow.HasShortfall)
+                            {
+                                <tr class="money-flow__shortfall-row">
+                                    <th scope="row">Shortfall</th>
+                                    <td class="text-end fw-semibold">$@flow.Shortfall.ToString("N0")</td>
+                                    <td></td>
+                                </tr>
+                            }
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        }
+
         <!-- Category insights -->
         @if (Model.Categories.Any())
         {
@@ -376,6 +448,78 @@
         .analysis-chart-card__canvas {
             position: relative;
             height: 300px;
+        }
+
+        /*
+         * Money Flow colours, read by money-flow.js. Categories take slots 0-4 in display order: this order of the
+         * categorical palette passes the colour-blind and normal-vision checks for neighbouring bands, and slot 4
+         * (magenta) is also safe beside Saved. Income and Spending stay neutral so the categories carry the colour;
+         * Shortfall and Saved keep their negative/positive meaning.
+         */
+        .money-flow {
+            --money-flow-slot-0: #2a78d6;
+            --money-flow-slot-1: #eb6834;
+            --money-flow-slot-2: #6250d6;
+            --money-flow-slot-3: #eda100;
+            --money-flow-slot-4: #e87ba4;
+            --money-flow-income: #475569;
+            --money-flow-spending: #6B7280;
+            --money-flow-shortfall: var(--app-accent-negative, #DC2626);
+            --money-flow-saved: var(--app-accent-positive, #059669);
+            --money-flow-uncategorized: #78716C;
+            --money-flow-other: #9CA3AF;
+        }
+
+        .money-flow__swatch {
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 3px;
+            margin-right: 0.375rem;
+            vertical-align: -0.05em;
+        }
+
+        .money-flow__swatch--slot-0 { background: var(--money-flow-slot-0); }
+        .money-flow__swatch--slot-1 { background: var(--money-flow-slot-1); }
+        .money-flow__swatch--slot-2 { background: var(--money-flow-slot-2); }
+        .money-flow__swatch--slot-3 { background: var(--money-flow-slot-3); }
+        .money-flow__swatch--slot-4 { background: var(--money-flow-slot-4); }
+        .money-flow__swatch--uncategorized { background: var(--money-flow-uncategorized); }
+        .money-flow__swatch--other { background: var(--money-flow-other); }
+        .money-flow__swatch--saved { background: var(--money-flow-saved); }
+
+        /* Money Flow: a taller canvas so small bands keep readable labels */
+        .money-flow__canvas {
+            position: relative;
+            height: 360px;
+        }
+
+        .money-flow__note {
+            border-left: 4px solid var(--app-accent-negative, #DC2626);
+            background: var(--app-accent-negative-soft, #FEE2E2);
+            border-radius: 0.375rem;
+            padding: 0.625rem 0.875rem;
+        }
+
+        /* Row headers name a category; keep them as body text, not the uppercase column-header style */
+        .money-flow__table tbody th,
+        .money-flow__table tfoot th {
+            font-size: inherit;
+            text-transform: none;
+            letter-spacing: normal;
+            color: inherit;
+        }
+
+        /* Match site.css body-cell padding so footer amounts line up with the rows above */
+        .money-flow__table tbody th,
+        .money-flow__table tfoot th,
+        .money-flow__table tfoot td {
+            padding: var(--app-spacing-s) var(--app-spacing-m);
+        }
+
+        .money-flow__shortfall-row th,
+        .money-flow__shortfall-row td {
+            color: var(--app-accent-negative, #DC2626);
         }
 
         /* Canvas fills the container */
@@ -560,18 +704,22 @@
     @{
         var jsonOptions = new JsonSerializerOptions
         {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
     }
     <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <script src="~/lib/chartjs-chart-sankey/dist/chartjs-chart-sankey.min.js"></script>
     <script>
         // Pass data to JavaScript for chart rendering — must be set before dashboard.js loads
         // Use camelCase naming policy to match JavaScript property access in dashboard.js
         window.__analysisData = {
             weeklyTrend: @Html.Raw(JsonSerializer.Serialize(Model.WeeklyTrend, jsonOptions)),
             trendPoints: @Html.Raw(JsonSerializer.Serialize(Model.TrendPoints, jsonOptions)),
-            categories: @Html.Raw(JsonSerializer.Serialize(Model.Categories, jsonOptions))
+            categories: @Html.Raw(JsonSerializer.Serialize(Model.Categories, jsonOptions)),
+            moneyFlow: @Html.Raw(JsonSerializer.Serialize(Model.MoneyFlow, jsonOptions))
         };
     </script>
     <script src="~/js/analysis/dashboard.js" asp-append-version="true"></script>
+    <script src="~/js/analysis/money-flow.js" asp-append-version="true"></script>
 }
