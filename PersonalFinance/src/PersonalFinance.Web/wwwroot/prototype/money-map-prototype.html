@@ -97,6 +97,13 @@ function flowModel(m) {
 function flowLinks(f) {
   // Split each right-hand node proportionally between Income and Shortfall.
   const links = [];
+  if (f.shortfall > 0) {
+    // Shortfall month: Income and Shortfall each flow as one band into a middle Spending node.
+    if (f.income > 0) links.push({ from: 'Income', to: 'Spending', flow: f.income });
+    links.push({ from: 'Shortfall', to: 'Spending', flow: f.shortfall });
+    f.graphRows.forEach(r => links.push({ from: 'Spending', to: r.name, flow: r.amount }));
+    return links;
+  }
   const sources = [['Income', f.income], ['Shortfall', f.shortfall]].filter(s => s[1] > 0);
   f.graphRows.forEach(r => sources.forEach(([src, amt]) => {
     const flow = r.amount * (amt / f.totalFlow);
@@ -105,7 +112,7 @@ function flowLinks(f) {
   return links;
 }
 
-const COLORS = { Income: '#4F46E5', Shortfall: '#DC2626', Saved: '#059669', Other: '#9CA3AF', Uncategorized: '#D97706' };
+const COLORS = { Spending: '#6B7280', Income: '#4F46E5', Shortfall: '#DC2626', Saved: '#059669', Other: '#9CA3AF', Uncategorized: '#D97706' };
 const colorOf = k => COLORS[k] || '#6366F1';
 
 let charts = [];
@@ -116,9 +123,10 @@ function renderSankey(canvas, f, opts = {}) {
   const narrow = window.innerWidth < 576;
   const labels = {};
   const nodeAmount = { Income: f.income, Shortfall: f.shortfall };
+  if (f.shortfall > 0) nodeAmount.Spending = f.expenses;
   f.graphRows.forEach(r => { nodeAmount[r.name] = r.amount; });
   Object.keys(nodeAmount).forEach(k => {
-    labels[k] = opts.short ? k : `${k} · ${fmt(nodeAmount[k])}` + (k === 'Income' || k === 'Shortfall' ? '' : ` · ${pct(nodeAmount[k], f.shareBase)}`);
+    labels[k] = opts.short ? k : `${k} · ${fmt(nodeAmount[k])}` + (k === 'Income' || k === 'Shortfall' || k === 'Spending' ? '' : ` · ${pct(nodeAmount[k], f.shareBase)}`);
   });
   const priority = {};
   f.graphRows.forEach((r, i) => { priority[r.name] = i; });
@@ -128,7 +136,7 @@ function renderSankey(canvas, f, opts = {}) {
       data: flowLinks(f),
       labels,
       priority,
-      column: { Income: 0, Shortfall: 0 },
+      column: { Income: 0, Shortfall: 0, Spending: 1 },
       colorFrom: c => colorOf(c.dataset.data[c.dataIndex].from),
       colorTo: c => colorOf(c.dataset.data[c.dataIndex].to),
       colorMode: 'gradient',
