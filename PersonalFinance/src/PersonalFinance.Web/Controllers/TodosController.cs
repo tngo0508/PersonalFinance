@@ -63,4 +63,23 @@ public class TodosController : Controller
         await _todoApi.CreateTodoAsync(request, cancellationToken);
         return Json(await _todoApi.GetOpenTodosAsync(cancellationToken));
     }
+
+    /// <summary>
+    /// Edits a To-do's title and due date and returns the refreshed open list, re-sorted. ApiService validates the
+    /// title and answers 404 for another Account's To-do; both reach the page through
+    /// <see cref="JsonApiErrorsAttribute"/>.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateTodoRequest? request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request is null || !ModelState.IsValid)
+        {
+            return BadRequest(new { error = TodoMessages.InvalidRequest });
+        }
+
+        await _todoApi.UpdateTodoAsync(id, request, cancellationToken);
+        return Json(await _todoApi.GetOpenTodosAsync(cancellationToken));
+    }
 }

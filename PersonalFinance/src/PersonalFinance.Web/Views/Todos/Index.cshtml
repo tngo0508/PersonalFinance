@@ -10,7 +10,8 @@
 
 @* The list is rendered by js/todos/todo-list.js from the JSON below, so adding (and later completing, editing or
    deleting) a To-do re-renders the same way as the first load. *@
-<div class="todo-page" id="todoPage" data-create-url="@Url.Action("Create", "Todos")">
+<div class="todo-page" id="todoPage" data-create-url="@Url.Action("Create", "Todos")"
+     data-update-url="@Url.Action("Update", "Todos")">
     <header class="todo-header">
         <h1 class="todo-title">To-do List</h1>
         <p class="todo-subtitle">Keep track of the things you want to get done, with an optional due date.</p>

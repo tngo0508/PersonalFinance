@@ -13,7 +13,7 @@ using PersonalFinance.Web.Models;
 namespace PersonalFinance.Tests.Web;
 
 /// <summary>
-/// The Web To-do List page: signed-in only, shows the Account's open To-dos, and adds a To-do through
+/// The Web To-do List page: signed-in only, shows the Account's open To-dos, and adds or edits a To-do through
 /// <see cref="ITodoApi"/>, answering the page's JavaScript with the refreshed list.
 /// </summary>
 public class TodosControllerTests
@@ -72,6 +72,41 @@ public class TodosControllerTests
     {
         Assert.NotNull(typeof(TodosController).GetMethod(nameof(TodosController.Create))!
             .GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
+    }
+
+    [Fact]
+    public async Task Update_SavesTheTodo_AndReturnsTheRefreshedList()
+    {
+        var (api, proxy) = ApiProxy.Create<ITodoApi>();
+        proxy.Returns(nameof(ITodoApi.UpdateTodoAsync), new TodoItemDto { Id = 7, Title = "Pay rent today" });
+        proxy.Returns(nameof(ITodoApi.GetOpenTodosAsync), new List<TodoItemDto> { new() { Id = 7, Title = "Pay rent today" } });
+
+        var result = await WithContext(new TodosController(api, NullLogger<TodosController>.Instance))
+            .Update(7, new UpdateTodoRequest { Title = "Pay rent today" });
+
+        var json = Assert.IsType<JsonResult>(result);
+        Assert.Equal("Pay rent today", Assert.Single(Assert.IsType<List<TodoItemDto>>(json.Value)).Title);
+        Assert.Equal([nameof(ITodoApi.UpdateTodoAsync), nameof(ITodoApi.GetOpenTodosAsync)], proxy.Calls);
+    }
+
+    [Fact]
+    public async Task Update_WithAnUnreadableBody_Returns400WithoutCallingApiService()
+    {
+        var (api, proxy) = ApiProxy.Create<ITodoApi>();
+
+        var result = await WithContext(new TodosController(api, NullLogger<TodosController>.Instance)).Update(7, null);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains(TodoMessages.InvalidRequest, badRequest.Value!.ToString());
+        Assert.Empty(proxy.Calls);
+    }
+
+    [Fact]
+    public void Update_IsAPost_ThatRequiresTheAntiforgeryToken()
+    {
+        var update = typeof(TodosController).GetMethod(nameof(TodosController.Update))!;
+        Assert.NotNull(update.GetCustomAttribute<HttpPostAttribute>());
+        Assert.NotNull(update.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
     }
 
     private static TodosController WithContext(TodosController controller)

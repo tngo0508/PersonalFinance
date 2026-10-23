@@ -81,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Linked from the sidebar under My Finances; signed-out visitors are sent to sign in.
   - Add a To-do with Enter or the Add button; the title is trimmed, required and at most 200 characters, with a visible error when it is not.
   - Open To-dos are listed by due date, undated last, then oldest first; an empty list invites the first To-do, and a failed load shows the Unavailable State with Retry.
+  - Edit a To-do's title and due date in place (Save, or Cancel/Escape), including clearing the due date; the title follows the same rules as adding, the list re-sorts after a save, and a failed save keeps the editor open with an error (`PUT api/todos/{id}`, 404 for another Account's To-do).
   - New `TodoItems` table (migration `AddTodoItem`, schema change: major version 4.0.0), soft-deleted like every user-owned record; ApiService serves `api/todos` through `ITodoApi`, and another Account's To-do returns 404.
 
 - **About Page**: A public About page at `/about` explains what Personal Finance is, why it exists, who builds it and its core features, for signed-out and signed-in visitors.

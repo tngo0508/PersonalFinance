@@ -19,11 +19,14 @@ public class TodosController : ControllerBase
 {
     private readonly IValidator<CreateTodoRequest> _createValidator;
     private readonly ITodoService _todoService;
+    private readonly IValidator<UpdateTodoRequest> _updateValidator;
 
-    public TodosController(ITodoService todoService, IValidator<CreateTodoRequest> createValidator)
+    public TodosController(ITodoService todoService, IValidator<CreateTodoRequest> createValidator,
+        IValidator<UpdateTodoRequest> updateValidator)
     {
         _todoService = todoService;
         _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     /// <summary>
@@ -68,5 +71,28 @@ public class TodosController : ControllerBase
 
         var todo = await _todoService.CreateTodoAsync(User.GetUserId(), request, cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = todo.Id }, todo);
+    }
+
+    /// <summary>
+    /// Edits the title and due date of one of the current Account's To-dos (a <c>null</c> due date clears it). An
+    /// invalid title gets 400 with the messages in <c>errors</c>; unknown, deleted or another Account's To-dos
+    /// return 404.
+    /// </summary>
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(typeof(TodoItemDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateTodoRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var validation = await _updateValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+        }
+
+        var todo = await _todoService.UpdateTodoAsync(User.GetUserId(), id, request, cancellationToken);
+        return todo is null ? NotFound() : Ok(todo);
     }
 }

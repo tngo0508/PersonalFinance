@@ -16,6 +16,7 @@
     let dueDateInput = null;
     let addButton = null;
     let errorBox = null;
+    let todosById = new Map();
 
     /**
      * Turns an ISO yyyy-MM-dd due date into a local calendar date, without a time-zone shift.
@@ -51,7 +52,23 @@
             item.appendChild(due);
         }
 
+        item.appendChild(renderEditButton(todo));
         return item;
+    }
+
+    /**
+     * Builds the Edit button for one To-do. The list's click handler opens the inline editor.
+     * @param {{id: number, title: string}} todo - The To-do from the server.
+     * @returns {HTMLButtonElement} The button.
+     */
+    function renderEditButton (todo) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-sm btn-link todo-item__edit';
+        button.dataset.todoEdit = String(todo.id);
+        button.textContent = 'Edit';
+        button.setAttribute('aria-label', `Edit ${todo.title}`);
+        return button;
     }
 
     /**
@@ -61,6 +78,7 @@
      * @returns {void}
      */
     function renderList (todos) {
+        todosById = new Map(todos.map(todo => [todo.id, todo]));
         list.replaceChildren(...todos.map(renderItem));
         list.hidden = todos.length === 0;
         emptyState.hidden = todos.length > 0;
@@ -104,9 +122,10 @@
     /**
      * Reads the error message from a failed response.
      * @param {Response} response - The failed response.
+     * @param {string} [fallback] - The message to show when the response has none.
      * @returns {Promise<string>} A message that is safe to show.
      */
-    async function readError (response) {
+    async function readError (response, fallback = 'The To-do could not be added. Please try again.') {
         try {
             const body = await response.json();
             if (body && typeof body.error === 'string' && body.error) {
@@ -115,7 +134,7 @@
         } catch {
             // Not JSON: fall through to the generic message.
         }
-        return 'The To-do could not be added. Please try again.';
+        return fallback;
     }
 
     /**
@@ -165,6 +184,173 @@
     }
 
     /**
+     * Swaps a To-do's list item for an inline editor holding its title and due date. Only one editor is open at a
+     * time: opening another puts the first back as it was.
+     * @param {HTMLLIElement} item - The list item to edit.
+     * @param {{id: number, title: string, dueDate: (string|null)}} todo - The To-do being edited.
+     * @returns {void}
+     */
+    function openEditor (item, todo) {
+        closeOpenEditor();
+
+        const editor = document.createElement('form');
+        editor.className = 'todo-edit';
+        editor.noValidate = true;
+
+        const titleId = `todoEditTitle${todo.id}`;
+        const dateId = `todoEditDue${todo.id}`;
+        const errorId = `todoEditError${todo.id}`;
+
+        const titleLabel = document.createElement('label');
+        titleLabel.className = 'visually-hidden';
+        titleLabel.htmlFor = titleId;
+        titleLabel.textContent = 'To-do';
+        const title = document.createElement('input');
+        title.type = 'text';
+        title.id = titleId;
+        title.className = 'form-control todo-edit__title';
+        title.autocomplete = 'off';
+        title.value = todo.title;
+        title.setAttribute('aria-describedby', errorId);
+
+        const dateLabel = document.createElement('label');
+        dateLabel.className = 'visually-hidden';
+        dateLabel.htmlFor = dateId;
+        dateLabel.textContent = 'Due date (optional)';
+        const dueDate = document.createElement('input');
+        dueDate.type = 'date';
+        dueDate.id = dateId;
+        dueDate.className = 'form-control todo-edit__date';
+        dueDate.value = todo.dueDate || '';
+
+        const save = document.createElement('button');
+        save.type = 'submit';
+        save.className = 'btn btn-sm btn-primary';
+        save.textContent = 'Save';
+
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'btn btn-sm btn-outline-secondary';
+        cancel.textContent = 'Cancel';
+
+        const error = document.createElement('p');
+        error.id = errorId;
+        error.className = 'todo-edit__error';
+        error.setAttribute('role', 'alert');
+        error.hidden = true;
+
+        editor.append(titleLabel, title, dateLabel, dueDate, save, cancel, error);
+        item.classList.add('todo-item--editing');
+        item.replaceChildren(editor);
+
+        const showEditError = message => {
+            error.textContent = message || '';
+            error.hidden = !message;
+            title.setAttribute('aria-invalid', message ? 'true' : 'false');
+        };
+        const close = () => {
+            const restored = renderItem(todo);
+            item.replaceWith(restored);
+            restored.querySelector('.todo-item__edit')?.focus();
+        };
+
+        editor.addEventListener('submit', event => {
+            event.preventDefault();
+            saveEdit(todo, { editor, title, dueDate, save, showEditError });
+        });
+        cancel.addEventListener('click', close);
+        editor.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                close();
+            }
+        });
+        title.addEventListener('input', () => {
+            if (!error.hidden) {
+                showEditError(null);
+            }
+        });
+
+        title.focus();
+        title.select();
+    }
+
+    /**
+     * Puts back the To-do whose editor is open, if any, unchanged.
+     * @returns {void}
+     */
+    function closeOpenEditor () {
+        const open = list.querySelector('.todo-item--editing');
+        const todo = open && todosById.get(Number(open.dataset.todoId));
+        if (todo) {
+            open.replaceWith(renderItem(todo));
+        }
+    }
+
+    /**
+     * Saves an edited To-do. On success, re-renders the list (re-sorted by the server); on failure, keeps the
+     * editor open with what the Account typed and shows why.
+     * @param {{id: number}} todo - The To-do being edited.
+     * @param {{editor: HTMLFormElement, title: HTMLInputElement, dueDate: HTMLInputElement,
+     *     save: HTMLButtonElement, showEditError: function(?string): void}} fields - The editor's controls.
+     * @returns {Promise<void>}
+     */
+    async function saveEdit (todo, fields) {
+        const saveButton = fields.save;
+        if (saveButton.disabled) {
+            return;
+        }
+
+        const title = fields.title.value.trim();
+        const invalid = validateTitle(title);
+        if (invalid) {
+            fields.showEditError(invalid);
+            fields.title.focus();
+            return;
+        }
+
+        fields.showEditError(null);
+        saveButton.disabled = true;
+        try {
+            const response = await fetch(`${page.dataset.updateUrl}/${encodeURIComponent(todo.id)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    RequestVerificationToken: window.PFUtils.getAntiForgeryToken(form)
+                },
+                body: JSON.stringify({ title, dueDate: fields.dueDate.value || null })
+            });
+            if (!response.ok) {
+                fields.showEditError(await readError(response, 'The To-do could not be saved. Please try again.'));
+                return;
+            }
+
+            renderList(await response.json());
+            list.querySelector(`[data-todo-edit="${todo.id}"]`)?.focus();
+        } catch {
+            fields.showEditError('The To-do could not be saved. Check your connection and try again.');
+        } finally {
+            saveButton.disabled = false;
+        }
+    }
+
+    /**
+     * Opens the inline editor when an Edit button in the list is clicked.
+     * @param {MouseEvent} event - A click inside the list.
+     * @returns {void}
+     */
+    function handleListClick (event) {
+        const button = event.target.closest('[data-todo-edit]');
+        if (!button) {
+            return;
+        }
+        const item = button.closest('.todo-item');
+        const todo = todosById.get(Number(button.dataset.todoEdit));
+        if (item && todo) {
+            openEditor(item, todo);
+        }
+    }
+
+    /**
      * Reads the To-dos the server rendered into the page.
      * @returns {Array<object>} The open To-dos, or an empty list when the data is missing.
      */
@@ -196,6 +382,7 @@
 
         renderList(readInitialTodos());
         form.addEventListener('submit', handleSubmit);
+        list.addEventListener('click', handleListClick);
         titleInput.addEventListener('input', () => {
             if (!errorBox.hidden) {
                 showError(null);

@@ -25,4 +25,12 @@ public interface ITodoApi
     /// </summary>
     [Post("/api/todos")]
     Task<TodoItemDto> CreateTodoAsync([Body] CreateTodoRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Edits a To-do's title and due date (a <c>null</c> due date clears it). An invalid title fails with 400 and
+    /// the messages in <c>errors</c>; another Account's id fails with 404.
+    /// </summary>
+    [Put("/api/todos/{id}")]
+    Task<TodoItemDto> UpdateTodoAsync(int id, [Body] UpdateTodoRequest request,
+        CancellationToken cancellationToken = default);
 }

@@ -99,6 +99,7 @@
 }
 
 .todo-item__title {
+    flex: 1 1 auto;
     color: var(--app-text);
     overflow-wrap: anywhere;
 }
@@ -107,6 +108,39 @@
     color: var(--app-text-muted);
     font-size: var(--app-font-size-small);
     white-space: nowrap;
+}
+
+/* --- Edit --- */
+
+.todo-item__edit {
+    padding: 0 0.25rem;
+}
+
+.todo-edit {
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.todo-edit__title {
+    flex: 1 1 14rem;
+}
+
+.todo-edit__date {
+    flex: 0 1 11rem;
+}
+
+.todo-edit__error {
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--app-accent-negative);
+    font-size: var(--app-font-size-small);
+}
+
+.todo-edit__error[hidden] {
+    display: none;
 }
 
 /* --- Empty state --- */

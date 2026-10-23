@@ -13,7 +13,7 @@ namespace PersonalFinance.Tests.Todos;
 
 /// <summary>
 /// The ApiService <c>api/todos</c> endpoints, driven through the controller with the real service and validators on
-/// the InMemory provider: an Account adds To-dos and lists its open To-dos, and never sees another Account's.
+/// the InMemory provider: an Account adds, edits and lists its open To-dos, and never sees another Account's.
 /// </summary>
 public class TodosEndpointTests
 {
@@ -27,7 +27,8 @@ public class TodosEndpointTests
     private static TodosApiController CreateController(AppDbContext db, string userId = UserId)
     {
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], "TestAuthType");
-        return new TodosApiController(new TodoService(db), new CreateTodoRequestValidator())
+        return new TodosApiController(new TodoService(db), new CreateTodoRequestValidator(),
+            new UpdateTodoRequestValidator())
         {
             ControllerContext = new ControllerContext
             {
@@ -177,9 +178,136 @@ public class TodosEndpointTests
         Assert.IsType<NotFoundResult>(result);
     }
 
-    private static async Task<TodoItemDto> CreateAsync(AppDbContext db, string title, string userId = UserId)
+    [Fact]
+    public async Task Update_ChangesTheTitleAndDueDate_Trimmed()
     {
-        var result = await CreateController(db, userId).Create(new CreateTodoRequest { Title = title });
+        await using var db = CreateContext();
+        var created = await CreateAsync(db, "Call the bank");
+
+        var result = await CreateController(db).Update(created.Id, new UpdateTodoRequest
+        {
+            Title = "  Call the bank about the loan  ", DueDate = new DateOnly(2026, 11, 5)
+        });
+
+        var updated = Assert.IsType<TodoItemDto>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal(created.Id, updated.Id);
+        Assert.Equal("Call the bank about the loan", updated.Title);
+        Assert.Equal(new DateOnly(2026, 11, 5), updated.DueDate);
+        var listed = Assert.Single(await ListAsync(db));
+        Assert.Equal("Call the bank about the loan", listed.Title);
+        Assert.Equal(new DateOnly(2026, 11, 5), listed.DueDate);
+    }
+
+    [Fact]
+    public async Task Update_ANewDueDate_ResortsTheList()
+    {
+        await using var db = CreateContext();
+        var first = await CreateAsync(db, "First", dueDate: new DateOnly(2026, 11, 1));
+        await CreateAsync(db, "Second", dueDate: new DateOnly(2026, 11, 2));
+
+        await CreateController(db).Update(first.Id, new UpdateTodoRequest
+        {
+            Title = "First", DueDate = new DateOnly(2026, 11, 3)
+        });
+
+        Assert.Equal(["Second", "First"], (await ListAsync(db)).Select(t => t.Title));
+    }
+
+    [Fact]
+    public async Task Update_ClearingTheDueDate_MakesTheTodoUndated_AndSortsItLast()
+    {
+        await using var db = CreateContext();
+        var dated = await CreateAsync(db, "Was dated", dueDate: new DateOnly(2026, 11, 1));
+        await CreateAsync(db, "Still dated", dueDate: new DateOnly(2026, 12, 1));
+
+        await CreateController(db).Update(dated.Id, new UpdateTodoRequest { Title = "Was dated", DueDate = null });
+
+        var todos = await ListAsync(db);
+        Assert.Equal(["Still dated", "Was dated"], todos.Select(t => t.Title));
+        Assert.Null(todos[^1].DueDate);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\t\r\n ")]
+    public async Task Update_RejectsAMissingOrWhitespaceTitle_AndKeepsTheTodo(string? title)
+    {
+        await using var db = CreateContext();
+        var created = await CreateAsync(db, "Keep me");
+
+        var errors = await AssertUpdateBadRequestAsync(db, created.Id, new UpdateTodoRequest { Title = title });
+
+        Assert.Contains("Title is required.", errors);
+        Assert.Equal("Keep me", Assert.Single(await ListAsync(db)).Title);
+    }
+
+    [Fact]
+    public async Task Update_RejectsATitleOverTheMaximumLength()
+    {
+        await using var db = CreateContext();
+        var created = await CreateAsync(db, "Keep me");
+
+        var errors = await AssertUpdateBadRequestAsync(db, created.Id,
+            new UpdateTodoRequest { Title = new string('a', 201) });
+
+        Assert.Contains("Title must be 200 characters or fewer.", errors);
+        Assert.Equal("Keep me", Assert.Single(await ListAsync(db)).Title);
+    }
+
+    [Fact]
+    public async Task Update_MeasuresTheTitleAfterTrimming()
+    {
+        await using var db = CreateContext();
+        var created = await CreateAsync(db, "Short");
+
+        var result = await CreateController(db).Update(created.Id,
+            new UpdateTodoRequest { Title = $"  {new string('a', 200)}  " });
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, Assert.Single(await ListAsync(db)).Title.Length);
+    }
+
+    [Fact]
+    public async Task Update_AnotherAccountsTodo_Returns404_AndLeavesItUnchanged()
+    {
+        await using var db = CreateContext();
+        var theirs = await CreateAsync(db, "Someone else's", "other-user");
+
+        var result = await CreateController(db).Update(theirs.Id, new UpdateTodoRequest { Title = "Hijacked" });
+
+        Assert.IsType<NotFoundResult>(result);
+        Assert.Equal("Someone else's", Assert.Single(await ListAsync(db, "other-user")).Title);
+    }
+
+    [Fact]
+    public async Task Update_AnUnknownOrDeletedTodo_Returns404()
+    {
+        await using var db = CreateContext();
+        var deleted = new TodoItem { UserId = UserId, Title = "Deleted" };
+        deleted.SoftDelete();
+        db.TodoItems.Add(deleted);
+        await db.SaveChangesAsync();
+
+        Assert.IsType<NotFoundResult>(await CreateController(db).Update(deleted.Id, new UpdateTodoRequest { Title = "Back" }));
+        Assert.IsType<NotFoundResult>(await CreateController(db).Update(9999, new UpdateTodoRequest { Title = "Nope" }));
+    }
+
+    private static async Task<IEnumerable<string>> AssertUpdateBadRequestAsync(AppDbContext db, int id,
+        UpdateTodoRequest request)
+    {
+        var result = await CreateController(db).Update(id, request);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var errors = badRequest.Value!.GetType().GetProperty("errors")!.GetValue(badRequest.Value);
+        return Assert.IsAssignableFrom<IEnumerable<string>>(errors);
+    }
+
+    private static async Task<TodoItemDto> CreateAsync(AppDbContext db, string title, string userId = UserId,
+        DateOnly? dueDate = null)
+    {
+        var result = await CreateController(db, userId).Create(new CreateTodoRequest { Title = title, DueDate = dueDate });
         return Assert.IsType<TodoItemDto>(Assert.IsType<CreatedAtActionResult>(result).Value);
     }
 

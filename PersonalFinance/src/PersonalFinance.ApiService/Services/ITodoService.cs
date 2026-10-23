@@ -23,4 +23,12 @@ public interface ITodoService
     /// </summary>
     Task<TodoItemDto> CreateTodoAsync(string userId, CreateTodoRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces the title (trimmed) and due date of one of the Account's To-dos; a <c>null</c> due date makes it
+    /// undated. Returns <c>null</c> when the To-do does not exist, is deleted or belongs to another Account. The
+    /// request must already be valid.
+    /// </summary>
+    Task<TodoItemDto?> UpdateTodoAsync(string userId, int id, UpdateTodoRequest request,
+        CancellationToken cancellationToken = default);
 }
