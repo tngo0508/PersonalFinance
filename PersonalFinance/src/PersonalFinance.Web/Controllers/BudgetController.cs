@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Web.Models;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Web.Infrastructure;
-using PersonalFinance.Shared.Constants;
+using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -38,7 +38,7 @@ public class BudgetController : Controller
 
         try
         {
-            var saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
+            BudgetResponseDto saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
 
             if (saved != null && saved.Allocations != null)
             {
@@ -84,7 +84,7 @@ public class BudgetController : Controller
             return View("Index", model);
         }
 
-        var request = BuildRequest(model);
+        SaveBudgetRequestDto request = BuildRequest(model);
 
         try
         {
@@ -117,7 +117,7 @@ public class BudgetController : Controller
     [JsonApiErrors]
     public async Task<IActionResult> GetBudgetData(CancellationToken cancellationToken = default)
     {
-        var saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
+        BudgetResponseDto saved = await _budgetPlannerApi.GetBudgetAsync("current", cancellationToken);
 
         if (saved == null || saved.Allocations == null)
         {
@@ -129,7 +129,7 @@ public class BudgetController : Controller
             });
         }
 
-        var categories = BudgetPlannerCategories.AllocationAmounts(saved.Allocations);
+        IReadOnlyList<(string Name, decimal Amount)> categories = BudgetPlannerCategories.AllocationAmounts(saved.Allocations);
 
         return Json(new
         {

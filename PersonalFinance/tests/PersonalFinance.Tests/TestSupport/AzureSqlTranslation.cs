@@ -18,7 +18,7 @@ public static class AzureSqlTranslation
     /// <summary>A context on the Azure SQL provider. It never connects: use it only to translate queries.</summary>
     public static AzureSqlAppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
+        DbContextOptions<AzureSqlAppDbContext> options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
             .UseSqlServer(OfflineConnectionString)
             .Options;
         return new AzureSqlAppDbContext(options);

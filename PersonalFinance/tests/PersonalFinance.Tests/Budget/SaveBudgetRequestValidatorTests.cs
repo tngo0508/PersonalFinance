@@ -1,3 +1,4 @@
+using FluentValidation.Results;
 using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
@@ -32,7 +33,7 @@ public class SaveBudgetRequestValidatorTests
             }
         };
 
-        var result = _validator.Validate(request);
+        ValidationResult result = _validator.Validate(request);
 
         Assert.True(result.IsValid);
     }
@@ -51,7 +52,7 @@ public class SaveBudgetRequestValidatorTests
             }
         };
 
-        var result = _validator.Validate(request);
+        ValidationResult result = _validator.Validate(request);
 
         Assert.True(result.IsValid);
     }
@@ -65,7 +66,7 @@ public class SaveBudgetRequestValidatorTests
             Allocations = new BudgetAllocationsDto()
         };
 
-        var result = _validator.Validate(request);
+        ValidationResult result = _validator.Validate(request);
 
         Assert.True(result.IsValid);
     }
@@ -83,7 +84,7 @@ public class SaveBudgetRequestValidatorTests
             }
         };
 
-        var result = _validator.Validate(request);
+        ValidationResult result = _validator.Validate(request);
 
         Assert.True(result.IsValid);
     }
@@ -99,7 +100,7 @@ public class SaveBudgetRequestValidatorTests
             Allocations = new BudgetAllocationsDto()
         };
 
-        var result = _validator.Validate(request);
+        ValidationResult result = _validator.Validate(request);
 
         Assert.False(result.IsValid);
     }

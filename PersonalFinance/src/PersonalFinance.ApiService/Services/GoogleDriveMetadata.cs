@@ -27,10 +27,10 @@ public static class GoogleDriveMetadata
             return null;
         }
 
-        var trimmed = input.Trim();
+        string trimmed = input.Trim();
 
         // Match regex patterns
-        var match = FolderUrlRegex.Match(trimmed);
+        Match match = FolderUrlRegex.Match(trimmed);
         if (match.Success && match.Groups[1].Value.Length >= 15)
         {
             return match.Groups[1].Value;
@@ -79,8 +79,8 @@ public static class GoogleDriveMetadata
     public static (string FileType, string BadgeClass, bool IsFolder) ResolveTypeInfo(string? mimeType,
         string? fileName)
     {
-        var mime = mimeType?.ToLowerInvariant() ?? string.Empty;
-        var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+        string mime = mimeType?.ToLowerInvariant() ?? string.Empty;
+        string ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
 
         if (mime == "application/vnd.google-apps.folder")
         {
@@ -148,7 +148,7 @@ public static class GoogleDriveMetadata
             return false;
         }
 
-        var trimmedName = fileName.Trim();
+        string trimmedName = fileName.Trim();
         if (!trimmedName.StartsWith("Monthly budget", StringComparison.OrdinalIgnoreCase))
         {
             return false;
@@ -159,13 +159,13 @@ public static class GoogleDriveMetadata
             return true;
         }
 
-        var ext = Path.GetExtension(trimmedName).ToLowerInvariant();
+        string ext = Path.GetExtension(trimmedName).ToLowerInvariant();
         if (ext is ".xlsx" or ".xls" or ".csv" or ".gsheet")
         {
             return true;
         }
 
-        var mime = mimeType?.ToLowerInvariant() ?? string.Empty;
+        string mime = mimeType?.ToLowerInvariant() ?? string.Empty;
         if (mime is "application/vnd.google-apps.spreadsheet" or
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" or
             "application/vnd.ms-excel" or

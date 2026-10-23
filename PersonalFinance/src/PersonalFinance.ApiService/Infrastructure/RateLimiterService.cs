@@ -32,11 +32,11 @@ public class RateLimiterService : IRateLimiterService
     /// <returns>True if the request is allowed within the rate limit; otherwise, false.</returns>
     public bool TryAllow(string userId)
     {
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
 
         lock (_lock)
         {
-            if (!_requestTimestamps.TryGetValue(userId, out var queue))
+            if (!_requestTimestamps.TryGetValue(userId, out Queue<DateTime>? queue))
             {
                 queue = new Queue<DateTime>();
                 _requestTimestamps[userId] = queue;

@@ -17,7 +17,7 @@ public class FeedbackServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"Feedback_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -35,15 +35,15 @@ public class FeedbackServiceTests
     [Fact]
     public async Task Submit_TheSixthWithinAnHour_IsRateLimited_AndNotStored()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
+        await using AppDbContext db = CreateContext();
+        FeedbackService service = CreateService(db);
 
-        for (var i = 0; i < 5; i++)
+        for (int i = 0; i < 5; i++)
         {
             Assert.True((await service.SubmitAsync(UserId, ValidRequest())).Succeeded);
         }
 
-        var sixth = await service.SubmitAsync(UserId, ValidRequest());
+        SubmitFeedbackResult sixth = await service.SubmitAsync(UserId, ValidRequest());
 
         Assert.False(sixth.Succeeded);
         Assert.True(sixth.RateLimited);
@@ -53,14 +53,14 @@ public class FeedbackServiceTests
     [Fact]
     public async Task Submit_AnotherAccount_IsNotAffectedByTheLimit()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
-        for (var i = 0; i < 5; i++)
+        await using AppDbContext db = CreateContext();
+        FeedbackService service = CreateService(db);
+        for (int i = 0; i < 5; i++)
         {
             await service.SubmitAsync(UserId, ValidRequest());
         }
 
-        var other = await service.SubmitAsync("other-user", ValidRequest());
+        SubmitFeedbackResult other = await service.SubmitAsync("other-user", ValidRequest());
 
         Assert.True(other.Succeeded);
         Assert.Equal(6, await db.Feedback.CountAsync());
@@ -69,15 +69,15 @@ public class FeedbackServiceTests
     [Fact]
     public async Task Submit_WhenTheWindowHasPassed_IsAcceptedAgain()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db, new RateLimiterService(5, TimeSpan.FromMilliseconds(50)));
-        for (var i = 0; i < 5; i++)
+        await using AppDbContext db = CreateContext();
+        FeedbackService service = CreateService(db, new RateLimiterService(5, TimeSpan.FromMilliseconds(50)));
+        for (int i = 0; i < 5; i++)
         {
             await service.SubmitAsync(UserId, ValidRequest());
         }
 
         await Task.Delay(120);
-        var result = await service.SubmitAsync(UserId, ValidRequest());
+        SubmitFeedbackResult result = await service.SubmitAsync(UserId, ValidRequest());
 
         Assert.True(result.Succeeded);
     }
@@ -85,9 +85,9 @@ public class FeedbackServiceTests
     [Fact]
     public async Task Submit_StoresFeedbackForTheAccount_WithStatusNew()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var result = await CreateService(db).SubmitAsync(UserId, new SubmitFeedbackRequest
+        SubmitFeedbackResult result = await CreateService(db).SubmitAsync(UserId, new SubmitFeedbackRequest
         {
             Category = FeedbackCategory.Bug,
             Message = "The chart on the Dashboard is blank.",
@@ -95,7 +95,7 @@ public class FeedbackServiceTests
         });
 
         Assert.True(result.Succeeded);
-        var stored = Assert.Single(await db.Feedback.ToListAsync());
+        Data.Entities.Feedback stored = Assert.Single(await db.Feedback.ToListAsync());
         Assert.Equal(UserId, stored.UserId);
         Assert.Equal(FeedbackStatus.New, stored.Status);
         Assert.Equal(FeedbackCategory.Bug, stored.Category);
@@ -106,9 +106,9 @@ public class FeedbackServiceTests
     [Fact]
     public async Task Submit_WithoutAPage_IsAccepted()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var result = await CreateService(db).SubmitAsync(UserId,
+        SubmitFeedbackResult result = await CreateService(db).SubmitAsync(UserId,
             new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Dark mode, please." });
 
         Assert.True(result.Succeeded);
@@ -118,7 +118,7 @@ public class FeedbackServiceTests
     [Fact]
     public async Task Submit_TrimsTheMessage()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         await CreateService(db).SubmitAsync(UserId,
             new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "  Add CSV export.  " });

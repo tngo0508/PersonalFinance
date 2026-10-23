@@ -49,7 +49,7 @@ public static class DatabaseProviderHelper
     /// </summary>
     public static DatabaseProviderType DetermineProvider(IConfiguration? configuration, string? connectionString)
     {
-        var explicitProvider = configuration?[DatabaseProviderConfigKey]
+        string? explicitProvider = configuration?[DatabaseProviderConfigKey]
             ?? configuration?["DatabaseProvider"]
             ?? configuration?["DB_PROVIDER"]
             ?? Environment.GetEnvironmentVariable(DatabaseProviderEnvVar)
@@ -65,7 +65,7 @@ public static class DatabaseProviderHelper
     {
         if (!string.IsNullOrWhiteSpace(explicitProvider))
         {
-            var trimmed = explicitProvider.Trim();
+            string trimmed = explicitProvider.Trim();
             if (trimmed.Equals("InMemory", StringComparison.OrdinalIgnoreCase) ||
                 trimmed.Equals("Memory", StringComparison.OrdinalIgnoreCase))
             {
@@ -75,7 +75,7 @@ public static class DatabaseProviderHelper
 
         if (!string.IsNullOrWhiteSpace(connectionStringFallback))
         {
-            var trimmed = connectionStringFallback.Trim();
+            string trimmed = connectionStringFallback.Trim();
             if (trimmed.StartsWith("InMemory:", StringComparison.OrdinalIgnoreCase) ||
                 trimmed.Equals(":memory:", StringComparison.OrdinalIgnoreCase))
             {
@@ -114,7 +114,7 @@ public static class DatabaseProviderHelper
         }
         else
         {
-            var resolvedConnectionString = ResolveConnectionString(connectionString);
+            string resolvedConnectionString = ResolveConnectionString(connectionString);
             options.UseSqlServer(resolvedConnectionString, sqlServerOptions =>
             {
                 // Enable resilient execution strategy for Azure SQL Serverless auto-pause resumption and transient network drops
@@ -145,14 +145,14 @@ public static class DatabaseProviderHelper
         string connectionStringName = DefaultConnectionStringName,
         Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null)
     {
-        var rawConnectionString = configuration.GetConnectionString(connectionStringName)
+        string rawConnectionString = configuration.GetConnectionString(connectionStringName)
             ?? configuration[connectionStringName]
             ?? Environment.GetEnvironmentVariable($"ConnectionStrings__{connectionStringName}")
             ?? Environment.GetEnvironmentVariable(connectionStringName)
             ?? DefaultSqlConnectionString;
 
-        var providerType = DetermineProvider(configuration, rawConnectionString);
-        var resolvedConnectionString = ResolveConnectionString(rawConnectionString);
+        DatabaseProviderType providerType = DetermineProvider(configuration, rawConnectionString);
+        string resolvedConnectionString = ResolveConnectionString(rawConnectionString);
 
         services.AddDbContext<AppDbContext, AzureSqlAppDbContext>(options =>
         {
@@ -171,7 +171,7 @@ public static class DatabaseProviderHelper
         DatabaseProviderType providerType = DatabaseProviderType.AzureSql,
         Action<SqlServerDbContextOptionsBuilder>? sqlServerOptionsAction = null)
     {
-        var resolvedConnectionString = ResolveConnectionString(connectionString);
+        string resolvedConnectionString = ResolveConnectionString(connectionString);
 
         services.AddDbContext<AppDbContext, AzureSqlAppDbContext>(options =>
         {

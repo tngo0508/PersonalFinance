@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
@@ -24,7 +25,7 @@ public class BudgetDataSourceService : IBudgetDataSourceService
     /// <inheritdoc />
     public async Task<BudgetDataSourceDto> GetDataSourcePreferenceAsync(string userId, CancellationToken ct = default)
     {
-        var preference = await _dbContext.UserBudgetSourcePreferences
+        UserBudgetSourcePreference? preference = await _dbContext.UserBudgetSourcePreferences
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.UserId == userId, ct);
 
@@ -37,7 +38,7 @@ public class BudgetDataSourceService : IBudgetDataSourceService
             };
         }
 
-        var hasSheetData = await _dbContext.SpreadsheetBudgetSnapshots
+        bool hasSheetData = await _dbContext.SpreadsheetBudgetSnapshots
                                .AsNoTracking()
                                .AnyAsync(s => s.UserId == userId, ct)
                            || await _dbContext.SpreadsheetTransactionRecords
@@ -54,7 +55,7 @@ public class BudgetDataSourceService : IBudgetDataSourceService
     /// <inheritdoc />
     public async Task<BudgetDataSource> GetActiveSourceAsync(string userId, CancellationToken ct = default)
     {
-        var preference = await GetDataSourcePreferenceAsync(userId, ct);
+        BudgetDataSourceDto preference = await GetDataSourcePreferenceAsync(userId, ct);
         return preference.Source;
     }
 
@@ -62,7 +63,7 @@ public class BudgetDataSourceService : IBudgetDataSourceService
     public async Task<BudgetDataSourceDto> SetDataSourcePreferenceAsync(string userId,
         SetBudgetDataSourceRequest request, CancellationToken ct = default)
     {
-        var preference = await _dbContext.UserBudgetSourcePreferences
+        UserBudgetSourcePreference? preference = await _dbContext.UserBudgetSourcePreferences
             .FirstOrDefaultAsync(p => p.UserId == userId, ct);
 
         if (preference == null)
@@ -80,7 +81,7 @@ public class BudgetDataSourceService : IBudgetDataSourceService
             }
             catch (DbUpdateException)
             {
-                var entry = _dbContext.Entry(preference);
+                EntityEntry<UserBudgetSourcePreference> entry = _dbContext.Entry(preference);
                 if (entry.State != EntityState.Detached)
                 {
                     entry.State = EntityState.Detached;

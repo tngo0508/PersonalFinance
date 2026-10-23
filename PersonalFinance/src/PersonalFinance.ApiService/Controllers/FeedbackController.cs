@@ -1,4 +1,5 @@
 using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
@@ -45,13 +46,13 @@ public class FeedbackController : ControllerBase
     public async Task<IActionResult> Submit([FromBody] SubmitFeedbackRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validation = await _submitValidator.ValidateAsync(request, cancellationToken);
+        ValidationResult validation = await _submitValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var result = await _feedbackService.SubmitAsync(User.GetUserId(), request, cancellationToken);
+        SubmitFeedbackResult result = await _feedbackService.SubmitAsync(User.GetUserId(), request, cancellationToken);
         if (result.RateLimited)
         {
             return StatusCode(StatusCodes.Status429TooManyRequests, new { error = FeedbackMessages.RateLimited });
@@ -92,7 +93,7 @@ public class FeedbackController : ControllerBase
     public async Task<IActionResult> ChangeStatus(int id, [FromBody] ChangeFeedbackStatusRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validation = await _changeStatusValidator.ValidateAsync(request, cancellationToken);
+        ValidationResult validation = await _changeStatusValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });

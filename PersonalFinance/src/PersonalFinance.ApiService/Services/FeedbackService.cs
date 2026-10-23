@@ -50,7 +50,7 @@ public class FeedbackService : IFeedbackService
     public async Task<bool> ChangeStatusAsync(int id, FeedbackStatus status,
         CancellationToken cancellationToken = default)
     {
-        var feedback = await _db.Feedback.FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
+        FeedbackEntity? feedback = await _db.Feedback.FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
         if (feedback is null)
         {
             return false;

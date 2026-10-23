@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,14 +21,14 @@ public class DatabasePersistenceAndMigrationTests
     [InlineData("InMemory", DatabaseProviderType.InMemory)]
     public void DetermineProvider_ExplicitConfigurationKey_ReturnsExpectedProvider(string providerName, DatabaseProviderType expected)
     {
-        var config = new ConfigurationBuilder()
+        IConfigurationRoot config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 { "Database:Provider", providerName }
             })
             .Build();
 
-        var result = DatabaseProviderHelper.DetermineProvider(config, null);
+        DatabaseProviderType result = DatabaseProviderHelper.DetermineProvider(config, null);
         Assert.Equal(expected, result);
     }
 
@@ -35,14 +36,14 @@ public class DatabasePersistenceAndMigrationTests
     public void ResolveConnectionString_AzureSql_PreservesNativeConnectionString()
     {
         const string sqlServerConn = "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=myDb;User ID=admin;";
-        var resolved = DatabaseProviderHelper.ResolveConnectionString(sqlServerConn);
+        string resolved = DatabaseProviderHelper.ResolveConnectionString(sqlServerConn);
         Assert.Equal(sqlServerConn, resolved);
     }
 
     [Fact]
     public void ResolveConnectionString_Empty_ReturnsDefaultSqlConnectionString()
     {
-        var resolved = DatabaseProviderHelper.ResolveConnectionString(null);
+        string resolved = DatabaseProviderHelper.ResolveConnectionString(null);
         Assert.Equal(DatabaseProviderHelper.DefaultSqlConnectionString, resolved);
     }
 
@@ -67,8 +68,8 @@ public class DatabasePersistenceAndMigrationTests
         const string azureSql =
             "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=PersonalFinance;User ID=admin;Password=x;Encrypt=True;TrustServerCertificate=False;";
 
-        var (localProvider, localMigrations) = ResolveProviderAndMigrations(localSqlServer);
-        var (azureProvider, azureMigrations) = ResolveProviderAndMigrations(azureSql);
+        (DatabaseProviderType localProvider, List<string>? localMigrations) = ResolveProviderAndMigrations(localSqlServer);
+        (DatabaseProviderType azureProvider, List<string>? azureMigrations) = ResolveProviderAndMigrations(azureSql);
 
         Assert.Equal(DatabaseProviderType.AzureSql, localProvider);
         Assert.Equal(DatabaseProviderType.AzureSql, azureProvider);
@@ -78,7 +79,7 @@ public class DatabasePersistenceAndMigrationTests
 
     private static (DatabaseProviderType Provider, List<string> Migrations) ResolveProviderAndMigrations(string connectionString)
     {
-        var (config, migrations) = AssertRegistersAzureSqlDbContext(new Dictionary<string, string?>
+        (IConfiguration? config, List<string>? migrations) = AssertRegistersAzureSqlDbContext(new Dictionary<string, string?>
         {
             { "ConnectionStrings:DefaultConnection", connectionString }
         });
@@ -93,16 +94,16 @@ public class DatabasePersistenceAndMigrationTests
     private static (IConfiguration Configuration, List<string> Migrations) AssertRegistersAzureSqlDbContext(
         Dictionary<string, string?> settings)
     {
-        var config = new ConfigurationBuilder()
+        IConfigurationRoot config = new ConfigurationBuilder()
             .AddInMemoryCollection(settings)
             .Build();
 
         var services = new ServiceCollection();
         services.AddAppDbContext(config);
 
-        using var serviceProvider = services.BuildServiceProvider();
-        using var scope = serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetService<AppDbContext>();
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        AppDbContext? dbContext = scope.ServiceProvider.GetService<AppDbContext>();
 
         Assert.NotNull(dbContext);
         Assert.IsType<AzureSqlAppDbContext>(dbContext);
@@ -115,7 +116,7 @@ public class DatabasePersistenceAndMigrationTests
     public void AppDbContextFactory_CreateDbContext_ConfiguresAzureSqlProvider()
     {
         var factory = new AppDbContextFactory();
-        var context = factory.CreateDbContext([
+        AppDbContext context = factory.CreateDbContext([
             "--connection-string",
             "Server=localhost;Database=PersonalFinance;Trusted_Connection=True;TrustServerCertificate=True;"
         ]);
@@ -128,7 +129,7 @@ public class DatabasePersistenceAndMigrationTests
     public void AzureSqlAppDbContextFactory_CreateDbContext_ConfiguresAzureSqlProvider()
     {
         var factory = new AzureSqlAppDbContextFactory();
-        var context = factory.CreateDbContext([
+        AzureSqlAppDbContext context = factory.CreateDbContext([
             "--connection-string",
             "Server=localhost;Database=PersonalFinance;Trusted_Connection=True;TrustServerCertificate=True;"
         ]);
@@ -140,8 +141,8 @@ public class DatabasePersistenceAndMigrationTests
     [Fact]
     public void DataProtectionKeys_PersistAndRetrieveAcrossContextInstances_SimulatesContainerRestart()
     {
-        var dbName = $"InMemory_DataProtection_{Guid.NewGuid():N}";
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        string dbName = $"InMemory_DataProtection_{Guid.NewGuid():N}";
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
 
@@ -159,7 +160,7 @@ public class DatabasePersistenceAndMigrationTests
         // Second container instance (e.g. after scale-to-zero or container restart) reads DataProtection key
         using (var db2 = new AppDbContext(options))
         {
-            var key = db2.DataProtectionKeys.FirstOrDefault(k => k.FriendlyName == "key-instance-1");
+            DataProtectionKey? key = db2.DataProtectionKeys.FirstOrDefault(k => k.FriendlyName == "key-instance-1");
             Assert.NotNull(key);
             Assert.Contains("secret-xml", key.Xml);
         }
@@ -172,14 +173,14 @@ public class DatabasePersistenceAndMigrationTests
         services.AddLogging();
         services.AddAppDbContext($"InMemory_Seed_{Guid.NewGuid():N}", DatabaseProviderType.InMemory);
 
-        using (var sp = services.BuildServiceProvider())
+        using (ServiceProvider sp = services.BuildServiceProvider())
         {
             await sp.MigrateAndSeedDatabaseAsync(NullLogger.Instance);
 
-            using var scope = sp.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using IServiceScope scope = sp.CreateScope();
+            AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var polls = await db.CommunityPolls.ToListAsync();
+            List<CommunityPoll> polls = await db.CommunityPolls.ToListAsync();
             Assert.True(polls.Count >= 3);
             Assert.Contains(polls, p => p.PollCode == "poll-budget-method");
         }
@@ -193,13 +194,13 @@ public class DatabasePersistenceAndMigrationTests
         const string connectionString =
             "Server=localhost;Database=PersonalFinance_ScriptCheck;Trusted_Connection=True;TrustServerCertificate=True;";
 
-        var options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
+        DbContextOptions<AzureSqlAppDbContext> options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
             .UseSqlServer(connectionString)
             .Options;
 
         using var context = new AzureSqlAppDbContext(options);
-        var migrator = context.GetService<IMigrator>();
-        var script = migrator.GenerateScript(fromMigration: null, toMigration: null, MigrationsSqlGenerationOptions.Idempotent);
+        IMigrator migrator = context.GetService<IMigrator>();
+        string script = migrator.GenerateScript(fromMigration: null, toMigration: null, MigrationsSqlGenerationOptions.Idempotent);
 
         Assert.False(string.IsNullOrWhiteSpace(script));
         Assert.Contains("CREATE TABLE [AspNetRoles]", script, StringComparison.Ordinal);
@@ -232,20 +233,20 @@ public class DatabasePersistenceAndMigrationTests
         const string connectionString =
             "Server=localhost;Database=PersonalFinance_ModelCheck;Trusted_Connection=True;TrustServerCertificate=True;";
 
-        var options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
+        DbContextOptions<AzureSqlAppDbContext> options = new DbContextOptionsBuilder<AzureSqlAppDbContext>()
             .UseSqlServer(connectionString)
             .Options;
 
         using var context = new AzureSqlAppDbContext(options);
-        var model = context.Model;
+        IModel model = context.Model;
 
-        var userId = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUser))!
+        IProperty userId = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUser))!
             .FindProperty(nameof(Microsoft.AspNetCore.Identity.IdentityUser.Id))!;
-        var roleId = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityRole))!
+        IProperty roleId = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityRole))!
             .FindProperty(nameof(Microsoft.AspNetCore.Identity.IdentityRole.Id))!;
-        var loginProvider = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUserLogin<string>))!
+        IProperty loginProvider = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUserLogin<string>))!
             .FindProperty(nameof(Microsoft.AspNetCore.Identity.IdentityUserLogin<string>.LoginProvider))!;
-        var providerKey = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUserLogin<string>))!
+        IProperty providerKey = model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUserLogin<string>))!
             .FindProperty(nameof(Microsoft.AspNetCore.Identity.IdentityUserLogin<string>.ProviderKey))!;
 
         Assert.Equal(450, userId.GetMaxLength());
@@ -259,14 +260,14 @@ public class DatabasePersistenceAndMigrationTests
     public void AzureSql_DefaultFallbackConnectionString_MatchesDefaultSqlConnectionString()
     {
         var services = new ServiceCollection();
-        var config = new ConfigurationBuilder().Build();
+        IConfigurationRoot config = new ConfigurationBuilder().Build();
         services.AddAppDbContext(config);
 
-        using var sp = services.BuildServiceProvider();
-        using var scope = sp.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using ServiceProvider sp = services.BuildServiceProvider();
+        using IServiceScope scope = sp.CreateScope();
+        AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var connectionString = db.Database.GetConnectionString();
+        string? connectionString = db.Database.GetConnectionString();
         Assert.NotNull(connectionString);
         Assert.Contains("localhost", connectionString);
         Assert.Contains("PersonalFinance", connectionString);
@@ -275,7 +276,7 @@ public class DatabasePersistenceAndMigrationTests
     [Fact]
     public void AzureSql_MigrationSourceFiles_Exist()
     {
-        var migrationsDir = Path.Combine(
+        string migrationsDir = Path.Combine(
             DatabasePathHelper.GetSolutionRoot(),
             "PersonalFinance",
             "src",

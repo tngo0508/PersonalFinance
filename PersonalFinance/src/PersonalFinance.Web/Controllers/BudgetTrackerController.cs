@@ -34,9 +34,9 @@ public class BudgetTrackerController : Controller
         [FromQuery] int? month,
         CancellationToken cancellationToken = default)
     {
-        var now = DateTime.UtcNow;
-        var selectedYear = year ?? now.Year;
-        var selectedMonth = month ?? now.Month;
+        DateTime now = DateTime.UtcNow;
+        int selectedYear = year ?? now.Year;
+        int selectedMonth = month ?? now.Month;
 
         if (selectedMonth < 1 || selectedMonth > 12)
         {
@@ -77,7 +77,7 @@ public class BudgetTrackerController : Controller
         [FromQuery] int month,
         CancellationToken cancellationToken = default)
     {
-        var sheet = await _budgetTrackerApi.GetSheetAsync(year, month, cancellationToken);
+        MonthlyBudgetSheetDto sheet = await _budgetTrackerApi.GetSheetAsync(year, month, cancellationToken);
         return Json(sheet);
     }
 
@@ -95,7 +95,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid month initialization request." });
         }
 
-        var sheet = await _budgetTrackerApi.InitializeMonthAsync(request, cancellationToken);
+        MonthlyBudgetSheetDto sheet = await _budgetTrackerApi.InitializeMonthAsync(request, cancellationToken);
         return Json(sheet);
     }
 
@@ -116,7 +116,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid planned amount request." });
         }
 
-        var sheet = await _budgetTrackerApi.SetPlannedAsync(year, month, categoryId, request, cancellationToken);
+        MonthlyBudgetSheetDto sheet = await _budgetTrackerApi.SetPlannedAsync(year, month, categoryId, request, cancellationToken);
         return Json(sheet);
     }
 
@@ -137,7 +137,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid actual override request." });
         }
 
-        var sheet = await _budgetTrackerApi.SetActualOverrideAsync(year, month, categoryId, request,
+        MonthlyBudgetSheetDto sheet = await _budgetTrackerApi.SetActualOverrideAsync(year, month, categoryId, request,
             cancellationToken);
         return Json(sheet);
     }
@@ -150,7 +150,7 @@ public class BudgetTrackerController : Controller
         [FromQuery] bool includeArchived = false,
         CancellationToken cancellationToken = default)
     {
-        var categories = await _budgetTrackerApi.GetCategoriesAsync(includeArchived, cancellationToken);
+        List<BudgetCategoryDto> categories = await _budgetTrackerApi.GetCategoriesAsync(includeArchived, cancellationToken);
         return Json(categories);
     }
 
@@ -168,7 +168,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid category request." });
         }
 
-        var category = await _budgetTrackerApi.CreateCategoryAsync(request, cancellationToken);
+        BudgetCategoryDto category = await _budgetTrackerApi.CreateCategoryAsync(request, cancellationToken);
         return Json(category);
     }
 
@@ -187,7 +187,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid category update request." });
         }
 
-        var category = await _budgetTrackerApi.UpdateCategoryAsync(id, request, cancellationToken);
+        BudgetCategoryDto category = await _budgetTrackerApi.UpdateCategoryAsync(id, request, cancellationToken);
         return Json(category);
     }
 
@@ -218,7 +218,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid transaction request." });
         }
 
-        var transaction = await _budgetTrackerApi.CreateTransactionAsync(request, cancellationToken);
+        BudgetTransactionDto transaction = await _budgetTrackerApi.CreateTransactionAsync(request, cancellationToken);
         return Json(transaction);
     }
 
@@ -237,7 +237,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid transaction update request." });
         }
 
-        var transaction = await _budgetTrackerApi.UpdateTransactionAsync(id, request, cancellationToken);
+        BudgetTransactionDto transaction = await _budgetTrackerApi.UpdateTransactionAsync(id, request, cancellationToken);
         return Json(transaction);
     }
 
@@ -260,7 +260,7 @@ public class BudgetTrackerController : Controller
     [HttpGet]
     public async Task<IActionResult> GetDataSource(CancellationToken cancellationToken = default)
     {
-        var preference = await _budgetTrackerApi.GetDataSourceAsync(cancellationToken);
+        BudgetDataSourceDto preference = await _budgetTrackerApi.GetDataSourceAsync(cancellationToken);
         return Json(preference);
     }
 
@@ -278,7 +278,7 @@ public class BudgetTrackerController : Controller
             return BadRequest(new { error = "Invalid data source preference request." });
         }
 
-        var updated = await _budgetTrackerApi.SetDataSourceAsync(request, cancellationToken);
+        BudgetDataSourceDto updated = await _budgetTrackerApi.SetDataSourceAsync(request, cancellationToken);
         return Json(updated);
     }
 }

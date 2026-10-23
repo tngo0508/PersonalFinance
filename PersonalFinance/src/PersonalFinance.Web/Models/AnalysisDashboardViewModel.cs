@@ -1,7 +1,7 @@
 using System.Globalization;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Web.Models;
 

@@ -27,7 +27,7 @@ public static class AppCulture
     /// </summary>
     public static void ApplyDefault()
     {
-        var culture = Default;
+        CultureInfo culture = Default;
         CultureInfo.DefaultThreadCurrentCulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         CultureInfo.CurrentCulture = culture;

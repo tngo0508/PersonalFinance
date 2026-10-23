@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -31,11 +32,11 @@ public class AccountPurgeService : IAccountPurgeService
     /// <inheritdoc />
     public async Task<AccountPurgeSummary> PurgeDueAsync(CancellationToken cancellationToken = default)
     {
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var dueIds = await DueRequestsQuery(now).ToListAsync(cancellationToken);
+        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+        List<int> dueIds = await DueRequestsQuery(now).ToListAsync(cancellationToken);
         int purged = 0, skipped = 0, failed = 0;
 
-        foreach (var requestId in dueIds)
+        foreach (int requestId in dueIds)
         {
             _db.ChangeTracker.Clear();
             try
@@ -99,18 +100,18 @@ public class AccountPurgeService : IAccountPurgeService
     /// </summary>
     private async Task<bool> PurgeOneAsync(int requestId, DateTime now, CancellationToken cancellationToken)
     {
-        var request = await _db.DeletionRequests.FirstOrDefaultAsync(r =>
+        DeletionRequest? request = await _db.DeletionRequests.FirstOrDefaultAsync(r =>
             r.Id == requestId && r.Status == DeletionRequestStatus.Pending && r.PurgeAfter <= now, cancellationToken);
         if (request is null)
         {
             return false;
         }
 
-        var userId = request.UserId;
+        string userId = request.UserId;
         await UncountLikesAsync(userId, request.RequestedAt, cancellationToken);
         await AnonymizeCommunityContentAsync(userId, request.RequestedAt, cancellationToken);
         await RemoveCachedDriveFilesAsync(userId, cancellationToken);
-        foreach (var type in DeletedEntityTypes())
+        foreach (Type type in DeletedEntityTypes())
         {
             await (Task)RemoveRowsMethod.MakeGenericMethod(type).Invoke(this, [userId, cancellationToken])!;
         }
@@ -130,30 +131,30 @@ public class AccountPurgeService : IAccountPurgeService
     /// </summary>
     private async Task UncountLikesAsync(string userId, DateTime requestedAt, CancellationToken cancellationToken)
     {
-        var storyLikes = await _db.CommunityStoryLikes.IgnoreQueryFilters()
+        Dictionary<int, int> storyLikes = await _db.CommunityStoryLikes.IgnoreQueryFilters()
             .Where(l => l.UserId == userId && (!l.IsDeleted || l.DeletedAt == requestedAt))
             .GroupBy(l => l.StoryId)
             .Select(g => new { Id = g.Key, Count = g.Count() })
             .ToDictionaryAsync(l => l.Id, l => l.Count, cancellationToken);
         var storyIds = storyLikes.Keys.ToList();
-        var stories = await _db.CommunityStories.IgnoreQueryFilters()
+        List<CommunityStory> stories = await _db.CommunityStories.IgnoreQueryFilters()
             .Where(s => storyIds.Contains(s.Id))
             .ToListAsync(cancellationToken);
-        foreach (var story in stories)
+        foreach (CommunityStory? story in stories)
         {
             story.Likes = Math.Max(0, story.Likes - storyLikes[story.Id]);
         }
 
-        var commentLikes = await _db.CommunityCommentLikes.IgnoreQueryFilters()
+        Dictionary<int, int> commentLikes = await _db.CommunityCommentLikes.IgnoreQueryFilters()
             .Where(l => l.UserId == userId && (!l.IsDeleted || l.DeletedAt == requestedAt))
             .GroupBy(l => l.CommentId)
             .Select(g => new { Id = g.Key, Count = g.Count() })
             .ToDictionaryAsync(l => l.Id, l => l.Count, cancellationToken);
         var commentIds = commentLikes.Keys.ToList();
-        var comments = await _db.CommunityComments.IgnoreQueryFilters()
+        List<CommunityComment> comments = await _db.CommunityComments.IgnoreQueryFilters()
             .Where(c => commentIds.Contains(c.Id))
             .ToListAsync(cancellationToken);
-        foreach (var comment in comments)
+        foreach (CommunityComment? comment in comments)
         {
             comment.Likes = Math.Max(0, comment.Likes - commentLikes[comment.Id]);
         }
@@ -167,7 +168,7 @@ public class AccountPurgeService : IAccountPurgeService
     private async Task AnonymizeCommunityContentAsync(string userId, DateTime requestedAt,
         CancellationToken cancellationToken)
     {
-        foreach (var story in await _db.CommunityStories.IgnoreQueryFilters()
+        foreach (CommunityStory? story in await _db.CommunityStories.IgnoreQueryFilters()
                      .Where(s => s.UserId == userId).ToListAsync(cancellationToken))
         {
             if (DeletedByTheAccount(story, requestedAt))
@@ -182,7 +183,7 @@ public class AccountPurgeService : IAccountPurgeService
             story.AuthorName = DeletedAccount.DisplayName;
         }
 
-        foreach (var comment in await _db.CommunityComments.IgnoreQueryFilters()
+        foreach (CommunityComment? comment in await _db.CommunityComments.IgnoreQueryFilters()
                      .Where(c => c.UserId == userId).ToListAsync(cancellationToken))
         {
             if (DeletedByTheAccount(comment, requestedAt))
@@ -203,7 +204,7 @@ public class AccountPurgeService : IAccountPurgeService
     /// </summary>
     private async Task RemoveCachedDriveFilesAsync(string userId, CancellationToken cancellationToken)
     {
-        var connectionIds = await _db.GoogleDriveConnections.IgnoreQueryFilters()
+        List<int?> connectionIds = await _db.GoogleDriveConnections.IgnoreQueryFilters()
             .Where(c => c.UserId == userId)
             .Select(c => (int?)c.Id)
             .ToListAsync(cancellationToken);
@@ -231,7 +232,7 @@ public class AccountPurgeService : IAccountPurgeService
         _db.UserLogins.RemoveRange(await _db.UserLogins.Where(l => l.UserId == userId).ToListAsync(cancellationToken));
         _db.UserTokens.RemoveRange(await _db.UserTokens.Where(t => t.UserId == userId).ToListAsync(cancellationToken));
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        IdentityUser? user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is not null)
         {
             _db.Users.Remove(user);

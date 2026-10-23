@@ -40,7 +40,7 @@ public class WatchlistController : Controller
     public async Task<IActionResult> Save([FromBody] SaveArticleRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var result = await _watchlistApi.SaveArticleAsync(request, cancellationToken);
+        SaveArticleResponseDto result = await _watchlistApi.SaveArticleAsync(request, cancellationToken);
         return Ok(new { success = result.Success, alreadySaved = result.AlreadySaved, id = result.Id });
     }
 
@@ -51,7 +51,7 @@ public class WatchlistController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Remove(int id, CancellationToken cancellationToken = default)
     {
-        var result = await _watchlistApi.RemoveArticleAsync(id, cancellationToken);
+        RemoveArticleResponseDto result = await _watchlistApi.RemoveArticleAsync(id, cancellationToken);
         return Ok(new { success = result.Success });
     }
 }

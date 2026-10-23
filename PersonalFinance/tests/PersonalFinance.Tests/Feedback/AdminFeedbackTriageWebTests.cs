@@ -23,7 +23,7 @@ public class AdminFeedbackTriageWebTests
 {
     private static AdminController CreateController(IFeedbackApi feedbackApi)
     {
-        var (adminApi, _) = ApiProxy.Create<IAdminApi>();
+        (IAdminApi? adminApi, ApiProxy<IAdminApi> _) = ApiProxy.Create<IAdminApi>();
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "admin-user")], "TestAuthType");
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
 
@@ -41,10 +41,10 @@ public class AdminFeedbackTriageWebTests
     {
         var api = new FakeFeedbackApi();
 
-        var result = await CreateController(api).Feedback(status);
+        IActionResult result = await CreateController(api).Feedback(status);
 
         Assert.Equal([status], api.ListedStatuses);
-        var model = Assert.IsType<AdminFeedbackInboxViewModel>(Assert.IsType<ViewResult>(result).Model);
+        AdminFeedbackInboxViewModel model = Assert.IsType<AdminFeedbackInboxViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Equal(status, model.Status);
     }
 
@@ -52,12 +52,12 @@ public class AdminFeedbackTriageWebTests
     public async Task ChangeFeedbackStatus_ChangesIt_AndReturnsToTheSameInboxFilter()
     {
         var api = new FakeFeedbackApi();
-        var controller = CreateController(api);
+        AdminController controller = CreateController(api);
 
-        var result = await controller.ChangeFeedbackStatus(7, FeedbackStatus.Archived, FeedbackStatus.Reviewed);
+        IActionResult result = await controller.ChangeFeedbackStatus(7, FeedbackStatus.Archived, FeedbackStatus.Reviewed);
 
         Assert.Equal([(7, FeedbackStatus.Archived)], api.Changes);
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(AdminController.Feedback), redirect.ActionName);
         Assert.Equal(FeedbackStatus.Reviewed, redirect.RouteValues?["status"]);
         Assert.Equal("Feedback marked Archived.", controller.TempData["AdminMessage"]);
@@ -67,9 +67,9 @@ public class AdminFeedbackTriageWebTests
     public async Task ChangeFeedbackStatus_UnknownFeedback_ShowsAFriendlyError()
     {
         var api = new FakeFeedbackApi { ChangeFailure = await ApiFailureAsync(HttpStatusCode.NotFound) };
-        var controller = CreateController(api);
+        AdminController controller = CreateController(api);
 
-        var result = await controller.ChangeFeedbackStatus(7, FeedbackStatus.Reviewed, null);
+        IActionResult result = await controller.ChangeFeedbackStatus(7, FeedbackStatus.Reviewed, null);
 
         Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("That Feedback no longer exists.", controller.TempData["AdminError"]);
@@ -80,18 +80,18 @@ public class AdminFeedbackTriageWebTests
     public async Task ChangeFeedbackStatus_WhenTheApiIsUnreachable_ShowsAFriendlyError()
     {
         var api = new FakeFeedbackApi { ChangeFailure = new HttpRequestException("ApiService unreachable") };
-        var controller = CreateController(api);
+        AdminController controller = CreateController(api);
 
         await controller.ChangeFeedbackStatus(7, FeedbackStatus.Reviewed, null);
 
-        var error = Assert.IsType<string>(controller.TempData["AdminError"]);
+        string error = Assert.IsType<string>(controller.TempData["AdminError"]);
         Assert.DoesNotContain("unreachable", error);
     }
 
     [Fact]
     public void ChangeFeedbackStatus_IsAPost_WithAnAntiForgeryToken()
     {
-        var method = typeof(AdminController).GetMethod(nameof(AdminController.ChangeFeedbackStatus))!;
+        MethodInfo method = typeof(AdminController).GetMethod(nameof(AdminController.ChangeFeedbackStatus))!;
 
         Assert.NotNull(method.GetCustomAttribute<HttpPostAttribute>());
         Assert.NotNull(method.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());

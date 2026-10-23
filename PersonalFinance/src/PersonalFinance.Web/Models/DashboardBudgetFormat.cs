@@ -20,7 +20,7 @@ public static class DashboardBudgetFormat
         }
 
         return DateTime.TryParseExact(period, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None,
-            out var month)
+            out DateTime month)
             ? month.ToString("MMMM yyyy", CultureInfo.InvariantCulture)
             : period;
     }

@@ -28,7 +28,7 @@ public class SavingsGoalService : ISavingsGoalService
     public async Task<List<SavingsGoalResponseDto>> GetSavingsGoalsAsync(string userId,
         CancellationToken cancellationToken = default)
     {
-        var goals = await _dbContext.SavingsGoals
+        List<SavingsGoalResponseDto> goals = await _dbContext.SavingsGoals
             .AsNoTracking()
             .NewestFirstFor(userId)
             .Select(g => new SavingsGoalResponseDto
@@ -77,14 +77,14 @@ public class SavingsGoalService : ISavingsGoalService
     public async Task<bool> UpdateSavingsGoalAsync(string userId, int id, UpdateSavingsGoalRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var goal = await _dbContext.SavingsGoals
+        SavingsGoal? goal = await _dbContext.SavingsGoals
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId, cancellationToken);
 
         if (goal is null) return false;
 
         if (!string.IsNullOrEmpty(request.Name)) goal.Name = request.Name;
         if (request.TargetAmount.HasValue) goal.TargetAmount = request.TargetAmount.Value;
-        var previousAmount = goal.CurrentAmount;
+        decimal previousAmount = goal.CurrentAmount;
         if (request.CurrentAmount.HasValue) goal.CurrentAmount = request.CurrentAmount.Value;
         if (request.Description != null) goal.Description = request.Description;
         if (request.TargetDate.HasValue) goal.TargetDate = request.TargetDate.Value;
@@ -102,7 +102,7 @@ public class SavingsGoalService : ISavingsGoalService
 
     public async Task<bool> DeleteSavingsGoalAsync(string userId, int id, CancellationToken cancellationToken = default)
     {
-        var goal = await _dbContext.SavingsGoals
+        SavingsGoal? goal = await _dbContext.SavingsGoals
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId, cancellationToken);
 
         if (goal is null) return false;
@@ -128,11 +128,11 @@ public class SavingsGoalService : ISavingsGoalService
         {
             if (targetAmount <= 0) return;
 
-            var milestones = new[] { 50, 75, 100 };
+            int[] milestones = new[] { 50, 75, 100 };
 
-            foreach (var milestone in milestones)
+            foreach (int milestone in milestones)
             {
-                var threshold = targetAmount * milestone / 100m;
+                decimal threshold = targetAmount * milestone / 100m;
 
                 // Only notify if we just crossed the threshold
                 if (previousAmount < threshold && currentAmount >= threshold)

@@ -116,7 +116,7 @@ public class AiScopeFilter : IAiScopeFilter
             return null;
         }
 
-        var lowerMessage = message.ToLowerInvariant().Trim();
+        string lowerMessage = message.ToLowerInvariant().Trim();
 
         // Check message length limit
         if (message.Length > AiAssistantMessages.MaxMessageLength)
@@ -132,7 +132,7 @@ public class AiScopeFilter : IAiScopeFilter
         }
 
         // Check for prompt injection attempts
-        foreach (var pattern in InjectionPatterns)
+        foreach (string pattern in InjectionPatterns)
         {
             if (lowerMessage.Contains(pattern))
             {
@@ -147,8 +147,8 @@ public class AiScopeFilter : IAiScopeFilter
         }
 
         // Check for off-topic keywords first (stronger signal)
-        var offTopicScore = CountKeywordMatches(lowerMessage, OffTopicKeywords);
-        var financeScore = CountKeywordMatches(lowerMessage, FinanceKeywords);
+        int offTopicScore = CountKeywordMatches(lowerMessage, OffTopicKeywords);
+        int financeScore = CountKeywordMatches(lowerMessage, FinanceKeywords);
 
         // Mixed requests still contain an out-of-scope task; do not spend tokens on it.
         if (offTopicScore > 0)
@@ -167,7 +167,7 @@ public class AiScopeFilter : IAiScopeFilter
         // Short messages that match a greeting pattern exactly or with minimal punctuation
         if (lowerMessage.Length < 30)
         {
-            foreach (var pattern in GreetingPatterns)
+            foreach (string pattern in GreetingPatterns)
             {
                 if (lowerMessage == pattern || lowerMessage == pattern + "!" || lowerMessage == pattern + "?")
                 {
@@ -177,19 +177,19 @@ public class AiScopeFilter : IAiScopeFilter
         }
 
         // Greeting followed by non-finance content
-        foreach (var pattern in GreetingPatterns)
+        foreach (string pattern in GreetingPatterns)
         {
             if (lowerMessage.StartsWith(pattern + " ", StringComparison.Ordinal) ||
                 lowerMessage.StartsWith(pattern + ",", StringComparison.Ordinal))
             {
                 // Check if the rest contains finance keywords
-                var rest = lowerMessage[pattern.Length..].Trim();
+                string rest = lowerMessage[pattern.Length..].Trim();
                 if (rest.Length < 10)
                 {
                     return true;
                 }
 
-                var hasFinanceKeyword = FinanceKeywords.Any(kw => rest.Contains(kw));
+                bool hasFinanceKeyword = FinanceKeywords.Any(kw => rest.Contains(kw));
                 if (!hasFinanceKeyword)
                 {
                     return true;
@@ -205,8 +205,8 @@ public class AiScopeFilter : IAiScopeFilter
     /// </summary>
     private static int CountKeywordMatches(string lowerMessage, string[] keywords)
     {
-        var count = 0;
-        foreach (var keyword in keywords)
+        int count = 0;
+        foreach (string keyword in keywords)
         {
             if (Regex.IsMatch(lowerMessage, @"(?<!\w)" + Regex.Escape(keyword) + @"(?!\w)",
                     RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))

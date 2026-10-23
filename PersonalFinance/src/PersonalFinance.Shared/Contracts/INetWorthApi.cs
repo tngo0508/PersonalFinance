@@ -1,5 +1,5 @@
-using Refit;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using Refit;
 
 namespace PersonalFinance.Shared.Contracts;
 

@@ -38,8 +38,8 @@ public class DriveConnectionService : IDriveConnectionService
         GoogleDriveRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var rawInput = request.FolderUrl;
-        var folderId = GoogleDriveMetadata.ExtractFolderId(rawInput);
+        string rawInput = request.FolderUrl;
+        string? folderId = GoogleDriveMetadata.ExtractFolderId(rawInput);
 
         if (string.IsNullOrWhiteSpace(folderId))
         {
@@ -52,7 +52,7 @@ public class DriveConnectionService : IDriveConnectionService
             };
         }
 
-        var apiKey = GoogleDriveApiKey.Resolve(request.ApiKey, _configuration);
+        string? apiKey = GoogleDriveApiKey.Resolve(request.ApiKey, _configuration);
 
         // If an API key is available, attempt live fetch via Google Drive API v3
         if (!string.IsNullOrWhiteSpace(apiKey))
@@ -94,7 +94,7 @@ public class DriveConnectionService : IDriveConnectionService
             }
             catch (HttpRequestException httpEx)
             {
-                var statusCode = httpEx.StatusCode.HasValue ? (int)httpEx.StatusCode.Value : 0;
+                int statusCode = httpEx.StatusCode.HasValue ? (int)httpEx.StatusCode.Value : 0;
                 string detailedGuidance;
 
                 if (statusCode == 404)
@@ -111,7 +111,7 @@ public class DriveConnectionService : IDriveConnectionService
                 }
                 else
                 {
-                    var statusCodeInfo = httpEx.StatusCode.HasValue
+                    string statusCodeInfo = httpEx.StatusCode.HasValue
                         ? $"HTTP {(int)httpEx.StatusCode.Value} ({httpEx.StatusCode})"
                         : "an HTTP error";
                     detailedGuidance = $"Google Drive API returned {statusCodeInfo} (Verify that your API key is valid, Google Drive API is enabled, and folder access is set to 'Anyone with the link'). Showing preview demo data.";
@@ -162,7 +162,7 @@ public class DriveConnectionService : IDriveConnectionService
             return new List<GoogleDriveConnectionDto>();
         }
 
-        var connections = await _dbContext.GoogleDriveConnections
+        List<GoogleDriveConnection> connections = await _dbContext.GoogleDriveConnections
             .AsNoTracking()
             .Where(c => c.UserId == userId)
             .Include(c => c.CachedFiles)
@@ -179,7 +179,7 @@ public class DriveConnectionService : IDriveConnectionService
         bool forceRefresh = false,
         CancellationToken cancellationToken = default)
     {
-        var connection = await _dbContext.GoogleDriveConnections
+        GoogleDriveConnection? connection = await _dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
             .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
 
@@ -193,7 +193,7 @@ public class DriveConnectionService : IDriveConnectionService
         }
 
         // If not forced and cache exists and is fresh (within 30 minutes), return cached data from database
-        var isCacheFresh = connection.LastSyncedAtUtc.HasValue &&
+        bool isCacheFresh = connection.LastSyncedAtUtc.HasValue &&
                            (DateTime.UtcNow - connection.LastSyncedAtUtc.Value) < TimeSpan.FromMinutes(30) &&
                            connection.CachedFiles.Any(f => !f.IsTrashed);
 
@@ -225,14 +225,14 @@ public class DriveConnectionService : IDriveConnectionService
             throw new ArgumentException("UserId is required to connect a Google Drive.", nameof(userId));
         }
 
-        var folderId = GoogleDriveMetadata.ExtractFolderId(request.FolderUrl);
+        string? folderId = GoogleDriveMetadata.ExtractFolderId(request.FolderUrl);
         if (string.IsNullOrWhiteSpace(folderId))
         {
             throw new ArgumentException("Invalid Google Drive folder URL or Folder ID.", nameof(request));
         }
 
         // Check if connection for this user and folder already exists
-        var existing = await _dbContext.GoogleDriveConnections
+        GoogleDriveConnection? existing = await _dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
             .FirstOrDefaultAsync(c => c.UserId == userId && c.FolderId == folderId, cancellationToken);
 
@@ -288,7 +288,7 @@ public class DriveConnectionService : IDriveConnectionService
         bool forceRefresh = false,
         CancellationToken cancellationToken = default)
     {
-        var connection = await _dbContext.GoogleDriveConnections
+        GoogleDriveConnection? connection = await _dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
             .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
 
@@ -311,7 +311,7 @@ public class DriveConnectionService : IDriveConnectionService
         string? newApiKey,
         CancellationToken cancellationToken = default)
     {
-        var connection = await _dbContext.GoogleDriveConnections
+        GoogleDriveConnection? connection = await _dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
             .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
 
@@ -344,7 +344,7 @@ public class DriveConnectionService : IDriveConnectionService
         string userId,
         CancellationToken cancellationToken = default)
     {
-        var connection = await _dbContext.GoogleDriveConnections
+        GoogleDriveConnection? connection = await _dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
             .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
 
@@ -373,7 +373,7 @@ public class DriveConnectionService : IDriveConnectionService
         bool forceRefresh,
         CancellationToken cancellationToken)
     {
-        var apiKey = GoogleDriveApiKey.Resolve(CredentialProtector.Decrypt(connection.EncryptedApiKey), _configuration);
+        string? apiKey = GoogleDriveApiKey.Resolve(CredentialProtector.Decrypt(connection.EncryptedApiKey), _configuration);
 
         GoogleDriveFolderResponseDto liveResponse;
 
@@ -392,7 +392,7 @@ public class DriveConnectionService : IDriveConnectionService
                 connection.ErrorMessage = "Google credentials are invalid or expired. Please re-authenticate or update your API key.";
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
-                var cachedFallback = MapConnectionToFolderResponse(connection);
+                GoogleDriveFolderResponseDto cachedFallback = MapConnectionToFolderResponse(connection);
                 cachedFallback.Success = false;
                 cachedFallback.ErrorMessage = connection.ErrorMessage;
                 return cachedFallback;
@@ -425,11 +425,11 @@ public class DriveConnectionService : IDriveConnectionService
             var existingFilesMap = connection.CachedFiles.ToDictionary(f => f.DriveFileId, f => f);
             var activeFileIds = new HashSet<string>();
 
-            foreach (var fetchedFile in liveResponse.Files)
+            foreach (GoogleDriveFileDto fetchedFile in liveResponse.Files)
             {
                 activeFileIds.Add(fetchedFile.Id);
 
-                if (existingFilesMap.TryGetValue(fetchedFile.Id, out var existingFile))
+                if (existingFilesMap.TryGetValue(fetchedFile.Id, out GoogleDriveCachedFile? existingFile))
                 {
                     // Update existing cached item if changed
                     existingFile.Name = fetchedFile.Name;
@@ -479,7 +479,7 @@ public class DriveConnectionService : IDriveConnectionService
                 .Where(f => !activeFileIds.Contains(f.DriveFileId))
                 .ToList();
 
-            foreach (var removedFile in filesToRemove)
+            foreach (GoogleDriveCachedFile? removedFile in filesToRemove)
             {
                 _dbContext.GoogleDriveCachedFiles.Remove(removedFile);
             }
@@ -498,7 +498,7 @@ public class DriveConnectionService : IDriveConnectionService
     private static GoogleDriveConnectionDto MapToDto(GoogleDriveConnection connection)
     {
         var activeFiles = connection.CachedFiles.Where(f => !f.IsTrashed).ToList();
-        var totalBytes = activeFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
+        long totalBytes = activeFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
 
         return new GoogleDriveConnectionDto
         {
@@ -547,7 +547,7 @@ public class DriveConnectionService : IDriveConnectionService
             })
             .ToList();
 
-        var totalBytes = activeFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
+        long totalBytes = activeFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
 
         return new GoogleDriveFolderResponseDto
         {
@@ -577,12 +577,12 @@ public class DriveConnectionService : IDriveConnectionService
         // 1. Fetch Folder Metadata (Name)
         try
         {
-            var folderMetaUrl = $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(folderId)}?fields=id,name,mimeType&key={Uri.EscapeDataString(apiKey)}";
-            using var metaResponse = await _httpClient.GetAsync(folderMetaUrl, cancellationToken);
+            string folderMetaUrl = $"https://www.googleapis.com/drive/v3/files/{Uri.EscapeDataString(folderId)}?fields=id,name,mimeType&key={Uri.EscapeDataString(apiKey)}";
+            using HttpResponseMessage metaResponse = await _httpClient.GetAsync(folderMetaUrl, cancellationToken);
             if (metaResponse.IsSuccessStatusCode)
             {
-                using var metaDoc = await JsonDocument.ParseAsync(await metaResponse.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-                if (metaDoc.RootElement.TryGetProperty("name", out var nameProp))
+                using JsonDocument metaDoc = await JsonDocument.ParseAsync(await metaResponse.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+                if (metaDoc.RootElement.TryGetProperty("name", out JsonElement nameProp))
                 {
                     folderName = nameProp.GetString();
                 }
@@ -600,57 +600,57 @@ public class DriveConnectionService : IDriveConnectionService
         // 2. Fetch Files inside folder (with pagination)
         do
         {
-            var query = $"'{folderId}' in parents and trashed = false";
-            var fields = "nextPageToken,files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,iconLink,thumbnailLink)";
-            var listUrl = $"https://www.googleapis.com/drive/v3/files?q={Uri.EscapeDataString(query)}&fields={Uri.EscapeDataString(fields)}&orderBy={Uri.EscapeDataString("modifiedTime desc")}&pageSize=100&key={Uri.EscapeDataString(apiKey)}";
+            string query = $"'{folderId}' in parents and trashed = false";
+            string fields = "nextPageToken,files(id,name,mimeType,size,createdTime,modifiedTime,webViewLink,iconLink,thumbnailLink)";
+            string listUrl = $"https://www.googleapis.com/drive/v3/files?q={Uri.EscapeDataString(query)}&fields={Uri.EscapeDataString(fields)}&orderBy={Uri.EscapeDataString("modifiedTime desc")}&pageSize=100&key={Uri.EscapeDataString(apiKey)}";
 
             if (!string.IsNullOrEmpty(pageToken))
             {
                 listUrl += $"&pageToken={Uri.EscapeDataString(pageToken)}";
             }
 
-            using var response = await _httpClient.GetAsync(listUrl, cancellationToken);
+            using HttpResponseMessage response = await _httpClient.GetAsync(listUrl, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogWarning("Google Drive API error: {Status} - {Error}", response.StatusCode, errorBody);
                 throw new HttpRequestException($"Google Drive API returned {(int)response.StatusCode}: {response.ReasonPhrase}", null, response.StatusCode);
             }
 
-            using var doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-            var root = doc.RootElement;
+            using JsonDocument doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+            JsonElement root = doc.RootElement;
 
-            if (root.TryGetProperty("files", out var filesArray) && filesArray.ValueKind == JsonValueKind.Array)
+            if (root.TryGetProperty("files", out JsonElement filesArray) && filesArray.ValueKind == JsonValueKind.Array)
             {
-                foreach (var fileElem in filesArray.EnumerateArray())
+                foreach (JsonElement fileElem in filesArray.EnumerateArray())
                 {
-                    var id = fileElem.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? string.Empty : string.Empty;
-                    var name = fileElem.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "Untitled" : "Untitled";
-                    var mimeType = fileElem.TryGetProperty("mimeType", out var mimeProp) ? mimeProp.GetString() ?? string.Empty : string.Empty;
+                    string id = fileElem.TryGetProperty("id", out JsonElement idProp) ? idProp.GetString() ?? string.Empty : string.Empty;
+                    string name = fileElem.TryGetProperty("name", out JsonElement nameProp) ? nameProp.GetString() ?? "Untitled" : "Untitled";
+                    string mimeType = fileElem.TryGetProperty("mimeType", out JsonElement mimeProp) ? mimeProp.GetString() ?? string.Empty : string.Empty;
 
                     long? size = null;
-                    if (fileElem.TryGetProperty("size", out var sizeProp) && long.TryParse(sizeProp.GetString(), out var parsedSize))
+                    if (fileElem.TryGetProperty("size", out JsonElement sizeProp) && long.TryParse(sizeProp.GetString(), out long parsedSize))
                     {
                         size = parsedSize;
                     }
 
                     DateTime? createdTime = null;
-                    if (fileElem.TryGetProperty("createdTime", out var createdProp) && DateTime.TryParse(createdProp.GetString(), out var parsedCreated))
+                    if (fileElem.TryGetProperty("createdTime", out JsonElement createdProp) && DateTime.TryParse(createdProp.GetString(), out DateTime parsedCreated))
                     {
                         createdTime = parsedCreated;
                     }
 
                     DateTime? modifiedTime = null;
-                    if (fileElem.TryGetProperty("modifiedTime", out var modProp) && DateTime.TryParse(modProp.GetString(), out var parsedMod))
+                    if (fileElem.TryGetProperty("modifiedTime", out JsonElement modProp) && DateTime.TryParse(modProp.GetString(), out DateTime parsedMod))
                     {
                         modifiedTime = parsedMod;
                     }
 
-                    var webViewLink = fileElem.TryGetProperty("webViewLink", out var webLinkProp) ? webLinkProp.GetString() : null;
-                    var iconLink = fileElem.TryGetProperty("iconLink", out var iconProp) ? iconProp.GetString() : null;
-                    var thumbnailLink = fileElem.TryGetProperty("thumbnailLink", out var thumbProp) ? thumbProp.GetString() : null;
+                    string? webViewLink = fileElem.TryGetProperty("webViewLink", out JsonElement webLinkProp) ? webLinkProp.GetString() : null;
+                    string? iconLink = fileElem.TryGetProperty("iconLink", out JsonElement iconProp) ? iconProp.GetString() : null;
+                    string? thumbnailLink = fileElem.TryGetProperty("thumbnailLink", out JsonElement thumbProp) ? thumbProp.GetString() : null;
 
-                    var (fileType, badgeClass, isFolder) = GoogleDriveMetadata.ResolveTypeInfo(mimeType, name);
+                    (string? fileType, string? badgeClass, bool isFolder) = GoogleDriveMetadata.ResolveTypeInfo(mimeType, name);
 
                     files.Add(new GoogleDriveFileDto
                     {
@@ -672,10 +672,10 @@ public class DriveConnectionService : IDriveConnectionService
                 }
             }
 
-            pageToken = root.TryGetProperty("nextPageToken", out var tokenProp) ? tokenProp.GetString() : null;
+            pageToken = root.TryGetProperty("nextPageToken", out JsonElement tokenProp) ? tokenProp.GetString() : null;
         } while (!string.IsNullOrEmpty(pageToken));
 
-        var totalBytes = files.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
+        long totalBytes = files.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
 
         string? emptyWarning = null;
         if (files.Count == 0)
@@ -804,13 +804,13 @@ public class DriveConnectionService : IDriveConnectionService
             }
         };
 
-        foreach (var file in sampleFiles)
+        foreach (GoogleDriveFileDto file in sampleFiles)
         {
             file.IsMonthlyBudgetSpreadsheet =
                 GoogleDriveMetadata.IsMonthlyBudgetSpreadsheet(file.Name, file.FileType, file.MimeType);
         }
 
-        var totalBytes = sampleFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
+        long totalBytes = sampleFiles.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
 
         return new GoogleDriveFolderResponseDto
         {

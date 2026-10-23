@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.Dashboard;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -32,7 +33,7 @@ public class DashboardController : Controller
     {
         try
         {
-            var summary = await _dashboardApi.GetSummaryAsync(cancellationToken);
+            DashboardSummaryDto summary = await _dashboardApi.GetSummaryAsync(cancellationToken);
             return View(summary);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)

@@ -40,25 +40,25 @@ public static class ApiErrorMessages
             try
             {
                 using var doc = JsonDocument.Parse(ex.Content);
-                var root = doc.RootElement;
+                JsonElement root = doc.RootElement;
 
                 if (root.ValueKind == JsonValueKind.Object)
                 {
                     // 1. Direct single error property
-                    if (root.TryGetProperty("error", out var errorProp) && errorProp.GetString() is { } errorMsg &&
+                    if (root.TryGetProperty("error", out JsonElement errorProp) && errorProp.GetString() is { } errorMsg &&
                         !string.IsNullOrWhiteSpace(errorMsg))
                     {
                         return errorMsg;
                     }
 
                     // 2. Errors collection (array of messages or object dictionary of arrays)
-                    if (root.TryGetProperty("errors", out var errorsProp))
+                    if (root.TryGetProperty("errors", out JsonElement errorsProp))
                     {
                         var errorList = new List<string>();
 
                         if (errorsProp.ValueKind == JsonValueKind.Array)
                         {
-                            foreach (var item in errorsProp.EnumerateArray())
+                            foreach (JsonElement item in errorsProp.EnumerateArray())
                             {
                                 if (item.ValueKind == JsonValueKind.String && item.GetString() is { } str &&
                                     !string.IsNullOrWhiteSpace(str))
@@ -67,12 +67,12 @@ public static class ApiErrorMessages
                                 }
                                 else if (item.ValueKind == JsonValueKind.Object)
                                 {
-                                    if (item.TryGetProperty("errorMessage", out var em) &&
+                                    if (item.TryGetProperty("errorMessage", out JsonElement em) &&
                                         em.GetString() is { } emStr && !string.IsNullOrWhiteSpace(emStr))
                                     {
                                         errorList.Add(emStr);
                                     }
-                                    else if (item.TryGetProperty("message", out var m) && m.GetString() is { } mStr &&
+                                    else if (item.TryGetProperty("message", out JsonElement m) && m.GetString() is { } mStr &&
                                              !string.IsNullOrWhiteSpace(mStr))
                                     {
                                         errorList.Add(mStr);
@@ -82,11 +82,11 @@ public static class ApiErrorMessages
                         }
                         else if (errorsProp.ValueKind == JsonValueKind.Object)
                         {
-                            foreach (var prop in errorsProp.EnumerateObject())
+                            foreach (JsonProperty prop in errorsProp.EnumerateObject())
                             {
                                 if (prop.Value.ValueKind == JsonValueKind.Array)
                                 {
-                                    foreach (var item in prop.Value.EnumerateArray())
+                                    foreach (JsonElement item in prop.Value.EnumerateArray())
                                     {
                                         if (item.GetString() is { } msg && !string.IsNullOrWhiteSpace(msg))
                                         {
@@ -110,21 +110,21 @@ public static class ApiErrorMessages
                     }
 
                     // 3. Detail property
-                    if (root.TryGetProperty("detail", out var detailProp) && detailProp.GetString() is { } detailMsg &&
+                    if (root.TryGetProperty("detail", out JsonElement detailProp) && detailProp.GetString() is { } detailMsg &&
                         !string.IsNullOrWhiteSpace(detailMsg))
                     {
                         return detailMsg;
                     }
 
                     // 4. Message property
-                    if (root.TryGetProperty("message", out var messageProp) &&
+                    if (root.TryGetProperty("message", out JsonElement messageProp) &&
                         messageProp.GetString() is { } messageMsg && !string.IsNullOrWhiteSpace(messageMsg))
                     {
                         return messageMsg;
                     }
 
                     // 5. Title property
-                    if (root.TryGetProperty("title", out var titleProp) && titleProp.GetString() is { } titleMsg &&
+                    if (root.TryGetProperty("title", out JsonElement titleProp) && titleProp.GetString() is { } titleMsg &&
                         !string.IsNullOrWhiteSpace(titleMsg))
                     {
                         return titleMsg;

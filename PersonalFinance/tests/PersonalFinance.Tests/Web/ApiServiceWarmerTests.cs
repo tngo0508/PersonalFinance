@@ -16,7 +16,7 @@ public class ApiServiceWarmerTests
     public async Task WarmUp_SendsAnonymousAlivenessPingToApiService()
     {
         var requests = new List<HttpRequestMessage>();
-        using var provider = BuildProvider(request =>
+        using ServiceProvider provider = BuildProvider(request =>
         {
             requests.Add(request);
             return new HttpResponseMessage(HttpStatusCode.OK);
@@ -24,7 +24,7 @@ public class ApiServiceWarmerTests
 
         await provider.GetRequiredService<IApiServiceWarmer>().WarmUpAsync();
 
-        var request = Assert.Single(requests);
+        HttpRequestMessage request = Assert.Single(requests);
         Assert.Equal(HttpMethod.Get, request.Method);
         Assert.Equal("http://apiservice.test/alive", request.RequestUri!.ToString());
         Assert.False(request.Headers.Contains("X-User-Id"));
@@ -34,12 +34,12 @@ public class ApiServiceWarmerTests
     public async Task WarmUp_WithinThrottleWindow_SendsOnePing()
     {
         var requests = new List<HttpRequestMessage>();
-        using var provider = BuildProvider(request =>
+        using ServiceProvider provider = BuildProvider(request =>
         {
             requests.Add(request);
             return new HttpResponseMessage(HttpStatusCode.OK);
         });
-        var warmer = provider.GetRequiredService<IApiServiceWarmer>();
+        IApiServiceWarmer warmer = provider.GetRequiredService<IApiServiceWarmer>();
 
         await warmer.WarmUpAsync();
         await warmer.WarmUpAsync();
@@ -50,9 +50,9 @@ public class ApiServiceWarmerTests
     [Fact]
     public async Task WarmUp_WhenApiServiceIsUnreachable_DoesNotThrow()
     {
-        using var provider = BuildProvider(_ => throw new HttpRequestException("Connection refused"));
+        using ServiceProvider provider = BuildProvider(_ => throw new HttpRequestException("Connection refused"));
 
-        var exception = await Record.ExceptionAsync(
+        Exception exception = await Record.ExceptionAsync(
             () => provider.GetRequiredService<IApiServiceWarmer>().WarmUpAsync());
 
         Assert.Null(exception);
@@ -60,7 +60,7 @@ public class ApiServiceWarmerTests
 
     private static ServiceProvider BuildProvider(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["ApiSettings:BaseUrl"] = "http://apiservice.test" })
             .Build();
 

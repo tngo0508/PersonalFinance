@@ -39,18 +39,18 @@ public class SearchService : ISearchService
     public async Task<SearchResultsDto> SearchAsync(string userId, string query,
         CancellationToken cancellationToken = default)
     {
-        var pattern = ToContainsPattern(query);
+        string? pattern = ToContainsPattern(query);
         if (pattern is null)
         {
             return new SearchResultsDto();
         }
 
-        var source = await _dataSourceService.GetActiveSourceAsync(userId, cancellationToken);
-        var isTracker = source == BudgetDataSource.BudgetTracker;
-        var transactionsQuery = isTracker
+        BudgetDataSource source = await _dataSourceService.GetActiveSourceAsync(userId, cancellationToken);
+        bool isTracker = source == BudgetDataSource.BudgetTracker;
+        IQueryable<SearchResultItemDto> transactionsQuery = isTracker
             ? TrackerTransactionsQuery(userId, pattern)
             : SheetTransactionsQuery(userId, pattern);
-        var categoriesQuery = isTracker
+        IQueryable<SearchResultItemDto> categoriesQuery = isTracker
             ? TrackerCategoriesQuery(userId, pattern)
             : SheetCategoriesQuery(userId, pattern);
 
@@ -69,7 +69,7 @@ public class SearchService : ISearchService
     /// </summary>
     internal static string? ToContainsPattern(string? query)
     {
-        var trimmed = query?.Trim() ?? string.Empty;
+        string trimmed = query?.Trim() ?? string.Empty;
         if (trimmed.Length < MinQueryLength)
         {
             return null;
@@ -80,7 +80,7 @@ public class SearchService : ISearchService
             trimmed = trimmed[..MaxQueryLength];
         }
 
-        var escaped = trimmed
+        string escaped = trimmed
             .Replace(LikeEscape, LikeEscape + LikeEscape)
             .Replace("%", LikeEscape + "%")
             .Replace("_", LikeEscape + "_")
@@ -143,7 +143,7 @@ public class SearchService : ISearchService
     /// </summary>
     internal IQueryable<SearchResultItemDto> TrackerCategoriesQuery(string userId, string pattern)
     {
-        var url = $"/BudgetTracker?{CurrentMonthQuery()}";
+        string url = $"/BudgetTracker?{CurrentMonthQuery()}";
         return _dbContext.BudgetCategories
             .AsNoTracking()
             .Where(c => c.UserId == userId && EF.Functions.Like(c.Name, pattern, LikeEscape))
@@ -166,7 +166,7 @@ public class SearchService : ISearchService
     /// </summary>
     internal IQueryable<SearchResultItemDto> SheetCategoriesQuery(string userId, string pattern)
     {
-        var url = $"/Analysis?{CurrentMonthQuery()}";
+        string url = $"/Analysis?{CurrentMonthQuery()}";
         return _dbContext.SpreadsheetTransactionRecords
             .AsNoTracking()
             .Where(t => t.UserId == userId && EF.Functions.Like(t.Category, pattern, LikeEscape))
@@ -187,7 +187,7 @@ public class SearchService : ISearchService
     /// <summary>The current UTC month as a query string, as the Budget Tracker page defaults to it.</summary>
     private string CurrentMonthQuery()
     {
-        var now = _timeProvider.GetUtcNow();
+        DateTimeOffset now = _timeProvider.GetUtcNow();
         return string.Create(CultureInfo.InvariantCulture, $"year={now.Year}&month={now.Month}");
     }
 

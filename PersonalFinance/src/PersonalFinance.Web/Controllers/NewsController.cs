@@ -55,10 +55,10 @@ public sealed class NewsController : Controller
         try
         {
             // Fetch all articles (unfiltered) to populate categories list
-            var allArticles = await _newsService.GetFinanceNewsAsync(cancellationToken: cancellationToken);
+            List<NewsArticle> allArticles = await _newsService.GetFinanceNewsAsync(cancellationToken: cancellationToken);
 
             // Fetch filtered articles via the service
-            var filteredArticles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
+            List<NewsArticle> filteredArticles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
 
             model.Sources = _newsService.GetAvailableSources();
             model.Categories = allArticles.Select(a => a.Category).Distinct().OrderBy(c => c).ToList();
@@ -97,7 +97,7 @@ public sealed class NewsController : Controller
 
         try
         {
-            var articles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
+            List<NewsArticle> articles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
 
             return Json(new NewsRefreshResponse
             {

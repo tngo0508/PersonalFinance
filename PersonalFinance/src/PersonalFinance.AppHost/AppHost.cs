@@ -1,6 +1,6 @@
-var builder = DistributedApplication.CreateBuilder(args);
+IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
-var apiService = builder.AddProject<Projects.PersonalFinance_ApiService>("apiservice");
+IResourceBuilder<ProjectResource> apiService = builder.AddProject<Projects.PersonalFinance_ApiService>("apiservice");
 
 builder.AddProject<Projects.PersonalFinance_Web>("web")
     .WithReference(apiService)

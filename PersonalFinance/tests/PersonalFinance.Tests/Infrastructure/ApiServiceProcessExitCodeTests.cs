@@ -16,7 +16,7 @@ public class ApiServiceProcessExitCodeTests
     public async Task MigrateOnly_StartupFailure_ExitsNonZeroAndLogsFatal()
     {
         // A malformed connection string fails startup before any network call, so the test is fast and deterministic.
-        var result = await RunApiServiceAsync(new Dictionary<string, string>
+        (int ExitCode, string Output) result = await RunApiServiceAsync(new Dictionary<string, string>
         {
             ["Database__Provider"] = "AzureSql",
             ["ConnectionStrings__DefaultConnection"] = "Server=127.0.0.1,1;Not A Real Keyword=1"
@@ -29,7 +29,7 @@ public class ApiServiceProcessExitCodeTests
     [Fact]
     public async Task MigrateOnly_Success_ExitsZero()
     {
-        var result = await RunApiServiceAsync(new Dictionary<string, string>
+        (int ExitCode, string Output) result = await RunApiServiceAsync(new Dictionary<string, string>
         {
             ["Database__Provider"] = "InMemory",
             ["ConnectionStrings__DefaultConnection"] = "InMemory:exit-code-test"
@@ -41,7 +41,7 @@ public class ApiServiceProcessExitCodeTests
 
     private static async Task<(int ExitCode, string Output)> RunApiServiceAsync(Dictionary<string, string> environment)
     {
-        var apiServiceDll = typeof(AdminController).Assembly.Location;
+        string apiServiceDll = typeof(AdminController).Assembly.Location;
         var startInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
@@ -60,7 +60,7 @@ public class ApiServiceProcessExitCodeTests
         startInfo.Environment.Remove("DATABASE_PROVIDER");
         startInfo.Environment.Remove("DB_PROVIDER");
         startInfo.Environment.Remove("MIGRATE_ONLY");
-        foreach (var (key, value) in environment)
+        foreach ((string? key, string? value) in environment)
         {
             startInfo.Environment[key] = value;
         }
@@ -68,8 +68,8 @@ public class ApiServiceProcessExitCodeTests
         using var process = Process.Start(startInfo);
         Assert.NotNull(process);
 
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        var stderr = process.StandardError.ReadToEndAsync();
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
         using var timeout = new CancellationTokenSource(ProcessTimeout);
         try
         {

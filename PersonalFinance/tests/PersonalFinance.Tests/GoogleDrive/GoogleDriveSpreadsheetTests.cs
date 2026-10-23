@@ -17,7 +17,7 @@ public class GoogleDriveSpreadsheetTests
 {
     private static AppDbContext CreateTestDbContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"GoogleDriveHelperTest_{Guid.NewGuid():N}")
             .Options;
         var context = new AppDbContext(options);
@@ -39,7 +39,7 @@ public class GoogleDriveSpreadsheetTests
     [InlineData("127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
     public void ExtractFolderId_WithValidInputs_ExtractsCorrectId(string input, string expectedId)
     {
-        var result = GoogleDriveMetadata.ExtractFolderId(input);
+        string? result = GoogleDriveMetadata.ExtractFolderId(input);
         Assert.Equal(expectedId, result);
     }
 
@@ -51,7 +51,7 @@ public class GoogleDriveSpreadsheetTests
     [InlineData("https://google.com/search?q=test")]
     public void ExtractFolderId_WithInvalidInputs_ReturnsNull(string? input)
     {
-        var result = GoogleDriveMetadata.ExtractFolderId(input);
+        string? result = GoogleDriveMetadata.ExtractFolderId(input);
         Assert.Null(result);
     }
 
@@ -66,7 +66,7 @@ public class GoogleDriveSpreadsheetTests
     [InlineData(1073741824L, "1 GB")]
     public void FormatBytes_FormatsCorrectly(long? bytes, string expected)
     {
-        var result = GoogleDriveMetadata.FormatBytes(bytes);
+        string result = GoogleDriveMetadata.FormatBytes(bytes);
         Assert.Equal(expected, result);
     }
 
@@ -86,7 +86,7 @@ public class GoogleDriveSpreadsheetTests
     public void ResolveTypeInfo_IdentifiesExpectedTypes(string mimeType, string filename, string expectedCategory,
         bool expectedIsFolder)
     {
-        var (category, _, isFolder) = GoogleDriveMetadata.ResolveTypeInfo(mimeType, filename);
+        (string? category, string _, bool isFolder) = GoogleDriveMetadata.ResolveTypeInfo(mimeType, filename);
         Assert.Equal(expectedCategory, category);
         Assert.Equal(expectedIsFolder, isFolder);
     }
@@ -94,9 +94,9 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public async Task DriveConnectionService_WithValidFolderAndNoKey_ReturnsPreviewResponse()
     {
-        using var dbContext = CreateTestDbContext();
+        using AppDbContext dbContext = CreateTestDbContext();
         var inMemorySettings = new Dictionary<string, string?>();
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
+        IConfigurationRoot configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
         var httpClient = new HttpClient();
         var service = new DriveConnectionService(httpClient, configuration, dbContext,
             NullLogger<DriveConnectionService>.Instance);
@@ -106,7 +106,7 @@ public class GoogleDriveSpreadsheetTests
             FolderUrl = "https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link"
         };
 
-        var response = await service.GetFolderFilesAsync(request);
+        GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request);
 
         Assert.True(response.Success);
         Assert.Equal("127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", response.FolderId);
@@ -118,8 +118,8 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public async Task DriveConnectionService_WithInvalidUrl_ReturnsErrorResponse()
     {
-        using var dbContext = CreateTestDbContext();
-        var configuration = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot configuration = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
         var service = new DriveConnectionService(httpClient, configuration, dbContext,
             NullLogger<DriveConnectionService>.Instance);
@@ -129,7 +129,7 @@ public class GoogleDriveSpreadsheetTests
             FolderUrl = "invalid-link"
         };
 
-        var response = await service.GetFolderFilesAsync(request);
+        GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request);
 
         Assert.False(response.Success);
         Assert.True(string.IsNullOrEmpty(response.FolderId));
@@ -139,8 +139,8 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public async Task DriveConnectionService_WhenHttpClientTimesOut_FallsBackToPreviewGracefully()
     {
-        using var dbContext = CreateTestDbContext();
-        var configuration = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot configuration = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) =>
             throw new TaskCanceledException("A task was canceled.", new TimeoutException("The operation timed out.")));
         var httpClient = new HttpClient(handler);
@@ -153,7 +153,7 @@ public class GoogleDriveSpreadsheetTests
             ApiKey = "AIzaSyFakeKey"
         };
 
-        var response = await service.GetFolderFilesAsync(request);
+        GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request);
 
         Assert.True(response.Success);
         Assert.True(response.IsDemoData);
@@ -163,8 +163,8 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public async Task DriveConnectionService_WhenCallerCancels_ReturnsCanceledResult()
     {
-        using var dbContext = CreateTestDbContext();
-        var configuration = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot configuration = new ConfigurationBuilder().Build();
         using var cts = new CancellationTokenSource();
         cts.Cancel(); // Pre-cancel
 
@@ -183,7 +183,7 @@ public class GoogleDriveSpreadsheetTests
             ApiKey = "AIzaSyFakeKey"
         };
 
-        var response = await service.GetFolderFilesAsync(request, cts.Token);
+        GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request, cts.Token);
 
         Assert.False(response.Success);
         Assert.Equal("The request was canceled.", response.ErrorMessage);
@@ -192,8 +192,8 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public async Task DriveConnectionService_WhenHttp403Forbidden_FallsBackToPreviewGracefully()
     {
-        using var dbContext = CreateTestDbContext();
-        var configuration = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot configuration = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) =>
         {
             var msg = new HttpResponseMessage(HttpStatusCode.Forbidden)
@@ -212,7 +212,7 @@ public class GoogleDriveSpreadsheetTests
             ApiKey = "AIzaSyFakeKey"
         };
 
-        var response = await service.GetFolderFilesAsync(request);
+        GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request);
 
         Assert.True(response.Success);
         Assert.True(response.IsDemoData);
@@ -223,8 +223,8 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public async Task DriveConnectionService_WhenHttp404NotFound_ExplainsSharingPermissions()
     {
-        using var dbContext = CreateTestDbContext();
-        var configuration = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot configuration = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) =>
         {
             var msg = new HttpResponseMessage(HttpStatusCode.NotFound)
@@ -243,7 +243,7 @@ public class GoogleDriveSpreadsheetTests
             ApiKey = "AIzaSyFakeKey"
         };
 
-        var response = await service.GetFolderFilesAsync(request);
+        GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request);
 
         Assert.True(response.Success);
         Assert.True(response.IsDemoData);
@@ -254,9 +254,9 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public async Task DriveConnectionService_WhenLiveQueryReturnsEmptyFiles_ProvidesSharingGuidance()
     {
-        using var dbContext = CreateTestDbContext();
-        var configuration = new ConfigurationBuilder().Build();
-        var emptyJsonResponse = @"{ ""files"": [] }";
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot configuration = new ConfigurationBuilder().Build();
+        string emptyJsonResponse = @"{ ""files"": [] }";
         var handler = new DelegatingTestHandler((req, ct) =>
         {
             var msg = new HttpResponseMessage(HttpStatusCode.OK)
@@ -275,7 +275,7 @@ public class GoogleDriveSpreadsheetTests
             ApiKey = "AIzaSyFakeKey"
         };
 
-        var response = await service.GetFolderFilesAsync(request);
+        GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request);
 
         Assert.True(response.Success);
         Assert.False(response.IsDemoData);
@@ -287,7 +287,7 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public void GoogleDriveController_IsDecoratedWithAuthorizeAttribute()
     {
-        var controllerType = typeof(GoogleDriveController);
+        Type controllerType = typeof(GoogleDriveController);
         var authorizeAttribute = Attribute.GetCustomAttribute(controllerType, typeof(AuthorizeAttribute));
 
         Assert.NotNull(authorizeAttribute);
@@ -309,16 +309,16 @@ public class GoogleDriveSpreadsheetTests
     public void IsMonthlyBudgetSpreadsheet_EvaluatesCorrectly(string? fileName, string? fileType, string? mimeType,
         bool expected)
     {
-        var result = GoogleDriveMetadata.IsMonthlyBudgetSpreadsheet(fileName, fileType, mimeType);
+        bool result = GoogleDriveMetadata.IsMonthlyBudgetSpreadsheet(fileName, fileType, mimeType);
         Assert.Equal(expected, result);
     }
 
     [Fact]
     public void ParseCsvTable_HandlesQuotedFieldsCommasAndNewlinesCorrectly()
     {
-        var csv =
+        string csv =
             "\"Category\",\"Planned Amount\",\"Actual Amount\"\n\"Housing, Rent & HOA\",\"$1,500.00\",\"$1,550.00\"\n\"Groceries \"\"Supermarket\"\"\",\"$650.00\",\"$680.00\"";
-        var table = BudgetSpreadsheetParser.ParseCsvTable(csv);
+        List<List<string>> table = BudgetSpreadsheetParser.ParseCsvTable(csv);
 
         Assert.Equal(3, table.Count);
         Assert.Equal("Category", table[0][0]);
@@ -332,7 +332,7 @@ public class GoogleDriveSpreadsheetTests
     [Fact]
     public void ParseSpreadsheetBudgetReport_ParsesActualIncomeAndExpensesCorrectly()
     {
-        var sampleCsv = @"Monthly budget 2026
+        string sampleCsv = @"Monthly budget 2026
 
 INCOME,Planned,Actual
 Salary,5000,5200
@@ -344,7 +344,7 @@ Groceries,600,650
 Utilities,300,280
 Entertainment,400,450";
 
-        var report =
+        MonthlyBudgetReportDto report =
             BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget 2026.xlsx", "drive-file-999");
 
         Assert.NotNull(report);
@@ -354,7 +354,7 @@ Entertainment,400,450";
         Assert.True(report.IsLiveSpreadsheetData);
         Assert.Equal(12, report.Months.Count);
 
-        var firstMonth = report.Months[0];
+        MonthlyBudgetMonthSummaryDto firstMonth = report.Months[0];
         Assert.Equal(6050m, firstMonth.ActualIncome); // 5200 + 850
         Assert.Equal(6000m, firstMonth.BudgetedIncome); // 5000 + 1000
         Assert.Equal(2980m, firstMonth.ActualExpenses); // 1600 + 650 + 280 + 450
@@ -363,12 +363,12 @@ Entertainment,400,450";
         Assert.Equal("On Track", firstMonth.Status);
 
         Assert.Equal(4, firstMonth.Categories.Count);
-        var rentCat = firstMonth.Categories.First(c => c.CategoryName == "Rent");
+        MonthlyBudgetCategoryItemDto rentCat = firstMonth.Categories.First(c => c.CategoryName == "Rent");
         Assert.Equal(1600m, rentCat.BudgetedAmount);
         Assert.Equal(1600m, rentCat.ActualAmount);
         Assert.Equal(0m, rentCat.Variance);
 
-        var grocCat = firstMonth.Categories.First(c => c.CategoryName == "Groceries");
+        MonthlyBudgetCategoryItemDto grocCat = firstMonth.Categories.First(c => c.CategoryName == "Groceries");
         Assert.Equal(600m, grocCat.BudgetedAmount);
         Assert.Equal(650m, grocCat.ActualAmount);
         Assert.Equal(-50m, grocCat.Variance);
@@ -381,14 +381,14 @@ Entertainment,400,450";
         using var ms = new MemoryStream();
         using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
-            var ssEntry = archive.CreateEntry("xl/sharedStrings.xml");
+            ZipArchiveEntry ssEntry = archive.CreateEntry("xl/sharedStrings.xml");
             using (var writer = new StreamWriter(ssEntry.Open(), Encoding.UTF8))
             {
                 writer.Write(
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"5\" uniqueCount=\"5\"><si><t>INCOME</t></si><si><t>Salary</t></si><si><t>EXPENSES</t></si><si><t>Housing</t></si><si><t>Groceries</t></si></sst>");
             }
 
-            var wsEntry = archive.CreateEntry("xl/worksheets/sheet1.xml");
+            ZipArchiveEntry wsEntry = archive.CreateEntry("xl/worksheets/sheet1.xml");
             using (var writer = new StreamWriter(wsEntry.Open(), Encoding.UTF8))
             {
                 writer.Write(
@@ -397,14 +397,14 @@ Entertainment,400,450";
         }
 
         ms.Position = 0;
-        var report = BudgetSpreadsheetParser.ParseXlsxBudgetReport(ms, "Monthly budget 2026.xlsx", "drive-xlsx-100");
+        MonthlyBudgetReportDto report = BudgetSpreadsheetParser.ParseXlsxBudgetReport(ms, "Monthly budget 2026.xlsx", "drive-xlsx-100");
 
         Assert.NotNull(report);
         Assert.Equal("Monthly budget 2026.xlsx", report.FileName);
         Assert.Equal("drive-xlsx-100", report.FileId);
         Assert.Equal(12, report.Months.Count);
 
-        var m1 = report.Months[0];
+        MonthlyBudgetMonthSummaryDto m1 = report.Months[0];
         Assert.Equal(5400m, m1.ActualIncome);
         Assert.Equal(5000m, m1.BudgetedIncome);
         Assert.Equal(2150m, m1.ActualExpenses); // 1500 + 650
@@ -418,21 +418,21 @@ Entertainment,400,450";
         using var ms = new MemoryStream();
         using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
-            var wbEntry = archive.CreateEntry("xl/workbook.xml");
+            ZipArchiveEntry wbEntry = archive.CreateEntry("xl/workbook.xml");
             using (var writer = new StreamWriter(wbEntry.Open(), Encoding.UTF8))
             {
                 writer.Write(
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Summary\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Transactions\" sheetId=\"2\" r:id=\"rId2\"/></sheets></workbook>");
             }
 
-            var wbRelsEntry = archive.CreateEntry("xl/_rels/workbook.xml.rels");
+            ZipArchiveEntry wbRelsEntry = archive.CreateEntry("xl/_rels/workbook.xml.rels");
             using (var writer = new StreamWriter(wbRelsEntry.Open(), Encoding.UTF8))
             {
                 writer.Write(
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/></Relationships>");
             }
 
-            var ssEntry = archive.CreateEntry("xl/sharedStrings.xml");
+            ZipArchiveEntry ssEntry = archive.CreateEntry("xl/sharedStrings.xml");
             using (var writer = new StreamWriter(ssEntry.Open(), Encoding.UTF8))
             {
                 writer.Write(
@@ -440,7 +440,7 @@ Entertainment,400,450";
             }
 
             // Sheet 1: Summary (September)
-            var ws1Entry = archive.CreateEntry("xl/worksheets/sheet1.xml");
+            ZipArchiveEntry ws1Entry = archive.CreateEntry("xl/worksheets/sheet1.xml");
             using (var writer = new StreamWriter(ws1Entry.Open(), Encoding.UTF8))
             {
                 writer.Write(
@@ -448,7 +448,7 @@ Entertainment,400,450";
             }
 
             // Sheet 2: Transactions
-            var ws2Entry = archive.CreateEntry("xl/worksheets/sheet2.xml");
+            ZipArchiveEntry ws2Entry = archive.CreateEntry("xl/worksheets/sheet2.xml");
             using (var writer = new StreamWriter(ws2Entry.Open(), Encoding.UTF8))
             {
                 writer.Write(
@@ -457,12 +457,12 @@ Entertainment,400,450";
         }
 
         ms.Position = 0;
-        var report =
+        MonthlyBudgetReportDto report =
             BudgetSpreadsheetParser.ParseXlsxBudgetReport(ms, "Monthly budget - September 2026.xlsx", "multi-sheet-1");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
-        var month = report.Months[0];
+        MonthlyBudgetMonthSummaryDto month = report.Months[0];
 
         Assert.Equal(2000m, month.StartingBalance);
         Assert.Equal(3600m, month.EndingBalance);
@@ -481,7 +481,7 @@ Entertainment,400,450";
     [Fact]
     public void ParseCsvTransactions_WithSideBySideExpenseAndIncomeTables_ReadsBothSections()
     {
-        var result = BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleTransactionsCsv(),
+        SpreadsheetTransactionsDto result = BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleTransactionsCsv(),
             "Monthly budget 2026.xlsx", "sample-tx");
 
         Assert.Null(result.ErrorMessage);
@@ -491,7 +491,7 @@ Entertainment,400,450";
         Assert.Equal(5970m, result.TotalIncome);
         Assert.Equal(5040m, result.TotalExpenses);
 
-        var rent = result.Transactions.First(t => t.Description == "September rent");
+        SpreadsheetTransactionDto rent = result.Transactions.First(t => t.Description == "September rent");
         Assert.Equal(new DateTime(2026, 9, 1), rent.Date);
         Assert.Equal(1500m, rent.Amount);
         Assert.Equal("Housing & Rent", rent.Category);
@@ -502,10 +502,10 @@ Entertainment,400,450";
     [Fact]
     public void ParseCsvTransactions_WithUnlabelledSignedAmounts_UsesSignForType()
     {
-        var csv =
+        string csv =
             "Date,Description,Amount\n2026-09-01,Paycheck,2500.00\n2026-09-03,Netflix,-15.99\n2026-09-04,Groceries,(80.00)\nTotal,,2404.01";
 
-        var result = BudgetSpreadsheetParser.ParseCsvTransactions(csv);
+        SpreadsheetTransactionsDto result = BudgetSpreadsheetParser.ParseCsvTransactions(csv);
 
         Assert.Equal(3, result.Transactions.Count);
         Assert.Equal(2500m, result.TotalIncome);
@@ -518,7 +518,7 @@ Entertainment,400,450";
     [Fact]
     public void ParseCsvTransactions_WithoutTransactionTable_ReturnsErrorMessage()
     {
-        var result = BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleMonthlyBudgetSpreadsheetCsv());
+        SpreadsheetTransactionsDto result = BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleMonthlyBudgetSpreadsheetCsv());
 
         Assert.Empty(result.Transactions);
         Assert.NotNull(result.ErrorMessage);
@@ -557,14 +557,14 @@ Entertainment,400,450";
         }
 
         ms.Position = 0;
-        var result = BudgetSpreadsheetParser.ParseXlsxTransactions(ms, "Monthly budget.xlsx", "xlsx-tx-1");
+        SpreadsheetTransactionsDto result = BudgetSpreadsheetParser.ParseXlsxTransactions(ms, "Monthly budget.xlsx", "xlsx-tx-1");
 
         Assert.Equal("Transactions", result.SheetName);
         Assert.Equal(3, result.Transactions.Count);
         Assert.Equal(124.12m, result.TotalExpenses);
         Assert.Equal(3000m, result.TotalIncome);
 
-        var paycheck = Assert.Single(result.Transactions, t => t.Type == SpreadsheetTransactionDto.IncomeType);
+        SpreadsheetTransactionDto paycheck = Assert.Single(result.Transactions, t => t.Type == SpreadsheetTransactionDto.IncomeType);
         Assert.Equal(new DateTime(2026, 9, 1), paycheck.Date);
         Assert.Equal("Paycheck", paycheck.Description);
         Assert.Equal("Salary", paycheck.Category);
@@ -585,14 +585,14 @@ Entertainment,400,450";
     [InlineData("Monthly budget.xlsx", null)]
     public void DetectMonthFromText_DetectsExpectedMonth(string input, int? expectedMonth)
     {
-        var result = BudgetSpreadsheetParser.DetectMonthFromText(input);
+        int? result = BudgetSpreadsheetParser.DetectMonthFromText(input);
         Assert.Equal(expectedMonth, result);
     }
 
     [Fact]
     public void ParseSpreadsheetBudgetReport_WithSingleMonthName_ReturnsOnlySpecifiedMonth()
     {
-        var sampleCsv = @"Monthly budget - September 2026
+        string sampleCsv = @"Monthly budget - September 2026
 
 INCOME,Planned,Actual
 Salary,5500,5600
@@ -601,7 +601,7 @@ EXPENSES,Planned,Actual
 Rent,1500,1500
 Food,650,620";
 
-        var report =
+        MonthlyBudgetReportDto report =
             BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
                 "file-sep-456");
 
@@ -617,7 +617,7 @@ Food,650,620";
     [Fact]
     public void ParseSpreadsheetBudgetReport_WithStartAndEndBalancesAndPlannedActuals_CalculatesCorrectMetrics()
     {
-        var sampleCsv = @"Monthly budget - September 2026
+        string sampleCsv = @"Monthly budget - September 2026
 
 STARTING BALANCE,1000.00,1000.00
 ENDING BALANCE,1500.00,1700.00
@@ -634,7 +634,7 @@ Utilities,300.00,280.00,20.00
 Dining & Entertainment,400.00,370.00,30.00
 Total Expenses,3000.00,2900.00,100.00";
 
-        var report =
+        MonthlyBudgetReportDto report =
             BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
                 "file-sep-789");
 
@@ -642,7 +642,7 @@ Total Expenses,3000.00,2900.00,100.00";
         Assert.True(report.IsSingleMonth);
         Assert.Single(report.Months);
 
-        var month = report.Months[0];
+        MonthlyBudgetMonthSummaryDto month = report.Months[0];
         Assert.Equal(9, month.MonthNumber);
         Assert.Equal("September", month.MonthName);
 
@@ -681,7 +681,7 @@ Total Expenses,3000.00,2900.00,100.00";
     [Fact]
     public void ParseSpreadsheetBudgetReport_WithSideBySideTables_ParsesBothExpensesAndIncomeCorrectly()
     {
-        var sampleCsv = @"Monthly budget - September 2026
+        string sampleCsv = @"Monthly budget - September 2026
 Start balance, 2500, , End balance, 4200
 Expenses, Planned, Actual, Difference, , Income, Planned, Actual, Difference
 Rent, 1200, 1200, 0, , Salary, 4000, 4000, 0
@@ -689,13 +689,13 @@ Groceries, 600, 580, 20, , Freelance, 1000, 1200, 200
 Utilities, 250, 220, 30, , Dividend, 200, 300, 100
 Total Expenses, 2050, 2000, 50, , Total Income, 5200, 5500, 300";
 
-        var report =
+        MonthlyBudgetReportDto report =
             BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
                 "file-sep-side");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
-        var month = report.Months[0];
+        MonthlyBudgetMonthSummaryDto month = report.Months[0];
 
         Assert.Equal(2500m, month.StartingBalance);
         Assert.Equal(4200m, month.EndingBalance);
@@ -713,7 +713,7 @@ Total Expenses, 2050, 2000, 50, , Total Income, 5200, 5500, 300";
     [Fact]
     public void ParseSpreadsheetBudgetReport_WithTransactionsTable_AggregatesIntoCategoriesWithoutCorruptingNames()
     {
-        var sampleCsv = @"Monthly budget - September 2026
+        string sampleCsv = @"Monthly budget - September 2026
 STARTING BALANCE, 2000, 2000
 ENDING BALANCE, 3500, 3500
 INCOME, Planned, Actual
@@ -729,13 +729,13 @@ Date, Amount, Description, Category
 2026-09-10, 80.00, Whole Foods, Groceries
 2026-09-18, 150.00, Safeway, Groceries";
 
-        var report =
+        MonthlyBudgetReportDto report =
             BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
                 "file-tx-table");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
-        var month = report.Months[0];
+        MonthlyBudgetMonthSummaryDto month = report.Months[0];
 
         Assert.Equal(4500m, month.ActualIncome);
         Assert.Equal(1850m, month.ActualExpenses); // 1500 (Rent) + 350 (Groceries from transactions)
@@ -744,7 +744,7 @@ Date, Amount, Description, Category
         // Ensure transaction lines did not create categories named after dates or descriptions
         Assert.Equal(2, month.Categories.Count);
         Assert.Contains(month.Categories, c => c.CategoryName == "Housing & Rent");
-        var grocCat = month.Categories.First(c => c.CategoryName == "Groceries");
+        MonthlyBudgetCategoryItemDto grocCat = month.Categories.First(c => c.CategoryName == "Groceries");
         Assert.Equal(350m, grocCat.ActualAmount);
         Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("2026"));
         Assert.DoesNotContain(month.Categories, c => c.CategoryName.Contains("Trader"));
@@ -753,7 +753,7 @@ Date, Amount, Description, Category
     [Fact]
     public void ParseSpreadsheetBudgetReport_WithIncreaseInTotalSavingsRow_DoesNotDistortExpensesAndSavingsRate()
     {
-        var sampleCsv = @"Monthly budget - September 2026
+        string sampleCsv = @"Monthly budget - September 2026
 
 STARTING BALANCE,1000.00,1000.00
 ENDING BALANCE,2500.00,2500.00
@@ -771,12 +771,12 @@ Dining & Entertainment,500.00,470.00,30.00
 Personal & Miscellaneous,300.00,100.00,200.00
 Total Expenses,3800.00,3500.00,300.00";
 
-        var report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+        MonthlyBudgetReportDto report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
             "file-increase-savings");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
-        var month = report.Months[0];
+        MonthlyBudgetMonthSummaryDto month = report.Months[0];
 
         // Income: 5000
         Assert.Equal(5000.00m, month.ActualIncome);
@@ -805,7 +805,7 @@ Total Expenses,3800.00,3500.00,300.00";
     [Fact]
     public void ParseSpreadsheetBudgetReport_WithDecreaseInTotalSavingsRow_CalculatesCorrectDeficitAndStatus()
     {
-        var sampleCsv = @"Monthly budget - September 2026
+        string sampleCsv = @"Monthly budget - September 2026
 
 STARTING BALANCE,3000.00,3000.00
 ENDING BALANCE,2000.00,2000.00
@@ -821,12 +821,12 @@ Groceries & Food,1000.00,1200.00,-200.00
 Utilities,500.00,800.00,-300.00
 Total Expenses,3500.00,4000.00,-500.00";
 
-        var report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
+        MonthlyBudgetReportDto report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - September 2026.xlsx",
             "file-decrease-savings");
 
         Assert.NotNull(report);
         Assert.Single(report.Months);
-        var month = report.Months[0];
+        MonthlyBudgetMonthSummaryDto month = report.Months[0];
 
         // Income: 3000
         Assert.Equal(3000.00m, month.ActualIncome);
@@ -855,7 +855,7 @@ Total Expenses,3500.00,4000.00,-500.00";
     [InlineData("$2,072.00")]
     public void ParseSpreadsheetBudgetReport_WithAmountResemblingYear_KeepsYearFromFileName(string amount)
     {
-        var sampleCsv = $@"Monthly budget - October 2026
+        string sampleCsv = $@"Monthly budget - October 2026
 
 INCOME,Planned,Actual,Difference
 Salary,{amount},{amount},0.00
@@ -865,7 +865,7 @@ EXPENSES,Planned,Actual,Difference
 Housing & Rent,1800.00,1800.00,0.00
 Total Expenses,1800.00,1800.00,0.00";
 
-        var report =
+        MonthlyBudgetReportDto report =
             BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget - October 2026",
                 "file-year-amount");
 
@@ -875,7 +875,7 @@ Total Expenses,1800.00,1800.00,0.00";
     [Fact]
     public void ParseSpreadsheetBudgetReport_WithoutYearInFileName_FallsBackToYearInSheetTitle()
     {
-        var sampleCsv = @"Monthly budget - October 2026
+        string sampleCsv = @"Monthly budget - October 2026
 
 INCOME,Planned,Actual,Difference
 Salary,2072,2072,0.00
@@ -885,7 +885,7 @@ EXPENSES,Planned,Actual,Difference
 Housing & Rent,1800.00,1800.00,0.00
 Total Expenses,1800.00,1800.00,0.00";
 
-        var report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget", "file-no-year");
+        MonthlyBudgetReportDto report = BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(sampleCsv, "Monthly budget", "file-no-year");
 
         Assert.Equal(2026, report.Year);
     }

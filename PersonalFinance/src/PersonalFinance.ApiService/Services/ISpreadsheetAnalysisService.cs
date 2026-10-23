@@ -1,5 +1,5 @@
-using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.ApiService.Services;
 

@@ -62,10 +62,10 @@ public class DeletionPagesTests
     [Fact]
     public async Task Delete_WithAWrongPassword_ChangesNothing()
     {
-        await using var harness = await Harness.CreateAsync(withPassword: true);
+        await using Harness harness = await Harness.CreateAsync(withPassword: true);
         harness.Page.Input.Password = "wrong";
 
-        var result = await harness.Page.OnPostAsync();
+        IActionResult result = await harness.Page.OnPostAsync();
 
         Assert.IsType<PageResult>(result);
         Assert.Contains("Incorrect password.", Errors(harness.Page));
@@ -76,19 +76,19 @@ public class DeletionPagesTests
     [Fact]
     public async Task Delete_WithThePassword_RequestsDeletion_EmailsTheCancelLink_AndRedirects()
     {
-        await using var harness = await Harness.CreateAsync(withPassword: true);
+        await using Harness harness = await Harness.CreateAsync(withPassword: true);
         harness.Page.Input.Password = Password;
 
-        var result = await harness.Page.OnPostAsync();
+        IActionResult result = await harness.Page.OnPostAsync();
 
         Assert.Equal(1, harness.Api.RequestCalls);
-        var (to, subject, body) = Assert.Single(harness.Email.Sent);
+        (string? to, string? subject, string? body) = Assert.Single(harness.Email.Sent);
         Assert.Equal("leaving@example.com", to);
         Assert.Equal("Your account is scheduled for deletion", subject);
         Assert.Contains("https://app.test/Identity/Account/CancelDeletion?token=cancel-token-123", body);
         Assert.Contains("November 21, 2026", body);
 
-        var redirect = Assert.IsType<RedirectToPageResult>(result);
+        RedirectToPageResult redirect = Assert.IsType<RedirectToPageResult>(result);
         Assert.Equal("/Account/DeletionRequested", redirect.PageName);
         Assert.Equal("2026-11-21", redirect.RouteValues!["purgeAfter"]);
         Assert.Equal(true, redirect.RouteValues["emailSent"]);
@@ -99,10 +99,10 @@ public class DeletionPagesTests
     [InlineData("DELETE", true)]
     public async Task Delete_AnAccountWithoutAPassword_ConfirmsByTypingTheWord(string typed, bool accepted)
     {
-        await using var harness = await Harness.CreateAsync(withPassword: false);
+        await using Harness harness = await Harness.CreateAsync(withPassword: false);
         harness.Page.Input.Confirmation = typed;
 
-        var result = await harness.Page.OnPostAsync();
+        IActionResult result = await harness.Page.OnPostAsync();
 
         Assert.Equal(accepted ? 1 : 0, harness.Api.RequestCalls);
         if (accepted)
@@ -118,11 +118,11 @@ public class DeletionPagesTests
     [Fact]
     public async Task Delete_TheLastAdmin_ShowsWhy_AndSendsNoEmail()
     {
-        await using var harness = await Harness.CreateAsync(withPassword: true,
+        await using Harness harness = await Harness.CreateAsync(withPassword: true,
             failure: await ApiExceptionAsync(HttpStatusCode.Conflict, AccountDeletionMessages.LastAdmin));
         harness.Page.Input.Password = Password;
 
-        var result = await harness.Page.OnPostAsync();
+        IActionResult result = await harness.Page.OnPostAsync();
 
         Assert.IsType<PageResult>(result);
         Assert.Contains(AccountDeletionMessages.LastAdmin, Errors(harness.Page));
@@ -147,7 +147,7 @@ public class DeletionPagesTests
     public async Task CancelButton_CancelsWithTheToken()
     {
         var api = new FakeAccountDeletionApi();
-        var page = CancelPage(api, "cancel-token-123");
+        CancelDeletionModel page = CancelPage(api, "cancel-token-123");
 
         await page.OnPostAsync();
 
@@ -160,7 +160,7 @@ public class DeletionPagesTests
     [InlineData(HttpStatusCode.BadRequest)]
     public async Task CancelButton_WithAnInvalidToken_SaysTheLinkIsNotValid(HttpStatusCode status)
     {
-        var page = CancelPage(new FakeAccountDeletionApi { CancelFailure = await ApiExceptionAsync(status, "x") },
+        CancelDeletionModel page = CancelPage(new FakeAccountDeletionApi { CancelFailure = await ApiExceptionAsync(status, "x") },
             "used-token");
 
         await page.OnPostAsync();
@@ -172,7 +172,7 @@ public class DeletionPagesTests
     [Fact]
     public async Task CancelButton_WhenApiServiceIsUnreachable_ShowsTheUnavailableMessage()
     {
-        var page = CancelPage(new FakeAccountDeletionApi { CancelFailure = new HttpRequestException("refused") },
+        CancelDeletionModel page = CancelPage(new FakeAccountDeletionApi { CancelFailure = new HttpRequestException("refused") },
             "cancel-token-123");
 
         await page.OnPostAsync();
@@ -198,7 +198,7 @@ public class DeletionPagesTests
     [Fact]
     public void DeletionScheduledEmail_EncodesTheLink_AndNamesTheDate()
     {
-        var html = EmailTemplateHelper.BuildDeletionScheduledEmail("https://app.test/cancel?token=<x>&y=1", PurgeAfter);
+        string html = EmailTemplateHelper.BuildDeletionScheduledEmail("https://app.test/cancel?token=<x>&y=1", PurgeAfter);
 
         Assert.Contains("https://app.test/cancel?token=&lt;x&gt;&amp;y=1", html);
         Assert.Contains("November 21, 2026", html);
@@ -256,12 +256,12 @@ public class DeletionPagesTests
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase($"DeletionPages_{Guid.NewGuid():N}"));
             services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<AppDbContext>();
-            var provider = services.BuildServiceProvider();
-            var scope = provider.CreateAsyncScope();
+            ServiceProvider provider = services.BuildServiceProvider();
+            AsyncServiceScope scope = provider.CreateAsyncScope();
 
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            UserManager<IdentityUser> userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
             var user = new IdentityUser { UserName = "leaving@example.com", Email = "leaving@example.com" };
-            var created = withPassword
+            IdentityResult created = withPassword
                 ? await userManager.CreateAsync(user, Password)
                 : await userManager.CreateAsync(user);
             Assert.True(created.Succeeded);
@@ -274,7 +274,7 @@ public class DeletionPagesTests
             };
             httpContext.Request.Scheme = "https";
             // An AsyncLocal accessor value would not flow out of this async method, so set the context directly.
-            var signInManager = scope.ServiceProvider.GetRequiredService<SignInManager<IdentityUser>>();
+            SignInManager<IdentityUser> signInManager = scope.ServiceProvider.GetRequiredService<SignInManager<IdentityUser>>();
             signInManager.Context = httpContext;
 
             var api = new FakeAccountDeletionApi { RequestFailure = failure };

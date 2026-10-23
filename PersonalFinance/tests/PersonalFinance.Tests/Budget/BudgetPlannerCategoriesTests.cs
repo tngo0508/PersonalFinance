@@ -1,3 +1,4 @@
+using System.Reflection;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
@@ -15,13 +16,13 @@ public class BudgetPlannerCategoriesTests
     public void AllocationAmounts_ListsEveryAllocationOnceInBudgetPageOrder()
     {
         var allocations = new BudgetAllocationsDto();
-        var properties = typeof(BudgetAllocationsDto).GetProperties();
-        for (var i = 0; i < properties.Length; i++)
+        PropertyInfo[] properties = typeof(BudgetAllocationsDto).GetProperties();
+        for (int i = 0; i < properties.Length; i++)
         {
             properties[i].SetValue(allocations, 100m + i);
         }
 
-        var categories = BudgetPlannerCategories.AllocationAmounts(allocations);
+        IReadOnlyList<(string Name, decimal Amount)> categories = BudgetPlannerCategories.AllocationAmounts(allocations);
 
         Assert.Equal(properties.Length, categories.Count);
         Assert.Equal(properties.Length, categories.Select(c => c.Amount).Distinct().Count());
@@ -36,16 +37,16 @@ public class BudgetPlannerCategoriesTests
     {
         var budget = new UserBudgetAllocation();
         var amountProperties = typeof(UserBudgetAllocation).GetProperties().Where(p => p.Name.EndsWith("Amount", StringComparison.Ordinal)).ToList();
-        for (var i = 0; i < amountProperties.Count; i++)
+        for (int i = 0; i < amountProperties.Count; i++)
         {
             amountProperties[i].SetValue(budget, 100m + i);
         }
 
-        var dto = budget.ToAllocationsDto();
+        BudgetAllocationsDto dto = budget.ToAllocationsDto();
 
-        foreach (var property in amountProperties)
+        foreach (PropertyInfo? property in amountProperties)
         {
-            var dtoName = property.Name[..^"Amount".Length];
+            string dtoName = property.Name[..^"Amount".Length];
             Assert.Equal(property.GetValue(budget), typeof(BudgetAllocationsDto).GetProperty(dtoName)!.GetValue(dto));
         }
     }

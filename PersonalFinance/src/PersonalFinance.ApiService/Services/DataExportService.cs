@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.DataExport;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -22,7 +23,7 @@ public class DataExportService : IDataExportService
     /// <inheritdoc />
     public async Task<DataExportDto> ExportAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var consents = await _db.UserConsents.AsNoTracking()
+        List<DataExportConsentDto> consents = await _db.UserConsents.AsNoTracking()
             .Where(c => c.UserId == userId)
             .OrderBy(c => c.CreatedAt).ThenBy(c => c.Id)
             .Select(c => new DataExportConsentDto
@@ -82,7 +83,7 @@ public class DataExportService : IDataExportService
             })
             .ToListAsync(cancellationToken);
 
-        var source = await _db.UserBudgetSourcePreferences.AsNoTracking()
+        BudgetDataSource? source = await _db.UserBudgetSourcePreferences.AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.Id)
             .Select(p => (Shared.Enums.BudgetDataSource?)p.Source)
@@ -315,7 +316,7 @@ public class DataExportService : IDataExportService
     private async Task<DataExportAccountDto> AccountAsync(string userId, List<DataExportConsentDto> consents,
         CancellationToken cancellationToken)
     {
-        var account = await _db.Users.AsNoTracking()
+        DataExportAccountDto account = await _db.Users.AsNoTracking()
             .Where(u => u.Id == userId)
             .Select(u => new DataExportAccountDto
             {

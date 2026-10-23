@@ -78,9 +78,11 @@ Only MIT, BSD (2/3-clause) and Apache 2.0 dependencies. Check the license before
 4. Keep the change focused: no unrelated refactoring, no leftover TODOs or debug code.
 5. Final report: what was implemented, files changed, DB changes, exact commands run and results, outstanding issues.
 
-## Naming
+## C# style
 
 PascalCase for types and public members, camelCase for private fields and locals, `I` prefix for interfaces, `Async` suffix on async methods, suffixes `Service`/`Controller`/`Dto`/`ViewModel`. File name matches the class name.
+
+Explicit types: write `var` only when the type is on the right-hand side (`new T(...)`, a cast, `.ToList()`, `T.Parse(...)`, an anonymous type). `IDE0008` fails the CI build otherwise; `dotnet format style PersonalFinance.sln` fixes a branch. The full rule set is the "C# Style" section of `docs/CODING_STANDARDS.md`.
 
 ## Agent skills
 

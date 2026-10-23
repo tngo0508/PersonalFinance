@@ -2,10 +2,11 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
-using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.ApiService.Services;
 
@@ -38,14 +39,14 @@ public class DashboardService : IDashboardService
     {
         // One private method per Dashboard section so each section can be extended independently.
         // Sequential queries on purpose: the request-scoped DbContext is not thread-safe (see spec).
-        var netWorth = await GetNetWorthSummaryAsync(userId, cancellationToken);
-        var budget = await GetBudgetSummaryAsync(userId, cancellationToken);
-        var monthlyBudget = await GetMonthlyBudgetSummaryAsync(userId, cancellationToken);
-        var newestGoals = await GetNewestGoalsAsync(userId, cancellationToken);
-        var goalsOverview = await GetGoalsOverviewAsync(userId, cancellationToken);
-        var recentActivity = await GetRecentActivityAsync(userId, newestGoals, cancellationToken);
-        var hasGoogleDriveConnection = await HasGoogleDriveConnectionAsync(userId, cancellationToken);
-        var activeSource = await _budgetDataProvider.GetActiveSourceAsync(userId, cancellationToken);
+        NetWorthSummaryDto? netWorth = await GetNetWorthSummaryAsync(userId, cancellationToken);
+        BudgetSummaryDto? budget = await GetBudgetSummaryAsync(userId, cancellationToken);
+        DashboardMonthlyBudgetDto? monthlyBudget = await GetMonthlyBudgetSummaryAsync(userId, cancellationToken);
+        List<NewestGoal> newestGoals = await GetNewestGoalsAsync(userId, cancellationToken);
+        GoalsOverviewDto goalsOverview = await GetGoalsOverviewAsync(userId, cancellationToken);
+        List<RecentActivityDto> recentActivity = await GetRecentActivityAsync(userId, newestGoals, cancellationToken);
+        bool hasGoogleDriveConnection = await HasGoogleDriveConnectionAsync(userId, cancellationToken);
+        BudgetDataSource activeSource = await _budgetDataProvider.GetActiveSourceAsync(userId, cancellationToken);
 
         return new DashboardSummaryDto
         {
@@ -62,7 +63,7 @@ public class DashboardService : IDashboardService
 
     private async Task<NetWorthSummaryDto?> GetNetWorthSummaryAsync(string userId, CancellationToken cancellationToken)
     {
-        var parameters = await _dbContext.NetWorthParameters
+        NetWorthParameters? parameters = await _dbContext.NetWorthParameters
             .AsNoTracking()
             .CurrentFor(userId)
             .FirstOrDefaultAsync(cancellationToken);
@@ -73,14 +74,14 @@ public class DashboardService : IDashboardService
         }
 
         // FI Target and projection both come from the Net Worth page's calculation, so the pages always agree.
-        var projection = NetWorthProjectionService.ComputeProjection(parameters.ToProjectionRequest());
+        NetWorthProjectionDto projection = NetWorthProjectionService.ComputeProjection(parameters.ToProjectionRequest());
 
-        var netWorth = parameters.StartingBalance;
-        var fiTarget = projection.FiTarget;
+        decimal netWorth = parameters.StartingBalance;
+        decimal fiTarget = projection.FiTarget;
         decimal? progressToFi = fiTarget != 0m ? netWorth / fiTarget * 100m : null;
-        var savingsRate = FinanceMetrics.SavingsRatePercent(parameters.AnnualSavings, parameters.AnnualIncome);
-        var projectionPoints = BuildProjectionPoints(parameters, projection);
-        var fiReachedAge = fiTarget > 0m
+        decimal? savingsRate = FinanceMetrics.SavingsRatePercent(parameters.AnnualSavings, parameters.AnnualIncome);
+        List<ProjectionPointDto> projectionPoints = BuildProjectionPoints(parameters, projection);
+        int? fiReachedAge = fiTarget > 0m
             ? projectionPoints.FirstOrDefault(p => p.Base >= fiTarget)?.Age
             : null;
 
@@ -131,21 +132,21 @@ public class DashboardService : IDashboardService
     private async Task<DashboardMonthlyBudgetDto?> GetMonthlyBudgetSummaryAsync(string userId,
         CancellationToken cancellationToken)
     {
-        var years = await _budgetDataProvider.GetAvailableYearsAsync(userId, cancellationToken);
+        List<int> years = await _budgetDataProvider.GetAvailableYearsAsync(userId, cancellationToken);
         if (years.Count == 0)
         {
             return null;
         }
 
-        var latestYear = years.Max();
-        var months = await _budgetDataProvider.GetMonthsAsync(userId, latestYear, cancellationToken);
+        int latestYear = years.Max();
+        List<BudgetMonthData> months = await _budgetDataProvider.GetMonthsAsync(userId, latestYear, cancellationToken);
         if (months.Count == 0)
         {
             return null;
         }
 
-        var latestMonth = months.OrderByDescending(m => m.Month).First();
-        var monthName =
+        BudgetMonthData latestMonth = months.OrderByDescending(m => m.Month).First();
+        string monthName =
             new DateTime(latestYear, latestMonth.Month, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture);
 
         return new DashboardMonthlyBudgetDto
@@ -162,7 +163,7 @@ public class DashboardService : IDashboardService
 
     private async Task<BudgetSummaryDto?> GetBudgetSummaryAsync(string userId, CancellationToken cancellationToken)
     {
-        var budget = await _dbContext.UserBudgetAllocations
+        UserBudgetAllocation? budget = await _dbContext.UserBudgetAllocations
             .AsNoTracking()
             .CurrentFor(userId)
             .FirstOrDefaultAsync(cancellationToken);
@@ -184,7 +185,7 @@ public class DashboardService : IDashboardService
             })
             .ToList();
 
-        var totalAllocatedPercent = allocations.Sum(a => a.Percent);
+        decimal totalAllocatedPercent = allocations.Sum(a => a.Percent);
         decimal? unallocatedPercent = totalAllocatedPercent < 100m ? 100m - totalAllocatedPercent : null;
 
         return new BudgetSummaryDto
@@ -296,7 +297,7 @@ public class DashboardService : IDashboardService
     private async Task<List<RecentActivityDto>> GetRecentActivityAsync(string userId, List<NewestGoal> newestGoals,
         CancellationToken cancellationToken)
     {
-        var recentTransactions = await _budgetDataProvider.GetTransactionsAsync(
+        List<BudgetTransactionData> recentTransactions = await _budgetDataProvider.GetTransactionsAsync(
             userId,
             DateOnly.MinValue,
             DateOnly.MaxValue,

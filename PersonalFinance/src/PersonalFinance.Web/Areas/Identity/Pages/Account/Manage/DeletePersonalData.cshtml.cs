@@ -46,7 +46,7 @@ public class DeletePersonalDataModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var user = await _userManager.GetUserAsync(User);
+        IdentityUser? user = await _userManager.GetUserAsync(User);
         if (user is null)
         {
             return NotFound();
@@ -58,14 +58,14 @@ public class DeletePersonalDataModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var user = await _userManager.GetUserAsync(User);
+        IdentityUser? user = await _userManager.GetUserAsync(User);
         if (user is null)
         {
             return NotFound();
         }
 
         RequirePassword = await _userManager.HasPasswordAsync(user);
-        var confirmed = RequirePassword
+        bool confirmed = RequirePassword
             ? !string.IsNullOrEmpty(Input.Password) && await _userManager.CheckPasswordAsync(user, Input.Password)
             : IsConfirmationWord(Input.Confirmation);
         if (!confirmed)
@@ -94,7 +94,7 @@ public class DeletePersonalDataModel : PageModel
             return Page();
         }
 
-        var emailSent = await SendCancelLinkAsync(user, accepted);
+        bool emailSent = await SendCancelLinkAsync(user, accepted);
         await _signInManager.SignOutAsync();
         return RedirectToPage("/Account/DeletionRequested", new
         {
@@ -121,7 +121,7 @@ public class DeletePersonalDataModel : PageModel
             return false;
         }
 
-        var cancelUrl = Url.Page("/Account/CancelDeletion", pageHandler: null,
+        string? cancelUrl = Url.Page("/Account/CancelDeletion", pageHandler: null,
             values: new { area = "Identity", token = accepted.CancelToken }, protocol: Request.Scheme);
         try
         {

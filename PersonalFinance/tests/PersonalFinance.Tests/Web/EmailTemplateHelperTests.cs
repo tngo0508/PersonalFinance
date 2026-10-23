@@ -8,10 +8,10 @@ public class EmailTemplateHelperTests
     [Fact]
     public void BuildConfirmationEmail_ContainsBrandedCtaButtonAndConfirmationUrl()
     {
-        var testUrl = "https://localhost:7100/Identity/Account/ConfirmEmail?userId=123&code=abc%3D%3D";
-        var appName = "PersonalFinance";
+        string testUrl = "https://localhost:7100/Identity/Account/ConfirmEmail?userId=123&code=abc%3D%3D";
+        string appName = "PersonalFinance";
 
-        var html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, appName);
+        string html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, appName);
 
         Assert.NotNull(html);
         Assert.Contains("PersonalFinance", html);
@@ -24,9 +24,9 @@ public class EmailTemplateHelperTests
     [Fact]
     public void BuildConfirmationEmail_WhenAppNameIsNull_DefaultsToPersonalFinance()
     {
-        var testUrl = "https://example.com/confirm";
+        string testUrl = "https://example.com/confirm";
 
-        var html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, null);
+        string html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, null);
 
         Assert.Contains("PersonalFinance", html);
         Assert.Contains("https://example.com/confirm", html);
@@ -35,10 +35,10 @@ public class EmailTemplateHelperTests
     [Fact]
     public void BuildConfirmationEmail_EscapesHtmlCharactersInParameters()
     {
-        var maliciousAppName = "<script>alert('xss')</script>App";
-        var testUrl = "https://example.com/confirm?token=<test>";
+        string maliciousAppName = "<script>alert('xss')</script>App";
+        string testUrl = "https://example.com/confirm?token=<test>";
 
-        var html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, maliciousAppName);
+        string html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, maliciousAppName);
 
         Assert.DoesNotContain("<script>", html);
         Assert.Contains("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;App", html);

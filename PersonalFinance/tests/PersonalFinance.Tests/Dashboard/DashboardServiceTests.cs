@@ -19,7 +19,7 @@ public class DashboardServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"Dashboard_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -33,9 +33,9 @@ public class DashboardServiceTests
     [Fact]
     public async Task EmptyAccount_ReturnsStructuredEmptySummary()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.NotNull(summary);
         Assert.Null(summary.NetWorth);
@@ -48,14 +48,14 @@ public class DashboardServiceTests
     [Fact]
     public async Task Budget_WhenTwoAllocationsShareThePeriod_UsesTheNewestRecord()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetAllocations.AddRange(
             new UserBudgetAllocation { Id = 1, UserId = UserId, Period = "2026-10", MonthlyIncome = 4_000m },
             new UserBudgetAllocation { Id = 2, UserId = UserId, Period = "2026-10", MonthlyIncome = 5_000m },
             new UserBudgetAllocation { Id = 3, UserId = UserId, Period = "2026-09", MonthlyIncome = 9_000m });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(5_000m, summary.Budget!.MonthlyIncome);
     }
@@ -63,14 +63,14 @@ public class DashboardServiceTests
     [Fact]
     public async Task SavingsGoals_WhenCreatedAtTies_OrdersNewestRecordFirst()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var createdAt = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
         db.SavingsGoals.AddRange(
             new SavingsGoal { Id = 1, UserId = UserId, Name = "Older", TargetAmount = 100m, CreatedAt = createdAt },
             new SavingsGoal { Id = 2, UserId = UserId, Name = "Newer", TargetAmount = 100m, CreatedAt = createdAt });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(ExpectedGoalNamesNewestFirst, summary.SavingsGoals.Select(g => g.Name));
     }
@@ -78,14 +78,14 @@ public class DashboardServiceTests
     [Fact]
     public async Task Summary_ExcludesOtherUsersAndSoftDeletedRecords()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.NetWorthParameters.Add(new NetWorthParameters { UserId = OtherUserId, StartingBalance = 1m });
         db.SavingsGoals.AddRange(
             new SavingsGoal { UserId = OtherUserId, Name = "Not mine", TargetAmount = 100m },
             new SavingsGoal { UserId = UserId, Name = "Deleted", TargetAmount = 100m, IsDeleted = true });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Null(summary.NetWorth);
         Assert.Empty(summary.SavingsGoals);
@@ -95,7 +95,7 @@ public class DashboardServiceTests
     [Fact]
     public async Task Summary_DefaultSource_WhenSnapshotsExist_IsGoogleSheet()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
             UserId = UserId,
@@ -108,7 +108,7 @@ public class DashboardServiceTests
         });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(BudgetDataSource.GoogleSheet, summary.ActiveSource);
         Assert.NotNull(summary.MonthlyBudget);
@@ -119,7 +119,7 @@ public class DashboardServiceTests
     [Fact]
     public async Task Summary_DefaultSource_WhenNoSnapshotsExist_IsBudgetTracker()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var plan = new MonthlyBudgetPlan { UserId = UserId, Year = 2026, Month = 10 };
         var category = new BudgetCategory { UserId = UserId, Name = "Salary", Kind = BudgetCategoryKind.Income };
         db.MonthlyBudgetPlans.Add(plan);
@@ -142,7 +142,7 @@ public class DashboardServiceTests
         });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(BudgetDataSource.BudgetTracker, summary.ActiveSource);
         Assert.NotNull(summary.MonthlyBudget);
@@ -153,7 +153,7 @@ public class DashboardServiceTests
     [Fact]
     public async Task Summary_WhenExplicitPreferenceSet_SwitchesActiveSourceAndTransactions()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         var snapshot = new SpreadsheetBudgetSnapshot
         {
@@ -211,7 +211,7 @@ public class DashboardServiceTests
         });
         await db.SaveChangesAsync();
 
-        var defaultSummary = await GetSummaryAsync(db);
+        DashboardSummaryDto defaultSummary = await GetSummaryAsync(db);
         Assert.Equal(BudgetDataSource.GoogleSheet, defaultSummary.ActiveSource);
         Assert.Contains(defaultSummary.RecentActivity, a => a.Title == "Sheet TX");
         Assert.DoesNotContain(defaultSummary.RecentActivity, a => a.Title == "Tracker TX");
@@ -228,7 +228,7 @@ public class DashboardServiceTests
         });
         await db.SaveChangesAsync();
 
-        var switchedSummary = await GetSummaryAsync(db);
+        DashboardSummaryDto switchedSummary = await GetSummaryAsync(db);
         Assert.Equal(BudgetDataSource.BudgetTracker, switchedSummary.ActiveSource);
         Assert.Contains(switchedSummary.RecentActivity, a => a.Title == "Tracker TX");
         Assert.DoesNotContain(switchedSummary.RecentActivity, a => a.Title == "Sheet TX");
@@ -242,7 +242,7 @@ public class DashboardServiceTests
     [Fact]
     public async Task Summary_WhenActiveSourceHasNoMonth_MonthlyBudgetIsNullAndDoesNotUsePlanner()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetAllocations.Add(new UserBudgetAllocation
         {
             UserId = UserId,
@@ -256,7 +256,7 @@ public class DashboardServiceTests
         });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(BudgetDataSource.GoogleSheet, summary.ActiveSource);
         Assert.Equal(7000m, summary.Budget!.MonthlyIncome);
@@ -266,7 +266,7 @@ public class DashboardServiceTests
     [Fact]
     public async Task Summary_RecentActivity_WhenBudgetTracker_MapsIncomeAndExpenseSigns()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetSourcePreferences.Add(new UserBudgetSourcePreference
         {
             UserId = UserId,
@@ -298,14 +298,14 @@ public class DashboardServiceTests
         );
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(2, summary.RecentActivity.Count);
-        var salary = summary.RecentActivity.Single(a => a.Title == "Salary");
+        RecentActivityDto salary = summary.RecentActivity.Single(a => a.Title == "Salary");
         Assert.Equal("Income", salary.Type);
         Assert.Equal(new DateTime(2026, 10, 6), salary.Date);
 
-        var groceries = summary.RecentActivity.Single(a => a.Title == "Supermarket");
+        RecentActivityDto groceries = summary.RecentActivity.Single(a => a.Title == "Supermarket");
         Assert.Equal("Expense", groceries.Type);
         Assert.Equal(new DateTime(2026, 10, 5), groceries.Date);
     }

@@ -35,7 +35,7 @@ public class ApiServiceInternalKeyHttpTests : IClassFixture<ApiServiceInternalKe
     public static TheoryData<string> Endpoints()
     {
         var data = new TheoryData<string>();
-        foreach (var endpoint in AccountEndpoints)
+        foreach (string endpoint in AccountEndpoints)
         {
             data.Add(endpoint);
         }
@@ -47,7 +47,7 @@ public class ApiServiceInternalKeyHttpTests : IClassFixture<ApiServiceInternalKe
     [MemberData(nameof(Endpoints))]
     public async Task WithoutAnyHeaders_Returns401(string endpoint)
     {
-        var response = await _client.SendAsync(Request(endpoint, userId: null, internalKey: null));
+        HttpResponseMessage response = await _client.SendAsync(Request(endpoint, userId: null, internalKey: null));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -56,7 +56,7 @@ public class ApiServiceInternalKeyHttpTests : IClassFixture<ApiServiceInternalKe
     [MemberData(nameof(Endpoints))]
     public async Task SpoofedUserIdWithoutKey_Returns401(string endpoint)
     {
-        var response = await _client.SendAsync(Request(endpoint, userId: "victim", internalKey: null));
+        HttpResponseMessage response = await _client.SendAsync(Request(endpoint, userId: "victim", internalKey: null));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -65,7 +65,7 @@ public class ApiServiceInternalKeyHttpTests : IClassFixture<ApiServiceInternalKe
     [MemberData(nameof(Endpoints))]
     public async Task SpoofedUserIdWithWrongKey_Returns401(string endpoint)
     {
-        var response = await _client.SendAsync(Request(endpoint, userId: "victim", internalKey: "guessed"));
+        HttpResponseMessage response = await _client.SendAsync(Request(endpoint, userId: "victim", internalKey: "guessed"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -74,7 +74,7 @@ public class ApiServiceInternalKeyHttpTests : IClassFixture<ApiServiceInternalKe
     [MemberData(nameof(Endpoints))]
     public async Task UserIdWithTheSharedSecret_IsServed(string endpoint)
     {
-        var response = await _client.SendAsync(Request(endpoint, userId: "account-1", internalKey: InternalKey));
+        HttpResponseMessage response = await _client.SendAsync(Request(endpoint, userId: "account-1", internalKey: InternalKey));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

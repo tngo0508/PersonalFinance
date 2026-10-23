@@ -1,9 +1,10 @@
-using PersonalFinance.Shared.Helpers;
 using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -60,8 +61,8 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { error = "Invalid year or month." });
         }
 
-        var userId = User.GetUserId();
-        var sheet = await _budgetService.GetSheetAsync(userId, year, month, ct);
+        string userId = User.GetUserId();
+        MonthlyBudgetSheetDto sheet = await _budgetService.GetSheetAsync(userId, year, month, ct);
         return Ok(sheet);
     }
 
@@ -74,14 +75,14 @@ public class BudgetTrackerController : ControllerBase
     public async Task<IActionResult> InitializeMonth([FromBody] InitializeMonthRequest request,
         CancellationToken ct = default)
     {
-        var validation = await _initializeMonthValidator.ValidateAsync(request, ct);
+        ValidationResult validation = await _initializeMonthValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = User.GetUserId();
-        var sheet = await _budgetService.InitializeMonthAsync(userId, request, ct);
+        string userId = User.GetUserId();
+        MonthlyBudgetSheetDto sheet = await _budgetService.InitializeMonthAsync(userId, request, ct);
         return Ok(sheet);
     }
 
@@ -100,16 +101,16 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { error = "Invalid year or month." });
         }
 
-        var validation = await _setPlannedValidator.ValidateAsync(request, ct);
+        ValidationResult validation = await _setPlannedValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var sheet = await _budgetService.SetPlannedAsync(userId, year, month, categoryId, request, ct);
+            MonthlyBudgetSheetDto sheet = await _budgetService.SetPlannedAsync(userId, year, month, categoryId, request, ct);
             return Ok(sheet);
         }
         catch (KeyNotFoundException ex)
@@ -133,16 +134,16 @@ public class BudgetTrackerController : ControllerBase
             return BadRequest(new { error = "Invalid year or month." });
         }
 
-        var validation = await _setActualOverrideValidator.ValidateAsync(request, ct);
+        ValidationResult validation = await _setActualOverrideValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var sheet = await _budgetService.SetActualOverrideAsync(userId, year, month, categoryId, request, ct);
+            MonthlyBudgetSheetDto sheet = await _budgetService.SetActualOverrideAsync(userId, year, month, categoryId, request, ct);
             return Ok(sheet);
         }
         catch (KeyNotFoundException ex)
@@ -159,8 +160,8 @@ public class BudgetTrackerController : ControllerBase
     public async Task<IActionResult> GetCategories([FromQuery] bool includeArchived = false,
         CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        var categories = await _budgetService.GetCategoriesAsync(userId, includeArchived, ct);
+        string userId = User.GetUserId();
+        List<BudgetCategoryDto> categories = await _budgetService.GetCategoriesAsync(userId, includeArchived, ct);
         return Ok(categories);
     }
 
@@ -174,16 +175,16 @@ public class BudgetTrackerController : ControllerBase
     public async Task<IActionResult> CreateCategory([FromBody] SaveCategoryRequest request,
         CancellationToken ct = default)
     {
-        var validation = await _saveCategoryValidator.ValidateAsync(request, ct);
+        ValidationResult validation = await _saveCategoryValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var created = await _budgetService.CreateCategoryAsync(userId, request, ct);
+            BudgetCategoryDto created = await _budgetService.CreateCategoryAsync(userId, request, ct);
             return StatusCode(StatusCodes.Status201Created, created);
         }
         catch (DuplicateCategoryException ex)
@@ -203,16 +204,16 @@ public class BudgetTrackerController : ControllerBase
     public async Task<IActionResult> UpdateCategory(int id, [FromBody] SaveCategoryRequest request,
         CancellationToken ct = default)
     {
-        var validation = await _saveCategoryValidator.ValidateAsync(request, ct);
+        ValidationResult validation = await _saveCategoryValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var updated = await _budgetService.UpdateCategoryAsync(userId, id, request, ct);
+            BudgetCategoryDto updated = await _budgetService.UpdateCategoryAsync(userId, id, request, ct);
             return Ok(updated);
         }
         catch (ArgumentException ex)
@@ -237,7 +238,7 @@ public class BudgetTrackerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteCategory(int id, CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
             await _budgetService.DeleteCategoryAsync(userId, id, ct);
@@ -259,16 +260,16 @@ public class BudgetTrackerController : ControllerBase
     public async Task<IActionResult> CreateTransaction([FromBody] SaveTransactionRequest request,
         CancellationToken ct = default)
     {
-        var validation = await _saveTransactionValidator.ValidateAsync(request, ct);
+        ValidationResult validation = await _saveTransactionValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var created = await _budgetService.CreateTransactionAsync(userId, request, ct);
+            BudgetTransactionDto created = await _budgetService.CreateTransactionAsync(userId, request, ct);
             return StatusCode(StatusCodes.Status201Created, created);
         }
         catch (ArgumentException ex)
@@ -291,16 +292,16 @@ public class BudgetTrackerController : ControllerBase
     public async Task<IActionResult> UpdateTransaction(int id, [FromBody] SaveTransactionRequest request,
         CancellationToken ct = default)
     {
-        var validation = await _saveTransactionValidator.ValidateAsync(request, ct);
+        ValidationResult validation = await _saveTransactionValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var updated = await _budgetService.UpdateTransactionAsync(userId, id, request, ct);
+            BudgetTransactionDto updated = await _budgetService.UpdateTransactionAsync(userId, id, request, ct);
             return Ok(updated);
         }
         catch (ArgumentException ex)
@@ -321,7 +322,7 @@ public class BudgetTrackerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteTransaction(int id, CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
             await _budgetService.DeleteTransactionAsync(userId, id, ct);
@@ -340,8 +341,8 @@ public class BudgetTrackerController : ControllerBase
     [ProducesResponseType(typeof(BudgetDataSourceDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDataSource(CancellationToken ct = default)
     {
-        var userId = User.GetUserId();
-        var preference = await _dataSourceService.GetDataSourcePreferenceAsync(userId, ct);
+        string userId = User.GetUserId();
+        BudgetDataSourceDto preference = await _dataSourceService.GetDataSourcePreferenceAsync(userId, ct);
         return Ok(preference);
     }
 
@@ -354,14 +355,14 @@ public class BudgetTrackerController : ControllerBase
     public async Task<IActionResult> SetDataSource([FromBody] SetBudgetDataSourceRequest request,
         CancellationToken ct = default)
     {
-        var validation = await _setDataSourceValidator.ValidateAsync(request, ct);
+        ValidationResult validation = await _setDataSourceValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
         }
 
-        var userId = User.GetUserId();
-        var preference = await _dataSourceService.SetDataSourcePreferenceAsync(userId, request, ct);
+        string userId = User.GetUserId();
+        BudgetDataSourceDto preference = await _dataSourceService.SetDataSourcePreferenceAsync(userId, request, ct);
         return Ok(preference);
     }
 }

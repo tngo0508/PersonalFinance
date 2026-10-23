@@ -20,7 +20,7 @@ public static class NetWorthProjectionService
     /// <returns>A projection DTO with Base, Conservative, and Aggressive scenarios.</returns>
     public static NetWorthProjectionDto ComputeProjection(NetWorthProjectionRequestDto request)
     {
-        var currentYear = DateTime.Now.Year;
+        int currentYear = DateTime.Now.Year;
         var projection = new NetWorthProjectionDto
         {
             CurrentYear = currentYear,
@@ -76,8 +76,8 @@ public static class NetWorthProjectionService
 
         while (age <= retirementAge)
         {
-            var roi = balance * roiRate;
-            var endingBalance = balance + annualSavings + roi;
+            decimal roi = balance * roiRate;
+            decimal endingBalance = balance + annualSavings + roi;
 
             scenario.Years.Add(new NetWorthYearDto
             {

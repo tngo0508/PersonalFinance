@@ -28,7 +28,7 @@ public class ReleaseAutomationTests
 
     private static string JobBlock(string workflow, string jobId)
     {
-        var match = Regex.Match(workflow, $@"\n  {Regex.Escape(jobId)}:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
+        Match match = Regex.Match(workflow, $@"\n  {Regex.Escape(jobId)}:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
         Assert.True(match.Success, $"Could not find job '{jobId}' in the workflow.");
         return match.Value;
     }
@@ -43,7 +43,7 @@ public class ReleaseAutomationTests
     [Fact]
     public void Changelog_HasADatedSectionForTheCurrentVersion_AndNoUnreleasedSection()
     {
-        var changelog = ReadRepoFile("CHANGELOG.md");
+        string changelog = ReadRepoFile("CHANGELOG.md");
 
         Assert.Matches(
             new Regex($@"^## \[{Regex.Escape(AppVersion.Current)}\] - \d{{4}}-\d{{2}}-\d{{2}}\r?$", RegexOptions.Multiline),
@@ -54,8 +54,8 @@ public class ReleaseAutomationTests
     [Fact]
     public void DeploymentWorkflow_CreateReleaseJob_ReleasesOnlyAfterSmokeTestsOnMain()
     {
-        var workflow = ReadRepoFile(".github", "workflows", "deploy-azure.yml");
-        var job = JobBlock(workflow, "create-release");
+        string workflow = ReadRepoFile(".github", "workflows", "deploy-azure.yml");
+        string job = JobBlock(workflow, "create-release");
 
         Assert.Contains("needs: smoke-test", job);
         Assert.Contains("if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}", job);
@@ -76,7 +76,7 @@ public class ReleaseAutomationTests
     [Fact]
     public void ReleaseCheckWorkflow_RunsOnEveryPullRequest_AndAllowsDocsOnlyAndNoReleasePullRequests()
     {
-        var workflow = ReadRepoFile(".github", "workflows", "release-check.yml");
+        string workflow = ReadRepoFile(".github", "workflows", "release-check.yml");
 
         // A required status check must always report, so the workflow is never path-filtered
         Assert.DoesNotMatch(new Regex(@"^\s*(paths|paths-ignore):", RegexOptions.Multiline), workflow);
@@ -94,7 +94,7 @@ public class ReleaseAutomationTests
     [Fact]
     public void ReleaseVersionScript_DefinesTheCommandsTheWorkflowsUse()
     {
-        var script = ReadRepoFile(".github", "scripts", "release-version.sh");
+        string script = ReadRepoFile(".github", "scripts", "release-version.sh");
 
         Assert.StartsWith("#!/usr/bin/env bash", script);
         Assert.Contains("set -euo pipefail", script);

@@ -26,7 +26,7 @@ public class AccountIsolationTests
     [Fact]
     public void EveryApiServiceController_RequiresAuthorizationOrOptsOutExplicitly()
     {
-        var controllerTypes = typeof(ApiGoogleDriveController).Assembly.GetTypes()
+        IEnumerable<Type> controllerTypes = typeof(ApiGoogleDriveController).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(ControllerBase).IsAssignableFrom(t));
 
         var unprotected = controllerTypes
@@ -62,10 +62,10 @@ public class AccountIsolationTests
     [InlineData("")]
     public async Task SpreadsheetReader_WithAnotherAccountsConnectionId_NeverUsesThatAccountsApiKey(string callerUserId)
     {
-        await using var db = CreateDb();
-        var connectionId = await SeedConnectionAsync(db, "owner");
+        await using AppDbContext db = CreateDb();
+        int connectionId = await SeedConnectionAsync(db, "owner");
         var requestedUris = new List<string>();
-        var reader = CreateReader(db, requestedUris);
+        SpreadsheetReaderService reader = CreateReader(db, requestedUris);
 
         await reader.GetSpreadsheetBudgetReportAsync(callerUserId, "file-1", "Budget.xlsx", connectionId);
         await reader.GetSpreadsheetTransactionsAsync(callerUserId, "file-1", "Budget.xlsx", connectionId);
@@ -76,10 +76,10 @@ public class AccountIsolationTests
     [Fact]
     public async Task SpreadsheetReader_WithOwnConnectionId_UsesOwnApiKey()
     {
-        await using var db = CreateDb();
-        var connectionId = await SeedConnectionAsync(db, "owner");
+        await using AppDbContext db = CreateDb();
+        int connectionId = await SeedConnectionAsync(db, "owner");
         var requestedUris = new List<string>();
-        var reader = CreateReader(db, requestedUris);
+        SpreadsheetReaderService reader = CreateReader(db, requestedUris);
 
         await reader.GetSpreadsheetBudgetReportAsync("owner", "file-1", "Budget.xlsx", connectionId);
 
@@ -109,7 +109,7 @@ public class AccountIsolationTests
 
     private static AppDbContext CreateDb()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"AccountIsolation_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);

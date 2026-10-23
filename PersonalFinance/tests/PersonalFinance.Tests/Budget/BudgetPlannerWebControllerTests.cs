@@ -1,12 +1,12 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models;
-using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.Tests.Budget;
 
@@ -37,7 +37,7 @@ public class BudgetPlannerWebControllerTests
     public async Task Save_WhenAllocationsAreLessThanMonthlyIncome_SavesSuccessfully()
     {
         var fakeApi = new FakeBudgetPlannerApi();
-        var controller = CreateController(fakeApi);
+        BudgetController controller = CreateController(fakeApi);
         var model = new BudgetViewModel
         {
             MonthlyIncome = 3575.00m,
@@ -53,9 +53,9 @@ public class BudgetPlannerWebControllerTests
             Miscellaneous = 76.82m // total = 3520.00 < 3575.00
         };
 
-        var result = await controller.Save(model);
+        IActionResult result = await controller.Save(model);
 
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.NotNull(fakeApi.SavedRequest);
         Assert.Equal(3575.00m, fakeApi.SavedRequest!.MonthlyIncome);
@@ -96,11 +96,11 @@ public class BudgetPlannerWebControllerTests
             }
         };
 
-        var controller = CreateController(fakeApi);
-        var result = await controller.Index();
+        BudgetController controller = CreateController(fakeApi);
+        IActionResult result = await controller.Index();
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<BudgetViewModel>(viewResult.Model);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
+        BudgetViewModel model = Assert.IsType<BudgetViewModel>(viewResult.Model);
         Assert.Equal(4000.00m, model.MonthlyIncome);
         Assert.Equal(1000m, model.Housing);
         Assert.Equal(500m, model.Food);
@@ -118,7 +118,7 @@ public class BudgetPlannerWebControllerTests
     public async Task Save_WhenAllocationsExceedMonthlyIncome_SavesBudgetAndSetsWarning()
     {
         var fakeApi = new FakeBudgetPlannerApi();
-        var controller = CreateController(fakeApi);
+        BudgetController controller = CreateController(fakeApi);
         var model = new BudgetViewModel
         {
             MonthlyIncome = 3000.00m,
@@ -126,9 +126,9 @@ public class BudgetPlannerWebControllerTests
             Food = 1500.00m // total = 3500.00 > 3000.00
         };
 
-        var result = await controller.Save(model);
+        IActionResult result = await controller.Save(model);
 
-        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        RedirectToActionResult redirectResult = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirectResult.ActionName);
         Assert.NotNull(fakeApi.SavedRequest);
         Assert.Equal(3000.00m, fakeApi.SavedRequest!.MonthlyIncome);
@@ -142,15 +142,15 @@ public class BudgetPlannerWebControllerTests
     public async Task Save_WhenMonthlyIncomeIsZeroOrNegative_ReturnsViewWithError()
     {
         var fakeApi = new FakeBudgetPlannerApi();
-        var controller = CreateController(fakeApi);
+        BudgetController controller = CreateController(fakeApi);
         var model = new BudgetViewModel
         {
             MonthlyIncome = 0m
         };
 
-        var result = await controller.Save(model);
+        IActionResult result = await controller.Save(model);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("Index", viewResult.ViewName);
         Assert.Null(fakeApi.SavedRequest);
         Assert.False(controller.ModelState.IsValid);
@@ -159,13 +159,13 @@ public class BudgetPlannerWebControllerTests
     [Fact]
     public void BudgetIndexView_ContainsAspForBindingsForAllCategories()
     {
-        var viewPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/PersonalFinance.Web/Views/Budget/Index.cshtml"));
+        string viewPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/PersonalFinance.Web/Views/Budget/Index.cshtml"));
         if (!File.Exists(viewPath))
         {
-            var dir = AppContext.BaseDirectory;
+            string dir = AppContext.BaseDirectory;
             while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "PersonalFinance.sln")))
             {
-                var parent = Directory.GetParent(dir);
+                DirectoryInfo? parent = Directory.GetParent(dir);
                 if (parent == null) break;
                 dir = parent.FullName;
             }
@@ -173,14 +173,14 @@ public class BudgetPlannerWebControllerTests
         }
 
         Assert.True(File.Exists(viewPath), $"View file should exist at: {viewPath}");
-        var content = File.ReadAllText(viewPath);
-        var expectedCategories = new[]
+        string content = File.ReadAllText(viewPath);
+        string[] expectedCategories = new[]
         {
             "Housing", "Food", "Transportation", "Utilities", "Insurance",
             "Healthcare", "Savings", "DebtRepayment", "Entertainment", "Miscellaneous"
         };
 
-        foreach (var category in expectedCategories)
+        foreach (string? category in expectedCategories)
         {
             Assert.Contains($"asp-for=\"{category}\"", content);
         }
@@ -211,7 +211,7 @@ public class TestTempDataProvider : ITempDataProvider
     public void SaveTempData(HttpContext context, IDictionary<string, object> values)
     {
         _data.Clear();
-        foreach (var kvp in values)
+        foreach (KeyValuePair<string, object> kvp in values)
         {
             _data[kvp.Key] = kvp.Value;
         }

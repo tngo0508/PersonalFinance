@@ -50,10 +50,10 @@ public class FeedbackStatusEndpointTests
     [Fact]
     public async Task ChangeStatus_KnownFeedback_ReturnsNoContent()
     {
-        await using var db = CreateContext();
-        var id = await AddFeedbackAsync(db);
+        await using AppDbContext db = CreateContext();
+        int id = await AddFeedbackAsync(db);
 
-        var result = await CreateController(db).ChangeStatus(id,
+        IActionResult result = await CreateController(db).ChangeStatus(id,
             new ChangeFeedbackStatusRequest { Status = FeedbackStatus.Reviewed });
 
         Assert.IsType<NoContentResult>(result);
@@ -62,9 +62,9 @@ public class FeedbackStatusEndpointTests
     [Fact]
     public async Task ChangeStatus_UnknownFeedback_ReturnsNotFound()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var result = await CreateController(db).ChangeStatus(999,
+        IActionResult result = await CreateController(db).ChangeStatus(999,
             new ChangeFeedbackStatusRequest { Status = FeedbackStatus.Reviewed });
 
         Assert.IsType<NotFoundResult>(result);
@@ -73,14 +73,14 @@ public class FeedbackStatusEndpointTests
     [Fact]
     public async Task ChangeStatus_UnknownStatus_ReturnsBadRequest_AndLeavesTheStatusUnchanged()
     {
-        await using var db = CreateContext();
-        var id = await AddFeedbackAsync(db);
+        await using AppDbContext db = CreateContext();
+        int id = await AddFeedbackAsync(db);
 
-        var result = await CreateController(db).ChangeStatus(id,
+        IActionResult result = await CreateController(db).ChangeStatus(id,
             new ChangeFeedbackStatusRequest { Status = (FeedbackStatus)99 });
 
         Assert.IsType<BadRequestObjectResult>(result);
-        var item = Assert.Single(await new FeedbackService(db,
+        FeedbackAdminItemDto item = Assert.Single(await new FeedbackService(db,
             new RateLimiterService(5, TimeSpan.FromHours(1))).ListAsync(FeedbackStatus.New));
         Assert.Equal(id, item.Id);
     }
@@ -88,9 +88,9 @@ public class FeedbackStatusEndpointTests
     [Fact]
     public async Task List_UnknownStatus_ReturnsBadRequest()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var result = await CreateController(db).List((FeedbackStatus)99);
+        IActionResult result = await CreateController(db).List((FeedbackStatus)99);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }

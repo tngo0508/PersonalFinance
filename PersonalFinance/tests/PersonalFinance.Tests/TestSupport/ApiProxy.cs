@@ -10,7 +10,7 @@ public static class ApiProxy
     /// <summary>Creates a fake where every method throws <see cref="HttpRequestException"/>.</summary>
     public static (TContract Api, ApiProxy<TContract> Proxy) Create<TContract>() where TContract : class
     {
-        var api = DispatchProxy.Create<TContract, ApiProxy<TContract>>();
+        TContract api = DispatchProxy.Create<TContract, ApiProxy<TContract>>();
         return (api, (ApiProxy<TContract>)(object)api);
     }
 }
@@ -46,17 +46,17 @@ public class ApiProxy<TContract> : DispatchProxy where TContract : class
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
         Calls.Add(targetMethod.Name);
-        var returnType = targetMethod.ReturnType;
+        Type returnType = targetMethod.ReturnType;
 
-        if (!_results.TryGetValue(targetMethod.Name, out var result))
+        if (!_results.TryGetValue(targetMethod.Name, out Func<object?>? result))
         {
-            var failure = _failures.GetValueOrDefault(targetMethod.Name) ?? new HttpRequestException("ApiService unreachable");
+            Exception failure = _failures.GetValueOrDefault(targetMethod.Name) ?? new HttpRequestException("ApiService unreachable");
             if (returnType == typeof(Task))
             {
                 return Task.FromException(failure);
             }
 
-            var resultType = returnType.GetGenericArguments()[0];
+            Type resultType = returnType.GetGenericArguments()[0];
             return typeof(Task).GetMethod(nameof(Task.FromException), 1, new[] { typeof(Exception) })!
                 .MakeGenericMethod(resultType)
                 .Invoke(null, new object[] { failure });

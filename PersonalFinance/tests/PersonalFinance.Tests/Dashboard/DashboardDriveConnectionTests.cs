@@ -16,7 +16,7 @@ public class DashboardDriveConnectionTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"DashboardDrive_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -30,11 +30,11 @@ public class DashboardDriveConnectionTests
     [Fact]
     public async Task UserWithConnection_IsConnected()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.GoogleDriveConnections.Add(new GoogleDriveConnection { UserId = UserId, FolderId = "folder" });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.True(summary.HasGoogleDriveConnection);
     }
@@ -42,7 +42,7 @@ public class DashboardDriveConnectionTests
     [Fact]
     public async Task UserWithConnectionNeedingReauth_IsStillConnected()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.GoogleDriveConnections.Add(new GoogleDriveConnection
         {
             UserId = UserId,
@@ -52,7 +52,7 @@ public class DashboardDriveConnectionTests
         });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.True(summary.HasGoogleDriveConnection);
     }
@@ -60,9 +60,9 @@ public class DashboardDriveConnectionTests
     [Fact]
     public async Task UserWithoutConnection_IsNotConnected()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.False(summary.HasGoogleDriveConnection);
     }
@@ -70,11 +70,11 @@ public class DashboardDriveConnectionTests
     [Fact]
     public async Task AnotherUsersConnection_IsIgnored()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.GoogleDriveConnections.Add(new GoogleDriveConnection { UserId = OtherUserId, FolderId = "folder" });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.False(summary.HasGoogleDriveConnection);
     }
@@ -82,7 +82,7 @@ public class DashboardDriveConnectionTests
     [Fact]
     public async Task SoftDeletedConnection_IsIgnored()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.GoogleDriveConnections.Add(new GoogleDriveConnection
         {
             UserId = UserId,
@@ -92,7 +92,7 @@ public class DashboardDriveConnectionTests
         });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.False(summary.HasGoogleDriveConnection);
     }

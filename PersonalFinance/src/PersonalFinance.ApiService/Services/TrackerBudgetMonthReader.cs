@@ -26,7 +26,7 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             return new List<BudgetMonthData>();
         }
 
-        var plans = await _dbContext.MonthlyBudgetPlans
+        List<MonthlyBudgetPlan> plans = await _dbContext.MonthlyBudgetPlans
             .AsNoTracking()
             .Include(p => p.Lines)
             .Where(p => p.UserId == userId && p.Year == year)
@@ -35,12 +35,12 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
         var yearStart = new DateOnly(year, 1, 1);
         var nextYearStart = new DateOnly(year + 1, 1, 1);
 
-        var transactions = await _dbContext.BudgetTransactions
+        List<BudgetTransaction> transactions = await _dbContext.BudgetTransactions
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.Date >= yearStart && t.Date < nextYearStart)
             .ToListAsync(ct);
 
-        var allCategories = await _dbContext.BudgetCategories
+        List<BudgetCategory> allCategories = await _dbContext.BudgetCategories
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(c => c.UserId == userId)
@@ -49,8 +49,8 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             .ThenBy(c => c.Id)
             .ToListAsync(ct);
 
-        var planMonths = plans.Select(p => p.Month);
-        var txMonths = transactions.Select(t => t.Date.Month);
+        IEnumerable<int> planMonths = plans.Select(p => p.Month);
+        IEnumerable<int> txMonths = transactions.Select(t => t.Date.Month);
         var monthNumbers = planMonths.Union(txMonths).Distinct().OrderBy(m => m).ToList();
 
         var plansByMonth = plans.ToDictionary(p => p.Month);
@@ -58,13 +58,13 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
 
         var result = new List<BudgetMonthData>();
 
-        foreach (var month in monthNumbers)
+        foreach (int month in monthNumbers)
         {
-            plansByMonth.TryGetValue(month, out var plan);
-            txsByMonth.TryGetValue(month, out var monthTxs);
+            plansByMonth.TryGetValue(month, out MonthlyBudgetPlan? plan);
+            txsByMonth.TryGetValue(month, out List<BudgetTransaction>? monthTxs);
             monthTxs ??= new List<BudgetTransaction>();
 
-            var monthData = BuildMonthData(year, month, plan, monthTxs, allCategories);
+            BudgetMonthData? monthData = BuildMonthData(year, month, plan, monthTxs, allCategories);
             if (monthData != null)
             {
                 result.Add(monthData);
@@ -83,15 +83,15 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             return null;
         }
 
-        var plan = await _dbContext.MonthlyBudgetPlans
+        MonthlyBudgetPlan? plan = await _dbContext.MonthlyBudgetPlans
             .AsNoTracking()
             .Include(p => p.Lines)
             .FirstOrDefaultAsync(p => p.UserId == userId && p.Year == year && p.Month == month, ct);
 
         var startDate = new DateOnly(year, month, 1);
-        var endDate = startDate.AddMonths(1);
+        DateOnly endDate = startDate.AddMonths(1);
 
-        var transactions = await _dbContext.BudgetTransactions
+        List<BudgetTransaction> transactions = await _dbContext.BudgetTransactions
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.Date >= startDate && t.Date < endDate)
             .ToListAsync(ct);
@@ -101,7 +101,7 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             return null;
         }
 
-        var allCategories = await _dbContext.BudgetCategories
+        List<BudgetCategory> allCategories = await _dbContext.BudgetCategories
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(c => c.UserId == userId)
@@ -117,7 +117,7 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
     public async Task<List<BudgetTrendRecordData>> GetTrendRecordsAsync(string userId, int year,
         CancellationToken ct = default)
     {
-        var months = await GetMonthsAsync(userId, year, ct);
+        List<BudgetMonthData> months = await GetMonthsAsync(userId, year, ct);
         return months.Select(month => new BudgetTrendRecordData
         {
             MonthNumber = month.Month,
@@ -142,14 +142,14 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             query = query.Take(take.Value);
         }
 
-        var transactions = await query.ToListAsync(ct);
+        List<BudgetTransaction> transactions = await query.ToListAsync(ct);
         if (transactions.Count == 0)
         {
             return new List<BudgetTransactionData>();
         }
 
         var categoryIds = transactions.Select(t => t.CategoryId).Distinct().ToList();
-        var categories = await _dbContext.BudgetCategories
+        Dictionary<int, BudgetCategory> categories = await _dbContext.BudgetCategories
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(c => c.UserId == userId && categoryIds.Contains(c.Id))
@@ -157,7 +157,7 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
 
         return transactions.Select(t =>
         {
-            var cat = categories.TryGetValue(t.CategoryId, out var c) ? c : null;
+            BudgetCategory? cat = categories.TryGetValue(t.CategoryId, out BudgetCategory? c) ? c : null;
             return new BudgetTransactionData
             {
                 Id = t.Id,
@@ -173,14 +173,14 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
     /// <inheritdoc />
     public async Task<List<int>> GetAvailableYearsAsync(string userId, CancellationToken ct = default)
     {
-        var planYears = await _dbContext.MonthlyBudgetPlans
+        List<int> planYears = await _dbContext.MonthlyBudgetPlans
             .AsNoTracking()
             .Where(p => p.UserId == userId)
             .Select(p => p.Year)
             .Distinct()
             .ToListAsync(ct);
 
-        var txYears = await _dbContext.BudgetTransactions
+        List<int> txYears = await _dbContext.BudgetTransactions
             .AsNoTracking()
             .Where(t => t.UserId == userId)
             .Select(t => t.Date.Year)
@@ -202,12 +202,12 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             return null;
         }
 
-        var lineMap = plan?.Lines.ToDictionary(l => l.CategoryId) ?? new Dictionary<int, MonthlyBudgetLine>();
+        Dictionary<int, MonthlyBudgetLine> lineMap = plan?.Lines.ToDictionary(l => l.CategoryId) ?? new Dictionary<int, MonthlyBudgetLine>();
         var txSumByCategory = transactions
             .GroupBy(t => t.CategoryId)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
 
-        var calculatedRows = MonthlyBudgetCalculator.BuildRows(allCategories, lineMap, txSumByCategory);
+        List<CalculatedBudgetCategoryRow> calculatedRows = MonthlyBudgetCalculator.BuildRows(allCategories, lineMap, txSumByCategory);
 
         var expenseRows = calculatedRows.Where(r => r.Kind == BudgetCategoryKind.Expense).ToList();
         var incomeRows = calculatedRows.Where(r => r.Kind == BudgetCategoryKind.Income).ToList();
@@ -220,7 +220,7 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             Kind = BudgetCategoryKind.Expense
         }).ToList();
 
-        var monthName = month >= 1 && month <= 12
+        string monthName = month >= 1 && month <= 12
             ? CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month)
             : string.Empty;
 

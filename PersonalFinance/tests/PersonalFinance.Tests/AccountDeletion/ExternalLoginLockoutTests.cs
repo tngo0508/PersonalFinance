@@ -32,9 +32,9 @@ public class ExternalLoginLockoutTests
     [Fact]
     public async Task GoogleSignIn_ToALockedAccountByEmail_IsRefused_AndLinksNothing()
     {
-        await using var harness = await Harness.CreateAsync(linkGoogle: false);
+        await using Harness harness = await Harness.CreateAsync(linkGoogle: false);
 
-        var result = await harness.Page.OnGetCallbackAsync();
+        IActionResult result = await harness.Page.OnGetCallbackAsync();
 
         Assert.Equal("./Lockout", Assert.IsType<RedirectToPageResult>(result).PageName);
         Assert.Empty(await harness.UserManager.GetLoginsAsync(harness.User));
@@ -44,9 +44,9 @@ public class ExternalLoginLockoutTests
     [Fact]
     public async Task GoogleSignIn_ToALockedAccountWithALinkedLogin_IsRefused()
     {
-        await using var harness = await Harness.CreateAsync(linkGoogle: true);
+        await using Harness harness = await Harness.CreateAsync(linkGoogle: true);
 
-        var result = await harness.Page.OnGetCallbackAsync();
+        IActionResult result = await harness.Page.OnGetCallbackAsync();
 
         Assert.Equal("./Lockout", Assert.IsType<RedirectToPageResult>(result).PageName);
         Assert.Equal(0, harness.SignInManager.SignInCalls);
@@ -85,11 +85,11 @@ public class ExternalLoginLockoutTests
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase($"ExternalLoginLockout_{Guid.NewGuid():N}"));
             services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<AppDbContext>();
-            var provider = services.BuildServiceProvider();
-            var scope = provider.CreateAsyncScope();
-            var sp = scope.ServiceProvider;
+            ServiceProvider provider = services.BuildServiceProvider();
+            AsyncServiceScope scope = provider.CreateAsyncScope();
+            IServiceProvider sp = scope.ServiceProvider;
 
-            var userManager = sp.GetRequiredService<UserManager<IdentityUser>>();
+            UserManager<IdentityUser> userManager = sp.GetRequiredService<UserManager<IdentityUser>>();
             var user = new IdentityUser { UserName = Email, Email = Email, EmailConfirmed = true };
             Assert.True((await userManager.CreateAsync(user)).Succeeded);
             var info = new ExternalLoginInfo(

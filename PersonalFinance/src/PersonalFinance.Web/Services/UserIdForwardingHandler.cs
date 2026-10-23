@@ -26,7 +26,7 @@ public sealed class UserIdForwardingHandler : DelegatingHandler
     {
         // Signed-out visitors are not forwarded as an Account, so ApiService answers 401 instead of
         // serving data for a shared placeholder id.
-        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        string? userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!string.IsNullOrEmpty(userId))
         {
             request.Headers.Add("X-User-Id", userId);
@@ -37,7 +37,7 @@ public sealed class UserIdForwardingHandler : DelegatingHandler
             request.Headers.Add(InternalKeyHeader, _internalKey);
         }
 
-        var response = await base.SendAsync(request, cancellationToken);
+        HttpResponseMessage response = await base.SendAsync(request, cancellationToken);
         return response;
     }
 }

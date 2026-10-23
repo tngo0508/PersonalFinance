@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
-using PersonalFinance.ApiService.Services;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models;
 using Xunit;
@@ -48,11 +48,11 @@ public class GoogleDriveWebControllerTests
         };
 
         // Act
-        var result = await controller.Index(null, null, null, addNew: false);
+        IActionResult result = await controller.Index(null, null, null, addNew: false);
 
         // Assert
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<GoogleDriveViewModel>(viewResult.Model);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
+        GoogleDriveViewModel model = Assert.IsType<GoogleDriveViewModel>(viewResult.Model);
         Assert.True(model.ShowConnectForm);
         Assert.Empty(model.Connections);
     }
@@ -93,11 +93,11 @@ public class GoogleDriveWebControllerTests
         };
 
         // Act
-        var result = await controller.Index(null, null, null, addNew: false);
+        IActionResult result = await controller.Index(null, null, null, addNew: false);
 
         // Assert
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<GoogleDriveViewModel>(viewResult.Model);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
+        GoogleDriveViewModel model = Assert.IsType<GoogleDriveViewModel>(viewResult.Model);
         Assert.False(model.ShowConnectForm);
         Assert.Equal(42, model.SelectedConnectionId);
         Assert.NotNull(model.Response);
@@ -117,10 +117,10 @@ public class GoogleDriveWebControllerTests
         };
 
         // Act
-        var result = await controller.Sync(42);
+        IActionResult result = await controller.Sync(42);
 
         // Assert
-        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        RedirectToActionResult redirectResult = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirectResult.ActionName);
         Assert.Equal(42, redirectResult.RouteValues?["connectionId"]);
     }
@@ -137,10 +137,10 @@ public class GoogleDriveWebControllerTests
         };
 
         // Act
-        var result = await controller.Reauth(42, "AIzaSyNewKey");
+        IActionResult result = await controller.Reauth(42, "AIzaSyNewKey");
 
         // Assert
-        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        RedirectToActionResult redirectResult = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirectResult.ActionName);
         Assert.Equal(42, redirectResult.RouteValues?["connectionId"]);
     }
@@ -157,10 +157,10 @@ public class GoogleDriveWebControllerTests
         };
 
         // Act
-        var result = await controller.Delete(42);
+        IActionResult result = await controller.Delete(42);
 
         // Assert
-        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        RedirectToActionResult redirectResult = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirectResult.ActionName);
     }
 
@@ -174,9 +174,9 @@ public class GoogleDriveWebControllerTests
             ControllerContext = CreateControllerContext("test-user-123")
         };
 
-        var result = await controller.MonthlyBudgetReport("Monthly budget 2026.xlsx", "file-123");
+        IActionResult result = await controller.MonthlyBudgetReport("Monthly budget 2026.xlsx", "file-123");
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
         Assert.Same(apiReport, jsonResult.Value);
     }
 
@@ -189,9 +189,9 @@ public class GoogleDriveWebControllerTests
             ControllerContext = CreateControllerContext("test-user-123")
         };
 
-        var result = await FilteredAction.InvokeAsync(controller, () => controller.MonthlyBudgetReport("Monthly budget 2026.xlsx", "file-123"));
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.MonthlyBudgetReport("Monthly budget 2026.xlsx", "file-123"));
 
-        var status = Assert.IsType<ObjectResult>(result);
+        ObjectResult status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status502BadGateway, status.StatusCode);
     }
 
@@ -204,7 +204,7 @@ public class GoogleDriveWebControllerTests
             ControllerContext = CreateControllerContext("test-user-123")
         };
 
-        var result = await controller.MonthlyBudgetReport("Monthly budget 2026.xlsx");
+        IActionResult result = await controller.MonthlyBudgetReport("Monthly budget 2026.xlsx");
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -220,11 +220,11 @@ public class GoogleDriveWebControllerTests
         };
 
         // Act
-        var result = await controller.SpreadsheetTransactions("file-123", "Monthly budget 2026.xlsx");
+        IActionResult result = await controller.SpreadsheetTransactions("file-123", "Monthly budget 2026.xlsx");
 
         // Assert
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var transactions = Assert.IsType<SpreadsheetTransactionsDto>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        SpreadsheetTransactionsDto transactions = Assert.IsType<SpreadsheetTransactionsDto>(jsonResult.Value);
         Assert.Equal("file-123", transactions.FileId);
         Assert.NotEmpty(transactions.Transactions);
     }
@@ -240,7 +240,7 @@ public class GoogleDriveWebControllerTests
         };
 
         // Act
-        var result = await controller.SpreadsheetTransactions("");
+        IActionResult result = await controller.SpreadsheetTransactions("");
 
         // Assert
         Assert.IsType<BadRequestObjectResult>(result);
@@ -310,7 +310,7 @@ public class FakeTempDataProvider : ITempDataProvider
 
     public void SaveTempData(HttpContext context, IDictionary<string, object?> values)
     {
-        foreach (var (key, val) in values)
+        foreach ((string? key, object? val) in values)
         {
             _data[key] = val;
         }

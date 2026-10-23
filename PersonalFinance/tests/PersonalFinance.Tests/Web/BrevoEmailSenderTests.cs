@@ -43,7 +43,7 @@ public class BrevoEmailSenderTests
     [Fact]
     public async Task SendEmailAsync_WhenApiKeyMissing_DoesNotThrowAndSkips()
     {
-        var options = Options.Create(new BrevoOptions
+        IOptions<BrevoOptions> options = Options.Create(new BrevoOptions
         {
             ApiKey = null,
             SenderEmail = "no-reply@personalfinance.local"
@@ -58,7 +58,7 @@ public class BrevoEmailSenderTests
     [Fact]
     public async Task SendEmailAsync_WhenSenderEmailMissing_DoesNotThrowAndSkips()
     {
-        var options = Options.Create(new BrevoOptions
+        IOptions<BrevoOptions> options = Options.Create(new BrevoOptions
         {
             ApiKey = "xkeysib-test-api-key",
             SenderEmail = null
@@ -72,7 +72,7 @@ public class BrevoEmailSenderTests
     [Fact]
     public async Task SendEmailAsync_WhenApiKeyConfigured_SendsViaBrevoRestApi()
     {
-        var options = Options.Create(new BrevoOptions
+        IOptions<BrevoOptions> options = Options.Create(new BrevoOptions
         {
             ApiKey = "xkeysib-test-api-key",
             SenderEmail = "no-reply@personalfinance.local",
@@ -93,7 +93,7 @@ public class BrevoEmailSenderTests
 
         Assert.NotNull(handler.LastRequestBody);
         using var jsonDoc = JsonDocument.Parse(handler.LastRequestBody);
-        var root = jsonDoc.RootElement;
+        JsonElement root = jsonDoc.RootElement;
         Assert.Equal("PersonalFinance", root.GetProperty("sender").GetProperty("name").GetString());
         Assert.Equal("no-reply@personalfinance.local", root.GetProperty("sender").GetProperty("email").GetString());
         Assert.Equal("user@example.com", root.GetProperty("to")[0].GetProperty("email").GetString());
@@ -104,7 +104,7 @@ public class BrevoEmailSenderTests
     [Fact]
     public async Task SendEmailAsync_WhenApiReturnsError_HandlesGracefullyWithoutUncaughtException()
     {
-        var options = Options.Create(new BrevoOptions
+        IOptions<BrevoOptions> options = Options.Create(new BrevoOptions
         {
             ApiKey = "xkeysib-test-api-key",
             SenderEmail = "no-reply@personalfinance.local"
@@ -127,7 +127,7 @@ public class BrevoEmailSenderTests
     [Fact]
     public async Task SendEmailAsync_WhenHttpThrows_HandlesGracefullyWithoutUncaughtException()
     {
-        var options = Options.Create(new BrevoOptions
+        IOptions<BrevoOptions> options = Options.Create(new BrevoOptions
         {
             ApiKey = "xkeysib-test-api-key",
             SenderEmail = "no-reply@personalfinance.local"
@@ -153,7 +153,7 @@ public class BrevoEmailSenderTests
             { "Brevo:SenderName", "PersonalFinance" }
         };
 
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(inMemorySettings)
             .Build();
 
@@ -162,13 +162,13 @@ public class BrevoEmailSenderTests
         services.Configure<BrevoOptions>(configuration.GetSection("Brevo"));
         services.AddHttpClient<IEmailSender, BrevoEmailSender>();
 
-        var provider = services.BuildServiceProvider();
-        var emailSender = provider.GetService<IEmailSender>();
+        ServiceProvider provider = services.BuildServiceProvider();
+        IEmailSender? emailSender = provider.GetService<IEmailSender>();
 
         Assert.NotNull(emailSender);
         Assert.IsType<BrevoEmailSender>(emailSender);
 
-        var options = provider.GetRequiredService<IOptions<BrevoOptions>>().Value;
+        BrevoOptions options = provider.GetRequiredService<IOptions<BrevoOptions>>().Value;
         Assert.Equal("xkeysib-secret-key", options.ApiKey);
         Assert.Equal("bc723b001@smtp-brevo.com", options.SenderEmail);
         Assert.Equal("PersonalFinance", options.SenderName);

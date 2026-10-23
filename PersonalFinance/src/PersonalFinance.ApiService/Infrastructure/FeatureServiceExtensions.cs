@@ -93,10 +93,10 @@ public static class FeatureServiceExtensions
         services.AddScoped<IAiQuotaService, AiQuotaService>();
         services.AddSingleton<IRateLimiterService, RateLimiterService>();
 
-        var openAiApiKey = configuration.GetValue<string>("OpenAI:ApiKey");
+        string? openAiApiKey = configuration.GetValue<string>("OpenAI:ApiKey");
         if (!string.IsNullOrWhiteSpace(openAiApiKey))
         {
-            var openAiModel = configuration.GetValue<string>("OpenAI:Model") ?? "gpt-4o-mini";
+            string openAiModel = configuration.GetValue<string>("OpenAI:Model") ?? "gpt-4o-mini";
             services.AddSingleton<IChatClient>(sp =>
                 new OpenAIClient(openAiApiKey)
                     .GetChatClient(openAiModel)

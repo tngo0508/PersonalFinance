@@ -11,7 +11,7 @@ public class UserIdForwardingHandlerTests
     [Fact]
     public async Task SignedInAccount_IsForwardedWithInternalKey()
     {
-        var sent = await SendAsync(new ClaimsPrincipal(new ClaimsIdentity(
+        HttpRequestMessage sent = await SendAsync(new ClaimsPrincipal(new ClaimsIdentity(
             new[] { new Claim(ClaimTypes.NameIdentifier, "account-1") }, "Cookies")));
 
         Assert.Equal("account-1", sent.Headers.GetValues("X-User-Id").Single());
@@ -21,7 +21,7 @@ public class UserIdForwardingHandlerTests
     [Fact]
     public async Task SignedOutVisitor_IsNotForwardedAsAnAccount()
     {
-        var sent = await SendAsync(new ClaimsPrincipal(new ClaimsIdentity()));
+        HttpRequestMessage sent = await SendAsync(new ClaimsPrincipal(new ClaimsIdentity()));
 
         Assert.False(sent.Headers.Contains("X-User-Id"));
     }
@@ -29,7 +29,7 @@ public class UserIdForwardingHandlerTests
     private static async Task<HttpRequestMessage> SendAsync(ClaimsPrincipal user)
     {
         var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = user } };
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Internal:ApiKey"] = "shared-secret" })
             .Build();
         HttpRequestMessage? captured = null;

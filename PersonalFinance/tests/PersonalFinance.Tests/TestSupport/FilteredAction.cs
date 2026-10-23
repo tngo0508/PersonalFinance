@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Tests;

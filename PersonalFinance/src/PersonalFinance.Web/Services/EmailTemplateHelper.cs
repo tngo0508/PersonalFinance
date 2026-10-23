@@ -7,7 +7,7 @@ public static class EmailTemplateHelper
 {
     public static string BuildConfirmationEmail(string confirmationUrl, string? appName = "PersonalFinance")
     {
-        var safeAppName = WebUtility.HtmlEncode(appName ?? "PersonalFinance");
+        string safeAppName = WebUtility.HtmlEncode(appName ?? "PersonalFinance");
         return BuildActionEmail(safeAppName, confirmationUrl,
             title: $"Confirm your {safeAppName} account",
             heading: "Confirm your email address",
@@ -23,8 +23,8 @@ public static class EmailTemplateHelper
     public static string BuildDeletionScheduledEmail(string cancelUrl, DateTime purgeAfterUtc,
         string? appName = "PersonalFinance")
     {
-        var safeAppName = WebUtility.HtmlEncode(appName ?? "PersonalFinance");
-        var purgeDate = WebUtility.HtmlEncode(purgeAfterUtc.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture));
+        string safeAppName = WebUtility.HtmlEncode(appName ?? "PersonalFinance");
+        string purgeDate = WebUtility.HtmlEncode(purgeAfterUtc.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture));
         return BuildActionEmail(safeAppName, cancelUrl,
             title: $"Your {safeAppName} account will be deleted",
             heading: "Your account is scheduled for deletion",
@@ -40,7 +40,7 @@ public static class EmailTemplateHelper
     private static string BuildActionEmail(string safeAppName, string url, string title, string heading,
         string introHtml, string buttonText, string footerHtml)
     {
-        var safeUrl = WebUtility.HtmlEncode(url);
+        string safeUrl = WebUtility.HtmlEncode(url);
 
         return $@"<!DOCTYPE html>
 <html lang=""en"">

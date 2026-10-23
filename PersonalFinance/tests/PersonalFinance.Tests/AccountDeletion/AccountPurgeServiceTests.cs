@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -35,7 +36,7 @@ public class AccountPurgeServiceTests
     /// <summary>Seeds both Accounts and makes a Deletion Request for <see cref="UserId"/>; returns its cancel token.</summary>
     private async Task<string> SeedPendingRequestAsync()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         UserDataSeed.OneOfEverything(db, UserId, "leaving");
         UserDataSeed.OneOfEverything(db, OtherUserId, "staying");
         db.Roles.Add(new IdentityRole { Id = "role-user", Name = AppRoles.User });
@@ -51,16 +52,16 @@ public class AccountPurgeServiceTests
         db.SavingsGoals.Add(deletedEarlier);
         await db.SaveChangesAsync();
 
-        foreach (var (owner, file) in new[] { (UserId, "leaving.xlsx"), (OtherUserId, "staying.xlsx") })
+        foreach ((string? owner, string? file) in new[] { (UserId, "leaving.xlsx"), (OtherUserId, "staying.xlsx") })
         {
-            var connectionId = await db.GoogleDriveConnections
+            int connectionId = await db.GoogleDriveConnections
                 .Where(c => c.UserId == owner).Select(c => c.Id).SingleAsync();
             db.GoogleDriveCachedFiles.Add(new GoogleDriveCachedFile { ConnectionId = connectionId, DriveFileId = file, Name = file });
         }
 
         await db.SaveChangesAsync();
 
-        var result = await new AccountDeletionService(db, new FixedTimeProvider(RequestedAt)).RequestAsync(UserId);
+        DeletionRequestResult result = await new AccountDeletionService(db, new FixedTimeProvider(RequestedAt)).RequestAsync(UserId);
         Assert.Equal(DeletionRequestOutcome.Accepted, result.Outcome);
         return result.CancelToken!;
     }
@@ -69,14 +70,14 @@ public class AccountPurgeServiceTests
     public async Task Purge_ErasesEveryTraceOfTheAccount_AndLeavesOtherAccountsAlone()
     {
         await SeedPendingRequestAsync();
-        await using var db = CreateContext();
-        var otherRowsBefore = await CountRowsAsync(db, OtherUserId);
+        await using AppDbContext db = CreateContext();
+        int otherRowsBefore = await CountRowsAsync(db, OtherUserId);
 
-        var summary = await CreatePurge(db, GraceEnds).PurgeDueAsync();
+        AccountPurgeSummary summary = await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
         Assert.Equal(new AccountPurgeSummary(1, 0, 0), summary);
-        await using var check = CreateContext();
-        foreach (var type in UserOwnedTypes(check))
+        await using AppDbContext check = CreateContext();
+        foreach (Type type in UserOwnedTypes(check))
         {
             Assert.Empty(await RowsAsync(check, type, UserId));
         }
@@ -95,15 +96,15 @@ public class AccountPurgeServiceTests
     public async Task Purge_KeepsTheAccountsStoriesAndComments_AsDeletedUser_AndShowsThemAgain()
     {
         await SeedPendingRequestAsync();
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
-        await using var check = CreateContext();
-        var story = await check.CommunityStories.SingleAsync(s => s.Title == "leaving story");
+        await using AppDbContext check = CreateContext();
+        CommunityStory story = await check.CommunityStories.SingleAsync(s => s.Title == "leaving story");
         Assert.Equal(DeletedAccount.UserId, story.UserId);
         Assert.Equal(DeletedAccount.DisplayName, story.AuthorName);
-        var comment = await check.CommunityComments.SingleAsync(c => c.Text == "leaving comment");
+        CommunityComment comment = await check.CommunityComments.SingleAsync(c => c.Text == "leaving comment");
         Assert.Equal(DeletedAccount.UserId, comment.UserId);
         Assert.Equal(DeletedAccount.DisplayName, comment.AuthorName);
     }
@@ -112,12 +113,12 @@ public class AccountPurgeServiceTests
     public async Task Purge_KeepsOnlyARecordOfWhen_UnderThePlaceholderId()
     {
         await SeedPendingRequestAsync();
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
-        await using var check = CreateContext();
-        var request = await check.DeletionRequests.SingleAsync();
+        await using AppDbContext check = CreateContext();
+        DeletionRequest request = await check.DeletionRequests.SingleAsync();
         Assert.Equal(DeletionRequestStatus.Purged, request.Status);
         Assert.Equal(DeletedAccount.UserId, request.UserId);
         Assert.Equal(RequestedAt.UtcDateTime, request.RequestedAt);
@@ -128,12 +129,12 @@ public class AccountPurgeServiceTests
     public async Task Purge_BeforeTheGracePeriodEnds_ChangesNothing()
     {
         await SeedPendingRequestAsync();
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var summary = await CreatePurge(db, GraceEnds.AddSeconds(-1)).PurgeDueAsync();
+        AccountPurgeSummary summary = await CreatePurge(db, GraceEnds.AddSeconds(-1)).PurgeDueAsync();
 
         Assert.Equal(new AccountPurgeSummary(0, 0, 0), summary);
-        await using var check = CreateContext();
+        await using AppDbContext check = CreateContext();
         Assert.True(await check.Users.AnyAsync(u => u.Id == UserId));
         Assert.Equal(DeletionRequestStatus.Pending, (await check.DeletionRequests.SingleAsync()).Status);
     }
@@ -141,18 +142,18 @@ public class AccountPurgeServiceTests
     [Fact]
     public async Task Purge_OfACancelledRequest_ChangesNothing()
     {
-        var token = await SeedPendingRequestAsync();
-        await using (var cancel = CreateContext())
+        string token = await SeedPendingRequestAsync();
+        await using (AppDbContext cancel = CreateContext())
         {
             Assert.True(await new AccountDeletionService(cancel, new FixedTimeProvider(RequestedAt.AddDays(1)))
                 .CancelAsync(token));
         }
 
-        await using var db = CreateContext();
-        var summary = await CreatePurge(db, GraceEnds.AddDays(5)).PurgeDueAsync();
+        await using AppDbContext db = CreateContext();
+        AccountPurgeSummary summary = await CreatePurge(db, GraceEnds.AddDays(5)).PurgeDueAsync();
 
         Assert.Equal(new AccountPurgeSummary(0, 0, 0), summary);
-        await using var check = CreateContext();
+        await using AppDbContext check = CreateContext();
         Assert.True(await check.Users.AnyAsync(u => u.Id == UserId));
         Assert.True(await check.SavingsGoals.AnyAsync(g => g.UserId == UserId));
     }
@@ -161,13 +162,13 @@ public class AccountPurgeServiceTests
     public async Task Purge_RunTwice_IsSafe()
     {
         await SeedPendingRequestAsync();
-        await using (var first = CreateContext())
+        await using (AppDbContext first = CreateContext())
         {
             await CreatePurge(first, GraceEnds).PurgeDueAsync();
         }
 
-        await using var second = CreateContext();
-        var summary = await CreatePurge(second, GraceEnds.AddDays(1)).PurgeDueAsync();
+        await using AppDbContext second = CreateContext();
+        AccountPurgeSummary summary = await CreatePurge(second, GraceEnds.AddDays(1)).PurgeDueAsync();
 
         Assert.Equal(new AccountPurgeSummary(0, 0, 0), summary);
     }
@@ -175,19 +176,19 @@ public class AccountPurgeServiceTests
     [Fact]
     public async Task Purge_CancelledWhileRunning_IsSkipped_AndErasesNothing()
     {
-        var token = await SeedPendingRequestAsync();
+        string token = await SeedPendingRequestAsync();
         var cancelBeforeSave = new BeforeSaveInterceptor(async () =>
         {
-            await using var cancel = CreateContext();
+            await using AppDbContext cancel = CreateContext();
             Assert.True(await new AccountDeletionService(cancel, new FixedTimeProvider(GraceEnds.AddSeconds(-1)))
                 .CancelAsync(token));
         });
-        await using var db = CreateContext(cancelBeforeSave);
+        await using AppDbContext db = CreateContext(cancelBeforeSave);
 
-        var summary = await CreatePurge(db, GraceEnds).PurgeDueAsync();
+        AccountPurgeSummary summary = await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
         Assert.Equal(new AccountPurgeSummary(0, 1, 0), summary);
-        await using var check = CreateContext();
+        await using AppDbContext check = CreateContext();
         Assert.True(await check.Users.AnyAsync(u => u.Id == UserId));
         Assert.True(await check.SavingsGoals.AnyAsync(g => g.UserId == UserId && g.Name == "leaving goal"));
         Assert.Equal(DeletionRequestStatus.Cancelled, (await check.DeletionRequests.SingleAsync()).Status);
@@ -196,7 +197,7 @@ public class AccountPurgeServiceTests
     [Fact]
     public async Task Purge_TakesBackOnlyTheLikesStillCounted()
     {
-        await using (var seed = CreateContext())
+        await using (AppDbContext seed = CreateContext())
         {
             seed.Users.Add(new IdentityUser { Id = UserId });
             var liveLike = new CommunityStory { UserId = OtherUserId, AuthorName = "a", Title = "live", Likes = 5 };
@@ -210,10 +211,10 @@ public class AccountPurgeServiceTests
             await new AccountDeletionService(seed, new FixedTimeProvider(RequestedAt)).RequestAsync(UserId);
         }
 
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
-        await using var check = CreateContext();
+        await using AppDbContext check = CreateContext();
         Assert.Equal(4, (await check.CommunityStories.SingleAsync(s => s.Title == "live")).Likes);
         Assert.Equal(5, (await check.CommunityStories.SingleAsync(s => s.Title == "unliked")).Likes);
         Assert.Empty(check.CommunityStoryLikes.IgnoreQueryFilters());
@@ -222,7 +223,7 @@ public class AccountPurgeServiceTests
     [Fact]
     public async Task Purge_HardDeletesStoriesAndCommentsTheAccountDeletedItself_WithOtherPeoplesLikes()
     {
-        await using (var seed = CreateContext())
+        await using (AppDbContext seed = CreateContext())
         {
             seed.Users.Add(new IdentityUser { Id = UserId });
             var deletedStory = new CommunityStory { UserId = UserId, AuthorName = "me@example.com", Title = "deleted story" };
@@ -235,10 +236,10 @@ public class AccountPurgeServiceTests
             await new AccountDeletionService(seed, new FixedTimeProvider(RequestedAt)).RequestAsync(UserId);
         }
 
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
-        await using var check = CreateContext();
+        await using AppDbContext check = CreateContext();
         Assert.Empty(check.CommunityStories.IgnoreQueryFilters());
         Assert.Empty(check.CommunityComments.IgnoreQueryFilters());
         Assert.Empty(check.CommunityStoryLikes.IgnoreQueryFilters());
@@ -251,15 +252,15 @@ public class AccountPurgeServiceTests
         await SeedPendingRequestAsync();
         var otherRunFirst = new BeforeSaveInterceptor(async () =>
         {
-            await using var other = CreateContext();
+            await using AppDbContext other = CreateContext();
             Assert.Equal(new AccountPurgeSummary(1, 0, 0), await CreatePurge(other, GraceEnds).PurgeDueAsync());
         });
-        await using var db = CreateContext(otherRunFirst);
+        await using AppDbContext db = CreateContext(otherRunFirst);
 
-        var summary = await CreatePurge(db, GraceEnds).PurgeDueAsync();
+        AccountPurgeSummary summary = await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
         Assert.Equal(new AccountPurgeSummary(0, 1, 0), summary);
-        await using var check = CreateContext();
+        await using AppDbContext check = CreateContext();
         Assert.Equal(DeletionRequestStatus.Purged, (await check.DeletionRequests.SingleAsync()).Status);
         Assert.False(await check.Users.AnyAsync(u => u.Id == UserId));
     }
@@ -267,7 +268,7 @@ public class AccountPurgeServiceTests
     [Fact]
     public void EveryTableWithAUserId_IsUserOwned_OrHandledByThePurge()
     {
-        using var db = CreateContext();
+        using AppDbContext db = CreateContext();
         // Not AuditableEntity, removed or anonymized by name in AccountPurgeService. A new table holding an Account id
         // must either inherit AuditableEntity (covered automatically) or be handled there and added here.
         Type[] handledExplicitly =
@@ -289,11 +290,11 @@ public class AccountPurgeServiceTests
     [Fact]
     public void DeletedEntityTypes_CoverEveryUserOwnedEntity_ExceptStoriesAndComments()
     {
-        using var db = CreateContext();
+        using AppDbContext db = CreateContext();
 
-        var deleted = CreatePurge(db, GraceEnds).DeletedEntityTypes();
+        IReadOnlyList<Type> deleted = CreatePurge(db, GraceEnds).DeletedEntityTypes();
 
-        var expected = UserOwnedTypes(db)
+        IOrderedEnumerable<Type> expected = UserOwnedTypes(db)
             .Where(t => t != typeof(CommunityStory) && t != typeof(CommunityComment))
             .OrderBy(t => t.Name, StringComparer.Ordinal);
         Assert.Equal(expected, deleted);
@@ -303,7 +304,7 @@ public class AccountPurgeServiceTests
     [Fact]
     public void DueRequestsQuery_TranslatesToAzureSql()
     {
-        using var db = AzureSqlTranslation.CreateContext();
+        using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
 
         AzureSqlTranslation.AssertTranslates(CreatePurge(db, GraceEnds).DueRequestsQuery(GraceEnds.UtcDateTime));
     }
@@ -323,8 +324,8 @@ public class AccountPurgeServiceTests
 
     private static async Task<int> CountRowsAsync(AppDbContext db, string userId)
     {
-        var total = 0;
-        foreach (var type in UserOwnedTypes(db))
+        int total = 0;
+        foreach (Type type in UserOwnedTypes(db))
         {
             total += (await RowsAsync(db, type, userId)).Count;
         }
@@ -334,13 +335,13 @@ public class AccountPurgeServiceTests
 
     private static async Task<List<AuditableEntity>> RowsAsync(AppDbContext db, Type entityType, string userId)
     {
-        var set = typeof(DbContext).GetMethod(nameof(DbContext.Set), Type.EmptyTypes)!
+        object set = typeof(DbContext).GetMethod(nameof(DbContext.Set), Type.EmptyTypes)!
             .MakeGenericMethod(entityType).Invoke(db, null)!;
-        var ignore = typeof(EntityFrameworkQueryableExtensions).GetMethods()
+        MethodInfo ignore = typeof(EntityFrameworkQueryableExtensions).GetMethods()
             .Single(m => m.Name == nameof(EntityFrameworkQueryableExtensions.IgnoreQueryFilters)
                          && m.GetParameters().Length == 1)
             .MakeGenericMethod(entityType);
-        var rows = await ((IQueryable)ignore.Invoke(null, [set])!).Cast<AuditableEntity>().ToListAsync();
+        List<AuditableEntity> rows = await ((IQueryable)ignore.Invoke(null, [set])!).Cast<AuditableEntity>().ToListAsync();
         return rows.Where(row => row.UserId == userId).ToList();
     }
 

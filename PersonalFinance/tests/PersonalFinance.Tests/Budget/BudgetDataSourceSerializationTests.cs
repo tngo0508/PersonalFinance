@@ -17,7 +17,7 @@ public class BudgetDataSourceSerializationTests
     public void SetBudgetDataSourceRequest_DeserializesStringAndNumericEnumValues(string json,
         BudgetDataSource expected)
     {
-        var request = JsonSerializer.Deserialize<SetBudgetDataSourceRequest>(json, DefaultApiOptions);
+        SetBudgetDataSourceRequest? request = JsonSerializer.Deserialize<SetBudgetDataSourceRequest>(json, DefaultApiOptions);
 
         Assert.NotNull(request);
         Assert.Equal(expected, request.Source);

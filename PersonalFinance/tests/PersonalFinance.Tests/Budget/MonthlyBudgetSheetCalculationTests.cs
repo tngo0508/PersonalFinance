@@ -17,7 +17,7 @@ public class MonthlyBudgetSheetCalculationTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"BudgetSheet_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -26,10 +26,10 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task GetSheet_SeedsDefaultCategories_WhenUserHasNone()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
 
-        var sheet = await service.GetSheetAsync(UserId, 2026, 10);
+        MonthlyBudgetSheetDto sheet = await service.GetSheetAsync(UserId, 2026, 10);
 
         Assert.NotNull(sheet);
         Assert.Equal(2026, sheet.Year);
@@ -46,12 +46,12 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task GetSheet_ComputesActualAsSumOfTransactions()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
-        var paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
 
         // Set planned amounts
         await service.SetPlannedAsync(UserId, 2026, 10, food.Id, new SetPlannedRequest { Amount = 500m });
@@ -86,15 +86,15 @@ public class MonthlyBudgetSheetCalculationTests
         );
         await db.SaveChangesAsync();
 
-        var sheet = await service.GetSheetAsync(UserId, 2026, 10);
+        MonthlyBudgetSheetDto sheet = await service.GetSheetAsync(UserId, 2026, 10);
 
-        var foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+        SheetRowDto foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
         Assert.Equal(500m, foodRow.Planned);
         Assert.Equal(200m, foodRow.Actual); // 120.50 + 79.50
         Assert.Equal(300m, foodRow.Diff); // 500 - 200 (positive = under budget)
         Assert.False(foodRow.ActualIsOverride);
 
-        var paycheckRow = sheet.Income.Rows.Single(r => r.CategoryId == paycheck.Id);
+        SheetRowDto paycheckRow = sheet.Income.Rows.Single(r => r.CategoryId == paycheck.Id);
         Assert.Equal(4000m, paycheckRow.Planned);
         Assert.Equal(4200m, paycheckRow.Actual);
         Assert.Equal(200m, paycheckRow.Diff); // 4200 - 4000 (positive = earned more)
@@ -104,14 +104,14 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task GetSheet_CalculatesTotalsAndDiffRulesCorrectly()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
-        var utilities = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Utilities");
-        var paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
-        var bonus = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Bonus");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory utilities = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Utilities");
+        BudgetCategory paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
+        BudgetCategory bonus = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Bonus");
 
         await service.SetPlannedAsync(UserId, 2026, 10, food.Id, new SetPlannedRequest { Amount = 300m });
         await service.SetPlannedAsync(UserId, 2026, 10, utilities.Id, new SetPlannedRequest { Amount = 200m });
@@ -156,15 +156,15 @@ public class MonthlyBudgetSheetCalculationTests
         });
         await db.SaveChangesAsync();
 
-        var sheet = await service.GetSheetAsync(UserId, 2026, 10);
+        MonthlyBudgetSheetDto sheet = await service.GetSheetAsync(UserId, 2026, 10);
 
         // Check individual expense row Diffs
-        var foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+        SheetRowDto foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
         Assert.Equal(300m, foodRow.Planned);
         Assert.Equal(350m, foodRow.Actual);
         Assert.Equal(-50m, foodRow.Diff); // 300 - 350 = -50 (negative: over budget)
 
-        var utilitiesRow = sheet.Expenses.Rows.Single(r => r.CategoryId == utilities.Id);
+        SheetRowDto utilitiesRow = sheet.Expenses.Rows.Single(r => r.CategoryId == utilities.Id);
         Assert.Equal(200m, utilitiesRow.Planned);
         Assert.Equal(150m, utilitiesRow.Actual);
         Assert.Equal(50m, utilitiesRow.Diff); // 200 - 150 = +50 (positive: under budget)
@@ -175,12 +175,12 @@ public class MonthlyBudgetSheetCalculationTests
         Assert.Equal(0m, sheet.Expenses.TotalDiff);
 
         // Check individual income row Diffs
-        var paycheckRow = sheet.Income.Rows.Single(r => r.CategoryId == paycheck.Id);
+        SheetRowDto paycheckRow = sheet.Income.Rows.Single(r => r.CategoryId == paycheck.Id);
         Assert.Equal(3000m, paycheckRow.Planned);
         Assert.Equal(3200m, paycheckRow.Actual);
         Assert.Equal(200m, paycheckRow.Diff); // 3200 - 3000 = +200 (positive: earned more)
 
-        var bonusRow = sheet.Income.Rows.Single(r => r.CategoryId == bonus.Id);
+        SheetRowDto bonusRow = sheet.Income.Rows.Single(r => r.CategoryId == bonus.Id);
         Assert.Equal(1000m, bonusRow.Planned);
         Assert.Equal(600m, bonusRow.Actual);
         Assert.Equal(-400m, bonusRow.Diff); // 600 - 1000 = -400 (negative: earned less)
@@ -194,11 +194,11 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task ActualOverride_ReplacesTransactionSum_AndCanBeReverted()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
         await service.SetPlannedAsync(UserId, 2026, 10, food.Id, new SetPlannedRequest { Amount = 400m });
 
         // Transaction sum is 100
@@ -213,18 +213,18 @@ public class MonthlyBudgetSheetCalculationTests
         await db.SaveChangesAsync();
 
         // 1. Set manual override to 250
-        var sheetWithOverride = await service.SetActualOverrideAsync(UserId, 2026, 10, food.Id,
+        MonthlyBudgetSheetDto sheetWithOverride = await service.SetActualOverrideAsync(UserId, 2026, 10, food.Id,
             new SetActualOverrideRequest { Amount = 250m });
-        var foodRowOverride = sheetWithOverride.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+        SheetRowDto foodRowOverride = sheetWithOverride.Expenses.Rows.Single(r => r.CategoryId == food.Id);
 
         Assert.Equal(250m, foodRowOverride.Actual);
         Assert.True(foodRowOverride.ActualIsOverride);
         Assert.Equal(150m, foodRowOverride.Diff); // 400 - 250
 
         // 2. Revert override (pass null)
-        var sheetReverted = await service.SetActualOverrideAsync(UserId, 2026, 10, food.Id,
+        MonthlyBudgetSheetDto sheetReverted = await service.SetActualOverrideAsync(UserId, 2026, 10, food.Id,
             new SetActualOverrideRequest { Amount = null });
-        var foodRowReverted = sheetReverted.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+        SheetRowDto foodRowReverted = sheetReverted.Expenses.Rows.Single(r => r.CategoryId == food.Id);
 
         Assert.Equal(100m, foodRowReverted.Actual);
         Assert.False(foodRowReverted.ActualIsOverride);
@@ -234,11 +234,11 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task ActualOverride_ZeroOverride_SetsActualToZeroUnlikeNoOverride()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
         await service.SetPlannedAsync(UserId, 2026, 10, food.Id, new SetPlannedRequest { Amount = 200m });
 
         // Transactions totaling 150
@@ -253,10 +253,10 @@ public class MonthlyBudgetSheetCalculationTests
         await db.SaveChangesAsync();
 
         // Explicit override of 0.00
-        var sheetWithZero =
+        MonthlyBudgetSheetDto sheetWithZero =
             await service.SetActualOverrideAsync(UserId, 2026, 10, food.Id,
                 new SetActualOverrideRequest { Amount = 0m });
-        var foodRowZero = sheetWithZero.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+        SheetRowDto foodRowZero = sheetWithZero.Expenses.Rows.Single(r => r.CategoryId == food.Id);
 
         Assert.Equal(0m, foodRowZero.Actual);
         Assert.True(foodRowZero.ActualIsOverride);
@@ -266,12 +266,12 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task ArchivedCategory_AppearsInMonthsWithData_AndIsHiddenFromEmptyMonths()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         // Add custom category and record data in October 2026
-        var customCat = await service.CreateCategoryAsync(UserId,
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId,
             new SaveCategoryRequest { Name = "Old Subscription", Kind = BudgetCategoryKind.Expense, SortOrder = 50 });
         await service.SetPlannedAsync(UserId, 2026, 10, customCat.Id, new SetPlannedRequest { Amount = 50m });
 
@@ -279,27 +279,27 @@ public class MonthlyBudgetSheetCalculationTests
         await service.DeleteCategoryAsync(UserId, customCat.Id);
 
         // October 2026 has planned amount for Old Subscription -> MUST appear with IsArchived == true
-        var octSheet = await service.GetSheetAsync(UserId, 2026, 10);
-        var octRow = octSheet.Expenses.Rows.FirstOrDefault(r => r.CategoryId == customCat.Id);
+        MonthlyBudgetSheetDto octSheet = await service.GetSheetAsync(UserId, 2026, 10);
+        SheetRowDto? octRow = octSheet.Expenses.Rows.FirstOrDefault(r => r.CategoryId == customCat.Id);
         Assert.NotNull(octRow);
         Assert.Equal("Old Subscription", octRow.Name);
         Assert.True(octRow.IsArchived);
         Assert.Equal(50m, octRow.Planned);
 
         // November 2026 has no data for Old Subscription -> MUST NOT appear
-        var novSheet = await service.GetSheetAsync(UserId, 2026, 11);
-        var novRow = novSheet.Expenses.Rows.FirstOrDefault(r => r.CategoryId == customCat.Id);
+        MonthlyBudgetSheetDto novSheet = await service.GetSheetAsync(UserId, 2026, 11);
+        SheetRowDto? novRow = novSheet.Expenses.Rows.FirstOrDefault(r => r.CategoryId == customCat.Id);
         Assert.Null(novRow);
     }
 
     [Fact]
     public async Task ArchivedCategory_AppearsWhenItHasTransactionsOnly_EvenWithoutPlanned()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var customCat = await service.CreateCategoryAsync(UserId,
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId,
             new SaveCategoryRequest { Name = "Archived Gym", Kind = BudgetCategoryKind.Expense, SortOrder = 50 });
 
         // Add transaction before archiving
@@ -315,8 +315,8 @@ public class MonthlyBudgetSheetCalculationTests
         await service.DeleteCategoryAsync(UserId, customCat.Id);
 
         // Sheet in October should display Archived Gym because of the transaction
-        var octSheet = await service.GetSheetAsync(UserId, 2026, 10);
-        var gymRow = octSheet.Expenses.Rows.FirstOrDefault(r => r.CategoryId == customCat.Id);
+        MonthlyBudgetSheetDto octSheet = await service.GetSheetAsync(UserId, 2026, 10);
+        SheetRowDto? gymRow = octSheet.Expenses.Rows.FirstOrDefault(r => r.CategoryId == customCat.Id);
 
         Assert.NotNull(gymRow);
         Assert.Equal("Archived Gym", gymRow.Name);
@@ -328,13 +328,13 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task UserIsolation_OtherUsersDataDoesNotAffectSheet()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
         await service.EnsureDefaultCategoriesAsync(OtherUserId);
 
-        var myFood = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
-        var otherFood = await db.BudgetCategories.FirstAsync(c => c.UserId == OtherUserId && c.Name == "Food");
+        BudgetCategory myFood = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory otherFood = await db.BudgetCategories.FirstAsync(c => c.UserId == OtherUserId && c.Name == "Food");
 
         await service.SetPlannedAsync(UserId, 2026, 10, myFood.Id, new SetPlannedRequest { Amount = 300m });
         await service.SetPlannedAsync(OtherUserId, 2026, 10, otherFood.Id, new SetPlannedRequest { Amount = 1000m });
@@ -349,8 +349,8 @@ public class MonthlyBudgetSheetCalculationTests
         });
         await db.SaveChangesAsync();
 
-        var mySheet = await service.GetSheetAsync(UserId, 2026, 10);
-        var myFoodRow = mySheet.Expenses.Rows.Single(r => r.CategoryId == myFood.Id);
+        MonthlyBudgetSheetDto mySheet = await service.GetSheetAsync(UserId, 2026, 10);
+        SheetRowDto myFoodRow = mySheet.Expenses.Rows.Single(r => r.CategoryId == myFood.Id);
 
         Assert.Equal(300m, myFoodRow.Planned);
         Assert.Equal(0m, myFoodRow.Actual);
@@ -360,12 +360,12 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task SetPlanned_And_SetActualOverride_WithOtherUserCategory_ThrowsKeyNotFoundException()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
         await service.EnsureDefaultCategoriesAsync(OtherUserId);
 
-        var otherFood = await db.BudgetCategories.FirstAsync(c => c.UserId == OtherUserId && c.Name == "Food");
+        BudgetCategory otherFood = await db.BudgetCategories.FirstAsync(c => c.UserId == OtherUserId && c.Name == "Food");
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             service.SetPlannedAsync(UserId, 2026, 10, otherFood.Id, new SetPlannedRequest { Amount = 100m }));
@@ -378,11 +378,11 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task SetPlanned_OnArchivedCategory_RejectsInFreshMonth_AllowsInHistoricalMonthWithData()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Archived Streaming",
             Kind = BudgetCategoryKind.Expense,
@@ -404,16 +404,16 @@ public class MonthlyBudgetSheetCalculationTests
                 new SetActualOverrideRequest { Amount = 25m }));
 
         // A rejected edit must not create a December plan (new-month prompt must remain available)
-        var decSheet = await service.GetSheetAsync(UserId, 2026, 12);
+        MonthlyBudgetSheetDto decSheet = await service.GetSheetAsync(UserId, 2026, 12);
         Assert.False(decSheet.IsInitialized);
         Assert.True(decSheet.CanCopyFromPrevious);
         Assert.Equal(0,
             await db.MonthlyBudgetPlans.CountAsync(p => p.UserId == UserId && p.Year == 2026 && p.Month == 12));
 
         // 2. Editing in historical month (October 2026) where it already has data -> succeeds and updates history
-        var updatedOct =
+        MonthlyBudgetSheetDto updatedOct =
             await service.SetPlannedAsync(UserId, 2026, 10, customCat.Id, new SetPlannedRequest { Amount = 30m });
-        var row = updatedOct.Expenses.Rows.Single(r => r.CategoryId == customCat.Id);
+        SheetRowDto row = updatedOct.Expenses.Rows.Single(r => r.CategoryId == customCat.Id);
         Assert.Equal(30m, row.Planned);
         Assert.True(row.IsArchived);
     }
@@ -421,19 +421,19 @@ public class MonthlyBudgetSheetCalculationTests
     [Fact]
     public async Task Updates_SetUpdatedAt_OnLinesAndPreference()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
         await service.SetPlannedAsync(UserId, 2026, 10, food.Id, new SetPlannedRequest { Amount = 100m });
-        var line = await db.MonthlyBudgetLines.SingleAsync(l => l.UserId == UserId && l.CategoryId == food.Id);
+        MonthlyBudgetLine line = await db.MonthlyBudgetLines.SingleAsync(l => l.UserId == UserId && l.CategoryId == food.Id);
         Assert.Null(line.UpdatedAt);
 
         await service.SetPlannedAsync(UserId, 2026, 10, food.Id, new SetPlannedRequest { Amount = 150m });
         Assert.NotNull(line.UpdatedAt);
-        var plannedUpdatedAt = line.UpdatedAt;
+        DateTime? plannedUpdatedAt = line.UpdatedAt;
 
         await service.SetActualOverrideAsync(UserId, 2026, 10, food.Id, new SetActualOverrideRequest { Amount = 80m });
         Assert.NotNull(line.UpdatedAt);
@@ -442,7 +442,7 @@ public class MonthlyBudgetSheetCalculationTests
         var sourceService = new BudgetDataSourceService(db);
         await sourceService.SetDataSourcePreferenceAsync(UserId,
             new SetBudgetDataSourceRequest { Source = BudgetDataSource.GoogleSheet });
-        var preference = await db.UserBudgetSourcePreferences.SingleAsync(p => p.UserId == UserId);
+        UserBudgetSourcePreference preference = await db.UserBudgetSourcePreferences.SingleAsync(p => p.UserId == UserId);
         Assert.Null(preference.UpdatedAt);
 
         await sourceService.SetDataSourcePreferenceAsync(UserId,

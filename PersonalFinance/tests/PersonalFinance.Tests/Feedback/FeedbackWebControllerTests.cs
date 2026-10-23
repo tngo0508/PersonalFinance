@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Constants;
@@ -53,7 +54,7 @@ public class FeedbackWebControllerTests
     [Fact]
     public void Send_IsAPostProtectedByAnAntiForgeryToken()
     {
-        var send = typeof(FeedbackController).GetMethod(nameof(FeedbackController.Send))!;
+        MethodInfo send = typeof(FeedbackController).GetMethod(nameof(FeedbackController.Send))!;
 
         Assert.NotNull(send.GetCustomAttribute<HttpPostAttribute>());
         Assert.NotNull(send.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
@@ -68,9 +69,9 @@ public class FeedbackWebControllerTests
     [InlineData(null, null)]
     public void Index_CapturesOnlyAnAppRelativePageTheAccountCameFrom(string? from, string? expected)
     {
-        var result = CreateController(new FakeFeedbackApi()).Index(from);
+        IActionResult result = CreateController(new FakeFeedbackApi()).Index(from);
 
-        var model = Assert.IsType<FeedbackViewModel>(Assert.IsType<ViewResult>(result).Model);
+        FeedbackViewModel model = Assert.IsType<FeedbackViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Equal(expected, model.PageUrl);
     }
 
@@ -78,11 +79,11 @@ public class FeedbackWebControllerTests
     public async Task Send_ForwardsTheFeedback_ThenRedirectsWithAConfirmation()
     {
         var api = new FakeFeedbackApi();
-        var controller = CreateController(api);
+        FeedbackController controller = CreateController(api);
 
-        var result = await controller.Send(ValidModel());
+        IActionResult result = await controller.Send(ValidModel());
 
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal(nameof(FeedbackController.Index), redirect.ActionName);
         Assert.NotNull(api.Submitted);
         Assert.Equal(FeedbackCategory.Bug, api.Submitted!.Category);
@@ -95,13 +96,13 @@ public class FeedbackWebControllerTests
     public async Task Send_WhenTheFormIsInvalid_KeepsTheInputAndDoesNotCallTheApi()
     {
         var api = new FakeFeedbackApi();
-        var controller = CreateController(api);
+        FeedbackController controller = CreateController(api);
         controller.ModelState.AddModelError(nameof(FeedbackViewModel.Message), "Message is required.");
-        var model = ValidModel();
+        FeedbackViewModel model = ValidModel();
 
-        var result = await controller.Send(model);
+        IActionResult result = await controller.Send(model);
 
-        var view = Assert.IsType<ViewResult>(result);
+        ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.Equal(nameof(FeedbackController.Index), view.ViewName);
         Assert.Same(model, view.Model);
         Assert.Null(api.Submitted);
@@ -110,16 +111,16 @@ public class FeedbackWebControllerTests
     [Fact]
     public async Task Send_WhenTheApiRejectsTheRequest_ShowsItsMessageAndKeepsTheInput()
     {
-        var failure = await CreateApiExceptionAsync(HttpStatusCode.BadRequest,
+        ApiException failure = await CreateApiExceptionAsync(HttpStatusCode.BadRequest,
             """{"errors":["Message must be 2,000 characters or fewer."]}""");
-        var controller = CreateController(new FakeFeedbackApi { Failure = failure });
-        var model = ValidModel();
+        FeedbackController controller = CreateController(new FakeFeedbackApi { Failure = failure });
+        FeedbackViewModel model = ValidModel();
 
-        var result = await controller.Send(model);
+        IActionResult result = await controller.Send(model);
 
-        var view = Assert.IsType<ViewResult>(result);
+        ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.Same(model, view.Model);
-        var error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
+        ModelError error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
         Assert.Equal("Message must be 2,000 characters or fewer.", error.ErrorMessage);
     }
 
@@ -128,16 +129,16 @@ public class FeedbackWebControllerTests
     [InlineData("""{"error":"You've sent a lot of feedback recently. Please try again later."}""")]
     public async Task Send_WhenRateLimited_ShowsATryAgainLaterMessageAndKeepsTheInput(string content)
     {
-        var failure = await CreateApiExceptionAsync(HttpStatusCode.TooManyRequests, content);
-        var controller = CreateController(new FakeFeedbackApi { Failure = failure });
-        var model = ValidModel();
+        ApiException failure = await CreateApiExceptionAsync(HttpStatusCode.TooManyRequests, content);
+        FeedbackController controller = CreateController(new FakeFeedbackApi { Failure = failure });
+        FeedbackViewModel model = ValidModel();
 
-        var result = await controller.Send(model);
+        IActionResult result = await controller.Send(model);
 
-        var view = Assert.IsType<ViewResult>(result);
+        ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.Equal(nameof(FeedbackController.Index), view.ViewName);
         Assert.Same(model, view.Model);
-        var error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
+        ModelError error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
         Assert.Equal(FeedbackMessages.RateLimited, error.ErrorMessage);
         Assert.Null(controller.TempData[FeedbackController.SentKey]);
     }
@@ -145,15 +146,15 @@ public class FeedbackWebControllerTests
     [Fact]
     public async Task Send_WhenTheApiIsUnreachable_ShowsAFriendlyMessageWithoutExceptionDetails()
     {
-        var controller = CreateController(new FakeFeedbackApi
+        FeedbackController controller = CreateController(new FakeFeedbackApi
         {
             Failure = new HttpRequestException("Connection refused (apiservice:8443)")
         });
 
-        var result = await controller.Send(ValidModel());
+        IActionResult result = await controller.Send(ValidModel());
 
         Assert.IsType<ViewResult>(result);
-        var error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
+        ModelError error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
         Assert.DoesNotContain("Connection refused", error.ErrorMessage);
         Assert.False(string.IsNullOrWhiteSpace(error.ErrorMessage));
     }
@@ -161,7 +162,7 @@ public class FeedbackWebControllerTests
     [Fact]
     public async Task Send_WhenAnUnexpectedErrorOccurs_DoesNotHideIt()
     {
-        var controller = CreateController(new FakeFeedbackApi { Failure = new InvalidOperationException("bug") });
+        FeedbackController controller = CreateController(new FakeFeedbackApi { Failure = new InvalidOperationException("bug") });
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => controller.Send(ValidModel()));
     }
@@ -171,7 +172,7 @@ public class FeedbackWebControllerTests
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        var controller = CreateController(new FakeFeedbackApi { Failure = new TaskCanceledException() });
+        FeedbackController controller = CreateController(new FakeFeedbackApi { Failure = new TaskCanceledException() });
         controller.HttpContext.RequestAborted = cts.Token;
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Send(ValidModel()));
@@ -183,7 +184,7 @@ public class FeedbackWebControllerTests
     [InlineData("\t\r\n ")]
     public void ViewModel_RejectsAnEmptyMessage(string message)
     {
-        var model = ValidModel();
+        FeedbackViewModel model = ValidModel();
         model.Message = message;
 
         Assert.Contains(Validate(model), r => r.MemberNames.Contains(nameof(FeedbackViewModel.Message)));
@@ -192,10 +193,10 @@ public class FeedbackWebControllerTests
     [Fact]
     public void ViewModel_RejectsAMessageOver2000Characters()
     {
-        var model = ValidModel();
+        FeedbackViewModel model = ValidModel();
         model.Message = new string('a', 2001);
 
-        var error = Assert.Single(Validate(model), r => r.MemberNames.Contains(nameof(FeedbackViewModel.Message)));
+        ValidationResult error = Assert.Single(Validate(model), r => r.MemberNames.Contains(nameof(FeedbackViewModel.Message)));
         Assert.Equal("Message must be 2,000 characters or fewer.", error.ErrorMessage);
     }
 

@@ -20,7 +20,7 @@ public static class ManageNavPages
     /// </summary>
     public static bool IsActive(ViewContext viewContext, string page)
     {
-        var activePage = viewContext.ViewData["ActivePage"] as string
+        string? activePage = viewContext.ViewData["ActivePage"] as string
                          ?? Path.GetFileNameWithoutExtension(viewContext.ActionDescriptor.DisplayName);
         return string.Equals(activePage, page, StringComparison.OrdinalIgnoreCase);
     }

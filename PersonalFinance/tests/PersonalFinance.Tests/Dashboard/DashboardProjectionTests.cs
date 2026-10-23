@@ -17,7 +17,7 @@ public class DashboardProjectionTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"DashboardProjection_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -27,7 +27,7 @@ public class DashboardProjectionTests
     {
         db.NetWorthParameters.Add(row);
         await db.SaveChangesAsync();
-        var summary =
+        DashboardSummaryDto summary =
             await new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(UserId);
         return summary.NetWorth;
     }
@@ -67,15 +67,15 @@ public class DashboardProjectionTests
     [Fact]
     public async Task ProjectionPoints_MatchTheNetWorthPageProjectionForTheSameParameters()
     {
-        await using var db = CreateContext();
-        var parameters = Parameters();
-        var expected = NetWorthPageProjection(parameters);
+        await using AppDbContext db = CreateContext();
+        NetWorthParameters parameters = Parameters();
+        NetWorthProjectionDto expected = NetWorthPageProjection(parameters);
 
-        var netWorth = await GetNetWorthAsync(db, parameters);
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, parameters);
 
-        var points = netWorth!.ProjectionPoints;
+        List<ProjectionPointDto> points = netWorth!.ProjectionPoints;
         Assert.Equal(expected.Base.Years.Count, points.Count);
-        for (var i = 0; i < points.Count; i++)
+        for (int i = 0; i < points.Count; i++)
         {
             Assert.Equal(expected.Base.Years[i].Year, points[i].Year);
             Assert.Equal(expected.Base.Years[i].Age, points[i].Age);
@@ -88,11 +88,11 @@ public class DashboardProjectionTests
     [Fact]
     public async Task ProjectionPoints_RunFromCurrentAgeThroughRetirementAge()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(currentAge: 35, retirementAge: 60));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(currentAge: 35, retirementAge: 60));
 
-        var points = netWorth!.ProjectionPoints;
+        List<ProjectionPointDto> points = netWorth!.ProjectionPoints;
         Assert.Equal(26, points.Count);
         Assert.Equal(35, points[0].Age);
         Assert.Equal(60, points[^1].Age);
@@ -102,12 +102,12 @@ public class DashboardProjectionTests
     [Fact]
     public async Task ProjectionPoints_FirstYear_AppliesSavingsAndReturn()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 100_000m, savings: 20_000m, baseRoi: 7m,
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 100_000m, savings: 20_000m, baseRoi: 7m,
             conservativeRoi: 4m, aggressiveRoi: 10m, aggressiveSavings: 30_000m));
 
-        var first = netWorth!.ProjectionPoints[0];
+        ProjectionPointDto first = netWorth!.ProjectionPoints[0];
         Assert.Equal(127_000m, first.Base);
         Assert.Equal(124_000m, first.Conservative);
         Assert.Equal(140_000m, first.Aggressive);
@@ -119,9 +119,9 @@ public class DashboardProjectionTests
     public async Task ProjectionPoints_WhenRetirementAgeIsAtOrBelowCurrentAge_AreEmpty(int currentAge,
         int retirementAge)
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(currentAge: currentAge, retirementAge: retirementAge));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(currentAge: currentAge, retirementAge: retirementAge));
 
         Assert.Empty(netWorth!.ProjectionPoints);
         Assert.Null(netWorth.FiReachedAge);
@@ -131,12 +131,12 @@ public class DashboardProjectionTests
     [Fact]
     public async Task FiReachedAge_IsTheFirstAgeWhereBaseReachesTheFiTarget()
     {
-        await using var db = CreateContext();
-        var parameters = Parameters(spending: 40_000m);
-        var expected = NetWorthPageProjection(parameters).Base.Years
+        await using AppDbContext db = CreateContext();
+        NetWorthParameters parameters = Parameters(spending: 40_000m);
+        int expected = NetWorthPageProjection(parameters).Base.Years
             .First(y => y.EndingBalance >= 1_000_000m).Age;
 
-        var netWorth = await GetNetWorthAsync(db, parameters);
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, parameters);
 
         Assert.Equal(expected, netWorth!.FiReachedAge);
         Assert.Equal(expected - 35, netWorth.FiYears);
@@ -145,10 +145,10 @@ public class DashboardProjectionTests
     [Fact]
     public async Task FiReachedAge_ZeroReturnAndExactTarget_ReachesOnTheBoundary()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         // FI Target 1,000,000; 0% return; 100,000 start + 100,000/yr → ending balance hits exactly 1,000,000 at age 43.
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 100_000m, savings: 100_000m, spending: 40_000m,
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 100_000m, savings: 100_000m, spending: 40_000m,
             currentAge: 35, retirementAge: 60, baseRoi: 0m));
 
         Assert.Equal(43, netWorth!.FiReachedAge);
@@ -158,9 +158,9 @@ public class DashboardProjectionTests
     [Fact]
     public async Task FiReachedAge_WhenAlreadyAboveTarget_IsCurrentAge()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 2_000_000m, spending: 40_000m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 2_000_000m, spending: 40_000m));
 
         Assert.Equal(35, netWorth!.FiReachedAge);
         Assert.Equal(0, netWorth.FiYears);
@@ -169,9 +169,9 @@ public class DashboardProjectionTests
     [Fact]
     public async Task FiReachedAge_WhenBaseNeverReachesTheTargetBeforeRetirement_IsNull()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 0m, savings: 1_000m, spending: 200_000m,
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 0m, savings: 1_000m, spending: 200_000m,
             retirementAge: 40, baseRoi: 0m));
 
         Assert.NotEmpty(netWorth!.ProjectionPoints);
@@ -182,9 +182,9 @@ public class DashboardProjectionTests
     [Fact]
     public async Task FiReachedAge_WhenFiTargetIsZero_IsNull()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(spending: 0m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(spending: 0m));
 
         Assert.NotEmpty(netWorth!.ProjectionPoints);
         Assert.Null(netWorth.FiReachedAge);

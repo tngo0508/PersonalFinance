@@ -59,12 +59,12 @@ public class AiQuotaService : IAiQuotaService
         {
             return new QuotaCheckResult { Allowed = false, DenialReason = "Please sign in to use the AI assistant." };
         }
-        var now = DateTime.UtcNow;
-        var todayStart = now.Date;
+        DateTime now = DateTime.UtcNow;
+        DateTime todayStart = now.Date;
         var monthStart = new DateTime(now.Year, now.Month, 1);
 
         // Check per-user daily limit
-        var userDailyCount = await _dbContext.AiUsageRecords
+        int userDailyCount = await _dbContext.AiUsageRecords
             .AsNoTracking()
             .Where(r => r.UserId == userId && r.CreatedAt >= todayStart)
             .CountAsync();
@@ -79,7 +79,7 @@ public class AiQuotaService : IAiQuotaService
         }
 
         // Check global monthly budget
-        var monthlyTotalCost = await _dbContext.AiUsageRecords
+        decimal monthlyTotalCost = await _dbContext.AiUsageRecords
             .AsNoTracking()
             .Where(r => r.CreatedAt >= monthStart)
             .SumAsync(r => r.EstimatedCostUsd);
@@ -93,7 +93,7 @@ public class AiQuotaService : IAiQuotaService
             };
         }
 
-        var budgetWarning = monthlyTotalCost >= MonthlyBudgetCeilingUsd * WarningThreshold;
+        bool budgetWarning = monthlyTotalCost >= MonthlyBudgetCeilingUsd * WarningThreshold;
 
         return new QuotaCheckResult
         {
@@ -132,11 +132,11 @@ public class AiQuotaService : IAiQuotaService
         promptTokens = Math.Max(0, promptTokens);
         completionTokens = Math.Max(0, completionTokens);
         cachedPromptTokens = Math.Clamp(cachedPromptTokens, 0, promptTokens);
-        var nonCachedInputTokens = promptTokens - cachedPromptTokens;
+        int nonCachedInputTokens = promptTokens - cachedPromptTokens;
 
-        var inputCost = nonCachedInputTokens * InputTokenPricePerMillion / 1_000_000m;
-        var cachedInputCost = cachedPromptTokens * CachedInputTokenPricePerMillion / 1_000_000m;
-        var outputCost = completionTokens * OutputTokenPricePerMillion / 1_000_000m;
+        decimal inputCost = nonCachedInputTokens * InputTokenPricePerMillion / 1_000_000m;
+        decimal cachedInputCost = cachedPromptTokens * CachedInputTokenPricePerMillion / 1_000_000m;
+        decimal outputCost = completionTokens * OutputTokenPricePerMillion / 1_000_000m;
 
         return inputCost + cachedInputCost + outputCost;
     }

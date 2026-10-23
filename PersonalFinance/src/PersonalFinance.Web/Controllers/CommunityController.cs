@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Community;
-using PersonalFinance.Web.Models;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -36,11 +36,11 @@ public sealed class CommunityController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var response = await _communityApi.GetCommunityAsync(cancellationToken);
-            var model = MapToViewModel(response);
+            CommunityResponseDto response = await _communityApi.GetCommunityAsync(cancellationToken);
+            CommunityViewModel model = MapToViewModel(response);
             return View(model);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -73,8 +73,8 @@ public sealed class CommunityController : Controller
             OptionId = request.OptionId
         };
 
-        var response = await _communityApi.VoteAsync(voteRequest, cancellationToken);
-        var updatedPoll = response.ActivePolls.FirstOrDefault(p => p.Id == request.PollCode);
+        CommunityResponseDto response = await _communityApi.VoteAsync(voteRequest, cancellationToken);
+        CommunityPollDto? updatedPoll = response.ActivePolls.FirstOrDefault(p => p.Id == request.PollCode);
 
         return Json(new
         {
@@ -101,8 +101,8 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = "Comment is too long (max 2000 characters)." });
         }
 
-        var authorName = User.Identity?.Name ?? "Anonymous";
-        var topic = request.Topic ?? "General";
+        string authorName = User.Identity?.Name ?? "Anonymous";
+        string topic = request.Topic ?? "General";
 
         var commentRequest = new CommunityCommentRequestDto
         {
@@ -112,7 +112,7 @@ public sealed class CommunityController : Controller
             StoryId = request.StoryId
         };
 
-        var comment = await _communityApi.AddCommentAsync(commentRequest, authorName, cancellationToken);
+        CommunityCommentDto comment = await _communityApi.AddCommentAsync(commentRequest, authorName, cancellationToken);
 
         return Json(new
         {
@@ -143,7 +143,7 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = "Comment ID is required." });
         }
 
-        var result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, cancellationToken);
+        CommentLikeResult result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, cancellationToken);
 
         return Json(new
         {
@@ -160,7 +160,7 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> GetPollComments([FromQuery] string pollCode, CancellationToken cancellationToken = default)
     {
-        var comments = await _communityApi.GetPollCommentsAsync(pollCode, cancellationToken);
+        List<CommunityCommentDto> comments = await _communityApi.GetPollCommentsAsync(pollCode, cancellationToken);
 
         return Json(new
         {
@@ -184,7 +184,7 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> SubmitStory([FromBody] StoryRequest request, CancellationToken cancellationToken = default)
     {
-        var authorName = User.Identity?.Name ?? "Anonymous";
+        string authorName = User.Identity?.Name ?? "Anonymous";
 
         var storyRequest = new CommunityStoryRequestDto
         {
@@ -194,7 +194,7 @@ public sealed class CommunityController : Controller
             Category = request.Category!
         };
 
-        var story = await _communityApi.SubmitStoryAsync(storyRequest, authorName, cancellationToken);
+        CommunityStoryDto story = await _communityApi.SubmitStoryAsync(storyRequest, authorName, cancellationToken);
 
         return Json(new
         {
@@ -221,7 +221,7 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = "Story ID is required." });
         }
 
-        var result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, cancellationToken);
+        StoryLikeResult result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, cancellationToken);
 
         return Json(new
         {

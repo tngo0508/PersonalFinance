@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.DTOs.NetWorth;
 
 namespace PersonalFinance.Tests.NetWorth;
 
@@ -17,14 +19,14 @@ public class NetWorthParametersServiceTests
             .Options);
         var service = new NetWorthParametersService(db);
         await service.SaveAsync(UserId, NetWorthDefaults.CreateRequest());
-        var firstSaved = (await db.NetWorthParameters.SingleAsync()).UpdatedAtUtc;
+        DateTime firstSaved = (await db.NetWorthParameters.SingleAsync()).UpdatedAtUtc;
 
         await Task.Delay(20);
-        var changed = NetWorthDefaults.CreateRequest();
+        NetWorthProjectionRequestDto changed = NetWorthDefaults.CreateRequest();
         changed.AnnualIncome = 120_000m;
         await service.SaveAsync(UserId, changed);
 
-        var row = await db.NetWorthParameters.AsNoTracking().SingleAsync();
+        NetWorthParameters row = await db.NetWorthParameters.AsNoTracking().SingleAsync();
         Assert.True(row.UpdatedAtUtc > firstSaved);
         Assert.Equal(120_000m, (await service.LoadAsync(UserId))!.AnnualIncome);
     }

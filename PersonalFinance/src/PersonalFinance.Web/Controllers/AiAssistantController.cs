@@ -38,7 +38,7 @@ public class AiAssistantController : ControllerBase
             return BadRequest(new { error = "Message is required." });
         }
 
-        var response = await _aiAssistantApi.SendChatMessageAsync(request);
+        AiChatResponseDto response = await _aiAssistantApi.SendChatMessageAsync(request);
         return Ok(response);
     }
 
@@ -50,7 +50,7 @@ public class AiAssistantController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request?.Title)) return BadRequest(new { error = "Title is required." });
 
-        var response = await _aiAssistantApi.SummarizeArticleAsync(request);
+        NewsArticleSummaryResponseDto response = await _aiAssistantApi.SummarizeArticleAsync(request);
         return Ok(response);
     }
 }

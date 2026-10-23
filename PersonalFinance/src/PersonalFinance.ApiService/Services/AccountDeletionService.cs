@@ -55,9 +55,9 @@ public class AccountDeletionService : IAccountDeletionService
     /// <inheritdoc />
     public async Task<bool> CancelAsync(string token, CancellationToken cancellationToken = default)
     {
-        var tokenHash = HashToken(token);
-        var now = UtcNow();
-        var request = await _db.DeletionRequests.FirstOrDefaultAsync(r =>
+        string tokenHash = HashToken(token);
+        DateTime now = UtcNow();
+        DeletionRequest? request = await _db.DeletionRequests.FirstOrDefaultAsync(r =>
             r.CancelTokenHash == tokenHash
             && r.Status == DeletionRequestStatus.Pending
             && r.PurgeAfter > now, cancellationToken);
@@ -66,12 +66,12 @@ public class AccountDeletionService : IAccountDeletionService
             return false;
         }
 
-        foreach (var type in HiddenEntityTypes())
+        foreach (Type type in HiddenEntityTypes())
         {
             await InvokeAsync(RestoreRowsMethod, type, request.UserId, request.RequestedAt, cancellationToken);
         }
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
+        IdentityUser? user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
         if (user is not null)
         {
             user.LockoutEnd = null;
@@ -107,7 +107,7 @@ public class AccountDeletionService : IAccountDeletionService
 
     private async Task<DeletionRequestResult> RequestCoreAsync(string userId, CancellationToken cancellationToken)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        IdentityUser? user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is null)
         {
             return DeletionRequestResult.Refused(DeletionRequestOutcome.AccountNotFound);
@@ -125,9 +125,9 @@ public class AccountDeletionService : IAccountDeletionService
         }
 
         // Whole milliseconds, so the stamp round-trips exactly through any datetime2 precision.
-        var now = UtcNow();
+        DateTime now = UtcNow();
         var stamp = new DateTime(now.Ticks - now.Ticks % TimeSpan.TicksPerMillisecond, DateTimeKind.Utc);
-        foreach (var type in HiddenEntityTypes())
+        foreach (Type type in HiddenEntityTypes())
         {
             await InvokeAsync(HideRowsMethod, type, userId, stamp, cancellationToken);
         }
@@ -138,8 +138,8 @@ public class AccountDeletionService : IAccountDeletionService
         user.LockoutEnd = DateTimeOffset.MaxValue;
         RotateStamps(user);
 
-        var token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(CancelTokenBytes));
-        var purgeAfter = stamp + GracePeriod;
+        string token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(CancelTokenBytes));
+        DateTime purgeAfter = stamp + GracePeriod;
         _db.DeletionRequests.Add(new DeletionRequest
         {
             UserId = userId,
@@ -177,10 +177,10 @@ public class AccountDeletionService : IAccountDeletionService
     private async Task HideRowsAsync<TEntity>(string userId, DateTime stamp, CancellationToken cancellationToken)
         where TEntity : AuditableEntity
     {
-        var rows = await _db.Set<TEntity>()
+        List<TEntity> rows = await _db.Set<TEntity>()
             .Where(e => e.UserId == userId && !e.IsDeleted)
             .ToListAsync(cancellationToken);
-        foreach (var row in rows)
+        foreach (TEntity? row in rows)
         {
             row.IsDeleted = true;
             row.DeletedAt = stamp;
@@ -190,10 +190,10 @@ public class AccountDeletionService : IAccountDeletionService
     private async Task RestoreRowsAsync<TEntity>(string userId, DateTime stamp, CancellationToken cancellationToken)
         where TEntity : AuditableEntity
     {
-        var rows = await _db.Set<TEntity>().IgnoreQueryFilters()
+        List<TEntity> rows = await _db.Set<TEntity>().IgnoreQueryFilters()
             .Where(e => e.UserId == userId && e.IsDeleted && e.DeletedAt == stamp)
             .ToListAsync(cancellationToken);
-        foreach (var row in rows)
+        foreach (TEntity? row in rows)
         {
             row.IsDeleted = false;
             row.DeletedAt = null;

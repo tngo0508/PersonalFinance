@@ -1,3 +1,4 @@
+using FluentValidation.Results;
 using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
@@ -25,7 +26,7 @@ public class CancelDeletionRequestValidatorTests
     [InlineData("a/b+c=")]
     public void AMalformedToken_IsRefused_WithTheInvalidLinkMessage(string token)
     {
-        var result = _validator.Validate(new CancelDeletionRequest { Token = token });
+        ValidationResult result = _validator.Validate(new CancelDeletionRequest { Token = token });
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.ErrorMessage == AccountDeletionMessages.InvalidCancelLink

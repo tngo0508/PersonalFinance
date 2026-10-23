@@ -27,12 +27,12 @@ public class BudgetDataProvider : IBudgetDataProvider
     /// <inheritdoc />
     public async Task<BudgetDataSource> GetActiveSourceAsync(string userId, CancellationToken ct = default)
     {
-        if (_cachedSources.TryGetValue(userId, out var cached))
+        if (_cachedSources.TryGetValue(userId, out BudgetDataSource cached))
         {
             return cached;
         }
 
-        var source = await _dataSourceService.GetActiveSourceAsync(userId, ct);
+        BudgetDataSource source = await _dataSourceService.GetActiveSourceAsync(userId, ct);
         _cachedSources[userId] = source;
         return source;
     }
@@ -40,7 +40,7 @@ public class BudgetDataProvider : IBudgetDataProvider
     /// <inheritdoc />
     public async Task<List<BudgetMonthData>> GetMonthsAsync(string userId, int year, CancellationToken ct = default)
     {
-        var reader = await GetReaderAsync(userId, ct);
+        IBudgetMonthReader reader = await GetReaderAsync(userId, ct);
         return await reader.GetMonthsAsync(userId, year, ct);
     }
 
@@ -48,7 +48,7 @@ public class BudgetDataProvider : IBudgetDataProvider
     public async Task<BudgetMonthData?> GetMonthAsync(string userId, int year, int month,
         CancellationToken ct = default)
     {
-        var reader = await GetReaderAsync(userId, ct);
+        IBudgetMonthReader reader = await GetReaderAsync(userId, ct);
         return await reader.GetMonthAsync(userId, year, month, ct);
     }
 
@@ -56,7 +56,7 @@ public class BudgetDataProvider : IBudgetDataProvider
     public async Task<List<BudgetTrendRecordData>> GetTrendRecordsAsync(string userId, int year,
         CancellationToken ct = default)
     {
-        var reader = await GetReaderAsync(userId, ct);
+        IBudgetMonthReader reader = await GetReaderAsync(userId, ct);
         return await reader.GetTrendRecordsAsync(userId, year, ct);
     }
 
@@ -64,20 +64,20 @@ public class BudgetDataProvider : IBudgetDataProvider
     public async Task<List<BudgetTransactionData>> GetTransactionsAsync(string userId, DateOnly from, DateOnly to,
         int? take = null, CancellationToken ct = default)
     {
-        var reader = await GetReaderAsync(userId, ct);
+        IBudgetMonthReader reader = await GetReaderAsync(userId, ct);
         return await reader.GetTransactionsAsync(userId, from, to, take, ct);
     }
 
     /// <inheritdoc />
     public async Task<List<int>> GetAvailableYearsAsync(string userId, CancellationToken ct = default)
     {
-        var reader = await GetReaderAsync(userId, ct);
+        IBudgetMonthReader reader = await GetReaderAsync(userId, ct);
         return await reader.GetAvailableYearsAsync(userId, ct);
     }
 
     private async Task<IBudgetMonthReader> GetReaderAsync(string userId, CancellationToken ct)
     {
-        var source = await GetActiveSourceAsync(userId, ct);
+        BudgetDataSource source = await GetActiveSourceAsync(userId, ct);
         return source == BudgetDataSource.BudgetTracker
             ? _trackerReader
             : _sheetReader;

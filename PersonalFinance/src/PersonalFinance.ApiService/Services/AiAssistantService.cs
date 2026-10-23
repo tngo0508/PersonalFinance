@@ -1,13 +1,14 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
-using System.Text.Json;
-using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
+using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.DTOs.News;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Helpers;
@@ -74,7 +75,7 @@ public class AiAssistantService : IAiAssistantService
         try
         {
             // Compact, stable system prompt (cache-friendly); data is fetched on demand through tools
-            var snapshot = await GetUserFinancialContextAsync(userId, cancellationToken);
+            UserFinancialContext snapshot = await GetUserFinancialContextAsync(userId, cancellationToken);
             var messages = new List<AiMessage>
             {
                 new(ChatRole.System, BuildCompactSystemPrompt()),
@@ -92,14 +93,14 @@ public class AiAssistantService : IAiAssistantService
             // Add conversation history if provided (client-supplied: bound count and length)
             if (request.ConversationHistory != null && request.ConversationHistory.Count > 0)
             {
-                foreach (var msg in request.ConversationHistory.TakeLast(MaxHistoryMessages))
+                foreach (ChatMessageDto? msg in request.ConversationHistory.TakeLast(MaxHistoryMessages))
                 {
                     if (string.IsNullOrWhiteSpace(msg.Content))
                     {
                         continue;
                     }
 
-                    var content = msg.Content.Length > MaxHistoryMessageLength
+                    string content = msg.Content.Length > MaxHistoryMessageLength
                         ? msg.Content[..MaxHistoryMessageLength]
                         : msg.Content;
 
@@ -126,18 +127,18 @@ public class AiAssistantService : IAiAssistantService
             };
 
             // The registered IChatClient runs the tool-call loop (UseFunctionInvocation)
-            var response = await _chatClient.GetResponseAsync(messages, options, cancellationToken);
+            ChatResponse response = await _chatClient.GetResponseAsync(messages, options, cancellationToken);
 
-            var responseText = string.IsNullOrWhiteSpace(response.Text)
+            string responseText = string.IsNullOrWhiteSpace(response.Text)
                 ? "I'm sorry, I couldn't generate a response."
                 : response.Text;
 
             // Record token usage (aggregated across all tool rounds)
-            var usage = response.Usage;
-            var promptTokens = (int)(usage?.InputTokenCount ?? 0);
-            var completionTokens = (int)(usage?.OutputTokenCount ?? 0);
-            var cachedPromptTokens = (int)(usage?.CachedInputTokenCount ?? 0);
-            var estimatedCost = AiQuotaService.CalculateEstimatedCost(
+            UsageDetails? usage = response.Usage;
+            int promptTokens = (int)(usage?.InputTokenCount ?? 0);
+            int completionTokens = (int)(usage?.OutputTokenCount ?? 0);
+            int cachedPromptTokens = (int)(usage?.CachedInputTokenCount ?? 0);
+            decimal estimatedCost = AiQuotaService.CalculateEstimatedCost(
                 promptTokens, completionTokens, cachedPromptTokens);
 
             await _quotaService.RecordUsageAsync(userId, "chat",
@@ -213,14 +214,14 @@ public class AiAssistantService : IAiAssistantService
 
         async Task<UserFinancialContext> LoadTransactionsAsync(string? startDate, string? endDate)
         {
-            var from = TryParseDate(startDate) ?? DateTime.UtcNow.Date.AddDays(-90);
-            var to = TryParseDate(endDate) ?? DateTime.UtcNow.Date;
+            DateTime from = TryParseDate(startDate) ?? DateTime.UtcNow.Date.AddDays(-90);
+            DateTime to = TryParseDate(endDate) ?? DateTime.UtcNow.Date;
             if (from > to || (to - from).TotalDays > 366)
             {
                 throw new ArgumentException("Choose a date range of at most 366 days, with start before end.");
             }
 
-            var rows = await _budgetDataProvider.GetTransactionsAsync(userId,
+            List<BudgetTransactionData> rows = await _budgetDataProvider.GetTransactionsAsync(userId,
                 DateOnly.FromDateTime(from), DateOnly.FromDateTime(to), ct: cancellationToken);
             return new UserFinancialContext
             {
@@ -237,8 +238,8 @@ public class AiAssistantService : IAiAssistantService
 
         async Task<string> GetBudgetAsync(string? month)
         {
-            var monthNumber = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.Month :
-                int.TryParse(month, out var number) ? number :
+            int monthNumber = string.IsNullOrWhiteSpace(month) ? DateTime.UtcNow.Month :
+                int.TryParse(month, out int number) ? number :
                 Array.FindIndex(CultureInfo.InvariantCulture.DateTimeFormat.MonthNames,
                     name => !string.IsNullOrEmpty(name) && name.Equals(month.Trim(), StringComparison.OrdinalIgnoreCase)) + 1;
             if (monthNumber is < 1 or > 12)
@@ -246,7 +247,7 @@ public class AiAssistantService : IAiAssistantService
                 return "Please specify a month name or number from 1 to 12.";
             }
 
-            var data = await _budgetDataProvider.GetMonthAsync(userId, DateTime.UtcNow.Year, monthNumber, cancellationToken);
+            BudgetMonthData? data = await _budgetDataProvider.GetMonthAsync(userId, DateTime.UtcNow.Year, monthNumber, cancellationToken);
             return data is null ? "No budget data found for that month." : JsonSerializer.Serialize(data);
         }
 
@@ -306,17 +307,17 @@ public class AiAssistantService : IAiAssistantService
             return "No transactions matched the filters.";
         }
 
-        var rowLimit = Math.Clamp(limit ?? DefaultToolTransactionRows, 1, MaxToolTransactionRows);
-        var expenseTotal = rows.Where(x => x.Transaction.Type == SpreadsheetTransactionDto.ExpenseType)
+        int rowLimit = Math.Clamp(limit ?? DefaultToolTransactionRows, 1, MaxToolTransactionRows);
+        decimal expenseTotal = rows.Where(x => x.Transaction.Type == SpreadsheetTransactionDto.ExpenseType)
             .Sum(x => x.Transaction.Amount);
-        var incomeTotal = rows.Where(x => x.Transaction.Type == SpreadsheetTransactionDto.IncomeType)
+        decimal incomeTotal = rows.Where(x => x.Transaction.Type == SpreadsheetTransactionDto.IncomeType)
             .Sum(x => x.Transaction.Amount);
 
         var sb = new StringBuilder();
         sb.AppendLine(AppCulture.Default,
             $"{rows.Count} matching transactions (expenses ${expenseTotal:N2}, income ${incomeTotal:N2}); " +
             $"showing newest {Math.Min(rowLimit, rows.Count)}:");
-        foreach (var (transaction, _) in rows.Take(rowLimit))
+        foreach ((LargeTransactionInfo? transaction, DateTime? _) in rows.Take(rowLimit))
         {
             sb.AppendLine(AppCulture.Default,
                 $"- {transaction.Date}: ${transaction.Amount:N2} {transaction.Type} - {transaction.Description} ({transaction.Category})");
@@ -327,7 +328,7 @@ public class AiAssistantService : IAiAssistantService
 
     private static DateTime? TryParseDate(string? value)
     {
-        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsed)
             ? parsed.Date
             : null;
     }
@@ -340,17 +341,17 @@ public class AiAssistantService : IAiAssistantService
         }
 
         var sb = new StringBuilder();
-        foreach (var goal in context.SavingsGoals)
+        foreach (SavingsGoalInfo goal in context.SavingsGoals)
         {
-            var status = goal.IsCompleted
+            string status = goal.IsCompleted
                 ? "completed"
                 : string.Create(AppCulture.Default, $"{goal.ProgressPercent:F1}% complete");
-            var target = goal.TargetDate.HasValue
+            string target = goal.TargetDate.HasValue
                 ? string.Create(CultureInfo.InvariantCulture, $", target date {goal.TargetDate.Value:yyyy-MM-dd}")
                 : string.Empty;
             if (!goal.IsCompleted && goal.TargetDate.HasValue && goal.TargetDate.Value.Date > DateTime.UtcNow.Date)
             {
-                var months = Math.Max(1, (goal.TargetDate.Value.Year - DateTime.UtcNow.Year) * 12 +
+                int months = Math.Max(1, (goal.TargetDate.Value.Year - DateTime.UtcNow.Year) * 12 +
                     goal.TargetDate.Value.Month - DateTime.UtcNow.Month);
                 sb.AppendLine(AppCulture.Default, $"Required monthly savings to target (no investment growth assumed): ${Math.Max(0m, goal.TargetAmount - goal.CurrentAmount) / months:N2}");
             }
@@ -414,29 +415,29 @@ public class AiAssistantService : IAiAssistantService
         try
         {
             // Truncate description to avoid excessive token usage
-            var description = string.IsNullOrEmpty(request.Description)
+            string description = string.IsNullOrEmpty(request.Description)
                 ? string.Empty
                 : request.Description.Length > 4000
                     ? string.Concat(request.Description.AsSpan(0, 4000), "...")
                     : request.Description;
 
             // Build the system prompt — news only, no financial advice
-            var systemPrompt =
+            string systemPrompt =
                 "You are a helpful news summarizer. Summarize the following news article in 2-3 concise sentences in plain English. " +
                 "Focus on the key facts and main points. Do not provide financial advice or recommendations.";
 
-            var userMessage = $"Title: {request.Title[..Math.Min(request.Title.Length, 500)]}\n\nDescription: {description}";
-            var response = await _chatClient.GetResponseAsync(
+            string userMessage = $"Title: {request.Title[..Math.Min(request.Title.Length, 500)]}\n\nDescription: {description}";
+            ChatResponse response = await _chatClient.GetResponseAsync(
                 [new AiMessage(ChatRole.System, systemPrompt), new AiMessage(ChatRole.User, userMessage)],
                 new ChatOptions
                 {
                     ModelId = _modelName,
                     MaxOutputTokens = _configuration.GetValue("OpenAI:MaxTokens", DefaultMaxCompletionTokens)
                 }, cancellationToken);
-            var summaryText = response.Text;
-            var promptTokens = (int)(response.Usage?.InputTokenCount ?? 0);
-            var completionTokens = (int)(response.Usage?.OutputTokenCount ?? 0);
-            var cachedTokens = (int)(response.Usage?.CachedInputTokenCount ?? 0);
+            string summaryText = response.Text;
+            int promptTokens = (int)(response.Usage?.InputTokenCount ?? 0);
+            int completionTokens = (int)(response.Usage?.OutputTokenCount ?? 0);
+            int cachedTokens = (int)(response.Usage?.CachedInputTokenCount ?? 0);
             await _quotaService.RecordUsageAsync(userId, "summarize", promptTokens, completionTokens, cachedTokens,
                 AiQuotaService.CalculateEstimatedCost(promptTokens, completionTokens, cachedTokens));
 
@@ -477,7 +478,7 @@ public class AiAssistantService : IAiAssistantService
         try
         {
             // Get net worth parameters
-            var netWorthParams = await _dbContext.NetWorthParameters
+            NetWorthParameters? netWorthParams = await _dbContext.NetWorthParameters
                 .AsNoTracking()
                 .CurrentFor(userId)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -494,7 +495,7 @@ public class AiAssistantService : IAiAssistantService
             }
 
             // Get budget allocations
-            var budget = await _dbContext.UserBudgetAllocations
+            UserBudgetAllocation? budget = await _dbContext.UserBudgetAllocations
                 .AsNoTracking()
                 .CurrentFor(userId)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -507,7 +508,7 @@ public class AiAssistantService : IAiAssistantService
             }
 
             // Get savings goals
-            var savingsGoals = await _dbContext.SavingsGoals
+            List<SavingsGoal> savingsGoals = await _dbContext.SavingsGoals
                 .AsNoTracking()
                 .NewestFirstFor(userId)
                 .ToListAsync(cancellationToken);

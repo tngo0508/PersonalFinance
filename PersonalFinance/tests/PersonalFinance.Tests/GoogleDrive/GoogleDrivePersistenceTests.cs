@@ -16,7 +16,7 @@ public class GoogleDrivePersistenceTests
 {
     private static AppDbContext CreateTestDbContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"GoogleDriveTest_{Guid.NewGuid():N}")
             .Options;
         var context = new AppDbContext(options);
@@ -28,11 +28,11 @@ public class GoogleDrivePersistenceTests
     public async Task ConnectDriveAsync_FirstTimeSetup_PersistsConnectionAndCachesFiles()
     {
         // Arrange
-        using var dbContext = CreateTestDbContext();
-        var config = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot config = new ConfigurationBuilder().Build();
         var handler = new DelegatingTestHandler((req, ct) =>
         {
-            var sampleJson = @"{ ""files"": [ { ""id"": ""file-1"", ""name"": ""TestDocument.pdf"", ""mimeType"": ""application/pdf"", ""size"": ""1024"" } ] }";
+            string sampleJson = @"{ ""files"": [ { ""id"": ""file-1"", ""name"": ""TestDocument.pdf"", ""mimeType"": ""application/pdf"", ""size"": ""1024"" } ] }";
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(sampleJson, System.Text.Encoding.UTF8, "application/json")
@@ -49,7 +49,7 @@ public class GoogleDrivePersistenceTests
         };
 
         // Act
-        var result = await service.ConnectDriveAsync("user-101", request);
+        GoogleDriveConnectionDto result = await service.ConnectDriveAsync("user-101", request);
 
         // Assert
         Assert.NotNull(result);
@@ -64,7 +64,7 @@ public class GoogleDrivePersistenceTests
         Assert.True(result.CachedFilesCount > 0);
 
         // Verify in database
-        var dbConnection = await dbContext.GoogleDriveConnections
+        GoogleDriveConnection? dbConnection = await dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
             .FirstOrDefaultAsync(c => c.Id == result.Id);
 
@@ -81,20 +81,20 @@ public class GoogleDrivePersistenceTests
     public async Task SubsequentLogin_LoadsSavedConfigurationAndSkipsSetupFlow()
     {
         // Arrange
-        using var dbContext = CreateTestDbContext();
-        var config = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot config = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // First setup
-        var conn = await service.ConnectDriveAsync("user-subsequent", new ConnectGoogleDriveRequestDto
+        GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-subsequent", new ConnectGoogleDriveRequestDto
         {
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ConnectionName = "Saved Drive"
         });
 
         // Act - On subsequent login, retrieve saved connections
-        var connections = await service.GetUserConnectionsAsync("user-subsequent");
+        List<GoogleDriveConnectionDto> connections = await service.GetUserConnectionsAsync("user-subsequent");
 
         // Assert
         Assert.Single(connections);
@@ -107,27 +107,27 @@ public class GoogleDrivePersistenceTests
     public async Task SupportMultipleGoogleDrives_PerUser_WithoutReplacingExisting()
     {
         // Arrange
-        using var dbContext = CreateTestDbContext();
-        var config = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot config = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Connect Drive 1
-        var drive1 = await service.ConnectDriveAsync("user-multi", new ConnectGoogleDriveRequestDto
+        GoogleDriveConnectionDto drive1 = await service.ConnectDriveAsync("user-multi", new ConnectGoogleDriveRequestDto
         {
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ConnectionName = "Drive 1 - Financial"
         });
 
         // Connect Drive 2 (Add another Drive)
-        var drive2 = await service.ConnectDriveAsync("user-multi", new ConnectGoogleDriveRequestDto
+        GoogleDriveConnectionDto drive2 = await service.ConnectDriveAsync("user-multi", new ConnectGoogleDriveRequestDto
         {
             FolderUrl = "1ABCdEfGhIjKlMnOpQrStUvWxYz12345_",
             ConnectionName = "Drive 2 - Receipts"
         });
 
         // Act
-        var allConnections = await service.GetUserConnectionsAsync("user-multi");
+        List<GoogleDriveConnectionDto> allConnections = await service.GetUserConnectionsAsync("user-multi");
 
         // Assert
         Assert.Equal(2, allConnections.Count);
@@ -139,14 +139,14 @@ public class GoogleDrivePersistenceTests
     public async Task GetConnectionFilesAsync_UsesDatabaseCache_AndAvoidsGoogleApiRequests()
     {
         // Arrange
-        using var dbContext = CreateTestDbContext();
-        var config = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot config = new ConfigurationBuilder().Build();
 
         int apiCallCount = 0;
         var handler = new DelegatingTestHandler((req, ct) =>
         {
             apiCallCount++;
-            var sampleJson = @"{ ""files"": [ { ""id"": ""file-1"", ""name"": ""Budget.xlsx"", ""mimeType"": ""application/vnd.google-apps.spreadsheet"" } ] }";
+            string sampleJson = @"{ ""files"": [ { ""id"": ""file-1"", ""name"": ""Budget.xlsx"", ""mimeType"": ""application/vnd.google-apps.spreadsheet"" } ] }";
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(sampleJson, System.Text.Encoding.UTF8, "application/json")
@@ -157,18 +157,18 @@ public class GoogleDrivePersistenceTests
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Initial setup calls API once to cache
-        var conn = await service.ConnectDriveAsync("user-cache", new ConnectGoogleDriveRequestDto
+        GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-cache", new ConnectGoogleDriveRequestDto
         {
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ApiKey = "AIzaSyTest"
         });
 
-        var callsAfterSetup = apiCallCount;
+        int callsAfterSetup = apiCallCount;
         Assert.True(callsAfterSetup > 0);
 
         // Act - Request files multiple times (subsequent requests within TTL)
-        var cached1 = await service.GetConnectionFilesAsync(conn.Id, "user-cache", forceRefresh: false);
-        var cached2 = await service.GetConnectionFilesAsync(conn.Id, "user-cache", forceRefresh: false);
+        GoogleDriveFolderResponseDto cached1 = await service.GetConnectionFilesAsync(conn.Id, "user-cache", forceRefresh: false);
+        GoogleDriveFolderResponseDto cached2 = await service.GetConnectionFilesAsync(conn.Id, "user-cache", forceRefresh: false);
 
         // Assert - Zero additional API requests were made; served strictly from database cache!
         Assert.Equal(callsAfterSetup, apiCallCount);
@@ -181,15 +181,15 @@ public class GoogleDrivePersistenceTests
     public async Task SyncConnectionAsync_PerformsIncrementalSync_WhenDriveFilesChange()
     {
         // Arrange
-        using var dbContext = CreateTestDbContext();
-        var config = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot config = new ConfigurationBuilder().Build();
 
-        var filesResponse1 = @"{ ""files"": [
+        string filesResponse1 = @"{ ""files"": [
             { ""id"": ""f1"", ""name"": ""OldName.pdf"", ""mimeType"": ""application/pdf"", ""size"": ""1000"" },
             { ""id"": ""f2"", ""name"": ""DeletedSoon.docx"", ""mimeType"": ""application/docx"", ""size"": ""2000"" }
         ] }";
 
-        var filesResponse2 = @"{ ""files"": [
+        string filesResponse2 = @"{ ""files"": [
             { ""id"": ""f1"", ""name"": ""NewNameUpdated.pdf"", ""mimeType"": ""application/pdf"", ""size"": ""1500"" },
             { ""id"": ""f3"", ""name"": ""NewlyAdded.xlsx"", ""mimeType"": ""application/vnd.google-apps.spreadsheet"", ""size"": ""3000"" }
         ] }";
@@ -197,7 +197,7 @@ public class GoogleDrivePersistenceTests
         bool returnSecondBatch = false;
         var handler = new DelegatingTestHandler((req, ct) =>
         {
-            var content = returnSecondBatch ? filesResponse2 : filesResponse1;
+            string content = returnSecondBatch ? filesResponse2 : filesResponse1;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(content, System.Text.Encoding.UTF8, "application/json")
@@ -207,37 +207,37 @@ public class GoogleDrivePersistenceTests
         var httpClient = new HttpClient(handler);
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
-        var conn = await service.ConnectDriveAsync("user-sync", new ConnectGoogleDriveRequestDto
+        GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-sync", new ConnectGoogleDriveRequestDto
         {
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ApiKey = "AIzaSyTest"
         });
 
-        var dbConnInitial = await dbContext.GoogleDriveConnections.Include(c => c.CachedFiles).FirstAsync(c => c.Id == conn.Id);
+        GoogleDriveConnection dbConnInitial = await dbContext.GoogleDriveConnections.Include(c => c.CachedFiles).FirstAsync(c => c.Id == conn.Id);
         Assert.Equal(2, dbConnInitial.CachedFiles.Count);
 
         // Act - Switch to second response and run manual sync
         returnSecondBatch = true;
-        var syncResult = await service.SyncConnectionAsync(conn.Id, "user-sync", forceRefresh: true);
+        GoogleDriveFolderResponseDto syncResult = await service.SyncConnectionAsync(conn.Id, "user-sync", forceRefresh: true);
 
         // Assert
         Assert.True(syncResult.Success);
         Assert.Equal(2, syncResult.Files.Count);
 
-        var dbConnAfter = await dbContext.GoogleDriveConnections.Include(c => c.CachedFiles).FirstAsync(c => c.Id == conn.Id);
+        GoogleDriveConnection dbConnAfter = await dbContext.GoogleDriveConnections.Include(c => c.CachedFiles).FirstAsync(c => c.Id == conn.Id);
 
         // f1 updated
-        var f1 = dbConnAfter.CachedFiles.FirstOrDefault(f => f.DriveFileId == "f1");
+        GoogleDriveCachedFile? f1 = dbConnAfter.CachedFiles.FirstOrDefault(f => f.DriveFileId == "f1");
         Assert.NotNull(f1);
         Assert.Equal("NewNameUpdated.pdf", f1.Name);
         Assert.Equal(1500, f1.Size);
 
         // f2 deleted from cache
-        var f2 = dbConnAfter.CachedFiles.FirstOrDefault(f => f.DriveFileId == "f2");
+        GoogleDriveCachedFile? f2 = dbConnAfter.CachedFiles.FirstOrDefault(f => f.DriveFileId == "f2");
         Assert.Null(f2);
 
         // f3 inserted
-        var f3 = dbConnAfter.CachedFiles.FirstOrDefault(f => f.DriveFileId == "f3");
+        GoogleDriveCachedFile? f3 = dbConnAfter.CachedFiles.FirstOrDefault(f => f.DriveFileId == "f3");
         Assert.NotNull(f3);
         Assert.Equal("NewlyAdded.xlsx", f3.Name);
     }
@@ -246,12 +246,12 @@ public class GoogleDrivePersistenceTests
     public async Task DeleteConnectionAsync_RemovesConnectionAndCascadeDeletesCachedFiles()
     {
         // Arrange
-        using var dbContext = CreateTestDbContext();
-        var config = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot config = new ConfigurationBuilder().Build();
         var httpClient = new HttpClient();
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
-        var conn = await service.ConnectDriveAsync("user-delete", new ConnectGoogleDriveRequestDto
+        GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-delete", new ConnectGoogleDriveRequestDto
         {
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_"
         });
@@ -260,7 +260,7 @@ public class GoogleDrivePersistenceTests
         Assert.True(await dbContext.GoogleDriveCachedFiles.AnyAsync(f => f.ConnectionId == conn.Id));
 
         // Act
-        var deleted = await service.DeleteConnectionAsync(conn.Id, "user-delete");
+        bool deleted = await service.DeleteConnectionAsync(conn.Id, "user-delete");
 
         // Assert
         Assert.True(deleted);
@@ -274,8 +274,8 @@ public class GoogleDrivePersistenceTests
     public async Task ReauthConnectionAsync_HandlesInvalidCredentials_AndReauthenticatesSuccessfully()
     {
         // Arrange
-        using var dbContext = CreateTestDbContext();
-        var config = new ConfigurationBuilder().Build();
+        using AppDbContext dbContext = CreateTestDbContext();
+        IConfigurationRoot config = new ConfigurationBuilder().Build();
 
         bool returnUnauthorized = true;
         var handler = new DelegatingTestHandler((req, ct) =>
@@ -288,7 +288,7 @@ public class GoogleDrivePersistenceTests
                 });
             }
 
-            var sampleJson = @"{ ""files"": [ { ""id"": ""f-auth"", ""name"": ""Authed.pdf"", ""mimeType"": ""application/pdf"" } ] }";
+            string sampleJson = @"{ ""files"": [ { ""id"": ""f-auth"", ""name"": ""Authed.pdf"", ""mimeType"": ""application/pdf"" } ] }";
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(sampleJson, System.Text.Encoding.UTF8, "application/json")
@@ -299,28 +299,28 @@ public class GoogleDrivePersistenceTests
         var service = new DriveConnectionService(httpClient, config, dbContext, NullLogger<DriveConnectionService>.Instance);
 
         // Connect with invalid credentials
-        var conn = await service.ConnectDriveAsync("user-auth", new ConnectGoogleDriveRequestDto
+        GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-auth", new ConnectGoogleDriveRequestDto
         {
             FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
             ApiKey = "ExpiredApiKey"
         });
 
         // Check connection marked as NeedsReauth
-        var dbConn = await dbContext.GoogleDriveConnections.FirstAsync(c => c.Id == conn.Id);
+        GoogleDriveConnection dbConn = await dbContext.GoogleDriveConnections.FirstAsync(c => c.Id == conn.Id);
         Assert.False(dbConn.IsValid);
         Assert.Equal("NeedsReauth", dbConn.SyncStatus);
         Assert.NotNull(dbConn.ErrorMessage);
 
         // Act - User provides valid credentials via Reauth
         returnUnauthorized = false;
-        var reauthResult = await service.ReauthConnectionAsync(conn.Id, "user-auth", "FreshValidApiKey");
+        GoogleDriveConnectionDto reauthResult = await service.ReauthConnectionAsync(conn.Id, "user-auth", "FreshValidApiKey");
 
         // Assert
         Assert.True(reauthResult.IsValid);
         Assert.Equal("Synced", reauthResult.SyncStatus);
         Assert.Null(reauthResult.ErrorMessage);
 
-        var dbConnAfter = await dbContext.GoogleDriveConnections.Include(c => c.CachedFiles).FirstAsync(c => c.Id == conn.Id);
+        GoogleDriveConnection dbConnAfter = await dbContext.GoogleDriveConnections.Include(c => c.CachedFiles).FirstAsync(c => c.Id == conn.Id);
         Assert.True(dbConnAfter.IsValid);
         Assert.Equal("Synced", dbConnAfter.SyncStatus);
         Assert.Equal("FreshValidApiKey", CredentialProtector.Decrypt(dbConnAfter.EncryptedApiKey));
@@ -330,16 +330,16 @@ public class GoogleDrivePersistenceTests
     [Fact]
     public void CredentialProtector_EncryptsAndMasksCredentialsSecurely()
     {
-        var rawKey = "AIzaSyTestGoogleDriveApiKey987654";
-        var encrypted = CredentialProtector.Encrypt(rawKey);
+        string rawKey = "AIzaSyTestGoogleDriveApiKey987654";
+        string? encrypted = CredentialProtector.Encrypt(rawKey);
 
         Assert.NotNull(encrypted);
         Assert.NotEqual(rawKey, encrypted);
 
-        var decrypted = CredentialProtector.Decrypt(encrypted);
+        string? decrypted = CredentialProtector.Decrypt(encrypted);
         Assert.Equal(rawKey, decrypted);
 
-        var masked = CredentialProtector.Mask(rawKey);
+        string? masked = CredentialProtector.Mask(rawKey);
         Assert.StartsWith("AIza", masked!);
         Assert.EndsWith("7654", masked!);
         Assert.DoesNotContain("TestGoogleDrive", masked!);

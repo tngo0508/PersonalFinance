@@ -10,7 +10,7 @@ public class NavigationLayoutTests
 
     private static string FindSolutionRoot()
     {
-        var current = AppDomain.CurrentDomain.BaseDirectory;
+        string current = AppDomain.CurrentDomain.BaseDirectory;
         while (!string.IsNullOrEmpty(current))
         {
             if (File.Exists(Path.Combine(current, "PersonalFinance.sln")) ||
@@ -19,7 +19,7 @@ public class NavigationLayoutTests
                 return current;
             }
 
-            var parent = Directory.GetParent(current);
+            DirectoryInfo? parent = Directory.GetParent(current);
             if (parent == null) break;
             current = parent.FullName;
         }
@@ -30,7 +30,7 @@ public class NavigationLayoutTests
     [Fact]
     public void AllRequiredControllers_ExistAndInheritFromController()
     {
-        var controllerTypes = new[]
+        Type[] controllerTypes = new[]
         {
             typeof(DashboardController),
             typeof(NetworthController),
@@ -44,7 +44,7 @@ public class NavigationLayoutTests
             typeof(GoogleDriveController)
         };
 
-        foreach (var type in controllerTypes)
+        foreach (Type? type in controllerTypes)
         {
             Assert.True(typeof(Controller).IsAssignableFrom(type), $"{type.Name} should inherit from Controller.");
             var indexMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
@@ -56,11 +56,11 @@ public class NavigationLayoutTests
     [Fact]
     public void LayoutView_ContainsThreeNavigationTiers()
     {
-        var layoutPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Shared",
+        string layoutPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Shared",
             "_Layout.cshtml");
         Assert.True(File.Exists(layoutPath), $"_Layout.cshtml not found at {layoutPath}");
 
-        var content = File.ReadAllText(layoutPath);
+        string content = File.ReadAllText(layoutPath);
 
         // Verify the 3 navigation tiers
         Assert.Contains("Overview", content);
@@ -91,13 +91,13 @@ public class NavigationLayoutTests
     [Fact]
     public void LayoutView_LinksSignedInAccountsToFeedback_FromTheSidebarAndTheFooter()
     {
-        var content = ReadView("Shared", "_Layout.cshtml");
+        string content = ReadView("Shared", "_Layout.cshtml");
 
-        var sidebar = content[content.IndexOf("<aside", StringComparison.Ordinal)..content.IndexOf("</aside>", StringComparison.Ordinal)];
+        string sidebar = content[content.IndexOf("<aside", StringComparison.Ordinal)..content.IndexOf("</aside>", StringComparison.Ordinal)];
         Assert.Contains("asp-controller=\"Feedback\"", sidebar);
 
-        var footer = content[content.IndexOf("<footer", StringComparison.Ordinal)..content.IndexOf("</footer>", StringComparison.Ordinal)];
-        var footerLink = footer.IndexOf("asp-controller=\"Feedback\"", StringComparison.Ordinal);
+        string footer = content[content.IndexOf("<footer", StringComparison.Ordinal)..content.IndexOf("</footer>", StringComparison.Ordinal)];
+        int footerLink = footer.IndexOf("asp-controller=\"Feedback\"", StringComparison.Ordinal);
         Assert.True(footerLink >= 0, "The footer should link to Feedback.");
         Assert.True(footer.LastIndexOf("@if (isSignedIn)", footerLink, StringComparison.Ordinal) >= 0,
             "The footer Feedback link should only be shown to signed-in Accounts.");
@@ -106,8 +106,8 @@ public class NavigationLayoutTests
     [Fact]
     public void AboutPage_LinksSignedInAccountsToFeedback()
     {
-        var about = ReadView("Home", "About.cshtml");
-        var feedbackLink = about.IndexOf("asp-controller=\"Feedback\"", StringComparison.Ordinal);
+        string about = ReadView("Home", "About.cshtml");
+        int feedbackLink = about.IndexOf("asp-controller=\"Feedback\"", StringComparison.Ordinal);
 
         Assert.True(feedbackLink >= 0, "The About page should link to Feedback.");
         Assert.True(about.LastIndexOf("IsAuthenticated", feedbackLink, StringComparison.Ordinal) >= 0,
@@ -119,7 +119,7 @@ public class NavigationLayoutTests
     [InlineData("Home", "About.cshtml")]
     public void FeedbackLinks_CaptureTheSourcePageThroughFeedbackSourcePage(string folder, string fileName)
     {
-        var view = ReadView(folder, fileName);
+        string view = ReadView(folder, fileName);
 
         Assert.DoesNotContain("asp-route-from=\"@Context.Request.Path\"", view);
         Assert.Contains("asp-route-from=\"@FeedbackSourcePage.From(Context.Request)\"", view);
@@ -128,7 +128,7 @@ public class NavigationLayoutTests
     [Fact]
     public void AboutPage_DescribesNetWorthAsTheGlossaryDefinesIt()
     {
-        var about = ReadView("Home", "About.cshtml");
+        string about = ReadView("Home", "About.cshtml");
 
         Assert.DoesNotContain("assets and liabilities", about);
         Assert.Contains("financial independence", about[about.IndexOf("<strong>Net Worth</strong>", StringComparison.Ordinal)..]);
@@ -137,7 +137,7 @@ public class NavigationLayoutTests
     [Fact]
     public void FeedbackForm_HelpTextUsesTheSharedMessageLimit()
     {
-        var form = ReadView("Feedback", "Index.cshtml");
+        string form = ReadView("Feedback", "Index.cshtml");
 
         Assert.DoesNotContain("2,000", form);
         Assert.Contains("FeedbackLimits.MessageMaxLength", form[form.IndexOf("id=\"messageHelp\"", StringComparison.Ordinal)..]);
@@ -146,8 +146,8 @@ public class NavigationLayoutTests
     [Fact]
     public void LayoutFooter_LinksToTheAboutPage()
     {
-        var footer = ReadView("Shared", "_Layout.cshtml");
-        var footerStart = footer.IndexOf("<footer", StringComparison.Ordinal);
+        string footer = ReadView("Shared", "_Layout.cshtml");
+        int footerStart = footer.IndexOf("<footer", StringComparison.Ordinal);
         Assert.True(footerStart >= 0, "_Layout.cshtml should contain a <footer>.");
 
         Assert.Contains("asp-controller=\"Home\" asp-action=\"About\"", footer[footerStart..]);
@@ -167,7 +167,7 @@ public class NavigationLayoutTests
 
     private static string ReadView(string folder, string fileName)
     {
-        var path = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", folder,
+        string path = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", folder,
             fileName);
         Assert.True(File.Exists(path), $"{fileName} not found at {path}");
         return File.ReadAllText(path);
@@ -176,11 +176,11 @@ public class NavigationLayoutTests
     [Fact]
     public void SidebarCss_DefinesRequiredResponsiveAndCollapsedDimensions()
     {
-        var cssPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "css",
+        string cssPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "css",
             "sidebar.css");
         Assert.True(File.Exists(cssPath), $"sidebar.css not found at {cssPath}");
 
-        var content = File.ReadAllText(cssPath);
+        string content = File.ReadAllText(cssPath);
 
         // 240px expanded desktop width
         Assert.Contains("240px", content);
@@ -199,11 +199,11 @@ public class NavigationLayoutTests
     [Fact]
     public void SidebarJs_ImplementsLocalStoragePersistenceAndAccessibility()
     {
-        var jsPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "js",
+        string jsPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "js",
             "core", "sidebar.js");
         Assert.True(File.Exists(jsPath), $"sidebar.js not found at {jsPath}");
 
-        var content = File.ReadAllText(jsPath);
+        string content = File.ReadAllText(jsPath);
 
         // LocalStorage state persistence
         Assert.Contains("sidebar-collapsed", content);

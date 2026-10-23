@@ -29,7 +29,7 @@ public class AdminNotFoundAuthorizationResultHandler : IAuthorizationMiddlewareR
 
     private static bool RequiresAdminPolicy(HttpContext context)
     {
-        var authorizeData = context.GetEndpoint()?.Metadata.GetOrderedMetadata<IAuthorizeData>();
+        IReadOnlyList<IAuthorizeData>? authorizeData = context.GetEndpoint()?.Metadata.GetOrderedMetadata<IAuthorizeData>();
         return authorizeData?.Any(a => a.Policy == AppPolicies.RequireAdmin) == true;
     }
 }

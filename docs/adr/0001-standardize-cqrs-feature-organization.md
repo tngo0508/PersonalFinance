@@ -1,7 +1,7 @@
 # 0001 – Standardize ApiService on Direct Service Injection and Permissive Open-Source Licensing
 
 **Date:** 2026-10-16  
-**Status:** Accepted
+**Status:** Accepted (§3 superseded by [ADR 0007](0007-feature-folders-with-interface-only-dependencies.md))
 
 ## Context
 
@@ -32,6 +32,9 @@ The project strictly prohibits dependencies with paid, commercial, or copyleft l
 - All new NuGet packages must be verified for MIT, BSD, or Apache 2.0 compliance before adoption.
 
 ### 3. Type-Based Folder Organization
+
+> **Superseded by [ADR 0007](0007-feature-folders-with-interface-only-dependencies.md) (2026-10-22):** ApiService and
+> Web are now organized by Feature. The text below is kept as the record of the original decision.
 
 The ApiService project is organized by type in top-level folders:
 ```

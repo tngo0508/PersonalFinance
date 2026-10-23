@@ -38,7 +38,7 @@ public class FeedbackRateLimitTests
 
     private static ServiceProvider BuildProvider()
     {
-        var databaseName = $"FeedbackDi_{Guid.NewGuid():N}";
+        string databaseName = $"FeedbackDi_{Guid.NewGuid():N}";
         var services = new ServiceCollection();
         services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(databaseName));
         services.AddScoped<IValidator<SubmitFeedbackRequest>, SubmitFeedbackRequestValidator>();
@@ -53,31 +53,31 @@ public class FeedbackRateLimitTests
     [Fact]
     public async Task Submit_TheSixthWithinAnHour_Returns429WithAFriendlyMessage()
     {
-        await using var provider = BuildProvider();
+        await using ServiceProvider provider = BuildProvider();
         IActionResult result = new NoContentResult();
 
-        for (var i = 0; i < 6; i++)
+        for (int i = 0; i < 6; i++)
         {
-            await using var scope = provider.CreateAsyncScope();
-            var controller = CreateController(scope.ServiceProvider.GetRequiredService<IFeedbackService>());
+            await using AsyncServiceScope scope = provider.CreateAsyncScope();
+            FeedbackApiController controller = CreateController(scope.ServiceProvider.GetRequiredService<IFeedbackService>());
             result = await controller.Submit(ValidRequest());
         }
 
-        var objectResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status429TooManyRequests, objectResult.StatusCode);
         Assert.Contains(FeedbackMessages.RateLimited, objectResult.Value!.ToString());
 
-        await using var check = provider.CreateAsyncScope();
+        await using AsyncServiceScope check = provider.CreateAsyncScope();
         Assert.Equal(5, await check.ServiceProvider.GetRequiredService<AppDbContext>().Feedback.CountAsync());
     }
 
     [Fact]
     public void FeedbackLimiter_IsNotTheSharedRateLimiter()
     {
-        using var provider = BuildProvider();
+        using ServiceProvider provider = BuildProvider();
 
-        var shared = provider.GetRequiredService<IRateLimiterService>();
-        var feedback = provider.GetRequiredKeyedService<IRateLimiterService>(FeedbackRateLimit.Key);
+        IRateLimiterService shared = provider.GetRequiredService<IRateLimiterService>();
+        IRateLimiterService feedback = provider.GetRequiredKeyedService<IRateLimiterService>(FeedbackRateLimit.Key);
 
         Assert.NotSame(shared, feedback);
     }

@@ -34,9 +34,9 @@ public static class CredentialProtector
             aes.Key = Key;
             aes.IV = Iv;
 
-            using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-            var plaintextBytes = Encoding.UTF8.GetBytes(plaintext.Trim());
-            var encryptedBytes = encryptor.TransformFinalBlock(plaintextBytes, 0, plaintextBytes.Length);
+            using ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+            byte[] plaintextBytes = Encoding.UTF8.GetBytes(plaintext.Trim());
+            byte[] encryptedBytes = encryptor.TransformFinalBlock(plaintextBytes, 0, plaintextBytes.Length);
             return Convert.ToBase64String(encryptedBytes);
         }
         catch
@@ -62,9 +62,9 @@ public static class CredentialProtector
             aes.Key = Key;
             aes.IV = Iv;
 
-            using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-            var cipherBytes = Convert.FromBase64String(encryptedText.Trim());
-            var decryptedBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+            using ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+            byte[] cipherBytes = Convert.FromBase64String(encryptedText.Trim());
+            byte[] decryptedBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
             return Encoding.UTF8.GetString(decryptedBytes);
         }
         catch
@@ -91,14 +91,14 @@ public static class CredentialProtector
             return null;
         }
 
-        var trimmed = secret.Trim();
+        string trimmed = secret.Trim();
         if (trimmed.Length <= 8)
         {
             return new string('*', trimmed.Length);
         }
 
-        var prefix = trimmed[..Math.Min(4, trimmed.Length)];
-        var suffix = trimmed[^Math.Min(4, trimmed.Length)..];
+        string prefix = trimmed[..Math.Min(4, trimmed.Length)];
+        string suffix = trimmed[^Math.Min(4, trimmed.Length)..];
         return $"{prefix}...{suffix}";
     }
 }

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -6,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
 
@@ -20,7 +20,7 @@ public partial class WebApiRouteTests
     [Fact]
     public void EveryApiPathCalledFromJavaScript_HasAnAuthorizedWebController()
     {
-        var jsRoot = Path.Combine(FindRepositoryRoot(), "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "js");
+        string jsRoot = Path.Combine(FindRepositoryRoot(), "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "js");
         var calledControllers = Directory.EnumerateFiles(jsRoot, "*.js", SearchOption.AllDirectories)
             .SelectMany(file => ApiPathPattern().Matches(File.ReadAllText(file)).Select(m => m.Groups[1].Value))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);

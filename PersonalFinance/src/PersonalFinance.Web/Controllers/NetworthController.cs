@@ -38,7 +38,7 @@ public class NetworthController : Controller
 
         try
         {
-            var saved = await _netWorthApi.LoadParametersAsync(cancellationToken);
+            NetWorthParametersDto? saved = await _netWorthApi.LoadParametersAsync(cancellationToken);
 
             // Only apply saved values if they represent real data (not a blank DTO with all zeros)
             if (saved != null && saved.CurrentAge > 0 && saved.RetirementAge > 0)
@@ -63,7 +63,7 @@ public class NetworthController : Controller
     public async Task<IActionResult> Calculate([FromQuery] NetWorthViewModel parameters,
         CancellationToken cancellationToken = default)
     {
-        var projection = await _netWorthApi.CalculateProjectionAsync(parameters.ToProjectionRequest(), cancellationToken);
+        NetWorthProjectionDto projection = await _netWorthApi.CalculateProjectionAsync(parameters.ToProjectionRequest(), cancellationToken);
         return Json(projection);
     }
 
@@ -75,7 +75,7 @@ public class NetworthController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveParameters(NetWorthViewModel model)
     {
-        var request = model.ToProjectionRequest();
+        NetWorthProjectionRequestDto request = model.ToProjectionRequest();
 
         if (!ModelState.IsValid)
         {

@@ -24,7 +24,7 @@ public static class FeedbackSourcePage
             return Accept(request.Query["from"].ToString());
         }
 
-        var path = request.Path.Value;
+        string? path = request.Path.Value;
         return Accept(path + request.QueryString.Value) ?? Accept(path);
     }
 
@@ -39,7 +39,7 @@ public static class FeedbackSourcePage
             return null;
         }
 
-        var queryStart = page.IndexOf('?', StringComparison.Ordinal);
+        int queryStart = page.IndexOf('?', StringComparison.Ordinal);
         var path = new PathString(queryStart < 0 ? page : page[..queryStart]);
         return path.StartsWithSegments(FeedbackPath, StringComparison.OrdinalIgnoreCase) ? null : page;
     }

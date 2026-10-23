@@ -8,11 +8,12 @@ using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.BudgetPlanner;
+using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
 using CreateNotificationRequestDto = PersonalFinance.ApiService.Services.CreateNotificationRequestDto;
 using NotificationDto = PersonalFinance.ApiService.Services.NotificationDto;
-using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.Tests.Analysis;
 
@@ -29,7 +30,7 @@ public class SpreadsheetAnalysisCharacterizationTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"CharDb_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -93,12 +94,12 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task GetSummaryStatisticsAsync_ReturnsAggregatedMetrics()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(CreateSnapshot());
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
 
         Assert.NotNull(stats);
         Assert.Equal(2026, stats.Year);
@@ -114,14 +115,14 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task GetTrendDataAsync_ReturnsAllMonthsInYearSorted()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.AddRange(
             CreateSnapshot(year: 2026, month: 11, monthName: "November", actualIncome: 6000m, actualExpenses: 4000m),
             CreateSnapshot(year: 2026, month: 10, monthName: "October", actualIncome: 5000m, actualExpenses: 3000m));
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var trend = await service.GetTrendDataAsync(UserId, 2026);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.TrendDataDto trend = await service.GetTrendDataAsync(UserId, 2026);
 
         Assert.Equal(2026, trend.Year);
         Assert.Equal(2, trend.TrendPoints.Count);
@@ -134,13 +135,13 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task GetCategoryInsightsAsync_ParsesCategoryBreakdownJson()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(CreateSnapshot(categoryJson:
             "[{\"categoryName\":\"Dining\",\"budgetedAmount\":300,\"actualAmount\":400},{\"categoryName\":\"Utilities\",\"budgetedAmount\":200,\"actualAmount\":150}]"));
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
 
         Assert.NotNull(insights);
         Assert.Equal(2, insights.Categories.Count);
@@ -162,13 +163,13 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task GetBudgetVarianceAsync_RanksCategoriesByVariance()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(CreateSnapshot(categoryJson:
             "[{\"categoryName\":\"Groceries\",\"budgetedAmount\":500,\"actualAmount\":600},{\"categoryName\":\"Travel\",\"budgetedAmount\":1000,\"actualAmount\":800}]"));
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
 
         Assert.NotNull(variance);
         Assert.Equal(2, variance.Rankings.Count);
@@ -187,17 +188,17 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task GetAvailableYearsAndMonths_ReturnsDistinctSortedLists()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.AddRange(
             CreateSnapshot(year: 2025, month: 12),
             CreateSnapshot(year: 2026, month: 1),
             CreateSnapshot(year: 2026, month: 10));
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var years = await service.GetAvailableYearsAsync(UserId);
-        var months2026 = await service.GetAvailableMonthsAsync(UserId, 2026);
-        var mostRecent = await service.GetMostRecentMonthAsync(UserId);
+        SpreadsheetAnalysisService service = CreateService(db);
+        List<int> years = await service.GetAvailableYearsAsync(UserId);
+        List<int> months2026 = await service.GetAvailableMonthsAsync(UserId, 2026);
+        (int year, int month)? mostRecent = await service.GetMostRecentMonthAsync(UserId);
 
         Assert.Equal(ExpectedYears2026And2025, years);
         Assert.Equal(ExpectedMonthsJanuaryAndOctober, months2026);
@@ -207,8 +208,8 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task DashboardRecentActivity_IncludesSpreadsheetTransactions_SortedByDateAndId()
     {
-        await using var db = CreateContext();
-        var snapshot = CreateSnapshot();
+        await using AppDbContext db = CreateContext();
+        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot();
         db.SpreadsheetBudgetSnapshots.Add(snapshot);
         await db.SaveChangesAsync();
 
@@ -238,7 +239,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         var dashboardService = new DashboardService(db, TestBudgetDataProviderFactory.Create(db));
-        var summary = await dashboardService.GetDashboardSummaryAsync(UserId);
+        DashboardSummaryDto summary = await dashboardService.GetDashboardSummaryAsync(UserId);
 
         Assert.Equal(2, summary.RecentActivity.Count);
         Assert.Equal("Groceries", summary.RecentActivity[0].Title);
@@ -248,7 +249,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task MultiSnapshot_SameMonth_AggregatesTotalsAndMergesCategoriesCaseInsensitively()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.AddRange(
             new SpreadsheetBudgetSnapshot
             {
@@ -284,10 +285,10 @@ public class SpreadsheetAnalysisCharacterizationTests
             });
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
+        SpreadsheetAnalysisService service = CreateService(db);
 
         // 1. Summary Statistics aggregates totals across snapshots
-        var stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
+        ApiService.Services.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
         Assert.NotNull(stats);
         Assert.Equal(5300m, stats.TotalIncome); // 3200 + 2100
         Assert.Equal(3200m, stats.TotalExpenses); // 1800 + 1400
@@ -295,16 +296,16 @@ public class SpreadsheetAnalysisCharacterizationTests
         Assert.Equal(2, stats.SnapshotCount);
 
         // 2. Category Insights merges "Food" and "food" case-insensitively
-        var insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
+        ApiService.Services.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
         Assert.NotNull(insights);
         Assert.Equal(3, insights.Categories.Count); // Food, Rent, Utilities
 
-        var food = insights.Categories.Single(c => c.CategoryName.Equals("Food", StringComparison.OrdinalIgnoreCase));
+        ApiService.Services.CategoryBreakdownDto food = insights.Categories.Single(c => c.CategoryName.Equals("Food", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(800m, food.BudgetedAmount); // 500 + 300
         Assert.Equal(650m, food.ActualAmount); // 400 + 250
 
         // 3. Budget Variance merges categories
-        var variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
+        ApiService.Services.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
         Assert.NotNull(variance);
         Assert.Equal(3, variance.Rankings.Count);
     }
@@ -312,8 +313,8 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task GetSpendingVelocityAsync_CalculatesDailyBurnAndWeeklyTrend()
     {
-        await using var db = CreateContext();
-        var snapshot = CreateSnapshot(year: 2026, month: 10, budgetedExpenses: 3100m, actualExpenses: 1550m);
+        await using AppDbContext db = CreateContext();
+        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot(year: 2026, month: 10, budgetedExpenses: 3100m, actualExpenses: 1550m);
         db.SpreadsheetBudgetSnapshots.Add(snapshot);
 
         // Add transaction records for weekly trend and category velocities
@@ -350,8 +351,8 @@ public class SpreadsheetAnalysisCharacterizationTests
             });
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
 
         Assert.NotNull(velocity);
         Assert.Equal(2026, velocity.Year);
@@ -368,13 +369,13 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task CategoryBreakdown_WithInvalidJson_ReturnsEmptyCategoriesWithoutFailing()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(CreateSnapshot(categoryJson: "INVALID-JSON-{{{"));
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
-        var variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
+        ApiService.Services.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
 
         Assert.NotNull(insights);
         Assert.Empty(insights.Categories);
@@ -388,32 +389,32 @@ public class SpreadsheetAnalysisCharacterizationTests
     public async Task UserIsolation_OtherUsersDataNeverReturned()
     {
         const string otherUserId = "other-char-user";
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.AddRange(
             CreateSnapshot(userId: UserId, year: 2026, month: 10, actualIncome: 5000m, actualExpenses: 3000m),
             CreateSnapshot(userId: otherUserId, year: 2026, month: 10, actualIncome: 99999m, actualExpenses: 88888m));
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
 
         Assert.NotNull(stats);
         Assert.Equal(5000m, stats.TotalIncome);
         Assert.Equal(3000m, stats.TotalExpenses);
         Assert.Equal(1, stats.SnapshotCount);
 
-        var years = await service.GetAvailableYearsAsync(UserId);
+        List<int> years = await service.GetAvailableYearsAsync(UserId);
         Assert.Equal(ExpectedYears2026Only, years);
     }
 
     [Fact]
     public async Task DashboardRecentActivity_CapsAtActivityItemCount()
     {
-        await using var db = CreateContext();
-        var snapshot = CreateSnapshot();
+        await using AppDbContext db = CreateContext();
+        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot();
         db.SpreadsheetBudgetSnapshots.Add(snapshot);
 
-        for (var i = 1; i <= 10; i++)
+        for (int i = 1; i <= 10; i++)
         {
             db.SpreadsheetTransactionRecords.Add(new SpreadsheetTransactionRecord
             {
@@ -431,7 +432,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         var dashboardService = new DashboardService(db, TestBudgetDataProviderFactory.Create(db));
-        var summary = await dashboardService.GetDashboardSummaryAsync(UserId);
+        DashboardSummaryDto summary = await dashboardService.GetDashboardSummaryAsync(UserId);
 
         Assert.Equal(5, summary.RecentActivity.Count);
         Assert.Equal("Transaction 10", summary.RecentActivity[0].Title);
@@ -441,7 +442,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task BudgetService_CheckBudgetAlerts_CreatesExceededNotificationWhen100PercentOrMore()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(CreateSnapshot(budgetedExpenses: 1000m, actualExpenses: 1100m)); // 110%
         await db.SaveChangesAsync();
 
@@ -464,7 +465,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task BudgetService_CheckBudgetAlerts_CreatesNotificationWhenThresholdExceeded()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(CreateSnapshot(budgetedExpenses: 1000m, actualExpenses: 900m)); // 90%
         await db.SaveChangesAsync();
 
@@ -487,7 +488,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task GetTrendDataAsync_WithMultipleSnapshotsInSameMonth_ReturnsOnePointPerSnapshot()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.AddRange(
             new SpreadsheetBudgetSnapshot
             {
@@ -511,8 +512,8 @@ public class SpreadsheetAnalysisCharacterizationTests
             });
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var trend = await service.GetTrendDataAsync(UserId, 2026);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.TrendDataDto trend = await service.GetTrendDataAsync(UserId, 2026);
 
         // Characterize existing behaviour: returns one trend point per stored snapshot row
         Assert.Equal(2, trend.TrendPoints.Count);
@@ -525,7 +526,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task GetSpendingVelocityAsync_WithMultipleSnapshotsInSameMonth_CalculatesCorrectVelocity()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var snapshot1 = new SpreadsheetBudgetSnapshot
         {
             UserId = UserId,
@@ -573,8 +574,8 @@ public class SpreadsheetAnalysisCharacterizationTests
         );
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
 
         Assert.NotNull(velocity);
         // Sum of budgeted expenses: 3000 + 1000 = 4000
@@ -590,7 +591,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task SpreadsheetAnalysis_WhenSourceIsBudgetTracker_ReturnsTrackerSummaryAndVelocity()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetSourcePreferences.Add(new UserBudgetSourcePreference
         {
             UserId = UserId,
@@ -619,20 +620,20 @@ public class SpreadsheetAnalysisCharacterizationTests
         });
         await db.SaveChangesAsync();
 
-        var service = CreateService(db);
-        var stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
+        SpreadsheetAnalysisService service = CreateService(db);
+        ApiService.Services.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
         Assert.NotNull(stats);
         Assert.Equal(150m, stats.TotalExpenses);
         Assert.Equal(1, stats.SnapshotCount);
 
-        var velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
+        ApiService.Services.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
         Assert.NotNull(velocity);
         Assert.Equal(600m, velocity.BudgetedExpenses);
         Assert.Single(velocity.CategoryVelocities);
         Assert.Equal("Dining", velocity.CategoryVelocities[0].CategoryName);
         Assert.NotEmpty(velocity.WeeklyTrend);
 
-        var mostRecent = await service.GetMostRecentMonthAsync(UserId);
+        (int year, int month)? mostRecent = await service.GetMostRecentMonthAsync(UserId);
         Assert.NotNull(mostRecent);
         Assert.Equal(2026, mostRecent.Value.year);
         Assert.Equal(10, mostRecent.Value.month);
@@ -641,7 +642,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task SpreadsheetAnalysisController_GetDashboard_ReturnsActiveSourceAndMatchesProviderOutput()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetSourcePreferences.Add(new UserBudgetSourcePreference
         {
             UserId = UserId,
@@ -670,11 +671,11 @@ public class SpreadsheetAnalysisCharacterizationTests
         });
         await db.SaveChangesAsync();
 
-        var controller = CreateAnalysisController(db);
+        SpreadsheetAnalysisController controller = CreateAnalysisController(db);
 
-        var actionResult = await controller.GetDashboard(2026, 10);
-        var okResult = Assert.IsType<OkObjectResult>(actionResult);
-        var result = Assert.IsType<AnalysisDashboardResult>(okResult.Value);
+        IActionResult actionResult = await controller.GetDashboard(2026, 10);
+        OkObjectResult okResult = Assert.IsType<OkObjectResult>(actionResult);
+        AnalysisDashboardResult result = Assert.IsType<AnalysisDashboardResult>(okResult.Value);
 
         Assert.True(result.HasData);
         Assert.Equal(BudgetDataSource.BudgetTracker, result.ActiveSource);
@@ -687,13 +688,13 @@ public class SpreadsheetAnalysisCharacterizationTests
     [Fact]
     public async Task SpreadsheetAnalysisController_GetDashboard_WhenEmpty_ReturnsHasDataFalseWithActiveSource()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var controller = CreateAnalysisController(db);
+        SpreadsheetAnalysisController controller = CreateAnalysisController(db);
 
-        var actionResult = await controller.GetDashboard(2026, 10);
-        var okResult = Assert.IsType<OkObjectResult>(actionResult);
-        var result = Assert.IsType<AnalysisDashboardResult>(okResult.Value);
+        IActionResult actionResult = await controller.GetDashboard(2026, 10);
+        OkObjectResult okResult = Assert.IsType<OkObjectResult>(actionResult);
+        AnalysisDashboardResult result = Assert.IsType<AnalysisDashboardResult>(okResult.Value);
 
         Assert.False(result.HasData);
         Assert.Equal(BudgetDataSource.BudgetTracker, result.ActiveSource);
@@ -707,7 +708,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     public async Task
         SpreadsheetAnalysisController_GetDashboard_WhenRequestedMonthMissing_KeepsYearMonthAndListsOtherMonths()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetSourcePreferences.Add(new UserBudgetSourcePreference
         {
             UserId = UserId,
@@ -733,11 +734,11 @@ public class SpreadsheetAnalysisCharacterizationTests
         });
         await db.SaveChangesAsync();
 
-        var controller = CreateAnalysisController(db);
+        SpreadsheetAnalysisController controller = CreateAnalysisController(db);
 
-        var actionResult = await controller.GetDashboard(2026, 3);
-        var okResult = Assert.IsType<OkObjectResult>(actionResult);
-        var result = Assert.IsType<AnalysisDashboardResult>(okResult.Value);
+        IActionResult actionResult = await controller.GetDashboard(2026, 3);
+        OkObjectResult okResult = Assert.IsType<OkObjectResult>(actionResult);
+        AnalysisDashboardResult result = Assert.IsType<AnalysisDashboardResult>(okResult.Value);
 
         Assert.False(result.HasData);
         Assert.Null(result.Summary);

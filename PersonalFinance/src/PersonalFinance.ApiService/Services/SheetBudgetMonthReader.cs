@@ -27,7 +27,7 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
     /// <inheritdoc />
     public async Task<List<BudgetMonthData>> GetMonthsAsync(string userId, int year, CancellationToken ct = default)
     {
-        var snapshots = await _dbContext.SpreadsheetBudgetSnapshots
+        List<SpreadsheetBudgetSnapshot> snapshots = await _dbContext.SpreadsheetBudgetSnapshots
             .AsNoTracking()
             .Where(s => s.UserId == userId && s.Year == year)
             .OrderBy(s => s.MonthNumber)
@@ -40,11 +40,11 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
         }
 
         var result = new List<BudgetMonthData>();
-        var grouped = snapshots.GroupBy(s => s.MonthNumber).OrderBy(g => g.Key);
+        IOrderedEnumerable<IGrouping<int, SpreadsheetBudgetSnapshot>> grouped = snapshots.GroupBy(s => s.MonthNumber).OrderBy(g => g.Key);
 
-        foreach (var group in grouped)
+        foreach (IGrouping<int, SpreadsheetBudgetSnapshot>? group in grouped)
         {
-            var aggregated = AggregateSnapshotsToMonthData(year, group.Key, group.ToList());
+            BudgetMonthData aggregated = AggregateSnapshotsToMonthData(year, group.Key, group.ToList());
             result.Add(aggregated);
         }
 
@@ -55,7 +55,7 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
     public async Task<BudgetMonthData?> GetMonthAsync(string userId, int year, int month,
         CancellationToken ct = default)
     {
-        var snapshots = await _dbContext.SpreadsheetBudgetSnapshots
+        List<SpreadsheetBudgetSnapshot> snapshots = await _dbContext.SpreadsheetBudgetSnapshots
             .AsNoTracking()
             .Where(s => s.UserId == userId && s.Year == year && s.MonthNumber == month)
             .OrderBy(s => s.Id)
@@ -113,7 +113,7 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
             query = query.Take(take.Value);
         }
 
-        var records = await query.ToListAsync(ct);
+        List<SpreadsheetTransactionRecord> records = await query.ToListAsync(ct);
 
         return records.Select(t => new BudgetTransactionData
         {
@@ -141,7 +141,7 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
     private static BudgetMonthData AggregateSnapshotsToMonthData(int year, int month,
         List<SpreadsheetBudgetSnapshot> snapshots)
     {
-        var monthName = snapshots.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s.MonthName))?.MonthName;
+        string? monthName = snapshots.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s.MonthName))?.MonthName;
         if (string.IsNullOrWhiteSpace(monthName))
         {
             monthName = month >= 1 && month <= 12
@@ -152,12 +152,12 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
         var categoryMap = new Dictionary<string, BudgetMonthCategoryData>(StringComparer.OrdinalIgnoreCase);
         var categoryList = new List<BudgetMonthCategoryData>();
 
-        foreach (var snapshot in snapshots)
+        foreach (SpreadsheetBudgetSnapshot snapshot in snapshots)
         {
-            var parsed = ParseCategories(snapshot.CategoryBreakdownJson);
-            foreach (var cat in parsed)
+            List<BudgetMonthCategoryData> parsed = ParseCategories(snapshot.CategoryBreakdownJson);
+            foreach (BudgetMonthCategoryData cat in parsed)
             {
-                if (categoryMap.TryGetValue(cat.Name, out var existing))
+                if (categoryMap.TryGetValue(cat.Name, out BudgetMonthCategoryData? existing))
                 {
                     existing.Budgeted += cat.Budgeted;
                     existing.Actual += cat.Actual;
@@ -176,8 +176,8 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
             }
         }
 
-        var hasStartingBalance = snapshots.Any(s => s.StartingBalance.HasValue);
-        var hasEndingBalance = snapshots.Any(s => s.EndingBalance.HasValue);
+        bool hasStartingBalance = snapshots.Any(s => s.StartingBalance.HasValue);
+        bool hasEndingBalance = snapshots.Any(s => s.EndingBalance.HasValue);
 
         return new BudgetMonthData
         {
@@ -206,11 +206,11 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
 
         try
         {
-            var items = JsonSerializer.Deserialize<List<CategoryJsonItem>>(json, CaseInsensitiveJsonOptions);
+            List<CategoryJsonItem>? items = JsonSerializer.Deserialize<List<CategoryJsonItem>>(json, CaseInsensitiveJsonOptions);
 
             if (items != null)
             {
-                foreach (var item in items)
+                foreach (CategoryJsonItem item in items)
                 {
                     categories.Add(new BudgetMonthCategoryData
                     {

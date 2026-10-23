@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 
 namespace PersonalFinance.ApiService.Infrastructure;
 
@@ -44,16 +45,16 @@ public class XUserIdAuthenticationHandler : AuthenticationHandler<Authentication
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // If the X-User-Id header is not present, return no result so the next handler can try
-        if (!Request.Headers.TryGetValue("X-User-Id", out var userIdValues) ||
+        if (!Request.Headers.TryGetValue("X-User-Id", out StringValues userIdValues) ||
             string.IsNullOrEmpty(userIdValues))
             return AuthenticateResult.NoResult();
 
-        var configuredKey = Context.RequestServices.GetService<IConfiguration>()?[XUserIdAuthenticationDefaults.InternalKeyConfig];
-        var keyConfigured = !string.IsNullOrEmpty(configuredKey);
+        string? configuredKey = Context.RequestServices.GetService<IConfiguration>()?[XUserIdAuthenticationDefaults.InternalKeyConfig];
+        bool keyConfigured = !string.IsNullOrEmpty(configuredKey);
         if (keyConfigured)
         {
             // A configured shared secret is mandatory: callers without it are not authenticated at all.
-            var supplied = Request.Headers[XUserIdAuthenticationDefaults.InternalKeyHeader].FirstOrDefault() ?? string.Empty;
+            string supplied = Request.Headers[XUserIdAuthenticationDefaults.InternalKeyHeader].FirstOrDefault() ?? string.Empty;
             if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(supplied), Encoding.UTF8.GetBytes(configuredKey!)))
             {
                 _logger.LogWarning("Rejected X-User-Id request with a missing or invalid internal key.");
@@ -61,7 +62,7 @@ public class XUserIdAuthenticationHandler : AuthenticationHandler<Authentication
             }
         }
 
-        var userId = userIdValues.First() ?? string.Empty;
+        string userId = userIdValues.First() ?? string.Empty;
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId),
@@ -71,14 +72,14 @@ public class XUserIdAuthenticationHandler : AuthenticationHandler<Authentication
         // Roles are always read from the database on every request; a client-supplied roles header is never trusted.
         // They are only attached when the caller proved itself with the shared secret (or in Development),
         // because X-User-Id alone is spoofable when the API is reachable from outside.
-        var isDevelopment = Context.RequestServices.GetService<IHostEnvironment>()?.IsDevelopment() == true;
-        var userManager = Context.RequestServices.GetService<UserManager<IdentityUser>>();
+        bool isDevelopment = Context.RequestServices.GetService<IHostEnvironment>()?.IsDevelopment() == true;
+        UserManager<IdentityUser>? userManager = Context.RequestServices.GetService<UserManager<IdentityUser>>();
         if (userManager is not null && (keyConfigured || isDevelopment))
         {
-            var user = await userManager.FindByIdAsync(userId);
+            IdentityUser? user = await userManager.FindByIdAsync(userId);
             if (user is not null)
             {
-                var roles = await userManager.GetRolesAsync(user);
+                IList<string> roles = await userManager.GetRolesAsync(user);
                 claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
             }
         }
