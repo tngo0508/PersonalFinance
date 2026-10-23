@@ -10,7 +10,8 @@ namespace PersonalFinance.Tests.Analysis;
 /// </summary>
 public class MoneyFlowBuilderTests
 {
-    private static CategoryInsightsDto Month(decimal income, decimal expenses, params (string Name, decimal Actual)[] categories)
+    private static CategoryInsightsDto Month(decimal income, decimal expenses,
+        params (string Name, decimal Actual)[] categories)
     {
         return new CategoryInsightsDto
         {
@@ -160,6 +161,35 @@ public class MoneyFlowBuilderTests
         Assert.NotNull(flow);
         Assert.Equal(3, flow.Nodes.Select(n => n.Key).Distinct().Count());
         Assert.Equal(2, flow.Links.Count);
+    }
+
+    [Fact]
+    public void Build_GivesEachCategoryItsOwnColourSlotInDisplayOrder()
+    {
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 700m, ("Food", 200m), ("Rent", 500m)));
+
+        Assert.NotNull(flow);
+        Assert.Equal([0, 1],
+            flow.Nodes.Where(n => n.Kind == MoneyFlowNodeKind.Category).Select(n => n.ColorSlot!.Value));
+        Assert.All(flow.Nodes.Where(n => n.Kind != MoneyFlowNodeKind.Category), n => Assert.Null(n.ColorSlot));
+        // The table shows the same swatch as the band.
+        Assert.Equal(1, flow.TableRows.Single(r => r.Name == "Food").ColorSlot);
+    }
+
+    [Fact]
+    public void Build_FoldsCategoriesPastTheColouredLimitIntoOther()
+    {
+        // Seven categories, each well above 3%: the five largest get colours, the last two join Other.
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 700m,
+            ("A", 160m), ("B", 140m), ("C", 120m), ("D", 100m), ("E", 80m), ("F", 60m), ("G", 40m)));
+
+        Assert.NotNull(flow);
+        List<MoneyFlowNodeViewModel> categories = flow.Nodes.Where(n => n.Kind == MoneyFlowNodeKind.Category).ToList();
+        Assert.Equal(MoneyFlowBuilder.MaxColoredCategories, categories.Count);
+        Assert.Equal(100m, flow.Nodes.Single(n => n.Kind == MoneyFlowNodeKind.Other).Amount);
+        MoneyFlowRowViewModel f = flow.TableRows.Single(r => r.Name == "F");
+        Assert.True(f.InOther);
+        Assert.Null(f.ColorSlot);
     }
 
     [Fact]

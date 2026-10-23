@@ -1,16 +1,29 @@
 (function () {
     'use strict';
 
-    // Colours by node kind, from the site.css tokens (brand indigo, positive, negative, warning, neutral grey).
-    const KIND_COLORS = {
-        income: '#4F46E5',
-        shortfall: '#DC2626',
-        spending: '#6B7280',
-        category: '#6366F1',
-        uncategorized: '#D97706',
-        other: '#9CA3AF',
-        saved: '#059669'
-    };
+    // Fallbacks if the card's CSS variables are missing; the view defines the real values (see Index.cshtml).
+    const FALLBACK_COLOR = '#9CA3AF';
+
+    /**
+     * Read the Money Flow colours from the card's CSS custom properties.
+     * @param {Element} card - The Money Flow section element.
+     * @returns {{slots: string[], kinds: Object<string, string>}} Category slot colours and colours by node kind.
+     */
+    function readColors (card) {
+        const style = getComputedStyle(card);
+        const read = (name) => style.getPropertyValue(name).trim() || FALLBACK_COLOR;
+        return {
+            slots: [0, 1, 2, 3, 4].map((slot) => read(`--money-flow-slot-${slot}`)),
+            kinds: {
+                income: read('--money-flow-income'),
+                shortfall: read('--money-flow-shortfall'),
+                spending: read('--money-flow-spending'),
+                uncategorized: read('--money-flow-uncategorized'),
+                other: read('--money-flow-other'),
+                saved: read('--money-flow-saved')
+            }
+        };
+    }
 
     /**
      * Format an amount as whole US dollars, e.g. "$1,800".
@@ -47,6 +60,7 @@
 
         // On narrow charts the amounts don't fit beside the bands; the table above them carries the figures.
         const compact = canvas.parentElement.clientWidth < 576;
+        const colors = readColors(canvas.closest('.money-flow') || canvas);
         const nodesByKey = {};
         const labels = {};
         const columns = {};
@@ -67,7 +81,13 @@
         function endColor (context, end) {
             const link = context.dataset.data[context.dataIndex];
             const node = link ? nodesByKey[link[end]] : null;
-            return (node && KIND_COLORS[node.kind]) || KIND_COLORS.category;
+            if (!node) {
+                return FALLBACK_COLOR;
+            }
+            if (node.kind === 'category') {
+                return colors.slots[node.colorSlot] || FALLBACK_COLOR;
+            }
+            return colors.kinds[node.kind] || FALLBACK_COLOR;
         }
 
         new Chart(canvas.getContext('2d'), {

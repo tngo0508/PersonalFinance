@@ -14,6 +14,12 @@ public static class MoneyFlowBuilder
     /// <summary>Categories below this share of the month's total flow are grouped into Other in the chart.</summary>
     private const decimal OtherThreshold = 0.03m;
 
+    /// <summary>
+    ///     How many categories get their own colour. Colours are assigned in display order from a palette validated
+    ///     for neighbouring bands (see money-flow.js); they are never cycled, so further categories join Other.
+    /// </summary>
+    public const int MaxColoredCategories = 5;
+
     private const string IncomeKey = "income";
     private const string ShortfallKey = "shortfall";
     private const string SpendingKey = "spending";
@@ -81,14 +87,17 @@ public static class MoneyFlowBuilder
         for (int i = 0; i < categories.Count; i++)
         {
             (string name, decimal amount) = categories[i];
-            if (amount < totalFlow * OtherThreshold)
+            int colored = rightHand.Count;
+            if (amount < totalFlow * OtherThreshold || colored >= MaxColoredCategories)
             {
                 other += amount;
                 continue;
             }
 
-            rightHand.Add(Node($"category-{i}", name, amount, MoneyFlowNodeKind.Category, rightColumn,
-                Share(amount, shareBase)));
+            MoneyFlowNodeViewModel node = Node($"category-{i}", name, amount, MoneyFlowNodeKind.Category, rightColumn,
+                Share(amount, shareBase));
+            node.ColorSlot = colored;
+            rightHand.Add(node);
         }
 
         if (uncategorized > 0m)
@@ -124,7 +133,16 @@ public static class MoneyFlowBuilder
             model.Links.AddRange(rightHand.Select(n => Link(IncomeKey, n.Key, n.Amount)));
         }
 
-        model.TableRows.AddRange(categories.Select(c => Row(c.Name, c.Amount, MoneyFlowNodeKind.Category, shareBase)));
+        Dictionary<string, int?> slotsByKey = rightHand
+            .Where(n => n.Kind == MoneyFlowNodeKind.Category)
+            .ToDictionary(n => n.Key, n => n.ColorSlot);
+        model.TableRows.AddRange(categories.Select((c, i) =>
+        {
+            MoneyFlowRowViewModel row = Row(c.Name, c.Amount, MoneyFlowNodeKind.Category, shareBase);
+            row.ColorSlot = slotsByKey.GetValueOrDefault($"category-{i}");
+            row.InOther = row.ColorSlot is null;
+            return row;
+        }));
         if (uncategorized > 0m)
         {
             model.TableRows.Add(Row("Uncategorized", uncategorized, MoneyFlowNodeKind.Uncategorized, shareBase));

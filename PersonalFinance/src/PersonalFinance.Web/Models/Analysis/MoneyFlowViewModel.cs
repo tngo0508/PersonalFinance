@@ -58,6 +58,9 @@ public sealed class MoneyFlowNodeViewModel
 
     /// <summary>Share of <see cref="MoneyFlowViewModel.ShareBase"/>; null for the left-hand and Spending nodes.</summary>
     public decimal? SharePercent { get; set; }
+
+    /// <summary>For a category, its colour slot (0 = largest); null for every other kind of node.</summary>
+    public int? ColorSlot { get; set; }
 }
 
 public sealed class MoneyFlowLinkViewModel
@@ -73,4 +76,10 @@ public sealed class MoneyFlowRowViewModel
     public decimal Amount { get; set; }
     public decimal SharePercent { get; set; }
     public MoneyFlowNodeKind Kind { get; set; }
+
+    /// <summary>The colour slot of the category's band, so the table can show the same swatch.</summary>
+    public int? ColorSlot { get; set; }
+
+    /// <summary>True for a category drawn inside the chart's Other band rather than on its own.</summary>
+    public bool InOther { get; set; }
 }
