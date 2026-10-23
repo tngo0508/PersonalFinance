@@ -14,23 +14,19 @@ internal sealed class NewsService : INewsService
     private const string CacheKey = "Watchlist.NewsFeed";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
-    // Personal finance RSS sources — focused on budgeting, saving, investing, debt, retirement
+    // The RSS sources, each filed under one of the NewsTopics; the topic filter follows this list.
     private static readonly IReadOnlyList<NewsSourceDto> Sources =
     [
-        // Budgeting & Saving
-        new() { Name = "NPR Personal Finance", Url = "https://feeds.npr.org/510305/podcast.xml", Category = "Budgeting" },
-        new() { Name = "CNN Business", Url = "https://rss.cnn.com/rss/money_latest.rss", Category = "Budgeting" },
-        // Investing
-        new() { Name = "Investopedia", Url = "https://www.investopedia.com/news/rssFeedType.latest/rss", Category = "Investing" },
-        new() { Name = "MarketWatch", Url = "https://feeds.content.dowjones.io/public/rss/mw_topstories", Category = "Investing" },
-        // Retirement & Planning
-        new() { Name = "Forbes Finance", Url = "https://feeds.feedburner.com/Forbes/finance-wires", Category = "Retirement" },
-        // General Finance
-        new() { Name = "BBC Business", Url = "http://feeds.bbci.co.uk/news/business/rss.xml", Category = "General" },
+        new() { Name = "NPR Personal Finance", Url = "https://feeds.npr.org/510305/podcast.xml", Category = NewsTopics.Budgeting },
+        new() { Name = "CNN Business", Url = "https://rss.cnn.com/rss/money_latest.rss", Category = NewsTopics.Budgeting },
+        new() { Name = "Investopedia", Url = "https://www.investopedia.com/news/rssFeedType.latest/rss", Category = NewsTopics.Investing },
+        new() { Name = "MarketWatch", Url = "https://feeds.content.dowjones.io/public/rss/mw_topstories", Category = NewsTopics.Investing },
+        new() { Name = "Forbes Finance", Url = "https://feeds.feedburner.com/Forbes/finance-wires", Category = NewsTopics.Retirement },
+        new() { Name = "BBC Business", Url = "http://feeds.bbci.co.uk/news/business/rss.xml", Category = NewsTopics.General },
     ];
 
-    private static readonly IReadOnlyList<string> PersonalFinanceCategories =
-        ["Budgeting", "Saving", "Investing", "Debt", "Retirement"];
+    // The topics some configured source covers, in source order.
+    private static readonly IReadOnlyList<string> Topics = Sources.Select(s => s.Category).Distinct().ToList();
 
     private readonly INewsFeedClient _feedClient;
     private readonly IMemoryCache _cache;
@@ -46,23 +42,22 @@ internal sealed class NewsService : INewsService
     {
         List<NewsArticleDto> articles = await GetCachedArticlesAsync(cancellationToken);
 
-        NewsFeedDto feed = FilterOptions(articles);
+        NewsFeedDto feed = FilterOptions();
         feed.Articles = FilterArticles(articles, query);
         return feed;
     }
 
     /// <inheritdoc />
-    public async Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
-        FilterOptions(await GetCachedArticlesAsync(cancellationToken));
+    public Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(FilterOptions());
 
     /// <summary>
-    /// The filter options of the whole feed, with no articles.
+    /// The filter options, with no articles: the configured sources and the topics they cover.
     /// </summary>
-    private static NewsFeedDto FilterOptions(List<NewsArticleDto> articles) => new()
+    private static NewsFeedDto FilterOptions() => new()
     {
-        Categories = articles.Select(a => a.Category).Distinct().Order(StringComparer.Ordinal).ToList(),
         Sources = Sources.Select(s => new NewsSourceDto { Name = s.Name, Url = s.Url, Category = s.Category }).ToList(),
-        PersonalFinanceCategories = PersonalFinanceCategories.ToList(),
+        Topics = Topics.ToList(),
     };
 
     /// <summary>

@@ -66,7 +66,7 @@
                 <div class="finance-hub-filter-group">
                     <select name="category" id="categoryFilter" class="form-select finance-hub-filter-select" onchange="this.form.submit()" aria-label="Filter by topic">
                         <option value="">All Topics</option>
-                        @foreach (var cat in Model.PersonalFinanceCategories)
+                        @foreach (var cat in Model.Topics)
                         {
                             <option value="@cat" selected="@(Model.SelectedCategory == cat)">@cat</option>
                         }

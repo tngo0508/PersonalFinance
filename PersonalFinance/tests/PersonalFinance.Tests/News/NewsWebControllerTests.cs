@@ -37,9 +37,8 @@ public class NewsWebControllerTests
         public NewsFeedDto Feed { get; } = new()
         {
             Articles = [new NewsArticleDto { Title = "Rates fall", Url = "https://example.test/rates", Category = "Investing" }],
-            Categories = ["General", "Investing"],
             Sources = [new NewsSourceDto { Name = "BBC Business" }],
-            PersonalFinanceCategories = ["Budgeting", "Saving", "Investing", "Debt", "Retirement"],
+            Topics = ["Investing", "General"],
         };
 
         public async Task<NewsFeedDto> GetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken = default)
@@ -55,9 +54,8 @@ public class NewsWebControllerTests
                 var rejected = new NewsFeedDto
                 {
                     Errors = ["The length of 'Search' must be 100 characters or fewer."],
-                    Categories = Feed.Categories,
                     Sources = Feed.Sources,
-                    PersonalFinanceCategories = Feed.PersonalFinanceCategories,
+                    Topics = Feed.Topics,
                 };
                 var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
                 {
@@ -95,9 +93,8 @@ public class NewsWebControllerTests
         NewsViewModel model = ViewModelOf(await CreateController(api).Index(query));
 
         Assert.Equal("Rates fall", Assert.Single(model.Articles).Title);
-        Assert.Equal(["General", "Investing"], model.Categories);
         Assert.Equal("BBC Business", Assert.Single(model.Sources).Name);
-        Assert.Equal(5, model.PersonalFinanceCategories.Count);
+        Assert.Equal(["Investing", "General"], model.Topics);
         Assert.Equal("Investing", model.SelectedCategory);
         Assert.Equal("BBC Business", model.SelectedSource);
         Assert.Equal("rates", model.SearchQuery);
@@ -117,7 +114,7 @@ public class NewsWebControllerTests
         Assert.Empty(model.Articles);
         Assert.Null(model.ErrorMessage);
         Assert.Equal("BBC Business", Assert.Single(model.Sources).Name);
-        Assert.Equal(["General", "Investing"], model.Categories);
+        Assert.Equal(["Investing", "General"], model.Topics);
         Assert.Equal("too long", model.SearchQuery);
         Assert.False(model.IsLoading);
         Assert.Single(api.Queries);

@@ -18,14 +18,9 @@ public sealed class NewsViewModel
     public List<NewsSourceDto> Sources { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the available categories derived from the fetched articles.
+    /// Gets or sets the topics offered by the category filter: those some configured source covers.
     /// </summary>
-    public List<string> Categories { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets the personal finance categories for filtering (Budgeting, Saving, Investing, Debt, Retirement).
-    /// </summary>
-    public List<string> PersonalFinanceCategories { get; set; } = new();
+    public List<string> Topics { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the currently selected category filter value.

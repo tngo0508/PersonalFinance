@@ -14,7 +14,8 @@ public interface INewsService
     Task<NewsFeedDto> GetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the filter options of the whole feed with no articles, for a query whose filters were rejected.
+    /// Gets the filter options (the configured sources and the topics they cover) with no articles, for a query whose
+    /// filters were rejected.
     /// </summary>
     Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default);
 }

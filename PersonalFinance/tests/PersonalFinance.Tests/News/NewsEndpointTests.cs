@@ -26,7 +26,7 @@ public class NewsEndpointTests
         }
 
         public Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(new NewsFeedDto { Sources = [new NewsSourceDto { Name = "BBC Business" }], Categories = ["General"] });
+            Task.FromResult(new NewsFeedDto { Sources = [new NewsSourceDto { Name = "BBC Business" }], Topics = ["General"] });
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class NewsEndpointTests
         Assert.NotEmpty(body.Errors);
         Assert.Empty(body.Articles);
         Assert.Equal("BBC Business", Assert.Single(body.Sources).Name);
-        Assert.Equal(["General"], body.Categories);
+        Assert.Equal(["General"], body.Topics);
         Assert.Null(service.LastQuery);
     }
 }

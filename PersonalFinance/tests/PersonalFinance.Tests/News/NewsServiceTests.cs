@@ -62,12 +62,20 @@ public class NewsServiceTests
     }
 
     [Fact]
-    public async Task GetNewsAsync_FiltersByCategory_ButListsTheCategoriesOfTheWholeFeed()
+    public async Task GetNewsAsync_FiltersByCategoryIgnoringCase()
     {
         NewsFeedDto feed = await CreateService(new StubFeedHandler()).GetNewsAsync(new NewsQueryDto { Category = "debt" });
 
         Assert.Equal("Housing update", Assert.Single(feed.Articles).Title);
-        Assert.Equal(["Debt", "General"], feed.Categories);
+    }
+
+    [Fact]
+    public async Task GetNewsAsync_OffersAsTopics_ExactlyTheCategoriesOfTheConfiguredSources_InSourceOrder()
+    {
+        NewsFeedDto feed = await CreateService(new StubFeedHandler()).GetNewsAsync(new NewsQueryDto());
+
+        Assert.Equal(["Budgeting", "Investing", "Retirement", "General"], feed.Topics);
+        Assert.Equal(feed.Sources.Select(s => s.Category).Distinct(), feed.Topics);
     }
 
     [Fact]
@@ -79,7 +87,6 @@ public class NewsServiceTests
         Assert.Equal("Shares climb", feed.Articles[0].Description);
         Assert.Equal("BBC Business", feed.Articles[0].Source);
         Assert.Contains(feed.Sources, s => s.Name == "BBC Business");
-        Assert.Equal(["Budgeting", "Saving", "Investing", "Debt", "Retirement"], feed.PersonalFinanceCategories);
     }
 
     [Fact]
@@ -89,9 +96,8 @@ public class NewsServiceTests
 
         Assert.Empty(options.Articles);
         Assert.Empty(options.Errors);
-        Assert.Equal(["Debt", "General"], options.Categories);
         Assert.Contains(options.Sources, s => s.Name == "BBC Business");
-        Assert.Equal(5, options.PersonalFinanceCategories.Count);
+        Assert.Equal(["Budgeting", "Investing", "Retirement", "General"], options.Topics);
     }
 
     [Fact]
