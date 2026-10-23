@@ -6,7 +6,7 @@ using PersonalFinance.ApiService.Features.Watchlist.Validators;
 using PersonalFinance.Shared.DTOs.Watchlist;
 using NewsApiController = PersonalFinance.ApiService.Features.Watchlist.NewsController;
 
-namespace PersonalFinance.Tests.News;
+namespace PersonalFinance.Tests.Watchlist;
 
 /// <summary>
 /// The ApiService <c>GET /api/News</c> endpoint: signed-in only, and its filters are validated before the feed is

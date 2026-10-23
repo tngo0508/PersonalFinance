@@ -176,7 +176,9 @@ A Web controller is named after its route, so its name can differ from its Featu
    `AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true)`).
 5. **ApiService controller** in `PersonalFinance.ApiService/Features/<Feature>/`, with `[Authorize]`, reading the
    Account id from claims.
-6. **Refit Contract** in `PersonalFinance.Shared/Contracts/I<Feature>Api.cs`; add one line to `AddInternalApiClients` in
+6. **Refit Contract** in `PersonalFinance.Shared/Contracts/`, one per ApiService controller and named after it
+   (`NewsController` → `INewsApi`, `SpreadsheetAnalysisController` → `ISpreadsheetAnalysisApi`), so a Feature with two
+   controllers has two contracts; add one line to `AddInternalApiClients` in
    `Web/Infrastructure/InternalApiClientExtensions.cs` (`Web/InternalApiClientRegistrationTests` fails if you forget).
 7. **Web controller** in `PersonalFinance.Web/Controllers/`, its **view model** in `Models/<Controller>/` and its
    **Razor view** in `Views/<Controller>/`, with `Models/<Controller>` added to `Views/_ViewImports.cshtml`;
@@ -184,7 +186,9 @@ A Web controller is named after its route, so its name can differ from its Featu
    JavaScript only calls Web: a `fetch('/api/X...')` needs a Web controller routed at `api/X` with `[Authorize]` and
    `[JsonApiErrors]` (`Web/WebApiRouteTests` checks this), and state-changing calls send the
    `RequestVerificationToken` header from the layout's `__RequestVerificationToken` meta tag.
-8. **Tests** in `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/`. Services are tested with the EF Core InMemory
+8. **Tests** in `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/`, the Web controller's tests included;
+   `tests/Web/` holds only tests of cross-cutting Web behaviour (layout, routes, Unavailable State, navigation). Some
+   older folders do not follow this yet (#185). Services are tested with the EF Core InMemory
    provider, which runs any query in memory: guard queries that use string, date or collation-dependent operations
    with `TestSupport/AzureSqlTranslation` (see `Search/SearchServiceTests`). Endpoint authorization can be tested over
    HTTP against the real pipeline with `WebApplicationFactory` (see `Security/ApiServiceInternalKeyHttpTests`).
