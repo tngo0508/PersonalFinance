@@ -4,9 +4,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.Dashboard;
-using PersonalFinance.Web.Features.LandingPage;
+using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Models.Home;
 using Xunit;
-using DashboardController = PersonalFinance.Web.Features.Dashboard.DashboardController;
+using DashboardController = PersonalFinance.Web.Controllers.DashboardController;
 
 namespace PersonalFinance.Tests.Web;
 

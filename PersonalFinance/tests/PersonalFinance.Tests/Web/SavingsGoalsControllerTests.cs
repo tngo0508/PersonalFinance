@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Tests.Budget;
-using PersonalFinance.Web.Features.SavingsGoals;
+using PersonalFinance.Web.Controllers;
 
 namespace PersonalFinance.Tests.Web;
 

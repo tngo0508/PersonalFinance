@@ -8,8 +8,9 @@ using Microsoft.Extensions.Logging;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
-using PersonalFinance.Web.Features.BudgetTracker;
+using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Models.BudgetTracker;
 using Refit;
 using AuthorizeAttribute = Microsoft.AspNetCore.Authorization.AuthorizeAttribute;
 

@@ -5,7 +5,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
-using PersonalFinance.Web.Features.NetWorth;
+using PersonalFinance.Web.Models.Networth;
 
 namespace PersonalFinance.Tests.NetWorth;
 

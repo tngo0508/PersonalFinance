@@ -40,7 +40,7 @@ The project follows a layered architecture pattern with clear separation of conc
 - **No Direct Instantiation**: Use dependency injection instead of `new` keyword for services
 - **Interface Segregation**: Define interfaces in the layer that consumes them
 - **Direct Service Injection**: ApiService controllers inject service interfaces directly via DI without intermediate mediator libraries. See `docs/adr/0001-standardize-cqrs-feature-organization.md`.
-- **Feature Folders**: ApiService and Web are organized by Feature (`Features/<Feature>/`), with code that two or more Features share in `Infrastructure/`. A Feature depends on another only through its interface. See `docs/adr/0007-feature-folders-with-interface-only-dependencies.md`.
+- **Feature Folders**: ApiService is organized by Feature (`Features/<Feature>/`), with code that two or more Features share in `Infrastructure/`. A Feature depends on another only through its interface. See `docs/adr/0007-feature-folders-with-interface-only-dependencies.md`. Web uses the classic MVC layout instead (`Controllers/`, `Models/<Controller>/`, `Views/<Controller>/`); see `docs/adr/0008-web-uses-classic-mvc-layout.md`.
 - **Soft Deletes**: All user-owned entities inherit from `AuditableEntity` with soft-delete support. EF Core global query filters automatically exclude deleted records.
 
 ## License Policy
@@ -76,9 +76,11 @@ When creating or modifying code, always place it in the correct project:
 | Business logic services | `PersonalFinance.ApiService` | `Features/NetWorth/NetWorthParametersService.cs` |
 | Validators | `PersonalFinance.ApiService` | `Features/NetWorth/Validators/NetWorthProjectionValidator.cs` |
 | Code two or more ApiService Features share | `PersonalFinance.ApiService` | `Infrastructure/RateLimiterService.cs` |
-| MVC controllers and view models (Web) | `PersonalFinance.Web` | `Features/NetWorth/NetworthController.cs`, `Features/NetWorth/NetWorthViewModel.cs` |
+| MVC controllers (Web) | `PersonalFinance.Web` | `Controllers/NetworthController.cs` |
+| View models (Web), named after the controller | `PersonalFinance.Web` | `Models/Networth/NetWorthViewModel.cs` |
 | Views (Razor) | `PersonalFinance.Web` | `Views/<Controller>/*.cshtml` files |
-| Code two or more Web Features share | `PersonalFinance.Web` | `Infrastructure/UserIdForwardingHandler.cs` |
+| UI services and tag helpers (Web) | `PersonalFinance.Web` | `Services/UserConsentService.cs`, `TagHelpers/TimeAgoTagHelper.cs` |
+| Web host plumbing | `PersonalFinance.Web` | `Infrastructure/UserIdForwardingHandler.cs` |
 | Data entities | `PersonalFinance.Data` | `NetWorthParameters` entity |
 | DbContext | `PersonalFinance.Data` | `ApplicationDbContext` |
 | DTOs (by feature) | `PersonalFinance.Shared` | `DTOs/NetWorth/NetWorthParametersDto.cs` |
@@ -218,7 +220,7 @@ Implement and validate the data layer before building dependent application logi
 
 #### Feature Folder Structure
 
-ApiService and Web are organized by Feature (`docs/adr/0007-feature-folders-with-interface-only-dependencies.md`). Each Feature in GLOSSARY.md owns `Features/<Feature>/`, under the same name used in `Shared/DTOs/` and the test project. The Feedback Feature is the exemplar:
+ApiService is organized by Feature (`docs/adr/0007-feature-folders-with-interface-only-dependencies.md`); Web uses the classic MVC layout (`docs/adr/0008-web-uses-classic-mvc-layout.md`). Each Feature in GLOSSARY.md owns `Features/<Feature>/` in ApiService, under the same name used in `Shared/DTOs/` and the test project. The Feedback Feature is the exemplar:
 
 ```
 ApiService/
@@ -235,25 +237,27 @@ ApiService/
     RateLimiterService.cs
     NotificationService.cs
     ...
-Web/
-  Features/
-    Feedback/
-      FeedbackController.cs          ← MVC controller, calls the Refit client
+Web/                                 ← Classic MVC layout (ADR 0008), not Feature folders
+  Controllers/
+    FeedbackController.cs            ← MVC controller, calls the Refit client
+  Models/
+    Feedback/                        ← Named after the controller that renders them
       FeedbackViewModel.cs
-  Infrastructure/
-    UserIdForwardingHandler.cs
   Views/
-    Feedback/                        ← Razor views stay where Razor's convention finds them
+    Feedback/
+  Services/                          ← UI services; TagHelpers/ beside it
+  Infrastructure/                    ← Host plumbing only
+    UserIdForwardingHandler.cs
 ```
 
-A Feature folder has a fixed anatomy:
+An ApiService Feature folder has a fixed anatomy:
 
 - **At the root:** the controller, `<Feature>Feature.cs` with `Add<Feature>Feature()`, and each service interface beside its implementation.
 - **Subfolders, only when needed:** `Domain/` (pure logic with no EF Core or HTTP dependency), `Validators/`, and `Adapters/` (clients for Google Drive, OpenAI and other external systems). There is no `Interfaces/` folder.
 - **Visibility marks the seam:** a Feature's public types are its service interfaces, its controller and its DTOs in `Shared`. Every other type is `internal sealed`. A Feature depends on another Feature only through that Feature's interface or `AppDbContext`.
-- **Namespaces follow folders:** `PersonalFinance.ApiService.Features.Feedback`, `PersonalFinance.ApiService.Features.Feedback.Validators`, `PersonalFinance.Web.Features.Feedback`, `PersonalFinance.ApiService.Infrastructure`.
+- **Namespaces follow folders:** `PersonalFinance.ApiService.Features.Feedback`, `PersonalFinance.ApiService.Features.Feedback.Validators`, `PersonalFinance.ApiService.Infrastructure`, `PersonalFinance.Web.Controllers`, `PersonalFinance.Web.Models.Feedback`.
 
-`tests/PersonalFinance.Tests/Architecture/FeatureLayoutTests.cs` enforces the namespace, folder and cross-Feature rules, and `ApiServiceCompositionTests.cs` checks that every interface and Validator is registered. A new Feature is added to the `Features` list there and to GLOSSARY.md.
+`tests/PersonalFinance.Tests/Architecture/FeatureLayoutTests.cs` enforces the namespace, folder and cross-Feature rules, `WebMvcLayoutTests.cs` enforces Web's MVC layout, and `ApiServiceCompositionTests.cs` checks that every interface and Validator is registered. A new Feature is added to the `Features` list there and to GLOSSARY.md.
 
 #### Service Responsibilities
 
@@ -602,7 +606,7 @@ After fixing a bug:
 
 ### Files & Folders
 - **Match Class Name**: File name should match class name
-- **Feature Folders**: ApiService and Web code lives in `Features/<Feature>/` or `Infrastructure/` (see "Feature Folder Structure" above)
+- **Feature Folders**: ApiService code lives in `Features/<Feature>/` or `Infrastructure/`; Web uses `Controllers/`, `Models/<Controller>/`, `Views/<Controller>/`, `Services/`, `TagHelpers/` and `Infrastructure/` (see "Feature Folder Structure" above)
 
 ## C# Style
 

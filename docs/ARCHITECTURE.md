@@ -43,7 +43,7 @@ flowchart LR
 - Web never references ApiService as a project. It talks to it over HTTP through the Refit Contracts in
   `Shared/Contracts/`.
 - Web references Data only for ASP.NET Core Identity (`AppDbContext` is an `IdentityDbContext`) and the registration
-  consent records (`Web/Features/Legal/UserConsentService.cs`). Feature data is always read through ApiService.
+  consent records (`Web/Services/UserConsentService.cs`). Feature data is always read through ApiService.
 - Data references neither Web nor ApiService. ApiService has no MVC or Razor dependency.
 
 ## Request flow
@@ -76,7 +76,7 @@ Responsibilities per step:
 
 | Step | Owns | Never does |
 |---|---|---|
-| Web controller (`Web/Features/<Feature>/`) | Builds view models, returns views or JSON, `[ValidateAntiForgeryToken]` on form posts. JSON actions carry `[JsonApiErrors]` instead of try/catch; view actions show their own error message. | Business rules, EF Core access, injecting ApiService Services, showing raw ApiService responses or exception messages. |
+| Web controller (`Web/Controllers/`) | Builds view models, returns views or JSON, `[ValidateAntiForgeryToken]` on form posts. JSON actions carry `[JsonApiErrors]` instead of try/catch; view actions show their own error message. | Business rules, EF Core access, injecting ApiService Services, showing raw ApiService responses or exception messages. |
 | Refit Contract (`Shared/Contracts/`) | The HTTP shape between Web and ApiService. | Logic. |
 | ApiService controller (`ApiService/Features/<Feature>/`) | Binding, calling a Validator, delegating to one Service, mapping results to status codes. | Business rules or queries. |
 | Validator (`ApiService/Features/<Feature>/Validators/`) | FluentValidation rules for one request DTO. | Database access. |
@@ -117,9 +117,10 @@ Rules for new code:
 
 ## Adding a feature: checklist
 
-Mirror the **Feedback** Feature: `ApiService/Features/Feedback/`, `Web/Features/Feedback/`, `Shared/DTOs/Feedback/` and
-`tests/Feedback/`. It is the smallest complete one, and it has the anatomy every Feature follows
-([ADR 0007](adr/0007-feature-folders-with-interface-only-dependencies.md)):
+Mirror the **Feedback** Feature: `ApiService/Features/Feedback/`, Web's `Controllers/FeedbackController.cs`,
+`Models/Feedback/` and `Views/Feedback/`, `Shared/DTOs/Feedback/` and `tests/Feedback/`. It is the smallest complete
+one. ApiService has the Feature anatomy of [ADR 0007](adr/0007-feature-folders-with-interface-only-dependencies.md);
+Web has the classic MVC layout of [ADR 0008](adr/0008-web-uses-classic-mvc-layout.md):
 
 ```text
 ApiService/Features/<Feature>/
@@ -130,14 +131,40 @@ ApiService/Features/<Feature>/
   Validators/                   internal sealed, only when the Feature has request validation
   Domain/                       pure logic with no EF Core or HTTP dependency, only when there is some
   Adapters/                     clients for external systems (Google Drive, OpenAI), only when there are some
-Web/Features/<Feature>/
-  <Feature>Controller.cs, view models, UI services   (views stay in Views/<Controller>/)
+Web/
+  Controllers/<Name>Controller.cs   every controller, named after its route
+  Models/<Name>/                    view models, request and response shapes, view formatting helpers
+  Views/<Name>/                     Razor views
+  Services/, TagHelpers/            UI services and tag helpers; Infrastructure/ is host plumbing only
 ```
 
-Everything in a Feature is `internal sealed` except its interface, its controller, its DTOs and its view models. A
+Everything in an ApiService Feature is `internal sealed` except its interface, its controller and its DTOs. A
 Feature depends on another Feature only through that Feature's interface or `AppDbContext`; the Architecture tests
 (`tests/Architecture/`) fail the build otherwise. Code that two or more Features use, or that serves the host rather
-than a Feature, goes in `Infrastructure/` instead.
+than a Feature, goes in `Infrastructure/` instead. In Web, `WebMvcLayoutTests` fails the build when a controller is
+outside `Controllers/`, a model folder has no controller of its name, or a `Views/` folder has no controller.
+
+A Web controller is named after its route, so its name can differ from its Feature's:
+
+| Feature | Web controllers (and their `Models/` and `Views/` folders) |
+|---|---|
+| Admin | `Admin` (including the Feedback inbox) |
+| AiAssistant | `AiAssistant` (JSON only) |
+| Analysis | `Analysis` |
+| BudgetPlanner | `Budget` |
+| BudgetTracker | `BudgetTracker` |
+| Community | `Community` |
+| Dashboard | `Dashboard` |
+| Feedback | `Feedback` |
+| GoogleDrive | `GoogleDrive` |
+| InvestmentCalculator | `InvestmentCalculator` |
+| LandingPage | `Home` |
+| Legal | `Legal` |
+| NetWorth | `Networth` |
+| SavingsGoals | `SavingsGoals` |
+| Search | `Search` (JSON only) |
+| Watchlist | `Watchlist` (JSON only), `News` |
+| Notifications (Infrastructure) | `Notification` (JSON only) |
 
 1. **Entity** in `PersonalFinance.Data/Entities/` (inherit `AuditableEntity` if user-owned), `DbSet` and configuration in
    `AppDbContext`, then a migration. Inspect the generated migration before committing.
@@ -151,8 +178,9 @@ than a Feature, goes in `Infrastructure/` instead.
    Account id from claims.
 6. **Refit Contract** in `PersonalFinance.Shared/Contracts/I<Feature>Api.cs`; add one line to `AddInternalApiClients` in
    `Web/Infrastructure/InternalApiClientExtensions.cs` (`Web/InternalApiClientRegistrationTests` fails if you forget).
-7. **Web controller and view model** in `PersonalFinance.Web/Features/<Feature>/`, the **Razor view** in
-   `Views/<Controller>/`; JavaScript in `wwwroot/js/<feature>/`.
+7. **Web controller** in `PersonalFinance.Web/Controllers/`, its **view model** in `Models/<Controller>/` and its
+   **Razor view** in `Views/<Controller>/`, with `Models/<Controller>` added to `Views/_ViewImports.cshtml`;
+   JavaScript in `wwwroot/js/<feature>/`.
    JavaScript only calls Web: a `fetch('/api/X...')` needs a Web controller routed at `api/X` with `[Authorize]` and
    `[JsonApiErrors]` (`Web/WebApiRouteTests` checks this), and state-changing calls send the
    `RequestVerificationToken` header from the layout's `__RequestVerificationToken` meta tag.

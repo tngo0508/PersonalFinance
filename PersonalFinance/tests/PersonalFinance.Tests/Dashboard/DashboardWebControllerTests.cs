@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Dashboard;
-using PersonalFinance.Web.Features.Dashboard;
+using PersonalFinance.Web.Controllers;
 using Xunit;
 
 namespace PersonalFinance.Tests.Dashboard;

@@ -4,17 +4,12 @@ using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.ApiService.Features.BudgetTracker;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.GoogleDrive;
-using PersonalFinance.Web.Features.Analysis;
-using PersonalFinance.Web.Features.Community;
-using PersonalFinance.Web.Features.Feedback;
-using PersonalFinance.Web.Features.InvestmentCalculator;
-using PersonalFinance.Web.Features.NetWorth;
-using PersonalFinance.Web.Features.SavingsGoals;
-using PersonalFinance.Web.Features.Watchlist;
-using BudgetController = PersonalFinance.Web.Features.BudgetPlanner.BudgetController;
-using BudgetTrackerController = PersonalFinance.Web.Features.BudgetTracker.BudgetTrackerController;
-using DashboardController = PersonalFinance.Web.Features.Dashboard.DashboardController;
-using GoogleDriveController = PersonalFinance.Web.Features.GoogleDrive.GoogleDriveController;
+using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Models.Feedback;
+using BudgetController = PersonalFinance.Web.Controllers.BudgetController;
+using BudgetTrackerController = PersonalFinance.Web.Controllers.BudgetTrackerController;
+using DashboardController = PersonalFinance.Web.Controllers.DashboardController;
+using GoogleDriveController = PersonalFinance.Web.Controllers.GoogleDriveController;
 
 namespace PersonalFinance.Tests.Web;
 

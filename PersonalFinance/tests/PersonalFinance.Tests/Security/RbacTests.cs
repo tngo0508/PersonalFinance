@@ -352,7 +352,7 @@ public class RbacTests
     }
 
     [Theory]
-    [InlineData(typeof(PersonalFinance.Web.Features.Admin.AdminController))]
+    [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController))]
     [InlineData(typeof(PersonalFinance.ApiService.Features.Admin.AdminController))]
     public void AdminControllers_CarryTheRequireAdminPolicy(Type controller)
     {
@@ -363,9 +363,9 @@ public class RbacTests
     }
 
     [Theory]
-    [InlineData(typeof(PersonalFinance.Web.Features.Admin.AdminController), "Feedback")]
+    [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController), "Feedback")]
     [InlineData(typeof(PersonalFinance.ApiService.Features.Feedback.FeedbackController), "List")]
-    [InlineData(typeof(PersonalFinance.Web.Features.Admin.AdminController), "ChangeFeedbackStatus")]
+    [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController), "ChangeFeedbackStatus")]
     [InlineData(typeof(PersonalFinance.ApiService.Features.Feedback.FeedbackController), "ChangeStatus")]
     public void AdminFeedbackInboxEndpoints_RequireTheAdminPolicy(Type controller, string action)
     {

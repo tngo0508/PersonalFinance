@@ -10,7 +10,7 @@ using PersonalFinance.ApiService.Features.GoogleDrive.Adapters;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
-using GoogleDriveController = PersonalFinance.Web.Features.GoogleDrive.GoogleDriveController;
+using GoogleDriveController = PersonalFinance.Web.Controllers.GoogleDriveController;
 
 namespace PersonalFinance.Tests.GoogleDrive;
 

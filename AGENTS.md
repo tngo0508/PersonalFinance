@@ -24,11 +24,12 @@ All paths are under `PersonalFinance/src/` unless noted.
 |---|---|
 | A Feature's API controller, services, validators, DI registration ([ADR 0007](docs/adr/0007-feature-folders-with-interface-only-dependencies.md)) | `PersonalFinance.ApiService/Features/<Feature>/` |
 | What two or more Features share: the Data Source provider (ADR 0002), the projection and mapping helpers, auth, rate limiting, Notifications | `PersonalFinance.ApiService/Infrastructure/` |
-| A Feature's MVC controller, view models, UI services; Razor views stay put | `PersonalFinance.Web/Features/<Feature>/`, `Views/<Controller>/` |
-| What two or more Web Features share: the user-id forwarding handler, Refit client registration, Unavailable State, email, Notifications | `PersonalFinance.Web/Infrastructure/` |
-| Legal pages (privacy, terms, disclaimer, cookies, contact) | `PersonalFinance.Web/Features/Legal/`, `Views/Legal/` |
+| Web MVC: controllers, view models (named after the controller), views ([ADR 0008](docs/adr/0008-web-uses-classic-mvc-layout.md)) | `PersonalFinance.Web/Controllers/`, `Models/<Controller>/`, `Views/<Controller>/` |
+| Web UI services and tag helpers | `PersonalFinance.Web/Services/`, `TagHelpers/` |
+| Web host plumbing: the user-id forwarding handler, Refit client registration, Unavailable State, email | `PersonalFinance.Web/Infrastructure/` |
+| Legal pages (privacy, terms, disclaimer, cookies, contact) | `PersonalFinance.Web/Controllers/LegalController.cs`, `Views/Legal/` |
 | Footer, cookie banner, layout | `PersonalFinance.Web/Views/Shared/` (`_Layout`, `_CookieBanner`) |
-| Registration + consent | `PersonalFinance.Web/Areas/Identity/Pages/Account/Register*`, `Features/Legal/UserConsentService.cs` |
+| Registration + consent | `PersonalFinance.Web/Areas/Identity/Pages/Account/Register*`, `Services/UserConsentService.cs` |
 | Client JavaScript (by feature) | `PersonalFinance.Web/wwwroot/js/{core,networth,budget,dashboard,...}` |
 | Global CSS | `PersonalFinance.Web/wwwroot/css/site.css` |
 | Entities, DbContext, migrations | `PersonalFinance.Data/{Entities,Migrations/AzureSql}` |

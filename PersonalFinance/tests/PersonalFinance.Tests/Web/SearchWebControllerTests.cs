@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Search;
-using PersonalFinance.Web.Features.Search;
+using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
 using Refit;
 using Xunit;
