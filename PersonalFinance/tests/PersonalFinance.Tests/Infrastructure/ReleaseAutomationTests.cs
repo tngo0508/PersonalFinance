@@ -37,7 +37,7 @@ public class ReleaseAutomationTests
     public void AppVersion_Current_MatchesItsComponents()
     {
         // The release tag is v{Current}; a stale Current would tag the wrong version
-        Assert.Equal(AppVersion.FullVersion, AppVersion.Current);
+        Assert.Equal(AppVersion.Current, AppVersion.FullVersion);
     }
 
     [Fact]
