@@ -139,6 +139,8 @@ Follow the existing Budget Tracker feature as the reference implementation.
    provider, which runs any query in memory: guard queries that use string, date or collation-dependent operations
    with `TestSupport/AzureSqlTranslation` (see `Search/SearchServiceTests`). Endpoint authorization can be tested over
    HTTP against the real pipeline with `WebApplicationFactory` (see `Security/ApiServiceInternalKeyHttpTests`).
-9. Bump `AppVersion` and add a `CHANGELOG.md` entry (see [`CONTRIBUTING.md`](../CONTRIBUTING.md)).
+9. Bump `AppVersion` and add its `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md` (see
+   [`CONTRIBUTING.md`](../CONTRIBUTING.md)). The merge becomes a GitHub Release of its own
+   ([ADR 0006](adr/0006-one-release-per-merged-pr.md)).
 
 Coding rules for each of these steps are in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).

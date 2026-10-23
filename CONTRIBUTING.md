@@ -85,8 +85,11 @@ The step-by-step feature checklist is in [`docs/ARCHITECTURE.md`](docs/ARCHITECT
 2. Add or update tests; `dotnet test` and `npm run lint` pass.
 3. Bump the version in `PersonalFinance/src/PersonalFinance.Shared/Constants/AppVersion.cs`: update `Current`,
    `Major`, `Minor` and `Patch` together (patch = fix, minor = feature, major = breaking change or schema migration).
-4. Add a `CHANGELOG.md` entry under `## [Unreleased]` in the right category (Added, Changed, Fixed, ...): a bold label,
-   a colon, one sentence, and sub-bullets for details.
+4. Add a `CHANGELOG.md` section `## [x.y.z] - YYYY-MM-DD` at the top for that version, with entries in the right
+   category (Added, Changed, Fixed, ...): a bold label, a colon, one sentence, and sub-bullets for details. The
+   `release-check` workflow fails the PR without the bump and section; label the PR `no-release` for a change that
+   should not be released (docs-only PRs pass on their own). After the merge is deployed and smoke-tested, CI publishes
+   the section as the GitHub Release `vx.y.z` ([ADR 0006](docs/adr/0006-one-release-per-merged-pr.md)).
 5. Keep the change focused: no unrelated refactoring, leftover TODOs or debug code.
 6. Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages (`feat:`, `fix:`, `docs:`,
    `refactor:`, `test:`, `chore:`).

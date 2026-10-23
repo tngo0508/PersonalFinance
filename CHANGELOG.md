@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [4.2.0] - 2026-10-22
+
+### Added
+
+- **Automatic GitHub Releases**: Every merge to `main` that bumps `AppVersion` now gets a GitHub Release once it is deployed and the smoke tests pass (ADR 0006).
+  - A `create-release` job in `deploy-azure.yml` tags `v{AppVersion.Current}` on the merged commit. The Release notes are that version's `CHANGELOG.md` section followed by GitHub's generated list of merged PRs. A version with a suffix (e.g. `-rc.1`) is marked as a pre-release.
+  - The job skips with a notice when the tag already exists, so a re-run or a merge without a bump never fails the deployment.
+  - A new `release-check.yml` workflow fails a PR unless `AppVersion.Current` is higher than on `main`, matches `Major.Minor.Patch[-Suffix]`, and has a `## [x.y.z] - YYYY-MM-DD` section in `CHANGELOG.md`. Docs-only PRs and PRs labelled `no-release` pass.
+  - `.github/scripts/release-version.sh` holds the shared version, comparison and notes logic.
+
+### Changed
+
+- **One CHANGELOG Section per Version**: Each PR now adds its own `## [x.y.z] - YYYY-MM-DD` section instead of writing under `## [Unreleased]`, which is gone. AGENTS.md, CONTRIBUTING.md and the coding standards describe the new rule.
+  - Everything that had built up under `[Unreleased]` since 2.0.1 (versions 2.0.2 to 4.1.1) is now the `[4.1.1]` section.
+
+## [4.1.1] - 2026-10-22
 
 ### Changed
 
@@ -1283,7 +1298,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [Unreleased]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.5.0...HEAD
 - [1.5.0]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.4.1...v1.5.0
 - [1.4.1]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.4.0...v1.4.1
 - [1.4.0]: https://github.com/tngo0508/PersonalFinanceApp/compare/v1.3.0...v1.4.0

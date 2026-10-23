@@ -510,8 +510,11 @@ CHANGELOG.md
 
 ### Format
 
-The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. All new entries go under the
-`## [Unreleased]` section using the following categories:
+The project follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format with one difference: there is no
+`## [Unreleased]` section. Every merged PR is a release of its own
+([ADR 0006](adr/0006-one-release-per-merged-pr.md)), so each PR adds a `## [x.y.z] - YYYY-MM-DD` section for the version
+it bumps `AppVersion` to, dated the day you write it. After the merge is deployed and smoke-tested, CI publishes that
+section as the GitHub Release `vx.y.z`. Entries use these categories:
 
 - **Added** — New features
 - **Changed** — Changes in existing functionality
@@ -523,7 +526,9 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) for
 ### Changelog Entry Rules
 
 - **Always add an entry** — Every feature, bug fix, or significant change must have a changelog entry.
-- **Use the `[Unreleased]` section** — Add entries under `## [Unreleased]` until a release is made.
+- **One section per version** — Add a `## [x.y.z] - YYYY-MM-DD` section matching `AppVersion.Current`; never write
+  under an older version's section. The `release-check` workflow fails the PR otherwise (docs-only PRs and PRs labelled
+  `no-release` are exempt).
 - **Bold the feature or component name** — Start each entry with a bold label describing what changed, followed by a
   colon and a brief description.
 - **Include implementation details as sub-bullets** — For complex changes, add sub-bullets explaining key implementation
@@ -535,7 +540,7 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) for
 ### Changelog Entry Procedure
 
 1. Open `CHANGELOG.md`
-2. Locate the `## [Unreleased]` section at the top
+2. Add a `## [x.y.z] - YYYY-MM-DD` heading for the new `AppVersion.Current` above the newest version section
 3. Find or create the appropriate category (`### Added`, `### Fixed`, `### Changed`, etc.)
 4. Add a new bullet point describing the change
 5. Add sub-bullets if the change requires implementation details
@@ -545,7 +550,7 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) for
 After adding a new watchlist feature:
 
 ```markdown
-## [Unreleased]
+## [4.3.0] - 2026-11-02
 
 ### Added
 
@@ -557,7 +562,7 @@ After adding a new watchlist feature:
 After fixing a bug:
 
 ```markdown
-## [Unreleased]
+## [4.3.1] - 2026-11-03
 
 ### Fixed
 

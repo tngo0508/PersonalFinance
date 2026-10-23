@@ -74,7 +74,7 @@ Only MIT, BSD (2/3-clause) and Apache 2.0 dependencies. Check the license before
 
 1. Tests added or updated, `dotnet test` and `npm run lint` run.
 2. **Bump `AppVersion`** in `PersonalFinance.Shared/Constants/AppVersion.cs` (SemVer: patch = fix, minor = feature, major = breaking or schema migration). Update `Current`, `Major`, `Minor`, `Patch` together.
-3. **Add a `CHANGELOG.md` entry** under `## [Unreleased]` in the right category (Added, Changed, Fixed, ...). Start with a bold label, then a colon and one sentence; use sub-bullets for details.
+3. **Add a `CHANGELOG.md` section** `## [x.y.z] - YYYY-MM-DD` at the top for the new version (there is no `[Unreleased]`), with entries in the right category (Added, Changed, Fixed, ...). Start each with a bold label, then a colon and one sentence; use sub-bullets for details. After the deploy, CI publishes it as the GitHub Release `vx.y.z` ([ADR 0006](docs/adr/0006-one-release-per-merged-pr.md)); `release-check` fails the PR without the bump and section, unless it is docs-only or labelled `no-release`.
 4. Keep the change focused: no unrelated refactoring, no leftover TODOs or debug code.
 5. Final report: what was implemented, files changed, DB changes, exact commands run and results, outstanding issues.
 
