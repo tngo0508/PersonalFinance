@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.18] - 2026-10-23
+
+### Fixed
+
+- **Watchlist Save Validated**: saving an article to the Watchlist now checks it first, and the News page says when saving fails (#188).
+  - `POST /api/Watchlist` validates the article with `SaveArticleRequestDtoValidator`: title, source and category are required, the address must be a full http or https link, and every field must fit its `SavedArticles` column (title 500, URL 2000, source 200, category 100, notes 2000, image URL 2000). An invalid article answers 400 with the reasons and is not saved; before, an empty field was stored and an overlong one failed in the database as a 500.
+  - A test keeps the validator's limits equal to the database column lengths.
+  - On the News page, a failed save shows "Couldn't save" on the button, with the reason in its tooltip and accessible label, then lets you try again; it used to fail silently.
+
 ## [4.2.17] - 2026-10-23
 
 ### Fixed

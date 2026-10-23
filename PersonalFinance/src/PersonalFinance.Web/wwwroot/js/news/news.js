@@ -81,7 +81,8 @@
             ...options
         });
         if (!res.ok) {
-            throw new Error(`API error: ${ res.status}`);
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `API error: ${ res.status}`);
         }
         return res.json();
     }
@@ -233,6 +234,25 @@
         }
     }
 
+    /**
+     * Shows on the save button that saving failed, with the reason in its tooltip and accessible label, then lets
+     * the user try again.
+     * @param {HTMLButtonElement} btn - The article's save button.
+     * @param {string} message - Why the article could not be saved.
+     */
+    function showSaveFailed (btn, message) {
+        btn.classList.add('save-failed');
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg> Couldn’t save';
+        btn.title = message;
+        btn.setAttribute('aria-label', `Could not save the article: ${ message}`);
+        setTimeout(() => {
+            btn.classList.remove('save-failed');
+            btn.title = 'Save to watchlist';
+            btn.setAttribute('aria-label', 'Save article to watchlist');
+            setSaveButtonState(btn, savedArticleUrls.has(btn.dataset.url));
+        }, 5000);
+    }
+
     function bindSaveButton (btn) {
     // Set initial state from savedArticleUrls
         const url = btn.dataset.url;
@@ -279,6 +299,7 @@
                 }
             } catch (err) {
                 console.error('Save article failed:', err);
+                showSaveFailed(btn, err.message || 'Please try again.');
             }
         });
     }

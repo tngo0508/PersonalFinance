@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.Watchlist;
+using PersonalFinance.ApiService.Features.Watchlist.Validators;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Watchlist;
 using PersonalFinance.Tests.TestSupport;
@@ -60,7 +61,7 @@ public class WatchlistEndpointTests
     private static WatchlistApiController CreateApiController(IWatchlistService service)
     {
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "TestAuthType");
-        return new WatchlistApiController(service)
+        return new WatchlistApiController(service, new SaveArticleRequestDtoValidator())
         {
             ControllerContext = new ControllerContext
             {
@@ -70,6 +71,14 @@ public class WatchlistEndpointTests
     }
 
     private static object? Property(object value, string name) => value.GetType().GetProperty(name)!.GetValue(value);
+
+    private static SaveArticleRequestDto SavedArticle() => new()
+    {
+        Title = "Rates fall",
+        Url = "https://example.test/saved",
+        Source = "BBC Business",
+        Category = "General"
+    };
 
     [Fact]
     public void ApiController_RequiresAuthentication()
@@ -84,7 +93,7 @@ public class WatchlistEndpointTests
         WatchlistApiController controller = CreateApiController(service);
 
         await controller.GetWatchlist();
-        await controller.SaveArticle(new SaveArticleRequestDto { Url = "https://example.test/saved" });
+        await controller.SaveArticle(SavedArticle());
         await controller.RemoveArticle(1);
         await controller.CheckArticleSaved("https://example.test/saved");
 
@@ -95,7 +104,7 @@ public class WatchlistEndpointTests
     public async Task ApiController_Save_ReportsWhetherTheArticleWasAlreadySaved()
     {
         IActionResult result = await CreateApiController(new FakeWatchlistService())
-            .SaveArticle(new SaveArticleRequestDto { Url = "https://example.test/saved" });
+            .SaveArticle(SavedArticle());
 
         object body = Assert.IsType<OkObjectResult>(result).Value!;
         Assert.Equal(true, Property(body, "alreadySaved"));
