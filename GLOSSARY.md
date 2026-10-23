@@ -61,23 +61,18 @@ A named access rule, such as "requires Admin", that pages and endpoints check in
 _Avoid_: Rule, guard
 
 ### Deletion Request
-An Account's confirmed request to be erased. It hides the Account's data straight away, blocks sign-in and starts the
-Grace Period. The last Admin cannot make one.
+An Account's confirmed request to be erased, which hides its data and starts the Grace Period.
 _Avoid_: Account closure, deactivation
 
 ### Grace Period
-The 30 days after a Deletion Request during which it can be cancelled from the confirmation email. Cancelling restores
-the Account and only the data the Deletion Request hid; data the Account deleted earlier stays deleted.
+The 30 days after a Deletion Request during which the Account can still cancel it.
 
 ### Purge
-The permanent erasure of an Account when its Grace Period ends. The Account and its data are removed for good; its
-community stories and comments stay, shown as written by "Deleted User". Only a record that a Purge happened, and when,
-is kept.
-_Avoid_: Soft delete (a Purge is not reversible)
+The permanent erasure of an Account and its data when its Grace Period ends. Its community stories and comments stay,
+shown as written by "Deleted User".
 
 ### Data Export
-A download, in a machine-readable file, of the data an Account currently holds in the app. It is separate from a
-Deletion Request and never changes any data.
+A JSON file of the data an Account currently holds in the app, which the Account downloads for itself.
 
 ## Domain
 
