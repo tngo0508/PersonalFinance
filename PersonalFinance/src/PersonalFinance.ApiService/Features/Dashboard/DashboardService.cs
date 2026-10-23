@@ -77,14 +77,14 @@ internal sealed class DashboardService : IDashboardService
         // FI Target and projection both come from the Net Worth page's calculation, so the pages always agree.
         NetWorthProjectionDto projection = NetWorthProjectionService.ComputeProjection(parameters.ToProjectionRequest());
 
+        // Savings Rate, Progress to FI and FI age are derived in the projection too, so the FI Breakdown on the
+        // Net Worth page shows the same figures.
         decimal netWorth = parameters.StartingBalance;
         decimal fiTarget = projection.FiTarget;
-        decimal? progressToFi = fiTarget != 0m ? netWorth / fiTarget * 100m : null;
-        decimal? savingsRate = FinanceMetrics.SavingsRatePercent(parameters.AnnualSavings, parameters.AnnualIncome);
+        decimal? progressToFi = projection.ProgressToFiPercent;
+        decimal? savingsRate = projection.SavingsRatePercent;
         List<ProjectionPointDto> projectionPoints = BuildProjectionPoints(parameters, projection);
-        int? fiReachedAge = fiTarget > 0m
-            ? projectionPoints.FirstOrDefault(p => p.Base >= fiTarget)?.Age
-            : null;
+        int? fiReachedAge = projection.Base.FiReachedAge;
 
         return new NetWorthSummaryDto
         {

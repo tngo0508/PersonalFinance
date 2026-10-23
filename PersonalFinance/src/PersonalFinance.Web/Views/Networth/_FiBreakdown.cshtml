@@ -1,0 +1,45 @@
+@model FiBreakdownViewModel
+
+@*
+    FI Breakdown: how each calculated figure comes from the values entered above. networth-breakdown.js rebuilds the
+    same markup from the Calculate response after every recalculation, so keep the two in step.
+*@
+<section class="nw-breakdown mb-4" aria-labelledby="nwBreakdownTitle">
+    <h2 class="nw-breakdown__title" id="nwBreakdownTitle">How this is calculated</h2>
+    <div class="nw-breakdown__grid" id="nwBreakdownGrid">
+        @foreach (var card in Model.Cards)
+        {
+            var labelId = $"nwBreakdown-{card.Key}-label";
+            <div class="card nw-breakdown__card" role="group" aria-labelledby="@labelId">
+                <div class="card-body">
+                    <div class="nw-breakdown__label" id="@labelId">@card.Label</div>
+                    <div class="nw-breakdown__value">@card.Value</div>
+                    <div class="nw-breakdown__inputs">
+                        <span class="nw-breakdown__from">from</span>
+                        @foreach (var input in card.Inputs)
+                        {
+                            <span class="nw-breakdown__chip" title="@input.Value">@input.Label</span>
+                        }
+                    </div>
+                    @if (card.Formula is not null)
+                    {
+                        <p class="nw-breakdown__formula">@card.Formula</p>
+                    }
+                    @if (card.Scenarios.Count > 0)
+                    {
+                        <ul class="nw-breakdown__scenarios">
+                            @foreach (var scenario in card.Scenarios)
+                            {
+                                <li>@scenario</li>
+                            }
+                        </ul>
+                    }
+                    @if (card.Note is not null)
+                    {
+                        <p class="nw-breakdown__note">@card.Note</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</section>

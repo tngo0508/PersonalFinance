@@ -16,15 +16,16 @@
      */
     function triggerRecalculation () {
         clearTimeout(recalcTimeout);
-        recalcTimeout = setTimeout(function () {
+        recalcTimeout = setTimeout(() => {
             recalculate();
         }, NW.DEBOUNCE_DELAY);
     }
 
     /**
      * Recalculate projections via AJAX and update all UI elements.
+     * @returns {Promise<void>} Resolves once the page has been updated (or the error shown).
      */
-    function recalculate () {
+    async function recalculate () {
         // Validate inputs before sending
         if (!NW.validateInputs()) {
             return;
@@ -44,42 +45,37 @@
         };
 
         // Build query string using URLSearchParams for safety
-        const urlParams = new URLSearchParams(params);
-        const url = '/Networth/Calculate?' + urlParams.toString();
+        const url = `/Networth/Calculate?${new URLSearchParams(params).toString()}`;
 
-        fetch(url)
-            .then(function (response) {
-                if (!response.ok) {
-                    if (response.status === 400) {
-                        return response.text().then(function (msg) {
-                            NW.showValidationMessage(msg);
-                            throw new Error('Validation error');
-                        });
-                    }
-                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (response.status === 400) {
+                    NW.showValidationMessage(await response.text());
+                    return;
                 }
-                return response.json();
-            })
-            .then(function (data) {
-                NW.clearValidationMessage();
-                window.nwProjectionData = data;
-                NW.renderGrowthChart(data);
-                NW.renderComparisonChart(data);
-                NW.updateMetrics(data);
-                NW.updateScenarioCards(data);
-                NW.updateScenarioBadges(data);
-                // Re-render the active scenario table
-                const activeBtn = document.querySelector('.nw-tab-btn.active');
-                if (activeBtn) {
-                    NW.updateTable(activeBtn.getAttribute('data-scenario'));
-                }
-            })
-            .catch(function (err) {
-                if (err.message !== 'Validation error') {
-                    console.error('Failed to recalculate projection:', err);
-                    NW.showValidationMessage('Failed to load projection data. Please check your connection and try again.');
-                }
-            });
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            const data = await response.json();
+
+            NW.clearValidationMessage();
+            window.nwProjectionData = data;
+            NW.renderGrowthChart(data);
+            NW.renderComparisonChart(data);
+            NW.updateMetrics(data);
+            NW.updateBreakdown(data);
+            NW.updateScenarioCards(data);
+            NW.updateScenarioBadges(data);
+            // Re-render the active scenario table
+            const activeBtn = document.querySelector('.nw-tab-btn.active');
+            if (activeBtn) {
+                NW.updateTable(activeBtn.getAttribute('data-scenario'));
+            }
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to recalculate projection:', err);
+            NW.showValidationMessage('Failed to load projection data. Please check your connection and try again.');
+        }
     }
 
     // Expose API functions

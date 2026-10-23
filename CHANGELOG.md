@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.4.0] - 2026-10-23
+
+### Added
+
+- **FI Breakdown on the Net Worth page**: a new "How this is calculated" panel shows how the Savings Rate, FI Target, Progress to FI and FI age come from the values you entered, with each formula worked through in your own numbers (#204).
+  - Each card names the inputs it is calculated from; the FI age card also lists the age for the Base, Conservative and Aggressive scenarios, and says so when FI isn't reached by your retirement age.
+  - The panel updates as you move the sliders, together with the rest of the page.
+
+### Changed
+
+- **One definition of the FI figures**: Savings Rate, Progress to FI and the age each scenario reaches the FI Target are now calculated once in the Net Worth projection, and the Dashboard reads them from there, so the two pages can't disagree (#204).
+
 ## [4.3.0] - 2026-10-23
 
 ### Added
