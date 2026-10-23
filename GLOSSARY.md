@@ -117,6 +117,11 @@ _Avoid_: money graph, finance diagram
 The Money Map view of one month of actual income moving into spending categories and savings.
 _Avoid_: Sankey (a chart type, not the concept), cash flow (overloaded)
 
+### Shortfall
+The amount by which a month's actual expenses exceed its actual income. A month has either a Shortfall or savings,
+never both.
+_Avoid_: deficit, negative savings, overspend
+
 ### Plan View
 The Money Map view of how the Net Worth parameters, the budget, the Savings Rate, the FI Target and Savings Goals
 depend on each other.
