@@ -2,7 +2,7 @@ using System.Text.Json;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetTracker;
 
 public class BudgetDataSourceSerializationTests
 {

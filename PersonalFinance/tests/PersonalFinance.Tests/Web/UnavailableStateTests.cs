@@ -7,7 +7,7 @@ using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
-using PersonalFinance.Tests.Budget;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
 using BudgetController = PersonalFinance.Web.Controllers.BudgetController;

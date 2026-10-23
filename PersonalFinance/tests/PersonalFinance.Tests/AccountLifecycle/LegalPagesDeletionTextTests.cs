@@ -1,4 +1,4 @@
-namespace PersonalFinance.Tests.AccountDeletion;
+namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// The Privacy Policy and Terms must describe account deletion as it ships (ADR 0005): hidden at once, 30 days to

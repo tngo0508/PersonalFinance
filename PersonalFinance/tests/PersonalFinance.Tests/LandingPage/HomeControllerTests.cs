@@ -9,7 +9,7 @@ using PersonalFinance.Web.Models.Home;
 using Xunit;
 using DashboardController = PersonalFinance.Web.Controllers.DashboardController;
 
-namespace PersonalFinance.Tests.Web;
+namespace PersonalFinance.Tests.LandingPage;
 
 public class HomeControllerTests
 {

@@ -6,7 +6,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetPlanner;
 
 /// <summary>
 /// Behaviour of the Budget service's save and read paths, exercised against an in-memory database.

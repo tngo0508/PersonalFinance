@@ -19,7 +19,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
 using PersonalFinance.Web.Infrastructure;
 
-namespace PersonalFinance.Tests.AccountDeletion;
+namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// A locked-out Account (for example one with a pending Deletion Request) cannot get back in through Google sign-in:

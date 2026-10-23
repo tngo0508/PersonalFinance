@@ -9,7 +9,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 
-namespace PersonalFinance.Tests.AccountDeletion;
+namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// Behaviour of <see cref="IAccountPurgeService"/> against an in-memory database: when the Grace Period ends, every

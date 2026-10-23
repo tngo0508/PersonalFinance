@@ -3,7 +3,7 @@ using PersonalFinance.ApiService.Features.BudgetPlanner.Validators;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetPlanner;
 
 /// <summary>
 /// Unit tests for <see cref="SaveBudgetRequestValidator"/>.

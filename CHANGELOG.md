@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.19] - 2026-10-23
+
+### Changed
+
+- **Tests Grouped by Feature**: every Feature's tests now live in `tests/PersonalFinance.Tests/<Feature>/` under the Feature's name, as the add-a-feature checklist and ADR 0007 say (#185).
+  - `AccountDeletion/` and `DataExport/` become `AccountLifecycle/`; `Budget/` splits into `BudgetPlanner/` and `BudgetTracker/`.
+  - The Landing Page, Savings Goals and Search Web controller tests move from `Web/` to `LandingPage/`, `SavingsGoals/` and `Search/`; the Consent tests from `Security/` to `Legal/`; the shared budget Data Source provider tests (ADR 0002) to `Infrastructure/`.
+  - `TestTempDataProvider`, used by several Web controller tests, moves from the Budget Planner tests to `TestSupport/`.
+  - `Web/`, `Security/`, `Infrastructure/`, `Architecture/` and `TestSupport/` keep only cross-cutting tests and helpers. Only file moves, namespaces and `using`s change; the test count is unchanged.
+
 ## [4.2.18] - 2026-10-23
 
 ### Fixed

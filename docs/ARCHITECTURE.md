@@ -187,8 +187,9 @@ A Web controller is named after its route, so its name can differ from its Featu
    `[JsonApiErrors]` (`Web/WebApiRouteTests` checks this), and state-changing calls send the
    `RequestVerificationToken` header from the layout's `__RequestVerificationToken` meta tag.
 8. **Tests** in `PersonalFinance/tests/PersonalFinance.Tests/<Feature>/`, the Web controller's tests included;
-   `tests/Web/` holds only tests of cross-cutting Web behaviour (layout, routes, Unavailable State, navigation). Some
-   older folders do not follow this yet (#185). Services are tested with the EF Core InMemory
+   `tests/Web/` holds only tests of cross-cutting Web behaviour (layout, routes, Unavailable State, navigation), and
+   `Infrastructure/`, `Security/`, `Architecture/` and `TestSupport/` the other cross-cutting tests and helpers.
+   Services are tested with the EF Core InMemory
    provider, which runs any query in memory: guard queries that use string, date or collation-dependent operations
    with `TestSupport/AzureSqlTranslation` (see `Search/SearchServiceTests`). Endpoint authorization can be tested over
    HTTP against the real pipeline with `WebApplicationFactory` (see `Security/ApiServiceInternalKeyHttpTests`).

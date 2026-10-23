@@ -6,7 +6,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 
-namespace PersonalFinance.Tests.AccountDeletion;
+namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// Behaviour of <see cref="IAccountDeletionService"/> against an in-memory database: a Deletion Request hides every

@@ -9,7 +9,7 @@ using PersonalFinance.Web.Infrastructure;
 using Refit;
 using Xunit;
 
-namespace PersonalFinance.Tests.Web;
+namespace PersonalFinance.Tests.Search;
 
 /// <summary>
 /// The Web search endpoint behind the top-bar Global Search. A failure must reach the browser as an error status, so

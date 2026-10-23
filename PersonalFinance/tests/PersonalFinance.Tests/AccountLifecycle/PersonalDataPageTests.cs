@@ -11,7 +11,7 @@ using PersonalFinance.Shared.DTOs.DataExport;
 using PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 using PersonalFinance.Web.Infrastructure;
 
-namespace PersonalFinance.Tests.DataExport;
+namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// The Personal data page downloads the Data Export, and the Identity UI default download only redirects to it.
