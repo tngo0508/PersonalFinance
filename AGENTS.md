@@ -47,7 +47,7 @@ All paths are under `PersonalFinance/src/` unless noted.
 ## Data rules
 
 - EF Core Code-First. Production is Azure SQL; local development may use SQL Server in Docker (`compose.yaml`, `npm run db:up`). Use only T-SQL and EF features both support. Never point local tooling (`dotnet ef`, e2e runs, user secrets) at production. Never hardcode secrets.
-- User-owned entities inherit `AuditableEntity` and are **soft-deleted** (`IsDeleted`, `DeletedAt`). Never hard-delete them.
+- User-owned entities inherit `AuditableEntity` and are **soft-deleted** (`IsDeleted`, `DeletedAt`). Never hard-delete them, except in the account Purge ([ADR 0005](docs/adr/0005-account-purge-hard-deletes-after-grace-period.md)).
 - Money is `decimal` with explicit precision. Never `float`/`double`.
 - Inspect every generated migration. Never reset, drop or apply production migrations without explicit authorization.
 - Use async EF operations, `AsNoTracking()` for reads, deterministic ordering, and no N+1 queries.

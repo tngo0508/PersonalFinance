@@ -60,6 +60,20 @@ _Avoid_: Owner (clashes with "user-owned" data), superuser, root
 A named access rule, such as "requires Admin", that pages and endpoints check instead of naming a Role directly.
 _Avoid_: Rule, guard
 
+### Deletion Request
+An Account's confirmed request to be erased, which hides its data and starts the Grace Period.
+_Avoid_: Account closure, deactivation
+
+### Grace Period
+The 30 days after a Deletion Request during which the Account can still cancel it.
+
+### Purge
+The permanent erasure of an Account and its data when its Grace Period ends. Its community stories and comments stay,
+shown as written by "Deleted User".
+
+### Data Export
+A JSON file of the data an Account currently holds in the app, which the Account downloads for itself.
+
 ## Domain
 
 ### Net Worth
