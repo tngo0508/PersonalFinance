@@ -141,6 +141,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<Feedback> Feedback => Set<Feedback>();
 
     /// <summary>
+    /// Deletion Requests — an Account's request to be erased, kept after the Purge as the audit record (ADR 0005).
+    /// </summary>
+    public DbSet<DeletionRequest> DeletionRequests => Set<DeletionRequest>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -615,6 +620,18 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.Status).IsRequired();
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
+        });
+
+        // Configure DeletionRequest entity — looked up by Account, by cancel token, and by the Purge (status, due date)
+        builder.Entity<DeletionRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.CancelTokenHash).IsRequired().HasMaxLength(64);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.CancelTokenHash).IsUnique();
+            entity.HasIndex(e => new { e.Status, e.PurgeAfter });
         });
     }
 }

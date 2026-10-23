@@ -77,6 +77,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Deletion Request**: An Account can delete itself from Account settings > Personal data > Delete my account, with 30 days to cancel from an emailed link (#142, ADR 0005).
+  - Confirmed with the password, or by typing DELETE for an Account that signs in with Google only. The last Admin cannot delete itself.
+  - Confirming hides every user-owned record with one shared `DeletedAt` stamp, locks the Account out (password and Google sign-in) with a new security stamp, signs out, and emails a single-use cancel link.
+  - The cancel link opens a page whose button restores the Account and exactly the records the request hid; records deleted earlier stay deleted. The link stops working once used or after 30 days.
+  - The sign-in Lockout page now explains how to cancel a pending deletion. Permanent erasure after 30 days is the Purge (#143).
+  - New `DeletionRequests` table (migration `AddDeletionRequest`), which keeps only the hash of the cancel token.
+
 - **Data Export**: An Account can download all of its data as one JSON file from Account settings > Personal data (#141).
   - Covers the account and its consents, Net Worth, Budget Planner, Budget Tracker, synced spreadsheet data, Google Drive connections, savings goals, saved articles, Community posts, likes and votes, Feedback, notifications and AI Assistant usage.
   - Only live records: soft-deleted rows are left out. Secrets never appear (password hash, security stamp, Google Drive API keys).
@@ -144,7 +151,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Account Deletion No Longer Orphans Data**: The built-in Delete personal data page deleted only the sign-in Account and left all of its financial data behind, so it now deletes nothing and points to the Contact page until the Deletion Request (#142) replaces it.
+- **Account Deletion No Longer Orphans Data**: The built-in Delete personal data page deleted only the sign-in Account and left all of its financial data behind; it is replaced by the Deletion Request.
 
 - **Build warnings:** A clean build of the whole solution, tests included, now reports zero warnings, and CI fails on any new one (#125).
   - Budget period keys and counters are formatted and parsed with the invariant culture, and the savings goal target date is parsed as invariant ISO `yyyy-MM-dd`; relative-time labels and the figures in AI Assistant prompts use the app culture (en-US), so a host locale change no longer alters them.

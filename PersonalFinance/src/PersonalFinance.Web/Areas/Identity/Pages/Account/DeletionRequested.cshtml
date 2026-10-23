@@ -1,0 +1,33 @@
+@page
+@model DeletionRequestedModel
+@{
+    ViewData["Title"] = "Your account is scheduled for deletion";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<p>
+    Your data is hidden and you have been signed out.
+    @if (Model.PurgeAfter is { } purgeAfter)
+    {
+        <text>
+            On <strong>@purgeAfter.ToString("MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture)</strong>
+            (UTC) your account and data will be deleted permanently.</text>
+    }
+    else
+    {
+        <text>In 30 days your account and data will be deleted permanently.</text>
+    }
+</p>
+
+@if (Model.EmailSent)
+{
+    <p>Changed your mind? Use the <strong>Cancel deletion</strong> link in the email we sent you before then.</p>
+}
+else
+{
+    <div class="alert alert-warning" role="alert">
+        We could not email you the cancel link. To cancel the deletion,
+        <a asp-area="" asp-controller="Legal" asp-action="Contact">contact us</a> before then.
+    </div>
+}

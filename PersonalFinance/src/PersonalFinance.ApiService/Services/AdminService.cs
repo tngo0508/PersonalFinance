@@ -54,9 +54,6 @@ public class AdminService : IAdminService
 {
     private const int MaxRoleNameLength = 50;
 
-    // Serializes the "count Admins, then remove" check so concurrent removals cannot leave zero Admins.
-    private static readonly SemaphoreSlim AdminRemovalLock = new(1, 1);
-
     private readonly AppDbContext _db;
     private readonly UserManager<IdentityUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
@@ -232,14 +229,15 @@ public class AdminService : IAdminService
 
     public async Task<AdminOperationResult> RemoveRoleAsync(string actingUserId, string userId, string roleName)
     {
-        await AdminRemovalLock.WaitAsync();
+        // Serializes the "count Admins, then remove" check so concurrent removals cannot leave zero Admins.
+        await AdminRoleLock.Instance.WaitAsync();
         try
         {
             return await RemoveRoleCoreAsync(actingUserId, userId, roleName);
         }
         finally
         {
-            AdminRemovalLock.Release();
+            AdminRoleLock.Instance.Release();
         }
     }
 

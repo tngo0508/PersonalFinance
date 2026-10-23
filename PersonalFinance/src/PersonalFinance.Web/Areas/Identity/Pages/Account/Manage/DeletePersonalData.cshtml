@@ -8,10 +8,40 @@
 
 <h3>@ViewData["Title"]</h3>
 
+<p>When you confirm:</p>
+<ul>
+    <li>Your data is hidden straight away and you are signed out. You cannot sign in again.</li>
+    <li>We email you a link that cancels the deletion and restores everything. It works for 30 days.</li>
+    <li>After 30 days your account and data are deleted permanently. Your Community stories and comments stay,
+        shown as written by "Deleted User".
+    </li>
+</ul>
 <p>
-    Deleting your account from this page is not available yet. To have your account and data erased,
-    <a asp-area="" asp-controller="Legal" asp-action="Contact">contact us</a>.
+    Want a copy first? <a asp-page="./PersonalData">Download your data</a> before you continue.
 </p>
-<p>
-    You can still <a asp-page="./PersonalData">download a copy of your data</a>.
-</p>
+
+<form id="delete-user" method="post">
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+    }
+    @if (Model.RequirePassword)
+    {
+        <div class="form-floating mb-3">
+            <input asp-for="Input.Password" type="password" class="form-control" autocomplete="current-password"
+                   required placeholder="Your password"/>
+            <label asp-for="Input.Password" class="form-label">Your password</label>
+        </div>
+    }
+    else
+    {
+        <div class="form-floating mb-3">
+            <input asp-for="Input.Confirmation" class="form-control" autocomplete="off" required
+                   placeholder="@DeletePersonalDataModel.ConfirmationWord"/>
+            <label asp-for="Input.Confirmation" class="form-label">
+                Type @DeletePersonalDataModel.ConfirmationWord to confirm
+            </label>
+        </div>
+    }
+    <button class="btn btn-danger" type="submit">Delete my account</button>
+</form>
