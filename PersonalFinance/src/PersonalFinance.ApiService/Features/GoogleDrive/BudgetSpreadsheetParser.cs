@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
@@ -443,6 +444,8 @@ internal static class BudgetSpreadsheetParser
     /// Parses tabular spreadsheet row data and calculates annual and monthly summaries.
     /// Handles section-based layouts, monthly matrices, start/end balances, planned vs actual totals, and category tables.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: spreadsheet parser split.")]
+    [SuppressMessage("Microsoft.Maintainability", "CA1505:AvoidUnmaintainableCode", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: spreadsheet parser split.")]
     public static MonthlyBudgetReportDto ParseSpreadsheetRows(
         List<List<string>> rows,
         string? fileName,
@@ -1027,6 +1030,7 @@ internal static class BudgetSpreadsheetParser
                lower == "expense log" || lower == "transaction log" || lower.Contains("transaction");
     }
 
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: spreadsheet parser split.")]
     private static List<(string SheetName, ZipArchiveEntry Entry)> GetWorksheetEntriesWithNames(ZipArchive archive)
     {
         var result = new List<(string SheetName, ZipArchiveEntry Entry)>();
@@ -1095,6 +1099,7 @@ internal static class BudgetSpreadsheetParser
         return result;
     }
 
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: spreadsheet parser split.")]
     private static List<List<string>> ParseWorksheetRows(ZipArchiveEntry wsEntry, List<string> sharedStrings)
     {
         var rows = new List<List<string>>();
@@ -1237,6 +1242,7 @@ internal static class BudgetSpreadsheetParser
     /// <summary>
     /// Parses a CSV or delimited text stream into rows and columns, handling quotes and delimiters.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: spreadsheet parser split.")]
     public static List<List<string>> ParseCsvTable(string text)
     {
         var result = new List<List<string>>();
@@ -1310,6 +1316,7 @@ internal static class BudgetSpreadsheetParser
     /// <summary>
     /// Assigns consistent and attractive chart colors according to category keywords.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: spreadsheet parser split.")]
     public static string AssignCategoryColor(string categoryName)
     {
         string lower = categoryName.ToLowerInvariant();

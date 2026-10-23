@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,7 @@ public static class RbacSeeder
     /// <summary>
     /// Ensures every role in <see cref="AppRoles.All"/> exists and grants Admin to the confirmed account matching <c>Rbac:AdminEmail</c>.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: split role seeding from the admin grant.")]
     public static async Task SeedAsync(
         IServiceProvider services,
         ILogger? logger = null,

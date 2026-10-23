@@ -19,4 +19,9 @@
     -->
     <TreatWarningsAsErrors Condition="'$(EnforceWarningsAsErrors)' == 'true'">true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Thresholds for the CA1502 and CA1505 complexity ceiling (ADR 0007 rule 6). -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeMetricsConfig.txt" Link="CodeMetricsConfig.txt" Visible="false" />
+  </ItemGroup>
 </Project>

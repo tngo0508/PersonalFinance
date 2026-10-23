@@ -143,6 +143,14 @@ dotnet_diagnostic.CA2007.severity = none
 # CA1848 (LoggerMessage delegates) is a perf optimisation; structured logging via ILogger is fine here.
 dotnet_diagnostic.CA1848.severity = suggestion
 
+# Complexity ceiling and sealing (ADR 0007 rule 6). Thresholds are in PersonalFinance/CodeMetricsConfig.txt.
+# Methods over the ceiling today carry an inline [SuppressMessage] whose Justification names their follow-up.
+dotnet_diagnostic.CA1502.severity = warning # cyclomatic complexity
+dotnet_diagnostic.CA1505.severity = warning # maintainability index
+dotnet_diagnostic.CA1852.severity = warning # seal internal types
+# The test project sees internals through InternalsVisibleTo; seal anyway, since tests do not subclass them.
+dotnet_code_quality.CA1852.ignore_internalsvisibleto = true
+
 # Aspire template convention: ServiceDefaults extension methods live in Microsoft.Extensions.Hosting.
 [**/PersonalFinance.ServiceDefaults/*Extensions.cs]
 dotnet_diagnostic.IDE0130.severity = none

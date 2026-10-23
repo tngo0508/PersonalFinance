@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -57,6 +58,7 @@ internal sealed class AiAssistantService : IAiAssistantService
         _modelName = configuration.GetValue<string>("OpenAI:Model") ?? "gpt-4o-mini";
     }
 
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: financial snapshot.")]
     public async Task<AiChatResponseDto> SendChatMessageAsync(string userId, AiChatRequestDto request,
         CancellationToken cancellationToken = default)
     {
@@ -538,7 +540,7 @@ internal sealed class AiAssistantService : IAiAssistantService
     /// <summary>
     /// Represents the user's financial context gathered from the database.
     /// </summary>
-    private class UserFinancialContext
+    private sealed class UserFinancialContext
     {
         public decimal AnnualIncome { get; set; }
         public decimal AnnualSpending { get; set; }
@@ -558,7 +560,7 @@ internal sealed class AiAssistantService : IAiAssistantService
     /// <summary>
     ///     Information about a large transaction.
     /// </summary>
-    private class LargeTransactionInfo
+    private sealed class LargeTransactionInfo
     {
         public string Date { get; set; } = string.Empty;
         public decimal Amount { get; set; }
@@ -570,7 +572,7 @@ internal sealed class AiAssistantService : IAiAssistantService
     /// <summary>
     /// Represents a savings goal's information.
     /// </summary>
-    private class SavingsGoalInfo
+    private sealed class SavingsGoalInfo
     {
         public string Name { get; set; } = string.Empty;
         public decimal TargetAmount { get; set; }

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -287,6 +288,7 @@ public sealed class NewsService : INewsService
     /// <summary>
     /// Downloads and parses an RSS 2.0 feed, extracting up to 5 articles per source.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: news feed parser split.")]
     private async Task<List<NewsArticle>> FetchRssFeedAsync(NewsSource source, CancellationToken cancellationToken)
     {
         var articles = new List<NewsArticle>();
