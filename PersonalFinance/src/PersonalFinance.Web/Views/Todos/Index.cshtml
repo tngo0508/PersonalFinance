@@ -47,5 +47,6 @@
 <script type="application/json" id="todo-data">@Json.Serialize(Model.Todos)</script>
 
 @section Scripts {
+    <script src="~/js/todos/todo-due-status.js" asp-append-version="true"></script>
     <script src="~/js/todos/todo-list.js" asp-append-version="true"></script>
 }

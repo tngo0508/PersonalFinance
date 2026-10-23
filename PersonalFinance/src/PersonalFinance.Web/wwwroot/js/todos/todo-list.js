@@ -27,6 +27,26 @@
         return new Date(year, month - 1, day);
     }
 
+    const dueStatusLabels = { overdue: 'Overdue', 'due-today': 'Due today' };
+
+    /**
+     * Builds the Overdue or Due today badge for a To-do, from the Account's local today. The status is spelled out
+     * in text so it never relies on colour alone.
+     * @param {{dueDate: (string|null), completedAt: (string|null)}} todo - The To-do from the server.
+     * @returns {HTMLSpanElement|null} The badge, or null when the To-do needs no marking.
+     */
+    function renderDueStatus (todo) {
+        const status = window.PFTodoDueStatus ? window.PFTodoDueStatus.classify(todo) : null;
+        if (!status) {
+            return null;
+        }
+        const badge = document.createElement('span');
+        badge.className = `todo-item__status todo-item__status--${status}`;
+        badge.dataset.status = status;
+        badge.textContent = dueStatusLabels[status];
+        return badge;
+    }
+
     /**
      * Builds the list item for one To-do. Text goes in with textContent only.
      * @param {{id: number, title: string, dueDate: (string|null)}} todo - The To-do from the server.
@@ -49,6 +69,12 @@
             due.dateTime = todo.dueDate;
             due.textContent = `Due ${dueDateFormat.format(parseDueDate(todo.dueDate))}`;
             item.appendChild(due);
+
+            const badge = renderDueStatus(todo);
+            if (badge) {
+                item.dataset.dueStatus = badge.dataset.status;
+                item.appendChild(badge);
+            }
         }
 
         return item;
