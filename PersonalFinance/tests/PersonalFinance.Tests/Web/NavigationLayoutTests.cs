@@ -1,7 +1,15 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Features.BudgetPlanner;
+using PersonalFinance.ApiService.Features.BudgetTracker;
+using PersonalFinance.ApiService.Features.Dashboard;
+using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Features.Feedback;
+using BudgetController = PersonalFinance.Web.Controllers.BudgetController;
+using BudgetTrackerController = PersonalFinance.Web.Controllers.BudgetTrackerController;
+using DashboardController = PersonalFinance.Web.Controllers.DashboardController;
+using GoogleDriveController = PersonalFinance.Web.Controllers.GoogleDriveController;
 
 namespace PersonalFinance.Tests.Web;
 

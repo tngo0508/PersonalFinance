@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
@@ -10,6 +11,7 @@ using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models;
 using Xunit;
+using GoogleDriveController = PersonalFinance.Web.Controllers.GoogleDriveController;
 
 namespace PersonalFinance.Tests.GoogleDrive;
 

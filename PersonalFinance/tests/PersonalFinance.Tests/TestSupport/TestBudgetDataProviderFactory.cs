@@ -1,3 +1,4 @@
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 

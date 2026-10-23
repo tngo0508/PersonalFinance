@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using PersonalFinance.ApiService.Features.GoogleDrive.Adapters;
 
 namespace PersonalFinance.Tests.Infrastructure;
 

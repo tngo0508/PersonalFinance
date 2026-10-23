@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Watchlist;

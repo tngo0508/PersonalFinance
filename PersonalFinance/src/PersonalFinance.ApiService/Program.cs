@@ -1,7 +1,14 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using PersonalFinance.ApiService.Features.Analysis;
+using PersonalFinance.ApiService.Features.BudgetPlanner;
+using PersonalFinance.ApiService.Features.BudgetTracker;
+using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.Feedback;
+using PersonalFinance.ApiService.Features.GoogleDrive;
+using PersonalFinance.ApiService.Features.NetWorth;
+using PersonalFinance.ApiService.Features.Search;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
@@ -47,11 +54,16 @@ try
     // Features: each one registers itself from Features/<Feature>/<Feature>Feature.cs (ADR 0007); the ones not
     // yet moved are still in Infrastructure/FeatureServiceExtensions.cs.
     builder.Services
-        .AddBudgetFeature()
-        .AddGoogleDriveFeature()
+        .AddApiServiceInfrastructure()
         .AddNetWorthFeature()
-        .AddDashboardFeatures()
+        .AddBudgetPlannerFeature()
+        .AddBudgetTrackerFeature()
+        .AddAnalysisFeature()
+        .AddGoogleDriveFeature()
+        .AddDashboardFeature()
+        .AddSearchFeature()
         .AddFeedbackFeature()
+        .AddRemainingFeatures()
         .AddPersonalDataFeature()
         .AddAdminFeature()
         .AddAiAssistantFeature(builder.Configuration);

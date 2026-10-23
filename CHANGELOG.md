@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.5] - 2026-10-22
+
+### Changed
+
+- **Budget-Family Features in Feature Folders**: NetWorth, BudgetPlanner, BudgetTracker, Analysis, GoogleDrive, Dashboard and Search now live in `ApiService/Features/<Feature>/` with the Feedback anatomy (ADR 0007, #158).
+  - Each Feature registers itself through its own `Add<Feature>Feature()`; Google Drive's adapter types sit in `Adapters/`; validators in `Validators/`; service implementations and validators are `internal sealed`.
+  - What two or more Features share moves to `ApiService/Infrastructure/`: the Data Source provider cluster (ADR 0002), the net worth projection and mapping helpers, the monthly budget calculator and the current-record queries, registered by `AddApiServiceInfrastructure()` together with the clock.
+  - `BudgetController` now takes `IValidator<SaveBudgetRequestDto>` like every other controller instead of the concrete validator.
+  - No behaviour, route or contract change.
+
 ## [4.2.4] - 2026-10-22
 
 ### Changed

@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Controllers;
+using PersonalFinance.ApiService.Features.Analysis;
+using PersonalFinance.ApiService.Features.BudgetPlanner;
+using PersonalFinance.ApiService.Features.Dashboard;
+using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -99,7 +103,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
 
         Assert.NotNull(stats);
         Assert.Equal(2026, stats.Year);
@@ -122,7 +126,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.TrendDataDto trend = await service.GetTrendDataAsync(UserId, 2026);
+        PersonalFinance.ApiService.Features.Analysis.TrendDataDto trend = await service.GetTrendDataAsync(UserId, 2026);
 
         Assert.Equal(2026, trend.Year);
         Assert.Equal(2, trend.TrendPoints.Count);
@@ -141,7 +145,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
 
         Assert.NotNull(insights);
         Assert.Equal(2, insights.Categories.Count);
@@ -169,7 +173,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
 
         Assert.NotNull(variance);
         Assert.Equal(2, variance.Rankings.Count);
@@ -288,7 +292,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         SpreadsheetAnalysisService service = CreateService(db);
 
         // 1. Summary Statistics aggregates totals across snapshots
-        ApiService.Services.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
         Assert.NotNull(stats);
         Assert.Equal(5300m, stats.TotalIncome); // 3200 + 2100
         Assert.Equal(3200m, stats.TotalExpenses); // 1800 + 1400
@@ -296,16 +300,16 @@ public class SpreadsheetAnalysisCharacterizationTests
         Assert.Equal(2, stats.SnapshotCount);
 
         // 2. Category Insights merges "Food" and "food" case-insensitively
-        ApiService.Services.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
         Assert.NotNull(insights);
         Assert.Equal(3, insights.Categories.Count); // Food, Rent, Utilities
 
-        ApiService.Services.CategoryBreakdownDto food = insights.Categories.Single(c => c.CategoryName.Equals("Food", StringComparison.OrdinalIgnoreCase));
+        PersonalFinance.ApiService.Features.Analysis.CategoryBreakdownDto food = insights.Categories.Single(c => c.CategoryName.Equals("Food", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(800m, food.BudgetedAmount); // 500 + 300
         Assert.Equal(650m, food.ActualAmount); // 400 + 250
 
         // 3. Budget Variance merges categories
-        ApiService.Services.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
         Assert.NotNull(variance);
         Assert.Equal(3, variance.Rankings.Count);
     }
@@ -352,7 +356,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
 
         Assert.NotNull(velocity);
         Assert.Equal(2026, velocity.Year);
@@ -374,8 +378,8 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
-        ApiService.Services.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.CategoryInsightsDto? insights = await service.GetCategoryInsightsAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.BudgetVarianceDto? variance = await service.GetBudgetVarianceAsync(UserId, 2026, 10);
 
         Assert.NotNull(insights);
         Assert.Empty(insights.Categories);
@@ -396,7 +400,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
 
         Assert.NotNull(stats);
         Assert.Equal(5000m, stats.TotalIncome);
@@ -513,7 +517,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.TrendDataDto trend = await service.GetTrendDataAsync(UserId, 2026);
+        PersonalFinance.ApiService.Features.Analysis.TrendDataDto trend = await service.GetTrendDataAsync(UserId, 2026);
 
         // Characterize existing behaviour: returns one trend point per stored snapshot row
         Assert.Equal(2, trend.TrendPoints.Count);
@@ -575,7 +579,7 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
 
         Assert.NotNull(velocity);
         // Sum of budgeted expenses: 3000 + 1000 = 4000
@@ -621,12 +625,12 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        ApiService.Services.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SummaryStatisticsDto? stats = await service.GetSummaryStatisticsAsync(UserId, 2026, 10);
         Assert.NotNull(stats);
         Assert.Equal(150m, stats.TotalExpenses);
         Assert.Equal(1, stats.SnapshotCount);
 
-        ApiService.Services.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
         Assert.NotNull(velocity);
         Assert.Equal(600m, velocity.BudgetedExpenses);
         Assert.Single(velocity.CategoryVelocities);

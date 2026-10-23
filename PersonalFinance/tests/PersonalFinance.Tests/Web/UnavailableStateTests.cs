@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
@@ -10,6 +11,7 @@ using PersonalFinance.Tests.Budget;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models;
+using BudgetController = PersonalFinance.Web.Controllers.BudgetController;
 
 namespace PersonalFinance.Tests.Web;
 
