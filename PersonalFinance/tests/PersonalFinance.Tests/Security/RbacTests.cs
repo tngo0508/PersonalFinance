@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
@@ -363,9 +364,9 @@ public class RbacTests
 
     [Theory]
     [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController), "Feedback")]
-    [InlineData(typeof(PersonalFinance.ApiService.Controllers.FeedbackController), "List")]
+    [InlineData(typeof(PersonalFinance.ApiService.Features.Feedback.FeedbackController), "List")]
     [InlineData(typeof(PersonalFinance.Web.Controllers.AdminController), "ChangeFeedbackStatus")]
-    [InlineData(typeof(PersonalFinance.ApiService.Controllers.FeedbackController), "ChangeStatus")]
+    [InlineData(typeof(PersonalFinance.ApiService.Features.Feedback.FeedbackController), "ChangeStatus")]
     public void AdminFeedbackInboxEndpoints_RequireTheAdminPolicy(Type controller, string action)
     {
         MethodInfo? method = controller.GetMethod(action);

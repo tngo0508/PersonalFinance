@@ -7,6 +7,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Admin;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Web.Features.Feedback;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models;
 using ApiException = Refit.ApiException;

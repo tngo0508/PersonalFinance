@@ -1,4 +1,4 @@
-namespace PersonalFinance.ApiService.Services;
+namespace PersonalFinance.ApiService.Features.Feedback;
 
 /// <summary>
 /// Outcome of sending validated Feedback: either it was stored, or the Account hit the submission limit.

@@ -1,7 +1,7 @@
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.ApiService.Services;
+namespace PersonalFinance.ApiService.Features.Feedback;
 
 /// <summary>
 /// Owns Feedback: Accounts send it, Admins read and triage it.

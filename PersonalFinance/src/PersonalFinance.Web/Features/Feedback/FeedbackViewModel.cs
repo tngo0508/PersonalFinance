@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Web.Models;
+namespace PersonalFinance.Web.Features.Feedback;
 
 /// <summary>
 /// The Send feedback form.

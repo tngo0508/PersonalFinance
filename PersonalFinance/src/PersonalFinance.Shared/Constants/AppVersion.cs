@@ -10,7 +10,7 @@ public static class AppVersion
     /// <summary>
     /// Current semantic version string (e.g. "1.0.0").
     /// </summary>
-    public const string Current = "4.2.3";
+    public const string Current = "4.2.4";
 
     /// <summary>
     /// Application canonical name used in logging, OpenAPI titles, and UI banners.
@@ -20,7 +20,7 @@ public static class AppVersion
     // --- Semantic Version Components (SemVer 2.0.0) ---
     public const int Major = 4; // Breaking changes
     public const int Minor = 2; // New features (backwards-compatible)
-    public const int Patch = 3; // Bug fixes (backwards-compatible)
+    public const int Patch = 4; // Bug fixes (backwards-compatible)
     public const string? Suffix = null; // Optional: "preview.1", "alpha", "beta", "rc.1"
 
     /// <summary>

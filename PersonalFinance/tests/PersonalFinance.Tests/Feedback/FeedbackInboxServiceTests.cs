@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;

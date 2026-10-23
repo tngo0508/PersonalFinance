@@ -22,8 +22,8 @@ All paths are under `PersonalFinance/src/` unless noted.
 
 | What | Where |
 |---|---|
-| API controllers, business services, validators | `PersonalFinance.ApiService/{Controllers,Services,Validators}` |
-| MVC controllers, Razor views, UI services | `PersonalFinance.Web/{Controllers,Views,Services}` |
+| A Feature's API controller, services, validators, DI registration ([ADR 0007](docs/adr/0007-feature-folders-with-interface-only-dependencies.md); Feedback moved, the rest still in `{Controllers,Services,Validators}`) | `PersonalFinance.ApiService/Features/<Feature>/` |
+| A Feature's MVC controller, view models, UI services (Feedback moved, the rest still in `{Controllers,Models,Services}`); Razor views | `PersonalFinance.Web/Features/<Feature>/`, `Views/<Controller>/` |
 | Legal pages (privacy, terms, disclaimer, cookies, contact) | `PersonalFinance.Web/Controllers/LegalController.cs`, `Views/Legal/` |
 | Footer, cookie banner, layout | `PersonalFinance.Web/Views/Shared/` (`_Layout`, `_CookieBanner`) |
 | Registration + consent | `PersonalFinance.Web/Areas/Identity/Pages/Account/Register*`, `Services/UserConsentService.cs` |

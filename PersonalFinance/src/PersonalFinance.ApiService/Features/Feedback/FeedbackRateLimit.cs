@@ -1,9 +1,11 @@
-namespace PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.ApiService.Infrastructure;
+
+namespace PersonalFinance.ApiService.Features.Feedback;
 
 /// <summary>
-/// Settings of the Feedback rate limiter, registered in <see cref="FeatureServiceExtensions.AddFeedbackFeature"/>.
+/// Settings of the Feedback rate limiter, registered in <see cref="FeedbackFeature.AddFeedbackFeature"/>.
 /// </summary>
-public static class FeedbackRateLimit
+internal static class FeedbackRateLimit
 {
     /// <summary>
     /// DI key of the Feedback rate limiter, kept separate from the shared <see cref="IRateLimiterService"/> used by

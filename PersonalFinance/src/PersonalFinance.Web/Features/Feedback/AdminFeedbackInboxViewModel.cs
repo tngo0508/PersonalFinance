@@ -1,7 +1,7 @@
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Web.Models;
+namespace PersonalFinance.Web.Features.Feedback;
 
 /// <summary>
 /// View model for the Admin Feedback inbox page.

@@ -1,14 +1,14 @@
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Helpers;
 
-namespace PersonalFinance.Web.Infrastructure;
+namespace PersonalFinance.Web.Features.Feedback;
 
 /// <summary>
 /// The page Feedback was sent from: what the "Send feedback" links pass as <c>from</c>, and what the Send feedback
 /// form accepts. Always an app-relative path (with its query string when it fits) of at most
 /// <see cref="FeedbackLimits.PageUrlMaxLength"/> characters.
 /// </summary>
-public static class FeedbackSourcePage
+internal static class FeedbackSourcePage
 {
     private static readonly PathString FeedbackPath = new("/Feedback");
 

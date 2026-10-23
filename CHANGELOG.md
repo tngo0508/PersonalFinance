@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.4] - 2026-10-22
+
+### Changed
+
+- **Feedback Is the First Feature Folder**: the Feedback Feature now lives in `ApiService/Features/Feedback/` and `Web/Features/Feedback/`, the pattern every Feature will follow (ADR 0007, #157).
+  - Interface beside implementation, `FeedbackFeature.AddFeedbackFeature()` for its DI, a `Validators/` subfolder, and `internal sealed` for everything but the interface, the controller and the view models.
+  - `FeedbackSourcePage` moves from Web Infrastructure into the Feature; the layout and the About page import it from there.
+  - Web tests can use a Feature's internal types (`InternalsVisibleTo`), as ApiService tests already could.
+  - The add-a-feature checklist in `docs/ARCHITECTURE.md` now says "mirror Feedback" and describes the Feature anatomy; AGENTS.md notes which Features have moved.
+  - No behaviour change: sending Feedback, its submission limit and the Admin inbox work as before.
+
 ## [4.2.3] - 2026-10-22
 
 ### Added

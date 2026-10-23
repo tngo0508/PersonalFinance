@@ -5,12 +5,12 @@ using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
 
-namespace PersonalFinance.ApiService.Services;
+namespace PersonalFinance.ApiService.Features.Feedback;
 
 /// <summary>
 /// EF Core implementation of <see cref="IFeedbackService"/>.
 /// </summary>
-public class FeedbackService : IFeedbackService
+internal sealed class FeedbackService : IFeedbackService
 {
     private readonly AppDbContext _db;
     private readonly IRateLimiterService _rateLimiter;

@@ -5,9 +5,8 @@ using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Web.Infrastructure;
-using PersonalFinance.Web.Models;
 
-namespace PersonalFinance.Web.Controllers;
+namespace PersonalFinance.Web.Features.Feedback;
 
 /// <summary>
 /// MVC controller for the Send feedback page. Signed-out visitors are sent to sign in.

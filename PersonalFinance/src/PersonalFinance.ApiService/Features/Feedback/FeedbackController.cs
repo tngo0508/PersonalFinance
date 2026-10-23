@@ -2,13 +2,12 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
 
-namespace PersonalFinance.ApiService.Controllers;
+namespace PersonalFinance.ApiService.Features.Feedback;
 
 /// <summary>
 /// API controller for Feedback. Sending Feedback is scoped to the authenticated Account
