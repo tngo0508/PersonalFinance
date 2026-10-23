@@ -1,7 +1,7 @@
 # 0007 – Feature Folders in ApiService and Web, with Interface-Only Dependencies Between Features
 
 **Date:** 2026-10-22  
-**Status:** Accepted (supersedes ADR 0001 §3)
+**Status:** Accepted (supersedes ADR 0001 §3); §1 and §5 superseded for Web by [ADR 0008](0008-web-uses-classic-mvc-layout.md)
 
 ## Context
 
