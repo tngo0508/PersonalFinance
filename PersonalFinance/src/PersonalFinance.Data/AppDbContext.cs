@@ -627,7 +627,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(e => e.Status).IsRequired();
+            // Concurrency token: a cancel and the Purge (or two cancels) cannot both act on the same pending request.
+            entity.Property(e => e.Status).IsRequired().IsConcurrencyToken();
             entity.Property(e => e.CancelTokenHash).IsRequired().HasMaxLength(64);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.CancelTokenHash).IsUnique();

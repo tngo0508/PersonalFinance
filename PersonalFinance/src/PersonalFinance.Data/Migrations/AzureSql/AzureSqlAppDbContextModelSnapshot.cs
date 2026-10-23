@@ -765,6 +765,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")

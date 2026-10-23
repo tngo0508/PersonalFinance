@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
@@ -74,12 +75,21 @@ public class AccountDeletionService : IAccountDeletionService
         if (user is not null)
         {
             user.LockoutEnd = null;
-            user.SecurityStamp = Guid.NewGuid().ToString("N");
+            RotateStamps(user);
         }
 
         request.Status = DeletionRequestStatus.Cancelled;
         request.CancelledAt = now;
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Status is a concurrency token: another cancel, or the Purge, changed this request first.
+            return false;
+        }
+
         return true;
     }
 
@@ -126,7 +136,7 @@ public class AccountDeletionService : IAccountDeletionService
         // their next validation.
         user.LockoutEnabled = true;
         user.LockoutEnd = DateTimeOffset.MaxValue;
-        user.SecurityStamp = Guid.NewGuid().ToString("N");
+        RotateStamps(user);
 
         var token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(CancelTokenBytes));
         var purgeAfter = stamp + GracePeriod;
@@ -146,25 +156,23 @@ public class AccountDeletionService : IAccountDeletionService
     /// True when <paramref name="userId"/> holds the Admin Role and no other Admin remains outside a pending
     /// Deletion Request.
     /// </summary>
-    private async Task<bool> IsLastAdminAsync(string userId, CancellationToken cancellationToken)
-    {
-        var adminIds = await (
-                from userRole in _db.UserRoles.AsNoTracking()
-                join role in _db.Roles.AsNoTracking() on userRole.RoleId equals role.Id
-                where role.Name == AppRoles.Admin
-                select userRole.UserId)
-            .ToListAsync(cancellationToken);
-        if (!adminIds.Contains(userId))
-        {
-            return false;
-        }
+    private async Task<bool> IsLastAdminAsync(string userId, CancellationToken cancellationToken) =>
+        await AdminIdsQuery().AnyAsync(id => id == userId, cancellationToken)
+        && !await OtherStayingAdminsQuery(userId).AnyAsync(cancellationToken);
 
-        var leavingIds = await _db.DeletionRequests.AsNoTracking()
-            .Where(r => r.Status == DeletionRequestStatus.Pending)
-            .Select(r => r.UserId)
-            .ToListAsync(cancellationToken);
-        return !adminIds.Any(id => id != userId && !leavingIds.Contains(id));
-    }
+    /// <summary>
+    /// The other Admins who are not leaving (no pending Deletion Request). Internal so tests can check it translates
+    /// to Azure SQL.
+    /// </summary>
+    internal IQueryable<string> OtherStayingAdminsQuery(string userId) =>
+        AdminIdsQuery().Where(id => id != userId && !_db.DeletionRequests.Any(r =>
+            r.UserId == id && r.Status == DeletionRequestStatus.Pending));
+
+    private IQueryable<string> AdminIdsQuery() =>
+        from userRole in _db.UserRoles.AsNoTracking()
+        join role in _db.Roles.AsNoTracking() on userRole.RoleId equals role.Id
+        where role.Name == AppRoles.Admin
+        select userRole.UserId;
 
     private async Task HideRowsAsync<TEntity>(string userId, DateTime stamp, CancellationToken cancellationToken)
         where TEntity : AuditableEntity
@@ -197,6 +205,17 @@ public class AccountDeletionService : IAccountDeletionService
         (Task)method.MakeGenericMethod(entityType).Invoke(this, [userId, stamp, cancellationToken])!;
 
     private DateTime UtcNow() => _timeProvider.GetUtcNow().UtcDateTime;
+
+    /// <summary>
+    /// Identity's stamps, rotated with every direct write to the user row: the security stamp ends other sessions
+    /// at their next validation, and the concurrency stamp makes a stale <c>UserManager</c> update fail instead of
+    /// silently undoing the lockout.
+    /// </summary>
+    private static void RotateStamps(IdentityUser user)
+    {
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
+        user.ConcurrencyStamp = Guid.NewGuid().ToString();
+    }
 
     private static string HashToken(string token) =>
         Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));

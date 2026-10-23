@@ -12,7 +12,7 @@ using PersonalFinance.Data;
 namespace PersonalFinance.Data.Migrations.AzureSql
 {
     [DbContext(typeof(AzureSqlAppDbContext))]
-    [Migration("20261023025553_AddDeletionRequest")]
+    [Migration("20261023031851_AddDeletionRequest")]
     partial class AddDeletionRequest
     {
         /// <inheritdoc />
@@ -768,6 +768,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")

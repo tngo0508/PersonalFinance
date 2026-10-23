@@ -146,7 +146,8 @@ Implement and validate the data layer before building dependent application logi
 #### Entity and Schema Design
 
 - **User-owned entities inherit from `AuditableEntity`** — All entities with a `UserId` field inherit from `AuditableEntity`, which provides `Id`, `UserId`, `CreatedAt`, `UpdatedAt`, `IsDeleted`, and `DeletedAt`.
-- **Soft deletes are mandatory** — Never hard-delete user-owned entities. Set `IsDeleted = true` and `DeletedAt = DateTime.UtcNow`. EF Core global query filters automatically exclude soft-deleted records.
+- **Soft deletes are mandatory** — Never hard-delete user-owned entities. Set `IsDeleted = true` and `DeletedAt = DateTime.UtcNow`. EF Core global query filters automatically exclude soft-deleted records. The one exception is the account Purge ([ADR 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)).
+- **`DeletionRequest` is the one exception to the `UserId` rule** — It is not an `AuditableEntity`, because it is never soft-deleted and is the audit record that outlives the Purge (ADR 0005). The Purge clears its `UserId`.
 - **System-defined entities** — Entities without `UserId` (e.g., `CommunityPoll`, `CommunityPollOption`) do NOT inherit from `AuditableEntity`.
 - When Code-First migrations are used, create migrations for schema changes and inspect the generated migration before applying it.
 - Define appropriate primary keys, foreign keys, indexes, unique constraints, nullability, maximum string lengths, precision, and delete behaviors.

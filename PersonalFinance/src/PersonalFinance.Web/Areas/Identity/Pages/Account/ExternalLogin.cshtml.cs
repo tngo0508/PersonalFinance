@@ -119,6 +119,13 @@ public class ExternalLoginModel : PageModel
             var existingUser = await _userManager.FindByEmailAsync(email);
             if (existingUser != null)
             {
+                // SignInAsync below skips the lockout check that ExternalLoginSignInAsync makes, so a locked-out
+                // Account (e.g. one with a pending Deletion Request) must be stopped here, before a login is linked.
+                if (await _userManager.IsLockedOutAsync(existingUser))
+                {
+                    return RedirectToPage("./Lockout");
+                }
+
                 if (existingUser.EmailConfirmed)
                 {
                     var addLoginResult = await _userManager.AddLoginAsync(existingUser, info);

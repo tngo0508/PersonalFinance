@@ -228,6 +228,67 @@ public class AccountDeletionServiceTests
         Assert.Equal(DeletionRequestStatus.Pending, (await db.DeletionRequests.SingleAsync()).Status);
     }
 
+    [Fact]
+    public async Task Request_And_Cancel_RotateTheConcurrencyStamp()
+    {
+        await using var db = CreateContext();
+        db.Users.Add(new IdentityUser { Id = UserId, ConcurrencyStamp = "original" });
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+
+        var token = (await service.RequestAsync(UserId)).CancelToken!;
+        var afterRequest = (await db.Users.SingleAsync()).ConcurrencyStamp;
+        await service.CancelAsync(token);
+
+        Assert.NotEqual("original", afterRequest);
+        Assert.NotEqual(afterRequest, (await db.Users.SingleAsync()).ConcurrencyStamp);
+    }
+
+    [Fact]
+    public async Task Cancel_OfAPurgedRequest_DoesNothing()
+    {
+        await using var db = CreateContext();
+        db.Users.Add(new IdentityUser { Id = UserId });
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+        var token = (await service.RequestAsync(UserId)).CancelToken!;
+        (await db.DeletionRequests.SingleAsync()).Status = DeletionRequestStatus.Purged;
+        await db.SaveChangesAsync();
+
+        Assert.False(await service.CancelAsync(token));
+        Assert.Equal(DeletionRequestStatus.Purged, (await db.DeletionRequests.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task DeletionRequestStatus_IsAConcurrencyToken_SoTwoWritersCannotBothChangeIt()
+    {
+        var name = $"AccountDeletion_{Guid.NewGuid():N}";
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options;
+        await using (var seed = new AppDbContext(options))
+        {
+            seed.DeletionRequests.Add(new DeletionRequest { UserId = UserId, CancelTokenHash = "hash" });
+            await seed.SaveChangesAsync();
+        }
+
+        await using var first = new AppDbContext(options);
+        await using var second = new AppDbContext(options);
+        var cancel = await first.DeletionRequests.SingleAsync();
+        var purge = await second.DeletionRequests.SingleAsync();
+        cancel.Status = DeletionRequestStatus.Cancelled;
+        await first.SaveChangesAsync();
+
+        purge.Status = DeletionRequestStatus.Purged;
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+    }
+
+    [Fact]
+    public void OtherStayingAdminsQuery_TranslatesToAzureSql()
+    {
+        using var db = AzureSqlTranslation.CreateContext();
+
+        AzureSqlTranslation.AssertTranslates(CreateService(db).OtherStayingAdminsQuery(UserId));
+    }
+
     private static void AddAdmin(AppDbContext db, params string[] userIds)
     {
         var role = new IdentityRole { Id = "role-admin", Name = AppRoles.Admin };

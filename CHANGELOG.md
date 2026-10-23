@@ -151,6 +151,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Google Sign-In Respects Lockout**: Signing in with Google to an existing, locked-out account by its email linked the Google login and signed in anyway; it now shows the Lockout page and links nothing.
 - **Account Deletion No Longer Orphans Data**: The built-in Delete personal data page deleted only the sign-in Account and left all of its financial data behind; it is replaced by the Deletion Request.
 
 - **Build warnings:** A clean build of the whole solution, tests included, now reports zero warnings, and CI fails on any new one (#125).
