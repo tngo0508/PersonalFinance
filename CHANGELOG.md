@@ -80,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Data Export**: An Account can download all of its data as one JSON file from Account settings > Personal data (#141).
   - Covers the account and its consents, Net Worth, Budget Planner, Budget Tracker, synced spreadsheet data, Google Drive connections, savings goals, saved articles, Community posts, likes and votes, Feedback, notifications and AI Assistant usage.
   - Only live records: soft-deleted rows are left out. Secrets never appear (password hash, security stamp, Google Drive API keys).
-  - Replaces the Identity UI default download, which held only the sign-in fields. New `GET /api/data-export` endpoint and `IDataExportApi` contract.
+  - Replaces the Identity UI default Personal data page and its download, which held only the sign-in fields plus the authenticator key; the old download address now redirects to Personal data. New `GET /api/data-export` endpoint and `IDataExportApi` contract.
 
 - **About Page**: A public About page at `/about` explains what Personal Finance is, why it exists, who builds it and its core features, for signed-out and signed-in visitors.
   - Served by `HomeController`; it needs no sign-in and makes no API call.

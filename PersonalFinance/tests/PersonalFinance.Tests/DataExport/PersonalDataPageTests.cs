@@ -31,6 +31,7 @@ public class PersonalDataPageTests
     [Theory]
     [InlineData(typeof(PersonalDataModel))]
     [InlineData(typeof(DeletePersonalDataModel))]
+    [InlineData(typeof(DownloadPersonalDataModel))]
     public void Page_RequiresASignedInAccount(Type pageModel)
     {
         Assert.NotNull(pageModel.GetCustomAttribute<AuthorizeAttribute>());
@@ -80,6 +81,18 @@ public class PersonalDataPageTests
         var result = new DeletePersonalDataModel().OnPost();
 
         Assert.IsType<RedirectToPageResult>(result);
+    }
+
+    [Fact]
+    public void DownloadPersonalData_SendsTheUserToTheDataExport_InsteadOfTheIdentityDefaultDownload()
+    {
+        Assert.Empty(typeof(DownloadPersonalDataModel).GetConstructors().Single().GetParameters());
+        var page = new DownloadPersonalDataModel();
+
+        foreach (var result in new[] { page.OnGet(), page.OnPost() })
+        {
+            Assert.Equal("./PersonalData", Assert.IsType<RedirectToPageResult>(result).PageName);
+        }
     }
 
     private sealed class FakeDataExportApi : IDataExportApi

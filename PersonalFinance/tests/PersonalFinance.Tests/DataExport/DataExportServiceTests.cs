@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.DataExport;
 using PersonalFinance.Shared.Enums;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
 
@@ -67,6 +68,8 @@ public class DataExportServiceTests
 
         var export = await CreateService(db).ExportAsync(UserId);
 
+        // Exactly one record per section, so a section without a text field cannot leak the other Account's row.
+        AssertOneOfEverything(export);
         var json = JsonSerializer.Serialize(export);
         Assert.Contains("mine", json);
         Assert.DoesNotContain("theirs", json);
@@ -81,6 +84,28 @@ public class DataExportServiceTests
 
         var export = await CreateService(db).ExportAsync(UserId);
 
+        AssertOneOfEverything(export);
+        var comment = Assert.Single(export.Community.Comments);
+        Assert.Equal("mine case study", comment.CaseStudyTitle);
+    }
+
+    [Fact]
+    public async Task Export_LeavesOutSoftDeletedAiUsage()
+    {
+        await using var db = CreateContext();
+        var deleted = new AiUsageRecord { UserId = UserId, Endpoint = "deleted-chat" };
+        deleted.SoftDelete();
+        db.AiUsageRecords.AddRange(deleted, new AiUsageRecord { UserId = UserId, Endpoint = "live-chat" });
+        await db.SaveChangesAsync();
+
+        var export = await CreateService(db).ExportAsync(UserId);
+
+        Assert.Equal("live-chat", Assert.Single(export.AiUsage).Endpoint);
+    }
+
+    private static void AssertOneOfEverything(DataExportDto export)
+    {
+        Assert.Single(export.Consents);
         Assert.Single(export.NetWorthParameters);
         Assert.Single(export.BudgetAllocations);
         Assert.Equal("BudgetTracker", export.BudgetDataSource);
@@ -115,6 +140,28 @@ public class DataExportServiceTests
         var export = await CreateService(db).ExportAsync(UserId);
 
         Assert.Equal("Live goal", Assert.Single(export.SavingsGoals).Name);
+    }
+
+    [Fact]
+    public async Task Export_LeavesOutSoftDeletedTransactionsAndBudgetLines()
+    {
+        await using var db = CreateContext();
+        var category = new BudgetCategory { UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense };
+        var plan = new MonthlyBudgetPlan { UserId = UserId, Year = 2026, Month = 3 };
+        var deletedTransaction = new BudgetTransaction
+            { UserId = UserId, Category = category, Date = new DateOnly(2026, 3, 1), Description = "Deleted" };
+        var deletedLine = new MonthlyBudgetLine { UserId = UserId, Plan = plan, Category = category, PlannedAmount = 9m };
+        deletedTransaction.SoftDelete();
+        deletedLine.SoftDelete();
+        db.BudgetTransactions.AddRange(deletedTransaction, new BudgetTransaction
+            { UserId = UserId, Category = category, Date = new DateOnly(2026, 3, 2), Description = "Live" });
+        db.MonthlyBudgetLines.Add(deletedLine);
+        await db.SaveChangesAsync();
+
+        var export = await CreateService(db).ExportAsync(UserId);
+
+        Assert.Equal("Live", Assert.Single(export.BudgetTransactions).Description);
+        Assert.Empty(export.BudgetMonthLines);
     }
 
     [Fact]
@@ -212,7 +259,8 @@ public class DataExportServiceTests
         db.SavedArticles.Add(new SavedArticle { UserId = userId, Title = $"{marker} article", Url = "https://example.com" });
 
         var story = new CommunityStory { UserId = userId, AuthorName = marker, Title = $"{marker} story" };
-        var comment = new CommunityComment { UserId = userId, AuthorName = marker, Text = $"{marker} comment" };
+        var comment = new CommunityComment
+            { UserId = userId, AuthorName = marker, Text = $"{marker} comment", CaseStudyTitle = $"{marker} case study" };
         db.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = userId, Story = story });
         db.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = userId, Comment = comment });
         var poll = new CommunityPoll { PollCode = $"{marker}-poll", Question = $"{marker} question?" };

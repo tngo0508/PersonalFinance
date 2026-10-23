@@ -223,14 +223,15 @@ public class DataExportService : IDataExportService
     }
 
     /// <summary>
-    /// Budget Tracker transactions with their category's name. Categories are joined without the soft-delete
-    /// filter, because a deleted Budget Category stays visible in past months that used it.
+    /// Budget Tracker transactions with their category's name, deleted categories included, because a deleted
+    /// Budget Category stays visible in past months that used it. <c>IgnoreQueryFilters</c> switches off every
+    /// filter in the query, so soft-deleted transactions are excluded explicitly.
     /// Internal so tests can check it translates to Azure SQL.
     /// </summary>
     internal IQueryable<DataExportBudgetTransactionDto> BudgetTransactionsQuery(string userId) =>
-        from transaction in _db.BudgetTransactions.AsNoTracking()
-        where transaction.UserId == userId
-        join category in _db.BudgetCategories.IgnoreQueryFilters().AsNoTracking()
+        from transaction in _db.BudgetTransactions.IgnoreQueryFilters().AsNoTracking()
+        where transaction.UserId == userId && !transaction.IsDeleted
+        join category in _db.BudgetCategories.AsNoTracking()
             on transaction.CategoryId equals category.Id into categories
         from category in categories.DefaultIfEmpty()
         orderby transaction.Date, transaction.Id
@@ -244,13 +245,15 @@ public class DataExportService : IDataExportService
 
     /// <summary>
     /// Budget Tracker Planned amounts and Actual Overrides of live months, with the category's name (deleted
-    /// categories included, as for transactions). Internal so tests can check it translates to Azure SQL.
+    /// categories included, as for transactions). Filters are off for the whole query, so soft-deleted lines and
+    /// months are excluded explicitly. Internal so tests can check it translates to Azure SQL.
     /// </summary>
     internal IQueryable<DataExportBudgetLineDto> BudgetMonthLinesQuery(string userId) =>
-        from line in _db.MonthlyBudgetLines.AsNoTracking()
-        where line.UserId == userId
+        from line in _db.MonthlyBudgetLines.IgnoreQueryFilters().AsNoTracking()
+        where line.UserId == userId && !line.IsDeleted
         join plan in _db.MonthlyBudgetPlans.AsNoTracking() on line.PlanId equals plan.Id
-        join category in _db.BudgetCategories.IgnoreQueryFilters().AsNoTracking()
+        where !plan.IsDeleted
+        join category in _db.BudgetCategories.AsNoTracking()
             on line.CategoryId equals category.Id into categories
         from category in categories.DefaultIfEmpty()
         orderby plan.Year, plan.Month, line.Id
@@ -330,7 +333,7 @@ public class DataExportService : IDataExportService
         account.Roles = await AccountRolesQuery(userId).ToListAsync(cancellationToken);
         account.ExternalLogins = await _db.UserLogins.AsNoTracking()
             .Where(l => l.UserId == userId)
-            .OrderBy(l => l.LoginProvider)
+            .OrderBy(l => l.LoginProvider).ThenBy(l => l.ProviderKey)
             .Select(l => l.ProviderDisplayName ?? l.LoginProvider)
             .ToListAsync(cancellationToken);
         return account;
@@ -361,6 +364,8 @@ public class DataExportService : IDataExportService
                     AuthorName = c.AuthorName,
                     Text = c.Text,
                     Topic = c.Topic,
+                    PollId = c.PollId,
+                    CaseStudyTitle = c.CaseStudyTitle,
                     CreatedAtUtc = c.CreatedAtUtc
                 })
                 .ToListAsync(cancellationToken),
