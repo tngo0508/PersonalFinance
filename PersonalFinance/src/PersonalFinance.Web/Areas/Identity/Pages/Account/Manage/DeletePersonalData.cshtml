@@ -1,0 +1,17 @@
+@page
+@model DeletePersonalDataModel
+@{
+    Layout = "_Layout"; // the account-settings shell in this folder, not Account/_ViewStart's sign-in layout
+    ViewData["Title"] = "Delete your account";
+    ViewData["ActivePage"] = ManageNavPages.PersonalData;
+}
+
+<h3>@ViewData["Title"]</h3>
+
+<p>
+    Deleting your account from this page is not available yet. To have your account and data erased,
+    <a asp-area="" asp-controller="Legal" asp-action="Contact">contact us</a>.
+</p>
+<p>
+    You can still <a asp-page="./PersonalData">download a copy of your data</a>.
+</p>

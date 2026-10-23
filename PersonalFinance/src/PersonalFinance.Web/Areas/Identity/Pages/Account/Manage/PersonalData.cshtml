@@ -1,0 +1,30 @@
+@page
+@model PersonalDataModel
+@{
+    Layout = "_Layout"; // the account-settings shell in this folder, not Account/_ViewStart's sign-in layout
+    ViewData["Title"] = "Personal data";
+    ViewData["ActivePage"] = ManageNavPages.PersonalData;
+}
+
+<h3>@ViewData["Title"]</h3>
+
+<h4>Download your data</h4>
+<p>
+    Get a copy of everything your account holds: account details, Net Worth, budgets, transactions, savings goals,
+    synced spreadsheet data, Community posts and Feedback. The file is JSON, so other apps can read it.
+</p>
+
+@if (Model.ErrorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+
+<form id="download-data" method="post" asp-page-handler="Download">
+    <button class="btn btn-primary" type="submit">Download my data</button>
+</form>
+
+<h4>Delete your account</h4>
+<p>
+    Deleting your account from this page is not available yet. To have your account and data erased,
+    <a asp-area="" asp-controller="Legal" asp-action="Contact">contact us</a>.
+</p>
