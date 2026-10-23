@@ -25,8 +25,11 @@ public class NewsServiceTests
         </channel></rss>
         """;
 
+    private static readonly DateTimeOffset Now = new(2026, 10, 23, 12, 0, 0, TimeSpan.Zero);
+
     private static NewsService CreateService(StubFeedHandler handler, IMemoryCache? cache = null) =>
-        new(new RssNewsFeedClient(new HttpClient(handler), NullLogger<RssNewsFeedClient>.Instance),
+        new(new RssNewsFeedClient(new HttpClient(handler), new FixedTimeProvider(Now),
+                NullLogger<RssNewsFeedClient>.Instance),
             cache ?? new MemoryCache(new MemoryCacheOptions()));
 
     [Theory]
@@ -93,6 +96,22 @@ public class NewsServiceTests
     }
 
     [Fact]
+    public async Task GetNewsAsync_DatesAnArticleWithoutAReadablePubDate_AtTheCurrentTime()
+    {
+        var handler = new StubFeedHandler
+        {
+            Feed = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0"><channel><item><title>Undated</title><pubDate>not a date</pubDate></item></channel></rss>
+                """
+        };
+
+        NewsFeedDto feed = await CreateService(handler).GetNewsAsync(new NewsQueryDto());
+
+        Assert.Equal(Now.UtcDateTime, Assert.Single(feed.Articles).PublishedAt);
+    }
+
+    [Fact]
     public async Task GetNewsAsync_SkipsAFailingSource()
     {
         NewsFeedDto feed = await CreateService(new StubFeedHandler { Throw = true }).GetNewsAsync(new NewsQueryDto());
@@ -106,6 +125,7 @@ public class NewsServiceTests
         private int _requests;
 
         public bool Throw { get; init; }
+        public string Feed { get; init; } = BbcFeed;
         public int Requests => _requests;
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
@@ -120,10 +140,15 @@ public class NewsServiceTests
             HttpResponseMessage response = request.RequestUri?.ToString() == BbcFeedUrl
                 ? new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent(BbcFeed, Encoding.UTF8, "application/rss+xml")
+                    Content = new StringContent(Feed, Encoding.UTF8, "application/rss+xml")
                 }
                 : new HttpResponseMessage(HttpStatusCode.NotFound);
             return Task.FromResult(response);
         }
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 }

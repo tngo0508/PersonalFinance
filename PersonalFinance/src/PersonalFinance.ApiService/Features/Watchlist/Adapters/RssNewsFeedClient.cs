@@ -17,11 +17,13 @@ internal sealed class RssNewsFeedClient : INewsFeedClient
     private static readonly Regex HtmlStripRegex = new("<.*?>", RegexOptions.Compiled);
 
     private readonly HttpClient _httpClient;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<RssNewsFeedClient> _logger;
 
-    public RssNewsFeedClient(HttpClient httpClient, ILogger<RssNewsFeedClient> logger)
+    public RssNewsFeedClient(HttpClient httpClient, TimeProvider timeProvider, ILogger<RssNewsFeedClient> logger)
     {
         _httpClient = httpClient;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -90,7 +92,7 @@ internal sealed class RssNewsFeedClient : INewsFeedClient
                     Url = link.Trim(),
                     Source = source.Name,
                     ImageUrl = imageUrl,
-                    PublishedAt = DateTime.TryParse(pubDateStr, out DateTime parsedDate) ? parsedDate : DateTime.UtcNow,
+                    PublishedAt = DateTime.TryParse(pubDateStr, out DateTime parsedDate) ? parsedDate : _timeProvider.GetUtcNow().UtcDateTime,
                     Category = category.Trim()
                 };
 

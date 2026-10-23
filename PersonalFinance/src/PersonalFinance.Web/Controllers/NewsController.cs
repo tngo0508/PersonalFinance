@@ -1,8 +1,10 @@
+using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Watchlist;
 using PersonalFinance.Web.Models.News;
+using ApiException = Refit.ApiException;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -32,30 +34,20 @@ public sealed class NewsController : Controller
     /// Supports filtering by category, source, and search query.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Index(
-        [FromQuery] string? category,
-        [FromQuery] string? source,
-        [FromQuery] string? search,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Index([FromQuery] NewsQueryDto query, CancellationToken cancellationToken = default)
     {
-        var query = new NewsQueryDto
-        {
-            Category = category,
-            Source = source,
-            Search = search,
-        };
-
         var model = new NewsViewModel
         {
-            SelectedCategory = category,
-            SelectedSource = source,
-            SearchQuery = search,
+            SelectedCategory = query.Category,
+            SelectedSource = query.Source,
+            SearchQuery = query.Search,
             IsLoading = true,
         };
 
         try
         {
-            NewsFeedDto feed = await _newsApi.GetNewsAsync(query, cancellationToken);
+            NewsFeedDto feed = await TryGetNewsAsync(query, cancellationToken)
+                ?? await GetFilterOptionsWithoutArticlesAsync(cancellationToken);
 
             model.Sources = feed.Sources;
             model.Categories = feed.Categories;
@@ -79,27 +71,16 @@ public sealed class NewsController : Controller
     /// </summary>
     [HttpGet]
     [Produces("application/json")]
-    public async Task<IActionResult> Refresh(
-        [FromQuery] string? category,
-        [FromQuery] string? source,
-        [FromQuery] string? search,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Refresh([FromQuery] NewsQueryDto query, CancellationToken cancellationToken = default)
     {
-        var query = new NewsQueryDto
-        {
-            Category = category,
-            Source = source,
-            Search = search,
-        };
-
         try
         {
-            NewsFeedDto feed = await _newsApi.GetNewsAsync(query, cancellationToken);
+            NewsFeedDto? feed = await TryGetNewsAsync(query, cancellationToken);
 
             return Json(new NewsRefreshResponse
             {
                 Success = true,
-                Articles = feed.Articles,
+                Articles = feed?.Articles ?? [],
                 LastRefreshed = DateTime.UtcNow,
             });
         }
@@ -113,5 +94,32 @@ public sealed class NewsController : Controller
                 Error = "Failed to refresh news.",
             });
         }
+    }
+
+    /// <summary>
+    /// Reads the feed, or returns <see langword="null"/> when ApiService rejects the filters (for example, an overlong
+    /// search): filters no article can match find nothing, rather than showing the page as unavailable.
+    /// </summary>
+    private async Task<NewsFeedDto?> TryGetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _newsApi.GetNewsAsync(query, cancellationToken);
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
+        {
+            _logger.LogInformation("ApiService rejected the news filters; showing no articles");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads the unfiltered feed for its filter options, so the page can still offer them, and drops its articles.
+    /// </summary>
+    private async Task<NewsFeedDto> GetFilterOptionsWithoutArticlesAsync(CancellationToken cancellationToken)
+    {
+        NewsFeedDto feed = await _newsApi.GetNewsAsync(new NewsQueryDto(), cancellationToken);
+        feed.Articles = [];
+        return feed;
     }
 }

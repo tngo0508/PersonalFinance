@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Finance News Read Through ApiService**: the RSS feed fetching, parsing, filtering and caching behind the Finance News page move from Web into ApiService's Watchlist Feature, and Web reads the feed through a Refit client like every other Feature (#171).
-  - New `GET /api/News?category=&source=&search=` endpoint, signed-in only, returning the matching articles and the filter options in one `NewsFeedDto`. Each filter is validated server-side to at most 100 characters.
+  - New `GET /api/News?category=&source=&search=` endpoint, signed-in only, returning the matching articles and the filter options in one `NewsFeedDto`. Each filter is validated server-side to at most 100 characters; the News page shows no articles for a filter ApiService rejects, with its filter options still offered, rather than an outage message.
   - `NewsService` and the RSS client (`Adapters/RssNewsFeedClient`) live in `ApiService/Features/Watchlist/`; the DTOs in `Shared/DTOs/Watchlist/NewsDtos.cs` and the contract in `Shared/Contracts/INewsApi.cs`.
   - Web's `NewsService` and `NewsQueryOptions` are removed. The News page now makes one ApiService call instead of two feed reads.
   - The page, its filters, the refresh endpoint and its JSON are unchanged.

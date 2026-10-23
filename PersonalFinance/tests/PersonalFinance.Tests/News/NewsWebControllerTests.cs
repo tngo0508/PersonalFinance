@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,19 +7,24 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Watchlist;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models.News;
+using Refit;
 
 namespace PersonalFinance.Tests.News;
 
 /// <summary>
-/// The Web Finance News page reads the feed from ApiService through <see cref="INewsApi"/>; a failure shows a message
-/// and never carries exception details.
+/// The Web Finance News page reads the feed from ApiService through <see cref="INewsApi"/>. Filters ApiService
+/// rejects find no articles; a failure shows a message and never carries exception details.
 /// </summary>
 public class NewsWebControllerTests
 {
     private sealed class FakeNewsApi : INewsApi
     {
         public Exception? Failure { get; init; }
-        public NewsQueryDto? LastQuery { get; private set; }
+
+        /// <summary>Answers any filtered query with 400, as ApiService does for an overlong filter.</summary>
+        public bool RejectFilters { get; init; }
+
+        public List<NewsQueryDto> Queries { get; } = [];
 
         public NewsFeedDto Feed { get; } = new()
         {
@@ -28,10 +34,21 @@ public class NewsWebControllerTests
             PersonalFinanceCategories = ["Budgeting", "Saving", "Investing", "Debt", "Retirement"],
         };
 
-        public Task<NewsFeedDto> GetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken = default)
+        public async Task<NewsFeedDto> GetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken = default)
         {
-            LastQuery = query;
-            return Failure is null ? Task.FromResult(Feed) : Task.FromException<NewsFeedDto>(Failure);
+            Queries.Add(query);
+            if (Failure is not null)
+            {
+                throw Failure;
+            }
+
+            if (RejectFilters && (query.Category ?? query.Source ?? query.Search) is not null)
+            {
+                throw await ApiException.Create(new HttpRequestMessage(HttpMethod.Get, "https://api.local/api/News"),
+                    HttpMethod.Get, new HttpResponseMessage(HttpStatusCode.BadRequest), new RefitSettings());
+            }
+
+            return Feed;
         }
     }
 
@@ -40,26 +57,45 @@ public class NewsWebControllerTests
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
     };
 
+    private static NewsViewModel ViewModelOf(IActionResult result) =>
+        Assert.IsType<NewsViewModel>(Assert.IsType<ViewResult>(result).Model);
+
+    private static NewsRefreshResponse RefreshResponseOf(IActionResult result) =>
+        Assert.IsType<NewsRefreshResponse>(Assert.IsType<JsonResult>(result).Value);
+
     [Fact]
     public async Task Index_BuildsTheViewModelFromTheFeed_AndForwardsTheFilters()
     {
         var api = new FakeNewsApi();
+        var query = new NewsQueryDto { Category = "Investing", Source = "BBC Business", Search = "rates" };
 
-        IActionResult result = await CreateController(api).Index("Investing", "BBC Business", "rates");
+        NewsViewModel model = ViewModelOf(await CreateController(api).Index(query));
 
-        NewsViewModel model = Assert.IsType<NewsViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Equal("Rates fall", Assert.Single(model.Articles).Title);
         Assert.Equal(["General", "Investing"], model.Categories);
         Assert.Equal("BBC Business", Assert.Single(model.Sources).Name);
         Assert.Equal(5, model.PersonalFinanceCategories.Count);
         Assert.Equal("Investing", model.SelectedCategory);
+        Assert.Equal("BBC Business", model.SelectedSource);
         Assert.Equal("rates", model.SearchQuery);
         Assert.False(model.IsLoading);
         Assert.NotNull(model.LastRefreshed);
         Assert.Null(model.ErrorMessage);
-        Assert.Equal("Investing", api.LastQuery!.Category);
-        Assert.Equal("BBC Business", api.LastQuery.Source);
-        Assert.Equal("rates", api.LastQuery.Search);
+        Assert.Same(query, Assert.Single(api.Queries));
+    }
+
+    [Fact]
+    public async Task Index_WhenApiServiceRejectsTheFilters_ShowsNoArticles_WithTheFilterOptions()
+    {
+        var api = new FakeNewsApi { RejectFilters = true };
+
+        NewsViewModel model = ViewModelOf(await CreateController(api).Index(new NewsQueryDto { Search = "too long" }));
+
+        Assert.Empty(model.Articles);
+        Assert.Null(model.ErrorMessage);
+        Assert.Equal("BBC Business", Assert.Single(model.Sources).Name);
+        Assert.Equal("too long", model.SearchQuery);
+        Assert.False(model.IsLoading);
     }
 
     [Fact]
@@ -67,9 +103,8 @@ public class NewsWebControllerTests
     {
         var api = new FakeNewsApi { Failure = new InvalidOperationException("secret stack trace") };
 
-        IActionResult result = await CreateController(api).Index(null, null, null);
+        NewsViewModel model = ViewModelOf(await CreateController(api).Index(new NewsQueryDto()));
 
-        NewsViewModel model = Assert.IsType<NewsViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Empty(model.Articles);
         Assert.False(model.IsLoading);
         Assert.NotNull(model.ErrorMessage);
@@ -79,11 +114,23 @@ public class NewsWebControllerTests
     [Fact]
     public async Task Refresh_ReturnsTheArticlesAsJson()
     {
-        IActionResult result = await CreateController(new FakeNewsApi()).Refresh(null, null, "rates");
+        NewsRefreshResponse response =
+            RefreshResponseOf(await CreateController(new FakeNewsApi()).Refresh(new NewsQueryDto { Search = "rates" }));
 
-        NewsRefreshResponse response = Assert.IsType<NewsRefreshResponse>(Assert.IsType<JsonResult>(result).Value);
         Assert.True(response.Success);
         Assert.Equal("Rates fall", Assert.Single(response.Articles!).Title);
+    }
+
+    [Fact]
+    public async Task Refresh_WhenApiServiceRejectsTheFilters_ReturnsNoArticles()
+    {
+        var api = new FakeNewsApi { RejectFilters = true };
+
+        NewsRefreshResponse response =
+            RefreshResponseOf(await CreateController(api).Refresh(new NewsQueryDto { Search = "too long" }));
+
+        Assert.True(response.Success);
+        Assert.Empty(response.Articles!);
     }
 
     [Fact]
@@ -91,9 +138,8 @@ public class NewsWebControllerTests
     {
         var api = new FakeNewsApi { Failure = new InvalidOperationException("secret stack trace") };
 
-        IActionResult result = await CreateController(api).Refresh(null, null, null);
+        NewsRefreshResponse response = RefreshResponseOf(await CreateController(api).Refresh(new NewsQueryDto()));
 
-        NewsRefreshResponse response = Assert.IsType<NewsRefreshResponse>(Assert.IsType<JsonResult>(result).Value);
         Assert.False(response.Success);
         Assert.DoesNotContain("secret", JsonSerializer.Serialize(response));
     }
