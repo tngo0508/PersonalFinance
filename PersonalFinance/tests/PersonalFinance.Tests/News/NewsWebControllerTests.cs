@@ -52,7 +52,10 @@ public class NewsWebControllerTests
         }
     }
 
-    private static NewsController CreateController(INewsApi api) => new(api, NullLogger<NewsController>.Instance)
+    private static readonly DateTimeOffset Now = new(2026, 10, 23, 12, 0, 0, TimeSpan.Zero);
+
+    private static NewsController CreateController(INewsApi api) =>
+        new(api, new FixedTimeProvider(Now), NullLogger<NewsController>.Instance)
     {
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
     };
@@ -79,7 +82,7 @@ public class NewsWebControllerTests
         Assert.Equal("BBC Business", model.SelectedSource);
         Assert.Equal("rates", model.SearchQuery);
         Assert.False(model.IsLoading);
-        Assert.NotNull(model.LastRefreshed);
+        Assert.Equal(Now.UtcDateTime, model.LastRefreshed);
         Assert.Null(model.ErrorMessage);
         Assert.Same(query, Assert.Single(api.Queries));
     }
@@ -119,6 +122,7 @@ public class NewsWebControllerTests
 
         Assert.True(response.Success);
         Assert.Equal("Rates fall", Assert.Single(response.Articles!).Title);
+        Assert.Equal(Now.UtcDateTime, response.LastRefreshed);
     }
 
     [Fact]
@@ -142,5 +146,10 @@ public class NewsWebControllerTests
 
         Assert.False(response.Success);
         Assert.DoesNotContain("secret", JsonSerializer.Serialize(response));
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 }

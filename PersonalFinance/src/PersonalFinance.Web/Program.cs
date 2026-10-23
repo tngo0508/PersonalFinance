@@ -104,6 +104,9 @@ try
     // registration.
     builder.Services.AddScoped<IUserConsentService, UserConsentService>();
 
+    // The clock, injected so tests can fix the time (CODING_STANDARDS "Async and time").
+    builder.Services.AddSingleton(TimeProvider.System);
+
     // Hosting behind Azure Container Apps: trust X-Forwarded-For/Proto so HTTPS and OAuth redirect URIs are correct.
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {

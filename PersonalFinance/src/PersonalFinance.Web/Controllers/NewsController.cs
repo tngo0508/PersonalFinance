@@ -16,16 +16,19 @@ namespace PersonalFinance.Web.Controllers;
 public sealed class NewsController : Controller
 {
     private readonly INewsApi _newsApi;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<NewsController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NewsController"/> class.
     /// </summary>
     /// <param name="newsApi">ApiService client for the finance news feed.</param>
+    /// <param name="timeProvider">Clock for the page's last-refreshed time.</param>
     /// <param name="logger">Logger for this controller.</param>
-    public NewsController(INewsApi newsApi, ILogger<NewsController> logger)
+    public NewsController(INewsApi newsApi, TimeProvider timeProvider, ILogger<NewsController> logger)
     {
         _newsApi = newsApi;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -53,7 +56,7 @@ public sealed class NewsController : Controller
             model.Categories = feed.Categories;
             model.PersonalFinanceCategories = feed.PersonalFinanceCategories;
             model.Articles = feed.Articles;
-            model.LastRefreshed = DateTime.UtcNow;
+            model.LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime;
             model.IsLoading = false;
         }
         catch (Exception ex)
@@ -81,7 +84,7 @@ public sealed class NewsController : Controller
             {
                 Success = true,
                 Articles = feed?.Articles ?? [],
-                LastRefreshed = DateTime.UtcNow,
+                LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime,
             });
         }
         catch (Exception ex)
