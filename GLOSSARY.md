@@ -6,8 +6,9 @@ Canonical definitions for the Personal Finance application domain and architectu
 
 ### Feature
 A vertical slice of functionality named after what a user would call it (Budget Tracker, Feedback, Savings Goals).
-It spans everything that slice needs: entities, services, controllers, API contracts, DTOs, views and tests, and every
-part of it carries the Feature's name wherever it lives.
+It spans everything that slice needs: entities, services, controllers, API contracts, DTOs, views and tests. In the
+API, the DTOs and the tests every part carries the Feature's name; in the web frontend a Feature is reached through
+its controllers, which are named after their routes (the Budget Planner's is `Budget`, the Landing Page's is `Home`).
 _Avoid_: Area (an ASP.NET Core term with its own meaning), component
 
 ### Service
@@ -34,7 +35,7 @@ A pattern where entities are marked as deleted (`IsDeleted = true`) instead of b
 ## Layers
 
 ### Web Layer
-`PersonalFinance.Web` — the MVC frontend. Contains controllers, view models and UI-specific services organized by Feature in `Features/<Feature>/`, shared code in `Infrastructure/`, Razor views in `Views/<Controller>/`, and the Identity Razor pages. Calls the ApiService via Refit HTTP clients. Controllers call APIs directly.
+`PersonalFinance.Web` — the MVC frontend. Uses the classic MVC layout (ADR 0008): controllers in `Controllers/`, view models in `Models/<Controller>/`, Razor views in `Views/<Controller>/`, UI services in `Services/`, tag helpers in `TagHelpers/`, host plumbing in `Infrastructure/`, and the Identity Razor pages. Calls the ApiService via Refit HTTP clients. Controllers call APIs directly.
 
 ### ApiService Layer
 `PersonalFinance.ApiService` — the REST API backend. Contains controllers, services, and validators organized by Feature in `Features/<Feature>/`, with code that two or more Features share in `Infrastructure/`. Uses direct service injection via ASP.NET Core dependency injection.
