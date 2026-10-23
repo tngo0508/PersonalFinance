@@ -63,4 +63,16 @@ public class TodosController : Controller
         await _todoApi.CreateTodoAsync(request, cancellationToken);
         return Json(await _todoApi.GetOpenTodosAsync(cancellationToken));
     }
+
+    /// <summary>
+    /// Deletes a To-do (ApiService soft-deletes it) and returns the refreshed open list. Another Account's id fails
+    /// with 404, reported through <see cref="JsonApiErrorsAttribute"/>.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken = default)
+    {
+        await _todoApi.DeleteTodoAsync(id, cancellationToken);
+        return Json(await _todoApi.GetOpenTodosAsync(cancellationToken));
+    }
 }

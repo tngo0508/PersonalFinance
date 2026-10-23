@@ -1,5 +1,5 @@
 /**
- * To-do List page: renders the Account's open To-dos and adds new ones.
+ * To-do List page: renders the Account's open To-dos, adds new ones and deletes them after a confirmation.
  * The server owns validation and ordering: every change posts to the Web TodosController, which answers with the
  * refreshed open list, and the page re-renders it with renderList().
  */
@@ -16,6 +16,11 @@
     let dueDateInput = null;
     let addButton = null;
     let errorBox = null;
+    let listError = null;
+    let deleteModal = null;
+    let deleteTitle = null;
+    let deleteConfirmButton = null;
+    let pendingDelete = null;
 
     /**
      * Turns an ISO yyyy-MM-dd due date into a local calendar date, without a time-zone shift.
@@ -77,7 +82,25 @@
             }
         }
 
+        item.appendChild(renderDeleteButton(todo));
         return item;
+    }
+
+    /**
+     * Builds the Delete button for one To-do. Clicks are handled on the list (see handleListClick).
+     * @param {{id: number, title: string}} todo - The To-do from the server.
+     * @returns {HTMLButtonElement} The button.
+     */
+    function renderDeleteButton (todo) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'todo-item__delete';
+        button.dataset.action = 'delete';
+        button.dataset.todoId = String(todo.id);
+        button.dataset.todoTitle = todo.title;
+        button.textContent = 'Delete';
+        button.setAttribute('aria-label', `Delete ${todo.title}`);
+        return button;
     }
 
     /**
@@ -130,9 +153,10 @@
     /**
      * Reads the error message from a failed response.
      * @param {Response} response - The failed response.
+     * @param {string} [fallback] - The message to use when the response has none.
      * @returns {Promise<string>} A message that is safe to show.
      */
-    async function readError (response) {
+    async function readError (response, fallback = 'The To-do could not be added. Please try again.') {
         try {
             const body = await response.json();
             if (body && typeof body.error === 'string' && body.error) {
@@ -141,7 +165,7 @@
         } catch {
             // Not JSON: fall through to the generic message.
         }
-        return 'The To-do could not be added. Please try again.';
+        return fallback;
     }
 
     /**
@@ -191,6 +215,65 @@
     }
 
     /**
+     * Shows an error above the list (for example a failed delete), or clears it.
+     * @param {string|null} message - The message to show, or null to clear.
+     * @returns {void}
+     */
+    function showListError (message) {
+        listError.textContent = message || '';
+        listError.hidden = !message;
+    }
+
+    /**
+     * Asks the Account to confirm deleting a To-do. Nothing is deleted until they press Delete in the dialog.
+     * @param {MouseEvent} event - A click inside the list.
+     * @returns {void}
+     */
+    function handleListClick (event) {
+        const button = event.target.closest('[data-action="delete"]');
+        if (!button || !list.contains(button)) {
+            return;
+        }
+
+        pendingDelete = { id: button.dataset.todoId, title: button.dataset.todoTitle };
+        deleteTitle.textContent = pendingDelete.title;
+        deleteConfirmButton.disabled = false;
+        deleteModal.show();
+    }
+
+    /**
+     * Deletes the confirmed To-do. On success, re-renders the list; on failure, keeps the list and shows why.
+     * @returns {Promise<void>}
+     */
+    async function handleDeleteConfirm () {
+        if (!pendingDelete || deleteConfirmButton.disabled) {
+            return;
+        }
+
+        const todo = pendingDelete;
+        deleteConfirmButton.disabled = true;
+        showListError(null);
+        try {
+            const response = await fetch(`${page.dataset.deleteUrl}/${encodeURIComponent(todo.id)}`, {
+                method: 'POST',
+                headers: { RequestVerificationToken: window.PFUtils.getAntiForgeryToken(form) }
+            });
+            if (!response.ok) {
+                showListError(await readError(response, 'The To-do could not be deleted. Please try again.'));
+                return;
+            }
+
+            renderList(await response.json());
+            titleInput.focus();
+        } catch {
+            showListError('The To-do could not be deleted. Check your connection and try again.');
+        } finally {
+            // Closing the dialog clears pendingDelete (see the hidden.bs.modal handler).
+            deleteModal.hide();
+        }
+    }
+
+    /**
      * Reads the To-dos the server rendered into the page.
      * @returns {Array<object>} The open To-dos, or an empty list when the data is missing.
      */
@@ -222,6 +305,7 @@
 
         renderList(readInitialTodos());
         form.addEventListener('submit', handleSubmit);
+        initDelete();
         titleInput.addEventListener('input', () => {
             if (!errorBox.hidden) {
                 showError(null);
@@ -232,6 +316,28 @@
         if (emptyAddButton) {
             emptyAddButton.addEventListener('click', () => titleInput.focus());
         }
+    }
+
+    /**
+     * Wires up deleting with its confirmation dialog. Without the dialog markup or Bootstrap, the Delete buttons do
+     * nothing rather than delete without asking.
+     * @returns {void}
+     */
+    function initDelete () {
+        listError = document.getElementById('todoListError');
+        const modalElement = document.getElementById('todoDeleteModal');
+        deleteTitle = document.getElementById('todoDeleteTitle');
+        deleteConfirmButton = document.getElementById('todoDeleteConfirmBtn');
+        if (!listError || !modalElement || !deleteTitle || !deleteConfirmButton || !window.bootstrap) {
+            return;
+        }
+
+        deleteModal = window.bootstrap.Modal.getOrCreateInstance(modalElement);
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            pendingDelete = null;
+        });
+        list.addEventListener('click', handleListClick);
+        deleteConfirmButton.addEventListener('click', handleDeleteConfirm);
     }
 
     if (document.readyState === 'loading') {

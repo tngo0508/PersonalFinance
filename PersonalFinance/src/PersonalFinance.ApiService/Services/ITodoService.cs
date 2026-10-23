@@ -23,4 +23,10 @@ public interface ITodoService
     /// </summary>
     Task<TodoItemDto> CreateTodoAsync(string userId, CreateTodoRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Soft-deletes one of the Account's To-dos, open or completed. Returns <c>false</c> when it does not exist, is
+    /// already deleted or belongs to another Account.
+    /// </summary>
+    Task<bool> DeleteTodoAsync(string userId, int id, CancellationToken cancellationToken = default);
 }

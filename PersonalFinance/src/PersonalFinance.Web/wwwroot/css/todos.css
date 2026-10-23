@@ -134,6 +134,33 @@
     flex: 1 1 auto;
 }
 
+/* --- Delete --- */
+.todo-item__delete {
+    margin-left: auto;
+    padding: 0.125rem 0.5rem;
+    border: none;
+    border-radius: var(--app-radius-s);
+    background: transparent;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.todo-item__delete:hover,
+.todo-item__delete:focus-visible {
+    color: var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+}
+
+.todo-list__error {
+    margin: 0 0 0.75rem;
+    color: var(--app-accent-negative);
+    font-size: var(--app-font-size-small);
+}
+
+.todo-list__error[hidden] {
+    display: none;
+}
+
 /* --- Empty state --- */
 
 .todo-empty {

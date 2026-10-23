@@ -69,4 +69,18 @@ public class TodosController : ControllerBase
         var todo = await _todoService.CreateTodoAsync(User.GetUserId(), request, cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = todo.Id }, todo);
     }
+
+    /// <summary>
+    /// Soft-deletes one of the current Account's To-dos, open or completed. Unknown, already deleted or another
+    /// Account's To-dos return 404.
+    /// </summary>
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken = default)
+    {
+        var deleted = await _todoService.DeleteTodoAsync(User.GetUserId(), id, cancellationToken);
+        return deleted ? NoContent() : NotFound();
+    }
 }

@@ -82,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Add a To-do with Enter or the Add button; the title is trimmed, required and at most 200 characters, with a visible error when it is not.
   - Open To-dos are listed by due date, undated last, then oldest first; an empty list invites the first To-do, and a failed load shows the Unavailable State with Retry.
   - Open To-dos due before today show an "Overdue" badge and those due today a "Due today" badge, worked out in the browser from the Account's local date; completed To-dos are never marked.
+  - Delete a To-do, open or completed, after confirming in a dialog; it is soft-deleted and leaves the list, and a failed delete keeps the list and shows an error (`DELETE api/todos/{id}`, 404 for another Account's To-do).
   - New `TodoItems` table (migration `AddTodoItem`, schema change: major version 4.0.0), soft-deleted like every user-owned record; ApiService serves `api/todos` through `ITodoApi`, and another Account's To-do returns 404.
 
 - **About Page**: A public About page at `/about` explains what Personal Finance is, why it exists, who builds it and its core features, for signed-out and signed-in visitors.

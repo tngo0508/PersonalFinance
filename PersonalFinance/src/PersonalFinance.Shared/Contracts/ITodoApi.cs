@@ -25,4 +25,10 @@ public interface ITodoApi
     /// </summary>
     [Post("/api/todos")]
     Task<TodoItemDto> CreateTodoAsync([Body] CreateTodoRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Soft-deletes one of the Account's To-dos; an unknown, deleted or another Account's id fails with 404.
+    /// </summary>
+    [Delete("/api/todos/{id}")]
+    Task DeleteTodoAsync(int id, CancellationToken cancellationToken = default);
 }
