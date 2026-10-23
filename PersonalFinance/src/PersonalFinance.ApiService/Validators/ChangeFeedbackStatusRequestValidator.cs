@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Feedback;
 

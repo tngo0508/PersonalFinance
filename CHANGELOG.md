@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.1] - 2026-10-22
+
+### Fixed
+
+- **Code Formatting Drift**: `dotnet format whitespace --verify-no-changes` in CI reports no changes again.
+  - Re-indented and re-wrapped nine files from the Data Export, Deletion Request, Purge, Search and Feedback work; whitespace only, no code changes.
+  - `ChangeFeedbackStatusRequest.cs` and its validator are saved as UTF-8 without a BOM, as `.editorconfig` requires.
+
 ## [4.2.0] - 2026-10-22
 
 ### Added

@@ -95,7 +95,7 @@ public class DataExportService : IDataExportService
                 .Select(c => new { c.Id, c.Name, c.Kind, c.SortOrder })
                 .ToListAsync(cancellationToken))
             .Select(c => new DataExportBudgetCategoryDto
-                { Id = c.Id, Name = c.Name, Kind = c.Kind.ToString(), SortOrder = c.SortOrder })
+            { Id = c.Id, Name = c.Name, Kind = c.Kind.ToString(), SortOrder = c.SortOrder })
             .ToList();
 
         export.BudgetMonthLines = await BudgetMonthLinesQuery(userId).ToListAsync(cancellationToken);
