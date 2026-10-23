@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.3] - 2026-10-22
+
+### Added
+
+- **Architecture Tests for ADR 0007**: a new Architecture test group guards the Feature layout while ApiService and Web are moved to it (#156).
+  - Every ApiService and Web type lives in a `Features.<Feature>` or `Infrastructure` namespace; today's type-based namespaces are tolerated through an explicit allow-list that #157 to #160 shrink and #161 deletes.
+  - Every source file declares the namespace its folder implies, and a constructor parameter that crosses from one Feature into another is an interface.
+  - A composition test hosts ApiService as the deployed app does and resolves every public interface and every Validator.
+
+### Changed
+
+- **Internal Validators Are Registered**: FluentValidation's assembly scan now includes internal types, so a Validator can be `internal` without silently dropping out of DI; `ChangeFeedbackStatusRequestValidator` is the first.
+
 ## [4.2.2] - 2026-10-22
 
 ### Changed

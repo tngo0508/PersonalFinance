@@ -7,7 +7,7 @@ namespace PersonalFinance.ApiService.Validators;
 /// <summary>
 /// Validator for an Admin's request to change a piece of Feedback's Feedback Status.
 /// </summary>
-public class ChangeFeedbackStatusRequestValidator : AbstractValidator<ChangeFeedbackStatusRequest>
+internal sealed class ChangeFeedbackStatusRequestValidator : AbstractValidator<ChangeFeedbackStatusRequest>
 {
     public ChangeFeedbackStatusRequestValidator()
     {
