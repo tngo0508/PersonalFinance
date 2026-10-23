@@ -26,7 +26,7 @@
             panels.forEach(p => p.classList.remove('active'));
             btn.classList.add('active');
             btn.setAttribute('aria-selected', 'true');
-            const panel = document.getElementById('panel-' + tabId);
+            const panel = document.getElementById(`panel-${ tabId}`);
             if (panel) {
                 panel.classList.add('active');
             }
@@ -52,13 +52,13 @@
             return 'Just now';
         }
         if (diffMins < 60) {
-            return diffMins + 'm ago';
+            return `${diffMins }m ago`;
         }
         if (diffHours < 24) {
-            return diffHours + 'h ago';
+            return `${diffHours }h ago`;
         }
         if (diffDays < 7) {
-            return diffDays + 'd ago';
+            return `${diffDays }d ago`;
         }
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
@@ -81,7 +81,7 @@
             ...options
         });
         if (!res.ok) {
-            throw new Error('API error: ' + res.status);
+            throw new Error(`API error: ${ res.status}`);
         }
         return res.json();
     }
@@ -130,9 +130,14 @@
 
         try {
             const qs = buildQueryString();
-            const url = '/News/Refresh' + (qs ? '?' + qs : '');
+            const url = `/News/Refresh${ qs ? `?${ qs}` : ''}`;
             const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'Unable to refresh the news right now. Please try again.');
+            }
             const data = await response.json();
+            showRefreshError(null);
 
             if (data.success && Array.isArray(data.articles)) {
                 const grid = document.getElementById('newsGrid');
@@ -153,38 +158,53 @@
             }
         } catch (err) {
             console.error('Refresh failed:', err);
+            showRefreshError(err.message);
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
         }
     }
 
+    /**
+     * Shows a refresh failure above the articles, which stay as they were, or hides it.
+     * @param {string|null} message - The message to show, or null to hide the alert.
+     */
+    function showRefreshError (message) {
+        const alertEl = document.getElementById('newsRefreshError');
+        const messageEl = document.getElementById('newsRefreshErrorMessage');
+        if (!alertEl || !messageEl) {
+            return;
+        }
+        messageEl.textContent = message || '';
+        alertEl.hidden = !message;
+    }
+
     function renderArticleCard (article) {
-        const desc = (article.description || '').length > 250 ? (article.description || '').slice(0, 250) + '...' : article.description || '';
+        const desc = (article.description || '').length > 250 ? `${(article.description || '').slice(0, 250) }...` : article.description || '';
         const timeLabel = timeAgo(article.publishedAt);
         const isSaved = savedArticleUrls.has(article.url);
         let imgHtml = '';
         if (article.imageUrl) {
-            imgHtml = '<a href="' + escapeHtml(article.url) + '" class="finance-hub-card-img-link" target="_blank" rel="noopener noreferrer"><div class="finance-hub-card-img"><img src="' + escapeHtml(article.imageUrl) + '" alt="" loading="lazy" onerror="this.parentElement.parentElement.style.display=\'none\'"/></div></a>';
+            imgHtml = `<a href="${ escapeHtml(article.url) }" class="finance-hub-card-img-link" target="_blank" rel="noopener noreferrer"><div class="finance-hub-card-img"><img src="${ escapeHtml(article.imageUrl) }" alt="" loading="lazy" onerror="this.parentElement.parentElement.style.display='none'"/></div></a>`;
         }
-        const saveBtnClass = 'btn btn-sm finance-hub-save-btn' + (isSaved ? ' saved' : '');
+        const saveBtnClass = `btn btn-sm finance-hub-save-btn${ isSaved ? ' saved' : ''}`;
         const saveBtnSvg = isSaved
             ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved'
             : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save';
-        return '<article class="finance-hub-card" data-article-url="' + escapeHtml(article.url) + '">' +
-      imgHtml +
-      '<div class="finance-hub-card-body">' +
-      '<div class="finance-hub-card-meta"><span class="finance-hub-badge source-badge">' + escapeHtml(article.source) + '</span><span class="finance-hub-badge category-badge">' + escapeHtml(article.category) + '</span></div>' +
-      '<h3 class="finance-hub-card-title"><a href="' + escapeHtml(article.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(article.title) + '</a></h3>' +
-      (desc ? '<p class="finance-hub-card-desc">' + escapeHtml(desc) + '</p>' : '') +
-      '<div class="finance-hub-card-footer">' +
-      '<time class="finance-hub-card-time" datetime="' + article.publishedAt + '">' +
+        return `<article class="finance-hub-card" data-article-url="${ escapeHtml(article.url) }">${
+            imgHtml
+        }<div class="finance-hub-card-body">` +
+      `<div class="finance-hub-card-meta"><span class="finance-hub-badge source-badge">${ escapeHtml(article.source) }</span><span class="finance-hub-badge category-badge">${ escapeHtml(article.category) }</span></div>` +
+      `<h3 class="finance-hub-card-title"><a href="${ escapeHtml(article.url) }" target="_blank" rel="noopener noreferrer">${ escapeHtml(article.title) }</a></h3>${
+          desc ? `<p class="finance-hub-card-desc">${ escapeHtml(desc) }</p>` : ''
+      }<div class="finance-hub-card-footer">` +
+      `<time class="finance-hub-card-time" datetime="${ article.publishedAt }">` +
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
-      '<span class="article-time-label">' + timeLabel + '</span></time>' +
+      `<span class="article-time-label">${ timeLabel }</span></time>` +
       '<div class="finance-hub-card-actions">' +
-      '<button type="button" class="' + saveBtnClass + '" data-title="' + escapeHtml(article.title) + '" data-url="' + escapeHtml(article.url) + '" data-source="' + escapeHtml(article.source) + '" data-category="' + escapeHtml(article.category) + '" data-image-url="' + escapeHtml(article.imageUrl || '') + '" title="Save to watchlist">' +
-      saveBtnSvg + '</button>' +
-      '<a href="' + escapeHtml(article.url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline finance-hub-read-more">Read <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>' +
+      `<button type="button" class="${ saveBtnClass }" data-title="${ escapeHtml(article.title) }" data-url="${ escapeHtml(article.url) }" data-source="${ escapeHtml(article.source) }" data-category="${ escapeHtml(article.category) }" data-image-url="${ escapeHtml(article.imageUrl || '') }" title="Save to watchlist">${
+          saveBtnSvg }</button>` +
+      `<a href="${ escapeHtml(article.url) }" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline finance-hub-read-more">Read <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>` +
       '</div></div></div></article>';
     }
 
@@ -338,18 +358,18 @@
         container.innerHTML = watchlistItems.map(item => {
             let imgHtml = '';
             if (item.imageUrl) {
-                imgHtml = '<div class="watchlist-item-img"><img src="' + escapeHtml(item.imageUrl) + '" alt="" onerror="this.parentElement.style.display=\'none\'"/></div>';
+                imgHtml = `<div class="watchlist-item-img"><img src="${ escapeHtml(item.imageUrl) }" alt="" onerror="this.parentElement.style.display='none'"/></div>`;
             }
-            return '<div class="watchlist-item" data-id="' + item.id + '" data-url="' + escapeHtml(item.url) + '">' +
-        imgHtml +
-        '<div class="watchlist-item-body">' +
-        '<h4 class="watchlist-item-title"><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(item.title) + '</a></h4>' +
+            return `<div class="watchlist-item" data-id="${ item.id }" data-url="${ escapeHtml(item.url) }">${
+                imgHtml
+            }<div class="watchlist-item-body">` +
+        `<h4 class="watchlist-item-title"><a href="${ escapeHtml(item.url) }" target="_blank" rel="noopener noreferrer">${ escapeHtml(item.title) }</a></h4>` +
         '<div class="watchlist-item-meta">' +
-        '<span class="finance-hub-badge source-badge">' + escapeHtml(item.source) + '</span>' +
-        '<span class="finance-hub-badge category-badge">' + escapeHtml(item.category) + '</span>' +
+        `<span class="finance-hub-badge source-badge">${ escapeHtml(item.source) }</span>` +
+        `<span class="finance-hub-badge category-badge">${ escapeHtml(item.category) }</span>` +
         '</div>' +
         '<div class="watchlist-item-actions">' +
-        '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline finance-hub-read-more">Read</a>' +
+        `<a href="${ escapeHtml(item.url) }" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline finance-hub-read-more">Read</a>` +
         '<button type="button" class="watchlist-remove-btn" title="Remove from watchlist">Remove</button>' +
         '</div></div></div>';
         }).join('');
@@ -360,7 +380,7 @@
                 const id = parseInt(item.dataset.id, 10);
                 const articleUrl = item.dataset.url;
                 try {
-                    await apiFetch('/api/Watchlist/' + id, { method: 'DELETE' });
+                    await apiFetch(`/api/Watchlist/${ id}`, { method: 'DELETE' });
                     watchlistItems = watchlistItems.filter(a => a.id !== id);
                     savedArticleUrls.delete(articleUrl);
                     renderWatchlist();

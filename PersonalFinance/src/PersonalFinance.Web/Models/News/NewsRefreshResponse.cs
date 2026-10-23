@@ -21,9 +21,4 @@ public sealed class NewsRefreshResponse
     /// Gets or sets the timestamp when the data was last refreshed.
     /// </summary>
     public DateTime? LastRefreshed { get; set; }
-
-    /// <summary>
-    /// Gets or sets an error message when the refresh operation fails.
-    /// </summary>
-    public string? Error { get; set; }
 }

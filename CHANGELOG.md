@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.13] - 2026-10-23
+
+### Fixed
+
+- **News Refresh Failures Shown**: when refreshing the Finance News fails, the page now says so above the articles instead of silently keeping the old ones (#175).
+  - `NewsController.Refresh` carries `[JsonApiErrors]` instead of a try/catch, as `docs/ARCHITECTURE.md` asks of JSON actions: a failure reaches the browser as an error status with a safe `{ "error": "..." }` message, never exception details.
+  - `news.js` checks the response status and shows that message in a new alert; the current articles stay in place, and the alert hides again on the next successful refresh.
+  - The unused `Error` property is removed from `NewsRefreshResponse`. A rejected filter still refreshes to no articles, not an error.
+
 ## [4.2.12] - 2026-10-23
 
 ### Changed

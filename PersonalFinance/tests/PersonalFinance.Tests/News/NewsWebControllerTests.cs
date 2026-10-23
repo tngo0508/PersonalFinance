@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
@@ -6,7 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Watchlist;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.News;
 using Refit;
 
@@ -14,7 +17,8 @@ namespace PersonalFinance.Tests.News;
 
 /// <summary>
 /// The Web Finance News page reads the feed from ApiService through <see cref="INewsApi"/>. Filters ApiService
-/// rejects find no articles; a failure shows a message and never carries exception details.
+/// rejects find no articles. A failure shows a message on the page, or reaches the refresh script as an error status
+/// through <see cref="JsonApiErrorsAttribute"/>, and never carries exception details.
 /// </summary>
 public class NewsWebControllerTests
 {
@@ -157,14 +161,45 @@ public class NewsWebControllerTests
     }
 
     [Fact]
-    public async Task Refresh_WhenApiServiceFails_ReturnsAnErrorWithoutExceptionDetails()
+    public void Refresh_IsAJsonActionWithApiErrors()
     {
-        var api = new FakeNewsApi { Failure = new InvalidOperationException("secret stack trace") };
+        MethodInfo refresh = typeof(NewsController).GetMethod(nameof(NewsController.Refresh))!;
 
-        NewsRefreshResponse response = RefreshResponseOf(await CreateController(api).Refresh(new NewsQueryDto()));
+        Assert.NotNull(refresh.GetCustomAttribute<JsonApiErrorsAttribute>());
+    }
 
-        Assert.False(response.Success);
-        Assert.DoesNotContain("secret", JsonSerializer.Serialize(response));
+    [Fact]
+    public async Task Refresh_WhenApiServiceFails_ReturnsItsStatusWithoutExceptionDetails()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent("System.InvalidOperationException: secret stack trace", Encoding.UTF8, "text/plain")
+        };
+        ApiException failure = await ApiException.Create(
+            new HttpRequestMessage(HttpMethod.Get, "https://api.local/api/News"), HttpMethod.Get, response,
+            new RefitSettings());
+        NewsController controller = CreateController(new FakeNewsApi { Failure = failure });
+
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Refresh(new NewsQueryDto()));
+
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
+        string body = JsonSerializer.Serialize(objectResult.Value);
+        Assert.Contains("error", body);
+        Assert.DoesNotContain("secret", body);
+    }
+
+    [Fact]
+    public async Task Refresh_WhenTheFailureIsUnexpected_Returns500WithAGenericMessage()
+    {
+        NewsController controller =
+            CreateController(new FakeNewsApi { Failure = new InvalidOperationException("secret stack trace") });
+
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Refresh(new NewsQueryDto()));
+
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
+        Assert.DoesNotContain("secret", JsonSerializer.Serialize(objectResult.Value));
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
