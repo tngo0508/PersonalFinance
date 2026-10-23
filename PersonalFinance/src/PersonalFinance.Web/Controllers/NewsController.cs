@@ -1,28 +1,29 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.Watchlist;
 using PersonalFinance.Web.Models.News;
-using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Finance News page.
-/// Delegates all business logic to <see cref="INewsService"/> and prepares view models.
+/// Reads the news feed from ApiService through <see cref="INewsApi"/> and prepares view models.
 /// </summary>
 [Authorize]
 public sealed class NewsController : Controller
 {
-    private readonly INewsService _newsService;
+    private readonly INewsApi _newsApi;
     private readonly ILogger<NewsController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NewsController"/> class.
     /// </summary>
-    /// <param name="newsService">Service for fetching and filtering finance news.</param>
+    /// <param name="newsApi">ApiService client for the finance news feed.</param>
     /// <param name="logger">Logger for this controller.</param>
-    public NewsController(INewsService newsService, ILogger<NewsController> logger)
+    public NewsController(INewsApi newsApi, ILogger<NewsController> logger)
     {
-        _newsService = newsService;
+        _newsApi = newsApi;
         _logger = logger;
     }
 
@@ -37,7 +38,7 @@ public sealed class NewsController : Controller
         [FromQuery] string? search,
         CancellationToken cancellationToken = default)
     {
-        var options = new NewsQueryOptions
+        var query = new NewsQueryDto
         {
             Category = category,
             Source = source,
@@ -54,16 +55,12 @@ public sealed class NewsController : Controller
 
         try
         {
-            // Fetch all articles (unfiltered) to populate categories list
-            List<NewsArticle> allArticles = await _newsService.GetFinanceNewsAsync(cancellationToken: cancellationToken);
+            NewsFeedDto feed = await _newsApi.GetNewsAsync(query, cancellationToken);
 
-            // Fetch filtered articles via the service
-            List<NewsArticle> filteredArticles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
-
-            model.Sources = _newsService.GetAvailableSources();
-            model.Categories = allArticles.Select(a => a.Category).Distinct().OrderBy(c => c).ToList();
-            model.PersonalFinanceCategories = _newsService.GetPersonalFinanceCategories();
-            model.Articles = filteredArticles;
+            model.Sources = feed.Sources;
+            model.Categories = feed.Categories;
+            model.PersonalFinanceCategories = feed.PersonalFinanceCategories;
+            model.Articles = feed.Articles;
             model.LastRefreshed = DateTime.UtcNow;
             model.IsLoading = false;
         }
@@ -88,7 +85,7 @@ public sealed class NewsController : Controller
         [FromQuery] string? search,
         CancellationToken cancellationToken = default)
     {
-        var options = new NewsQueryOptions
+        var query = new NewsQueryDto
         {
             Category = category,
             Source = source,
@@ -97,12 +94,12 @@ public sealed class NewsController : Controller
 
         try
         {
-            List<NewsArticle> articles = await _newsService.GetFinanceNewsAsync(options, cancellationToken);
+            NewsFeedDto feed = await _newsApi.GetNewsAsync(query, cancellationToken);
 
             return Json(new NewsRefreshResponse
             {
                 Success = true,
-                Articles = articles,
+                Articles = feed.Articles,
                 LastRefreshed = DateTime.UtcNow,
             });
         }

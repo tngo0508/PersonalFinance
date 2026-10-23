@@ -1,4 +1,4 @@
-using PersonalFinance.Web.Services;
+using PersonalFinance.Shared.DTOs.Watchlist;
 
 namespace PersonalFinance.Web.Models.News;
 
@@ -10,12 +10,12 @@ public sealed class NewsViewModel
     /// <summary>
     /// Gets or sets the list of news articles to display, after filtering is applied.
     /// </summary>
-    public List<NewsArticle> Articles { get; set; } = new();
+    public List<NewsArticleDto> Articles { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the available news sources for the source filter dropdown.
     /// </summary>
-    public List<NewsSource> Sources { get; set; } = new();
+    public List<NewsSourceDto> Sources { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the available categories derived from the fetched articles.

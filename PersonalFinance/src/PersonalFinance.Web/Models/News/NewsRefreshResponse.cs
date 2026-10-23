@@ -1,4 +1,4 @@
-using PersonalFinance.Web.Services;
+using PersonalFinance.Shared.DTOs.Watchlist;
 
 namespace PersonalFinance.Web.Models.News;
 
@@ -15,7 +15,7 @@ public sealed class NewsRefreshResponse
     /// <summary>
     /// Gets or sets the list of filtered news articles.
     /// </summary>
-    public List<NewsArticle>? Articles { get; set; }
+    public List<NewsArticleDto>? Articles { get; set; }
 
     /// <summary>
     /// Gets or sets the timestamp when the data was last refreshed.

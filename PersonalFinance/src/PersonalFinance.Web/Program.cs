@@ -100,9 +100,8 @@ try
     builder.Services.Configure<BrevoOptions>(builder.Configuration.GetSection("Brevo"));
     builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(client => client.Timeout = TimeSpan.FromSeconds(15));
 
-    // UI services (Services/, ADR 0008): the news feed articles are found in and saved from, and the Consent an
-    // Account gives to the Terms of Service and Privacy Policy at registration.
-    builder.Services.AddHttpClient<INewsService, NewsService>(client => client.Timeout = TimeSpan.FromSeconds(5));
+    // UI services (Services/, ADR 0008): the Consent an Account gives to the Terms of Service and Privacy Policy at
+    // registration.
     builder.Services.AddScoped<IUserConsentService, UserConsentService>();
 
     // Hosting behind Azure Container Apps: trust X-Forwarded-For/Proto so HTTPS and OAuth redirect URIs are correct.

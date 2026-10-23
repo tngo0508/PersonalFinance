@@ -41,6 +41,7 @@ public static class InternalApiClientExtensions
         services.AddInternalApiClient<ISearchApi>(apiBaseUrl);
         services.AddInternalApiClient<ISpreadsheetAnalysisApi>(apiBaseUrl);
         services.AddInternalApiClient<IWatchlistApi>(apiBaseUrl);
+        services.AddInternalApiClient<INewsApi>(apiBaseUrl);
 
         // Anonymous liveness ping from the Login page, so ApiService is awake by the time the Dashboard loads.
         services.AddHttpClient(ApiServiceWarmer.HttpClientName, client => client.BaseAddress = apiBaseUrl);
