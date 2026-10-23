@@ -62,11 +62,37 @@ public class NewsServiceTests
     }
 
     [Fact]
-    public async Task GetNewsAsync_FiltersByCategoryIgnoringCase()
+    public async Task GetNewsAsync_FilesEveryArticleUnderItsSourcesTopic_IgnoringTheFeedsOwnCategories()
     {
-        NewsFeedDto feed = await CreateService(new StubFeedHandler()).GetNewsAsync(new NewsQueryDto { Category = "debt" });
+        // The BBC stub's "Housing update" item carries <category>Debt</category>; BBC Business is filed under General.
+        NewsFeedDto feed = await CreateService(new StubFeedHandler()).GetNewsAsync(new NewsQueryDto());
 
-        Assert.Equal("Housing update", Assert.Single(feed.Articles).Title);
+        Assert.All(feed.Articles, a => Assert.Equal("General", a.Category));
+    }
+
+    [Fact]
+    public async Task GetNewsAsync_FiltersByTopicIgnoringCase()
+    {
+        NewsService service = CreateService(new StubFeedHandler());
+
+        Assert.Equal(3, (await service.GetNewsAsync(new NewsQueryDto { Category = "general" })).Articles.Count);
+        Assert.Empty((await service.GetNewsAsync(new NewsQueryDto { Category = "debt" })).Articles);
+    }
+
+    [Fact]
+    public async Task GetNewsAsync_ReadsTheConfiguredSources_EachUnderItsTopic()
+    {
+        NewsFeedDto feed = await CreateService(new StubFeedHandler()).GetNewsAsync(new NewsQueryDto());
+
+        Assert.Equal(
+            [
+                ("NPR Personal Finance", "Budgeting"), ("NerdWallet", "Budgeting"),
+                ("MarketWatch", "Investing"), ("CNBC Investing", "Investing"),
+                ("Retirement Researcher", "Retirement"),
+                ("BBC Business", "General"),
+            ],
+            feed.Sources.Select(s => (s.Name, s.Category)));
+        Assert.All(feed.Sources, s => Assert.StartsWith("http", s.Url));
     }
 
     [Fact]
