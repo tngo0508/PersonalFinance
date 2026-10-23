@@ -3,12 +3,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using PersonalFinance.ApiService.Controllers;
 using PersonalFinance.ApiService.Features.Analysis;
 using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.GoogleDrive;
-using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Contracts;
@@ -16,8 +15,8 @@ using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
-using CreateNotificationRequestDto = PersonalFinance.ApiService.Services.CreateNotificationRequestDto;
-using NotificationDto = PersonalFinance.ApiService.Services.NotificationDto;
+using CreateNotificationRequestDto = PersonalFinance.ApiService.Infrastructure.CreateNotificationRequestDto;
+using NotificationDto = PersonalFinance.ApiService.Infrastructure.NotificationDto;
 
 namespace PersonalFinance.Tests.Analysis;
 

@@ -1,14 +1,20 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using PersonalFinance.ApiService.Features.AccountLifecycle;
+using PersonalFinance.ApiService.Features.Admin;
+using PersonalFinance.ApiService.Features.AiAssistant;
 using PersonalFinance.ApiService.Features.Analysis;
 using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.ApiService.Features.BudgetTracker;
+using PersonalFinance.ApiService.Features.Community;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Features.NetWorth;
+using PersonalFinance.ApiService.Features.SavingsGoals;
 using PersonalFinance.ApiService.Features.Search;
+using PersonalFinance.ApiService.Features.Watchlist;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
@@ -51,8 +57,7 @@ try
             .RequireAuthenticatedUser()
             .RequireRole(AppRoles.Admin));
 
-    // Features: each one registers itself from Features/<Feature>/<Feature>Feature.cs (ADR 0007); the ones not
-    // yet moved are still in Infrastructure/FeatureServiceExtensions.cs.
+    // Features: each one registers itself from Features/<Feature>/<Feature>Feature.cs (ADR 0007).
     builder.Services
         .AddApiServiceInfrastructure()
         .AddNetWorthFeature()
@@ -62,11 +67,13 @@ try
         .AddGoogleDriveFeature()
         .AddDashboardFeature()
         .AddSearchFeature()
+        .AddSavingsGoalsFeature()
+        .AddCommunityFeature()
+        .AddWatchlistFeature()
+        .AddAiAssistantFeature(builder.Configuration)
         .AddFeedbackFeature()
-        .AddRemainingFeatures()
-        .AddPersonalDataFeature()
         .AddAdminFeature()
-        .AddAiAssistantFeature(builder.Configuration);
+        .AddAccountLifecycleFeature();
 
     // HTTP: controllers, FluentValidation validators, RFC 7807 ProblemDetails, OpenAPI document.
     builder.Services.AddControllers()

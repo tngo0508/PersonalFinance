@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using PersonalFinance.ApiService.Controllers;
+using PersonalFinance.ApiService.Features.Admin;
 using Xunit;
 
 namespace PersonalFinance.Tests.Infrastructure;

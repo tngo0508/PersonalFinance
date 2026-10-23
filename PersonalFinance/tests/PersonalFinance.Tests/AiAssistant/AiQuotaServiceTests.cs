@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Features.AiAssistant;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 

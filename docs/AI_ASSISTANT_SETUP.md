@@ -218,8 +218,8 @@ dotnet user-secrets set "OpenAI:ApiKey" "sk-proj-your-new-api-key" --project Per
 | **AI Chat Widget (CSS)** | `PersonalFinance.Web/wwwroot/css/ai-chat-widget.css` | Styling for the chat panel and bubble. |
 | **Web Controller** | `PersonalFinance.Web/Controllers/AiAssistantController.cs` | Receives chat requests from the frontend, forwards to the API service. |
 | **Refit API Contract** | `PersonalFinance.Shared/Contracts/IAiAssistantApi.cs` | Type-safe HTTP client interface for AI assistant calls. |
-| **API Controller** | `PersonalFinance.ApiService/Controllers/AiAssistantController.cs` | Backend endpoint that processes chat requests. |
-| **AI Assistant Service** | `PersonalFinance.ApiService/Services/AiAssistantService.cs` | Gathers user financial data, builds prompts, calls OpenAI API. |
+| **API Controller** | `PersonalFinance.ApiService/Features/AiAssistant/AiAssistantController.cs` | Backend endpoint that processes chat requests. |
+| **AI Assistant Service** | `PersonalFinance.ApiService/Features/AiAssistant/AiAssistantService.cs` | Gathers user financial data, builds prompts, calls OpenAI API. |
 | **DTOs** | `PersonalFinance.Shared/DTOs/AiChatDto.cs` | Request and response data transfer objects. |
 
 ### Data Flow

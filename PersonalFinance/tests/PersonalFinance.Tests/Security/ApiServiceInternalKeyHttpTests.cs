@@ -1,7 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using PersonalFinance.ApiService.Controllers;
+using PersonalFinance.ApiService.Features.Admin;
 
 namespace PersonalFinance.Tests.Security;
 

@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 
 namespace PersonalFinance.ApiService.Infrastructure;
 

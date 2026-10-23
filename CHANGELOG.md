@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.6] - 2026-10-23
+
+### Changed
+
+- **Remaining ApiService Features in Feature Folders**: SavingsGoals, Community, Watchlist, AiAssistant, Admin and AccountLifecycle now live in `ApiService/Features/<Feature>/`, so every ApiService type sits in a Feature or in `Infrastructure/` (ADR 0007, #159).
+  - AccountLifecycle keeps the Deletion Request, the Data Export, the Purge and the daily purge job (`AccountPurgeJob`, still started with `--purge-only` per ADR 0005) together.
+  - The OpenAI chat client registration moves to `Features/AiAssistant/Adapters/OpenAiChatClient.cs`; `IAdminService` and its result types move out of `AdminService.cs` into `IAdminService.cs`.
+  - The shared `FeatureServiceExtensions` class is gone: `Program.cs` calls one `Add<Feature>Feature()` per Feature after `AddApiServiceInfrastructure()`, which now also registers the shared rate limiter and Notifications (used by the Budget Planner, Analysis and Savings Goals).
+  - Service implementations, the cancel-deletion validator and the purge job are `internal`; the legacy allow-list in the architecture tests no longer names any ApiService namespace.
+  - No behaviour, route or contract change.
+
 ## [4.2.5] - 2026-10-22
 
 ### Changed

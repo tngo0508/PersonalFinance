@@ -3,9 +3,8 @@ using FluentValidation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using PersonalFinance.ApiService.Controllers;
+using PersonalFinance.ApiService.Features.Admin;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
 
 namespace PersonalFinance.Tests.Architecture;
 

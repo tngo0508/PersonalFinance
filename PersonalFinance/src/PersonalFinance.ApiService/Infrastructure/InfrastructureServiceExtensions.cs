@@ -1,13 +1,11 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 
 namespace PersonalFinance.ApiService.Infrastructure;
 
 /// <summary>
-/// Dependency-injection registrations for what two or more Features share (ADR 0007): the clock, and the
+/// Dependency-injection registrations for what two or more Features share (ADR 0007): the clock, the
 /// source-selected budget reads of ADR 0002 that the Budget Tracker, Analysis, Dashboard, Search and the AI Assistant
-/// all go through. Called from <c>Program.cs</c> before any Feature.
+/// all go through, the per-user rate limiter, and Notifications. Called from <c>Program.cs</c> before any Feature.
 /// </summary>
 public static class InfrastructureServiceExtensions
 {
@@ -20,6 +18,12 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<SheetBudgetMonthReader>();
         services.AddScoped<TrackerBudgetMonthReader>();
         services.AddScoped<IBudgetDataProvider, BudgetDataProvider>();
+
+        // The AI Assistant's per-user limiter; Feedback registers its own keyed instance with FeedbackRateLimit's limits.
+        services.AddSingleton<IRateLimiterService, RateLimiterService>();
+
+        // Notifications: raised by the Budget Planner, Analysis and Savings Goals, read through NotificationController.
+        services.AddScoped<INotificationService, NotificationService>();
         return services;
     }
 }

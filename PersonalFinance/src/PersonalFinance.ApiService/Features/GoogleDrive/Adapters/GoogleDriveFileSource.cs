@@ -2,8 +2,6 @@ using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Data.Helpers;

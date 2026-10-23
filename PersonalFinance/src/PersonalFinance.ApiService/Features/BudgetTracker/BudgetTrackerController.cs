@@ -3,8 +3,6 @@ using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Helpers;
 

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.Search;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;

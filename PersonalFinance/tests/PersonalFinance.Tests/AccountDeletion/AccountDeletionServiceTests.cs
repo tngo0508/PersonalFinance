@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Features.AccountLifecycle;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;

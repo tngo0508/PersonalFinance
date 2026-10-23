@@ -3,8 +3,6 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;

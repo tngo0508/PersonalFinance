@@ -2,8 +2,6 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Infrastructure;
-using PersonalFinance.ApiService.Services;
-using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
