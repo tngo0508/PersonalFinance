@@ -915,3 +915,52 @@ jobs:
             docker buildx imagetools create --tag "${IMAGE_TAG%:*}:latest" "$IMAGE_TAG"
             echo "  -> ${IMAGE_TAG%:*}:latest now points to ${IMAGE_TAG##*:}"
           done
+
+  # ============================================================================
+  # 6. GITHUB RELEASE v{AppVersion.Current} (only after deploy + smoke tests pass)
+  # ============================================================================
+  # One Release per merged PR (docs/adr/0006-one-release-per-merged-pr.md). release-check.yml makes PRs bump AppVersion
+  # and add its CHANGELOG section; here an existing tag (no bump, or a re-run) skips instead of failing the deployment.
+  create-release:
+    name: Create GitHub Release
+    needs: smoke-test
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create release from AppVersion and CHANGELOG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(bash .github/scripts/release-version.sh current)
+          TAG="v$VERSION"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            echo "::notice::Tag $TAG already exists, so no Release was created. Bump AppVersion to release this change."
+            echo "No Release: $TAG already exists." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          bash .github/scripts/release-version.sh notes "$VERSION" > "$RUNNER_TEMP/release-notes.md"
+
+          # A version with a suffix (e.g. 4.2.0-rc.1) is a pre-release and never becomes "Latest"
+          if [[ "$VERSION" == *-* ]]; then
+            RELEASE_FLAGS=(--prerelease --latest=false)
+          else
+            RELEASE_FLAGS=(--latest)
+          fi
+
+          # The CHANGELOG section comes first; --generate-notes appends the merged PRs since the previous Release
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --generate-notes \
+            "${RELEASE_FLAGS[@]}"
+
+          echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG) at ${GITHUB_SHA::7}." >> "$GITHUB_STEP_SUMMARY"

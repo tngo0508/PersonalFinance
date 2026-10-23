@@ -1,0 +1,68 @@
+name: Release Check
+
+# Every merged PR becomes a GitHub Release of its own (docs/adr/0006-one-release-per-merged-pr.md), so each PR must bump
+# AppVersion and add that version's CHANGELOG section. No paths-ignore here: this check is meant to be a required
+# status check, and a skipped workflow never reports one. Docs-only PRs pass inside the job instead.
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  release-check:
+    name: Check AppVersion bump and CHANGELOG
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Decide whether this PR needs a release
+        id: scope
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          NO_RELEASE: ${{ contains(github.event.pull_request.labels.*.name, 'no-release') }}
+        run: |
+          if [ "$NO_RELEASE" = "true" ]; then
+            echo "::notice::Labelled no-release: skipping the version check. Merging this PR creates no Release."
+            echo "required=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Same rule as deploy-azure.yml's paths-ignore: Markdown-only changes never deploy
+          CHANGED_FILES=$(gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --name-only)
+          if ! grep -q -v -E '\.md$' <<< "$CHANGED_FILES"; then
+            echo "::notice::Docs-only PR: skipping the version check. Merging this PR creates no Release."
+            echo "required=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "required=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check AppVersion and CHANGELOG
+        if: steps.scope.outputs.required == 'true'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          APP_VERSION_FILE=PersonalFinance/src/PersonalFinance.Shared/Constants/AppVersion.cs
+          VERSION=$(bash .github/scripts/release-version.sh current)
+
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git show "FETCH_HEAD:$APP_VERSION_FILE" > "$RUNNER_TEMP/BaseAppVersion.cs"
+          BASE_VERSION=$(bash .github/scripts/release-version.sh current "$RUNNER_TEMP/BaseAppVersion.cs")
+
+          if ! bash .github/scripts/release-version.sh is-newer "$VERSION" "$BASE_VERSION"; then
+            echo "::error file=$APP_VERSION_FILE::AppVersion.Current is $VERSION but $BASE_REF is already at $BASE_VERSION. Bump it (patch = fix, minor = feature, major = breaking change or schema migration), or label the PR no-release."
+            exit 1
+          fi
+
+          bash .github/scripts/release-version.sh notes "$VERSION" > /dev/null
+          echo "Merging this PR releases v$VERSION (was v$BASE_VERSION)." >> "$GITHUB_STEP_SUMMARY"

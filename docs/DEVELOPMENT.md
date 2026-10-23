@@ -680,6 +680,7 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 - `DatabasePersistenceAndMigrationTests`: Provider switching, provider-specific migration sets, migrate/seed pipeline, SQL Server migration script inspection (`nvarchar(450)` keys), and Data Protection key persistence.
 - `ServiceDefaultsTests`: Validates OpenTelemetry providers, health check registration, and Aspire defaults.
 - `GitHubActionsDeploymentWorkflowTests`: Validates CI/CD workflow configuration including job timeouts, concurrency settings, `paths-ignore`, per-image cache scopes, deploy gating, and `promote-latest` behavior.
+- `ReleaseAutomationTests`: `AppVersion.Current` matches its components and has a `CHANGELOG.md` section, and the `create-release` job and `release-check` workflow keep their gates.
 - `ModelValidationConventionTests`: Fails when `[Required]` is placed on a `bool` property (it is always satisfied, so it never rejects an unchecked box).
 
 ### Running the E2E tests locally
@@ -968,8 +969,25 @@ sequenceDiagram
     GHA->>Azure: 4. Authenticate via OIDC federated credentials
     GHA->>ACA: 5. Deploy / update Bicep template with image tags
     GHA->>ACA: 6. Execute post-deployment smoke tests (/health, /alive, /, /Identity/Account/Login)
+    GHA->>GHCR: 7. Promote the deployed images to latest
+    GHA->>Dev: 8. Create GitHub Release v{AppVersion.Current}
     deactivate GHA
 ```
+
+### GitHub Releases
+
+Every merged PR that bumps `AppVersion` becomes a GitHub Release of its own
+([ADR 0006](adr/0006-one-release-per-merged-pr.md)):
+
+- **`release-check.yml`** runs on every PR to `main`. It fails unless `AppVersion.Current` is higher than on `main`,
+  equals `Major.Minor.Patch[-Suffix]`, and has a `## [x.y.z] - YYYY-MM-DD` section in `CHANGELOG.md`. Docs-only PRs pass,
+  and so do PRs labelled `no-release` (a revert or CI-only tweak, for example); merging those creates no Release.
+- **`create-release`** in `deploy-azure.yml` runs on `main` after the smoke tests pass. It creates the tag `vx.y.z` on the
+  merged commit and a Release whose notes are that CHANGELOG section followed by GitHub's generated list of merged PRs.
+  A version with a suffix (e.g. `4.3.0-rc.1`) is a pre-release. If the tag already exists (no bump, or a re-run), the job
+  skips with a notice and the deployment stays green.
+- Both use [`.github/scripts/release-version.sh`](../.github/scripts/release-version.sh). Run it locally to preview a
+  Release's notes: `bash .github/scripts/release-version.sh notes "$(bash .github/scripts/release-version.sh current)"`.
 
 ### GitHub Repository Secrets & Variables
 

@@ -108,6 +108,7 @@ For the rationale behind key design choices, see:
 - [ADR-0002](docs/adr/0002-budget-tracker-separate-from-spreadsheet-data.md) — Budget Tracker data stored in separate entities
 - [ADR-0003](docs/adr/0003-networth-reset-randomize-frontend-only.md) — Net Worth Reset and Randomize are frontend-only
 - [ADR-0004](docs/adr/0004-rbac-roles-from-database-and-policy-checks.md) — RBAC: roles read from the database, code checks policies
+- [ADR-0006](docs/adr/0006-one-release-per-merged-pr.md) — One GitHub Release per merged PR, tagged from `AppVersion`
 
 For detailed setup instructions, secrets management, and EF Core migrations, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
 
