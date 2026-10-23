@@ -6,13 +6,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.ApiService.Features.GoogleDrive;
+using PersonalFinance.ApiService.Features.GoogleDrive.Adapters;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Data.Helpers;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.Helpers;
-using ApiGoogleDriveController = PersonalFinance.ApiService.Controllers.GoogleDriveController;
+using ApiGoogleDriveController = PersonalFinance.ApiService.Features.GoogleDrive.GoogleDriveController;
 
 namespace PersonalFinance.Tests.Security;
 

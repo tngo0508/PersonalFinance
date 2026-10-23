@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.ApiService.Services;
+using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
