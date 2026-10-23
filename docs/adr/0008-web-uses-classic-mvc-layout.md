@@ -23,9 +23,10 @@ A Web Feature is one to four C# files; its behaviour lives in ApiService, where 
 2. **Namespaces follow the folders** (`PersonalFinance.Web.Controllers`, `PersonalFinance.Web.Models.<Controller>`, …),
    and `Views/_ViewImports.cshtml` imports every `Models.*` namespace.
 3. **Registrations go back into `Program.cs`.** Web has no `Add<Feature>Feature()` extensions.
-4. **A test enforces it.** The Web half of `Architecture/FeatureLayoutTests` checks that every Web type sits in an
-   allowed namespace, that every controller is in `Controllers`, and that every `Views/<X>/` folder has an
-   `XController`.
+4. **A test enforces it.** `Architecture/WebMvcLayoutTests` checks that every Web type sits in an allowed namespace
+   (a `Models.<X>` namespace only when there is an `XController`), that every controller is in `Controllers`, and that
+   every `Views/<X>/` folder has an `XController`. `Architecture/FeatureLayoutTests` keeps the Feature rules for
+   ApiService only.
 5. **Unchanged:** ApiService, `Shared` and the test project keep ADR 0007's Feature layout; the Identity area keeps its
    Razor Pages layout; client JavaScript stays in `wwwroot/js/<feature>/`.
 
@@ -42,5 +43,5 @@ A Feature is still the unit of work. In Web it is reached through its controller
 ## Consequences
 
 - The move is a mechanical, logic-free PR released as a patch.
-- `NewsService` (RSS fetching, parsing and caching) sits in `Services/` until a follow-up moves it into ApiService's
-  Watchlist Feature behind a Refit client; that logic never belonged in Web.
+- `NewsService` (RSS fetching, parsing and caching) never belonged in Web. The layout move (#170) leaves it in
+  `Services/`, and #171 then moves it into ApiService's Watchlist Feature behind a Refit client.
