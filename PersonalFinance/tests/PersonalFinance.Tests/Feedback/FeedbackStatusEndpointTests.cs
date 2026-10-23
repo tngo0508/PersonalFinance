@@ -2,13 +2,15 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Features.Feedback;
+using PersonalFinance.ApiService.Features.Feedback.Validators;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
-using FeedbackApiController = PersonalFinance.ApiService.Controllers.FeedbackController;
+using FeedbackApiController = PersonalFinance.ApiService.Features.Feedback.FeedbackController;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
 
 namespace PersonalFinance.Tests.Feedback;

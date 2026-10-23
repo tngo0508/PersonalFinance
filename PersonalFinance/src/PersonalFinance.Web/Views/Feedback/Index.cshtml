@@ -1,6 +1,7 @@
 @using System.Globalization
 @using PersonalFinance.Shared.Constants
 @using PersonalFinance.Shared.Enums
+@using PersonalFinance.Web.Features.Feedback
 @model FeedbackViewModel
 @{
     ViewData["Title"] = "Send feedback";
@@ -15,7 +16,7 @@
         </p>
     </header>
 
-    @if (TempData[PersonalFinance.Web.Controllers.FeedbackController.SentKey] is string sentMessage)
+    @if (TempData[FeedbackController.SentKey] is string sentMessage)
     {
         <div class="alert alert-success" role="status">@sentMessage</div>
     }

@@ -3,13 +3,13 @@ using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Helpers;
 
-namespace PersonalFinance.ApiService.Validators;
+namespace PersonalFinance.ApiService.Features.Feedback.Validators;
 
 /// <summary>
 /// Validator for a request to send Feedback. <c>NotEmpty</c> also rejects a whitespace-only message, which would be
 /// stored empty once trimmed.
 /// </summary>
-public class SubmitFeedbackRequestValidator : AbstractValidator<SubmitFeedbackRequest>
+internal sealed class SubmitFeedbackRequestValidator : AbstractValidator<SubmitFeedbackRequest>
 {
     public SubmitFeedbackRequestValidator()
     {

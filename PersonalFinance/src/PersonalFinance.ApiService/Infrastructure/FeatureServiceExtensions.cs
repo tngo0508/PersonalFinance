@@ -6,8 +6,9 @@ using PersonalFinance.ApiService.Services;
 namespace PersonalFinance.ApiService.Infrastructure;
 
 /// <summary>
-/// Dependency-injection registrations for ApiService, one method per feature (see <c>GLOSSARY.md</c>).
-/// A new Service is registered in its feature's method; a new feature gets its own method, called from <c>Program.cs</c>.
+/// Dependency-injection registrations for the Features not yet moved to <c>Features/&lt;Feature&gt;/</c> (ADR 0007),
+/// one method per feature. A moved Feature registers itself in its own <c>&lt;Feature&gt;Feature</c> class, as
+/// <c>Features/Feedback/FeedbackFeature.cs</c> does; this class empties as the move completes.
 /// </summary>
 public static class FeatureServiceExtensions
 {
@@ -52,15 +53,6 @@ public static class FeatureServiceExtensions
         services.AddScoped<INotificationService, NotificationService>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ISearchService, SearchService>();
-        return services;
-    }
-
-    /// <summary>Feedback that Accounts send to the operator.</summary>
-    public static IServiceCollection AddFeedbackFeature(this IServiceCollection services)
-    {
-        services.AddScoped<IFeedbackService, FeedbackService>();
-        services.AddKeyedSingleton<IRateLimiterService>(FeedbackRateLimit.Key, (_, _) =>
-            new RateLimiterService(FeedbackRateLimit.MaxSubmissionsPerWindow, FeedbackRateLimit.Window));
         return services;
     }
 

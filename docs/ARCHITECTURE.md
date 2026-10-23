@@ -117,21 +117,42 @@ Rules for new code:
 
 ## Adding a feature: checklist
 
-Follow the existing Budget Tracker feature as the reference implementation.
+Mirror the **Feedback** Feature: `ApiService/Features/Feedback/`, `Web/Features/Feedback/`, `Shared/DTOs/Feedback/` and
+`tests/Feedback/`. It is the smallest complete one, and it has the anatomy every Feature follows
+([ADR 0007](adr/0007-feature-folders-with-interface-only-dependencies.md)):
+
+```text
+ApiService/Features/<Feature>/
+  <Feature>Controller.cs        public: the HTTP seam
+  I<Feature>Service.cs          public: the seam other Features and tests use
+  <Feature>Service.cs           internal sealed, beside its interface
+  <Feature>Feature.cs           Add<Feature>Feature(): the Feature's DI registrations, called from Program.cs
+  Validators/                   internal sealed, only when the Feature has request validation
+  Domain/                       pure logic with no EF Core or HTTP dependency, only when there is some
+  Adapters/                     clients for external systems (Google Drive, OpenAI), only when there are some
+Web/Features/<Feature>/
+  <Feature>Controller.cs, view models, UI services   (views stay in Views/<Controller>/)
+```
+
+Everything in a Feature is `internal sealed` except its interface, its controller, its DTOs and its view models. A
+Feature depends on another Feature only through that Feature's interface or `AppDbContext`; the Architecture tests
+(`tests/Architecture/`) fail the build otherwise. Features not yet moved to this layout still sit in the type-based
+folders below, which ADR 0007 is retiring.
 
 1. **Entity** in `PersonalFinance.Data/Entities/` (inherit `AuditableEntity` if user-owned), `DbSet` and configuration in
    `AppDbContext`, then a migration. Inspect the generated migration before committing.
 2. **DTOs** in `PersonalFinance.Shared/DTOs/<Feature>/`.
-3. **Service** interface and implementation in `PersonalFinance.ApiService/Services/`; register it in its feature's
-   method in `ApiService/Infrastructure/FeatureServiceExtensions.cs` (a new feature gets a new method, called from
-   `ApiService/Program.cs`).
-4. **Validators** in `PersonalFinance.ApiService/Validators/` (picked up automatically by
-   `AddValidatorsFromAssemblyContaining<Program>()`).
-5. **ApiService controller** in `PersonalFinance.ApiService/Controllers/`, with `[Authorize]`, reading the Account id from
-   claims.
+3. **Service** interface and implementation in `PersonalFinance.ApiService/Features/<Feature>/`; register it in that
+   Feature's `Add<Feature>Feature()` (a new Feature gets a new `<Feature>Feature.cs`, called from
+   `ApiService/Program.cs`). `tests/Architecture/ApiServiceCompositionTests` fails if the interface is not registered.
+4. **Validators** in `PersonalFinance.ApiService/Features/<Feature>/Validators/` (picked up automatically by
+   `AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true)`).
+5. **ApiService controller** in `PersonalFinance.ApiService/Features/<Feature>/`, with `[Authorize]`, reading the
+   Account id from claims.
 6. **Refit Contract** in `PersonalFinance.Shared/Contracts/I<Feature>Api.cs`; add one line to `AddInternalApiClients` in
    `Web/Infrastructure/InternalApiClientExtensions.cs` (`Web/InternalApiClientRegistrationTests` fails if you forget).
-7. **Web controller, view model and Razor view** in `PersonalFinance.Web/`; JavaScript in `wwwroot/js/<feature>/`.
+7. **Web controller and view model** in `PersonalFinance.Web/Features/<Feature>/`, the **Razor view** in
+   `Views/<Controller>/`; JavaScript in `wwwroot/js/<feature>/`.
    JavaScript only calls Web: a `fetch('/api/X...')` needs a Web controller routed at `api/X` with `[Authorize]` and
    `[JsonApiErrors]` (`Web/WebApiRouteTests` checks this), and state-changing calls send the
    `RequestVerificationToken` header from the layout's `__RequestVerificationToken` meta tag.

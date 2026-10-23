@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Web.Features.Feedback;
 using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Tests.Feedback;

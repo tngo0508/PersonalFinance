@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
@@ -43,7 +44,8 @@ try
             .RequireAuthenticatedUser()
             .RequireRole(AppRoles.Admin));
 
-    // Features (Infrastructure/FeatureServiceExtensions.cs).
+    // Features: each one registers itself from Features/<Feature>/<Feature>Feature.cs (ADR 0007); the ones not
+    // yet moved are still in Infrastructure/FeatureServiceExtensions.cs.
     builder.Services
         .AddBudgetFeature()
         .AddGoogleDriveFeature()

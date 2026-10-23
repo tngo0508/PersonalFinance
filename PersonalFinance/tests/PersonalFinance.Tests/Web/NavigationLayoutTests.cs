@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Features.Feedback;
 
 namespace PersonalFinance.Tests.Web;
 
