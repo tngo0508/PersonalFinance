@@ -46,14 +46,24 @@ internal sealed class NewsService : INewsService
     {
         List<NewsArticleDto> articles = await GetCachedArticlesAsync(cancellationToken);
 
-        return new NewsFeedDto
-        {
-            Articles = FilterArticles(articles, query),
-            Categories = articles.Select(a => a.Category).Distinct().Order(StringComparer.Ordinal).ToList(),
-            Sources = Sources.Select(s => new NewsSourceDto { Name = s.Name, Url = s.Url, Category = s.Category }).ToList(),
-            PersonalFinanceCategories = PersonalFinanceCategories.ToList(),
-        };
+        NewsFeedDto feed = FilterOptions(articles);
+        feed.Articles = FilterArticles(articles, query);
+        return feed;
     }
+
+    /// <inheritdoc />
+    public async Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
+        FilterOptions(await GetCachedArticlesAsync(cancellationToken));
+
+    /// <summary>
+    /// The filter options of the whole feed, with no articles.
+    /// </summary>
+    private static NewsFeedDto FilterOptions(List<NewsArticleDto> articles) => new()
+    {
+        Categories = articles.Select(a => a.Category).Distinct().Order(StringComparer.Ordinal).ToList(),
+        Sources = Sources.Select(s => new NewsSourceDto { Name = s.Name, Url = s.Url, Category = s.Category }).ToList(),
+        PersonalFinanceCategories = PersonalFinanceCategories.ToList(),
+    };
 
     /// <summary>
     /// Returns the cached feed, or fetches every source concurrently, keeps the newest articles and caches them.

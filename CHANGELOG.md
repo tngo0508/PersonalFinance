@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.12] - 2026-10-23
+
+### Changed
+
+- **Rejected News Filters Answered by ApiService**: when a News filter is rejected (over 100 characters), `GET /api/News` now answers 400 with the reasons and the filter options, so the Web News page makes one ApiService call in every case (#176).
+  - The 400 body is a `NewsFeedDto` with no articles, the validation messages in a new `Errors` list, and the categories, sources and personal finance categories of the whole feed. Successful responses carry an empty `Errors` list.
+  - `INewsService.GetFilterOptionsAsync` returns those options from the cached feed.
+  - Web's `NewsController` no longer makes a second, unfiltered request to rebuild the filter options; it reads them from the 400 body.
+  - The page looks the same: a rejected filter still shows no articles with the filters on offer, and no outage message.
+
 ## [4.2.11] - 2026-10-23
 
 ### Changed

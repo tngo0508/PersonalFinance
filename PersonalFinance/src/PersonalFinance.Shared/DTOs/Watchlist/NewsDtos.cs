@@ -45,7 +45,9 @@ public class NewsQueryDto
 }
 
 /// <summary>
-/// The news feed: the articles matching a <see cref="NewsQueryDto"/>, and the filter options.
+/// The news feed: the articles matching a <see cref="NewsQueryDto"/>, and the filter options. When the filters are
+/// rejected, it is the body of the 400 response: no articles, the reasons in <see cref="Errors"/>, and the filter
+/// options, so the page can still offer them.
 /// </summary>
 public class NewsFeedDto
 {
@@ -59,4 +61,7 @@ public class NewsFeedDto
 
     /// <summary>Budgeting, Saving, Investing, Debt and Retirement.</summary>
     public List<string> PersonalFinanceCategories { get; set; } = [];
+
+    /// <summary>Why the filters were rejected; empty when they were applied.</summary>
+    public List<string> Errors { get; set; } = [];
 }

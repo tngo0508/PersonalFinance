@@ -26,6 +26,8 @@ public class NewsController : ControllerBase
 
     /// <summary>
     /// Gets the news articles matching the optional category, source and search filters, with the filter options.
+    /// Rejected filters answer 400 with the reasons and the filter options but no articles, so the caller can still
+    /// offer the filters without a second request.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -36,7 +38,9 @@ public class NewsController : ControllerBase
         ValidationResult validation = await _queryValidator.ValidateAsync(query, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            NewsFeedDto rejected = await _newsService.GetFilterOptionsAsync(cancellationToken);
+            rejected.Errors = validation.Errors.Select(e => e.ErrorMessage).ToList();
+            return BadRequest(rejected);
         }
 
         NewsFeedDto feed = await _newsService.GetNewsAsync(query, cancellationToken);
