@@ -8,7 +8,7 @@ using PersonalFinance.Shared.DTOs.DataExport;
 using PersonalFinance.Shared.Enums;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
 
-namespace PersonalFinance.Tests.DataExport;
+namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// Behaviour of <see cref="IDataExportService"/> against an in-memory database: an Account gets its own live

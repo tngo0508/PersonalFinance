@@ -5,10 +5,10 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
-using PersonalFinance.Tests.Budget;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 
-namespace PersonalFinance.Tests.Web;
+namespace PersonalFinance.Tests.SavingsGoals;
 
 /// <summary>
 /// The goal target date comes from <c>&lt;input type="date"&gt;</c>, which always posts ISO <c>yyyy-MM-dd</c>.

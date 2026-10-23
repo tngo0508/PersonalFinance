@@ -7,7 +7,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.Infrastructure;
 
 /// <summary>
 /// Unit and integration tests for IBudgetDataSourceService, SheetBudgetMonthReader,

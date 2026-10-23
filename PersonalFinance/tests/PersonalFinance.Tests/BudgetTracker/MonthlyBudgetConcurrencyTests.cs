@@ -6,7 +6,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetTracker;
 
 /// <summary>
 /// Unit tests verifying concurrency recovery paths in MonthlyBudgetService: default category seeding,

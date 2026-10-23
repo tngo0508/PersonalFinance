@@ -14,7 +14,7 @@ using PersonalFinance.Web.Models.BudgetTracker;
 using Refit;
 using AuthorizeAttribute = Microsoft.AspNetCore.Authorization.AuthorizeAttribute;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetTracker;
 
 public class BudgetTrackerWebControllerTests
 {

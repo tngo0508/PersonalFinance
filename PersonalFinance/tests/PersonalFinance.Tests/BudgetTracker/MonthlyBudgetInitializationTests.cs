@@ -5,7 +5,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetTracker;
 
 /// <summary>
 /// Unit tests for monthly plan initialization: blank init, copy from previous, nearest earlier detection across year/skipped months, archived category exclusion, and idempotency.

@@ -4,7 +4,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetPlanner;
 
 /// <summary>
 /// The ten Budget Planner categories are listed once; these tests fail when a category is added to the DTO or entity

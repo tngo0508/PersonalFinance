@@ -25,7 +25,7 @@ using PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 using PersonalFinance.Web.Infrastructure;
 using Refit;
 
-namespace PersonalFinance.Tests.AccountDeletion;
+namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// The Web side of a Deletion Request: the Delete your account page confirms with the password (or the typed word

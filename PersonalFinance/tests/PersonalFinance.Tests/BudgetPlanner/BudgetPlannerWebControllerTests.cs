@@ -1,14 +1,15 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models.Budget;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetPlanner;
 
 /// <summary>
 /// Unit tests for <see cref="BudgetController"/>.
@@ -199,21 +200,5 @@ public class FakeBudgetPlannerApi : IBudgetPlannerApi
     {
         SavedRequest = request;
         return Task.FromResult(new SaveBudgetResponseDto { Success = true });
-    }
-}
-
-public class TestTempDataProvider : ITempDataProvider
-{
-    private readonly Dictionary<string, object> _data = new();
-
-    public IDictionary<string, object> LoadTempData(HttpContext context) => _data;
-
-    public void SaveTempData(HttpContext context, IDictionary<string, object> values)
-    {
-        _data.Clear();
-        foreach (KeyValuePair<string, object> kvp in values)
-        {
-            _data[kvp.Key] = kvp.Value;
-        }
     }
 }

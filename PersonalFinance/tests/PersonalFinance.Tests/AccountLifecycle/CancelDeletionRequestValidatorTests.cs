@@ -3,7 +3,7 @@ using PersonalFinance.ApiService.Features.AccountLifecycle.Validators;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
 
-namespace PersonalFinance.Tests.AccountDeletion;
+namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// A cancel token must look like one the service issued (Base64Url) before it is hashed and looked up; anything

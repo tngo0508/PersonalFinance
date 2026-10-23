@@ -5,7 +5,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Services;
 
-namespace PersonalFinance.Tests.Security;
+namespace PersonalFinance.Tests.Legal;
 
 public class UserConsentTests
 {

@@ -5,7 +5,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetTracker;
 
 /// <summary>
 /// Unit tests for Budget Tracker transactions: date-based month membership, boundary partitions, CRUD, and category constraints.

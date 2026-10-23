@@ -2,7 +2,7 @@ using PersonalFinance.ApiService.Features.BudgetTracker.Validators;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetTracker;
 
 /// <summary>
 /// Unit tests for Budget Tracker FluentValidation validators.

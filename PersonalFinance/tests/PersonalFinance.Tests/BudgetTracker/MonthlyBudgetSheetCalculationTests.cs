@@ -6,7 +6,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
-namespace PersonalFinance.Tests.Budget;
+namespace PersonalFinance.Tests.BudgetTracker;
 
 /// <summary>
 /// Unit tests verifying monthly budget sheet math, diff rules, totals, actual overrides (including 0 vs null), archived category visibility, and user isolation.
