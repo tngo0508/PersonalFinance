@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.17] - 2026-10-23
+
+### Fixed
+
+- **Saving a Removed Article Again**: saving an article you had removed from your Watchlist now brings it back, instead of failing (#186).
+  - Removing is a soft delete, and the (Account, URL) index is unique across removed rows too, but saving only looked for articles that were not removed, so it inserted a second row that Azure SQL rejected. It now restores the removed row with the new title, notes and save time.
+  - The save time comes from the injected `TimeProvider`.
+
+### Added
+
+- **Watchlist Tests**: the saved-articles Watchlist, which had no tests, is covered (#186).
+  - `WatchlistServiceTests`: saving, saving the same URL again, saving after removing, listing only the Account's own articles newest first, removing (a soft delete, only your own), and checking a URL.
+  - `WatchlistEndpointTests`: the ApiService controller is signed-in only and scopes every call to the Account in the claims; the Web JSON controller needs the antiforgery token to write and passes a failure on without exception details.
+  - Validating the save request is tracked in #188.
+
 ## [4.2.16] - 2026-10-23
 
 ### Changed
