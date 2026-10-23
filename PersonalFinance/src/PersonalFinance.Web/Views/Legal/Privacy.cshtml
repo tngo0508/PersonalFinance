@@ -92,9 +92,20 @@
     </section>
 
     <section class="legal-section">
-        <h2>Data Retention and Soft Deletion</h2>
-        <p>When you delete data in our Service, we use a "soft delete" mechanism. This means the data is marked as deleted but remains in our database. This approach allows us to maintain data integrity and prevent accidental loss.</p>
-        <p>If you request full data erasure (see below), we will process your request within 30 days. Soft-deleted data associated with your account will be permanently removed or anonymized during this period.</p>
+        <h2>Data Retention and Deletion</h2>
+        <p>When you delete an item in our Service, such as a transaction or a savings goal, it is hidden from you but stays in our database while your account exists. This protects you from accidental loss. Deleting your account removes these items for good, as described below.</p>
+        <h3>Deleting your account</h3>
+        <p>You can delete your account yourself on the <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page in your account settings, by confirming with your password (or by typing DELETE if you sign in with Google only).</p>
+        <ul>
+            <li><strong>Straight away:</strong> your data is hidden, you are signed out, and you can no longer sign in. We email you a link to cancel the deletion.</li>
+            <li><strong>For 30 days:</strong> you can cancel with that link. Your account and your data are restored exactly as they were.</li>
+            <li><strong>Within 31 days of your request:</strong> we permanently delete your account and all of your data, including items you had deleted earlier. The deletion runs once a day after the 30 days end.</li>
+            <li><strong>Community posts:</strong> stories and comments you published stay visible, shown as written by "Deleted User", with nothing that links them to you. Stories and comments you had already deleted are removed, and your likes and poll votes are deleted.</li>
+            <li><strong>What we keep:</strong> only a record that an account deletion was requested and when it was completed, with nothing that identifies you.</li>
+            <li><strong>Backups:</strong> our database provider keeps automatic backups for up to 7 days, so deleted data disappears from backups within 7 days after the deletion.</li>
+        </ul>
+        <h3>Downloading your data</h3>
+        <p>On the same <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page, <strong>Download my data</strong> gives you a copy of everything your account holds, as a JSON file that other apps can read. Downloading never changes your data.</p>
     </section>
 
     <section class="legal-section">
@@ -108,7 +119,7 @@
             <li><strong>Right to Object:</strong> Object to the processing of your personal data</li>
             <li><strong>Right to Restriction:</strong> Request restriction of processing</li>
         </ul>
-        <p>To exercise any of these rights, please contact us using the details on our <a asp-controller="Legal" asp-action="Contact">Contact page</a>.</p>
+        <p>You can exercise your rights of access, portability and erasure yourself on the <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page: download your data, or delete your account (see "Deleting your account" above). For any other request, please contact us using the details on our <a asp-controller="Legal" asp-action="Contact">Contact page</a>.</p>
     </section>
 
     <section class="legal-section">
