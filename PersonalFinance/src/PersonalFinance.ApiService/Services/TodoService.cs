@@ -58,6 +58,21 @@ public class TodoService : ITodoService
         return MapToDto(todo);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> DeleteTodoAsync(string userId, int id, CancellationToken cancellationToken = default)
+    {
+        var todo = await _db.TodoItems
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.Id == id, cancellationToken);
+        if (todo is null)
+        {
+            return false;
+        }
+
+        todo.SoftDelete();
+        await _db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     /// <summary>
     /// The open-To-do list query: due date ascending with undated To-dos last, then creation time, then id, so the
     /// order is deterministic. Internal so tests can check it translates to Azure SQL.
