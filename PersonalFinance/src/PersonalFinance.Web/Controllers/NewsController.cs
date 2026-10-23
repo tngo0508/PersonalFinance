@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Watchlist;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.News;
 using ApiException = Refit.ApiException;
 
@@ -69,33 +70,22 @@ public sealed class NewsController : Controller
     }
 
     /// <summary>
-    /// Returns JSON article data for AJAX-based page refresh.
+    /// Returns JSON article data for AJAX-based page refresh. A failure reaches the script as an error status with
+    /// <c>{ "error": "..." }</c> (see <see cref="JsonApiErrorsAttribute"/>).
     /// </summary>
     [HttpGet]
     [Produces("application/json")]
+    [JsonApiErrors]
     public async Task<IActionResult> Refresh([FromQuery] NewsQueryDto query, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            NewsFeedDto feed = await GetNewsAsync(query, cancellationToken);
+        NewsFeedDto feed = await GetNewsAsync(query, cancellationToken);
 
-            return Json(new NewsRefreshResponse
-            {
-                Success = true,
-                Articles = feed.Articles,
-                LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime,
-            });
-        }
-        catch (Exception ex)
+        return Json(new NewsRefreshResponse
         {
-            _logger.LogError(ex, "Error refreshing finance news via API");
-
-            return Json(new NewsRefreshResponse
-            {
-                Success = false,
-                Error = "Failed to refresh news.",
-            });
-        }
+            Success = true,
+            Articles = feed.Articles,
+            LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime,
+        });
     }
 
     /// <summary>

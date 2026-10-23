@@ -116,6 +116,10 @@
                     Refresh
                 </button>
             </div>
+            <div class="finance-hub-alert alert-danger" id="newsRefreshError" role="alert" hidden>
+                <strong>Unable to refresh</strong>
+                <p id="newsRefreshErrorMessage"></p>
+            </div>
         }
 
         @if (Model.IsLoading)
