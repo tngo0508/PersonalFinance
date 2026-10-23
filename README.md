@@ -79,7 +79,7 @@ Web references `PersonalFinance.Data` only for ASP.NET Core Identity and consent
 ### Key Principles
 
 - **Direct Service Injection** — ApiService controllers inject service interfaces directly via .NET DI. No mediator libraries (MediatR) or CQRS indirection. See [ADR-0001](docs/adr/0001-standardize-cqrs-feature-organization.md).
-- **Type-Based Organization** — ApiService is organized by type: `Controllers/`, `Services/`, `Validators/`.
+- **Feature Folders** — ApiService and Web are organized by Feature in `Features/<Feature>/`, with shared code in `Infrastructure/`. See [ADR-0007](docs/adr/0007-feature-folders-with-interface-only-dependencies.md).
 - **Strict Backend/Frontend Separation** — Web controllers call Refit APIs; they never inject ApiService services directly. Business logic lives in ApiService, not in Web controllers.
 - **Soft Deletes** — All user-owned entities inherit from `AuditableEntity` with soft-delete support. EF Core global query filters exclude deleted records.
 - **Permissive Open-Source Only** — Dependencies are restricted to MIT, BSD, or Apache 2.0 licenses. MediatR and AutoMapper are banned due to commercial licensing.

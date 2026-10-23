@@ -76,11 +76,11 @@ Responsibilities per step:
 
 | Step | Owns | Never does |
 |---|---|---|
-| Web controller (`Web/Controllers/`) | Builds view models, returns views or JSON, `[ValidateAntiForgeryToken]` on form posts. JSON actions carry `[JsonApiErrors]` instead of try/catch; view actions show their own error message. | Business rules, EF Core access, injecting ApiService Services, showing raw ApiService responses or exception messages. |
+| Web controller (`Web/Features/<Feature>/`) | Builds view models, returns views or JSON, `[ValidateAntiForgeryToken]` on form posts. JSON actions carry `[JsonApiErrors]` instead of try/catch; view actions show their own error message. | Business rules, EF Core access, injecting ApiService Services, showing raw ApiService responses or exception messages. |
 | Refit Contract (`Shared/Contracts/`) | The HTTP shape between Web and ApiService. | Logic. |
-| ApiService controller (`ApiService/Controllers/`) | Binding, calling a Validator, delegating to one Service, mapping results to status codes. | Business rules or queries. |
-| Validator (`ApiService/Validators/`) | FluentValidation rules for one request DTO. | Database access. |
-| Service (`ApiService/Services/`) | Business rules, EF Core reads and writes, mapping Entities to DTOs by hand. | HTTP concerns. |
+| ApiService controller (`ApiService/Features/<Feature>/`) | Binding, calling a Validator, delegating to one Service, mapping results to status codes. | Business rules or queries. |
+| Validator (`ApiService/Features/<Feature>/Validators/`) | FluentValidation rules for one request DTO. | Database access. |
+| Service (`ApiService/Features/<Feature>/`, or `ApiService/Infrastructure/` when two or more Features share it) | Business rules, EF Core reads and writes, mapping Entities to DTOs by hand. | HTTP concerns. |
 
 There is no mediator: ApiService controllers inject Service interfaces directly
 ([ADR 0001](adr/0001-standardize-cqrs-feature-organization.md)). MediatR and AutoMapper are banned for licensing reasons.
@@ -136,8 +136,8 @@ Web/Features/<Feature>/
 
 Everything in a Feature is `internal sealed` except its interface, its controller, its DTOs and its view models. A
 Feature depends on another Feature only through that Feature's interface or `AppDbContext`; the Architecture tests
-(`tests/Architecture/`) fail the build otherwise. Features not yet moved to this layout still sit in the type-based
-folders below, which ADR 0007 is retiring.
+(`tests/Architecture/`) fail the build otherwise. Code that two or more Features use, or that serves the host rather
+than a Feature, goes in `Infrastructure/` instead.
 
 1. **Entity** in `PersonalFinance.Data/Entities/` (inherit `AuditableEntity` if user-owned), `DbSet` and configuration in
    `AppDbContext`, then a migration. Inspect the generated migration before committing.

@@ -11,10 +11,10 @@ part of it carries the Feature's name wherever it lives.
 _Avoid_: Area (an ASP.NET Core term with its own meaning), component
 
 ### Service
-A class that owns business logic and data access coordination for a feature. Injected directly into controllers via dependency injection, containing domain rules, validation, and database operations. Services live in `PersonalFinance.ApiService/Services/`.
+A class that owns business logic and data access coordination for a feature. Injected directly into controllers via dependency injection, containing domain rules, validation, and database operations. A Service lives in its Feature's folder, `PersonalFinance.ApiService/Features/<Feature>/`, with its interface beside it; one that two or more Features use lives in `PersonalFinance.ApiService/Infrastructure/` (ADR 0007).
 
 ### Validator
-A class that provides validation logic for requests and inputs. Validators live in `PersonalFinance.ApiService/Validators/`.
+A class that provides validation logic for requests and inputs. Validators live in their Feature's `PersonalFinance.ApiService/Features/<Feature>/Validators/` folder.
 
 ### API Contract
 A Refit interface that defines the HTTP API between the Web layer and the ApiService layer. Contracts live in `PersonalFinance.Shared/Contracts/` and are shared by both layers. Examples: `INetWorthApi`, `ICommunityApi`.
@@ -34,10 +34,10 @@ A pattern where entities are marked as deleted (`IsDeleted = true`) instead of b
 ## Layers
 
 ### Web Layer
-`PersonalFinance.Web` — the MVC frontend. Contains controllers, views, Razor pages, and UI-specific services. Calls the ApiService via Refit HTTP clients. Controllers call APIs directly.
+`PersonalFinance.Web` — the MVC frontend. Contains controllers, view models and UI-specific services organized by Feature in `Features/<Feature>/`, shared code in `Infrastructure/`, Razor views in `Views/<Controller>/`, and the Identity Razor pages. Calls the ApiService via Refit HTTP clients. Controllers call APIs directly.
 
 ### ApiService Layer
-`PersonalFinance.ApiService` — the REST API backend. Contains controllers, services, and validators organized by type in `Controllers/`, `Services/`, and `Validators/`. Uses direct service injection via ASP.NET Core dependency injection.
+`PersonalFinance.ApiService` — the REST API backend. Contains controllers, services, and validators organized by Feature in `Features/<Feature>/`, with code that two or more Features share in `Infrastructure/`. Uses direct service injection via ASP.NET Core dependency injection.
 
 ### Data Layer
 `PersonalFinance.Data` — data access. Contains entities, DbContext, and database configuration. Independent of UI and API concerns.

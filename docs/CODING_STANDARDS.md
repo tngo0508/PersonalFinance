@@ -40,7 +40,7 @@ The project follows a layered architecture pattern with clear separation of conc
 - **No Direct Instantiation**: Use dependency injection instead of `new` keyword for services
 - **Interface Segregation**: Define interfaces in the layer that consumes them
 - **Direct Service Injection**: ApiService controllers inject service interfaces directly via DI without intermediate mediator libraries. See `docs/adr/0001-standardize-cqrs-feature-organization.md`.
-- **Type-Based Organization**: ApiService is organized by type (`Controllers/`, `Services/`, `Validators/`), keeping all controllers, services, and validators in cohesive type folders.
+- **Feature Folders**: ApiService and Web are organized by Feature (`Features/<Feature>/`), with code that two or more Features share in `Infrastructure/`. A Feature depends on another only through its interface. See `docs/adr/0007-feature-folders-with-interface-only-dependencies.md`.
 - **Soft Deletes**: All user-owned entities inherit from `AuditableEntity` with soft-delete support. EF Core global query filters automatically exclude deleted records.
 
 ## License Policy
@@ -72,12 +72,13 @@ When creating or modifying code, always place it in the correct project:
 
 | Code Type | Project | Examples |
 |---|---|---|
-| API controllers | `PersonalFinance.ApiService` | `Controllers/NetWorthController.cs` |
-| Business logic services | `PersonalFinance.ApiService` | `Services/NetWorthParametersService.cs` |
-| Validators | `PersonalFinance.ApiService` | `Validators/NetWorthProjectionValidator.cs` |
-| MVC controllers (Web) | `PersonalFinance.Web` | `Controllers/NetworthController.cs` |
-| Views (Razor) | `PersonalFinance.Web` | `Views/*.cshtml` files |
-| UI-specific services | `PersonalFinance.Web` | `UserIdForwardingHandler`, view model factories |
+| API controllers | `PersonalFinance.ApiService` | `Features/NetWorth/NetWorthController.cs` |
+| Business logic services | `PersonalFinance.ApiService` | `Features/NetWorth/NetWorthParametersService.cs` |
+| Validators | `PersonalFinance.ApiService` | `Features/NetWorth/Validators/NetWorthProjectionValidator.cs` |
+| Code two or more ApiService Features share | `PersonalFinance.ApiService` | `Infrastructure/RateLimiterService.cs` |
+| MVC controllers and view models (Web) | `PersonalFinance.Web` | `Features/NetWorth/NetworthController.cs`, `Features/NetWorth/NetWorthViewModel.cs` |
+| Views (Razor) | `PersonalFinance.Web` | `Views/<Controller>/*.cshtml` files |
+| Code two or more Web Features share | `PersonalFinance.Web` | `Infrastructure/UserIdForwardingHandler.cs` |
 | Data entities | `PersonalFinance.Data` | `NetWorthParameters` entity |
 | DbContext | `PersonalFinance.Data` | `ApplicationDbContext` |
 | DTOs (by feature) | `PersonalFinance.Shared` | `DTOs/NetWorth/NetWorthParametersDto.cs` |
@@ -211,33 +212,48 @@ Implement and validate the data layer before building dependent application logi
 - Prefer testing migrations against a dedicated development or test database before staging or production.
 - Clearly identify any migration that requires manual execution, elevated permissions, data backfills, or deployment coordination.
 
-### 3. Application Layer — Direct Service Injection and Type-Based Organization
+### 3. Application Layer — Direct Service Injection and Feature Folders
 
 **All ApiService features use Direct Service Injection.** Controllers inject service interfaces directly through built-in .NET dependency injection. There is no mediator indirection. See `docs/adr/0001-standardize-cqrs-feature-organization.md` for the rationale.
 
-#### Type-Based Folder Structure
+#### Feature Folder Structure
 
-ApiService code is organized by type in top-level folders under `PersonalFinance.ApiService/`:
+ApiService and Web are organized by Feature (`docs/adr/0007-feature-folders-with-interface-only-dependencies.md`). Each Feature in GLOSSARY.md owns `Features/<Feature>/`, under the same name used in `Shared/DTOs/` and the test project. The Feedback Feature is the exemplar:
 
 ```
 ApiService/
-  Controllers/
-    NetWorthController.cs          ← API controller, injects INetWorthParametersService
-    BudgetController.cs
-    CommunityController.cs
+  Features/
+    Feedback/
+      FeedbackController.cs          ← API controller, injects IFeedbackService
+      FeedbackFeature.cs             ← AddFeedbackFeature(), called from Program.cs
+      IFeedbackService.cs            ← Service interface, beside its implementation
+      FeedbackService.cs             ← Business logic and data access (internal sealed)
+      SubmitFeedbackResult.cs
+      Validators/
+        SubmitFeedbackRequestValidator.cs
+  Infrastructure/                    ← Only what two or more Features share, or what serves the host
+    RateLimiterService.cs
+    NotificationService.cs
     ...
-  Services/
-    INetWorthParametersService.cs  ← Service interface
-    NetWorthParametersService.cs   ← Business logic and data access
-    IBudgetService.cs
-    BudgetService.cs
-    ...
-  Validators/
-    NetWorthProjectionValidator.cs ← Validation rules
-    ...
+Web/
+  Features/
+    Feedback/
+      FeedbackController.cs          ← MVC controller, calls the Refit client
+      FeedbackViewModel.cs
+  Infrastructure/
+    UserIdForwardingHandler.cs
+  Views/
+    Feedback/                        ← Razor views stay where Razor's convention finds them
 ```
 
-Namespace conventions: `PersonalFinance.ApiService.Controllers`, `PersonalFinance.ApiService.Services`, `PersonalFinance.ApiService.Validators`.
+A Feature folder has a fixed anatomy:
+
+- **At the root:** the controller, `<Feature>Feature.cs` with `Add<Feature>Feature()`, and each service interface beside its implementation.
+- **Subfolders, only when needed:** `Domain/` (pure logic with no EF Core or HTTP dependency), `Validators/`, and `Adapters/` (clients for Google Drive, OpenAI and other external systems). There is no `Interfaces/` folder.
+- **Visibility marks the seam:** a Feature's public types are its service interfaces, its controller and its DTOs in `Shared`. Every other type is `internal sealed`. A Feature depends on another Feature only through that Feature's interface or `AppDbContext`.
+- **Namespaces follow folders:** `PersonalFinance.ApiService.Features.Feedback`, `PersonalFinance.ApiService.Features.Feedback.Validators`, `PersonalFinance.Web.Features.Feedback`, `PersonalFinance.ApiService.Infrastructure`.
+
+`tests/PersonalFinance.Tests/Architecture/FeatureLayoutTests.cs` enforces the namespace, folder and cross-Feature rules, and `ApiServiceCompositionTests.cs` checks that every interface and Validator is registered. A new Feature is added to the `Features` list there and to GLOSSARY.md.
 
 #### Service Responsibilities
 
@@ -252,7 +268,7 @@ Namespace conventions: `PersonalFinance.ApiService.Controllers`, `PersonalFinanc
 
 #### Validation and External Dependencies
 
-- Validate inputs at the appropriate application boundary using dedicated validators in `Validators/`.
+- Validate inputs at the appropriate application boundary using dedicated validators in the Feature's `Validators/` folder.
 - Treat browser-side validation as a usability feature, not a security boundary.
 - Validate external API responses and handle timeouts, cancellation, rate limits, and expected failures.
 - Use `IHttpClientFactory` or the application's existing typed-client approach for HTTP integrations.
@@ -280,7 +296,7 @@ Keep controllers thin and consistent with the application's existing conventions
 
 - **Inject Service Interfaces Directly** — Controllers inject service interfaces (e.g., `INetWorthParametersService`, `IBudgetService`) directly via constructor injection.
 - Receive and bind HTTP input.
-- Perform appropriate request-level validation using validators in `Validators/`.
+- Perform appropriate request-level validation using the Feature's validators in `Features/<Feature>/Validators/`.
 - Delegate operations to injected domain services.
 - Translate service results into appropriate HTTP responses (`Ok`, `BadRequest`, `NotFound`, `NoContent`).
 - Avoid embedding database queries, complex business rules, or substantial calculation logic in controllers.
