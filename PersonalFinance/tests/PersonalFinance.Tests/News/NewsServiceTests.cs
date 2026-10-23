@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Caching.Memory;
@@ -121,6 +122,63 @@ public class NewsServiceTests
         NewsFeedDto feed = await CreateService(handler).GetNewsAsync(new NewsQueryDto());
 
         Assert.Equal(Now.UtcDateTime, Assert.Single(feed.Articles).PublishedAt);
+    }
+
+    [Theory]
+    [InlineData("Mon, 19 Oct 2026 10:00:00 GMT", "2026-10-19T10:00:00Z")]
+    [InlineData("Tue, 20 Oct 2026 08:00:00 -0400", "2026-10-20T12:00:00Z")]
+    [InlineData("Tue, 20 Oct 2026 08:00:00 +0530", "2026-10-20T02:30:00Z")]
+    [InlineData("Tue, 20 Oct 2026 08:00:00 EST", "2026-10-20T13:00:00Z")]
+    [InlineData("Tue, 20 Oct 2026 08:00:00 PDT", "2026-10-20T15:00:00Z")]
+    [InlineData("20 Oct 2026 08:00 UT", "2026-10-20T08:00:00Z")]
+    public async Task GetNewsAsync_ReadsRfc822PubDatesAsUtc_WhateverTheServerCulture(string pubDate, string expectedUtc)
+    {
+        var handler = new StubFeedHandler
+        {
+            Feed = $"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0"><channel><item><title>Dated</title><pubDate>{pubDate}</pubDate></item></channel></rss>
+                """
+        };
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("fr-FR");
+        try
+        {
+            NewsFeedDto feed = await CreateService(handler).GetNewsAsync(new NewsQueryDto());
+
+            DateTime publishedAt = Assert.Single(feed.Articles).PublishedAt;
+            Assert.Equal(DateTimeKind.Utc, publishedAt.Kind);
+            Assert.Equal(DateTime.Parse(expectedUtc, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal), publishedAt);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
+    public async Task GetNewsAsync_KeepsTheFirstFiveArticlesOfASource_AndTruncatesLongDescriptions()
+    {
+        string items = string.Concat(Enumerable.Range(1, 7).Select(i =>
+            $"<item><title>Item {i}</title><description>{new string('x', 300)}</description>" +
+            $"<pubDate>Mon, 19 Oct 2026 {10 - i:00}:00:00 GMT</pubDate></item>"));
+        var handler = new StubFeedHandler
+        {
+            Feed = $"""<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>{items}</channel></rss>"""
+        };
+
+        NewsFeedDto feed = await CreateService(handler).GetNewsAsync(new NewsQueryDto());
+
+        Assert.Equal(["Item 1", "Item 2", "Item 3", "Item 4", "Item 5"], feed.Articles.Select(a => a.Title));
+        Assert.All(feed.Articles, a => Assert.Equal(new string('x', 250) + "...", a.Description));
+    }
+
+    [Fact]
+    public async Task GetNewsAsync_SkipsASourceWhoseFeedIsNotXml()
+    {
+        NewsFeedDto feed = await CreateService(new StubFeedHandler { Feed = "not xml at all" }).GetNewsAsync(new NewsQueryDto());
+
+        Assert.Empty(feed.Articles);
     }
 
     [Fact]

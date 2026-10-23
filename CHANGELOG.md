@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.14] - 2026-10-23
+
+### Fixed
+
+- **News Article Dates in UTC**: Finance News articles are now dated by their RSS `pubDate` read as RFC 822 in UTC, whatever the server culture (#177).
+  - Before, `DateTime.TryParse` used the server culture and converted to the server's local time zone. It could not read zone names such as `EST` or `PDT`, and on a non-English server culture it could not read the dates at all; those articles were dated at the time of the fetch, which also reorders the newest-first list.
+  - Numeric offsets (`-0400`, `+0530`) and the RFC 822 zone names (`GMT`, `UT`, `EST`, `PDT`, ...) are applied; other invariant dates (ISO 8601) are still read, and an unreadable date still falls back to the current time.
+
+### Changed
+
+- **RSS Parser Split**: `RssNewsFeedClient` reads a feed in small steps (fetch, map an item, image, date) instead of one method over the complexity ceiling, and its `CA1502` suppression is removed (#177).
+  - The date parsing lives in `Adapters/Rfc822Date.cs`.
+  - The two near-identical catch blocks are one: a timeout, an unreachable host or a feed that is not RSS skips that source and logs one warning. Five articles per source, HTML stripping and 250-character descriptions are unchanged.
+
 ## [4.2.13] - 2026-10-23
 
 ### Fixed
