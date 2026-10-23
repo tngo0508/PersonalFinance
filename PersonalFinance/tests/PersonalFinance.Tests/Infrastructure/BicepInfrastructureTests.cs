@@ -39,7 +39,8 @@ public class BicepInfrastructureTests
             Path.Combine(modulesDir, "container-env.bicep"),
             Path.Combine(modulesDir, "sql-database.bicep"),
             Path.Combine(modulesDir, "api-service.bicep"),
-            Path.Combine(modulesDir, "web-service.bicep")
+            Path.Combine(modulesDir, "web-service.bicep"),
+            Path.Combine(modulesDir, "purge-job.bicep")
         };
 
         foreach (var file in expectedFiles)
@@ -62,6 +63,7 @@ public class BicepInfrastructureTests
         Assert.Contains("module sqlDatabase 'modules/sql-database.bicep'", mainBicep);
         Assert.Contains("module apiService 'modules/api-service.bicep'", mainBicep);
         Assert.Contains("module webService 'modules/web-service.bicep'", mainBicep);
+        Assert.Contains("module purgeJob 'modules/purge-job.bicep'", mainBicep);
 
         Assert.Contains("output webUrl string", mainBicep);
         Assert.Contains("output webFqdn string", mainBicep);
@@ -72,6 +74,31 @@ public class BicepInfrastructureTests
         Assert.Contains("param sqlLocation string", mainBicep);
         Assert.Contains("location: sqlLocation", mainBicep);
         Assert.Contains("uniqueString(resourceGroup().id, location)", mainBicep);
+    }
+
+    [Fact]
+    public void PurgeJobBicep_RunsTheApiImageDaily_WithPurgeOnly_AndTheConnectionStringAsASecret()
+    {
+        var root = FindProjectRoot();
+        var jobBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "purge-job.bicep"));
+        var mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
+
+        // A scheduled job, because the API scales to zero and cannot be relied on to run every day (ADR 0005)
+        Assert.Contains("resource purgeJob 'Microsoft.App/jobs@", jobBicep);
+        Assert.Contains("triggerType: 'Schedule'", jobBicep);
+        Assert.Contains("cronExpression: cronExpression", jobBicep);
+        Assert.Contains("parallelism: 1", jobBicep);
+        Assert.Contains("workloadProfileName: 'Consumption'", jobBicep);
+
+        // Same image as the API, in purge mode
+        Assert.Contains("'--purge-only'", jobBicep);
+        Assert.Contains("containerImage: apiImage", mainBicep);
+        Assert.Contains("param purgeJobCron string = '0 15 * * *'", mainBicep);
+
+        // The connection string only ever travels as a secret
+        Assert.Matches(@"@secure\(\)\s+param dbConnectionString string", jobBicep);
+        Assert.Contains("secretRef: 'db-connection-string'", jobBicep);
+        Assert.Contains("name: 'ConnectionStrings__DefaultConnection'", jobBicep);
     }
 
     [Fact]

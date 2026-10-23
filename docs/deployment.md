@@ -308,6 +308,7 @@ stateDiagram-v2
 
 - **Scale rule**: HTTP, 100 concurrent requests per replica, `minReplicas: 0`, `maxReplicas: 1`. With zero replicas the app costs nothing, but the first request waits for a cold start; the smoke test retries `/health` up to 30 times for this reason.
 - **Migrations at startup**: both `Program.cs` files call `MigrateAndSeedDatabaseAsync()`, so a deploy that adds a migration applies it when the new revision starts. `--migrate-only` / `MIGRATE_ONLY=true` runs migrations and exits, for use as a one-off job; it exits non-zero when startup or a migration fails.
+- **Daily Purge job**: `infra/modules/purge-job.bicep` deploys a Container Apps Job that runs the API image with `--purge-only` (or `PURGE_ONLY=true`) every day at `purgeJobCron` (default `0 15 * * *`, UTC). It applies pending migrations, permanently erases Accounts whose 30-day Grace Period has ended (ADR 0005), and exits non-zero if any Account failed; those are retried the next day. It runs as a job because the API scales to zero. To run it now: `az containerapp job start --name <purge job> --resource-group <rg>`; executions and logs: `az containerapp job execution list --name <purge job> --resource-group <rg>`.
 - **Logs**: container stdout (Serilog console output) goes to the Log Analytics workspace (`ContainerAppConsoleLogs_CL`). See Section 8.6 for live tailing.
 
 ### 1.8 Environments at a Glance

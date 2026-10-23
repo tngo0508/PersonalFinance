@@ -108,6 +108,12 @@ try
     app.UseAuthorization();
     app.MapControllers();
 
+    // The daily Purge job runs this image with --purge-only (ADR 0005): migrate, purge, exit.
+    if (AccountPurgeJob.IsRequested(args))
+    {
+        return await AccountPurgeJob.RunAsync(app);
+    }
+
     await app.MigrateAndRunAsync(args);
     return StartupExit.Success;
 }

@@ -90,6 +90,9 @@ param businessHoursStartMinute int = 0
 @description('Business hours end hour in UTC (0-23, scales to 0 at this hour, default 23:00 UTC)')
 param businessHoursEndHour int = 23
 
+@description('When the daily Purge job runs (UTC cron). Default 15:00 UTC, inside business hours, when the database is usually awake.')
+param purgeJobCron string = '0 15 * * *'
+
 // =============================================================================
 // BUDGET ESTIMATE (~$10/month total)
 // =============================================================================
@@ -97,6 +100,7 @@ param businessHoursEndHour int = 23
 // ACA Consumption (scheduled scaling):   ~$3-5/month   (1 replica during business hours, 0 at night)
 // ACA Managed Environment:               ~$1.75/month  (Consumption tier base cost)
 // Log Analytics:                         ~$0/month     (5 GB/month free ingestion, 30-day retention)
+// ACA Job (daily Purge):                 ~$0/month     (seconds a day, within the Consumption free grant)
 // ---------------------------------------------------------------------------
 // Total estimated cost:                  ~$10/month
 // =============================================================================
@@ -118,6 +122,7 @@ var logAnalyticsWorkspaceName = 'law-${environmentName}-${locationSuffix}'
 var containerAppEnvironmentName = 'cae-${environmentName}-${locationSuffix}'
 var apiAppName = 'api-${environmentName}-${locationSuffix}'
 var webAppName = 'web-${environmentName}-${locationSuffix}'
+var purgeJobName = 'purge-${environmentName}-${locationSuffix}'
 // Include the SQL region in the deterministic name. Azure SQL server names are
 // location-bound, and a failed deployment can leave a name reserved in the
 // original region even when provisioning did not complete.
@@ -207,6 +212,20 @@ module webService 'modules/web-service.bicep' = {
     businessHoursEndHour: businessHoursEndHour
     customDomainName: customDomainName
     certificateId: certificateId
+    tags: tags
+  }
+}
+
+// 6. Daily Purge job (ADR 0005): runs the API image with --purge-only, since the API itself scales to zero
+module purgeJob 'modules/purge-job.bicep' = {
+  name: 'purgeJobDeployment'
+  params: {
+    name: purgeJobName
+    location: location
+    containerAppEnvironmentId: containerEnv.outputs.id
+    containerImage: apiImage
+    dbConnectionString: effectiveConnectionString
+    cronExpression: purgeJobCron
     tags: tags
   }
 }
