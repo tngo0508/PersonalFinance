@@ -108,6 +108,20 @@ income`), from the Budget Tracker or synced Google Sheet data. Shown in the Budg
 properties keep the name `SavingsRate` / `AverageSavingsRate` for the JavaScript that reads them.)
 _Avoid_: calling it "Savings Rate" in new code or UI text without the "Actual" qualifier.
 
+### Money Map
+The Feature that shows, as read-only graphs, how a user's money moves and how their plan fits together. It has two
+views: the Flow View and the Plan View.
+_Avoid_: money graph, finance diagram
+
+### Flow View
+The Money Map view of one month of actual income moving into spending categories and savings.
+_Avoid_: Sankey (a chart type, not the concept), cash flow (overloaded)
+
+### Plan View
+The Money Map view of how the Net Worth parameters, the budget, the Savings Rate, the FI Target and Savings Goals
+depend on each other.
+_Avoid_: plan graph, dependency map
+
 ### Landing Page
 The public page served at `/` to signed-out visitors. It explains the product and leads to registration or sign-in.
 _Avoid_: Home page (ambiguous with Dashboard)
