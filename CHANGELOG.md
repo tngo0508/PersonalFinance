@@ -80,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Purge**: Accounts whose 30-day Grace Period has ended are now erased permanently by a daily job (#143, ADR 0005).
   - A Container Apps Job (`infra/modules/purge-job.bicep`, default 15:00 UTC) runs the API image with `--purge-only`, because the API scales to zero. It costs seconds of compute a day, within the free grant.
   - One transaction per Account: every user-owned record (including ones deleted earlier, AI usage, consents and Feedback), cached Google Drive file listings, and the sign-in account with its roles, logins, claims and tokens are deleted.
-  - Community stories and comments stay, shown as written by "Deleted User"; the Account's likes and poll votes are deleted and like counts corrected.
+  - Community stories and comments stay, shown as written by "Deleted User"; ones the Account had deleted itself are erased. The Account's likes and poll votes are deleted and like counts corrected.
   - Only the Deletion Request remains, with its request and purge times under a placeholder id.
   - Safe to run twice or overlapping: a request cancelled meanwhile is skipped. The job exits non-zero if any Account failed; those are retried the next day.
 

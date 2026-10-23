@@ -52,6 +52,12 @@ public class AccountPurgeService : IAccountPurgeService
             catch (DbUpdateConcurrencyException)
             {
                 skipped++;
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Deletion Request {DeletionRequestId} skipped: cancelled or purged by another run meanwhile.",
+                        requestId);
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -128,34 +134,35 @@ public class AccountPurgeService : IAccountPurgeService
             .Where(l => l.UserId == userId && (!l.IsDeleted || l.DeletedAt == requestedAt))
             .GroupBy(l => l.StoryId)
             .Select(g => new { Id = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
-        var storyIds = storyLikes.Select(l => l.Id).ToList();
+            .ToDictionaryAsync(l => l.Id, l => l.Count, cancellationToken);
+        var storyIds = storyLikes.Keys.ToList();
         var stories = await _db.CommunityStories.IgnoreQueryFilters()
             .Where(s => storyIds.Contains(s.Id))
             .ToListAsync(cancellationToken);
         foreach (var story in stories)
         {
-            story.Likes = Math.Max(0, story.Likes - storyLikes.First(l => l.Id == story.Id).Count);
+            story.Likes = Math.Max(0, story.Likes - storyLikes[story.Id]);
         }
 
         var commentLikes = await _db.CommunityCommentLikes.IgnoreQueryFilters()
             .Where(l => l.UserId == userId && (!l.IsDeleted || l.DeletedAt == requestedAt))
             .GroupBy(l => l.CommentId)
             .Select(g => new { Id = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
-        var commentIds = commentLikes.Select(l => l.Id).ToList();
+            .ToDictionaryAsync(l => l.Id, l => l.Count, cancellationToken);
+        var commentIds = commentLikes.Keys.ToList();
         var comments = await _db.CommunityComments.IgnoreQueryFilters()
             .Where(c => commentIds.Contains(c.Id))
             .ToListAsync(cancellationToken);
         foreach (var comment in comments)
         {
-            comment.Likes = Math.Max(0, comment.Likes - commentLikes.First(l => l.Id == comment.Id).Count);
+            comment.Likes = Math.Max(0, comment.Likes - commentLikes[comment.Id]);
         }
     }
 
     /// <summary>
-    /// The Account's stories and comments stay, written by "Deleted User" under the placeholder id. The ones the
-    /// Deletion Request hid are shown again; ones the Account deleted itself stay deleted.
+    /// The Account's stories and comments stay, written by "Deleted User" under the placeholder id, and the ones the
+    /// Deletion Request hid are shown again. Ones the Account deleted itself are erased, with other people's likes on
+    /// them: nobody can see them, so keeping them would only keep the Account's words.
     /// </summary>
     private async Task AnonymizeCommunityContentAsync(string userId, DateTime requestedAt,
         CancellationToken cancellationToken)
@@ -163,6 +170,14 @@ public class AccountPurgeService : IAccountPurgeService
         foreach (var story in await _db.CommunityStories.IgnoreQueryFilters()
                      .Where(s => s.UserId == userId).ToListAsync(cancellationToken))
         {
+            if (DeletedByTheAccount(story, requestedAt))
+            {
+                _db.CommunityStoryLikes.RemoveRange(await _db.CommunityStoryLikes.IgnoreQueryFilters()
+                    .Where(l => l.StoryId == story.Id).ToListAsync(cancellationToken));
+                _db.CommunityStories.Remove(story);
+                continue;
+            }
+
             Anonymize(story, requestedAt);
             story.AuthorName = DeletedAccount.DisplayName;
         }
@@ -170,6 +185,14 @@ public class AccountPurgeService : IAccountPurgeService
         foreach (var comment in await _db.CommunityComments.IgnoreQueryFilters()
                      .Where(c => c.UserId == userId).ToListAsync(cancellationToken))
         {
+            if (DeletedByTheAccount(comment, requestedAt))
+            {
+                _db.CommunityCommentLikes.RemoveRange(await _db.CommunityCommentLikes.IgnoreQueryFilters()
+                    .Where(l => l.CommentId == comment.Id).ToListAsync(cancellationToken));
+                _db.CommunityComments.Remove(comment);
+                continue;
+            }
+
             Anonymize(comment, requestedAt);
             comment.AuthorName = DeletedAccount.DisplayName;
         }
@@ -214,6 +237,10 @@ public class AccountPurgeService : IAccountPurgeService
             _db.Users.Remove(user);
         }
     }
+
+    /// <summary>Soft-deleted before the Deletion Request, by the Account itself.</summary>
+    private static bool DeletedByTheAccount(AuditableEntity row, DateTime requestedAt) =>
+        row.IsDeleted && row.DeletedAt != requestedAt;
 
     private static void Anonymize(AuditableEntity row, DateTime requestedAt)
     {

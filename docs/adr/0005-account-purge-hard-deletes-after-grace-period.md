@@ -27,7 +27,8 @@ deletion alone. The original #65 asked for soft deletion only.
    roles, claims, logins and tokens.
 5. **Community content is anonymized, not deleted.** Stories and comments stay, with `AuthorName` set to "Deleted User"
    and `UserId` set to a fixed placeholder id that matches no Account, so no schema change is needed and threads other
-   users replied to keep their context. Likes and poll votes are deleted.
+   users replied to keep their context. Likes and poll votes are deleted. Stories and comments the Account had already
+   deleted itself are erased, with other people's likes on them, since nobody can see them.
 6. **Only a minimal audit record survives.** A dedicated deletion record keeps when the request was made and when the
    Purge ran, with no email or name. The Purge also replaces its `UserId` with the same placeholder id as anonymized
    community content, so no row refers to the erased Account. `UserConsent` is not reused: it records policy consent.

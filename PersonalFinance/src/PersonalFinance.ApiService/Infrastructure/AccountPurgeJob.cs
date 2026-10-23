@@ -27,10 +27,21 @@ public static class AccountPurgeJob
         await host.MigrateAndSeedDatabaseAsync(cancellationToken);
 
         await using var scope = host.Services.CreateAsyncScope();
-        var summary = await scope.ServiceProvider.GetRequiredService<IAccountPurgeService>()
-            .PurgeDueAsync(cancellationToken);
-
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(AccountPurgeJob));
+        AccountPurgeSummary summary;
+        try
+        {
+            summary = await scope.ServiceProvider.GetRequiredService<IAccountPurgeService>()
+                .PurgeDueAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Stopped before the end (e.g. the job's replicaTimeout): a failed run, never a clean exit. Accounts saved
+            // so far stay purged; the rest are due again on the next run.
+            logger.LogWarning("Purge stopped before it finished; the remaining Accounts are retried on the next run.");
+            return StartupExit.Failure;
+        }
+
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("Purge finished: {Purged} purged, {Skipped} skipped, {Failed} failed.",

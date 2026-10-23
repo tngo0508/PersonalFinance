@@ -220,6 +220,73 @@ public class AccountPurgeServiceTests
     }
 
     [Fact]
+    public async Task Purge_HardDeletesStoriesAndCommentsTheAccountDeletedItself_WithOtherPeoplesLikes()
+    {
+        await using (var seed = CreateContext())
+        {
+            seed.Users.Add(new IdentityUser { Id = UserId });
+            var deletedStory = new CommunityStory { UserId = UserId, AuthorName = "me@example.com", Title = "deleted story" };
+            var deletedComment = new CommunityComment { UserId = UserId, AuthorName = "me@example.com", Text = "deleted comment" };
+            deletedStory.SoftDelete();
+            deletedComment.SoftDelete();
+            seed.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = OtherUserId, Story = deletedStory });
+            seed.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = OtherUserId, Comment = deletedComment });
+            await seed.SaveChangesAsync();
+            await new AccountDeletionService(seed, new FixedTimeProvider(RequestedAt)).RequestAsync(UserId);
+        }
+
+        await using var db = CreateContext();
+        await CreatePurge(db, GraceEnds).PurgeDueAsync();
+
+        await using var check = CreateContext();
+        Assert.Empty(check.CommunityStories.IgnoreQueryFilters());
+        Assert.Empty(check.CommunityComments.IgnoreQueryFilters());
+        Assert.Empty(check.CommunityStoryLikes.IgnoreQueryFilters());
+        Assert.Empty(check.CommunityCommentLikes.IgnoreQueryFilters());
+    }
+
+    [Fact]
+    public async Task Purge_TwoRunsOverlapping_EraseTheAccountOnce_AndTheLateRunSkipsIt()
+    {
+        await SeedPendingRequestAsync();
+        var otherRunFirst = new BeforeSaveInterceptor(async () =>
+        {
+            await using var other = CreateContext();
+            Assert.Equal(new AccountPurgeSummary(1, 0, 0), await CreatePurge(other, GraceEnds).PurgeDueAsync());
+        });
+        await using var db = CreateContext(otherRunFirst);
+
+        var summary = await CreatePurge(db, GraceEnds).PurgeDueAsync();
+
+        Assert.Equal(new AccountPurgeSummary(0, 1, 0), summary);
+        await using var check = CreateContext();
+        Assert.Equal(DeletionRequestStatus.Purged, (await check.DeletionRequests.SingleAsync()).Status);
+        Assert.False(await check.Users.AnyAsync(u => u.Id == UserId));
+    }
+
+    [Fact]
+    public void EveryTableWithAUserId_IsUserOwned_OrHandledByThePurge()
+    {
+        using var db = CreateContext();
+        // Not AuditableEntity, removed or anonymized by name in AccountPurgeService. A new table holding an Account id
+        // must either inherit AuditableEntity (covered automatically) or be handled there and added here.
+        Type[] handledExplicitly =
+        [
+            typeof(IdentityUserRole<string>), typeof(IdentityUserClaim<string>), typeof(IdentityUserLogin<string>),
+            typeof(IdentityUserToken<string>), typeof(DeletionRequest)
+        ];
+
+        var unhandled = db.Model.GetEntityTypes()
+            .Where(t => t.FindProperty("UserId") is not null)
+            .Select(t => t.ClrType)
+            .Where(t => !typeof(AuditableEntity).IsAssignableFrom(t) && !handledExplicitly.Contains(t))
+            .Select(t => t.Name)
+            .ToList();
+
+        Assert.Empty(unhandled);
+    }
+
+    [Fact]
     public void DeletedEntityTypes_CoverEveryUserOwnedEntity_ExceptStoriesAndComments()
     {
         using var db = CreateContext();
