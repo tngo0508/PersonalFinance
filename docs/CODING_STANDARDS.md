@@ -40,7 +40,7 @@ The project follows a layered architecture pattern with clear separation of conc
 - **No Direct Instantiation**: Use dependency injection instead of `new` keyword for services
 - **Interface Segregation**: Define interfaces in the layer that consumes them
 - **Direct Service Injection**: ApiService controllers inject service interfaces directly via DI without intermediate mediator libraries. See `docs/adr/0001-standardize-cqrs-feature-organization.md`.
-- **Feature Folders**: ApiService and Web are organized by Feature (`Features/<Feature>/`), with code that two or more Features share in `Infrastructure/`. A Feature depends on another only through its interface. See `docs/adr/0007-feature-folders-with-interface-only-dependencies.md`.
+- **Feature Folders**: ApiService is organized by Feature (`Features/<Feature>/`), with code that two or more Features share in `Infrastructure/`. A Feature depends on another only through its interface. See `docs/adr/0007-feature-folders-with-interface-only-dependencies.md`. Web uses the classic MVC layout instead (`Controllers/`, `Models/<Controller>/`, `Views/<Controller>/`); see `docs/adr/0008-web-uses-classic-mvc-layout.md`.
 - **Soft Deletes**: All user-owned entities inherit from `AuditableEntity` with soft-delete support. EF Core global query filters automatically exclude deleted records.
 
 ## License Policy
@@ -76,9 +76,11 @@ When creating or modifying code, always place it in the correct project:
 | Business logic services | `PersonalFinance.ApiService` | `Features/NetWorth/NetWorthParametersService.cs` |
 | Validators | `PersonalFinance.ApiService` | `Features/NetWorth/Validators/NetWorthProjectionValidator.cs` |
 | Code two or more ApiService Features share | `PersonalFinance.ApiService` | `Infrastructure/RateLimiterService.cs` |
-| MVC controllers and view models (Web) | `PersonalFinance.Web` | `Features/NetWorth/NetworthController.cs`, `Features/NetWorth/NetWorthViewModel.cs` |
+| MVC controllers (Web) | `PersonalFinance.Web` | `Controllers/NetworthController.cs` |
+| View models (Web), named after the controller | `PersonalFinance.Web` | `Models/Networth/NetWorthViewModel.cs` |
 | Views (Razor) | `PersonalFinance.Web` | `Views/<Controller>/*.cshtml` files |
-| Code two or more Web Features share | `PersonalFinance.Web` | `Infrastructure/UserIdForwardingHandler.cs` |
+| UI services and tag helpers (Web) | `PersonalFinance.Web` | `Services/UserConsentService.cs`, `TagHelpers/TimeAgoTagHelper.cs` |
+| Web host plumbing | `PersonalFinance.Web` | `Infrastructure/UserIdForwardingHandler.cs` |
 | Data entities | `PersonalFinance.Data` | `NetWorthParameters` entity |
 | DbContext | `PersonalFinance.Data` | `ApplicationDbContext` |
 | DTOs (by feature) | `PersonalFinance.Shared` | `DTOs/NetWorth/NetWorthParametersDto.cs` |
