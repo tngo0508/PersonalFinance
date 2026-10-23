@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.9] - 2026-10-23
+
+### Changed
+
+- **Complexity Ceiling and Sealing Enforced**: `CA1502` (cyclomatic complexity), `CA1505` (maintainability index) and `CA1852` (seal internal types) now run at warning severity, so a new method over the ceiling or an unsealed internal class fails the CI build (ADR 0007, #162).
+  - Thresholds live in `PersonalFinance/CodeMetricsConfig.txt`: cyclomatic complexity 20 per method, maintainability index 10. No new package; the rules ship with the SDK.
+  - The 14 methods over the ceiling today carry an inline `[SuppressMessage]` naming their follow-up: the spreadsheet parser split (5 methods), the Google Drive client seam (3), the financial snapshot, the Analysis dashboard, a net worth projection rule table, splitting role seeding from the admin grant, an API error message table and a news feed parser split. No method was changed.
+  - `CA1852` also applies to types that `InternalsVisibleTo` exposes to the tests; the three nested context classes in `AiAssistantService` are now sealed.
+  - The coding standards' rule table marks the three rules as enforced and describes the suppression convention.
+  - No behaviour, route or contract change.
+
 ## [4.2.8] - 2026-10-23
 
 ### Changed

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using PersonalFinance.ApiService.Infrastructure;
 
@@ -77,6 +78,7 @@ internal static class GoogleDriveMetadata
     /// <summary>
     /// Resolves human-friendly file type description and Bootstrap badge color from MIME type and filename.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: Google Drive client seam.")]
     public static (string FileType, string BadgeClass, bool IsFolder) ResolveTypeInfo(string? mimeType,
         string? fileName)
     {

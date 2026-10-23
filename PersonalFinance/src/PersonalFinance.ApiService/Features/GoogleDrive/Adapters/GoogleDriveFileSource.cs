@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.GoogleDrive;
@@ -34,6 +35,7 @@ internal sealed class GoogleDriveFileSource : IGoogleDriveFileSource
     }
 
     /// <inheritdoc />
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: Google Drive client seam.")]
     public async IAsyncEnumerable<SpreadsheetDownload> DownloadAsync(
         string userId,
         string fileId,

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -566,6 +567,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
         };
     }
 
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: Google Drive client seam.")]
     private async Task<GoogleDriveFolderResponseDto> FetchLiveFolderFilesAsync(
         string folderId,
         string rawInput,

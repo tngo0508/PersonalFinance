@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using Refit;
@@ -28,6 +29,7 @@ public static class ApiErrorMessages
     /// Extracts a user-friendly error message from an ApiException payload.
     /// Avoids exposing raw HTML, non-JSON backend payloads, or 5xx server internals.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: API error message table.")]
     public static string FromApiException(ApiException ex)
     {
         if ((int)ex.StatusCode >= 500)

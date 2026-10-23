@@ -602,8 +602,7 @@ After fixing a bug:
 
 ### Files & Folders
 - **Match Class Name**: File name should match class name
-- **Layer Folders**: Organize by layer (Controllers, Services, Models, etc.)
-- **Feature Folders**: For larger features, use feature-based organization
+- **Feature Folders**: ApiService and Web code lives in `Features/<Feature>/` or `Infrastructure/` (see "Feature Folder Structure" above)
 
 ## C# Style
 
@@ -616,8 +615,8 @@ in CI, where warnings are errors. Before opening a PR, run `dotnet format style 
 |---|---|
 | Explicit types; `var` only when the type is on the right-hand side | `IDE0008` (warning) |
 | File-scoped namespaces | `IDE0161` (warning) |
-| `internal sealed` unless something needs the type public | `CA1852` (arrives with the ADR 0007 PRs) |
-| One job per method, within the complexity ceiling | `CA1502`, `CA1505` (arrive with the ADR 0007 PRs) |
+| `internal sealed` unless something needs the type public | `CA1852` (warning) |
+| One job per method, within the complexity ceiling | `CA1502`, `CA1505` (warning; thresholds in `PersonalFinance/CodeMetricsConfig.txt`) |
 | Money is `decimal` | Code review; see Data Layer rules |
 
 ### Explicit types (IDE0007 / IDE0008)
@@ -652,6 +651,10 @@ var count = 0;                                      // int count = 0;
 - Guard clauses and early returns instead of nested `if`. Use `ArgumentNullException.ThrowIfNull(x)` and
   `ArgumentException.ThrowIfNullOrWhiteSpace(s)` at the top of a method.
 - No `#region`. If a class needs regions to be navigable, it needs splitting.
+- The complexity ceiling is a cyclomatic complexity of 20 per method (`CA1502`) and a maintainability index of at
+  least 10 (`CA1505`). Methods that were over it when the ceiling was set carry an inline
+  `[SuppressMessage(..., Justification = "...; follow-up: <name>.")]` naming the split that will remove it. Never add a
+  new suppression to get a build green: split the method. When a follow-up lands, delete its suppression.
 
 ### Async and time
 

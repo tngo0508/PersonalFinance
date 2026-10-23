@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.GoogleDrive;
@@ -289,6 +290,7 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         return await _budgetDataProvider.GetActiveSourceAsync(userId, cancellationToken);
     }
 
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: Analysis dashboard.")]
     public async Task<SyncSpreadsheetBudgetResult> SyncSpreadsheetBudgetAsync(
         string userId,
         int connectionId,

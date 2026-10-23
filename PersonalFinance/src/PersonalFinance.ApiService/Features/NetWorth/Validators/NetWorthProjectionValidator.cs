@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.DTOs.NetWorth;
 
@@ -12,6 +13,7 @@ public static class NetWorthProjectionValidator
     /// Validates the net worth projection request parameters.
     /// Returns an error message if validation fails, null if valid.
     /// </summary>
+    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: net worth projection rule table.")]
     public static string? Validate(NetWorthProjectionRequestDto request)
     {
         if (request.StartingBalance < 0 || request.StartingBalance > 1_000_000_000m)
