@@ -43,7 +43,7 @@ flowchart LR
 - Web never references ApiService as a project. It talks to it over HTTP through the Refit Contracts in
   `Shared/Contracts/`.
 - Web references Data only for ASP.NET Core Identity (`AppDbContext` is an `IdentityDbContext`) and the registration
-  consent records (`Web/Services/UserConsentService.cs`). Feature data is always read through ApiService.
+  consent records (`Web/Features/Legal/UserConsentService.cs`). Feature data is always read through ApiService.
 - Data references neither Web nor ApiService. ApiService has no MVC or Razor dependency.
 
 ## Request flow
@@ -88,7 +88,7 @@ There is no mediator: ApiService controllers inject Service interfaces directly
 ## Identity: how an Account reaches ApiService
 
 1. The browser signs in to Web with ASP.NET Core Identity (cookie).
-2. `Web/Services/UserIdForwardingHandler.cs` is attached to every Refit client by
+2. `Web/Infrastructure/UserIdForwardingHandler.cs` is attached to every Refit client by
    `Web/Infrastructure/InternalApiClientExtensions.cs`. It adds the signed-in
    Account id as `X-User-Id` (nothing for signed-out visitors) and the shared secret as `X-Internal-Key`.
 3. `ApiService/Infrastructure/XUserIdAuthenticationHandler.cs` checks the shared secret, loads the Account's Roles from

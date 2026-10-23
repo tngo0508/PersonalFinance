@@ -4,7 +4,7 @@ using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Dashboard;
-using PersonalFinance.Web.Models;
+using PersonalFinance.Web.Features.Dashboard;
 
 namespace PersonalFinance.Tests.Dashboard;
 

@@ -1,8 +1,7 @@
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
-using PersonalFinance.Web.Models;
-using PersonalFinance.Web.Services;
+using PersonalFinance.Web.Features.Watchlist;
 
 namespace PersonalFinance.Tests.News;
 

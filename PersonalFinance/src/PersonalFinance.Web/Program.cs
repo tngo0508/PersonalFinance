@@ -10,8 +10,9 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Web.Features.Legal;
+using PersonalFinance.Web.Features.Watchlist;
 using PersonalFinance.Web.Infrastructure;
-using PersonalFinance.Web.Services;
 using Serilog;
 
 // Console logging until the host is built, so startup and DI failures are captured.
@@ -96,11 +97,14 @@ try
     // ApiService: one Refit client per contract, each forwarding the signed-in Account (Infrastructure/InternalApiClientExtensions.cs).
     builder.Services.AddInternalApiClients(builder.Configuration);
 
-    // Web-only services.
+    // Email sent from the Identity pages, through Brevo.
     builder.Services.Configure<BrevoOptions>(builder.Configuration.GetSection("Brevo"));
     builder.Services.AddHttpClient<IEmailSender, BrevoEmailSender>(client => client.Timeout = TimeSpan.FromSeconds(15));
-    builder.Services.AddHttpClient<INewsService, NewsService>(client => client.Timeout = TimeSpan.FromSeconds(5));
-    builder.Services.AddScoped<IUserConsentService, UserConsentService>();
+
+    // Features: each one with Web services registers itself from Features/<Feature>/<Feature>Feature.cs (ADR 0007).
+    builder.Services
+        .AddWatchlistFeature()
+        .AddLegalFeature();
 
     // Hosting behind Azure Container Apps: trust X-Forwarded-For/Proto so HTTPS and OAuth redirect URIs are correct.
     builder.Services.Configure<ForwardedHeadersOptions>(options =>

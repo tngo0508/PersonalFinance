@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.7] - 2026-10-23
+
+### Changed
+
+- **Web Features in Feature Folders**: every Web controller, view model and UI service now lives in `Web/Features/<Feature>/`, under the same Feature names as ApiService (ADR 0007, #160).
+  - Razor views stay in `Views/<Controller>/`; views that name a model now `@using` its Feature namespace.
+  - News moves into the Watchlist Feature. Three Web-only Features are added for pages that fit no existing Feature: LandingPage (`HomeController`), Legal (the Legal Pages and the registration Consent service) and InvestmentCalculator. GLOSSARY.md gains Legal Pages, Consent and Investment Calculator, and ADR 0007 lists the new Features.
+  - `Web/Infrastructure/` holds what several Features use and what serves the host rather than a Feature: the user-id forwarding handler and API warmer, the Refit client registration, the Unavailable State, the Brevo email sender and templates, the Admin not-found handler and Notifications. ADR 0007 now states the host rule and why controllers keep their route names (`HomeController`, `NewsController`).
+  - Web Features with services register them like ApiService does: `AddWatchlistFeature()` (the news feed) and `AddLegalFeature()` (Consent).
+  - From the 4.2.6 review: the OpenAI registration class is renamed `OpenAiChatClientRegistration`, and `AdminOperationStatus` and `AdminOperationResult` get their own files.
+  - The legacy allow-list in the architecture tests is now empty; #161 deletes it.
+  - No behaviour, route or view change.
+
 ## [4.2.6] - 2026-10-23
 
 ### Changed

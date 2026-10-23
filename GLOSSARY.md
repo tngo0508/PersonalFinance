@@ -111,6 +111,20 @@ _Avoid_: calling it "Savings Rate" in new code or UI text without the "Actual" q
 The public page served at `/` to signed-out visitors. It explains the product and leads to registration or sign-in.
 _Avoid_: Home page (ambiguous with Dashboard)
 
+### Legal Pages
+The public pages that state the Terms of Service, the Privacy Policy, the disclaimer, the cookie policy and how to
+contact the operator.
+_Avoid_: Policies (too narrow), static pages
+
+### Consent
+An Account's recorded acceptance of a given version of the Terms of Service and Privacy Policy, given at registration.
+_Avoid_: Agreement, opt-in
+
+### Investment Calculator
+A signed-in tool that shows how an investment grows with compound interest from the values the user enters. It stores
+nothing.
+_Avoid_: Projection (that is Net Worth's), simulator
+
 ### Dashboard
 The signed-in user's overview page, summarizing net worth, budget, savings goals, and recent activity. Signed-in visitors to `/` are redirected here.
 _Avoid_: Home page, home

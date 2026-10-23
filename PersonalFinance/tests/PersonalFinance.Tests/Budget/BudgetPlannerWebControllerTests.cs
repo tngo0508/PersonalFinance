@@ -5,8 +5,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
-using PersonalFinance.Web.Controllers;
-using PersonalFinance.Web.Models;
+using PersonalFinance.Web.Features.BudgetPlanner;
 
 namespace PersonalFinance.Tests.Budget;
 

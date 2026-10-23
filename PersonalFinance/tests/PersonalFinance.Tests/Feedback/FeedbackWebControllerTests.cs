@@ -13,9 +13,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.Budget;
-using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Features.Feedback;
-using PersonalFinance.Web.Models;
 using Refit;
 using AuthorizeAttribute = Microsoft.AspNetCore.Authorization.AuthorizeAttribute;
 

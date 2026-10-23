@@ -2,8 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
-using PersonalFinance.Web.Controllers;
-using PersonalFinance.Web.Services;
+using PersonalFinance.Web.Features.Legal;
 
 namespace PersonalFinance.Tests.Security;
 

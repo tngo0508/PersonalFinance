@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using PersonalFinance.Web.Services;
+using PersonalFinance.Web.Infrastructure;
 using Xunit;
 
 namespace PersonalFinance.Tests.Web;

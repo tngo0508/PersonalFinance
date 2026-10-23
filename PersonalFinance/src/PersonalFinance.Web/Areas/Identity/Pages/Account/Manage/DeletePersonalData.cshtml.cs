@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
 using PersonalFinance.Web.Infrastructure;
-using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 

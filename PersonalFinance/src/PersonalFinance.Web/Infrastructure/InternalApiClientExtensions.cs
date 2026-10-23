@@ -1,5 +1,4 @@
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Web.Services;
 using Refit;
 
 namespace PersonalFinance.Web.Infrastructure;

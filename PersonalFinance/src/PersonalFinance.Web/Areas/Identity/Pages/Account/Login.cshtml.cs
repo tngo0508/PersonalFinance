@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
-using PersonalFinance.Web.Services;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 
