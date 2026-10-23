@@ -7,7 +7,7 @@ Canonical definitions for the Personal Finance application domain and architectu
 ### Feature
 A vertical slice of functionality named after what a user would call it (Budget Tracker, Feedback, Savings Goals).
 It spans everything that slice needs: entities, services, controllers, API contracts, DTOs, views and tests. In the
-API, the DTOs and the tests every part carries the Feature's name; in the web frontend a Feature is reached through
+API, the DTOs and the tests, every part carries the Feature's name; in the web frontend a Feature is reached through
 its controllers, which are named after their routes (the Budget Planner's is `Budget`, the Landing Page's is `Home`).
 _Avoid_: Area (an ASP.NET Core term with its own meaning), component
 
