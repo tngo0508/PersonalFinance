@@ -2232,3 +2232,87 @@
     height: 30px;
   }
 }
+
+/* ==========================================================================
+   FI Breakdown: "How this is calculated" (nw-breakdown-*)
+   ========================================================================== */
+
+.nw-breakdown__title {
+  font-size: 1rem;
+  font-weight: var(--app-font-weight-semibold);
+  color: var(--nw-text-main);
+  margin-bottom: 0.75rem;
+}
+
+.nw-breakdown__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.nw-breakdown__card {
+  height: 100%;
+  border: 1px solid var(--nw-border);
+  border-radius: var(--app-radius-m);
+  box-shadow: var(--nw-shadow-sm);
+}
+
+.nw-breakdown__card .card-body {
+  padding: 1rem;
+}
+
+.nw-breakdown__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--nw-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.nw-breakdown__value {
+  font-size: 1.35rem;
+  font-weight: var(--app-font-weight-semibold);
+  color: var(--nw-text-main);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.5rem;
+}
+
+.nw-breakdown__inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.nw-breakdown__from {
+  color: var(--nw-text-muted);
+}
+
+.nw-breakdown__chip {
+  background: var(--nw-primary-light);
+  color: var(--nw-primary-hover);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  white-space: nowrap;
+}
+
+.nw-breakdown__formula,
+.nw-breakdown__note {
+  font-size: 0.85rem;
+  color: var(--nw-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.nw-breakdown__formula {
+  font-variant-numeric: tabular-nums;
+}
+
+.nw-breakdown__scenarios {
+  font-size: 0.8rem;
+  color: var(--nw-text-main);
+  padding-left: 1.1rem;
+  margin: 0.25rem 0 0;
+}

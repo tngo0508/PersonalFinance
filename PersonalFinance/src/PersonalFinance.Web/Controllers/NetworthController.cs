@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Constants;
@@ -5,6 +7,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.Networth;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -16,6 +19,9 @@ namespace PersonalFinance.Web.Controllers;
 [Authorize]
 public class NetworthController : Controller
 {
+    /// <summary>The camelCase shape the page's scripts read, matching the app's MVC JSON settings.</summary>
+    private static readonly JsonSerializerOptions CalculateJsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly INetWorthApi _netWorthApi;
     private readonly ILogger<NetworthController> _logger;
 
@@ -57,14 +63,17 @@ public class NetworthController : Controller
 
     /// <summary>
     /// Returns JSON projection data for AJAX-based chart updates. Parameters missing from the query string
-    /// keep their <see cref="NetWorthDefaults"/> value.
+    /// keep their <see cref="NetWorthDefaults"/> value. The FI Breakdown cards ride alongside the projection's
+    /// own properties (as <c>breakdown</c>), so the page's scripts keep reading the projection at the top level.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Calculate([FromQuery] NetWorthViewModel parameters,
         CancellationToken cancellationToken = default)
     {
         NetWorthProjectionDto projection = await _netWorthApi.CalculateProjectionAsync(parameters.ToProjectionRequest(), cancellationToken);
-        return Json(projection);
+        JsonObject result = JsonSerializer.SerializeToNode(projection, CalculateJsonOptions)!.AsObject();
+        result["breakdown"] = JsonSerializer.SerializeToNode(FiBreakdownBuilder.Build(projection), CalculateJsonOptions);
+        return Json(result);
     }
 
     /// <summary>

@@ -53,6 +53,12 @@ public sealed class NetWorthScenarioDto
     /// <summary>Total interest earned (final net worth minus total contributions).</summary>
     public decimal TotalInterestEarned { get; set; }
 
+    /// <summary>
+    /// Age at the end of the first projected year whose balance reaches the FI Target; <c>null</c> when it is not
+    /// reached by retirement age, when there is no FI Target, or when retirement age is not after current age.
+    /// </summary>
+    public int? FiReachedAge { get; set; }
+
     /// <summary>Year-by-year projection data.</summary>
     public List<NetWorthYearDto> Years { get; set; } = new();
 }
@@ -76,6 +82,21 @@ public sealed class NetWorthProjectionDto
 
     /// <summary>Financial independence target (annual spending × 25, using the 4% rule).</summary>
     public decimal FiTarget { get; set; }
+
+    /// <summary>The user's net worth: the entered starting balance.</summary>
+    public decimal StartingBalance { get; set; }
+
+    /// <summary>Planned annual savings.</summary>
+    public decimal AnnualSavings { get; set; }
+
+    /// <summary>Age the projection runs to.</summary>
+    public int RetirementAge { get; set; }
+
+    /// <summary>Savings Rate: annual savings over annual income, one decimal; <c>null</c> without income.</summary>
+    public decimal? SavingsRatePercent { get; set; }
+
+    /// <summary>Progress to FI: starting balance over the FI Target, uncapped; <c>null</c> without an FI Target.</summary>
+    public decimal? ProgressToFiPercent { get; set; }
 
     /// <summary>Base scenario projection.</summary>
     public NetWorthScenarioDto Base { get; set; } = new();

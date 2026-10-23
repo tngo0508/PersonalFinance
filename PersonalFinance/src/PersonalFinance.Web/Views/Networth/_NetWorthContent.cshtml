@@ -1,6 +1,7 @@
 @model NetWorthViewModel
 @using System.Text.Json
 @using PersonalFinance.Shared.DTOs.NetWorth
+@using PersonalFinance.Web.Services
 
 @{
     var projection = Model.Projection;
@@ -396,6 +397,12 @@
                 </div>
             </div>
         </div>
+
+        <!-- FI Breakdown: how the calculated figures come from the inputs -->
+        @if (projection is not null)
+        {
+            <partial name="_FiBreakdown" model="FiBreakdownBuilder.Build(projection)" />
+        }
 
         <!-- Charts Section -->
         <div class="row g-3 mb-4">

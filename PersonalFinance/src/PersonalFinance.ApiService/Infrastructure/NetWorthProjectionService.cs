@@ -1,4 +1,5 @@
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Infrastructure;
 
@@ -21,13 +22,19 @@ public static class NetWorthProjectionService
     public static NetWorthProjectionDto ComputeProjection(NetWorthProjectionRequestDto request)
     {
         int currentYear = DateTime.Now.Year;
+        decimal fiTarget = request.AnnualSpending * FiRuleMultiplier;
         var projection = new NetWorthProjectionDto
         {
             CurrentYear = currentYear,
             CurrentAge = request.CurrentAge,
             AnnualIncome = request.AnnualIncome,
             AnnualSpending = request.AnnualSpending,
-            FiTarget = request.AnnualSpending * FiRuleMultiplier
+            FiTarget = fiTarget,
+            StartingBalance = request.StartingBalance,
+            AnnualSavings = request.AnnualSavings,
+            RetirementAge = request.RetirementAge,
+            SavingsRatePercent = FinanceMetrics.SavingsRatePercent(request.AnnualSavings, request.AnnualIncome),
+            ProgressToFiPercent = fiTarget != 0m ? request.StartingBalance / fiTarget * 100m : null
         };
 
         // Base scenario
@@ -44,6 +51,14 @@ public static class NetWorthProjectionService
         projection.Aggressive = BuildScenario(
             "Aggressive", request.StartingBalance, request.AggressiveSavings, request.CurrentAge,
             request.RetirementAge, request.AggressiveRoi / 100m, currentYear);
+
+        bool hasProjection = request.RetirementAge > request.CurrentAge;
+        foreach (NetWorthScenarioDto scenario in new[] { projection.Base, projection.Conservative, projection.Aggressive })
+        {
+            scenario.FiReachedAge = hasProjection && fiTarget > 0m
+                ? scenario.Years.FirstOrDefault(y => y.EndingBalance >= fiTarget)?.Age
+                : null;
+        }
 
         return projection;
     }
