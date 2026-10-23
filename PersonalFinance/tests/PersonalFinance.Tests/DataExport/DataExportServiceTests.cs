@@ -62,8 +62,8 @@ public class DataExportServiceTests
     public async Task Export_NeverContainsAnotherAccountsRecords()
     {
         await using var db = CreateContext();
-        SeedOneOfEverything(db, UserId, "mine");
-        SeedOneOfEverything(db, OtherUserId, "theirs");
+        UserDataSeed.OneOfEverything(db, UserId, "mine");
+        UserDataSeed.OneOfEverything(db, OtherUserId, "theirs");
         await db.SaveChangesAsync();
 
         var export = await CreateService(db).ExportAsync(UserId);
@@ -79,7 +79,7 @@ public class DataExportServiceTests
     public async Task Export_CoversEverySection()
     {
         await using var db = CreateContext();
-        SeedOneOfEverything(db, UserId, "mine");
+        UserDataSeed.OneOfEverything(db, UserId, "mine");
         await db.SaveChangesAsync();
 
         var export = await CreateService(db).ExportAsync(UserId);
@@ -229,47 +229,6 @@ public class DataExportServiceTests
         AzureSqlTranslation.AssertTranslates(service.StoryLikesQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.PollVotesQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.AccountRolesQuery(UserId));
-    }
-
-    /// <summary>
-    /// One record in every section for <paramref name="userId"/>, each with <paramref name="marker"/> in a text
-    /// field, so a serialized export shows whose records it holds.
-    /// </summary>
-    private static void SeedOneOfEverything(AppDbContext db, string userId, string marker)
-    {
-        db.Users.Add(new IdentityUser { Id = userId, UserName = $"{marker}@example.com", Email = $"{marker}@example.com" });
-        db.UserConsents.Add(new UserConsent { UserId = userId, PolicyVersion = marker });
-        db.NetWorthParameters.Add(new NetWorthParameters { UserId = userId, StartingBalance = 1000m });
-        db.UserBudgetAllocations.Add(new UserBudgetAllocation { UserId = userId, Period = marker });
-        db.UserBudgetSourcePreferences.Add(new UserBudgetSourcePreference { UserId = userId, Source = BudgetDataSource.BudgetTracker });
-
-        var category = new BudgetCategory { UserId = userId, Name = $"{marker} category", Kind = BudgetCategoryKind.Expense };
-        var plan = new MonthlyBudgetPlan { UserId = userId, Year = 2026, Month = 3 };
-        db.MonthlyBudgetLines.Add(new MonthlyBudgetLine { UserId = userId, Plan = plan, Category = category, PlannedAmount = 50m });
-        db.BudgetTransactions.Add(new BudgetTransaction
-            { UserId = userId, Category = category, Date = new DateOnly(2026, 3, 2), Description = $"{marker} coffee" });
-
-        var connection = new GoogleDriveConnection { UserId = userId, Name = $"{marker} folder", FolderId = "f", FolderUrl = "u" };
-        var snapshot = new SpreadsheetBudgetSnapshot
-            { UserId = userId, Connection = connection, FileName = $"{marker}.xlsx", FileId = "file", CategoryBreakdownJson = "{}" };
-        db.SpreadsheetTransactionRecords.Add(new SpreadsheetTransactionRecord
-            { UserId = userId, Snapshot = snapshot, Connection = connection, Description = $"{marker} rent" });
-
-        db.SavingsGoals.Add(new SavingsGoal { UserId = userId, Name = $"{marker} goal" });
-        db.SavedArticles.Add(new SavedArticle { UserId = userId, Title = $"{marker} article", Url = "https://example.com" });
-
-        var story = new CommunityStory { UserId = userId, AuthorName = marker, Title = $"{marker} story" };
-        var comment = new CommunityComment
-            { UserId = userId, AuthorName = marker, Text = $"{marker} comment", CaseStudyTitle = $"{marker} case study" };
-        db.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = userId, Story = story });
-        db.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = userId, Comment = comment });
-        var poll = new CommunityPoll { PollCode = $"{marker}-poll", Question = $"{marker} question?" };
-        var option = new CommunityPollOption { Poll = poll, Text = "Yes" };
-        db.CommunityPollVotes.Add(new CommunityPollVote { UserId = userId, Poll = poll, Option = option });
-
-        db.Feedback.Add(new FeedbackEntity { UserId = userId, Category = FeedbackCategory.Idea, Message = $"{marker} idea" });
-        db.Notifications.Add(new Notification { UserId = userId, Title = $"{marker} notice", Message = "m" });
-        db.AiUsageRecords.Add(new AiUsageRecord { UserId = userId, Endpoint = $"{marker}-chat" });
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider

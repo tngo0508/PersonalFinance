@@ -25,6 +25,7 @@ public static class InternalApiClientExtensions
 
         var apiBaseUrl = new Uri(configuration[ApiBaseUrlKey] ?? DefaultApiBaseUrl);
 
+        services.AddInternalApiClient<IAccountDeletionApi>(apiBaseUrl);
         services.AddInternalApiClient<IAdminApi>(apiBaseUrl);
         services.AddInternalApiClient<IAiAssistantApi>(apiBaseUrl, TimeSpan.FromSeconds(30));
         services.AddInternalApiClient<IBudgetTrackerApi>(apiBaseUrl);

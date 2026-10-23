@@ -50,7 +50,7 @@ try
         .AddNetWorthFeature()
         .AddDashboardFeatures()
         .AddFeedbackFeature()
-        .AddDataExportFeature()
+        .AddPersonalDataFeature()
         .AddAdminFeature()
         .AddAiAssistantFeature(builder.Configuration);
 

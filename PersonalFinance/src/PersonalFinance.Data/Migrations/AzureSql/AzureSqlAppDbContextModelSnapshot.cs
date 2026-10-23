@@ -739,6 +739,52 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.ToTable("CommunityStoryLikes");
                 });
 
+            modelBuilder.Entity("PersonalFinance.Data.Entities.DeletionRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CancelTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PurgeAfter")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PurgedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CancelTokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Status", "PurgeAfter");
+
+                    b.ToTable("DeletionRequests");
+                });
+
             modelBuilder.Entity("PersonalFinance.Data.Entities.Feedback", b =>
                 {
                     b.Property<int>("Id")

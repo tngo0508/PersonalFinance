@@ -1,0 +1,33 @@
+@page
+@model CancelDeletionModel
+@{
+    ViewData["Title"] = "Cancel account deletion";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+@if (Model.Cancelled)
+{
+    <div class="alert alert-success" role="status">
+        Your account and data are restored.
+    </div>
+    <p><a class="btn btn-primary" asp-page="./Login">Sign in</a></p>
+}
+else if (Model.ErrorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+    <p>
+        Need help? <a asp-area="" asp-controller="Legal" asp-action="Contact">Contact us</a>.
+    </p>
+}
+else
+{
+    <p>
+        Your account is scheduled for deletion. Cancel to restore your account and all of its data, and to sign in
+        again.
+    </p>
+    <form method="post">
+        <input type="hidden" asp-for="Token"/>
+        <button class="btn btn-primary" type="submit">Cancel deletion</button>
+    </form>
+}

@@ -1,0 +1,16 @@
+@page
+@model LockoutModel
+@{
+    ViewData["Title"] = "Account locked";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<p>You cannot sign in to this account right now.</p>
+<p>
+    If you asked to delete your account, it is scheduled for deletion. To keep it, use the
+    <strong>Cancel deletion</strong> link in the email we sent you.
+</p>
+<p>
+    Otherwise, try again later or <a asp-area="" asp-controller="Legal" asp-action="Contact">contact us</a>.
+</p>

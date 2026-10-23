@@ -64,10 +64,11 @@ public static class FeatureServiceExtensions
         return services;
     }
 
-    /// <summary>The Data Export an Account downloads from the Personal data page.</summary>
-    public static IServiceCollection AddDataExportFeature(this IServiceCollection services)
+    /// <summary>The Data Export and the Deletion Request on the Personal data page (ADR 0005).</summary>
+    public static IServiceCollection AddPersonalDataFeature(this IServiceCollection services)
     {
         services.AddScoped<IDataExportService, DataExportService>();
+        services.AddScoped<IAccountDeletionService, AccountDeletionService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }

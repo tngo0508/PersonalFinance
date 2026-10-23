@@ -14,8 +14,7 @@ using PersonalFinance.Web.Infrastructure;
 namespace PersonalFinance.Tests.DataExport;
 
 /// <summary>
-/// The Personal data page downloads the Data Export, and the built-in Delete personal data page no longer deletes
-/// anything until the Deletion Request (#142) replaces it.
+/// The Personal data page downloads the Data Export, and the Identity UI default download only redirects to it.
 /// </summary>
 public class PersonalDataPageTests
 {
@@ -71,16 +70,6 @@ public class PersonalDataPageTests
         Assert.IsType<PageResult>(result);
         Assert.Equal(JsonApiErrorsFilter.UnavailableMessage, page.ErrorMessage);
         Assert.DoesNotContain("connection refused", page.ErrorMessage);
-    }
-
-    [Fact]
-    public void DeletePersonalData_Post_DeletesNothing_AndShowsThePageAgain()
-    {
-        Assert.Empty(typeof(DeletePersonalDataModel).GetConstructors().Single().GetParameters());
-
-        var result = new DeletePersonalDataModel().OnPost();
-
-        Assert.IsType<RedirectToPageResult>(result);
     }
 
     [Fact]
