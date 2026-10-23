@@ -220,7 +220,7 @@ Implement and validate the data layer before building dependent application logi
 
 #### Feature Folder Structure
 
-ApiService and Web are organized by Feature (`docs/adr/0007-feature-folders-with-interface-only-dependencies.md`). Each Feature in GLOSSARY.md owns `Features/<Feature>/`, under the same name used in `Shared/DTOs/` and the test project. The Feedback Feature is the exemplar:
+ApiService is organized by Feature (`docs/adr/0007-feature-folders-with-interface-only-dependencies.md`); Web uses the classic MVC layout (`docs/adr/0008-web-uses-classic-mvc-layout.md`). Each Feature in GLOSSARY.md owns `Features/<Feature>/` in ApiService, under the same name used in `Shared/DTOs/` and the test project. The Feedback Feature is the exemplar:
 
 ```
 ApiService/
