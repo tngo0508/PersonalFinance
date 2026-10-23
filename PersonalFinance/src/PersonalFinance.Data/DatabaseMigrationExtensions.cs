@@ -21,24 +21,24 @@ public static class DatabaseMigrationExtensions
         TimeSpan? initialDelay = null,
         CancellationToken cancellationToken = default)
     {
-        var delay = initialDelay ?? TimeSpan.FromSeconds(3);
+        TimeSpan delay = initialDelay ?? TimeSpan.FromSeconds(3);
 
-        using var scope = serviceProvider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         logger ??= scope.ServiceProvider.GetService<ILogger<AppDbContext>>();
 
         if (logger is not null && logger.IsEnabled(LogLevel.Information))
         {
-            var providerName = db.Database.ProviderName ?? "Unknown";
-            var targetHost = db.Database.IsRelational() ? db.Database.GetDbConnection().DataSource : "(in-memory)";
+            string providerName = db.Database.ProviderName ?? "Unknown";
+            string targetHost = db.Database.IsRelational() ? db.Database.GetDbConnection().DataSource : "(in-memory)";
             logger.LogInformation(
                 "Starting database migration and initialization for provider: {Provider} on target host: {TargetHost}...",
                 providerName,
                 string.IsNullOrWhiteSpace(targetHost) ? "(unspecified/localhost)" : targetHost);
         }
 
-        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             try
             {
@@ -105,7 +105,7 @@ public static class DatabaseMigrationExtensions
         this IHost host,
         CancellationToken cancellationToken = default)
     {
-        var logger = host.Services.GetService<ILoggerFactory>()?.CreateLogger("DatabaseInitializer");
+        ILogger? logger = host.Services.GetService<ILoggerFactory>()?.CreateLogger("DatabaseInitializer");
         await host.Services.MigrateAndSeedDatabaseAsync(logger, cancellationToken: cancellationToken);
     }
 
@@ -116,7 +116,7 @@ public static class DatabaseMigrationExtensions
     /// </summary>
     public static async Task MigrateAndRunAsync(this IHost host, string[] args)
     {
-        var migrateOnly = args.Contains("--migrate-only") ||
+        bool migrateOnly = args.Contains("--migrate-only") ||
                           string.Equals(Environment.GetEnvironmentVariable("MIGRATE_ONLY"), "true",
                               StringComparison.OrdinalIgnoreCase);
 
@@ -147,7 +147,7 @@ public static class DatabaseMigrationExtensions
 
         logger?.LogInformation("Seeding initial community polls...");
 
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
 
         var polls = new List<CommunityPoll>
         {
@@ -229,7 +229,7 @@ public static class DatabaseMigrationExtensions
 
         logger?.LogInformation("Seeding initial community stories...");
 
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
 
         var stories = new List<CommunityStory>
         {

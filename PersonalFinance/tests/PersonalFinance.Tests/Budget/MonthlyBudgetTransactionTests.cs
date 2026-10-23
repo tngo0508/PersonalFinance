@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
@@ -16,7 +17,7 @@ public class MonthlyBudgetTransactionTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"BudgetTransactions_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -25,14 +26,14 @@ public class MonthlyBudgetTransactionTests
     [Fact]
     public async Task Transactions_ArePartitionedStrictlyByCalendarMonth()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
         // 1. Transaction on last day of October 2026 (2026-10-31)
-        var txOctEnd = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto txOctEnd = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 10, 31),
             Amount = 45m,
@@ -41,7 +42,7 @@ public class MonthlyBudgetTransactionTests
         });
 
         // 2. Transaction on first day of November 2026 (2026-11-01)
-        var txNovStart = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto txNovStart = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 11, 1),
             Amount = 60m,
@@ -50,7 +51,7 @@ public class MonthlyBudgetTransactionTests
         });
 
         // 3. Transaction on December 31, 2026 (2026-12-31)
-        var txDecEnd = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto txDecEnd = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 12, 31),
             Amount = 100m,
@@ -59,7 +60,7 @@ public class MonthlyBudgetTransactionTests
         });
 
         // 4. Transaction on January 1, 2027 (2027-01-01)
-        var txJanStart = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto txJanStart = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2027, 1, 1),
             Amount = 25m,
@@ -68,25 +69,25 @@ public class MonthlyBudgetTransactionTests
         });
 
         // Verify October 2026
-        var octSheet = await service.GetSheetAsync(UserId, 2026, 10);
+        MonthlyBudgetSheetDto octSheet = await service.GetSheetAsync(UserId, 2026, 10);
         Assert.Single(octSheet.Transactions);
         Assert.Equal(txOctEnd.Id, octSheet.Transactions[0].Id);
         Assert.Equal(45m, octSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id).Actual);
 
         // Verify November 2026
-        var novSheet = await service.GetSheetAsync(UserId, 2026, 11);
+        MonthlyBudgetSheetDto novSheet = await service.GetSheetAsync(UserId, 2026, 11);
         Assert.Single(novSheet.Transactions);
         Assert.Equal(txNovStart.Id, novSheet.Transactions[0].Id);
         Assert.Equal(60m, novSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id).Actual);
 
         // Verify December 2026
-        var decSheet = await service.GetSheetAsync(UserId, 2026, 12);
+        MonthlyBudgetSheetDto decSheet = await service.GetSheetAsync(UserId, 2026, 12);
         Assert.Single(decSheet.Transactions);
         Assert.Equal(txDecEnd.Id, decSheet.Transactions[0].Id);
         Assert.Equal(100m, decSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id).Actual);
 
         // Verify January 2027
-        var janSheet = await service.GetSheetAsync(UserId, 2027, 1);
+        MonthlyBudgetSheetDto janSheet = await service.GetSheetAsync(UserId, 2027, 1);
         Assert.Single(janSheet.Transactions);
         Assert.Equal(txJanStart.Id, janSheet.Transactions[0].Id);
         Assert.Equal(25m, janSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id).Actual);
@@ -95,14 +96,14 @@ public class MonthlyBudgetTransactionTests
     [Fact]
     public async Task Transaction_TypeFollowsCategoryKind()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
-        var paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
 
-        var expenseTx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto expenseTx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 10, 10),
             Amount = 35m,
@@ -110,7 +111,7 @@ public class MonthlyBudgetTransactionTests
             CategoryId = food.Id
         });
 
-        var incomeTx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto incomeTx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 10, 15),
             Amount = 2500m,
@@ -128,14 +129,14 @@ public class MonthlyBudgetTransactionTests
     [Fact]
     public async Task EditingTransactionDate_MovesItToNewMonthAutomatically()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
         // Create transaction in October
-        var tx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto tx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 10, 20),
             Amount = 75m,
@@ -153,12 +154,12 @@ public class MonthlyBudgetTransactionTests
         });
 
         // Check October: should be empty
-        var octSheet = await service.GetSheetAsync(UserId, 2026, 10);
+        MonthlyBudgetSheetDto octSheet = await service.GetSheetAsync(UserId, 2026, 10);
         Assert.Empty(octSheet.Transactions);
         Assert.Equal(0m, octSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id).Actual);
 
         // Check November: should have the transaction
-        var novSheet = await service.GetSheetAsync(UserId, 2026, 11);
+        MonthlyBudgetSheetDto novSheet = await service.GetSheetAsync(UserId, 2026, 11);
         Assert.Single(novSheet.Transactions);
         Assert.Equal(75m, novSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id).Actual);
     }
@@ -166,16 +167,16 @@ public class MonthlyBudgetTransactionTests
     [Fact]
     public async Task CannotCreateOrAssignTransaction_ToArchivedCategory()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
-        var customCat = await service.CreateCategoryAsync(UserId,
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId,
             new SaveCategoryRequest { Name = "Gym", Kind = BudgetCategoryKind.Expense, SortOrder = 100 });
 
         // Create transaction in active category first
-        var tx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto tx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 10, 10),
             Amount = 30m,
@@ -210,16 +211,16 @@ public class MonthlyBudgetTransactionTests
     [Fact]
     public async Task Transaction_OwnershipIsolation_PreventsCrossUserAccess()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
         await service.EnsureDefaultCategoriesAsync(OtherUserId);
 
-        var myFood = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
-        var otherFood = await db.BudgetCategories.FirstAsync(c => c.UserId == OtherUserId && c.Name == "Food");
+        BudgetCategory myFood = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory otherFood = await db.BudgetCategories.FirstAsync(c => c.UserId == OtherUserId && c.Name == "Food");
 
         // User creates transaction
-        var tx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto tx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 10, 15),
             Amount = 100m,
@@ -254,13 +255,13 @@ public class MonthlyBudgetTransactionTests
     [Fact]
     public async Task UpdateTransaction_SetsUpdatedAt_AndDeleteSoftDeletes()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
-        var tx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+        BudgetTransactionDto tx = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
         {
             Date = new DateOnly(2026, 10, 10),
             Amount = 20m,
@@ -268,7 +269,7 @@ public class MonthlyBudgetTransactionTests
             CategoryId = food.Id
         });
 
-        var stored = await db.BudgetTransactions.SingleAsync(t => t.Id == tx.Id);
+        BudgetTransaction stored = await db.BudgetTransactions.SingleAsync(t => t.Id == tx.Id);
         Assert.Null(stored.UpdatedAt);
 
         await service.UpdateTransactionAsync(UserId, tx.Id, new SaveTransactionRequest
@@ -283,7 +284,7 @@ public class MonthlyBudgetTransactionTests
         Assert.Equal(22m, stored.Amount);
 
         await service.DeleteTransactionAsync(UserId, tx.Id);
-        var deleted = await db.BudgetTransactions.IgnoreQueryFilters().SingleAsync(t => t.Id == tx.Id);
+        BudgetTransaction deleted = await db.BudgetTransactions.IgnoreQueryFilters().SingleAsync(t => t.Id == tx.Id);
         Assert.True(deleted.IsDeleted);
         Assert.NotNull(deleted.DeletedAt);
     }

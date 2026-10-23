@@ -7,9 +7,9 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Admin;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models;
 using ApiException = Refit.ApiException;
-using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -66,14 +66,14 @@ public class AdminController : Controller
     {
         try
         {
-            var items = await _feedbackApi.ListAsync(status, cancellationToken);
+            List<FeedbackAdminItemDto> items = await _feedbackApi.ListAsync(status, cancellationToken);
             return View(new AdminFeedbackInboxViewModel { Items = items, Status = status });
         }
         catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
                                    && !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Failed to load the Feedback inbox.");
-            var retryRouteValues = status is null
+            Dictionary<string, string> retryRouteValues = status is null
                 ? new Dictionary<string, string>()
                 : new Dictionary<string, string> { ["status"] = status.Value.ToString() };
             return this.UnavailableView("Feedback inbox", "We couldn't load the Feedback inbox", "Admin",

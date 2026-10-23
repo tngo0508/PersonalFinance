@@ -85,7 +85,7 @@ public class AdminController : ControllerBase
     [HttpDelete("users/{userId}/roles/{roleName}")]
     public async Task<IActionResult> RemoveRole(string userId, string roleName)
     {
-        var actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        string actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         return ToActionResult(await _adminService.RemoveRoleAsync(actingUserId, userId, roleName));
     }
 

@@ -57,7 +57,7 @@ public static class BudgetSpreadsheetParser
             return Unavailable(fileName, fileId, "The spreadsheet is empty.");
         }
 
-        var rows = ParseCsvTable(contentOrCsv);
+        List<List<string>> rows = ParseCsvTable(contentOrCsv);
         if (rows.Count == 0)
         {
             return Unavailable(fileName, fileId, "The spreadsheet has no rows.");
@@ -81,28 +81,28 @@ public static class BudgetSpreadsheetParser
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
 
             // 1. Extract shared strings table
-            var sharedStrings = ReadSharedStrings(archive);
+            List<string> sharedStrings = ReadSharedStrings(archive);
 
             // 2. Map sheet names and worksheet entries
-            var sheetEntries = GetWorksheetEntriesWithNames(archive);
+            List<(string SheetName, ZipArchiveEntry Entry)> sheetEntries = GetWorksheetEntriesWithNames(archive);
             if (sheetEntries.Count == 0)
             {
                 return Unavailable(fileName, fileId, "The workbook has no worksheets.");
             }
 
-            var summarySheet = sheetEntries.FirstOrDefault(s => IsSummarySheetName(s.SheetName));
+            (string SheetName, ZipArchiveEntry Entry) summarySheet = sheetEntries.FirstOrDefault(s => IsSummarySheetName(s.SheetName));
             var transactionSheets = sheetEntries.Where(s => IsTransactionSheetName(s.SheetName)).ToList();
 
             if (summarySheet.Entry != null)
             {
-                var summaryRows = ParseWorksheetRows(summarySheet.Entry, sharedStrings);
-                var report = ParseSpreadsheetRows(summaryRows, fileName, fileId, dataSource);
+                List<List<string>> summaryRows = ParseWorksheetRows(summarySheet.Entry, sharedStrings);
+                MonthlyBudgetReportDto report = ParseSpreadsheetRows(summaryRows, fileName, fileId, dataSource);
 
                 if (transactionSheets.Count > 0)
                 {
-                    foreach (var txSheet in transactionSheets)
+                    foreach ((string SheetName, ZipArchiveEntry Entry) txSheet in transactionSheets)
                     {
-                        var txRows = ParseWorksheetRows(txSheet.Entry, sharedStrings);
+                        List<List<string>> txRows = ParseWorksheetRows(txSheet.Entry, sharedStrings);
                         EnrichReportWithTransactions(report, txRows);
                     }
                 }
@@ -111,9 +111,9 @@ public static class BudgetSpreadsheetParser
             }
 
             var allRows = new List<List<string>>();
-            foreach (var (_, wsEntry) in sheetEntries)
+            foreach ((string _, ZipArchiveEntry? wsEntry) in sheetEntries)
             {
-                var wsRows = ParseWorksheetRows(wsEntry, sharedStrings);
+                List<List<string>> wsRows = ParseWorksheetRows(wsEntry, sharedStrings);
                 allRows.AddRange(wsRows);
             }
 
@@ -150,18 +150,18 @@ public static class BudgetSpreadsheetParser
         try
         {
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
-            var sharedStrings = ReadSharedStrings(archive);
-            var sheetEntries = GetWorksheetEntriesWithNames(archive);
+            List<string> sharedStrings = ReadSharedStrings(archive);
+            List<(string SheetName, ZipArchiveEntry Entry)> sheetEntries = GetWorksheetEntriesWithNames(archive);
 
             var preferredSheets = sheetEntries.Where(s => IsTransactionSheetName(s.SheetName)).ToList();
             var otherSheets = sheetEntries.Except(preferredSheets).ToList();
 
-            foreach (var candidates in new[] { preferredSheets, otherSheets })
+            foreach (List<(string SheetName, ZipArchiveEntry Entry)>? candidates in new[] { preferredSheets, otherSheets })
             {
                 var sheetNames = new List<string>();
-                foreach (var (sheetName, entry) in candidates)
+                foreach ((string? sheetName, ZipArchiveEntry? entry) in candidates)
                 {
-                    var transactions = ParseTransactionRows(ParseWorksheetRows(entry, sharedStrings));
+                    List<SpreadsheetTransactionDto> transactions = ParseTransactionRows(ParseWorksheetRows(entry, sharedStrings));
                     if (transactions.Count == 0) continue;
 
                     result.Transactions.AddRange(transactions);
@@ -226,7 +226,7 @@ public static class BudgetSpreadsheetParser
 
         for (int r = 0; r < rows.Count; r++)
         {
-            var headerTables = DetectTransactionTables(rows, r);
+            List<TransactionTableLayout> headerTables = DetectTransactionTables(rows, r);
             if (headerTables.Count > 0)
             {
                 ApplySignBasedTypes(tables);
@@ -234,9 +234,9 @@ public static class BudgetSpreadsheetParser
                 continue;
             }
 
-            foreach (var table in tables)
+            foreach (TransactionTableLayout table in tables)
             {
-                var tx = ReadTransaction(rows[r], table);
+                SpreadsheetTransactionDto? tx = ReadTransaction(rows[r], table);
                 if (tx != null)
                 {
                     table.Transactions.Add(tx);
@@ -252,19 +252,19 @@ public static class BudgetSpreadsheetParser
     private static List<TransactionTableLayout> DetectTransactionTables(List<List<string>> rows, int headerRow)
     {
         var tables = new List<TransactionTableLayout>();
-        var row = rows[headerRow];
+        List<string> row = rows[headerRow];
         var dateCols = Enumerable.Range(0, row.Count).Where(i => IsDateHeader(row[i])).ToList();
 
         for (int t = 0; t < dateCols.Count; t++)
         {
-            var start = dateCols[t];
-            var end = t + 1 < dateCols.Count ? dateCols[t + 1] - 1 : row.Count - 1;
+            int start = dateCols[t];
+            int end = t + 1 < dateCols.Count ? dateCols[t + 1] - 1 : row.Count - 1;
 
             int Find(Func<string, bool> predicate) =>
                 Enumerable.Range(start, end - start + 1)
                     .FirstOrDefault(i => i != start && predicate(row[i].Trim().ToLowerInvariant()), -1);
 
-            var amountCol = Find(h => h.Contains("amount") || h is "amt" or "cost" or "price" or "value");
+            int amountCol = Find(h => h.Contains("amount") || h is "amt" or "cost" or "price" or "value");
             if (amountCol < 0) continue;
 
             tables.Add(new TransactionTableLayout
@@ -285,7 +285,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsDateHeader(string text)
     {
-        var lower = text.Trim().ToLowerInvariant();
+        string lower = text.Trim().ToLowerInvariant();
         return lower == "date" || lower.EndsWith(" date", StringComparison.Ordinal);
     }
 
@@ -295,10 +295,10 @@ public static class BudgetSpreadsheetParser
     {
         for (int r = headerRow - 1; r >= Math.Max(0, headerRow - 3); r--)
         {
-            var row = rows[r];
+            List<string> row = rows[r];
             for (int c = startCol; c <= Math.Min(endCol, row.Count - 1); c++)
             {
-                var type = ClassifyTypeText(row[c]);
+                string? type = ClassifyTypeText(row[c]);
                 if (type != null) return type;
             }
         }
@@ -308,7 +308,7 @@ public static class BudgetSpreadsheetParser
 
     private static string? ClassifyTypeText(string text)
     {
-        var lower = text.Trim().ToLowerInvariant();
+        string lower = text.Trim().ToLowerInvariant();
         if (lower.Length == 0) return null;
         if (lower.Contains("income") || lower.Contains("deposit") || lower.Contains("credit"))
             return SpreadsheetTransactionDto.IncomeType;
@@ -321,11 +321,11 @@ public static class BudgetSpreadsheetParser
     {
         string Cell(int col) => col >= 0 && col < row.Count ? row[col].Trim() : string.Empty;
 
-        if (!TryParseDecimal(Cell(table.AmountCol), out var amount)) return null;
+        if (!TryParseDecimal(Cell(table.AmountCol), out decimal amount)) return null;
 
-        var dateText = Cell(table.DateCol);
-        var description = Cell(table.DescriptionCol);
-        var category = Cell(table.CategoryCol);
+        string dateText = Cell(table.DateCol);
+        string description = Cell(table.DescriptionCol);
+        string category = Cell(table.CategoryCol);
         if (dateText.Length == 0 && description.Length == 0 && category.Length == 0) return null;
         // Only "Total..." for descriptions: IsTotalRow's "Net"/"Sum" prefixes would drop payees like "Netflix"
         if (IsTotalRow(dateText) || description.StartsWith("Total", StringComparison.OrdinalIgnoreCase)) return null;
@@ -345,11 +345,11 @@ public static class BudgetSpreadsheetParser
 
     private static void ApplySignBasedTypes(List<TransactionTableLayout> tables)
     {
-        foreach (var table in tables.Where(t => t.SectionType == null && t.TypeCol < 0))
+        foreach (TransactionTableLayout? table in tables.Where(t => t.SectionType == null && t.TypeCol < 0))
         {
             if (!table.Transactions.Any(t => t.Amount < 0)) continue;
 
-            foreach (var tx in table.Transactions)
+            foreach (SpreadsheetTransactionDto tx in table.Transactions)
             {
                 tx.Type = tx.Amount < 0 ? SpreadsheetTransactionDto.ExpenseType : SpreadsheetTransactionDto.IncomeType;
                 tx.Amount = Math.Abs(tx.Amount);
@@ -363,12 +363,12 @@ public static class BudgetSpreadsheetParser
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
 
-        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var serial))
+        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double serial))
         {
             return serial is >= 1 and < 2958466 ? DateTime.FromOADate(serial).Date : null;
         }
 
-        if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ||
+        if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date) ||
             DateTime.TryParse(text, CultureInfo.CurrentCulture, DateTimeStyles.None, out date))
         {
             return date.Date;
@@ -380,16 +380,16 @@ public static class BudgetSpreadsheetParser
     private static List<string> ReadSharedStrings(ZipArchive archive)
     {
         var sharedStrings = new List<string>();
-        var sharedStringsEntry = archive.GetEntry("xl/sharedStrings.xml");
+        ZipArchiveEntry? sharedStringsEntry = archive.GetEntry("xl/sharedStrings.xml");
         if (sharedStringsEntry == null) return sharedStrings;
 
-        using var ssStream = sharedStringsEntry.Open();
+        using Stream ssStream = sharedStringsEntry.Open();
         var ssDoc = XDocument.Load(ssStream);
-        var ns = ssDoc.Root?.Name.Namespace ?? XNamespace.None;
-        foreach (var si in ssDoc.Descendants(ns + "si"))
+        XNamespace ns = ssDoc.Root?.Name.Namespace ?? XNamespace.None;
+        foreach (XElement si in ssDoc.Descendants(ns + "si"))
         {
             var sb = new StringBuilder();
-            foreach (var t in si.Descendants(ns + "t"))
+            foreach (XElement t in si.Descendants(ns + "t"))
             {
                 sb.Append(t.Value);
             }
@@ -407,26 +407,26 @@ public static class BudgetSpreadsheetParser
     private static bool TryDetectYearFromRow(List<string> row, out int year)
     {
         year = 0;
-        var currentYear = DateTime.UtcNow.Year;
+        int currentYear = DateTime.UtcNow.Year;
 
-        foreach (var cell in row)
+        foreach (string cell in row)
         {
             if (string.IsNullOrWhiteSpace(cell))
             {
                 continue;
             }
 
-            var text = cell.Trim();
-            var isPlainYear = Regex.IsMatch(text, @"^20\d{2}$");
-            var isTextOrDate = !Regex.IsMatch(text, @"^[\p{Sc}\s\d,.\-+()%]+$");
+            string text = cell.Trim();
+            bool isPlainYear = Regex.IsMatch(text, @"^20\d{2}$");
+            bool isTextOrDate = !Regex.IsMatch(text, @"^[\p{Sc}\s\d,.\-+()%]+$");
             if (!isPlainYear && !isTextOrDate)
             {
                 continue;
             }
 
-            var match = Regex.Match(text, @"(?<![\d.,$])(20\d{2})(?![\d,]|\.\d)");
+            Match match = Regex.Match(text, @"(?<![\d.,$])(20\d{2})(?![\d,]|\.\d)");
             if (match.Success
-                && int.TryParse(match.Groups[1].Value, out var parsed)
+                && int.TryParse(match.Groups[1].Value, out int parsed)
                 && parsed >= currentYear - 15
                 && parsed <= currentYear + 5)
             {
@@ -448,14 +448,14 @@ public static class BudgetSpreadsheetParser
         string? fileId,
         string dataSource)
     {
-        var cleanName = string.IsNullOrWhiteSpace(fileName) ? "Monthly budget.xlsx" : fileName.Trim();
-        var yearMatch = Regex.Match(cleanName, @"\b(20\d{2})\b");
-        var year = yearMatch.Success && int.TryParse(yearMatch.Value, out var parsedYear)
+        string cleanName = string.IsNullOrWhiteSpace(fileName) ? "Monthly budget.xlsx" : fileName.Trim();
+        Match yearMatch = Regex.Match(cleanName, @"\b(20\d{2})\b");
+        int year = yearMatch.Success && int.TryParse(yearMatch.Value, out int parsedYear)
             ? parsedYear
             : DateTime.UtcNow.Year;
-        var fileNameMonth = DetectMonthFromText(cleanName);
+        int? fileNameMonth = DetectMonthFromText(cleanName);
 
-        var title = fileNameMonth.HasValue
+        string title = fileNameMonth.HasValue
             ? $"Monthly Budget Summary ({MonthNames[fileNameMonth.Value - 1]} {year})"
             : $"Monthly Budget Summary ({year})";
 
@@ -507,17 +507,17 @@ public static class BudgetSpreadsheetParser
         int targetMonth = fileNameMonth ?? 1; // Default to detected fileNameMonth or January
 
         // First pass: scan for year or month hints
-        foreach (var row in rows)
+        foreach (List<string> row in rows)
         {
-            var combinedRowText = string.Join(" ", row).Trim();
-            var detectedMonth = DetectMonthFromText(combinedRowText);
+            string combinedRowText = string.Join(" ", row).Trim();
+            int? detectedMonth = DetectMonthFromText(combinedRowText);
             if (detectedMonth.HasValue && !fileNameMonth.HasValue)
             {
                 targetMonth = detectedMonth.Value;
             }
 
             // A year in the file name is authoritative; sheet content is only a fallback hint.
-            if (!yearMatch.Success && TryDetectYearFromRow(row, out var yr))
+            if (!yearMatch.Success && TryDetectYearFromRow(row, out int yr))
             {
                 report.Year = yr;
                 report.Title = fileNameMonth.HasValue
@@ -527,15 +527,15 @@ public static class BudgetSpreadsheetParser
         }
 
         // Second pass: Parse rows
-        foreach (var rawRow in rows)
+        foreach (List<string> rawRow in rows)
         {
             var row = rawRow.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).ToList();
             if (row.Count == 0) continue;
 
-            var firstCol = row[0];
+            string firstCol = row[0];
 
             // Section switchers (Income vs Expenses) when there are no numbers
-            var allRowNumbers = ExtractDecimalsFromRow(row.Skip(1));
+            List<decimal> allRowNumbers = ExtractDecimalsFromRow(row.Skip(1));
 
             if (IsIncomeSectionHeader(firstCol) && allRowNumbers.Count == 0)
             {
@@ -550,7 +550,7 @@ public static class BudgetSpreadsheetParser
             }
 
             // Month row switcher (e.g. "Month: February" or "February 2026")
-            var monthFromRow = DetectMonthFromText(firstCol);
+            int? monthFromRow = DetectMonthFromText(firstCol);
             if (monthFromRow.HasValue && allRowNumbers.Count == 0 && !fileNameMonth.HasValue)
             {
                 targetMonth = monthFromRow.Value;
@@ -560,17 +560,17 @@ public static class BudgetSpreadsheetParser
             // Check if transaction row e.g. [Date, Amount, Description, Category]
             if (row.Count >= 2 && (IsTransactionDate(firstCol) || (row.Count >= 3 && IsTransactionDate(row[1]))))
             {
-                var txNums = ExtractDecimalsFromRow(row);
+                List<decimal> txNums = ExtractDecimalsFromRow(row);
                 if (txNums.Count > 0)
                 {
-                    var amount = txNums[0];
+                    decimal amount = txNums[0];
                     var textCells = row.Where(c => !TryParseDecimal(c, out _) && !IsTransactionDate(c)).ToList();
                     if (textCells.Count > 0)
                     {
-                        var catName = CleanCategoryName(textCells.Last());
+                        string catName = CleanCategoryName(textCells.Last());
                         if (!string.IsNullOrWhiteSpace(catName) && !IsIgnoredHeaderText(catName))
                         {
-                            var existingCat = monthlyExpenseCategories[targetMonth].FirstOrDefault(c =>
+                            MonthlyBudgetCategoryItemDto? existingCat = monthlyExpenseCategories[targetMonth].FirstOrDefault(c =>
                                 c.CategoryName.Equals(catName, StringComparison.OrdinalIgnoreCase));
                             if (existingCat != null)
                             {
@@ -594,12 +594,12 @@ public static class BudgetSpreadsheetParser
             }
 
             // Extract row segments (handles single columns, side-by-side columns, key-value rows)
-            var segments = ExtractRowSegments(row);
+            List<(string Name, List<decimal> Numbers)> segments = ExtractRowSegments(row);
 
-            foreach (var segment in segments)
+            foreach ((string Name, List<decimal> Numbers) segment in segments)
             {
-                var name = segment.Name;
-                var nums = segment.Numbers;
+                string name = segment.Name;
+                List<decimal> nums = segment.Numbers;
 
                 // 1. Starting Balance
                 if (IsStartBalanceText(name))
@@ -715,10 +715,10 @@ public static class BudgetSpreadsheetParser
                 }
 
                 // 9. Monthly Matrix Row: [MonthName, BudgetIncome, ActualIncome, BudgetExpenses, ActualExpenses]
-                var segMonth = DetectMonthFromText(name);
+                int? segMonth = DetectMonthFromText(name);
                 if (segMonth.HasValue && nums.Count >= 2)
                 {
-                    var mIdx = fileNameMonth ?? segMonth.Value;
+                    int mIdx = fileNameMonth ?? segMonth.Value;
                     if (nums.Count >= 4)
                     {
                         explicitIncomeSummary[mIdx] = (nums[0], nums[1]);
@@ -736,9 +736,9 @@ public static class BudgetSpreadsheetParser
                 // 10. Category Item
                 if (nums.Count > 0 && !IsTotalRow(name))
                 {
-                    var categoryName = CleanCategoryName(name);
-                    var budgeted = nums[0];
-                    var actual = nums.Count > 1 ? nums[1] : budgeted;
+                    string categoryName = CleanCategoryName(name);
+                    decimal budgeted = nums[0];
+                    decimal actual = nums.Count > 1 ? nums[1] : budgeted;
 
                     if (currentSection == "Income" || IsIncomeCategory(categoryName))
                     {
@@ -765,7 +765,7 @@ public static class BudgetSpreadsheetParser
         }
 
         // Reconcile and calculate final monthly summaries
-        var hasAnyParsedData = explicitIncomeSummary.Values.Any(v => v.HasValue) ||
+        bool hasAnyParsedData = explicitIncomeSummary.Values.Any(v => v.HasValue) ||
                                explicitExpenseSummary.Values.Any(v => v.HasValue) ||
                                explicitNetSavings.Values.Any(v => v.HasValue) ||
                                plannedIncomePart.Values.Any(v => v.HasValue) ||
@@ -789,7 +789,7 @@ public static class BudgetSpreadsheetParser
 
         for (int m = startM; m <= endM; m++)
         {
-            var mName = MonthNames[m - 1];
+            string mName = MonthNames[m - 1];
 
             // Reconcile Income (Planned & Actual)
             decimal bInc = 0m;
@@ -800,7 +800,7 @@ public static class BudgetSpreadsheetParser
 
             if (explicitIncomeSummary[m].HasValue)
             {
-                var summary = explicitIncomeSummary[m]!.Value;
+                (decimal Budget, decimal Actual) summary = explicitIncomeSummary[m]!.Value;
                 if (bInc == 0) bInc = summary.Budget;
                 if (aInc == 0) aInc = summary.Actual;
             }
@@ -817,11 +817,11 @@ public static class BudgetSpreadsheetParser
             if (plannedExpensePart[m].HasValue) bExp = plannedExpensePart[m]!.Value;
             if (actualExpensePart[m].HasValue) aExp = actualExpensePart[m]!.Value;
 
-            var cats = monthlyExpenseCategories[m];
+            List<MonthlyBudgetCategoryItemDto> cats = monthlyExpenseCategories[m];
 
             if (explicitExpenseSummary[m].HasValue)
             {
-                var summary = explicitExpenseSummary[m]!.Value;
+                (decimal Budget, decimal Actual) summary = explicitExpenseSummary[m]!.Value;
                 if (bExp == 0) bExp = summary.Budget;
                 if (aExp == 0) aExp = summary.Actual;
             }
@@ -832,13 +832,13 @@ public static class BudgetSpreadsheetParser
             }
 
             // Balances
-            var startBal = monthlyStartBalance[m];
-            var endBal = monthlyEndBalance[m];
+            decimal? startBal = monthlyStartBalance[m];
+            decimal? endBal = monthlyEndBalance[m];
 
             // If income or expense not set, but start and end balances exist
             if (aInc == 0 && aExp == 0 && startBal.HasValue && endBal.HasValue)
             {
-                var diff = endBal.Value - startBal.Value;
+                decimal diff = endBal.Value - startBal.Value;
                 if (diff >= 0)
                 {
                     aInc = diff;
@@ -891,11 +891,11 @@ public static class BudgetSpreadsheetParser
         string currentName = string.Empty;
         var currentNumbers = new List<decimal>();
 
-        foreach (var cell in row)
+        foreach (string cell in row)
         {
             if (string.IsNullOrWhiteSpace(cell)) continue;
 
-            if (TryParseDecimal(cell, out var val))
+            if (TryParseDecimal(cell, out decimal val))
             {
                 if (string.IsNullOrEmpty(currentName))
                 {
@@ -926,7 +926,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsStartBalanceText(string text)
     {
-        var clean = text.ToLowerInvariant().Replace(" ", "").Replace("_", "").Replace("-", "");
+        string clean = text.ToLowerInvariant().Replace(" ", "").Replace("_", "").Replace("-", "");
         return clean.Contains("startbalance") || clean.Contains("startingbalance") ||
                clean.Contains("initialbalance") || clean.Contains("beginningbalance") ||
                clean.Contains("openingbalance") || clean.Contains("startbal") || clean.Contains("startingbal");
@@ -934,7 +934,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsEndBalanceText(string text)
     {
-        var clean = text.ToLowerInvariant().Replace(" ", "").Replace("_", "").Replace("-", "");
+        string clean = text.ToLowerInvariant().Replace(" ", "").Replace("_", "").Replace("-", "");
         return clean.Contains("endbalance") || clean.Contains("endingbalance") ||
                clean.Contains("finalbalance") || clean.Contains("closingbalance") ||
                clean.Contains("endbal") || clean.Contains("endingbal");
@@ -942,7 +942,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsNetSavingsText(string text)
     {
-        var lower = text.ToLowerInvariant();
+        string lower = text.ToLowerInvariant();
         return lower.Contains("net savings") || lower.Contains("net income") || lower.Contains("net surplus") ||
                lower.Contains("increase in total savings") || lower.Contains("decrease in total savings") ||
                lower.Contains("increase in savings") || lower.Contains("decrease in savings") ||
@@ -955,7 +955,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsTotalIncomeText(string text)
     {
-        var lower = text.ToLowerInvariant();
+        string lower = text.ToLowerInvariant();
         return lower.Contains("total income") || lower.Contains("income total") ||
                lower.Contains("total revenue") || lower.Contains("total earnings") ||
                lower.Contains("total paycheck") || lower.Contains("incomes total") ||
@@ -966,7 +966,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsTotalExpenseText(string text)
     {
-        var lower = text.ToLowerInvariant();
+        string lower = text.ToLowerInvariant();
         return lower.Contains("total expense") || lower.Contains("total expenses") ||
                lower.Contains("expenses total") || lower.Contains("expense total") ||
                lower.Contains("total spending") || lower.Contains("total outflow") ||
@@ -979,21 +979,21 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsIncomeSectionHeader(string text)
     {
-        var lower = text.ToLowerInvariant().Trim();
+        string lower = text.ToLowerInvariant().Trim();
         return lower == "income" || lower == "incomes" || lower == "income:" || lower == "earnings" ||
                lower == "revenue";
     }
 
     private static bool IsExpenseSectionHeader(string text)
     {
-        var lower = text.ToLowerInvariant().Trim();
+        string lower = text.ToLowerInvariant().Trim();
         return lower == "expenses" || lower == "expense" || lower == "expense:" || lower == "expenses:" ||
                lower == "spending" || lower == "outflows";
     }
 
     private static bool IsIncomeCategory(string name)
     {
-        var lower = name.ToLowerInvariant();
+        string lower = name.ToLowerInvariant();
         return lower.Contains("income") || lower.Contains("salary") || lower.Contains("paycheck") ||
                lower.Contains("wage") || lower.Contains("bonus") || lower.Contains("dividend") ||
                lower.Contains("freelance") || lower.Contains("consulting") || lower.Contains("interest") ||
@@ -1002,7 +1002,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsIgnoredHeaderText(string text)
     {
-        var lower = text.ToLowerInvariant().Trim();
+        string lower = text.ToLowerInvariant().Trim();
         return lower == "category" || lower == "item" || lower == "description" ||
                lower == "month" || lower == "date" || lower == "difference" || lower == "diff" ||
                lower == "planned" || lower == "actual" || lower == "budgeted" || lower == "variance" ||
@@ -1013,7 +1013,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsSummarySheetName(string name)
     {
-        var lower = name.ToLowerInvariant().Trim();
+        string lower = name.ToLowerInvariant().Trim();
         return lower == "summary" || lower == "budget summary" || lower == "overview" ||
                lower == "monthly budget" || lower == "budget" || lower == "annual summary" ||
                lower.Contains("summary");
@@ -1021,7 +1021,7 @@ public static class BudgetSpreadsheetParser
 
     private static bool IsTransactionSheetName(string name)
     {
-        var lower = name.ToLowerInvariant().Trim();
+        string lower = name.ToLowerInvariant().Trim();
         return lower == "transaction" || lower == "transactions" || lower == "expenses" ||
                lower == "expense log" || lower == "transaction log" || lower.Contains("transaction");
     }
@@ -1029,40 +1029,40 @@ public static class BudgetSpreadsheetParser
     private static List<(string SheetName, ZipArchiveEntry Entry)> GetWorksheetEntriesWithNames(ZipArchive archive)
     {
         var result = new List<(string SheetName, ZipArchiveEntry Entry)>();
-        var workbookEntry = archive.GetEntry("xl/workbook.xml");
-        var workbookRelsEntry = archive.GetEntry("xl/_rels/workbook.xml.rels");
+        ZipArchiveEntry? workbookEntry = archive.GetEntry("xl/workbook.xml");
+        ZipArchiveEntry? workbookRelsEntry = archive.GetEntry("xl/_rels/workbook.xml.rels");
 
         if (workbookEntry != null && workbookRelsEntry != null)
         {
             try
             {
-                using var wbStream = workbookEntry.Open();
+                using Stream wbStream = workbookEntry.Open();
                 var wbDoc = XDocument.Load(wbStream);
-                var wbNs = wbDoc.Root?.Name.Namespace ?? XNamespace.None;
-                var rNs = wbDoc.Root?.GetNamespaceOfPrefix("r") ??
+                XNamespace wbNs = wbDoc.Root?.Name.Namespace ?? XNamespace.None;
+                XNamespace rNs = wbDoc.Root?.GetNamespaceOfPrefix("r") ??
                           XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
 
-                using var relsStream = workbookRelsEntry.Open();
+                using Stream relsStream = workbookRelsEntry.Open();
                 var relsDoc = XDocument.Load(relsStream);
-                var relsNs = relsDoc.Root?.Name.Namespace ?? XNamespace.None;
+                XNamespace relsNs = relsDoc.Root?.Name.Namespace ?? XNamespace.None;
 
                 var relMap = relsDoc.Descendants(relsNs + "Relationship")
                     .Where(r => r.Attribute("Id") != null && r.Attribute("Target") != null)
                     .ToDictionary(r => r.Attribute("Id")!.Value, r => r.Attribute("Target")!.Value);
 
-                foreach (var sheetElem in wbDoc.Descendants(wbNs + "sheet"))
+                foreach (XElement sheetElem in wbDoc.Descendants(wbNs + "sheet"))
                 {
-                    var sheetName = sheetElem.Attribute("name")?.Value ?? string.Empty;
-                    var rId = sheetElem.Attribute(rNs + "id")?.Value ?? string.Empty;
-                    if (relMap.TryGetValue(rId, out var target))
+                    string sheetName = sheetElem.Attribute("name")?.Value ?? string.Empty;
+                    string rId = sheetElem.Attribute(rNs + "id")?.Value ?? string.Empty;
+                    if (relMap.TryGetValue(rId, out string? target))
                     {
-                        var cleanTarget = target.TrimStart('/');
+                        string cleanTarget = target.TrimStart('/');
                         if (!cleanTarget.StartsWith("xl/", StringComparison.OrdinalIgnoreCase))
                         {
                             cleanTarget = "xl/" + cleanTarget;
                         }
 
-                        var wsEntry = archive.GetEntry(cleanTarget) ?? archive.Entries.FirstOrDefault(e =>
+                        ZipArchiveEntry? wsEntry = archive.GetEntry(cleanTarget) ?? archive.Entries.FirstOrDefault(e =>
                             e.FullName.Equals(cleanTarget, StringComparison.OrdinalIgnoreCase));
                         if (wsEntry != null)
                         {
@@ -1085,7 +1085,7 @@ public static class BudgetSpreadsheetParser
                 .OrderBy(e => e.FullName)
                 .ToList();
 
-            foreach (var wsEntry in worksheetEntries)
+            foreach (ZipArchiveEntry? wsEntry in worksheetEntries)
             {
                 result.Add((Path.GetFileNameWithoutExtension(wsEntry.FullName), wsEntry));
             }
@@ -1097,24 +1097,24 @@ public static class BudgetSpreadsheetParser
     private static List<List<string>> ParseWorksheetRows(ZipArchiveEntry wsEntry, List<string> sharedStrings)
     {
         var rows = new List<List<string>>();
-        using var wsStream = wsEntry.Open();
+        using Stream wsStream = wsEntry.Open();
         var wsDoc = XDocument.Load(wsStream);
-        var ns = wsDoc.Root?.Name.Namespace ?? XNamespace.None;
+        XNamespace ns = wsDoc.Root?.Name.Namespace ?? XNamespace.None;
 
-        foreach (var rowElem in wsDoc.Descendants(ns + "row"))
+        foreach (XElement rowElem in wsDoc.Descendants(ns + "row"))
         {
             var rowCells = new List<(int Col, string Val)>();
-            foreach (var cellElem in rowElem.Elements(ns + "c"))
+            foreach (XElement cellElem in rowElem.Elements(ns + "c"))
             {
-                var cellRef = cellElem.Attribute("r")?.Value ?? string.Empty;
-                var colIdx = GetColumnIndexFromCellRef(cellRef);
-                var type = cellElem.Attribute("t")?.Value;
+                string cellRef = cellElem.Attribute("r")?.Value ?? string.Empty;
+                int colIdx = GetColumnIndexFromCellRef(cellRef);
+                string? type = cellElem.Attribute("t")?.Value;
 
                 string cellVal = string.Empty;
                 if (type == "s")
                 {
-                    var vVal = cellElem.Element(ns + "v")?.Value;
-                    if (int.TryParse(vVal, out var sIdx) && sIdx >= 0 && sIdx < sharedStrings.Count)
+                    string? vVal = cellElem.Element(ns + "v")?.Value;
+                    if (int.TryParse(vVal, out int sIdx) && sIdx >= 0 && sIdx < sharedStrings.Count)
                     {
                         cellVal = sharedStrings[sIdx];
                     }
@@ -1136,10 +1136,10 @@ public static class BudgetSpreadsheetParser
 
             if (rowCells.Count > 0)
             {
-                var maxCol = rowCells.Max(c => c.Col);
+                int maxCol = rowCells.Max(c => c.Col);
                 var rowList = new List<string>(new string[maxCol + 1]);
                 for (int i = 0; i <= maxCol; i++) rowList[i] = string.Empty;
-                foreach (var (col, val) in rowCells)
+                foreach ((int col, string? val) in rowCells)
                 {
                     rowList[col] = val;
                 }
@@ -1156,22 +1156,22 @@ public static class BudgetSpreadsheetParser
         // Extract transactions from rows: look for columns like [Date, Amount, Description, Category]
         var categoryTotals = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var rawRow in txRows)
+        foreach (List<string> rawRow in txRows)
         {
             var row = rawRow.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).ToList();
             if (row.Count < 2) continue;
             if (IsIgnoredHeaderText(row[0])) continue;
 
             // Find decimal amounts in row
-            var nums = ExtractDecimalsFromRow(row);
+            List<decimal> nums = ExtractDecimalsFromRow(row);
             if (nums.Count == 0) continue;
-            var amount = nums[0];
+            decimal amount = nums[0];
 
             // Find category text
             var textCells = row.Where(c => !TryParseDecimal(c, out _) && !IsTransactionDate(c)).ToList();
             if (textCells.Count == 0) continue;
 
-            var catName = CleanCategoryName(textCells.Last());
+            string catName = CleanCategoryName(textCells.Last());
             if (string.IsNullOrWhiteSpace(catName) || IsIgnoredHeaderText(catName)) continue;
 
             if (categoryTotals.ContainsKey(catName))
@@ -1187,11 +1187,11 @@ public static class BudgetSpreadsheetParser
         if (categoryTotals.Count == 0) return;
 
         // If report has months with zero actual expenses in categories, populate from aggregated transactions
-        foreach (var month in report.Months)
+        foreach (MonthlyBudgetMonthSummaryDto month in report.Months)
         {
-            foreach (var cat in month.Categories)
+            foreach (MonthlyBudgetCategoryItemDto cat in month.Categories)
             {
-                if (cat.ActualAmount == 0 && categoryTotals.TryGetValue(cat.CategoryName, out var actualTxAmount))
+                if (cat.ActualAmount == 0 && categoryTotals.TryGetValue(cat.CategoryName, out decimal actualTxAmount))
                 {
                     cat.ActualAmount = actualTxAmount;
                 }
@@ -1202,7 +1202,7 @@ public static class BudgetSpreadsheetParser
     private static bool IsTransactionDate(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
-        var trimmed = text.Trim();
+        string trimmed = text.Trim();
 
         // Must contain at least one digit (to distinguish from month/day names like "September", "Monday")
         if (!trimmed.Any(char.IsDigit))
@@ -1311,7 +1311,7 @@ public static class BudgetSpreadsheetParser
     /// </summary>
     public static string AssignCategoryColor(string categoryName)
     {
-        var lower = categoryName.ToLowerInvariant();
+        string lower = categoryName.ToLowerInvariant();
         if (lower.Contains("rent") || lower.Contains("house") || lower.Contains("mortgage") || lower.Contains("home"))
             return "#3b82f6";
         if (lower.Contains("groc") || lower.Contains("food") || lower.Contains("market")) return "#10b981";
@@ -1329,8 +1329,8 @@ public static class BudgetSpreadsheetParser
         if (lower.Contains("pers") || lower.Contains("cloth") || lower.Contains("misc")) return "#64748b";
 
         // Deterministic hash color fallback
-        var hash = Math.Abs(categoryName.GetHashCode());
-        var palette = new[]
+        int hash = Math.Abs(categoryName.GetHashCode());
+        string[] palette = new[]
         {
             "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#6366f1", "#14b8a6", "#f97316", "#84cc16"
         };
@@ -1343,9 +1343,9 @@ public static class BudgetSpreadsheetParser
 
         for (int i = 0; i < 12; i++)
         {
-            var mName = MonthNames[i];
-            var shortName = ShortMonthNames[i];
-            var pattern = i == 8
+            string mName = MonthNames[i];
+            string shortName = ShortMonthNames[i];
+            string pattern = i == 8
                 ? $@"\b(?:{mName}|Sept|{shortName})\b"
                 : $@"\b(?:{mName}|{shortName})\b";
 
@@ -1355,11 +1355,11 @@ public static class BudgetSpreadsheetParser
             }
         }
 
-        var match = Regex.Match(text, @"\b(?:20\d{2}[-_/.](0[1-9]|1[0-2])|(0[1-9]|1[0-2])[-_/.](20\d{2}))\b");
+        Match match = Regex.Match(text, @"\b(?:20\d{2}[-_/.](0[1-9]|1[0-2])|(0[1-9]|1[0-2])[-_/.](20\d{2}))\b");
         if (match.Success)
         {
-            var mStr = !string.IsNullOrEmpty(match.Groups[1].Value) ? match.Groups[1].Value : match.Groups[2].Value;
-            if (int.TryParse(mStr, out var mVal) && mVal >= 1 && mVal <= 12)
+            string mStr = !string.IsNullOrEmpty(match.Groups[1].Value) ? match.Groups[1].Value : match.Groups[2].Value;
+            if (int.TryParse(mStr, out int mVal) && mVal >= 1 && mVal <= 12)
             {
                 return mVal;
             }
@@ -1371,9 +1371,9 @@ public static class BudgetSpreadsheetParser
     private static List<decimal> ExtractDecimalsFromRow(IEnumerable<string> items)
     {
         var decimals = new List<decimal>();
-        foreach (var item in items)
+        foreach (string item in items)
         {
-            if (TryParseDecimal(item, out var val))
+            if (TryParseDecimal(item, out decimal val))
             {
                 decimals.Add(val);
             }
@@ -1387,7 +1387,7 @@ public static class BudgetSpreadsheetParser
         value = 0m;
         if (string.IsNullOrWhiteSpace(text)) return false;
 
-        var clean = text.Trim()
+        string clean = text.Trim()
             .Replace("$", "")
             .Replace("€", "")
             .Replace("£", "")
@@ -1407,7 +1407,7 @@ public static class BudgetSpreadsheetParser
 
     private static string CleanCategoryName(string raw)
     {
-        var clean = raw.Trim().Trim('"', '\'', '-', ':');
+        string clean = raw.Trim().Trim('"', '\'', '-', ':');
         return clean.Length > 50 ? clean.Substring(0, 50) : clean;
     }
 
@@ -1431,10 +1431,10 @@ public static class BudgetSpreadsheetParser
 
     private static int GetColumnIndexFromCellRef(string cellRef)
     {
-        var match = Regex.Match(cellRef, @"^[A-Z]+");
+        Match match = Regex.Match(cellRef, @"^[A-Z]+");
         if (!match.Success) return 0;
 
-        var colLetters = match.Value;
+        string colLetters = match.Value;
         int col = 0;
         foreach (char c in colLetters)
         {

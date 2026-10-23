@@ -11,13 +11,13 @@ using Serilog;
 Log.Logger = LoggingExtensions.CreateBootstrapLogger();
 
 // Captured once the host is built, so a cancellation during shutdown is not reported as a crash.
-var applicationStopping = CancellationToken.None;
+CancellationToken applicationStopping = CancellationToken.None;
 
 try
 {
     Log.Information("Starting {AppName} (v{Version})...", AppVersion.ApplicationName, AppVersion.Current);
 
-    var builder = WebApplication.CreateBuilder(args);
+    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
     AppCulture.ApplyDefault();
 
     // Platform: Aspire defaults (OpenTelemetry, health checks, service discovery, HttpClient resilience) and Serilog.
@@ -71,7 +71,7 @@ try
         });
     });
 
-    var app = builder.Build();
+    WebApplication app = builder.Build();
     applicationStopping = app.Lifetime.ApplicationStopping;
 
     app.UseExceptionHandler();

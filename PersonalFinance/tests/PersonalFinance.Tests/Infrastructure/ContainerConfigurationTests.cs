@@ -9,12 +9,12 @@ public class ContainerConfigurationTests
     [Fact]
     public void Dockerignore_ExistsAndContainsEssentialExclusions()
     {
-        var solutionRoot = DatabasePathHelper.GetSolutionRoot();
-        var dockerignorePath = Path.Combine(solutionRoot, ".dockerignore");
+        string solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        string dockerignorePath = Path.Combine(solutionRoot, ".dockerignore");
 
         Assert.True(File.Exists(dockerignorePath), "Root .dockerignore file must exist.");
 
-        var content = File.ReadAllText(dockerignorePath);
+        string content = File.ReadAllText(dockerignorePath);
 
         // Verify exclusions for build artifacts
         Assert.Contains("bin/", content);
@@ -36,13 +36,13 @@ public class ContainerConfigurationTests
     {
         // TargetFramework lives in PersonalFinance/Directory.Build.props; a Docker build context without it
         // fails restore with NETSDK1013 ("The TargetFramework value '' was not recognized").
-        var solutionRoot = DatabasePathHelper.GetSolutionRoot();
-        var dockerfile = File.ReadAllText(Path.Combine(solutionRoot, "PersonalFinance", "src", project, "Dockerfile"));
-        var restoreAt = dockerfile.IndexOf("dotnet restore", StringComparison.Ordinal);
+        string solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        string dockerfile = File.ReadAllText(Path.Combine(solutionRoot, "PersonalFinance", "src", project, "Dockerfile"));
+        int restoreAt = dockerfile.IndexOf("dotnet restore", StringComparison.Ordinal);
 
-        foreach (var file in new[] { "PersonalFinance/Directory.Build.props", "PersonalFinance/Directory.Packages.props" })
+        foreach (string? file in new[] { "PersonalFinance/Directory.Build.props", "PersonalFinance/Directory.Packages.props" })
         {
-            var copiedAt = dockerfile.IndexOf(file, StringComparison.Ordinal);
+            int copiedAt = dockerfile.IndexOf(file, StringComparison.Ordinal);
             Assert.True(copiedAt >= 0 && copiedAt < restoreAt, $"{project} Dockerfile must COPY {file} before dotnet restore.");
         }
     }
@@ -50,12 +50,12 @@ public class ContainerConfigurationTests
     [Fact]
     public void ApiService_Dockerfile_ExistsAndHasProperConfiguration()
     {
-        var solutionRoot = DatabasePathHelper.GetSolutionRoot();
-        var dockerfilePath = Path.Combine(solutionRoot, "PersonalFinance", "src", "PersonalFinance.ApiService", "Dockerfile");
+        string solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        string dockerfilePath = Path.Combine(solutionRoot, "PersonalFinance", "src", "PersonalFinance.ApiService", "Dockerfile");
 
         Assert.True(File.Exists(dockerfilePath), "ApiService Dockerfile must exist.");
 
-        var content = File.ReadAllText(dockerfilePath);
+        string content = File.ReadAllText(dockerfilePath);
 
         // Verify multi-stage structure & .NET 10
         Assert.Contains("FROM", content);
@@ -80,12 +80,12 @@ public class ContainerConfigurationTests
     [Fact]
     public void Web_Dockerfile_ExistsAndHasProperConfiguration()
     {
-        var solutionRoot = DatabasePathHelper.GetSolutionRoot();
-        var dockerfilePath = Path.Combine(solutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Dockerfile");
+        string solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        string dockerfilePath = Path.Combine(solutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Dockerfile");
 
         Assert.True(File.Exists(dockerfilePath), "Web Dockerfile must exist.");
 
-        var content = File.ReadAllText(dockerfilePath);
+        string content = File.ReadAllText(dockerfilePath);
 
         // Verify multi-stage structure & .NET 10
         Assert.Contains("FROM", content);

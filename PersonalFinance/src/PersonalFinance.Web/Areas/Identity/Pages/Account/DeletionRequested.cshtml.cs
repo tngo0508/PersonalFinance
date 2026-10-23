@@ -20,7 +20,7 @@ public class DeletionRequestedModel : PageModel
     public void OnGet(string? purgeAfter, bool emailSent = true)
     {
         PurgeAfter = DateTime.TryParseExact(purgeAfter, "yyyy-MM-dd", CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out var date)
+            DateTimeStyles.None, out DateTime date)
             ? date
             : null;
         EmailSent = emailSent;

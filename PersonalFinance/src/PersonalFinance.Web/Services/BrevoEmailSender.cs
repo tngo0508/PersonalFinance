@@ -45,7 +45,7 @@ public class BrevoEmailSender : IEmailSender
             htmlContent = htmlMessage
         };
 
-        var requestJson = JsonSerializer.Serialize(payload);
+        string requestJson = JsonSerializer.Serialize(payload);
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email")
         {
             Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
@@ -56,7 +56,7 @@ public class BrevoEmailSender : IEmailSender
 
         try
         {
-            var response = await _httpClient.SendAsync(request);
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {
@@ -67,7 +67,7 @@ public class BrevoEmailSender : IEmailSender
             }
             else
             {
-                var errorBody = await response.Content.ReadAsStringAsync();
+                string errorBody = await response.Content.ReadAsStringAsync();
                 _logger.LogError("Failed to send email to {ToEmail} via Brevo API. Status: {StatusCode}, Details: {Details}",
                     email, response.StatusCode, errorBody);
             }

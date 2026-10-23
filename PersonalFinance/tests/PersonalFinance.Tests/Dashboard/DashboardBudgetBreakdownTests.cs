@@ -25,7 +25,7 @@ public class DashboardBudgetBreakdownTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"DashboardBudget_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -33,7 +33,7 @@ public class DashboardBudgetBreakdownTests
 
     private static async Task<BudgetSummaryDto?> GetBudgetAsync(AppDbContext db, string userId = UserId)
     {
-        var summary =
+        DashboardSummaryDto summary =
             await new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(userId);
         return summary.Budget;
     }
@@ -59,11 +59,11 @@ public class DashboardBudgetBreakdownTests
     [Fact]
     public async Task Allocations_ConvertEachPercentToDollarsOfMonthlyIncome()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetAllocations.Add(FullyAllocatedBudget());
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
         var amounts = budget!.Allocations.ToDictionary(a => a.Name, a => a.Amount);
         Assert.Equal(1_500m, amounts["Housing"]);
@@ -75,16 +75,16 @@ public class DashboardBudgetBreakdownTests
     [Fact]
     public async Task Percent_IsDerivedFromTheStoredAmount_ForAnExactAmountThatIsNotAWholePercent()
     {
-        await using var db = CreateContext();
-        var allocation = FullyAllocatedBudget();
+        await using AppDbContext db = CreateContext();
+        UserBudgetAllocation allocation = FullyAllocatedBudget();
         allocation.MonthlyIncome = 3_700m;
         allocation.HousingAmount = 700m;
         db.UserBudgetAllocations.Add(allocation);
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
-        var housing = budget!.Allocations.Single(a => a.Name == "Housing");
+        BudgetAllocationDto housing = budget!.Allocations.Single(a => a.Name == "Housing");
         Assert.Equal(700m, housing.Amount);
         Assert.Equal(18.92m, Math.Round(housing.Percent, 2));
         Assert.Equal(18.92m, Math.Round(budget.HousingPercent!.Value, 2));
@@ -93,13 +93,13 @@ public class DashboardBudgetBreakdownTests
     [Fact]
     public async Task Percent_IsZeroForEveryCategory_WhenMonthlyIncomeIsZero()
     {
-        await using var db = CreateContext();
-        var allocation = FullyAllocatedBudget();
+        await using AppDbContext db = CreateContext();
+        UserBudgetAllocation allocation = FullyAllocatedBudget();
         allocation.MonthlyIncome = 0m;
         db.UserBudgetAllocations.Add(allocation);
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
         Assert.All(budget!.Allocations, a => Assert.Equal(0m, a.Percent));
         Assert.Equal(0m, budget.HousingPercent);
@@ -109,16 +109,16 @@ public class DashboardBudgetBreakdownTests
     [Fact]
     public async Task Allocations_ListAllTenCategoriesInBudgetPageOrder_IncludingZeroOnes()
     {
-        await using var db = CreateContext();
-        var allocation = FullyAllocatedBudget();
+        await using AppDbContext db = CreateContext();
+        UserBudgetAllocation allocation = FullyAllocatedBudget();
         allocation.EntertainmentAmount = 0m;
         db.UserBudgetAllocations.Add(allocation);
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
         Assert.Equal(ExpectedCategoryOrder, budget!.Allocations.Select(a => a.Name));
-        var entertainment = budget.Allocations.Single(a => a.Name == "Entertainment");
+        BudgetAllocationDto entertainment = budget.Allocations.Single(a => a.Name == "Entertainment");
         Assert.Equal(0m, entertainment.Percent);
         Assert.Equal(0m, entertainment.Amount);
     }
@@ -126,13 +126,13 @@ public class DashboardBudgetBreakdownTests
     [Fact]
     public async Task Unallocated_WhenAllocationsTotalUnder100Percent_IsTheRemainderInPercentAndDollars()
     {
-        await using var db = CreateContext();
-        var allocation = FullyAllocatedBudget();
+        await using AppDbContext db = CreateContext();
+        UserBudgetAllocation allocation = FullyAllocatedBudget();
         allocation.HousingAmount = 1_000m; // 20% of 5,000, so total is now 90%
         db.UserBudgetAllocations.Add(allocation);
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
         Assert.Equal(90m, budget!.TotalAllocatedPercent);
         Assert.Equal(10m, budget.UnallocatedPercent);
@@ -144,13 +144,13 @@ public class DashboardBudgetBreakdownTests
     [InlineData(45, 115)]
     public async Task Unallocated_WhenAllocationsTotal100PercentOrMore_IsAbsent(int housingPercent, int expectedTotal)
     {
-        await using var db = CreateContext();
-        var allocation = FullyAllocatedBudget();
+        await using AppDbContext db = CreateContext();
+        UserBudgetAllocation allocation = FullyAllocatedBudget();
         allocation.HousingAmount = housingPercent * 50m; // 1% of $5,000 income is $50
         db.UserBudgetAllocations.Add(allocation);
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
         Assert.Equal(expectedTotal, budget!.TotalAllocatedPercent);
         Assert.Null(budget.UnallocatedPercent);
@@ -160,17 +160,17 @@ public class DashboardBudgetBreakdownTests
     [Fact]
     public async Task Budget_UsesTheMostRecentPeriod_RegardlessOfInsertionOrder()
     {
-        await using var db = CreateContext();
-        var october = FullyAllocatedBudget(period: "2026-10");
+        await using AppDbContext db = CreateContext();
+        UserBudgetAllocation october = FullyAllocatedBudget(period: "2026-10");
         october.MonthlyIncome = 6_000m;
         october.HousingAmount = 1_800m; // amounts stay fixed when income changes
-        var lastYear = FullyAllocatedBudget(period: "2025-12");
+        UserBudgetAllocation lastYear = FullyAllocatedBudget(period: "2025-12");
         lastYear.MonthlyIncome = 9_000m;
         // Newest period inserted first, so the latest Id belongs to an older period.
         db.UserBudgetAllocations.AddRange(october, FullyAllocatedBudget(period: "2026-09"), lastYear);
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
         Assert.Equal("2026-10", budget!.Period);
         Assert.Equal(6_000m, budget.MonthlyIncome);
@@ -180,15 +180,15 @@ public class DashboardBudgetBreakdownTests
     [Fact]
     public async Task Budget_IgnoresOtherUsersAndSoftDeletedAllocations()
     {
-        await using var db = CreateContext();
-        var mine = FullyAllocatedBudget(period: "2026-08");
-        var otherUsers = FullyAllocatedBudget(OtherUserId, "2026-12");
-        var deleted = FullyAllocatedBudget(period: "2026-11");
+        await using AppDbContext db = CreateContext();
+        UserBudgetAllocation mine = FullyAllocatedBudget(period: "2026-08");
+        UserBudgetAllocation otherUsers = FullyAllocatedBudget(OtherUserId, "2026-12");
+        UserBudgetAllocation deleted = FullyAllocatedBudget(period: "2026-11");
         deleted.IsDeleted = true;
         db.UserBudgetAllocations.AddRange(mine, otherUsers, deleted);
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
         Assert.Equal("2026-08", budget!.Period);
         Assert.Null(await GetBudgetAsync(db, "user-without-budget"));
@@ -218,11 +218,11 @@ public class DashboardBudgetBreakdownTests
     [Fact]
     public async Task Allocations_CarryAKeyMatchingTheCssColourTokenNames()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetAllocations.Add(FullyAllocatedBudget());
         await db.SaveChangesAsync();
 
-        var budget = await GetBudgetAsync(db);
+        BudgetSummaryDto? budget = await GetBudgetAsync(db);
 
         var keys = budget!.Allocations.ToDictionary(a => a.Name, a => a.Key);
         Assert.Equal("debt-repayment", keys["Debt Repayment"]);

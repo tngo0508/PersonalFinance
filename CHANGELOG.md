@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.2] - 2026-10-22
+
+### Changed
+
+- **Explicit Types in C#**: `var` is now allowed only when the type is written on the right-hand side (`new T(...)`, a cast, a conversion such as `.ToList()` or `T.Parse(...)`, an anonymous type), following Microsoft's C# coding conventions.
+  - `.editorconfig` sets `csharp_style_var_for_built_in_types` and `csharp_style_var_elsewhere` to `false:warning`, so `IDE0008` fails the CI build; `dotnet format style PersonalFinance.sln` fixes a branch before the PR.
+  - 188 C# files rewritten by `dotnet format`; no behaviour change.
+  - `docs/CODING_STANDARDS.md` gains a "C# Style" section (explicit types, visibility and sealing, method shape, async and time, DTOs and records) and AGENTS.md points to it.
+- **ADR 0007, Feature Folders**: ApiService and Web will be organized by Feature, with a fixed folder anatomy and interface-only dependencies between Features, superseding ADR 0001 §3. The move itself follows in later releases.
+  - GLOSSARY.md defines `Feature` without folder details and adds `Account Lifecycle`.
+
 ## [4.2.1] - 2026-10-22
 
 ### Fixed

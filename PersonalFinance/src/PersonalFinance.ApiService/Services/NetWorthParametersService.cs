@@ -26,7 +26,7 @@ public sealed class NetWorthParametersService : INetWorthParametersService
         CancellationToken cancellationToken = default)
     {
         // Include soft-deleted records to handle re-saving after deletion
-        var existing = await _dbContext.NetWorthParameters
+        NetWorthParameters? existing = await _dbContext.NetWorthParameters
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.UserId == userId, cancellationToken);
 
@@ -62,7 +62,7 @@ public sealed class NetWorthParametersService : INetWorthParametersService
     /// </summary>
     public async Task<NetWorthParametersDto?> LoadAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var parameters = await _dbContext.NetWorthParameters
+        NetWorthParameters? parameters = await _dbContext.NetWorthParameters
             .AsNoTracking()
             .CurrentFor(userId)
             .FirstOrDefaultAsync(cancellationToken);
@@ -75,7 +75,7 @@ public sealed class NetWorthParametersService : INetWorthParametersService
     /// </summary>
     public async Task DeleteAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var parameters = await _dbContext.NetWorthParameters
+        NetWorthParameters? parameters = await _dbContext.NetWorthParameters
             .FirstOrDefaultAsync(e => e.UserId == userId, cancellationToken);
 
         if (parameters != null)

@@ -45,27 +45,27 @@ public class PersonalDataPageTests
             Account = new DataExportAccountDto { Id = "export-user", Email = "me@example.com" },
             SavingsGoals = [new DataExportSavingsGoalDto { Name = "Emergency fund", TargetAmount = 1000.50m }]
         });
-        var page = CreatePage(api);
+        PersonalDataModel page = CreatePage(api);
 
-        var result = await page.OnPostDownloadAsync();
+        IActionResult result = await page.OnPostDownloadAsync();
 
-        var file = Assert.IsType<FileContentResult>(result);
+        FileContentResult file = Assert.IsType<FileContentResult>(result);
         Assert.Equal("application/json", file.ContentType);
         Assert.Equal("personal-finance-export-2026-10-22.json", file.FileDownloadName);
         Assert.Equal("no-store", page.Response.Headers.CacheControl.ToString());
 
         using var json = JsonDocument.Parse(file.FileContents);
         Assert.Equal("me@example.com", json.RootElement.GetProperty("account").GetProperty("email").GetString());
-        var goal = json.RootElement.GetProperty("savingsGoals")[0];
+        JsonElement goal = json.RootElement.GetProperty("savingsGoals")[0];
         Assert.Equal(1000.50m, goal.GetProperty("targetAmount").GetDecimal());
     }
 
     [Fact]
     public async Task Download_WhenTheApiIsUnreachable_ShowsTheUnavailableMessage_AndNoFile()
     {
-        var page = CreatePage(new FakeDataExportApi(new HttpRequestException("connection refused")));
+        PersonalDataModel page = CreatePage(new FakeDataExportApi(new HttpRequestException("connection refused")));
 
-        var result = await page.OnPostDownloadAsync();
+        IActionResult result = await page.OnPostDownloadAsync();
 
         Assert.IsType<PageResult>(result);
         Assert.Equal(JsonApiErrorsFilter.UnavailableMessage, page.ErrorMessage);
@@ -78,7 +78,7 @@ public class PersonalDataPageTests
         Assert.Empty(typeof(DownloadPersonalDataModel).GetConstructors().Single().GetParameters());
         var page = new DownloadPersonalDataModel();
 
-        foreach (var result in new[] { page.OnGet(), page.OnPost() })
+        foreach (IActionResult? result in new[] { page.OnGet(), page.OnPost() })
         {
             Assert.Equal("./PersonalData", Assert.IsType<RedirectToPageResult>(result).PageName);
         }

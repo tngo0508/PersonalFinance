@@ -34,7 +34,7 @@ public class FeedbackApiWireFormatTests : IClassFixture<FeedbackApiWireFormatTes
     [InlineData(FeedbackCategory.Other)]
     public async Task SubmitThroughTheRefitContract_IsAccepted(FeedbackCategory category)
     {
-        var api = ApiFor($"wire-format-{Guid.NewGuid():N}");
+        IFeedbackApi api = ApiFor($"wire-format-{Guid.NewGuid():N}");
 
         await AssertAcceptedAsync(() => api.SubmitAsync(Submission(category)));
     }
@@ -42,24 +42,24 @@ public class FeedbackApiWireFormatTests : IClassFixture<FeedbackApiWireFormatTes
     [Fact]
     public async Task AdminListAndStatusChangeThroughTheRefitContract_RoundTripTheEnums()
     {
-        var admin = ApiFor(await CreateAdminAsync());
-        var message = $"Wire format check {Guid.NewGuid():N}";
+        IFeedbackApi admin = ApiFor(await CreateAdminAsync());
+        string message = $"Wire format check {Guid.NewGuid():N}";
         await AssertAcceptedAsync(() => admin.SubmitAsync(Submission(FeedbackCategory.Idea, message)));
 
-        var listed = Assert.Single(await admin.ListAsync(), item => item.Message == message);
+        FeedbackAdminItemDto listed = Assert.Single(await admin.ListAsync(), item => item.Message == message);
         Assert.Equal(FeedbackCategory.Idea, listed.Category);
         Assert.Equal(FeedbackStatus.New, listed.Status);
 
         await AssertAcceptedAsync(() =>
             admin.ChangeStatusAsync(listed.Id, new ChangeFeedbackStatusRequest { Status = FeedbackStatus.Archived }));
 
-        var archived = Assert.Single(await admin.ListAsync(FeedbackStatus.Archived), item => item.Id == listed.Id);
+        FeedbackAdminItemDto archived = Assert.Single(await admin.ListAsync(FeedbackStatus.Archived), item => item.Id == listed.Id);
         Assert.Equal(FeedbackStatus.Archived, archived.Status);
     }
 
     private IFeedbackApi ApiFor(string userId)
     {
-        var client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         client.DefaultRequestHeaders.Add("X-User-Id", userId);
         client.DefaultRequestHeaders.Add("X-Internal-Key", InternalKey);
         return RestService.For<IFeedbackApi>(client);
@@ -67,15 +67,15 @@ public class FeedbackApiWireFormatTests : IClassFixture<FeedbackApiWireFormatTes
 
     private async Task<string> CreateAdminAsync()
     {
-        using var scope = _host.Services.CreateScope();
-        var users = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-        var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        using IServiceScope scope = _host.Services.CreateScope();
+        UserManager<IdentityUser> users = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        RoleManager<IdentityRole> roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         if (!await roles.RoleExistsAsync(AppRoles.Admin))
         {
             await roles.CreateAsync(new IdentityRole(AppRoles.Admin));
         }
 
-        var email = $"admin-{Guid.NewGuid():N}@example.com";
+        string email = $"admin-{Guid.NewGuid():N}@example.com";
         var user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true };
         Assert.True((await users.CreateAsync(user)).Succeeded);
         Assert.True((await users.AddToRoleAsync(user, AppRoles.Admin)).Succeeded);
@@ -88,7 +88,7 @@ public class FeedbackApiWireFormatTests : IClassFixture<FeedbackApiWireFormatTes
 
     private static async Task AssertAcceptedAsync(Func<Task> call)
     {
-        var exception = await Record.ExceptionAsync(call);
+        Exception? exception = await Record.ExceptionAsync(call);
 
         var apiException = exception as ApiException;
         Assert.True(exception is null,

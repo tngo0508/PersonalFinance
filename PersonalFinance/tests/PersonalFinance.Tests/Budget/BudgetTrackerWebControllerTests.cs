@@ -50,7 +50,7 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public void Controller_HasAuthorizeAttribute()
     {
-        var authAttr = typeof(BudgetTrackerController).GetCustomAttribute<AuthorizeAttribute>();
+        AuthorizeAttribute? authAttr = typeof(BudgetTrackerController).GetCustomAttribute<AuthorizeAttribute>();
         Assert.NotNull(authAttr);
     }
 
@@ -67,23 +67,23 @@ public class BudgetTrackerWebControllerTests
     public void StateChangingActions_HaveAntiForgeryTokenAndHttpMethodAttributes(string actionName,
         Type httpMethodAttrType)
     {
-        var method = typeof(BudgetTrackerController).GetMethod(actionName);
+        MethodInfo? method = typeof(BudgetTrackerController).GetMethod(actionName);
         Assert.NotNull(method);
 
-        var antiforgeryAttr = method.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>();
+        ValidateAntiForgeryTokenAttribute? antiforgeryAttr = method.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>();
         Assert.NotNull(antiforgeryAttr);
 
-        var methodAttr = method.GetCustomAttribute(httpMethodAttrType);
+        Attribute? methodAttr = method.GetCustomAttribute(httpMethodAttrType);
         Assert.NotNull(methodAttr);
     }
 
     [Fact]
     public async Task GetApiErrorMessage_WhenArrayErrors_ExtractsAllMessages()
     {
-        var json = """{"errors": ["Year must be between 1900 and 2100.", "Month must be between 1 and 12."]}""";
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
+        string json = """{"errors": ["Year must be between 1900 and 2100.", "Month must be between 1 and 12."]}""";
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Equal("Year must be between 1900 and 2100.; Month must be between 1 and 12.", msg);
     }
@@ -91,11 +91,11 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetApiErrorMessage_WhenObjectDictionaryErrors_PrefersErrorsOverTitle()
     {
-        var json =
+        string json =
             """{"title": "One or more validation errors occurred.", "errors": {"Amount": ["Amount must be greater than 0."], "Date": ["Date is required."]}}""";
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Contains("Amount must be greater than 0.", msg);
         Assert.Contains("Date is required.", msg);
@@ -105,10 +105,10 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetApiErrorMessage_WhenSingleErrorProperty_ReturnsError()
     {
-        var json = """{"error": "Category 'Dining' already exists."}""";
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.Conflict, json);
+        string json = """{"error": "Category 'Dining' already exists."}""";
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.Conflict, json);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Equal("Category 'Dining' already exists.", msg);
     }
@@ -116,10 +116,10 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetApiErrorMessage_WhenDetailProperty_ReturnsDetail()
     {
-        var json = """{"detail": "The specified monthly budget line was not found."}""";
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.NotFound, json);
+        string json = """{"detail": "The specified monthly budget line was not found."}""";
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.NotFound, json);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Equal("The specified monthly budget line was not found.", msg);
     }
@@ -127,10 +127,10 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetApiErrorMessage_WhenTitleOnly_ReturnsTitle()
     {
-        var json = """{"title": "Invalid Request Parameters"}""";
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
+        string json = """{"title": "Invalid Request Parameters"}""";
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Equal("Invalid Request Parameters", msg);
     }
@@ -138,10 +138,10 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetApiErrorMessage_When500InternalServerError_ReturnsGenericServerError()
     {
-        var json = """{"title": "Internal Server Error", "detail": "System.NullReferenceException at Service.cs:42"}""";
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.InternalServerError, json);
+        string json = """{"title": "Internal Server Error", "detail": "System.NullReferenceException at Service.cs:42"}""";
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.InternalServerError, json);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Equal("A server error occurred. Please try again.", msg);
     }
@@ -149,10 +149,10 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetApiErrorMessage_WhenNonJsonContent_ReturnsGenericErrorMessage()
     {
-        var html = "<html><body>502 Bad Gateway</body></html>";
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadGateway, html);
+        string html = "<html><body>502 Bad Gateway</body></html>";
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadGateway, html);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Equal("A server error occurred. Please try again.", msg);
     }
@@ -160,10 +160,10 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetApiErrorMessage_WhenNonJson400_ReturnsGenericErrorMessage()
     {
-        var text = "plain text bad request";
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, text);
+        string text = "plain text bad request";
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, text);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Equal("An error occurred while processing the request.", msg);
     }
@@ -171,9 +171,9 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetApiErrorMessage_WhenEmptyContent404_ReturnsNotFoundMessage()
     {
-        var apiEx = await CreateApiExceptionAsync(HttpStatusCode.NotFound, string.Empty);
+        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.NotFound, string.Empty);
 
-        var msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(apiEx);
 
         Assert.Equal("The requested resource was not found.", msg);
     }
@@ -181,70 +181,70 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task InitializeMonth_WhenRequestIsNull_ReturnsBadRequest()
     {
-        var controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
-        var result = await controller.InitializeMonth(null!);
+        BudgetTrackerController controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
+        IActionResult result = await controller.InitializeMonth(null!);
 
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
     [Fact]
     public async Task SetPlanned_WhenRequestIsNull_ReturnsBadRequest()
     {
-        var controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
-        var result = await controller.SetPlanned(2026, 10, 1, null!);
+        BudgetTrackerController controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
+        IActionResult result = await controller.SetPlanned(2026, 10, 1, null!);
 
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
     [Fact]
     public async Task SetActualOverride_WhenRequestIsNull_ReturnsBadRequest()
     {
-        var controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
-        var result = await controller.SetActualOverride(2026, 10, 1, null!);
+        BudgetTrackerController controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
+        IActionResult result = await controller.SetActualOverride(2026, 10, 1, null!);
 
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
     [Fact]
     public async Task CreateCategory_WhenRequestIsNull_ReturnsBadRequest()
     {
-        var controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
-        var result = await controller.CreateCategory(null!);
+        BudgetTrackerController controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
+        IActionResult result = await controller.CreateCategory(null!);
 
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
     [Fact]
     public async Task UpdateCategory_WhenRequestIsNull_ReturnsBadRequest()
     {
-        var controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
-        var result = await controller.UpdateCategory(1, null!);
+        BudgetTrackerController controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
+        IActionResult result = await controller.UpdateCategory(1, null!);
 
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
     [Fact]
     public async Task CreateTransaction_WhenRequestIsNull_ReturnsBadRequest()
     {
-        var controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
-        var result = await controller.CreateTransaction(null!);
+        BudgetTrackerController controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
+        IActionResult result = await controller.CreateTransaction(null!);
 
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
     [Fact]
     public async Task UpdateTransaction_WhenRequestIsNull_ReturnsBadRequest()
     {
-        var controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
-        var result = await controller.UpdateTransaction(1, null!);
+        BudgetTrackerController controller = CreateController(new FakeBudgetTrackerApi(), new RecordingLogger<BudgetTrackerController>());
+        IActionResult result = await controller.UpdateTransaction(1, null!);
 
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
@@ -288,12 +288,12 @@ public class BudgetTrackerWebControllerTests
         };
 
         var logger = new RecordingLogger<BudgetTrackerController>();
-        var controller = CreateController(fakeApi, logger);
+        BudgetTrackerController controller = CreateController(fakeApi, logger);
 
-        var result = await controller.Index(2026, 10);
+        IActionResult result = await controller.Index(2026, 10);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<BudgetTrackerViewModel>(viewResult.Model);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
+        BudgetTrackerViewModel model = Assert.IsType<BudgetTrackerViewModel>(viewResult.Model);
         Assert.Equal(2026, model.Year);
         Assert.Equal(10, model.Month);
         Assert.NotNull(model.Sheet);
@@ -311,12 +311,12 @@ public class BudgetTrackerWebControllerTests
         };
 
         var logger = new RecordingLogger<BudgetTrackerController>();
-        var controller = CreateController(fakeApi, logger);
+        BudgetTrackerController controller = CreateController(fakeApi, logger);
 
-        var result = await controller.Index(2026, 10);
+        IActionResult result = await controller.Index(2026, 10);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<BudgetTrackerViewModel>(viewResult.Model);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
+        BudgetTrackerViewModel model = Assert.IsType<BudgetTrackerViewModel>(viewResult.Model);
         Assert.Null(model.Sheet);
         Assert.NotNull(model.ErrorMessage);
         Assert.Contains(logger.Entries, e => e.Level >= LogLevel.Warning);
@@ -329,7 +329,7 @@ public class BudgetTrackerWebControllerTests
         cts.Cancel();
 
         var fakeApi = new FakeBudgetTrackerApi();
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(2026, 10, cts.Token));
     }
@@ -337,16 +337,16 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task GetSheet_WhenApiThrowsApiException_ReturnsStatusCodeAndParsedErrorMessage()
     {
-        var json = """{"error": "Monthly sheet not found."}""";
+        string json = """{"error": "Monthly sheet not found."}""";
         var fakeApi = new FakeBudgetTrackerApi
         {
             Failure = await CreateApiExceptionAsync(HttpStatusCode.NotFound, json)
         };
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
-        var result = await FilteredAction.InvokeAsync(controller, () => controller.GetSheet(2026, 10));
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.GetSheet(2026, 10));
 
-        var objectResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status404NotFound, objectResult.StatusCode);
     }
 
@@ -357,13 +357,13 @@ public class BudgetTrackerWebControllerTests
         {
             Sheet = new MonthlyBudgetSheetDto { Year = 2026, Month = 11, IsInitialized = true }
         };
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var request = new InitializeMonthRequest { Year = 2026, Month = 11, CopyFromPrevious = true };
-        var result = await controller.InitializeMonth(request);
+        IActionResult result = await controller.InitializeMonth(request);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var sheet = Assert.IsType<MonthlyBudgetSheetDto>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        MonthlyBudgetSheetDto sheet = Assert.IsType<MonthlyBudgetSheetDto>(jsonResult.Value);
         Assert.Equal(11, sheet.Month);
         Assert.True(sheet.IsInitialized);
         Assert.NotNull(fakeApi.LastInitializeMonthRequest);
@@ -379,12 +379,12 @@ public class BudgetTrackerWebControllerTests
         {
             Sheet = new MonthlyBudgetSheetDto { Year = 2026, Month = 10 }
         };
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var request = new SetPlannedRequest { Amount = 750.50m };
-        var result = await controller.SetPlanned(2026, 10, 42, request);
+        IActionResult result = await controller.SetPlanned(2026, 10, 42, request);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
         Assert.IsType<MonthlyBudgetSheetDto>(jsonResult.Value);
         Assert.Equal(2026, fakeApi.LastSetPlannedYear);
         Assert.Equal(10, fakeApi.LastSetPlannedMonth);
@@ -395,17 +395,17 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task SetPlanned_WhenApiThrowsValidationErrorArray_ReturnsBadRequestWithParsedMessage()
     {
-        var json =
+        string json =
             """{"errors": ["Amount must be greater than or equal to 0.", "Amount cannot exceed 2 decimal places."]}""";
         var fakeApi = new FakeBudgetTrackerApi
         {
             Failure = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json)
         };
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
-        var result = await FilteredAction.InvokeAsync(controller, () => controller.SetPlanned(2026, 10, 1, new SetPlannedRequest { Amount = -10 }));
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.SetPlanned(2026, 10, 1, new SetPlannedRequest { Amount = -10 }));
 
-        var objectResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status400BadRequest, objectResult.StatusCode);
     }
 
@@ -416,12 +416,12 @@ public class BudgetTrackerWebControllerTests
         {
             Sheet = new MonthlyBudgetSheetDto { Year = 2026, Month = 10 }
         };
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var request = new SetActualOverrideRequest { Amount = 450.00m };
-        var result = await controller.SetActualOverride(2026, 10, 7, request);
+        IActionResult result = await controller.SetActualOverride(2026, 10, 7, request);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
         Assert.IsType<MonthlyBudgetSheetDto>(jsonResult.Value);
         Assert.Equal(2026, fakeApi.LastSetActualOverrideYear);
         Assert.Equal(10, fakeApi.LastSetActualOverrideMonth);
@@ -439,12 +439,12 @@ public class BudgetTrackerWebControllerTests
                 new() { Id = 1, Name = "Rent", Kind = BudgetCategoryKind.Expense, SortOrder = 1 }
             }
         };
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
-        var result = await controller.GetCategories(false);
+        IActionResult result = await controller.GetCategories(false);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var categories = Assert.IsType<List<BudgetCategoryDto>>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        List<BudgetCategoryDto> categories = Assert.IsType<List<BudgetCategoryDto>>(jsonResult.Value);
         Assert.Single(categories);
     }
 
@@ -452,13 +452,13 @@ public class BudgetTrackerWebControllerTests
     public async Task CreateCategory_WhenCalled_PassesRequestAndReturnsCreatedCategory()
     {
         var fakeApi = new FakeBudgetTrackerApi();
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var request = new SaveCategoryRequest { Name = "Utilities", Kind = BudgetCategoryKind.Expense, SortOrder = 2 };
-        var result = await controller.CreateCategory(request);
+        IActionResult result = await controller.CreateCategory(request);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var created = Assert.IsType<BudgetCategoryDto>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        BudgetCategoryDto created = Assert.IsType<BudgetCategoryDto>(jsonResult.Value);
         Assert.Equal("Utilities", created.Name);
         Assert.Equal(BudgetCategoryKind.Expense, created.Kind);
         Assert.NotNull(fakeApi.LastCreateCategoryRequest);
@@ -468,17 +468,17 @@ public class BudgetTrackerWebControllerTests
     [Fact]
     public async Task CreateCategory_WhenDuplicate_ReturnsConflictStatus()
     {
-        var json = """{"error": "Category with name 'Utilities' already exists."}""";
+        string json = """{"error": "Category with name 'Utilities' already exists."}""";
         var fakeApi = new FakeBudgetTrackerApi
         {
             Failure = await CreateApiExceptionAsync(HttpStatusCode.Conflict, json)
         };
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
-        var result = await FilteredAction.InvokeAsync(controller, () => controller.CreateCategory(new SaveCategoryRequest
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.CreateCategory(new SaveCategoryRequest
         { Name = "Utilities", Kind = BudgetCategoryKind.Expense }));
 
-        var objectResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status409Conflict, objectResult.StatusCode);
     }
 
@@ -486,14 +486,14 @@ public class BudgetTrackerWebControllerTests
     public async Task UpdateCategory_WhenCalled_PassesIdAndRequestAndReturnsUpdatedCategory()
     {
         var fakeApi = new FakeBudgetTrackerApi();
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var request = new SaveCategoryRequest
         { Name = "Utilities & Gas", Kind = BudgetCategoryKind.Expense, SortOrder = 2 };
-        var result = await controller.UpdateCategory(5, request);
+        IActionResult result = await controller.UpdateCategory(5, request);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var updated = Assert.IsType<BudgetCategoryDto>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        BudgetCategoryDto updated = Assert.IsType<BudgetCategoryDto>(jsonResult.Value);
         Assert.Equal("Utilities & Gas", updated.Name);
         Assert.Equal(5, fakeApi.LastUpdateCategoryId);
         Assert.NotNull(fakeApi.LastUpdateCategoryRequest);
@@ -504,9 +504,9 @@ public class BudgetTrackerWebControllerTests
     public async Task DeleteCategory_WhenCalled_PassesIdAndReturnsNoContent()
     {
         var fakeApi = new FakeBudgetTrackerApi();
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
-        var result = await controller.DeleteCategory(5);
+        IActionResult result = await controller.DeleteCategory(5);
 
         Assert.IsType<NoContentResult>(result);
         Assert.Equal(5, fakeApi.LastDeleteCategoryId);
@@ -516,7 +516,7 @@ public class BudgetTrackerWebControllerTests
     public async Task CreateTransaction_WhenCalled_PassesRequestAndReturnsCreatedTransaction()
     {
         var fakeApi = new FakeBudgetTrackerApi();
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var request = new SaveTransactionRequest
         {
@@ -525,10 +525,10 @@ public class BudgetTrackerWebControllerTests
             Description = "Groceries",
             CategoryId = 1
         };
-        var result = await controller.CreateTransaction(request);
+        IActionResult result = await controller.CreateTransaction(request);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var tx = Assert.IsType<BudgetTransactionDto>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        BudgetTransactionDto tx = Assert.IsType<BudgetTransactionDto>(jsonResult.Value);
         Assert.Equal(85.50m, tx.Amount);
         Assert.Equal("Groceries", tx.Description);
         Assert.NotNull(fakeApi.LastCreateTransactionRequest);
@@ -539,7 +539,7 @@ public class BudgetTrackerWebControllerTests
     public async Task UpdateTransaction_WhenCalled_PassesIdAndRequestAndReturnsUpdatedTransaction()
     {
         var fakeApi = new FakeBudgetTrackerApi();
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
         var request = new SaveTransactionRequest
         {
@@ -548,10 +548,10 @@ public class BudgetTrackerWebControllerTests
             Description = "Groceries Updated",
             CategoryId = 1
         };
-        var result = await controller.UpdateTransaction(12, request);
+        IActionResult result = await controller.UpdateTransaction(12, request);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var tx = Assert.IsType<BudgetTransactionDto>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        BudgetTransactionDto tx = Assert.IsType<BudgetTransactionDto>(jsonResult.Value);
         Assert.Equal(95.00m, tx.Amount);
         Assert.Equal(12, fakeApi.LastUpdateTransactionId);
         Assert.NotNull(fakeApi.LastUpdateTransactionRequest);
@@ -561,9 +561,9 @@ public class BudgetTrackerWebControllerTests
     public async Task DeleteTransaction_WhenCalled_PassesIdAndReturnsNoContent()
     {
         var fakeApi = new FakeBudgetTrackerApi();
-        var controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
+        BudgetTrackerController controller = CreateController(fakeApi, new RecordingLogger<BudgetTrackerController>());
 
-        var result = await controller.DeleteTransaction(12);
+        IActionResult result = await controller.DeleteTransaction(12);
 
         Assert.IsType<NoContentResult>(result);
         Assert.Equal(12, fakeApi.LastDeleteTransactionId);
@@ -574,12 +574,12 @@ public class BudgetTrackerWebControllerTests
     {
         var fakeApi = new FakeBudgetTrackerApi();
         var logger = new RecordingLogger<BudgetTrackerController>();
-        var controller = CreateController(fakeApi, logger);
+        BudgetTrackerController controller = CreateController(fakeApi, logger);
 
-        var result = await controller.GetDataSource(CancellationToken.None);
+        IActionResult result = await controller.GetDataSource(CancellationToken.None);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var dto = Assert.IsType<BudgetDataSourceDto>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        BudgetDataSourceDto dto = Assert.IsType<BudgetDataSourceDto>(jsonResult.Value);
         Assert.Equal(BudgetDataSource.GoogleSheet, dto.Source);
         Assert.True(dto.IsDefault);
     }
@@ -593,11 +593,11 @@ public class BudgetTrackerWebControllerTests
                 "{\"error\":\"Internal error\"}")
         };
         var logger = new RecordingLogger<BudgetTrackerController>();
-        var controller = CreateController(fakeApi, logger);
+        BudgetTrackerController controller = CreateController(fakeApi, logger);
 
-        var result = await FilteredAction.InvokeAsync(controller, () => controller.GetDataSource(CancellationToken.None));
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.GetDataSource(CancellationToken.None));
 
-        var objResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(500, objResult.StatusCode);
     }
 
@@ -606,13 +606,13 @@ public class BudgetTrackerWebControllerTests
     {
         var fakeApi = new FakeBudgetTrackerApi();
         var logger = new RecordingLogger<BudgetTrackerController>();
-        var controller = CreateController(fakeApi, logger);
+        BudgetTrackerController controller = CreateController(fakeApi, logger);
 
         var request = new SetBudgetDataSourceRequest { Source = BudgetDataSource.BudgetTracker };
-        var result = await controller.SetDataSource(request, CancellationToken.None);
+        IActionResult result = await controller.SetDataSource(request, CancellationToken.None);
 
-        var jsonResult = Assert.IsType<JsonResult>(result);
-        var dto = Assert.IsType<BudgetDataSourceDto>(jsonResult.Value);
+        JsonResult jsonResult = Assert.IsType<JsonResult>(result);
+        BudgetDataSourceDto dto = Assert.IsType<BudgetDataSourceDto>(jsonResult.Value);
         Assert.Equal(BudgetDataSource.BudgetTracker, dto.Source);
         Assert.False(dto.IsDefault);
     }
@@ -622,11 +622,11 @@ public class BudgetTrackerWebControllerTests
     {
         var fakeApi = new FakeBudgetTrackerApi();
         var logger = new RecordingLogger<BudgetTrackerController>();
-        var controller = CreateController(fakeApi, logger);
+        BudgetTrackerController controller = CreateController(fakeApi, logger);
 
-        var result = await controller.SetDataSource(null!, CancellationToken.None);
+        IActionResult result = await controller.SetDataSource(null!, CancellationToken.None);
 
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.NotNull(badRequest.Value);
     }
 
@@ -638,12 +638,12 @@ public class BudgetTrackerWebControllerTests
             Failure = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, "{\"errors\":[\"Invalid data source\"]}")
         };
         var logger = new RecordingLogger<BudgetTrackerController>();
-        var controller = CreateController(fakeApi, logger);
+        BudgetTrackerController controller = CreateController(fakeApi, logger);
 
         var request = new SetBudgetDataSourceRequest { Source = BudgetDataSource.BudgetTracker };
-        var result = await FilteredAction.InvokeAsync(controller, () => controller.SetDataSource(request, CancellationToken.None));
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.SetDataSource(request, CancellationToken.None));
 
-        var objResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objResult.StatusCode);
         Assert.NotNull(objResult.Value);
     }

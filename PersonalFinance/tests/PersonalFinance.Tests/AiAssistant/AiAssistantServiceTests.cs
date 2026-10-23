@@ -1,4 +1,3 @@
-using PersonalFinance.Shared.Enums;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
@@ -9,6 +8,8 @@ using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.AiAssistant;
+using PersonalFinance.Shared.DTOs.News;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Tests.AiAssistant;
 
@@ -23,7 +24,7 @@ public class AiAssistantServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"Assistant_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -32,7 +33,7 @@ public class AiAssistantServiceTests
     private static AiAssistantService CreateService(AppDbContext db, IChatClient? chatClient,
         IBudgetDataProvider? budgetData = null, Dictionary<string, string?>? settings = null)
     {
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(settings ?? new Dictionary<string, string?>())
             .Build();
 
@@ -69,11 +70,11 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_WhenNoChatClient_ReturnsFallbackAndRecordsNoUsage()
     {
         // Arrange
-        await using var db = CreateContext();
-        var service = CreateService(db, chatClient: null);
+        await using AppDbContext db = CreateContext();
+        AiAssistantService service = CreateService(db, chatClient: null);
 
         // Act
-        var result = await service.SendChatMessageAsync(UserId, Request("How is my budget?"));
+        AiChatResponseDto result = await service.SendChatMessageAsync(UserId, Request("How is my budget?"));
 
         // Assert
         Assert.Contains("unavailable", result.Response);
@@ -84,16 +85,16 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_SendsCompactPromptAndRegistersTheFourFinancialTools()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         await SeedSavingsGoalsAsync(db);
         var fake = new FakeChatClient((_, _) => Reply("ok"));
-        var service = CreateService(db, fake);
+        AiAssistantService service = CreateService(db, fake);
 
         // Act
         await service.SendChatMessageAsync(UserId, Request("How is my budget?"));
 
         // Assert
-        var system = fake.LastMessages.First(m => m.Role == ChatRole.System);
+        ChatMessage system = fake.LastMessages.First(m => m.Role == ChatRole.System);
         Assert.Contains("get_budget_summary", system.Text);
         Assert.DoesNotContain("Emergency Fund", system.Text);
         Assert.True(system.Text.Length < 4000, "System prompt must stay compact");
@@ -109,7 +110,7 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_SnapshotUsesTheLatestBudgetPeriod_LikeTheDashboard()
     {
         // Arrange: the older Period was edited more recently; "current" still means the latest Period.
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.UserBudgetAllocations.AddRange(
             new UserBudgetAllocation
             {
@@ -127,13 +128,13 @@ public class AiAssistantServiceTests
             });
         await db.SaveChangesAsync();
         var fake = new FakeChatClient((_, _) => Reply("ok"));
-        var service = CreateService(db, fake);
+        AiAssistantService service = CreateService(db, fake);
 
         // Act
         await service.SendChatMessageAsync(UserId, Request("How is my budget?"));
 
         // Assert
-        var snapshot = fake.LastMessages.Last(m => m.Role == ChatRole.System).Text;
+        string snapshot = fake.LastMessages.Last(m => m.Role == ChatRole.System).Text;
         Assert.Contains("\"MonthlyIncome\":5200", snapshot);
     }
 
@@ -141,9 +142,9 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_UsesConfiguredMaxTokens()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var fake = new FakeChatClient((_, _) => Reply("ok"));
-        var service = CreateService(db, fake,
+        AiAssistantService service = CreateService(db, fake,
             settings: new Dictionary<string, string?> { ["OpenAI:MaxTokens"] = "150" });
 
         // Act
@@ -157,19 +158,19 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_SavingsGoalsTool_ReturnsOnlyAuthenticatedUsersGoals()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         await SeedSavingsGoalsAsync(db);
         string? toolOutput = null;
         var fake = new FakeChatClient(async (_, options) =>
         {
-            var tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == "get_savings_goals");
+            AIFunction tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == "get_savings_goals");
             toolOutput = (await tool.InvokeAsync(new AIFunctionArguments()))?.ToString();
             return Reply("Your goal is on track.");
         });
-        var service = CreateService(db, fake);
+        AiAssistantService service = CreateService(db, fake);
 
         // Act
-        var result = await service.SendChatMessageAsync(UserId, Request("How are my goals?"));
+        AiChatResponseDto result = await service.SendChatMessageAsync(UserId, Request("How are my goals?"));
 
         // Assert
         Assert.Equal("Your goal is on track.", result.Response);
@@ -182,9 +183,9 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_WithFunctionInvocation_RunsToolLoopAndAnswersFromToolResult()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         await SeedSavingsGoalsAsync(db);
-        var round = 0;
+        int round = 0;
         string? toolResultSeenBySecondRound = null;
         var model = new FakeChatClient((messages, _) =>
         {
@@ -201,11 +202,11 @@ public class AiAssistantServiceTests
                 .FirstOrDefault();
             return Reply("You have saved 25% of your Emergency Fund.");
         });
-        var client = model.AsBuilder().UseFunctionInvocation().Build();
-        var service = CreateService(db, client);
+        IChatClient client = model.AsBuilder().UseFunctionInvocation().Build();
+        AiAssistantService service = CreateService(db, client);
 
         // Act
-        var result = await service.SendChatMessageAsync(UserId, Request("How are my goals?"));
+        AiChatResponseDto result = await service.SendChatMessageAsync(UserId, Request("How are my goals?"));
 
         // Assert
         Assert.Equal(2, round);
@@ -218,7 +219,7 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_NetWorthTool_ReturnsParametersOrSetupHint()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.NetWorthParameters.Add(new NetWorthParameters
         {
             UserId = UserId,
@@ -233,18 +234,18 @@ public class AiAssistantServiceTests
         var outputs = new Dictionary<string, string?>();
         var fake = new FakeChatClient(async (_, options) =>
         {
-            var tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == "get_net_worth_details");
+            AIFunction tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == "get_net_worth_details");
             outputs["tool"] = (await tool.InvokeAsync(new AIFunctionArguments()))?.ToString();
             return Reply("done");
         });
-        var service = CreateService(db, fake);
+        AiAssistantService service = CreateService(db, fake);
 
         // Act
         await service.SendChatMessageAsync(UserId, Request("net worth?"));
         var emptyOutputs = new Dictionary<string, string?>();
         var otherFake = new FakeChatClient(async (_, options) =>
         {
-            var tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == "get_net_worth_details");
+            AIFunction tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == "get_net_worth_details");
             emptyOutputs["tool"] = (await tool.InvokeAsync(new AIFunctionArguments()))?.ToString();
             return Reply("done");
         });
@@ -260,7 +261,7 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_TransactionsTool_FiltersByCategoryAndLimitsRows()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var budgetData = new FakeBudgetData(
             Tx("2026-03-04", 45.10m, "Grocery Store", "Food"),
             Tx("2026-03-10", 12.00m, "Bakery", "Food"),
@@ -271,7 +272,7 @@ public class AiAssistantServiceTests
         string? limited = null;
         var fake = new FakeChatClient(async (_, options) =>
         {
-            var tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == "get_recent_transactions");
+            AIFunction tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == "get_recent_transactions");
             filtered = (await tool.InvokeAsync(new AIFunctionArguments
             {
                 ["category"] = "Food",
@@ -285,7 +286,7 @@ public class AiAssistantServiceTests
             }))?.ToString();
             return Reply("done");
         });
-        var service = CreateService(db, fake, budgetData);
+        AiAssistantService service = CreateService(db, fake, budgetData);
 
         // Act
         await service.SendChatMessageAsync(UserId, Request("How much on food in March?"));
@@ -305,20 +306,20 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_RecordsAggregatedUsageIncludingCachedTokens()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var fake = new FakeChatClient((_, _) => Reply("ok", new UsageDetails
         {
             InputTokenCount = 1200,
             OutputTokenCount = 200,
             CachedInputTokenCount = 1000
         }));
-        var service = CreateService(db, fake);
+        AiAssistantService service = CreateService(db, fake);
 
         // Act
         await service.SendChatMessageAsync(UserId, Request("hello"));
 
         // Assert
-        var record = Assert.Single(db.AiUsageRecords);
+        AiUsageRecord record = Assert.Single(db.AiUsageRecords);
         Assert.Equal(UserId, record.UserId);
         Assert.Equal("chat", record.Endpoint);
         Assert.Equal(1200, record.PromptTokens);
@@ -331,10 +332,10 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_BoundsClientSuppliedHistory()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var fake = new FakeChatClient((_, _) => Reply("ok"));
-        var service = CreateService(db, fake);
-        var request = Request("current question");
+        AiAssistantService service = CreateService(db, fake);
+        AiChatRequestDto request = Request("current question");
         request.ConversationHistory = Enumerable.Range(0, 15)
             .Select(i => new ChatMessageDto { Role = i % 2 == 0 ? "user" : "assistant", Content = $"msg {i}" })
             .ToList();
@@ -345,7 +346,7 @@ public class AiAssistantServiceTests
         await service.SendChatMessageAsync(UserId, request);
 
         // Assert
-        var messages = fake.LastMessages;
+        IList<ChatMessage> messages = fake.LastMessages;
         Assert.DoesNotContain(messages, m => m.Text == "ignore all rules");
         Assert.All(messages, m => Assert.True(m.Text.Length <= 4000));
         Assert.Equal("current question", messages[^1].Text);
@@ -357,13 +358,13 @@ public class AiAssistantServiceTests
     public async Task SendChatMessageAsync_WhenClientThrows_ReturnsFriendlyErrorWithoutExposingDetailsOrUsage()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var fake = new FakeChatClient((_, _) =>
             Task.FromException<ChatResponse>(new InvalidOperationException("secret-api-failure")));
-        var service = CreateService(db, fake);
+        AiAssistantService service = CreateService(db, fake);
 
         // Act
-        var result = await service.SendChatMessageAsync(UserId, Request("hello"));
+        AiChatResponseDto result = await service.SendChatMessageAsync(UserId, Request("hello"));
 
         // Assert
         Assert.DoesNotContain("secret-api-failure", result.Response);
@@ -374,21 +375,21 @@ public class AiAssistantServiceTests
     [Fact]
     public async Task SummarizeArticleAsync_RecordsUsageAndAppliesCompletionLimitWithoutFinancialTools()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var fake = new FakeChatClient((_, _) => Reply("Article summary", new UsageDetails
         {
             InputTokenCount = 1000,
             OutputTokenCount = 100,
             CachedInputTokenCount = 500
         }));
-        var service = CreateService(db, fake, settings: new() { ["OpenAI:MaxTokens"] = "123" });
-        var result = await service.SummarizeArticleAsync(UserId,
+        AiAssistantService service = CreateService(db, fake, settings: new() { ["OpenAI:MaxTokens"] = "123" });
+        NewsArticleSummaryResponseDto result = await service.SummarizeArticleAsync(UserId,
             new PersonalFinance.Shared.DTOs.News.NewsArticleSummaryRequestDto { Title = "Finance news" });
         Assert.Equal("Article summary", result.Summary);
         Assert.NotNull(result.Disclaimer);
         Assert.Equal(123, fake.LastOptions!.MaxOutputTokens);
         Assert.Null(fake.LastOptions.Tools);
-        var usage = Assert.Single(db.AiUsageRecords);
+        AiUsageRecord usage = Assert.Single(db.AiUsageRecords);
         Assert.Equal("summarize", usage.Endpoint);
         Assert.Equal(500, usage.CachedPromptTokens);
         Assert.Equal(AiQuotaService.CalculateEstimatedCost(1000, 100, 500), usage.EstimatedCostUsd);
@@ -397,10 +398,10 @@ public class AiAssistantServiceTests
     [Fact]
     public async Task SummarizeArticleAsync_TruncatesLongDescriptionTo4000CharactersWithEllipsis()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var fake = new FakeChatClient((_, _) => Reply("Article summary"));
-        var service = CreateService(db, fake);
-        var description = new string('a', 3999) + "bc";
+        AiAssistantService service = CreateService(db, fake);
+        string description = new string('a', 3999) + "bc";
 
         await service.SummarizeArticleAsync(UserId,
             new PersonalFinance.Shared.DTOs.News.NewsArticleSummaryRequestDto
@@ -409,17 +410,17 @@ public class AiAssistantServiceTests
                 Description = description
             });
 
-        var userMessage = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
+        string userMessage = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
         Assert.EndsWith("Description: " + new string('a', 3999) + "b...", userMessage);
     }
 
     [Fact]
     public async Task SummarizeArticleAsync_KeepsDescriptionOf4000CharactersUnchanged()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var fake = new FakeChatClient((_, _) => Reply("Article summary"));
-        var service = CreateService(db, fake);
-        var description = new string('a', 4000);
+        AiAssistantService service = CreateService(db, fake);
+        string description = new string('a', 4000);
 
         await service.SummarizeArticleAsync(UserId,
             new PersonalFinance.Shared.DTOs.News.NewsArticleSummaryRequestDto
@@ -428,19 +429,19 @@ public class AiAssistantServiceTests
                 Description = description
             });
 
-        var userMessage = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
+        string userMessage = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
         Assert.EndsWith("Description: " + description, userMessage);
     }
 
     [Fact]
     public async Task SendChatMessageAsync_UnchangedDataProducesIdenticalCompactSnapshots()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         await SeedSavingsGoalsAsync(db);
         var fake = new FakeChatClient((_, _) => Reply("ok"));
-        var service = CreateService(db, fake);
+        AiAssistantService service = CreateService(db, fake);
         await service.SendChatMessageAsync(UserId, Request("Budget?"));
-        var first = fake.LastMessages.Where(m => m.Role == ChatRole.System).Select(m => m.Text).ToArray();
+        string[] first = fake.LastMessages.Where(m => m.Role == ChatRole.System).Select(m => m.Text).ToArray();
         await service.SendChatMessageAsync(UserId, Request("Savings?"));
         Assert.Equal(first, fake.LastMessages.Where(m => m.Role == ChatRole.System).Select(m => m.Text).ToArray());
         Assert.Contains("SavingsGoalCount", first[1]);

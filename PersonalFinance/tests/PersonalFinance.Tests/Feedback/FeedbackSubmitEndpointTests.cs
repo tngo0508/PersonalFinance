@@ -45,20 +45,20 @@ public class FeedbackSubmitEndpointTests
     private static async Task<IEnumerable<string>> AssertBadRequestAsync(AppDbContext db,
         SubmitFeedbackRequest request)
     {
-        var result = await CreateController(db).Submit(request);
+        IActionResult result = await CreateController(db).Submit(request);
 
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Empty(await db.Feedback.ToListAsync());
-        var errors = badRequest.Value!.GetType().GetProperty("errors")!.GetValue(badRequest.Value);
+        object? errors = badRequest.Value!.GetType().GetProperty("errors")!.GetValue(badRequest.Value);
         return Assert.IsAssignableFrom<IEnumerable<string>>(errors);
     }
 
     [Fact]
     public async Task Submit_ValidFeedback_ReturnsNoContent_AndStoresIt()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var result = await CreateController(db).Submit(new SubmitFeedbackRequest
+        IActionResult result = await CreateController(db).Submit(new SubmitFeedbackRequest
         {
             Category = FeedbackCategory.Idea,
             Message = "Add CSV export.",
@@ -75,9 +75,9 @@ public class FeedbackSubmitEndpointTests
     [InlineData("\t\r\n ")]
     public async Task Submit_RejectsAnEmptyOrWhitespaceMessage(string message)
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var errors = await AssertBadRequestAsync(db,
+        IEnumerable<string> errors = await AssertBadRequestAsync(db,
             new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = message });
 
         Assert.Contains("Message is required.", errors);
@@ -86,9 +86,9 @@ public class FeedbackSubmitEndpointTests
     [Fact]
     public async Task Submit_RejectsAMessageOverTheMaximumLength()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var errors = await AssertBadRequestAsync(db, new SubmitFeedbackRequest
+        IEnumerable<string> errors = await AssertBadRequestAsync(db, new SubmitFeedbackRequest
         {
             Category = FeedbackCategory.Idea,
             Message = new string('a', 2001)
@@ -100,9 +100,9 @@ public class FeedbackSubmitEndpointTests
     [Fact]
     public async Task Submit_AcceptsAMessageOfExactlyTheMaximumLength()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var result = await CreateController(db).Submit(new SubmitFeedbackRequest
+        IActionResult result = await CreateController(db).Submit(new SubmitFeedbackRequest
         {
             Category = FeedbackCategory.Other,
             Message = new string('a', 2000)
@@ -119,9 +119,9 @@ public class FeedbackSubmitEndpointTests
     [InlineData("Dashboard")]
     public async Task Submit_RejectsAPageThatIsNotAnAppRelativePath(string pageUrl)
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var errors = await AssertBadRequestAsync(db,
+        IEnumerable<string> errors = await AssertBadRequestAsync(db,
             new SubmitFeedbackRequest { Category = FeedbackCategory.Bug, Message = "Hi", PageUrl = pageUrl });
 
         Assert.Contains("Page must be a path within the app.", errors);
@@ -130,9 +130,9 @@ public class FeedbackSubmitEndpointTests
     [Fact]
     public async Task Submit_RejectsAPageOverTheMaximumLength()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var errors = await AssertBadRequestAsync(db, new SubmitFeedbackRequest
+        IEnumerable<string> errors = await AssertBadRequestAsync(db, new SubmitFeedbackRequest
         {
             Category = FeedbackCategory.Bug,
             Message = "Hi",
@@ -145,9 +145,9 @@ public class FeedbackSubmitEndpointTests
     [Fact]
     public async Task Submit_RejectsAnUnknownCategory()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var errors = await AssertBadRequestAsync(db,
+        IEnumerable<string> errors = await AssertBadRequestAsync(db,
             new SubmitFeedbackRequest { Category = (FeedbackCategory)99, Message = "Hi" });
 
         Assert.Contains("Choose a category: Bug, Idea or Other.", errors);
@@ -156,14 +156,14 @@ public class FeedbackSubmitEndpointTests
     [Fact]
     public async Task Submit_InvalidFeedback_DoesNotUseUpTheLimit()
     {
-        await using var db = CreateContext();
-        var controller = CreateController(db);
-        for (var i = 0; i < FeedbackRateLimit.MaxSubmissionsPerWindow; i++)
+        await using AppDbContext db = CreateContext();
+        FeedbackApiController controller = CreateController(db);
+        for (int i = 0; i < FeedbackRateLimit.MaxSubmissionsPerWindow; i++)
         {
             await controller.Submit(new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "" });
         }
 
-        var result = await controller.Submit(
+        IActionResult result = await controller.Submit(
             new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Add CSV export." });
 
         Assert.IsType<NoContentResult>(result);
@@ -172,17 +172,17 @@ public class FeedbackSubmitEndpointTests
     [Fact]
     public async Task Submit_WhenRateLimited_Returns429WithTheSharedMessage()
     {
-        await using var db = CreateContext();
-        var controller = CreateController(db);
-        for (var i = 0; i < FeedbackRateLimit.MaxSubmissionsPerWindow; i++)
+        await using AppDbContext db = CreateContext();
+        FeedbackApiController controller = CreateController(db);
+        for (int i = 0; i < FeedbackRateLimit.MaxSubmissionsPerWindow; i++)
         {
             await controller.Submit(new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Hi" });
         }
 
-        var result = await controller.Submit(
+        IActionResult result = await controller.Submit(
             new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Hi" });
 
-        var objectResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status429TooManyRequests, objectResult.StatusCode);
         Assert.Contains(FeedbackMessages.RateLimited, objectResult.Value!.ToString());
     }

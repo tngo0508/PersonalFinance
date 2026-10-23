@@ -11,6 +11,7 @@ Detailed standards for this .NET Core MVC project, based on Microsoft's official
 - [Version Management](#version-management)
 - [Changelog Management](#changelog-management)
 - [Naming Conventions](#naming-conventions)
+- [C# Style](#c-style)
 - [JavaScript / ESLint](#javascript--eslint)
 - [References](#references)
 
@@ -587,6 +588,71 @@ After fixing a bug:
 - **Match Class Name**: File name should match class name
 - **Layer Folders**: Organize by layer (Controllers, Services, Models, etc.)
 - **Feature Folders**: For larger features, use feature-based organization
+
+## C# Style
+
+These rules follow Microsoft's C# coding conventions and the `dotnet/runtime` coding style. `.editorconfig` enforces
+them through `EnforceCodeStyleInBuild`: a rule at `warning` severity is a squiggle while you develop and a failed build
+in CI, where warnings are errors. Before opening a PR, run `dotnet format style PersonalFinance.sln` and
+`dotnet format whitespace PersonalFinance.sln` to fix a branch mechanically.
+
+| Rule | Enforced by |
+|---|---|
+| Explicit types; `var` only when the type is on the right-hand side | `IDE0008` (warning) |
+| File-scoped namespaces | `IDE0161` (warning) |
+| `internal sealed` unless something needs the type public | `CA1852` (arrives with the ADR 0007 PRs) |
+| One job per method, within the complexity ceiling | `CA1502`, `CA1505` (arrive with the ADR 0007 PRs) |
+| Money is `decimal` | Code review; see Data Layer rules |
+
+### Explicit types (IDE0007 / IDE0008)
+
+Write the type unless it already appears on the right-hand side of the `=`. `var` is allowed for `new T(...)`, casts,
+`as`, conversion methods named after their result (`.ToList()`, `XDocument.Load(...)`, `int.Parse(...)`), and
+anonymous types, which require it. The analyzer decides what counts as apparent; if the build is green, the code is
+within the rule. It is fine to write `var` while developing; `dotnet format style` rewrites it before the PR.
+
+```csharp
+// Allowed: the type is on the line
+var service = new FeedbackService(context, limiter);
+var rows = results.Select(r => new { r.Id, r.Name });
+
+// Not allowed: the reader has to look elsewhere for the type
+var inbox = await _feedbackApi.GetInboxAsync(ct);   // IReadOnlyList<FeedbackAdminItemDto> inbox = ...
+foreach (var goal in goals)                         // foreach (SavingsGoal goal in goals)
+var count = 0;                                      // int count = 0;
+```
+
+### Visibility and sealing
+
+- A class is `internal sealed` unless something needs it public: a service interface, a controller (MVC discovery
+  needs `public`), a DTO or an entity. `InternalsVisibleTo("PersonalFinance.Tests")` lets tests see internals.
+- An interface lives in the same folder as the class that implements it. There is no `Interfaces/` folder
+  ([ADR 0007](adr/0007-feature-folders-with-interface-only-dependencies.md)).
+
+### Method shape
+
+- One job per method, and the name says what it does. A public method should read as a list of steps whose private
+  helpers carry the detail.
+- Guard clauses and early returns instead of nested `if`. Use `ArgumentNullException.ThrowIfNull(x)` and
+  `ArgumentException.ThrowIfNullOrWhiteSpace(s)` at the top of a method.
+- No `#region`. If a class needs regions to be navigable, it needs splitting.
+
+### Async and time
+
+- `Async` suffix on every async method; accept and pass a `CancellationToken` wherever the surrounding code does.
+- New code reads the clock through the injected `TimeProvider`, never `DateTime.UtcNow` or `DateTime.Now`, so tests
+  can use `FakeTimeProvider`.
+
+### DTOs and records
+
+- Existing DTOs stay classes. A new DTO may be a `sealed record` with `init` properties when nothing model-binds it.
+- No primary constructors for now: the solution has none, and mixing the two styles costs more than it saves.
+
+### References
+
+- [C# coding conventions](https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions)
+- [.NET runtime C# coding style](https://github.com/dotnet/runtime/blob/main/docs/coding-guidelines/coding-style.md)
+- [Code-style rule options (`.editorconfig`)](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/code-style-rule-options)
 
 ## JavaScript / ESLint
 

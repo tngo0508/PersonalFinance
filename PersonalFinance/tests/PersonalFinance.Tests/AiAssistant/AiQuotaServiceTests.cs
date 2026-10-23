@@ -16,7 +16,7 @@ public class AiQuotaServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"Quota_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -25,9 +25,9 @@ public class AiQuotaServiceTests
     [Fact]
     public async Task CheckQuotaAsync_UsesConfiguredLimitsAcrossServiceInstances()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"PersistentQuota_{Guid.NewGuid():N}").Options;
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        IConfigurationRoot config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["OpenAI:DailyMessageLimit"] = "1",
             ["OpenAI:MonthlyBudgetUsd"] = "2",
@@ -50,7 +50,7 @@ public class AiQuotaServiceTests
     [InlineData("anonymous")]
     public async Task CheckQuotaAsync_AnonymousRequestsAreDenied(string userId)
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         Assert.False((await new AiQuotaService(db).CheckQuotaAsync(userId, "chat")).Allowed);
     }
 
@@ -58,11 +58,11 @@ public class AiQuotaServiceTests
     public async Task CheckQuotaAsync_WhenNoUsage_ReturnsAllowed()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new AiQuotaService(db);
 
         // Act
-        var result = await service.CheckQuotaAsync(UserId, "chat");
+        QuotaCheckResult result = await service.CheckQuotaAsync(UserId, "chat");
 
         // Assert
         Assert.True(result.Allowed);
@@ -74,12 +74,12 @@ public class AiQuotaServiceTests
     public async Task CheckQuotaAsync_WhenUserExceedsDailyLimit_ReturnsDenied()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new AiQuotaService(db);
-        var today = DateTime.UtcNow;
+        DateTime today = DateTime.UtcNow;
 
         // Add 30 records for the user today (the daily limit)
-        for (var i = 0; i < 30; i++)
+        for (int i = 0; i < 30; i++)
         {
             db.AiUsageRecords.Add(new AiUsageRecord
             {
@@ -94,7 +94,7 @@ public class AiQuotaServiceTests
         await db.SaveChangesAsync();
 
         // Act
-        var result = await service.CheckQuotaAsync(UserId, "chat");
+        QuotaCheckResult result = await service.CheckQuotaAsync(UserId, "chat");
 
         // Assert
         Assert.False(result.Allowed);
@@ -105,12 +105,12 @@ public class AiQuotaServiceTests
     public async Task CheckQuotaAsync_WhenOtherUserExceedsLimit_CurrentUserAllowed()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new AiQuotaService(db);
-        var today = DateTime.UtcNow;
+        DateTime today = DateTime.UtcNow;
 
         // Add 30 records for the other user
-        for (var i = 0; i < 30; i++)
+        for (int i = 0; i < 30; i++)
         {
             db.AiUsageRecords.Add(new AiUsageRecord
             {
@@ -125,7 +125,7 @@ public class AiQuotaServiceTests
         await db.SaveChangesAsync();
 
         // Act
-        var result = await service.CheckQuotaAsync(UserId, "chat");
+        QuotaCheckResult result = await service.CheckQuotaAsync(UserId, "chat");
 
         // Assert
         Assert.True(result.Allowed);
@@ -135,13 +135,13 @@ public class AiQuotaServiceTests
     public async Task CheckQuotaAsync_WhenMonthlyBudgetExceeded_ReturnsDenied()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new AiQuotaService(db);
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
         var monthStart = new DateTime(now.Year, now.Month, 1);
 
         // Add records totaling $10 (the monthly budget)
-        for (var i = 0; i < 10; i++)
+        for (int i = 0; i < 10; i++)
         {
             db.AiUsageRecords.Add(new AiUsageRecord
             {
@@ -156,7 +156,7 @@ public class AiQuotaServiceTests
         await db.SaveChangesAsync();
 
         // Act
-        var result = await service.CheckQuotaAsync(UserId, "chat");
+        QuotaCheckResult result = await service.CheckQuotaAsync(UserId, "chat");
 
         // Assert
         Assert.False(result.Allowed);
@@ -167,13 +167,13 @@ public class AiQuotaServiceTests
     public async Task CheckQuotaAsync_WhenBudgetNearWarningThreshold_ReturnsWarning()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new AiQuotaService(db);
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
         var monthStart = new DateTime(now.Year, now.Month, 1);
 
         // Add $9.00 worth of usage (90% of $10 budget)
-        for (var i = 0; i < 9; i++)
+        for (int i = 0; i < 9; i++)
         {
             db.AiUsageRecords.Add(new AiUsageRecord
             {
@@ -188,7 +188,7 @@ public class AiQuotaServiceTests
         await db.SaveChangesAsync();
 
         // Act
-        var result = await service.CheckQuotaAsync(UserId, "chat");
+        QuotaCheckResult result = await service.CheckQuotaAsync(UserId, "chat");
 
         // Assert
         Assert.True(result.Allowed);
@@ -199,14 +199,14 @@ public class AiQuotaServiceTests
     public async Task RecordUsageAsync_SavesRecordToDatabase()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new AiQuotaService(db);
 
         // Act
         await service.RecordUsageAsync(UserId, "chat", 1000, 500, 200, 0.01m);
 
         // Assert
-        var record = await db.AiUsageRecords.FirstOrDefaultAsync(r => r.UserId == UserId);
+        AiUsageRecord? record = await db.AiUsageRecords.FirstOrDefaultAsync(r => r.UserId == UserId);
         Assert.NotNull(record);
         Assert.Equal("chat", record.Endpoint);
         Assert.Equal(1000, record.PromptTokens);
@@ -219,19 +219,19 @@ public class AiQuotaServiceTests
     public void CalculateEstimatedCost_MatchesGpt4oMiniPricing()
     {
         // Arrange
-        var promptTokens = 1000;
-        var completionTokens = 500;
-        var cachedPromptTokens = 200;
+        int promptTokens = 1000;
+        int completionTokens = 500;
+        int cachedPromptTokens = 200;
 
         // Act
-        var cost = AiQuotaService.CalculateEstimatedCost(promptTokens, completionTokens, cachedPromptTokens);
+        decimal cost = AiQuotaService.CalculateEstimatedCost(promptTokens, completionTokens, cachedPromptTokens);
 
         // Assert
         // Non-cached input: 800 * $0.15 / 1M = $0.00012
         // Cached input: 200 * $0.075 / 1M = $0.000015
         // Output: 500 * $0.60 / 1M = $0.0003
         // Total: $0.000435
-        var expected = 0.000435m;
+        decimal expected = 0.000435m;
         Assert.Equal(expected, cost);
     }
 
@@ -239,7 +239,7 @@ public class AiQuotaServiceTests
     public void CalculateEstimatedCost_ZeroTokens_ReturnsZero()
     {
         // Act
-        var cost = AiQuotaService.CalculateEstimatedCost(0, 0, 0);
+        decimal cost = AiQuotaService.CalculateEstimatedCost(0, 0, 0);
 
         // Assert
         Assert.Equal(0m, cost);
@@ -249,13 +249,13 @@ public class AiQuotaServiceTests
     public async Task CheckQuotaAsync_OldRecords_DoNotCount()
     {
         // Arrange
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new AiQuotaService(db);
-        var yesterday = DateTime.UtcNow.AddDays(-1);
-        var lastMonth = DateTime.UtcNow.AddMonths(-1);
+        DateTime yesterday = DateTime.UtcNow.AddDays(-1);
+        DateTime lastMonth = DateTime.UtcNow.AddMonths(-1);
 
         // Add records from yesterday and last month
-        for (var i = 0; i < 30; i++)
+        for (int i = 0; i < 30; i++)
         {
             db.AiUsageRecords.Add(new AiUsageRecord
             {
@@ -267,7 +267,7 @@ public class AiQuotaServiceTests
                 CreatedAt = yesterday,
             });
         }
-        for (var i = 0; i < 20; i++)
+        for (int i = 0; i < 20; i++)
         {
             db.AiUsageRecords.Add(new AiUsageRecord
             {
@@ -282,7 +282,7 @@ public class AiQuotaServiceTests
         await db.SaveChangesAsync();
 
         // Act
-        var result = await service.CheckQuotaAsync(UserId, "chat");
+        QuotaCheckResult result = await service.CheckQuotaAsync(UserId, "chat");
 
         // Assert
         Assert.True(result.Allowed);

@@ -22,19 +22,19 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_ExistsAndIsNonEmpty()
     {
-        var root = FindProjectRoot();
-        var workflowPath = Path.Combine(root, ".github", "workflows", "deploy-azure.yml");
+        string root = FindProjectRoot();
+        string workflowPath = Path.Combine(root, ".github", "workflows", "deploy-azure.yml");
 
         Assert.True(File.Exists(workflowPath), $"Expected workflow file '{workflowPath}' does not exist.");
-        var content = File.ReadAllText(workflowPath);
+        string content = File.ReadAllText(workflowPath);
         Assert.False(string.IsNullOrWhiteSpace(content), "Workflow file is unexpectedly empty.");
     }
 
     [Fact]
     public void DeploymentWorkflow_ConfiguresRequiredTriggers()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // Push to main
         Assert.Contains("push:", workflow);
@@ -54,8 +54,8 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_ConfiguresZeroCostRegistry_GHCR()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // GHCR configuration
         Assert.Contains("REGISTRY: ghcr.io", workflow);
@@ -70,8 +70,8 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_ConfiguresPasswordlessAzureOidcAuthentication()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // OIDC permission token
         Assert.Contains("id-token: write", workflow);
@@ -95,8 +95,8 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_BuildAndTestStage_CoversDotNet10AndBicepValidation()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         Assert.Contains("build-and-test:", workflow);
         Assert.Contains("actions/setup-dotnet@v4", workflow);
@@ -109,13 +109,13 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SetupDotNetSteps_UseTheSdkPinnedInGlobalJson()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // The repo-root global.json pins the SDK, so CI and local builds run the same analyzers (#125)
         Assert.True(File.Exists(Path.Combine(root, "global.json")), "global.json must exist at the repository root.");
 
-        var setupSteps = Regex.Matches(workflow, @"uses: actions/setup-dotnet@v4\s+with:\s+(?<input>[^\r\n]+)");
+        MatchCollection setupSteps = Regex.Matches(workflow, @"uses: actions/setup-dotnet@v4\s+with:\s+(?<input>[^\r\n]+)");
         Assert.NotEmpty(setupSteps);
         foreach (Match step in setupSteps)
         {
@@ -129,11 +129,11 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_FullSolutionBuilds_FailOnAnyWarning()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // Every full-solution build turns on the warnings-as-errors switch in Directory.Build.props (#132)
-        var solutionBuilds = Regex.Matches(workflow, @"dotnet build PersonalFinance\.sln[^\r\n]*");
+        MatchCollection solutionBuilds = Regex.Matches(workflow, @"dotnet build PersonalFinance\.sln[^\r\n]*");
         Assert.Equal(2, solutionBuilds.Count);
         foreach (Match build in solutionBuilds)
         {
@@ -144,8 +144,8 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_DeployStage_MapsAllExpectedBicepParameters()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         Assert.Contains("deploy-azure:", workflow);
         Assert.Contains("template: infra/main.bicep", workflow);
@@ -166,19 +166,19 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_AllJobAndOutputReferences_AreValidAndDeclared()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // 1. Discover all defined job IDs and declared outputs using structural line analysis
-        var lines = workflow.Split('\n');
+        string[] lines = workflow.Split('\n');
         string? currentJob = null;
         bool inOutputs = false;
         var declaredOutputs = new Dictionary<string, HashSet<string>>();
         var definedJobs = new HashSet<string>();
 
-        foreach (var rawLine in lines)
+        foreach (string rawLine in lines)
         {
-            var line = rawLine.TrimEnd('\r');
+            string line = rawLine.TrimEnd('\r');
             // Job definition at 2-space indentation (e.g. "  build-and-push-containers:")
             if (Regex.IsMatch(line, @"^  [a-zA-Z0-9_-]+:"))
             {
@@ -193,7 +193,7 @@ public class GitHubActionsDeploymentWorkflowTests
             }
             else if (inOutputs)
             {
-                var outputMatch = Regex.Match(line, @"^      ([a-zA-Z0-9_-]+):");
+                Match outputMatch = Regex.Match(line, @"^      ([a-zA-Z0-9_-]+):");
                 if (outputMatch.Success)
                 {
                     declaredOutputs[currentJob!].Add(outputMatch.Groups[1].Value);
@@ -214,13 +214,13 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("web_image_tag", declaredOutputs["build-and-push-containers"]);
 
         // 2. Find all expressions referencing needs.<job_id>.outputs.<output_name>
-        var needsOutputReferences = Regex.Matches(workflow, @"needs\.([a-zA-Z0-9_-]+)\.outputs\.([a-zA-Z0-9_-]+)");
+        MatchCollection needsOutputReferences = Regex.Matches(workflow, @"needs\.([a-zA-Z0-9_-]+)\.outputs\.([a-zA-Z0-9_-]+)");
         Assert.NotEmpty(needsOutputReferences);
 
         foreach (Match refMatch in needsOutputReferences)
         {
-            var targetJobId = refMatch.Groups[1].Value;
-            var outputName = refMatch.Groups[2].Value;
+            string targetJobId = refMatch.Groups[1].Value;
+            string outputName = refMatch.Groups[2].Value;
 
             Assert.True(definedJobs.Contains(targetJobId),
                 $"Workflow expression references job '{targetJobId}' which is NOT defined under jobs in the workflow.");
@@ -233,13 +233,13 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SmokeTestBashScript_HasNoPowerShellBacktickEscapes()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
-        var smokeTestJobMatch = Regex.Match(workflow, @"smoke-test:\s*.*", RegexOptions.Singleline);
+        Match smokeTestJobMatch = Regex.Match(workflow, @"smoke-test:\s*.*", RegexOptions.Singleline);
         Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
 
-        var smokeTestContent = smokeTestJobMatch.Value;
+        string smokeTestContent = smokeTestJobMatch.Value;
 
         // Ensure there are no PowerShell-style backtick escapes (e.g. `n, `r, `t) in bash script blocks
         Assert.DoesNotContain("`n", smokeTestContent);
@@ -250,8 +250,8 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SmokeTestStage_VerifiesCoreEndpoints()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         Assert.Contains("smoke-test:", workflow);
         Assert.Contains("/health", workflow);
@@ -263,12 +263,12 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_AllJobs_DefineExplicitTimeouts()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // Every job (2-space indented key under `jobs:`) must declare its own timeout
-        var jobsSection = workflow[workflow.IndexOf("\njobs:", StringComparison.Ordinal)..];
-        var jobBlocks = Regex.Matches(jobsSection, @"\n  ([a-zA-Z0-9_-]+):[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
+        string jobsSection = workflow[workflow.IndexOf("\njobs:", StringComparison.Ordinal)..];
+        MatchCollection jobBlocks = Regex.Matches(jobsSection, @"\n  ([a-zA-Z0-9_-]+):[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
         Assert.NotEmpty(jobBlocks);
         foreach (Match job in jobBlocks)
         {
@@ -277,7 +277,7 @@ public class GitHubActionsDeploymentWorkflowTests
         }
 
         // Verify smoke-test job specifically limits execution duration
-        var smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
+        Match smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
         Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
         Assert.Contains("timeout-minutes:", smokeTestJobMatch.Value);
     }
@@ -285,8 +285,8 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_PullRequests_AreOptimizedForSpeed()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // Superseded PR runs are cancelled, but main deployments are never interrupted
         Assert.Contains("concurrency:", workflow);
@@ -313,12 +313,12 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SqlServerMigrationsJob_AppliesMigrationsTwiceWithTheDeveloperScripts()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
-        var jobMatch = Regex.Match(workflow, @"\n  sql-server-migrations:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
+        Match jobMatch = Regex.Match(workflow, @"\n  sql-server-migrations:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
         Assert.True(jobMatch.Success, "Could not find sql-server-migrations job in workflow.");
-        var job = jobMatch.Value;
+        string job = jobMatch.Value;
 
         Assert.Contains("runs-on: ubuntu-latest", job);
 
@@ -346,12 +346,12 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SmokeTestJob_ConfiguresCurlTimeoutsAndFallback()
     {
-        var root = FindProjectRoot();
-        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string root = FindProjectRoot();
+        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
-        var smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
+        Match smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
         Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
-        var content = smokeTestJobMatch.Value;
+        string content = smokeTestJobMatch.Value;
 
         // Verify connection timeout and max time are enforced on curl calls to prevent hanging
         Assert.Contains("--connect-timeout", content);
@@ -362,11 +362,11 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void SmokeTestScript_ExistsAndDefinesExpectedEndpointsAndOptions()
     {
-        var root = FindProjectRoot();
-        var scriptPath = Path.Combine(root, "infra", "smoke-test.ps1");
+        string root = FindProjectRoot();
+        string scriptPath = Path.Combine(root, "infra", "smoke-test.ps1");
 
         Assert.True(File.Exists(scriptPath), $"Expected smoke test script '{scriptPath}' does not exist.");
-        var script = File.ReadAllText(scriptPath);
+        string script = File.ReadAllText(scriptPath);
 
         Assert.Contains("[string]$WebUrl", script);
         Assert.Contains("[int]$MaxRetries", script);
@@ -379,11 +379,11 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void Readme_ContainsDeploymentStatusBadgeIndicator()
     {
-        var root = FindProjectRoot();
-        var readmePath = Path.Combine(root, "README.md");
+        string root = FindProjectRoot();
+        string readmePath = Path.Combine(root, "README.md");
 
         Assert.True(File.Exists(readmePath), "README.md must exist in the repository root.");
-        var readme = File.ReadAllText(readmePath);
+        string readme = File.ReadAllText(readmePath);
 
         Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml/badge.svg", readme);
         Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml", readme);

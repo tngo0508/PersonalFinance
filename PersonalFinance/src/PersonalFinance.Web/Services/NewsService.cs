@@ -163,7 +163,7 @@ public sealed class NewsService : INewsService
         string category,
         CancellationToken cancellationToken = default)
     {
-        var allArticles = await GetFinanceNewsAsync(cancellationToken: cancellationToken);
+        List<NewsArticle> allArticles = await GetFinanceNewsAsync(cancellationToken: cancellationToken);
         return allArticles
             .Where(a => a.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -187,7 +187,7 @@ public sealed class NewsService : INewsService
     private async Task<List<NewsArticle>> FetchAndCacheAsync(CancellationToken cancellationToken)
     {
         // Fetch fresh data from all sources concurrently
-        var allArticles = await FetchAllSourcesAsync(cancellationToken);
+        List<NewsArticle> allArticles = await FetchAllSourcesAsync(cancellationToken);
 
         // Sort by published date, newest first, and limit results
         var sortedArticles = allArticles
@@ -212,7 +212,7 @@ public sealed class NewsService : INewsService
         List<NewsArticle> articles,
         Models.NewsQueryOptions options)
     {
-        var filtered = articles.AsEnumerable();
+        IEnumerable<NewsArticle> filtered = articles.AsEnumerable();
 
         if (!string.IsNullOrEmpty(options.Category))
         {
@@ -228,7 +228,7 @@ public sealed class NewsService : INewsService
 
         if (!string.IsNullOrEmpty(options.Search))
         {
-            var query = options.Search;
+            string query = options.Search;
             filtered = filtered.Where(a =>
                 a.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 a.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
@@ -245,11 +245,11 @@ public sealed class NewsService : INewsService
     private async Task<List<NewsArticle>> FetchAllSourcesAsync(CancellationToken cancellationToken)
     {
         var allArticles = new List<NewsArticle>();
-        var tasks = _sources.Select(source => FetchSourceAsync(source, cancellationToken));
+        IEnumerable<Task<List<NewsArticle>>> tasks = _sources.Select(source => FetchSourceAsync(source, cancellationToken));
 
-        var results = await Task.WhenAll(tasks);
+        List<NewsArticle>[] results = await Task.WhenAll(tasks);
 
-        foreach (var articles in results)
+        foreach (List<NewsArticle>? articles in results)
         {
             allArticles.AddRange(articles);
         }
@@ -291,14 +291,14 @@ public sealed class NewsService : INewsService
     {
         var articles = new List<NewsArticle>();
 
-        var response = await _httpClient.GetAsync(source.Url, cancellationToken);
+        HttpResponseMessage response = await _httpClient.GetAsync(source.Url, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning("Feed {SourceName} returned HTTP {StatusCode}", source.Name, response.StatusCode);
             return articles;
         }
 
-        var xml = await response.Content.ReadAsStringAsync(cancellationToken);
+        string xml = await response.Content.ReadAsStringAsync(cancellationToken);
 
         try
         {
@@ -307,16 +307,16 @@ public sealed class NewsService : INewsService
             // Handle standard RSS 2.0 format — reduced to 5 items per source for faster page loads
             var items = doc.Descendants("item").Take(5).ToList();
 
-            foreach (var item in items)
+            foreach (XElement? item in items)
             {
-                var title = item.Element("title")?.Value ?? string.Empty;
-                var link = item.Element("link")?.Value ?? string.Empty;
-                var description = item.Element("description")?.Value ?? string.Empty;
-                var pubDateStr = item.Element("pubDate")?.Value ?? string.Empty;
-                var category = item.Element("category")?.Value ?? source.Category;
+                string title = item.Element("title")?.Value ?? string.Empty;
+                string link = item.Element("link")?.Value ?? string.Empty;
+                string description = item.Element("description")?.Value ?? string.Empty;
+                string pubDateStr = item.Element("pubDate")?.Value ?? string.Empty;
+                string category = item.Element("category")?.Value ?? source.Category;
 
                 // Try to extract image from media:content or enclosure
-                var imageUrl = item.Descendants().FirstOrDefault(e => e.Name.LocalName == "content" && e.Name.Namespace?.NamespaceName == "http://search.yahoo.com/mrss/")?.Attribute("url")?.Value
+                string? imageUrl = item.Descendants().FirstOrDefault(e => e.Name.LocalName == "content" && e.Name.Namespace?.NamespaceName == "http://search.yahoo.com/mrss/")?.Attribute("url")?.Value
                               ?? item.Element("enclosure")?.Attribute("url")?.Value;
 
                 // Clean up description (strip HTML tags)
@@ -329,7 +329,7 @@ public sealed class NewsService : INewsService
                     Url = link.Trim(),
                     Source = source.Name,
                     ImageUrl = imageUrl,
-                    PublishedAt = DateTime.TryParse(pubDateStr, out var parsedDate) ? parsedDate : DateTime.UtcNow,
+                    PublishedAt = DateTime.TryParse(pubDateStr, out DateTime parsedDate) ? parsedDate : DateTime.UtcNow,
                     Category = category.Trim()
                 };
 

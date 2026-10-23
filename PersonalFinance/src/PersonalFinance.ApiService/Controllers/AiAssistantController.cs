@@ -1,10 +1,10 @@
-using PersonalFinance.Shared.Helpers;
-using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -55,23 +55,23 @@ public class AiAssistantController : ControllerBase
         }
 
         // Check scope before calling the LLM
-        var cannedResponse = _scopeFilter.Evaluate(request.Message);
+        AiChatResponseDto? cannedResponse = _scopeFilter.Evaluate(request.Message);
         if (cannedResponse != null)
         {
             return Ok(cannedResponse);
         }
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
 
         // Check quota before calling the LLM
-        var quotaResult = await _quotaService.CheckQuotaAsync(userId, "chat");
+        QuotaCheckResult quotaResult = await _quotaService.CheckQuotaAsync(userId, "chat");
         if (!quotaResult.Allowed)
         {
             return StatusCode(StatusCodes.Status429TooManyRequests,
                 new { error = quotaResult.DenialReason });
         }
 
-        var response = await _aiAssistantService.SendChatMessageAsync(userId, request, cancellationToken);
+        AiChatResponseDto response = await _aiAssistantService.SendChatMessageAsync(userId, request, cancellationToken);
 
         // Add disclaimer to AI-generated responses
         response.Disclaimer = AiAssistantMessages.Disclaimer;
@@ -92,9 +92,9 @@ public class AiAssistantController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request?.Title)) return BadRequest(new { error = "Title is required." });
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
 
-        var quotaResult = await _quotaService.CheckQuotaAsync(userId, "summarize");
+        QuotaCheckResult quotaResult = await _quotaService.CheckQuotaAsync(userId, "summarize");
         if (!quotaResult.Allowed)
         {
             return StatusCode(StatusCodes.Status429TooManyRequests, new { error = quotaResult.DenialReason });
@@ -102,7 +102,7 @@ public class AiAssistantController : ControllerBase
 
         try
         {
-            var response = await _aiAssistantService.SummarizeArticleAsync(userId, request, cancellationToken);
+            NewsArticleSummaryResponseDto response = await _aiAssistantService.SummarizeArticleAsync(userId, request, cancellationToken);
             response.Disclaimer = AiAssistantMessages.Disclaimer;
             response.BudgetWarning = quotaResult.BudgetWarning ? AiAssistantMessages.BudgetWarning : null;
             return Ok(response);

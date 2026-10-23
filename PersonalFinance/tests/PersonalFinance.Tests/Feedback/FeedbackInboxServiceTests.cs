@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using PersonalFinance.ApiService.Services;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
 
@@ -17,7 +18,7 @@ public class FeedbackInboxServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"FeedbackInbox_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -37,14 +38,14 @@ public class FeedbackInboxServiceTests
     [Fact]
     public async Task List_ShowsNewestFirst()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.Feedback.AddRange(
             Feedback("oldest", Monday),
             Feedback("newest", Monday.AddDays(2)),
             Feedback("middle", Monday.AddDays(1)));
         await db.SaveChangesAsync();
 
-        var items = await CreateService(db).ListAsync();
+        List<FeedbackAdminItemDto> items = await CreateService(db).ListAsync();
 
         Assert.Equal(["newest", "middle", "oldest"], items.Select(i => i.Message));
     }
@@ -52,13 +53,13 @@ public class FeedbackInboxServiceTests
     [Fact]
     public async Task List_SentAtTheSameMoment_PutsTheLaterOneFirst()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.Feedback.Add(Feedback("first sent", Monday));
         await db.SaveChangesAsync();
         db.Feedback.Add(Feedback("second sent", Monday));
         await db.SaveChangesAsync();
 
-        var items = await CreateService(db).ListAsync();
+        List<FeedbackAdminItemDto> items = await CreateService(db).ListAsync();
 
         Assert.Equal(["second sent", "first sent"], items.Select(i => i.Message));
     }
@@ -66,13 +67,13 @@ public class FeedbackInboxServiceTests
     [Fact]
     public async Task List_LeavesOutSoftDeletedFeedback()
     {
-        await using var db = CreateContext();
-        var deleted = Feedback("deleted", Monday);
+        await using AppDbContext db = CreateContext();
+        FeedbackEntity deleted = Feedback("deleted", Monday);
         deleted.SoftDelete();
         db.Feedback.AddRange(deleted, Feedback("kept", Monday));
         await db.SaveChangesAsync();
 
-        var items = await CreateService(db).ListAsync();
+        List<FeedbackAdminItemDto> items = await CreateService(db).ListAsync();
 
         Assert.Equal("kept", Assert.Single(items).Message);
     }
@@ -80,7 +81,7 @@ public class FeedbackInboxServiceTests
     [Fact]
     public async Task List_ShowsCategoryMessageAccountEmailPageStatusAndDate()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.Users.Add(new IdentityUser { Id = "user-1", UserName = "ana@example.com", Email = "ana@example.com" });
         db.Feedback.Add(new FeedbackEntity
         {
@@ -92,7 +93,7 @@ public class FeedbackInboxServiceTests
         });
         await db.SaveChangesAsync();
 
-        var item = Assert.Single(await CreateService(db).ListAsync());
+        FeedbackAdminItemDto item = Assert.Single(await CreateService(db).ListAsync());
 
         Assert.Equal(FeedbackCategory.Bug, item.Category);
         Assert.Equal("The chart is blank.", item.Message);
@@ -106,11 +107,11 @@ public class FeedbackInboxServiceTests
     [Fact]
     public async Task List_FeedbackFromAnAccountThatNoLongerExists_IsStillListed_WithoutAnEmail()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.Feedback.Add(Feedback("orphan", Monday, userId: "gone"));
         await db.SaveChangesAsync();
 
-        var item = Assert.Single(await CreateService(db).ListAsync());
+        FeedbackAdminItemDto item = Assert.Single(await CreateService(db).ListAsync());
 
         Assert.Equal(string.Empty, item.AccountEmail);
     }
@@ -118,7 +119,7 @@ public class FeedbackInboxServiceTests
     [Fact]
     public async Task List_WhenThereIsNoFeedback_IsEmpty()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         Assert.Empty(await CreateService(db).ListAsync());
     }
@@ -126,9 +127,9 @@ public class FeedbackInboxServiceTests
     [Fact]
     public void AdminListQuery_TranslatesToAzureSql_AsOneOrderedQuery()
     {
-        using var db = AzureSqlTranslation.CreateContext();
+        using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
 
-        var sql = AzureSqlTranslation.AssertTranslates(CreateService(db).AdminListQuery());
+        string sql = AzureSqlTranslation.AssertTranslates(CreateService(db).AdminListQuery());
 
         Assert.Contains("LEFT JOIN", sql, StringComparison.Ordinal);
         Assert.Contains("[IsDeleted]", sql, StringComparison.Ordinal);

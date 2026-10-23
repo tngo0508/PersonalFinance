@@ -54,24 +54,24 @@ public class ResendEmailConfirmationModel : PageModel
             return Page();
         }
 
-        var user = await _userManager.FindByEmailAsync(Input.Email);
+        IdentityUser? user = await _userManager.FindByEmailAsync(Input.Email);
         if (user == null)
         {
             ModelState.AddModelError(string.Empty, "Verification email sent. Please check your email.");
             return Page();
         }
 
-        var userId = await _userManager.GetUserIdAsync(user);
-        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        string userId = await _userManager.GetUserIdAsync(user);
+        string code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-        var callbackUrl = Url.Page(
+        string? callbackUrl = Url.Page(
             "/Account/ConfirmEmail",
             pageHandler: null,
             values: new { userId = userId, code = code },
             protocol: Request.Scheme);
 
-        var appName = _brevoOptions.SenderName ?? "PersonalFinance";
-        var htmlBody = EmailTemplateHelper.BuildConfirmationEmail(callbackUrl ?? string.Empty, appName);
+        string appName = _brevoOptions.SenderName ?? "PersonalFinance";
+        string htmlBody = EmailTemplateHelper.BuildConfirmationEmail(callbackUrl ?? string.Empty, appName);
 
         await _emailSender.SendEmailAsync(
             Input.Email,

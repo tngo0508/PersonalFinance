@@ -45,10 +45,10 @@ dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false
 csharp_using_directive_placement = outside_namespace:suggestion
 
-# `var` when the type is obvious
-csharp_style_var_for_built_in_types = true:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
-csharp_style_var_elsewhere = true:suggestion
+# Explicit types; `var` only when the type is written on the right-hand side (IDE0007/IDE0008)
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = true:silent
+csharp_style_var_elsewhere = false:warning
 
 # Braces, expression bodies, modern syntax
 csharp_prefer_braces = true:suggestion

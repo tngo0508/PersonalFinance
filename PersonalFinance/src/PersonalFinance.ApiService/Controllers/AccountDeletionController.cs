@@ -1,4 +1,5 @@
 using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
@@ -40,7 +41,7 @@ public class AccountDeletionController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(CancellationToken cancellationToken = default)
     {
-        var result = await _accountDeletionService.RequestAsync(User.GetUserId(), cancellationToken);
+        DeletionRequestResult result = await _accountDeletionService.RequestAsync(User.GetUserId(), cancellationToken);
         return result.Outcome switch
         {
             DeletionRequestOutcome.Accepted => Ok(new DeletionRequestAcceptedDto
@@ -66,7 +67,7 @@ public class AccountDeletionController : ControllerBase
     public async Task<IActionResult> Cancel([FromBody] CancelDeletionRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validation = await _cancelValidator.ValidateAsync(request, cancellationToken);
+        ValidationResult validation = await _cancelValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
             return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage).Distinct() });

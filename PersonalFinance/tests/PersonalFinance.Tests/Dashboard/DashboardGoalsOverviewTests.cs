@@ -22,7 +22,7 @@ public class DashboardGoalsOverviewTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"DashboardGoals_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -52,11 +52,11 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task Overview_WithSevenGoals_CountsAllSevenWhileListReturnsFive()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.AddRange(Enumerable.Range(1, 7).Select(i => Goal(i, 100m, 25m, completed: i <= 2)));
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(ExpectedNewestFiveGoalIds, summary.SavingsGoals.Select(g => g.Id));
         Assert.Equal(7, summary.GoalsOverview.TotalCount);
@@ -69,11 +69,11 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task Overview_WhenSavedExceedsTarget_CapsFundedPercentAt100_ButReportsActualTotalSaved()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.AddRange(Goal(1, 100m, 250m, completed: true), Goal(2, 100m, 100m, completed: true));
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(350m, summary.GoalsOverview.TotalSaved);
         Assert.Equal(100m, summary.GoalsOverview.FundedPercent);
@@ -82,11 +82,11 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task Overview_WhenTotalTargetIsZero_FundedPercentIsNull()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.Add(Goal(1, 0m, 0m));
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(1, summary.GoalsOverview.TotalCount);
         Assert.Equal(0m, summary.GoalsOverview.TotalTarget);
@@ -96,9 +96,9 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task Overview_WithNoGoals_IsEmptyWithNullFundedPercent()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.NotNull(summary.GoalsOverview);
         Assert.Equal(0, summary.GoalsOverview.TotalCount);
@@ -111,14 +111,14 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task Overview_ExcludesOtherUsersAndSoftDeletedGoals()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.AddRange(
             Goal(1, 200m, 50m),
             Goal(2, 1_000m, 1_000m, completed: true, userId: OtherUserId),
             Goal(3, 500m, 500m, completed: true, deleted: true));
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(1, summary.GoalsOverview.TotalCount);
         Assert.Equal(0, summary.GoalsOverview.CompletedCount);
@@ -130,7 +130,7 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task RecentActivity_MixesTransactionsAndGoalsNewestFirst()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.Add(Goal(1, 100m, 10m));
         db.SpreadsheetTransactionRecords.AddRange(
             new SpreadsheetTransactionRecord
@@ -155,7 +155,7 @@ public class DashboardGoalsOverviewTests
             });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(ExpectedMixedActivityTitles, summary.RecentActivity.Select(a => a.Title));
         Assert.Equal(ExpectedMixedActivityTypes, summary.RecentActivity.Select(a => a.Type));
@@ -164,11 +164,11 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task Overview_CapsEachGoalAtItsTarget_SoOverFundedGoalsCannotMaskUnfundedOnes()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.AddRange(Goal(1, 1_000m, 2_000m, completed: true), Goal(2, 1_000m, 0m));
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         Assert.Equal(50m, summary.GoalsOverview.FundedPercent);
     }
@@ -176,7 +176,7 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task RecentActivity_ReturnsAtMostFiveItemsNewestFirst()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.AddRange(Enumerable.Range(1, 4).Select(i => Goal(i, 100m, 10m)));
         db.SpreadsheetTransactionRecords.AddRange(Enumerable.Range(1, 6).Select(i => new SpreadsheetTransactionRecord
         {
@@ -190,7 +190,7 @@ public class DashboardGoalsOverviewTests
         }));
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         // Goals are created at midnight on day i, transactions at noon on day i; only three goals are considered.
         Assert.Equal(ExpectedCappedActivityTitles, summary.RecentActivity.Select(a => a.Title));
@@ -199,7 +199,7 @@ public class DashboardGoalsOverviewTests
     [Fact]
     public async Task RecentActivity_WhenDatesTie_OrdersDeterministically()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var date = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc);
         db.SavingsGoals.AddRange(
             new SavingsGoal { Id = 1, UserId = UserId, Name = "Goal A", TargetAmount = 100m, CreatedAt = date },
@@ -227,7 +227,7 @@ public class DashboardGoalsOverviewTests
             });
         await db.SaveChangesAsync();
 
-        var summary = await GetSummaryAsync(db);
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
 
         // Same date: transactions before goals, then newest record (highest Id) first within each source.
         Assert.Equal(ExpectedSameDateActivityTitles, summary.RecentActivity.Select(a => a.Title));

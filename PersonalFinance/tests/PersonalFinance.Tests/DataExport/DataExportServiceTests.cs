@@ -22,7 +22,7 @@ public class DataExportServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"DataExport_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -33,7 +33,7 @@ public class DataExportServiceTests
     [Fact]
     public async Task Export_ContainsTheAccountAndItsRecords()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.Users.Add(new IdentityUser { Id = UserId, UserName = "me@example.com", Email = "me@example.com" });
         db.Roles.Add(new IdentityRole { Id = "role-user", Name = "User" });
         db.UserRoles.Add(new IdentityUserRole<string> { UserId = UserId, RoleId = "role-user" });
@@ -51,7 +51,7 @@ public class DataExportServiceTests
         db.SavingsGoals.Add(new SavingsGoal { UserId = UserId, Name = "Emergency fund", TargetAmount = 10_000m });
         await db.SaveChangesAsync();
 
-        var export = await CreateService(db).ExportAsync(UserId);
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
 
         Assert.Equal(Now.UtcDateTime, export.ExportedAtUtc);
         Assert.Equal("me@example.com", export.Account.Email);
@@ -65,16 +65,16 @@ public class DataExportServiceTests
     [Fact]
     public async Task Export_NeverContainsAnotherAccountsRecords()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         UserDataSeed.OneOfEverything(db, UserId, "mine");
         UserDataSeed.OneOfEverything(db, OtherUserId, "theirs");
         await db.SaveChangesAsync();
 
-        var export = await CreateService(db).ExportAsync(UserId);
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
 
         // Exactly one record per section, so a section without a text field cannot leak the other Account's row.
         AssertOneOfEverything(export);
-        var json = JsonSerializer.Serialize(export);
+        string json = JsonSerializer.Serialize(export);
         Assert.Contains("mine", json);
         Assert.DoesNotContain("theirs", json);
     }
@@ -82,27 +82,27 @@ public class DataExportServiceTests
     [Fact]
     public async Task Export_CoversEverySection()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         UserDataSeed.OneOfEverything(db, UserId, "mine");
         await db.SaveChangesAsync();
 
-        var export = await CreateService(db).ExportAsync(UserId);
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
 
         AssertOneOfEverything(export);
-        var comment = Assert.Single(export.Community.Comments);
+        DataExportCommentDto comment = Assert.Single(export.Community.Comments);
         Assert.Equal("mine case study", comment.CaseStudyTitle);
     }
 
     [Fact]
     public async Task Export_LeavesOutSoftDeletedAiUsage()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var deleted = new AiUsageRecord { UserId = UserId, Endpoint = "deleted-chat" };
         deleted.SoftDelete();
         db.AiUsageRecords.AddRange(deleted, new AiUsageRecord { UserId = UserId, Endpoint = "live-chat" });
         await db.SaveChangesAsync();
 
-        var export = await CreateService(db).ExportAsync(UserId);
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
 
         Assert.Equal("live-chat", Assert.Single(export.AiUsage).Endpoint);
     }
@@ -134,14 +134,14 @@ public class DataExportServiceTests
     [Fact]
     public async Task Export_LeavesOutSoftDeletedRows()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var live = new SavingsGoal { UserId = UserId, Name = "Live goal" };
         var deleted = new SavingsGoal { UserId = UserId, Name = "Deleted goal" };
         deleted.SoftDelete();
         db.SavingsGoals.AddRange(live, deleted);
         await db.SaveChangesAsync();
 
-        var export = await CreateService(db).ExportAsync(UserId);
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
 
         Assert.Equal("Live goal", Assert.Single(export.SavingsGoals).Name);
     }
@@ -149,7 +149,7 @@ public class DataExportServiceTests
     [Fact]
     public async Task Export_LeavesOutSoftDeletedTransactionsAndBudgetLines()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var category = new BudgetCategory { UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense };
         var plan = new MonthlyBudgetPlan { UserId = UserId, Year = 2026, Month = 3 };
         var deletedTransaction = new BudgetTransaction
@@ -162,7 +162,7 @@ public class DataExportServiceTests
         db.MonthlyBudgetLines.Add(deletedLine);
         await db.SaveChangesAsync();
 
-        var export = await CreateService(db).ExportAsync(UserId);
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
 
         Assert.Equal("Live", Assert.Single(export.BudgetTransactions).Description);
         Assert.Empty(export.BudgetMonthLines);
@@ -171,7 +171,7 @@ public class DataExportServiceTests
     [Fact]
     public async Task Export_TransactionInADeletedCategory_KeepsTheCategoryName()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var category = new BudgetCategory { UserId = UserId, Name = "Old category", Kind = BudgetCategoryKind.Expense };
         db.BudgetCategories.Add(category);
         await db.SaveChangesAsync();
@@ -180,10 +180,10 @@ public class DataExportServiceTests
         category.SoftDelete();
         await db.SaveChangesAsync();
 
-        var export = await CreateService(db).ExportAsync(UserId);
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
 
         Assert.Empty(export.BudgetCategories);
-        var transaction = Assert.Single(export.BudgetTransactions);
+        DataExportBudgetTransactionDto transaction = Assert.Single(export.BudgetTransactions);
         Assert.Equal("Old category", transaction.Category);
         Assert.Equal(12.34m, transaction.Amount);
     }
@@ -191,7 +191,7 @@ public class DataExportServiceTests
     [Fact]
     public async Task Export_NeverContainsGoogleDriveApiKeys()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.GoogleDriveConnections.Add(new GoogleDriveConnection
         {
             UserId = UserId,
@@ -203,9 +203,9 @@ public class DataExportServiceTests
         });
         await db.SaveChangesAsync();
 
-        var export = await CreateService(db).ExportAsync(UserId);
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
 
-        var json = JsonSerializer.Serialize(export);
+        string json = JsonSerializer.Serialize(export);
         Assert.Contains("Budget folder", json);
         Assert.DoesNotContain("encrypted-secret-key", json);
         Assert.DoesNotContain("AIza", json);
@@ -214,9 +214,9 @@ public class DataExportServiceTests
     [Fact]
     public async Task Export_UnknownAccount_ReturnsEmptySections()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var export = await CreateService(db).ExportAsync("nobody");
+        DataExportDto export = await CreateService(db).ExportAsync("nobody");
 
         Assert.Equal("nobody", export.Account.Id);
         Assert.Null(export.Account.Email);
@@ -229,8 +229,8 @@ public class DataExportServiceTests
     [Fact]
     public void JoinQueries_TranslateToAzureSql()
     {
-        using var db = AzureSqlTranslation.CreateContext();
-        var service = CreateService(db);
+        using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
+        DataExportService service = CreateService(db);
 
         AzureSqlTranslation.AssertTranslates(service.BudgetTransactionsQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.BudgetMonthLinesQuery(UserId));

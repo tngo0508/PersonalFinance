@@ -21,8 +21,8 @@ public class IdentityConfigurationTests
             options.SignIn.RequireConfirmedAccount = requireConfirmedAccount)
             .AddEntityFrameworkStores<AppDbContext>();
 
-        var provider = services.BuildServiceProvider();
-        var dbContext = provider.GetRequiredService<AppDbContext>();
+        ServiceProvider provider = services.BuildServiceProvider();
+        AppDbContext dbContext = provider.GetRequiredService<AppDbContext>();
         dbContext.Database.EnsureCreated();
 
         return provider;
@@ -31,8 +31,8 @@ public class IdentityConfigurationTests
     [Fact]
     public void IdentityOptions_RequireConfirmedAccount_IsConfiguredAsTrue()
     {
-        using var provider = BuildIdentityServiceProvider(requireConfirmedAccount: true);
-        var options = provider.GetRequiredService<IOptions<IdentityOptions>>().Value;
+        using ServiceProvider provider = BuildIdentityServiceProvider(requireConfirmedAccount: true);
+        IdentityOptions options = provider.GetRequiredService<IOptions<IdentityOptions>>().Value;
 
         Assert.True(options.SignIn.RequireConfirmedAccount);
     }
@@ -40,9 +40,9 @@ public class IdentityConfigurationTests
     [Fact]
     public async Task SignInManager_CanSignInAsync_RejectsUnconfirmedUserWhenRequireConfirmedAccountIsTrue()
     {
-        using var provider = BuildIdentityServiceProvider(requireConfirmedAccount: true);
-        var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
-        var signInManager = provider.GetRequiredService<SignInManager<IdentityUser>>();
+        using ServiceProvider provider = BuildIdentityServiceProvider(requireConfirmedAccount: true);
+        UserManager<IdentityUser> userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        SignInManager<IdentityUser> signInManager = provider.GetRequiredService<SignInManager<IdentityUser>>();
 
         var unconfirmedUser = new IdentityUser
         {
@@ -51,19 +51,19 @@ public class IdentityConfigurationTests
             EmailConfirmed = false
         };
 
-        var createResult = await userManager.CreateAsync(unconfirmedUser, "P@ssword123!");
+        IdentityResult createResult = await userManager.CreateAsync(unconfirmedUser, "P@ssword123!");
         Assert.True(createResult.Succeeded);
 
-        var canSignIn = await signInManager.CanSignInAsync(unconfirmedUser);
+        bool canSignIn = await signInManager.CanSignInAsync(unconfirmedUser);
         Assert.False(canSignIn);
     }
 
     [Fact]
     public async Task SignInManager_CanSignInAsync_AllowsConfirmedUserWhenRequireConfirmedAccountIsTrue()
     {
-        using var provider = BuildIdentityServiceProvider(requireConfirmedAccount: true);
-        var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
-        var signInManager = provider.GetRequiredService<SignInManager<IdentityUser>>();
+        using ServiceProvider provider = BuildIdentityServiceProvider(requireConfirmedAccount: true);
+        UserManager<IdentityUser> userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        SignInManager<IdentityUser> signInManager = provider.GetRequiredService<SignInManager<IdentityUser>>();
 
         var confirmedUser = new IdentityUser
         {
@@ -72,10 +72,10 @@ public class IdentityConfigurationTests
             EmailConfirmed = true
         };
 
-        var createResult = await userManager.CreateAsync(confirmedUser, "P@ssword123!");
+        IdentityResult createResult = await userManager.CreateAsync(confirmedUser, "P@ssword123!");
         Assert.True(createResult.Succeeded);
 
-        var canSignIn = await signInManager.CanSignInAsync(confirmedUser);
+        bool canSignIn = await signInManager.CanSignInAsync(confirmedUser);
         Assert.True(canSignIn);
     }
 }

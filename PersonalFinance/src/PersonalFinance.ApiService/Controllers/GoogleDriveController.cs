@@ -1,9 +1,9 @@
-using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.Shared.Helpers;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -56,7 +56,7 @@ public class GoogleDriveController : ControllerBase
             _logger.LogInformation("Processing Google Drive explore request for input '{Url}'", request.FolderUrl);
         }
 
-        var result = await _driveConnectionService.GetFolderFilesAsync(request, cancellationToken);
+        GoogleDriveFolderResponseDto result = await _driveConnectionService.GetFolderFilesAsync(request, cancellationToken);
         if (!result.Success && string.IsNullOrEmpty(result.FolderId))
         {
             return BadRequest(result);
@@ -73,7 +73,7 @@ public class GoogleDriveController : ControllerBase
     public async Task<ActionResult<List<GoogleDriveConnectionDto>>> GetConnections(
         CancellationToken cancellationToken = default)
     {
-        var connections = await _driveConnectionService.GetUserConnectionsAsync(User.GetUserId(), cancellationToken);
+        List<GoogleDriveConnectionDto> connections = await _driveConnectionService.GetUserConnectionsAsync(User.GetUserId(), cancellationToken);
         return Ok(connections);
     }
 
@@ -88,7 +88,7 @@ public class GoogleDriveController : ControllerBase
         [FromQuery] bool forceRefresh = false,
         CancellationToken cancellationToken = default)
     {
-        var result =
+        GoogleDriveFolderResponseDto result =
             await _driveConnectionService.GetConnectionFilesAsync(connectionId, User.GetUserId(), forceRefresh,
                 cancellationToken);
         if (!result.Success && result.ErrorMessage == "Google Drive connection not found.")
@@ -116,7 +116,7 @@ public class GoogleDriveController : ControllerBase
 
         try
         {
-            var result = await _driveConnectionService.ConnectDriveAsync(User.GetUserId(), request, cancellationToken);
+            GoogleDriveConnectionDto result = await _driveConnectionService.ConnectDriveAsync(User.GetUserId(), request, cancellationToken);
             return Ok(result);
         }
         catch (ArgumentException argEx)
@@ -136,7 +136,7 @@ public class GoogleDriveController : ControllerBase
         [FromBody] SyncGoogleDriveRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var result = await _driveConnectionService.SyncConnectionAsync(connectionId, User.GetUserId(),
+        GoogleDriveFolderResponseDto result = await _driveConnectionService.SyncConnectionAsync(connectionId, User.GetUserId(),
             request?.ForceRefresh ?? true, cancellationToken);
         if (!result.Success && result.ErrorMessage == "Google Drive connection not found.")
         {
@@ -159,7 +159,7 @@ public class GoogleDriveController : ControllerBase
     {
         try
         {
-            var result = await _driveConnectionService.ReauthConnectionAsync(connectionId, User.GetUserId(),
+            GoogleDriveConnectionDto result = await _driveConnectionService.ReauthConnectionAsync(connectionId, User.GetUserId(),
                 request?.ApiKey, cancellationToken);
             return Ok(result);
         }
@@ -179,7 +179,7 @@ public class GoogleDriveController : ControllerBase
         int connectionId,
         CancellationToken cancellationToken = default)
     {
-        var deleted = await _driveConnectionService.DeleteConnectionAsync(connectionId, User.GetUserId(), cancellationToken);
+        bool deleted = await _driveConnectionService.DeleteConnectionAsync(connectionId, User.GetUserId(), cancellationToken);
         if (!deleted)
         {
             return NotFound(false);
@@ -205,7 +205,7 @@ public class GoogleDriveController : ControllerBase
             return BadRequest("fileId or fileName is required.");
         }
 
-        var report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
+        MonthlyBudgetReportDto report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
             User.GetUserId(), fileId, fileName, connectionId, cancellationToken);
         return Ok(report);
     }
@@ -227,7 +227,7 @@ public class GoogleDriveController : ControllerBase
             return BadRequest("fileId is required.");
         }
 
-        var transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
+        SpreadsheetTransactionsDto transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
             User.GetUserId(), fileId, fileName, connectionId, cancellationToken);
         return Ok(transactions);
     }

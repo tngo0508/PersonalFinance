@@ -20,12 +20,12 @@ public class SpreadsheetSyncTests
         db.GoogleDriveConnections.Add(connection);
         await db.SaveChangesAsync();
 
-        var unreadable = BudgetSpreadsheetParser.Unavailable("Monthly budget 2026.xlsx", "file-1",
+        MonthlyBudgetReportDto unreadable = BudgetSpreadsheetParser.Unavailable("Monthly budget 2026.xlsx", "file-1",
             "The spreadsheet could not be downloaded from Google Drive.");
         var service = new SpreadsheetAnalysisService(db, new FixedReportReader(unreadable), new NoOpNotifications(),
             TestBudgetDataProviderFactory.Create(db));
 
-        var result = await service.SyncSpreadsheetBudgetAsync(UserId, connection.Id, "file-1",
+        SyncSpreadsheetBudgetResult result = await service.SyncSpreadsheetBudgetAsync(UserId, connection.Id, "file-1",
             "Monthly budget 2026.xlsx", overwrite: true);
 
         Assert.False(result.Success);

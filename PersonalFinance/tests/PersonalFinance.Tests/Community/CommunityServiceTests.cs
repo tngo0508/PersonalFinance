@@ -17,7 +17,7 @@ public class CommunityServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"Community_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -29,11 +29,11 @@ public class CommunityServiceTests
     [Fact]
     public async Task SubmitStory_ReadTimeCountsWordsSeparatedByRepeatedSpaces_AndIsNotFeatured()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
+        await using AppDbContext db = CreateContext();
+        CommunityService service = CreateService(db);
 
         // 401 words, separated by double spaces: 401 / 200 rounds up to 3 minutes.
-        var body = string.Join("  ", Enumerable.Repeat("word", 401));
+        string body = string.Join("  ", Enumerable.Repeat("word", 401));
         var request = new CommunityStoryRequestDto
         {
             Title = "Paying off my car loan",
@@ -42,7 +42,7 @@ public class CommunityServiceTests
             Category = "Debt",
         };
 
-        var story = await service.SubmitStoryAsync(UserId, request, "Alex");
+        CommunityStoryDto story = await service.SubmitStoryAsync(UserId, request, "Alex");
 
         Assert.Equal(3, story.ReadTimeMinutes);
         Assert.False(story.IsFeatured);
@@ -52,7 +52,7 @@ public class CommunityServiceTests
     [Fact]
     public async Task GetCommunity_ReportsTheViewersVote_AndOptionPercentages()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var poll = new CommunityPoll { PollCode = "save-rate", Question = "How much do you save?", Category = "Saving" };
         var low = new CommunityPollOption { Text = "Under 10%", Order = 1 };
         var high = new CommunityPollOption { Text = "10% or more", Order = 2 };
@@ -67,9 +67,9 @@ public class CommunityServiceTests
             new CommunityPollVote { UserId = "other-2", PollId = poll.Id, OptionId = low.Id });
         await db.SaveChangesAsync();
 
-        var response = await CreateService(db).GetCommunityAsync(UserId);
+        CommunityResponseDto response = await CreateService(db).GetCommunityAsync(UserId);
 
-        var dto = Assert.Single(response.ActivePolls);
+        CommunityPollDto dto = Assert.Single(response.ActivePolls);
         Assert.Equal("save-rate", dto.Id);
         Assert.Equal(string.Empty, dto.Description);
         Assert.Equal(3, dto.TotalVotes);

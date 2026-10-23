@@ -1,7 +1,8 @@
-using PersonalFinance.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
-using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Services;
+using PersonalFinance.Shared.DTOs.Search;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -28,8 +29,8 @@ public class SearchController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Search([FromQuery] string q, CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var results = await _searchService.SearchAsync(userId, q, cancellationToken);
+        string userId = User.GetUserId();
+        SearchResultsDto results = await _searchService.SearchAsync(userId, q, cancellationToken);
         return Ok(results);
     }
 }

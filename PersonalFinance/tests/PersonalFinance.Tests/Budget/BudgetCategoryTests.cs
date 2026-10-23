@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
@@ -16,7 +17,7 @@ public class BudgetCategoryTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"BudgetCategories_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -25,12 +26,12 @@ public class BudgetCategoryTests
     [Fact]
     public async Task EnsureDefaultCategories_IsIdempotent_AndCreatesAllExpectedDefaults()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
 
         // Run once
         await service.EnsureDefaultCategoriesAsync(UserId);
-        var categories1 = await service.GetCategoriesAsync(UserId);
+        List<BudgetCategoryDto> categories1 = await service.GetCategoriesAsync(UserId);
 
         Assert.Equal(16, categories1.Count); // 11 expenses + 5 income
         var expenseCategories = categories1.Where(c => c.Kind == BudgetCategoryKind.Expense).ToList();
@@ -41,14 +42,14 @@ public class BudgetCategoryTests
 
         // Run second time: should not duplicate
         await service.EnsureDefaultCategoriesAsync(UserId);
-        var categories2 = await service.GetCategoriesAsync(UserId);
+        List<BudgetCategoryDto> categories2 = await service.GetCategoriesAsync(UserId);
         Assert.Equal(16, categories2.Count);
     }
 
     [Fact]
     public async Task CreateCategory_RejectsDuplicateName_CaseInsensitivelyWithinKind()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
@@ -70,7 +71,7 @@ public class BudgetCategoryTests
             }));
 
         // But "Food" in Income is allowed because kind is different
-        var incomeFood = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        BudgetCategoryDto incomeFood = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Food",
             Kind = BudgetCategoryKind.Income,
@@ -82,18 +83,18 @@ public class BudgetCategoryTests
     [Fact]
     public async Task UpdateCategory_AllowsRenameAndReorder()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Freelance",
             Kind = BudgetCategoryKind.Income,
             SortOrder = 10
         });
 
-        var updated = await service.UpdateCategoryAsync(UserId, customCat.Id, new SaveCategoryRequest
+        BudgetCategoryDto updated = await service.UpdateCategoryAsync(UserId, customCat.Id, new SaveCategoryRequest
         {
             Name = "Contract Work",
             Kind = BudgetCategoryKind.Income,
@@ -104,18 +105,18 @@ public class BudgetCategoryTests
         Assert.Equal(5, updated.SortOrder);
         Assert.Equal(BudgetCategoryKind.Income, updated.Kind);
 
-        var stored = await db.BudgetCategories.SingleAsync(c => c.Id == customCat.Id);
+        BudgetCategory stored = await db.BudgetCategories.SingleAsync(c => c.Id == customCat.Id);
         Assert.NotNull(stored.UpdatedAt);
     }
 
     [Fact]
     public async Task UpdateCategory_RejectsKindChange()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Side Business",
             Kind = BudgetCategoryKind.Income,
@@ -135,11 +136,11 @@ public class BudgetCategoryTests
     [Fact]
     public async Task UpdateCategory_RejectsDuplicateName()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Side Business",
             Kind = BudgetCategoryKind.Income,
@@ -159,11 +160,11 @@ public class BudgetCategoryTests
     [Fact]
     public async Task UpdateCategory_ArchivedOrNotFound_ThrowsKeyNotFoundException()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Side Business",
             Kind = BudgetCategoryKind.Income,
@@ -194,11 +195,11 @@ public class BudgetCategoryTests
     [Fact]
     public async Task DeleteCategory_SoftDeletesCategory_HidingItFromActiveList()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Freelance",
             Kind = BudgetCategoryKind.Income,
@@ -206,22 +207,22 @@ public class BudgetCategoryTests
         });
 
         // Verify it is in active list
-        var activeBefore = await service.GetCategoriesAsync(UserId, includeArchived: false);
+        List<BudgetCategoryDto> activeBefore = await service.GetCategoriesAsync(UserId, includeArchived: false);
         Assert.Contains(activeBefore, c => c.Id == customCat.Id);
 
         // Delete it
         await service.DeleteCategoryAsync(UserId, customCat.Id);
 
         // Verify it is excluded from active list
-        var activeAfter = await service.GetCategoriesAsync(UserId, includeArchived: false);
+        List<BudgetCategoryDto> activeAfter = await service.GetCategoriesAsync(UserId, includeArchived: false);
         Assert.DoesNotContain(activeAfter, c => c.Id == customCat.Id);
 
         // Verify it is included when includeArchived = true
-        var allCategories = await service.GetCategoriesAsync(UserId, includeArchived: true);
-        var archived = allCategories.Single(c => c.Id == customCat.Id);
+        List<BudgetCategoryDto> allCategories = await service.GetCategoriesAsync(UserId, includeArchived: true);
+        BudgetCategoryDto archived = allCategories.Single(c => c.Id == customCat.Id);
         Assert.True(archived.IsArchived);
 
-        var stored = await db.BudgetCategories.IgnoreQueryFilters().SingleAsync(c => c.Id == customCat.Id);
+        BudgetCategory stored = await db.BudgetCategories.IgnoreQueryFilters().SingleAsync(c => c.Id == customCat.Id);
         Assert.True(stored.IsDeleted);
         Assert.NotNull(stored.DeletedAt);
     }
@@ -229,13 +230,13 @@ public class BudgetCategoryTests
     [Fact]
     public async Task Category_OwnershipIsolation_PreventsCrossUserMutation()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
         await service.EnsureDefaultCategoriesAsync(OtherUserId);
 
-        var myCategories = await service.GetCategoriesAsync(UserId);
-        var myFirstCategory = myCategories[0];
+        List<BudgetCategoryDto> myCategories = await service.GetCategoriesAsync(UserId);
+        BudgetCategoryDto myFirstCategory = myCategories[0];
 
         // Other user cannot update or delete my category
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
@@ -253,12 +254,12 @@ public class BudgetCategoryTests
     [Fact]
     public void DuplicateNameCheck_TranslatesToAzureSql_ComparingLoweredNames()
     {
-        using var db = AzureSqlTranslation.CreateContext();
-        var query = db.BudgetCategories
+        using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
+        IQueryable<BudgetCategory> query = db.BudgetCategories
             .Where(c => c.UserId == UserId && c.Kind == BudgetCategoryKind.Expense)
             .Where(MonthlyBudgetService.NameEqualsIgnoreCase("Groceries"));
 
-        var sql = AzureSqlTranslation.AssertTranslates(query);
+        string sql = AzureSqlTranslation.AssertTranslates(query);
 
         // EF lowers the argument before sending it as a parameter; SQL lowers the column.
         Assert.Contains("LOWER([b].[Name]) = @", sql, StringComparison.Ordinal);

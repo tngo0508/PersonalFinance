@@ -21,7 +21,7 @@ public class AdminFeedbackInboxWebTests
 {
     private static AdminController CreateController(IFeedbackApi feedbackApi)
     {
-        var (adminApi, _) = ApiProxy.Create<IAdminApi>();
+        (IAdminApi? adminApi, ApiProxy<IAdminApi> _) = ApiProxy.Create<IAdminApi>();
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "admin-user")], "TestAuthType");
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
 
@@ -35,42 +35,42 @@ public class AdminFeedbackInboxWebTests
     [Fact]
     public async Task Feedback_ShowsTheInboxItems()
     {
-        var (api, proxy) = ApiProxy.Create<IFeedbackApi>();
+        (IFeedbackApi? api, ApiProxy<IFeedbackApi>? proxy) = ApiProxy.Create<IFeedbackApi>();
         proxy.Returns(nameof(IFeedbackApi.ListAsync), new List<FeedbackAdminItemDto>
         {
             new() { Id = 2, Category = FeedbackCategory.Bug, Message = "Blank chart", AccountEmail = "a@example.com" },
             new() { Id = 1, Category = FeedbackCategory.Idea, Message = "Dark mode", AccountEmail = "b@example.com" }
         });
 
-        var result = await CreateController(api).Feedback();
+        IActionResult result = await CreateController(api).Feedback();
 
-        var view = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<AdminFeedbackInboxViewModel>(view.Model);
+        ViewResult view = Assert.IsType<ViewResult>(result);
+        AdminFeedbackInboxViewModel model = Assert.IsType<AdminFeedbackInboxViewModel>(view.Model);
         Assert.Equal(["Blank chart", "Dark mode"], model.Items.Select(i => i.Message));
     }
 
     [Fact]
     public async Task Feedback_WhenThereIsNone_ShowsAnEmptyInbox()
     {
-        var (api, proxy) = ApiProxy.Create<IFeedbackApi>();
+        (IFeedbackApi? api, ApiProxy<IFeedbackApi>? proxy) = ApiProxy.Create<IFeedbackApi>();
         proxy.Returns(nameof(IFeedbackApi.ListAsync), new List<FeedbackAdminItemDto>());
 
-        var result = await CreateController(api).Feedback();
+        IActionResult result = await CreateController(api).Feedback();
 
-        var view = Assert.IsType<ViewResult>(result);
+        ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.Empty(Assert.IsType<AdminFeedbackInboxViewModel>(view.Model).Items);
     }
 
     [Fact]
     public async Task Feedback_WhenTheApiFails_ShowsTheUnavailableState_ThatRetriesTheInbox()
     {
-        var (api, _) = ApiProxy.Create<IFeedbackApi>();
+        (IFeedbackApi? api, ApiProxy<IFeedbackApi> _) = ApiProxy.Create<IFeedbackApi>();
 
-        var result = await CreateController(api).Feedback();
+        IActionResult result = await CreateController(api).Feedback();
 
-        var view = Assert.IsType<ViewResult>(result);
+        ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.Equal(UnavailableStateExtensions.UnavailableViewName, view.ViewName);
-        var model = Assert.IsType<UnavailableStateViewModel>(view.Model);
+        UnavailableStateViewModel model = Assert.IsType<UnavailableStateViewModel>(view.Model);
         Assert.Equal("Admin", model.RetryController);
         Assert.Equal(nameof(AdminController.Feedback), model.RetryAction);
         Assert.DoesNotContain("ApiService unreachable", model.Heading);
@@ -79,29 +79,29 @@ public class AdminFeedbackInboxWebTests
     [Fact]
     public async Task Feedback_WhenTheApiFails_RetryKeepsTheStatusFilter()
     {
-        var (api, _) = ApiProxy.Create<IFeedbackApi>();
+        (IFeedbackApi? api, ApiProxy<IFeedbackApi> _) = ApiProxy.Create<IFeedbackApi>();
 
-        var result = await CreateController(api).Feedback(FeedbackStatus.Archived);
+        IActionResult result = await CreateController(api).Feedback(FeedbackStatus.Archived);
 
-        var model = Assert.IsType<UnavailableStateViewModel>(Assert.IsType<ViewResult>(result).Model);
+        UnavailableStateViewModel model = Assert.IsType<UnavailableStateViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Equal(nameof(FeedbackStatus.Archived), model.RetryRouteValues["status"]);
     }
 
     [Fact]
     public async Task Feedback_WhenTheApiFailsWithoutAFilter_RetryHasNoStatus()
     {
-        var (api, _) = ApiProxy.Create<IFeedbackApi>();
+        (IFeedbackApi? api, ApiProxy<IFeedbackApi> _) = ApiProxy.Create<IFeedbackApi>();
 
-        var result = await CreateController(api).Feedback();
+        IActionResult result = await CreateController(api).Feedback();
 
-        var model = Assert.IsType<UnavailableStateViewModel>(Assert.IsType<ViewResult>(result).Model);
+        UnavailableStateViewModel model = Assert.IsType<UnavailableStateViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Empty(model.RetryRouteValues);
     }
 
     [Fact]
     public async Task Feedback_WhenAnUnexpectedErrorOccurs_DoesNotHideIt()
     {
-        var (api, proxy) = ApiProxy.Create<IFeedbackApi>();
+        (IFeedbackApi? api, ApiProxy<IFeedbackApi>? proxy) = ApiProxy.Create<IFeedbackApi>();
         proxy.Throws(nameof(IFeedbackApi.ListAsync), new InvalidOperationException("bug"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => CreateController(api).Feedback());
@@ -112,7 +112,7 @@ public class AdminFeedbackInboxWebTests
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        var (api, proxy) = ApiProxy.Create<IFeedbackApi>();
+        (IFeedbackApi? api, ApiProxy<IFeedbackApi>? proxy) = ApiProxy.Create<IFeedbackApi>();
         proxy.Throws(nameof(IFeedbackApi.ListAsync), new OperationCanceledException(cts.Token));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Feedback(cancellationToken: cts.Token));

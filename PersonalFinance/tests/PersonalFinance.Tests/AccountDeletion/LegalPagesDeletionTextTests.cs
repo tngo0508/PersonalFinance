@@ -24,7 +24,7 @@ public class LegalPagesDeletionTextTests
     [InlineData("Terms")]
     public void LegalPages_NoLongerSayDeletingAnAccountOnlySoftDeletesIt(string page)
     {
-        var view = ReadLegalView(page);
+        string view = ReadLegalView(page);
 
         Assert.DoesNotContain("soft-delete your data", view, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("within 30 days", view, StringComparison.OrdinalIgnoreCase);
@@ -35,7 +35,7 @@ public class LegalPagesDeletionTextTests
     [Fact]
     public void PrivacyPolicy_DescribesTheDeletionRequest_TheGracePeriod_AndThePurge()
     {
-        var privacy = ReadLegalView("Privacy");
+        string privacy = ReadLegalView("Privacy");
 
         Assert.Contains("30 days", privacy);
         Assert.Contains("cancel", privacy, StringComparison.OrdinalIgnoreCase);

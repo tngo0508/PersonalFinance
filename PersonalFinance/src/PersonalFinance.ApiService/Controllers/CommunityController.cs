@@ -1,8 +1,8 @@
-using PersonalFinance.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
-using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -31,8 +31,8 @@ public class CommunityController : ControllerBase
     public async Task<ActionResult<CommunityResponseDto>> GetCommunity(
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var response = await _communityService.GetCommunityAsync(userId, cancellationToken);
+        string userId = User.GetUserId();
+        CommunityResponseDto response = await _communityService.GetCommunityAsync(userId, cancellationToken);
         return Ok(response);
     }
 
@@ -46,8 +46,8 @@ public class CommunityController : ControllerBase
         [FromBody] CommunityVoteRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var result = await _communityService.VoteAsync(userId, request, cancellationToken);
+        string userId = User.GetUserId();
+        CommunityVoteResultDto result = await _communityService.VoteAsync(userId, request, cancellationToken);
         if (!result.Success)
         {
             return BadRequest(result.ErrorMessage);
@@ -67,10 +67,10 @@ public class CommunityController : ControllerBase
         [FromQuery] string authorName,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var comment =
+            CommunityCommentDto comment =
                 await _communityService.AddCommentAsync(userId, request, authorName ?? string.Empty, cancellationToken);
             return CreatedAtAction(nameof(GetCommunity), comment);
         }
@@ -89,10 +89,10 @@ public class CommunityController : ControllerBase
         int commentId,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var result = await _communityService.ToggleCommentLikeAsync(userId, commentId, cancellationToken);
+            CommentLikeResult result = await _communityService.ToggleCommentLikeAsync(userId, commentId, cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException)
@@ -112,7 +112,7 @@ public class CommunityController : ControllerBase
     {
         try
         {
-            var comments = await _communityService.GetPollCommentsAsync(pollCode, cancellationToken);
+            List<CommunityCommentDto> comments = await _communityService.GetPollCommentsAsync(pollCode, cancellationToken);
             return Ok(comments);
         }
         catch (KeyNotFoundException)
@@ -132,10 +132,10 @@ public class CommunityController : ControllerBase
         [FromQuery] string authorName,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var story = await _communityService.SubmitStoryAsync(userId, request, authorName ?? string.Empty,
+            CommunityStoryDto story = await _communityService.SubmitStoryAsync(userId, request, authorName ?? string.Empty,
                 cancellationToken);
             return CreatedAtAction(nameof(GetCommunity), story);
         }
@@ -154,10 +154,10 @@ public class CommunityController : ControllerBase
         int storyId,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         try
         {
-            var result = await _communityService.ToggleStoryLikeAsync(userId, storyId, cancellationToken);
+            StoryLikeResult result = await _communityService.ToggleStoryLikeAsync(userId, storyId, cancellationToken);
             return Ok(result);
         }
         catch (KeyNotFoundException)
@@ -174,8 +174,8 @@ public class CommunityController : ControllerBase
     public async Task<ActionResult<List<CommunityStoryDto>>> GetStories(
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var response = await _communityService.GetCommunityAsync(userId, cancellationToken);
+        string userId = User.GetUserId();
+        CommunityResponseDto response = await _communityService.GetCommunityAsync(userId, cancellationToken);
         return Ok(response.Stories ?? new List<CommunityStoryDto>());
     }
 
@@ -189,8 +189,8 @@ public class CommunityController : ControllerBase
         int storyId,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var story = await _communityService.GetStoryByIdAsync(userId, storyId, cancellationToken);
+        string userId = User.GetUserId();
+        CommunityStoryDto? story = await _communityService.GetStoryByIdAsync(userId, storyId, cancellationToken);
         if (story == null)
             return NotFound();
         return Ok(story);

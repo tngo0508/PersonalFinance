@@ -24,10 +24,10 @@ public class UnavailableStateTests
     [Fact]
     public async Task BudgetIndex_WhenApiFails_RendersUnavailableStateInsteadOfDefaults()
     {
-        var (api, _) = ApiProxy.Create<IBudgetPlannerApi>();
-        var controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi> _) = ApiProxy.Create<IBudgetPlannerApi>();
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
 
-        var result = await controller.Index();
+        IActionResult result = await controller.Index();
 
         AssertUnavailable(result, "Budget");
     }
@@ -35,8 +35,8 @@ public class UnavailableStateTests
     [Fact]
     public async Task BudgetGetBudgetData_WhenApiFails_LetsJsonApiErrorsAnswerInsteadOfEmptyBudget()
     {
-        var (api, _) = ApiProxy.Create<IBudgetPlannerApi>();
-        var controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi> _) = ApiProxy.Create<IBudgetPlannerApi>();
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => controller.GetBudgetData());
         Assert.NotNull(typeof(BudgetController).GetMethod(nameof(BudgetController.GetBudgetData))!
@@ -46,10 +46,10 @@ public class UnavailableStateTests
     [Fact]
     public async Task NetWorthIndex_WhenParametersFailToLoad_RendersUnavailableState()
     {
-        var (api, proxy) = ApiProxy.Create<INetWorthApi>();
-        var controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
+        (INetWorthApi? api, ApiProxy<INetWorthApi>? proxy) = ApiProxy.Create<INetWorthApi>();
+        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
 
-        var result = await controller.Index();
+        IActionResult result = await controller.Index();
 
         AssertUnavailable(result, "Networth");
         Assert.DoesNotContain(nameof(INetWorthApi.CalculateProjectionAsync), proxy.Calls);
@@ -58,11 +58,11 @@ public class UnavailableStateTests
     [Fact]
     public async Task NetWorthIndex_WhenProjectionFails_RendersUnavailableState()
     {
-        var (api, proxy) = ApiProxy.Create<INetWorthApi>();
+        (INetWorthApi? api, ApiProxy<INetWorthApi>? proxy) = ApiProxy.Create<INetWorthApi>();
         proxy.Returns(nameof(INetWorthApi.LoadParametersAsync), new NetWorthParametersDto());
-        var controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
+        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
 
-        var result = await controller.Index();
+        IActionResult result = await controller.Index();
 
         AssertUnavailable(result, "Networth");
     }
@@ -70,23 +70,23 @@ public class UnavailableStateTests
     [Fact]
     public async Task NetWorthDeleteParameters_WhenApiFails_ShowsSafeErrorAfterRedirect()
     {
-        var (api, _) = ApiProxy.Create<INetWorthApi>();
-        var controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
+        (INetWorthApi? api, ApiProxy<INetWorthApi> _) = ApiProxy.Create<INetWorthApi>();
+        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
 
-        var result = await controller.DeleteParameters();
+        IActionResult result = await controller.DeleteParameters();
 
         Assert.IsType<RedirectToActionResult>(result);
-        var error = Assert.IsType<string>(controller.TempData["SaveError"]);
+        string error = Assert.IsType<string>(controller.TempData["SaveError"]);
         Assert.DoesNotContain(ExceptionText, error);
     }
 
     [Fact]
     public async Task SavingsGoalsIndex_WhenApiFails_RendersUnavailableStateInsteadOfEmptyList()
     {
-        var (api, _) = ApiProxy.Create<ISavingsGoalsApi>();
-        var controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
 
-        var result = await controller.Index();
+        IActionResult result = await controller.Index();
 
         AssertUnavailable(result, "SavingsGoals");
     }
@@ -94,25 +94,25 @@ public class UnavailableStateTests
     [Fact]
     public async Task SavingsGoalsCreate_WhenApiFails_ShowsSafeErrorWithGoals()
     {
-        var (api, proxy) = ApiProxy.Create<ISavingsGoalsApi>();
+        (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi>? proxy) = ApiProxy.Create<ISavingsGoalsApi>();
         proxy.Returns(nameof(ISavingsGoalsApi.GetSavingsGoalsAsync), new List<SavingsGoalDto>());
-        var controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
 
-        var result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
+        IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
 
-        var view = Assert.IsType<ViewResult>(result);
+        ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.Equal(nameof(SavingsGoalsController.Index), view.ViewName);
-        var error = Assert.Single(controller.ModelState[string.Empty]!.Errors).ErrorMessage;
+        string error = Assert.Single(controller.ModelState[string.Empty]!.Errors).ErrorMessage;
         Assert.DoesNotContain(ExceptionText, error);
     }
 
     [Fact]
     public async Task SavingsGoalsCreate_WhenGoalsAlsoFailToLoad_RendersUnavailableState()
     {
-        var (api, _) = ApiProxy.Create<ISavingsGoalsApi>();
-        var controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
 
-        var result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
+        IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
 
         AssertUnavailable(result, "SavingsGoals");
     }
@@ -122,25 +122,25 @@ public class UnavailableStateTests
     [InlineData(nameof(SavingsGoalsController.Delete))]
     public async Task SavingsGoalsUpdateAndDelete_WhenApiFails_ShowSafeErrorAfterRedirect(string action)
     {
-        var (api, _) = ApiProxy.Create<ISavingsGoalsApi>();
-        var controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
 
-        var result = action == nameof(SavingsGoalsController.Update)
+        IActionResult result = action == nameof(SavingsGoalsController.Update)
             ? await controller.Update(1, 50m, false)
             : await controller.Delete(1);
 
         Assert.IsType<RedirectToActionResult>(result);
-        var error = Assert.IsType<string>(controller.TempData["Error"]);
+        string error = Assert.IsType<string>(controller.TempData["Error"]);
         Assert.DoesNotContain(ExceptionText, error);
     }
 
     [Fact]
     public async Task CommunityIndex_WhenApiFails_RendersUnavailableState()
     {
-        var (api, _) = ApiProxy.Create<ICommunityApi>();
-        var controller = WithContext(new CommunityController(api, NullLogger<CommunityController>.Instance));
+        (ICommunityApi? api, ApiProxy<ICommunityApi> _) = ApiProxy.Create<ICommunityApi>();
+        CommunityController controller = WithContext(new CommunityController(api, NullLogger<CommunityController>.Instance));
 
-        var result = await controller.Index();
+        IActionResult result = await controller.Index();
 
         AssertUnavailable(result, "Community");
     }
@@ -150,18 +150,18 @@ public class UnavailableStateTests
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        var (api, proxy) = ApiProxy.Create<IBudgetPlannerApi>();
+        (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi>? proxy) = ApiProxy.Create<IBudgetPlannerApi>();
         proxy.Throws(nameof(IBudgetPlannerApi.GetBudgetAsync), new OperationCanceledException(cts.Token));
-        var controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(cts.Token));
     }
 
     private static void AssertUnavailable(IActionResult result, string retryController)
     {
-        var view = Assert.IsType<ViewResult>(result);
+        ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.Equal(UnavailableStateExtensions.UnavailableViewName, view.ViewName);
-        var model = Assert.IsType<UnavailableStateViewModel>(view.Model);
+        UnavailableStateViewModel model = Assert.IsType<UnavailableStateViewModel>(view.Model);
         Assert.Equal(retryController, model.RetryController);
         Assert.False(string.IsNullOrWhiteSpace(model.PageTitle));
         Assert.False(string.IsNullOrWhiteSpace(model.Heading));

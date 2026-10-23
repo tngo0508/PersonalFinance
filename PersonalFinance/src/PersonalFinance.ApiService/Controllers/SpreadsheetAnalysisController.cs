@@ -1,9 +1,10 @@
-using PersonalFinance.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Shared.Enums;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -38,9 +39,9 @@ public class SpreadsheetAnalysisController : ControllerBase
         [FromQuery] int? month,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var availableYears = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
-        var activeSource = await _analysisService.GetActiveSourceAsync(userId, cancellationToken);
+        string userId = User.GetUserId();
+        List<int> availableYears = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
+        BudgetDataSource activeSource = await _analysisService.GetActiveSourceAsync(userId, cancellationToken);
 
         if (availableYears.Count == 0)
         {
@@ -55,14 +56,14 @@ public class SpreadsheetAnalysisController : ControllerBase
             });
         }
 
-        var selectedYear = (year ?? 0) != 0 ? (year ?? 0) : availableYears.First();
-        var availableMonths = await _analysisService.GetAvailableMonthsAsync(userId, selectedYear, cancellationToken);
-        var summary = await _analysisService.GetSummaryStatisticsAsync(userId, selectedYear, month, cancellationToken);
-        var velocity = await _analysisService.GetSpendingVelocityAsync(userId, selectedYear, month, cancellationToken);
-        var trends = await _analysisService.GetTrendDataAsync(userId, selectedYear, cancellationToken);
-        var categories =
+        int selectedYear = (year ?? 0) != 0 ? (year ?? 0) : availableYears.First();
+        List<int> availableMonths = await _analysisService.GetAvailableMonthsAsync(userId, selectedYear, cancellationToken);
+        Services.SummaryStatisticsDto? summary = await _analysisService.GetSummaryStatisticsAsync(userId, selectedYear, month, cancellationToken);
+        Services.SpendingVelocityDto? velocity = await _analysisService.GetSpendingVelocityAsync(userId, selectedYear, month, cancellationToken);
+        Services.TrendDataDto trends = await _analysisService.GetTrendDataAsync(userId, selectedYear, cancellationToken);
+        Services.CategoryInsightsDto? categories =
             await _analysisService.GetCategoryInsightsAsync(userId, selectedYear, month, cancellationToken);
-        var variance = await _analysisService.GetBudgetVarianceAsync(userId, selectedYear, month, cancellationToken);
+        Services.BudgetVarianceDto? variance = await _analysisService.GetBudgetVarianceAsync(userId, selectedYear, month, cancellationToken);
 
         return Ok(new AnalysisDashboardResult
         {
@@ -88,13 +89,13 @@ public class SpreadsheetAnalysisController : ControllerBase
         [FromBody] SyncSpreadsheetRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation("User {UserId} requested sync for spreadsheet {FileId}", userId, request.FileId);
         }
 
-        var result = await _analysisService.SyncSpreadsheetBudgetAsync(userId, request.ConnectionId, request.FileId,
+        SyncSpreadsheetBudgetResult result = await _analysisService.SyncSpreadsheetBudgetAsync(userId, request.ConnectionId, request.FileId,
             request.FileName, request.Overwrite ?? false, cancellationToken);
         return Ok(new SyncSpreadsheetResponseDto
         {
@@ -120,8 +121,8 @@ public class SpreadsheetAnalysisController : ControllerBase
     [HttpGet("years")]
     public async Task<IActionResult> GetAvailableYears(CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var years = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
+        string userId = User.GetUserId();
+        List<int> years = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
         return Ok(years);
     }
 
@@ -131,8 +132,8 @@ public class SpreadsheetAnalysisController : ControllerBase
     [HttpGet("months/{year}")]
     public async Task<IActionResult> GetAvailableMonths(int year, CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var months = await _analysisService.GetAvailableMonthsAsync(userId, year, cancellationToken);
+        string userId = User.GetUserId();
+        List<int> months = await _analysisService.GetAvailableMonthsAsync(userId, year, cancellationToken);
         return Ok(months);
     }
 
@@ -153,8 +154,8 @@ public class SpreadsheetAnalysisController : ControllerBase
             return BadRequest("fileId or fileName is required.");
         }
 
-        var userId = User.GetUserId();
-        var report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
+        string userId = User.GetUserId();
+        MonthlyBudgetReportDto report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
             userId, fileId, fileName, connectionId, cancellationToken);
         return Ok(report);
     }
@@ -176,8 +177,8 @@ public class SpreadsheetAnalysisController : ControllerBase
             return BadRequest("fileId is required.");
         }
 
-        var userId = User.GetUserId();
-        var transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
+        string userId = User.GetUserId();
+        SpreadsheetTransactionsDto transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(
             userId, fileId, fileName, connectionId, cancellationToken);
         return Ok(transactions);
     }

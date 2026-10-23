@@ -23,14 +23,14 @@ public class TimeAgoTagHelper : TagHelper
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
         if (string.IsNullOrEmpty(Datetime) ||
-            !DateTime.TryParse(Datetime, out var parsedDate))
+            !DateTime.TryParse(Datetime, out DateTime parsedDate))
         {
             return;
         }
 
-        var relativeTime = TimeAgoText(parsedDate);
+        string relativeTime = TimeAgoText(parsedDate);
         // Prepend the relative time text while preserving any child elements (e.g., SVG icons)
-        var existingContent = output.Content.GetContent();
+        string existingContent = output.Content.GetContent();
         output.Content.SetContent($"{relativeTime}{existingContent}");
     }
 
@@ -41,9 +41,9 @@ public class TimeAgoTagHelper : TagHelper
     public static string TimeAgoText(DateTime dateTime)
     {
         // Ensure the comparison is in UTC
-        var utcNow = DateTime.UtcNow;
-        var input = dateTime.Kind == DateTimeKind.Utc ? dateTime : dateTime.ToUniversalTime();
-        var span = utcNow - input;
+        DateTime utcNow = DateTime.UtcNow;
+        DateTime input = dateTime.Kind == DateTimeKind.Utc ? dateTime : dateTime.ToUniversalTime();
+        TimeSpan span = utcNow - input;
 
         if (span.TotalMinutes < 1)
             return "Just now";

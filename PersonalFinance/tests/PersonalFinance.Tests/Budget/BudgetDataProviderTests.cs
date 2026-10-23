@@ -24,10 +24,10 @@ public class BudgetDataProviderTests
     private static (AppDbContext Context, ConcurrencySimulationInterceptor Interceptor, string DbName)
         CreateContextWithInterceptor()
     {
-        var dbName = $"BudgetPrefConcurrency_{Guid.NewGuid():N}";
+        string dbName = $"BudgetPrefConcurrency_{Guid.NewGuid():N}";
         var interceptor = new ConcurrencySimulationInterceptor();
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .AddInterceptors(interceptor)
             .Options;
@@ -37,7 +37,7 @@ public class BudgetDataProviderTests
 
     private static AppDbContext CreateSecondaryContext(string dbName)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
 
@@ -46,7 +46,7 @@ public class BudgetDataProviderTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"BudgetDataProvider_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -65,10 +65,10 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task DataSourcePreference_DefaultResolution_WhenNoSnapshots_ReturnsBudgetTracker()
     {
-        await using var db = CreateContext();
-        var (_, sourceService, _, _) = CreateServices(db);
+        await using AppDbContext db = CreateContext();
+        (BudgetDataProvider _, BudgetDataSourceService? sourceService, SheetBudgetMonthReader _, TrackerBudgetMonthReader _) = CreateServices(db);
 
-        var pref = await sourceService.GetDataSourcePreferenceAsync(UserId);
+        BudgetDataSourceDto pref = await sourceService.GetDataSourcePreferenceAsync(UserId);
 
         Assert.Equal(BudgetDataSource.BudgetTracker, pref.Source);
         Assert.True(pref.IsDefault);
@@ -77,7 +77,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task DataSourcePreference_DefaultResolution_WhenSnapshotsExist_ReturnsGoogleSheet()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
             UserId = UserId,
@@ -87,9 +87,9 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (_, sourceService, _, _) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService? sourceService, SheetBudgetMonthReader _, TrackerBudgetMonthReader _) = CreateServices(db);
 
-        var pref = await sourceService.GetDataSourcePreferenceAsync(UserId);
+        BudgetDataSourceDto pref = await sourceService.GetDataSourcePreferenceAsync(UserId);
 
         Assert.Equal(BudgetDataSource.GoogleSheet, pref.Source);
         Assert.True(pref.IsDefault);
@@ -98,7 +98,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task DataSourcePreference_ExplicitPreference_OverridesDefault()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
             UserId = UserId,
@@ -108,9 +108,9 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (_, sourceService, _, _) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService? sourceService, SheetBudgetMonthReader _, TrackerBudgetMonthReader _) = CreateServices(db);
 
-        var saved = await sourceService.SetDataSourcePreferenceAsync(UserId, new SetBudgetDataSourceRequest
+        BudgetDataSourceDto saved = await sourceService.SetDataSourcePreferenceAsync(UserId, new SetBudgetDataSourceRequest
         {
             Source = BudgetDataSource.BudgetTracker
         });
@@ -118,7 +118,7 @@ public class BudgetDataProviderTests
         Assert.Equal(BudgetDataSource.BudgetTracker, saved.Source);
         Assert.False(saved.IsDefault);
 
-        var pref = await sourceService.GetDataSourcePreferenceAsync(UserId);
+        BudgetDataSourceDto pref = await sourceService.GetDataSourcePreferenceAsync(UserId);
         Assert.Equal(BudgetDataSource.BudgetTracker, pref.Source);
         Assert.False(pref.IsDefault);
     }
@@ -126,7 +126,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task SheetBudgetMonthReader_GetMonth_MapsSnapshotDataCorrectly()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
             UserId = UserId,
@@ -143,9 +143,9 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (_, _, sheetReader, _) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader? sheetReader, TrackerBudgetMonthReader _) = CreateServices(db);
 
-        var month = await sheetReader.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? month = await sheetReader.GetMonthAsync(UserId, 2026, 10);
 
         Assert.NotNull(month);
         Assert.Equal(2026, month.Year);
@@ -166,7 +166,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task SheetBudgetMonthReader_GetTransactions_RespectsDateRangeAndTake()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetTransactionRecords.AddRange(
             new SpreadsheetTransactionRecord
             {
@@ -200,15 +200,15 @@ public class BudgetDataProviderTests
             });
         await db.SaveChangesAsync();
 
-        var (_, _, sheetReader, _) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader? sheetReader, TrackerBudgetMonthReader _) = CreateServices(db);
 
-        var txs = await sheetReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
+        List<BudgetTransactionData> txs = await sheetReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
 
         Assert.Equal(2, txs.Count);
         Assert.Equal(2, txs[0].Id); // Sorted by Date desc
         Assert.Equal(1, txs[1].Id);
 
-        var singleTx =
+        List<BudgetTransactionData> singleTx =
             await sheetReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31),
                 take: 1);
         Assert.Single(singleTx);
@@ -218,7 +218,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task TrackerBudgetMonthReader_GetMonth_CalculatesActualFromTransactions()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var catFood = new BudgetCategory
         { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         var catPay = new BudgetCategory
@@ -278,9 +278,9 @@ public class BudgetDataProviderTests
             });
         await db.SaveChangesAsync();
 
-        var (_, _, _, trackerReader) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
-        var month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
 
         Assert.NotNull(month);
         Assert.Equal(2026, month.Year);
@@ -291,7 +291,7 @@ public class BudgetDataProviderTests
         Assert.Equal(3000m, month.BudgetedIncome);
         Assert.Equal(3200m, month.ActualIncome);
 
-        var foodCat = month.Categories.Single(c => c.Name == "Food");
+        BudgetMonthCategoryData foodCat = month.Categories.Single(c => c.Name == "Food");
         Assert.Equal(400m, foodCat.Budgeted);
         Assert.Equal(200m, foodCat.Actual);
     }
@@ -299,7 +299,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task TrackerBudgetMonthReader_GetMonth_ActualOverrideReplacesTransactionSum()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var catFood = new BudgetCategory
         { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         db.BudgetCategories.Add(catFood);
@@ -329,20 +329,20 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (_, _, _, trackerReader) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
-        var month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
 
         Assert.NotNull(month);
         Assert.Equal(350m, month.ActualExpenses);
-        var foodCat = month.Categories.Single(c => c.Name == "Food");
+        BudgetMonthCategoryData foodCat = month.Categories.Single(c => c.Name == "Food");
         Assert.Equal(350m, foodCat.Actual);
     }
 
     [Fact]
     public async Task TrackerBudgetMonthReader_GetMonth_IncludesArchivedCategoryWithData_ExcludesEmptyArchived()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var catActive = new BudgetCategory
         { Id = 1, UserId = UserId, Name = "Active Cat", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         var catArchivedWithLine = new BudgetCategory
@@ -380,9 +380,9 @@ public class BudgetDataProviderTests
         db.MonthlyBudgetPlans.Add(plan);
         await db.SaveChangesAsync();
 
-        var (_, _, _, trackerReader) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
-        var month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
 
         Assert.NotNull(month);
         Assert.Equal(2, month.Categories.Count);
@@ -394,7 +394,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task TrackerBudgetMonthReader_GetTransactions_RespectsDateRangeAndMapsType()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var catFood = new BudgetCategory
         { Id = 1, UserId = UserId, Name = "Food", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
         var catPay = new BudgetCategory
@@ -422,9 +422,9 @@ public class BudgetDataProviderTests
             });
         await db.SaveChangesAsync();
 
-        var (_, _, _, trackerReader) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
-        var txs = await trackerReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1),
+        List<BudgetTransactionData> txs = await trackerReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1),
             new DateOnly(2026, 10, 31));
 
         Assert.Equal(2, txs.Count);
@@ -435,7 +435,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task BudgetDataProvider_ActiveSource_RoutesToCorrectReader()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         // Seed Google Sheet snapshot
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
@@ -463,10 +463,10 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (provider, sourceService, _, _) = CreateServices(db);
+        (BudgetDataProvider? provider, BudgetDataSourceService? sourceService, SheetBudgetMonthReader _, TrackerBudgetMonthReader _) = CreateServices(db);
 
         // Default should be Google Sheet because snapshot exists
-        var sheetMonth = await provider.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? sheetMonth = await provider.GetMonthAsync(UserId, 2026, 10);
         Assert.NotNull(sheetMonth);
         Assert.Equal(1111m, sheetMonth.BudgetedExpenses);
         Assert.Equal(2222m, sheetMonth.ActualExpenses);
@@ -475,7 +475,7 @@ public class BudgetDataProviderTests
         await sourceService.SetDataSourcePreferenceAsync(UserId,
             new SetBudgetDataSourceRequest { Source = BudgetDataSource.BudgetTracker });
 
-        var trackerMonth = await provider.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? trackerMonth = await provider.GetMonthAsync(UserId, 2026, 10);
         Assert.NotNull(trackerMonth);
         Assert.Equal(3333m, trackerMonth.BudgetedExpenses);
         Assert.Equal(4444m, trackerMonth.ActualExpenses);
@@ -484,7 +484,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task BudgetDataProvider_SheetTrend_PreservesEachSnapshotAndItsCount()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.AddRange(
             new SpreadsheetBudgetSnapshot
             {
@@ -527,11 +527,11 @@ public class BudgetDataProviderTests
             });
         await db.SaveChangesAsync();
 
-        var (provider, _, _, _) = CreateServices(db);
+        (BudgetDataProvider? provider, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader _) = CreateServices(db);
         BudgetDataProvider readPath = provider;
-        var months = await readPath.GetMonthsAsync(UserId, 2026);
-        var october = await readPath.GetMonthAsync(UserId, 2026, 10);
-        var records = await readPath.GetTrendRecordsAsync(UserId, 2026);
+        List<BudgetMonthData> months = await readPath.GetMonthsAsync(UserId, 2026);
+        BudgetMonthData? october = await readPath.GetMonthAsync(UserId, 2026, 10);
+        List<BudgetTrendRecordData> records = await readPath.GetTrendRecordsAsync(UserId, 2026);
 
         Assert.NotNull(october);
         Assert.Equal(2, october.SourceRecordCount);
@@ -567,7 +567,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task BudgetDataProvider_TrackerTrend_UsesOneEffectiveMonthPointAndNeverFallsBack()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
             UserId = UserId,
@@ -602,13 +602,13 @@ public class BudgetDataProviderTests
             { UserId = UserId, CategoryId = income.Id, Date = new DateOnly(2026, 11, 1), Amount = 500m });
         await db.SaveChangesAsync();
 
-        var (provider, sourceService, _, _) = CreateServices(db);
+        (BudgetDataProvider? provider, BudgetDataSourceService? sourceService, SheetBudgetMonthReader _, TrackerBudgetMonthReader _) = CreateServices(db);
         await sourceService.SetDataSourcePreferenceAsync(UserId,
             new SetBudgetDataSourceRequest { Source = BudgetDataSource.BudgetTracker });
 
         BudgetDataProvider readPath = provider;
-        var months = await readPath.GetMonthsAsync(UserId, 2026);
-        var records = await readPath.GetTrendRecordsAsync(UserId, 2026);
+        List<BudgetMonthData> months = await readPath.GetMonthsAsync(UserId, 2026);
+        List<BudgetTrendRecordData> records = await readPath.GetTrendRecordsAsync(UserId, 2026);
 
         Assert.Equal(ExpectedMonthsOctoberAndNovember, months.Select(m => m.Month));
         Assert.All(months, m => Assert.Equal(1, m.SourceRecordCount));
@@ -635,7 +635,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task BudgetDataProvider_NoFallbackRule_WhenActiveSourceEmpty_ReturnsNullOrEmpty()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         // Google Sheet has data for October 2026
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
@@ -654,26 +654,26 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (provider, _, _, _) = CreateServices(db);
+        (BudgetDataProvider? provider, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader _) = CreateServices(db);
 
         // Active source is BudgetTracker. Since it has no data, it MUST return null, never fall back to Google Sheet!
-        var month = await provider.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? month = await provider.GetMonthAsync(UserId, 2026, 10);
         Assert.Null(month);
 
-        var months = await provider.GetMonthsAsync(UserId, 2026);
+        List<BudgetMonthData> months = await provider.GetMonthsAsync(UserId, 2026);
         Assert.Empty(months);
 
-        var trend = await provider.GetTrendRecordsAsync(UserId, 2026);
+        List<BudgetTrendRecordData> trend = await provider.GetTrendRecordsAsync(UserId, 2026);
         Assert.Empty(trend);
 
-        var txs = await provider.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
+        List<BudgetTransactionData> txs = await provider.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
         Assert.Empty(txs);
     }
 
     [Fact]
     public async Task AvailableYears_AggregatesDistinctYearsFromPlansAndTransactions()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.MonthlyBudgetPlans.AddRange(
             new MonthlyBudgetPlan { UserId = UserId, Year = 2025, Month = 12 },
             new MonthlyBudgetPlan { UserId = UserId, Year = 2026, Month = 1 });
@@ -686,9 +686,9 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (_, _, _, trackerReader) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
-        var years = await trackerReader.GetAvailableYearsAsync(UserId);
+        List<int> years = await trackerReader.GetAvailableYearsAsync(UserId);
 
         Assert.Equal(ExpectedYearsDescending, years);
     }
@@ -696,7 +696,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task TrackerBudgetMonthReader_GetMonthsAsync_ReturnsAllActiveMonthsSorted()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.MonthlyBudgetPlans.AddRange(
             new MonthlyBudgetPlan { UserId = UserId, Year = 2026, Month = 11 },
             new MonthlyBudgetPlan { UserId = UserId, Year = 2026, Month = 3 });
@@ -709,9 +709,9 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (_, _, _, trackerReader) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
-        var months = await trackerReader.GetMonthsAsync(UserId, 2026);
+        List<BudgetMonthData> months = await trackerReader.GetMonthsAsync(UserId, 2026);
 
         Assert.Equal(3, months.Count);
         Assert.Equal(ExpectedMonthsMarchMayNovember, months.Select(m => m.Month));
@@ -720,7 +720,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task UserIsolation_OtherUsersDataNeverVisibleInReadersOrSourceService()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         // Seed data for OtherUserId
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
@@ -768,38 +768,38 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (provider, sourceService, sheetReader, trackerReader) = CreateServices(db);
+        (BudgetDataProvider? provider, BudgetDataSourceService? sourceService, SheetBudgetMonthReader? sheetReader, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
         // 1. Source preference default for UserId is BudgetTracker (since UserId has no snapshots)
-        var pref = await sourceService.GetDataSourcePreferenceAsync(UserId);
+        BudgetDataSourceDto pref = await sourceService.GetDataSourcePreferenceAsync(UserId);
         Assert.Equal(BudgetDataSource.BudgetTracker, pref.Source);
         Assert.True(pref.IsDefault);
 
         // 2. Sheet reader returns null/empty for UserId
-        var sheetMonth = await sheetReader.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? sheetMonth = await sheetReader.GetMonthAsync(UserId, 2026, 10);
         Assert.Null(sheetMonth);
 
-        var sheetTxs =
+        List<BudgetTransactionData> sheetTxs =
             await sheetReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
         Assert.Empty(sheetTxs);
 
         // 3. Tracker reader returns null/empty for UserId
-        var trackerMonth = await trackerReader.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? trackerMonth = await trackerReader.GetMonthAsync(UserId, 2026, 10);
         Assert.Null(trackerMonth);
 
-        var trackerTxs =
+        List<BudgetTransactionData> trackerTxs =
             await trackerReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
         Assert.Empty(trackerTxs);
 
         // 4. Provider returns null for UserId
-        var providerMonth = await provider.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? providerMonth = await provider.GetMonthAsync(UserId, 2026, 10);
         Assert.Null(providerMonth);
     }
 
     [Fact]
     public async Task DataSourcePreference_ConcurrentInsertRace_RecoversAndUpdatesExistingRow()
     {
-        var (db, interceptor, dbName) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new BudgetDataSourceService(db);
@@ -807,7 +807,7 @@ public class BudgetDataProviderTests
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
-                await using var secondaryDb = CreateSecondaryContext(dbName);
+                await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
                 var secondaryService = new BudgetDataSourceService(secondaryDb);
                 await secondaryService.SetDataSourcePreferenceAsync(UserId, new SetBudgetDataSourceRequest
                 {
@@ -816,7 +816,7 @@ public class BudgetDataProviderTests
             };
 
             // Set preference to BudgetTracker. It should catch DbUpdateException, detach, reload, and update to BudgetTracker
-            var result = await service.SetDataSourcePreferenceAsync(UserId, new SetBudgetDataSourceRequest
+            BudgetDataSourceDto result = await service.SetDataSourcePreferenceAsync(UserId, new SetBudgetDataSourceRequest
             {
                 Source = BudgetDataSource.BudgetTracker
             });
@@ -824,7 +824,7 @@ public class BudgetDataProviderTests
             Assert.Equal(BudgetDataSource.BudgetTracker, result.Source);
             Assert.False(result.IsDefault);
 
-            var inDb = await db.UserBudgetSourcePreferences.SingleAsync(p => p.UserId == UserId);
+            UserBudgetSourcePreference inDb = await db.UserBudgetSourcePreferences.SingleAsync(p => p.UserId == UserId);
             Assert.Equal(BudgetDataSource.BudgetTracker, inDb.Source);
         }
     }
@@ -832,7 +832,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task DataSourcePreference_ConcurrentInsertRace_RethrowsWhenNoRowExists()
     {
-        var (db, interceptor, _) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string _) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new BudgetDataSourceService(db);
@@ -851,7 +851,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task BudgetDataProvider_DefaultSource_RoutesTransactionsAndAvailableYears()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         // Seed Google Sheet snapshot and transaction
         var snapshot = new SpreadsheetBudgetSnapshot
         {
@@ -877,24 +877,24 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (provider, _, _, _) = CreateServices(db);
+        (BudgetDataProvider? provider, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader _) = CreateServices(db);
 
         // Default source is GoogleSheet because snapshot exists
-        var activeSource = await provider.GetActiveSourceAsync(UserId);
+        BudgetDataSource activeSource = await provider.GetActiveSourceAsync(UserId);
         Assert.Equal(BudgetDataSource.GoogleSheet, activeSource);
 
-        var txs = await provider.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
+        List<BudgetTransactionData> txs = await provider.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
         Assert.Single(txs);
         Assert.Equal("Sheet Grocery", txs[0].Description);
 
-        var years = await provider.GetAvailableYearsAsync(UserId);
+        List<int> years = await provider.GetAvailableYearsAsync(UserId);
         Assert.Equal(ExpectedYears2026Only, years);
     }
 
     [Fact]
     public async Task SheetBudgetMonthReader_MultiSnapshot_AggregatesTotalsAndMergesCategories()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.AddRange(
             new SpreadsheetBudgetSnapshot
             {
@@ -929,10 +929,10 @@ public class BudgetDataProviderTests
             });
         await db.SaveChangesAsync();
 
-        var (_, _, sheetReader, _) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader? sheetReader, TrackerBudgetMonthReader _) = CreateServices(db);
 
         // 1. GetMonthAsync aggregates both snapshots
-        var month = await sheetReader.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? month = await sheetReader.GetMonthAsync(UserId, 2026, 10);
         Assert.NotNull(month);
         Assert.Equal(4500m, month.BudgetedIncome); // 3000 + 1500
         Assert.Equal(4700m, month.ActualIncome); // 3100 + 1600
@@ -942,12 +942,12 @@ public class BudgetDataProviderTests
         Assert.Equal(8900m, month.EndingBalance);
         Assert.Equal(2, month.Categories.Count); // Food, Rent
 
-        var food = month.Categories.Single(c => c.Name.Equals("Food", StringComparison.OrdinalIgnoreCase));
+        BudgetMonthCategoryData food = month.Categories.Single(c => c.Name.Equals("Food", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(600m, food.Budgeted); // 400 + 200
         Assert.Equal(500m, food.Actual); // 350 + 150
 
         // 2. GetMonthsAsync returns one aggregated month for month 10
-        var months = await sheetReader.GetMonthsAsync(UserId, 2026);
+        List<BudgetMonthData> months = await sheetReader.GetMonthsAsync(UserId, 2026);
         Assert.Single(months);
         Assert.Equal(10, months[0].Month);
         Assert.Equal(2800m, months[0].ActualExpenses);
@@ -956,7 +956,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task TrackerBudgetMonthReader_ZeroLineArchivedCategory_IsHidden()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         var activeCat = new BudgetCategory
         { Id = 1, UserId = UserId, Name = "Active Rent", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
@@ -1003,9 +1003,9 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (_, _, _, trackerReader) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
-        var month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
+        BudgetMonthData? month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
         Assert.NotNull(month);
 
         // Only Active Rent and Archived With Data should be in categories list
@@ -1018,7 +1018,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task TransactionDateBoundaries_FirstAndLastDayOfMonths()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var snapshot = new SpreadsheetBudgetSnapshot
         { UserId = UserId, Year = 2026, MonthNumber = 10, ConnectionId = 1 };
         db.SpreadsheetBudgetSnapshots.Add(snapshot);
@@ -1059,9 +1059,9 @@ public class BudgetDataProviderTests
             });
         await db.SaveChangesAsync();
 
-        var (_, _, sheetReader, _) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader? sheetReader, TrackerBudgetMonthReader _) = CreateServices(db);
 
-        var txs = await sheetReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
+        List<BudgetTransactionData> txs = await sheetReader.GetTransactionsAsync(UserId, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31));
 
         Assert.Equal(2, txs.Count);
         Assert.Contains(txs, t => t.Description == "First Day");
@@ -1072,16 +1072,16 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task MonthlyBudgetService_And_TrackerBudgetMonthReader_ParityTest()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var monthlyBudgetService = new MonthlyBudgetService(db);
-        var (_, _, _, trackerReader) = CreateServices(db);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
         await monthlyBudgetService.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
-        var home = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Home");
-        var paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
-        var bonus = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Bonus");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory home = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Home");
+        BudgetCategory paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
+        BudgetCategory bonus = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Bonus");
 
         // Custom archived category with data
         var archivedExpense = new BudgetCategory
@@ -1153,8 +1153,8 @@ public class BudgetDataProviderTests
         await db.SaveChangesAsync();
 
         // Fetch sheet and normalized month data
-        var sheet = await monthlyBudgetService.GetSheetAsync(UserId, 2026, 10);
-        var monthData = await trackerReader.GetMonthAsync(UserId, 2026, 10);
+        MonthlyBudgetSheetDto sheet = await monthlyBudgetService.GetSheetAsync(UserId, 2026, 10);
+        BudgetMonthData? monthData = await trackerReader.GetMonthAsync(UserId, 2026, 10);
 
         Assert.NotNull(sheet);
         Assert.NotNull(monthData);
@@ -1167,9 +1167,9 @@ public class BudgetDataProviderTests
 
         // Verify expense categories in normalized monthData match sheet expenses
         Assert.Equal(sheet.Expenses.Rows.Count, monthData.Categories.Count);
-        foreach (var expenseRow in sheet.Expenses.Rows)
+        foreach (SheetRowDto expenseRow in sheet.Expenses.Rows)
         {
-            var matchingCat = monthData.Categories.SingleOrDefault(c => c.Name == expenseRow.Name);
+            BudgetMonthCategoryData? matchingCat = monthData.Categories.SingleOrDefault(c => c.Name == expenseRow.Name);
             Assert.NotNull(matchingCat);
             Assert.Equal(expenseRow.Planned, matchingCat.Budgeted);
             Assert.Equal(expenseRow.Actual, matchingCat.Actual);
@@ -1187,7 +1187,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task TrackerBudgetMonthReader_SeparatesExpenseAndIncomeCategories_WithSameName()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         var expenseOther = new BudgetCategory
         { Id = 1, UserId = UserId, Name = "Other", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
@@ -1228,8 +1228,8 @@ public class BudgetDataProviderTests
         );
         await db.SaveChangesAsync();
 
-        var (_, _, _, trackerReader) = CreateServices(db);
-        var month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
+        BudgetMonthData? month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
 
         Assert.NotNull(month);
         Assert.Equal(100m, month.BudgetedExpenses);
@@ -1248,7 +1248,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task GetTransactionsAsync_OpenRangeWithTake_ReturnsNewestRecords_BothReaders()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
         // 1. Sheet transactions
         var snapshot = new SpreadsheetBudgetSnapshot
@@ -1288,16 +1288,16 @@ public class BudgetDataProviderTests
 
         await db.SaveChangesAsync();
 
-        var (provider, sourceService, sheetReader, trackerReader) = CreateServices(db);
+        (BudgetDataProvider? provider, BudgetDataSourceService? sourceService, SheetBudgetMonthReader? sheetReader, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
         // Test Sheet reader with open range and take: 5
-        var sheetTxs = await sheetReader.GetTransactionsAsync(UserId, DateOnly.MinValue, DateOnly.MaxValue, take: 5);
+        List<BudgetTransactionData> sheetTxs = await sheetReader.GetTransactionsAsync(UserId, DateOnly.MinValue, DateOnly.MaxValue, take: 5);
         Assert.Equal(5, sheetTxs.Count);
         Assert.Equal("Sheet Tx 10", sheetTxs[0].Description);
         Assert.Equal("Sheet Tx 6", sheetTxs[4].Description);
 
         // Test Tracker reader with open range and take: 5
-        var trackerTxs =
+        List<BudgetTransactionData> trackerTxs =
             await trackerReader.GetTransactionsAsync(UserId, DateOnly.MinValue, DateOnly.MaxValue, take: 5);
         Assert.Equal(5, trackerTxs.Count);
         Assert.Equal("Tracker Tx 10", trackerTxs[0].Description);
@@ -1306,7 +1306,7 @@ public class BudgetDataProviderTests
         // Test Provider delegates open range with take
         await sourceService.SetDataSourcePreferenceAsync(UserId,
             new SetBudgetDataSourceRequest { Source = BudgetDataSource.BudgetTracker });
-        var providerTxs = await provider.GetTransactionsAsync(UserId, DateOnly.MinValue, DateOnly.MaxValue, take: 3);
+        List<BudgetTransactionData> providerTxs = await provider.GetTransactionsAsync(UserId, DateOnly.MinValue, DateOnly.MaxValue, take: 3);
         Assert.Equal(3, providerTxs.Count);
         Assert.Equal("Tracker Tx 10", providerTxs[0].Description);
     }
@@ -1314,7 +1314,7 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task SheetBudgetMonthReader_PreservesNullStartingAndEndingBalances_WhenAllNull()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
             UserId = UserId,
@@ -1328,8 +1328,8 @@ public class BudgetDataProviderTests
         });
         await db.SaveChangesAsync();
 
-        var (_, _, sheetReader, _) = CreateServices(db);
-        var month = await sheetReader.GetMonthAsync(UserId, 2026, 10);
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader? sheetReader, TrackerBudgetMonthReader _) = CreateServices(db);
+        BudgetMonthData? month = await sheetReader.GetMonthAsync(UserId, 2026, 10);
 
         Assert.NotNull(month);
         Assert.Null(month.StartingBalance);
@@ -1339,13 +1339,13 @@ public class BudgetDataProviderTests
     [Fact]
     public async Task TrackerBudgetMonthReader_YearBoundsGuard_ReturnsEmptyOrNull()
     {
-        await using var db = CreateContext();
-        var (_, _, _, trackerReader) = CreateServices(db);
+        await using AppDbContext db = CreateContext();
+        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
-        var monthsInvalid = await trackerReader.GetMonthsAsync(UserId, 9999);
+        List<BudgetMonthData> monthsInvalid = await trackerReader.GetMonthsAsync(UserId, 9999);
         Assert.Empty(monthsInvalid);
 
-        var monthInvalid = await trackerReader.GetMonthAsync(UserId, 9999, 1);
+        BudgetMonthData? monthInvalid = await trackerReader.GetMonthAsync(UserId, 9999, 1);
         Assert.Null(monthInvalid);
     }
 
@@ -1361,7 +1361,7 @@ public class BudgetDataProviderTests
         {
             if (OnSavingChangesAsync != null && eventData.Context is AppDbContext context)
             {
-                var handler = OnSavingChangesAsync;
+                Func<AppDbContext, ValueTask> handler = OnSavingChangesAsync;
                 OnSavingChangesAsync = null; // Execute only once for the target operation
                 await handler(context);
                 if (ShouldThrow)

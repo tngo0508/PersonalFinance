@@ -47,9 +47,9 @@ public class SpreadsheetReaderService : ISpreadsheetReader
         }
 
         MonthlyBudgetReportDto? unreadable = null;
-        await foreach (var download in _fileSource.DownloadAsync(userId, fileId, fileName, connectionId, cancellationToken))
+        await foreach (SpreadsheetDownload download in _fileSource.DownloadAsync(userId, fileId, fileName, connectionId, cancellationToken))
         {
-            var report = download.Format == SpreadsheetFormat.Xlsx
+            MonthlyBudgetReportDto report = download.Format == SpreadsheetFormat.Xlsx
                 ? BudgetSpreadsheetParser.ParseXlsxBudgetReport(new MemoryStream(download.Content), download.FileName,
                     fileId, download.DataSource)
                 : BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(ReadText(download.Content), download.FileName,
@@ -86,9 +86,9 @@ public class SpreadsheetReaderService : ISpreadsheetReader
         }
 
         SpreadsheetTransactionsDto? unreadable = null;
-        await foreach (var download in _fileSource.DownloadAsync(userId, fileId, fileName, connectionId, cancellationToken))
+        await foreach (SpreadsheetDownload download in _fileSource.DownloadAsync(userId, fileId, fileName, connectionId, cancellationToken))
         {
-            var result = download.Format == SpreadsheetFormat.Xlsx
+            SpreadsheetTransactionsDto result = download.Format == SpreadsheetFormat.Xlsx
                 ? BudgetSpreadsheetParser.ParseXlsxTransactions(new MemoryStream(download.Content), download.FileName,
                     fileId, download.DataSource)
                 : BudgetSpreadsheetParser.ParseCsvTransactions(ReadText(download.Content), download.FileName, fileId,

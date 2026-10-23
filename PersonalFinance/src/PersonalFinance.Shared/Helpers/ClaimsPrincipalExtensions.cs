@@ -15,7 +15,7 @@ public static class ClaimsPrincipalExtensions
     /// <exception cref="InvalidOperationException">The principal has no Account id claim.</exception>
     public static string GetUserId(this ClaimsPrincipal user)
     {
-        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        string? userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrWhiteSpace(userId))
         {
             throw new InvalidOperationException(

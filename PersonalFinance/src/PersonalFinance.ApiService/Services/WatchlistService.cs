@@ -24,7 +24,7 @@ public class WatchlistService : IWatchlistService
 
     public async Task<List<SavedArticleResponseDto>> GetWatchlistAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var articles = await _dbContext.SavedArticles
+        List<SavedArticleResponseDto> articles = await _dbContext.SavedArticles
             .AsNoTracking()
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.SavedAtUtc)
@@ -46,7 +46,7 @@ public class WatchlistService : IWatchlistService
 
     public async Task<SaveArticleResultDto> SaveArticleAsync(string userId, SaveArticleRequestDto request, CancellationToken cancellationToken = default)
     {
-        var existing = await _dbContext.SavedArticles
+        SavedArticle? existing = await _dbContext.SavedArticles
             .FirstOrDefaultAsync(a => a.UserId == userId && a.Url == request.Url, cancellationToken);
 
         if (existing is not null)
@@ -79,7 +79,7 @@ public class WatchlistService : IWatchlistService
 
     public async Task<bool> RemoveArticleAsync(string userId, int id, CancellationToken cancellationToken = default)
     {
-        var article = await _dbContext.SavedArticles
+        SavedArticle? article = await _dbContext.SavedArticles
             .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId, cancellationToken);
 
         if (article is null) return false;

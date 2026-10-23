@@ -37,12 +37,12 @@ public class DashboardWebControllerTests
             Budget = new BudgetSummaryDto { MonthlyIncome = 6_500m, Period = "2026-10" }
         };
         var logger = new RecordingLogger<DashboardController>();
-        var controller = CreateController(new FakeDashboardApi { Summary = summary }, logger);
+        DashboardController controller = CreateController(new FakeDashboardApi { Summary = summary }, logger);
 
-        var result = await controller.Index();
+        IActionResult result = await controller.Index();
 
-        var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<DashboardSummaryDto>(viewResult.Model);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
+        DashboardSummaryDto model = Assert.IsType<DashboardSummaryDto>(viewResult.Model);
         Assert.Equal(125_000m, model.NetWorth!.CurrentNetWorth);
         Assert.Equal("2026-10", model.Budget!.Period);
         Assert.DoesNotContain(logger.Entries, e => e.Level >= LogLevel.Warning);
@@ -52,16 +52,16 @@ public class DashboardWebControllerTests
     public async Task Index_WhenApiFails_LogsFailureAndRendersUnavailableState()
     {
         var logger = new RecordingLogger<DashboardController>();
-        var controller = CreateController(
+        DashboardController controller = CreateController(
             new FakeDashboardApi { Failure = new HttpRequestException("API unavailable") }, logger);
 
-        var result = await controller.Index();
+        IActionResult result = await controller.Index();
 
         // Never the empty summary: that would show setup cards to a user whose data is only unreachable.
-        var viewResult = Assert.IsType<ViewResult>(result);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal(DashboardController.UnavailableViewName, viewResult.ViewName);
         Assert.Null(viewResult.Model);
-        var entry = Assert.Single(logger.Entries, e => e.Level >= LogLevel.Warning);
+        (LogLevel Level, string Message, Exception? Exception) entry = Assert.Single(logger.Entries, e => e.Level >= LogLevel.Warning);
         Assert.IsType<HttpRequestException>(entry.Exception);
     }
 
@@ -70,7 +70,7 @@ public class DashboardWebControllerTests
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        var controller = CreateController(
+        DashboardController controller = CreateController(
             new FakeDashboardApi { Failure = new OperationCanceledException(cts.Token) },
             new RecordingLogger<DashboardController>());
 
@@ -81,14 +81,14 @@ public class DashboardWebControllerTests
     public async Task Index_WhenApiTimesOutWithoutCallerCancellation_RendersUnavailableState()
     {
         var logger = new RecordingLogger<DashboardController>();
-        var controller = CreateController(
+        DashboardController controller = CreateController(
             new FakeDashboardApi { Failure = new TaskCanceledException("The request timed out.") }, logger);
 
-        var result = await controller.Index(CancellationToken.None);
+        IActionResult result = await controller.Index(CancellationToken.None);
 
-        var viewResult = Assert.IsType<ViewResult>(result);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal(DashboardController.UnavailableViewName, viewResult.ViewName);
-        var entry = Assert.Single(logger.Entries, e => e.Level >= LogLevel.Warning);
+        (LogLevel Level, string Message, Exception? Exception) entry = Assert.Single(logger.Entries, e => e.Level >= LogLevel.Warning);
         Assert.IsType<TaskCanceledException>(entry.Exception);
     }
 }

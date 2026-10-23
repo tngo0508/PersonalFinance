@@ -1,9 +1,9 @@
-using PersonalFinance.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
-using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.ApiService.Validators;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -33,13 +33,13 @@ public class NetWorthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public IActionResult CalculateProjection([FromBody] NetWorthProjectionRequestDto request)
     {
-        var error = NetWorthProjectionValidator.Validate(request);
+        string? error = NetWorthProjectionValidator.Validate(request);
         if (error != null)
         {
             return BadRequest(error);
         }
 
-        var projection = NetWorthProjectionService.ComputeProjection(request);
+        NetWorthProjectionDto projection = NetWorthProjectionService.ComputeProjection(request);
         return Ok(projection);
     }
 
@@ -51,14 +51,14 @@ public class NetWorthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SaveParameters([FromBody] NetWorthProjectionRequestDto request)
     {
-        var error = NetWorthProjectionValidator.Validate(request);
+        string? error = NetWorthProjectionValidator.Validate(request);
         if (error != null)
         {
             return BadRequest(error);
         }
 
-        var userId = User.GetUserId();
-        var result = await _parametersService.SaveAsync(userId, request, HttpContext.RequestAborted);
+        string userId = User.GetUserId();
+        NetWorthParametersDto result = await _parametersService.SaveAsync(userId, request, HttpContext.RequestAborted);
         return Ok(result);
     }
 
@@ -69,8 +69,8 @@ public class NetWorthController : ControllerBase
     [ProducesResponseType(typeof(NetWorthParametersDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> LoadParameters()
     {
-        var userId = User.GetUserId();
-        var parameters = await _parametersService.LoadAsync(userId, HttpContext.RequestAborted);
+        string userId = User.GetUserId();
+        NetWorthParametersDto? parameters = await _parametersService.LoadAsync(userId, HttpContext.RequestAborted);
 
         if (parameters == null)
         {
@@ -87,7 +87,7 @@ public class NetWorthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeleteParameters()
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         await _parametersService.DeleteAsync(userId, HttpContext.RequestAborted);
         return NoContent();
     }

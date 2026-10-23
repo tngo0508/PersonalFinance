@@ -36,10 +36,10 @@ public class AiScopeFilterTests
     public void Evaluate_FinanceQuery_ReturnsNull()
     {
         // Arrange
-        var message = "How much did I spend on groceries last month?";
+        string message = "How much did I spend on groceries last month?";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.Null(result);
@@ -61,7 +61,7 @@ public class AiScopeFilterTests
     public void Evaluate_FinanceQueries_PassThrough(string message)
     {
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.Null(result);
@@ -80,7 +80,7 @@ public class AiScopeFilterTests
     public void Evaluate_OffTopicQuery_ReturnsRefusal(string message)
     {
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.NotNull(result);
@@ -103,7 +103,7 @@ public class AiScopeFilterTests
     public void Evaluate_Greeting_ReturnsAcknowledgement(string message)
     {
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.NotNull(result);
@@ -116,10 +116,10 @@ public class AiScopeFilterTests
     public void Evaluate_GreetingWithFinanceKeyword_PassesThrough()
     {
         // Arrange
-        var message = "Hi, how much did I spend on budget this month?";
+        string message = "Hi, how much did I spend on budget this month?";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.Null(result);
@@ -133,7 +133,7 @@ public class AiScopeFilterTests
     public void Evaluate_PromptInjection_ReturnsRefusal(string message)
     {
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.NotNull(result);
@@ -145,7 +145,7 @@ public class AiScopeFilterTests
     public void Evaluate_EmptyMessage_ReturnsNull()
     {
         // Act
-        var result = _filter.Evaluate("");
+        AiChatResponseDto? result = _filter.Evaluate("");
 
         // Assert
         Assert.Null(result);
@@ -155,7 +155,7 @@ public class AiScopeFilterTests
     public void Evaluate_WhitespaceOnly_ReturnsNull()
     {
         // Act
-        var result = _filter.Evaluate("   ");
+        AiChatResponseDto? result = _filter.Evaluate("   ");
 
         // Assert
         Assert.Null(result);
@@ -165,10 +165,10 @@ public class AiScopeFilterTests
     public void Evaluate_MessageTooLong_ReturnsRefusal()
     {
         // Arrange
-        var message = new string('a', AiAssistantMessages.MaxMessageLength + 1);
+        string message = new string('a', AiAssistantMessages.MaxMessageLength + 1);
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.NotNull(result);
@@ -181,11 +181,11 @@ public class AiScopeFilterTests
     {
         // Arrange
         // A message exactly at the max length with a finance keyword
-        var padding = new string('x', AiAssistantMessages.MaxMessageLength - 10);
-        var message = $"{padding} budget";
+        string padding = new string('x', AiAssistantMessages.MaxMessageLength - 10);
+        string message = $"{padding} budget";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.Null(result);
@@ -195,10 +195,10 @@ public class AiScopeFilterTests
     public void Evaluate_CaseInsensitive_OffTopicRefusal()
     {
         // Arrange
-        var message = "WRITE A PYTHON SCRIPT TO SORT A LIST";
+        string message = "WRITE A PYTHON SCRIPT TO SORT A LIST";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.NotNull(result);
@@ -209,10 +209,10 @@ public class AiScopeFilterTests
     public void Evaluate_CaseInsensitive_FinancePassThrough()
     {
         // Arrange
-        var message = "HOW MUCH DID I SPEND ON GROCERIES LAST MONTH?";
+        string message = "HOW MUCH DID I SPEND ON GROCERIES LAST MONTH?";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.Null(result);
@@ -223,10 +223,10 @@ public class AiScopeFilterTests
     {
         // Arrange
         // Unclassified requests receive a deterministic response.
-        var message = "What do you think about my situation?";
+        string message = "What do you think about my situation?";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.True(result!.IsRefusal);
@@ -236,10 +236,10 @@ public class AiScopeFilterTests
     public void Evaluate_BitcoinQuery_ReturnsRefusal()
     {
         // Arrange
-        var message = "Should I buy Bitcoin today?";
+        string message = "Should I buy Bitcoin today?";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.NotNull(result);
@@ -251,10 +251,10 @@ public class AiScopeFilterTests
     {
         // Arrange
         // A message with more off-topic keywords than finance keywords
-        var message = "Write a python function to calculate my budget";
+        string message = "Write a python function to calculate my budget";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         // "python", "function" (2 off-topic) vs "budget" (1 finance)
@@ -266,11 +266,11 @@ public class AiScopeFilterTests
     public void Evaluate_ResponseHasTimestamp()
     {
         // Arrange
-        var before = DateTime.UtcNow.AddSeconds(-1);
-        var message = "Hello";
+        DateTime before = DateTime.UtcNow.AddSeconds(-1);
+        string message = "Hello";
 
         // Act
-        var result = _filter.Evaluate(message);
+        AiChatResponseDto? result = _filter.Evaluate(message);
 
         // Assert
         Assert.NotNull(result);

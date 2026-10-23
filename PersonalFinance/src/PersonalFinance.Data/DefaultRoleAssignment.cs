@@ -19,7 +19,7 @@ public static class DefaultRoleAssignment
     {
         try
         {
-            var result = await userManager.AddToRoleAsync(user, AppRoles.User);
+            IdentityResult result = await userManager.AddToRoleAsync(user, AppRoles.User);
             if (!result.Succeeded)
             {
                 logger?.LogWarning(

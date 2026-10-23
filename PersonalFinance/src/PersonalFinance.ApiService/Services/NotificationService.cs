@@ -19,7 +19,7 @@ public class NotificationService : INotificationService
     public async Task<int> CreateNotificationAsync(string userId, CreateNotificationRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var notificationType = request.Type switch
+        NotificationType notificationType = request.Type switch
         {
             "BudgetAlert" => NotificationType.BudgetAlert,
             "SavingsMilestone" => NotificationType.SavingsMilestone,
@@ -45,7 +45,7 @@ public class NotificationService : INotificationService
     public async Task<List<NotificationDto>> GetNotificationsAsync(string userId,
         CancellationToken cancellationToken = default)
     {
-        var notifications = await _dbContext.Notifications
+        List<NotificationDto> notifications = await _dbContext.Notifications
             .Where(n => n.UserId == userId)
             .OrderByDescending(n => n.CreatedAt)
             .Take(50)
@@ -74,7 +74,7 @@ public class NotificationService : INotificationService
     public async Task<bool> MarkAsReadAsync(string userId, int notificationId,
         CancellationToken cancellationToken = default)
     {
-        var notification = await _dbContext.Notifications
+        Notification? notification = await _dbContext.Notifications
             .FirstOrDefaultAsync(n => n.Id == notificationId && n.UserId == userId, cancellationToken);
 
         if (notification is null)
@@ -90,11 +90,11 @@ public class NotificationService : INotificationService
 
     public async Task MarkAllAsReadAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var notifications = await _dbContext.Notifications
+        List<Notification> notifications = await _dbContext.Notifications
             .Where(n => n.UserId == userId && !n.IsRead)
             .ToListAsync(cancellationToken);
 
-        foreach (var notification in notifications)
+        foreach (Notification? notification in notifications)
         {
             notification.IsRead = true;
             notification.ReadAt = DateTime.UtcNow;

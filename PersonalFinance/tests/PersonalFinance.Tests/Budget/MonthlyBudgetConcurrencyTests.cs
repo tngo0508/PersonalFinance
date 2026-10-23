@@ -19,10 +19,10 @@ public class MonthlyBudgetConcurrencyTests
     private static (AppDbContext Context, ConcurrencySimulationInterceptor Interceptor, string DbName)
         CreateContextWithInterceptor()
     {
-        var dbName = $"BudgetConcurrency_{Guid.NewGuid():N}";
+        string dbName = $"BudgetConcurrency_{Guid.NewGuid():N}";
         var interceptor = new ConcurrencySimulationInterceptor();
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .AddInterceptors(interceptor)
             .Options;
@@ -32,7 +32,7 @@ public class MonthlyBudgetConcurrencyTests
 
     private static AppDbContext CreateSecondaryContext(string dbName)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(dbName)
             .Options;
 
@@ -42,7 +42,7 @@ public class MonthlyBudgetConcurrencyTests
     [Fact]
     public async Task EnsureDefaultCategories_RecoversFromConcurrentSeeding_WithoutThrowingOrStaleEntities()
     {
-        var (db, interceptor, dbName) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new MonthlyBudgetService(db);
@@ -51,7 +51,7 @@ public class MonthlyBudgetConcurrencyTests
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
-                await using var secondaryDb = CreateSecondaryContext(dbName);
+                await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
                 var secondaryService = new MonthlyBudgetService(secondaryDb);
                 await secondaryService.EnsureDefaultCategoriesAsync(UserId);
             };
@@ -60,11 +60,11 @@ public class MonthlyBudgetConcurrencyTests
             await service.EnsureDefaultCategoriesAsync(UserId);
 
             // Assert exactly 16 categories exist
-            var totalCategories = await db.BudgetCategories.CountAsync(c => c.UserId == UserId);
+            int totalCategories = await db.BudgetCategories.CountAsync(c => c.UserId == UserId);
             Assert.Equal(16, totalCategories);
 
             // Assert a subsequent create operation on the same context succeeds (proving no stale tracked entities)
-            var created = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+            BudgetCategoryDto created = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
             {
                 Name = "Custom Hobby",
                 Kind = BudgetCategoryKind.Expense,
@@ -79,7 +79,7 @@ public class MonthlyBudgetConcurrencyTests
     [Fact]
     public async Task EnsureDefaultCategories_Rethrows_WhenNoCompetingRowsExist()
     {
-        var (db, interceptor, _) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string _) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new MonthlyBudgetService(db);
@@ -95,7 +95,7 @@ public class MonthlyBudgetConcurrencyTests
     [Fact]
     public async Task InitializeMonth_RecoversFromConcurrentPlanCreation()
     {
-        var (db, interceptor, dbName) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new MonthlyBudgetService(db);
@@ -104,7 +104,7 @@ public class MonthlyBudgetConcurrencyTests
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
-                await using var secondaryDb = CreateSecondaryContext(dbName);
+                await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
                 var secondaryService = new MonthlyBudgetService(secondaryDb);
                 await secondaryService.InitializeMonthAsync(UserId, new InitializeMonthRequest
                 {
@@ -114,7 +114,7 @@ public class MonthlyBudgetConcurrencyTests
                 });
             };
 
-            var sheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
+            MonthlyBudgetSheetDto sheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
             {
                 Year = 2026,
                 Month = 10,
@@ -122,7 +122,7 @@ public class MonthlyBudgetConcurrencyTests
             });
 
             Assert.True(sheet.IsInitialized);
-            var planCount =
+            int planCount =
                 await db.MonthlyBudgetPlans.CountAsync(p => p.UserId == UserId && p.Year == 2026 && p.Month == 10);
             Assert.Equal(1, planCount);
         }
@@ -131,17 +131,17 @@ public class MonthlyBudgetConcurrencyTests
     [Fact]
     public async Task SetPlanned_RecoversFromConcurrentPlanCreation()
     {
-        var (db, interceptor, dbName) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new MonthlyBudgetService(db);
             await service.EnsureDefaultCategoriesAsync(UserId);
-            var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+            BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
-                await using var secondaryDb = CreateSecondaryContext(dbName);
+                await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
                 var secondaryPlan = new MonthlyBudgetPlan
                 {
                     UserId = UserId,
@@ -154,14 +154,14 @@ public class MonthlyBudgetConcurrencyTests
             };
 
             // Set planned creates plan, hits simulated race, reloads existing plan, and sets planned
-            var sheet = await service.SetPlannedAsync(UserId, 2026, 11, food.Id,
+            MonthlyBudgetSheetDto sheet = await service.SetPlannedAsync(UserId, 2026, 11, food.Id,
                 new SetPlannedRequest { Amount = 450m });
 
             Assert.True(sheet.IsInitialized);
-            var foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+            SheetRowDto foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
             Assert.Equal(450m, foodRow.Planned);
 
-            var planCount =
+            int planCount =
                 await db.MonthlyBudgetPlans.CountAsync(p => p.UserId == UserId && p.Year == 2026 && p.Month == 11);
             Assert.Equal(1, planCount);
         }
@@ -170,7 +170,7 @@ public class MonthlyBudgetConcurrencyTests
     [Fact]
     public async Task CreateCategory_RecoversFromConcurrentDuplicate_ThrowingDuplicateCategoryException()
     {
-        var (db, interceptor, dbName) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new MonthlyBudgetService(db);
@@ -179,7 +179,7 @@ public class MonthlyBudgetConcurrencyTests
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
-                await using var secondaryDb = CreateSecondaryContext(dbName);
+                await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
                 secondaryDb.BudgetCategories.Add(new BudgetCategory
                 {
                     UserId = UserId,
@@ -200,7 +200,7 @@ public class MonthlyBudgetConcurrencyTests
                 }));
 
             // Context should be clean; subsequent valid category creation should succeed
-            var nextCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+            BudgetCategoryDto nextCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
             {
                 Name = "Unique Income",
                 Kind = BudgetCategoryKind.Income,
@@ -213,23 +213,23 @@ public class MonthlyBudgetConcurrencyTests
     [Fact]
     public async Task SetPlanned_RecoversFromConcurrentLineCreation_UpdatesCompetingLine()
     {
-        var (db, interceptor, dbName) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new MonthlyBudgetService(db);
             await service.EnsureDefaultCategoriesAsync(UserId);
-            var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+            BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
             // Initialize plan first so GetOrCreatePlanAsync does not throw
             await service.InitializeMonthAsync(UserId, new InitializeMonthRequest { Year = 2026, Month = 10 });
 
-            var plan =
+            MonthlyBudgetPlan plan =
                 await db.MonthlyBudgetPlans.FirstAsync(p => p.UserId == UserId && p.Year == 2026 && p.Month == 10);
 
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
-                await using var secondaryDb = CreateSecondaryContext(dbName);
+                await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
                 secondaryDb.MonthlyBudgetLines.Add(new MonthlyBudgetLine
                 {
                     PlanId = plan.Id,
@@ -242,13 +242,13 @@ public class MonthlyBudgetConcurrencyTests
             };
 
             // SetPlanned tries to insert line, encounters conflict, recovers and updates the competing line to 350
-            var sheet = await service.SetPlannedAsync(UserId, 2026, 10, food.Id,
+            MonthlyBudgetSheetDto sheet = await service.SetPlannedAsync(UserId, 2026, 10, food.Id,
                 new SetPlannedRequest { Amount = 350m });
 
-            var foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+            SheetRowDto foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
             Assert.Equal(350m, foodRow.Planned);
 
-            var recoveredLine =
+            MonthlyBudgetLine recoveredLine =
                 await db.MonthlyBudgetLines.SingleAsync(l => l.PlanId == plan.Id && l.CategoryId == food.Id);
             Assert.Equal(1,
                 await db.MonthlyBudgetLines.CountAsync(l => l.PlanId == plan.Id && l.CategoryId == food.Id));
@@ -260,23 +260,23 @@ public class MonthlyBudgetConcurrencyTests
     [Fact]
     public async Task SetActualOverride_RecoversFromConcurrentLineCreation_UpdatesCompetingLine()
     {
-        var (db, interceptor, dbName) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new MonthlyBudgetService(db);
             await service.EnsureDefaultCategoriesAsync(UserId);
-            var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+            BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
             // Initialize plan first
             await service.InitializeMonthAsync(UserId, new InitializeMonthRequest { Year = 2026, Month = 10 });
 
-            var plan =
+            MonthlyBudgetPlan plan =
                 await db.MonthlyBudgetPlans.FirstAsync(p => p.UserId == UserId && p.Year == 2026 && p.Month == 10);
 
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
-                await using var secondaryDb = CreateSecondaryContext(dbName);
+                await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
                 secondaryDb.MonthlyBudgetLines.Add(new MonthlyBudgetLine
                 {
                     PlanId = plan.Id,
@@ -289,14 +289,14 @@ public class MonthlyBudgetConcurrencyTests
             };
 
             // SetActualOverride tries to insert line, encounters conflict, recovers and sets override to 180
-            var sheet = await service.SetActualOverrideAsync(UserId, 2026, 10, food.Id,
+            MonthlyBudgetSheetDto sheet = await service.SetActualOverrideAsync(UserId, 2026, 10, food.Id,
                 new SetActualOverrideRequest { Amount = 180m });
 
-            var foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+            SheetRowDto foodRow = sheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
             Assert.Equal(180m, foodRow.Actual);
             Assert.True(foodRow.ActualIsOverride);
 
-            var recoveredLine =
+            MonthlyBudgetLine recoveredLine =
                 await db.MonthlyBudgetLines.SingleAsync(l => l.PlanId == plan.Id && l.CategoryId == food.Id);
             Assert.Equal(1,
                 await db.MonthlyBudgetLines.CountAsync(l => l.PlanId == plan.Id && l.CategoryId == food.Id));
@@ -308,12 +308,12 @@ public class MonthlyBudgetConcurrencyTests
     [Fact]
     public async Task SetPlanned_Rethrows_WhenNoCompetingLineExists()
     {
-        var (db, interceptor, _) = CreateContextWithInterceptor();
+        (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string _) = CreateContextWithInterceptor();
         await using (db)
         {
             var service = new MonthlyBudgetService(db);
             await service.EnsureDefaultCategoriesAsync(UserId);
-            var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+            BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
             await service.InitializeMonthAsync(UserId, new InitializeMonthRequest { Year = 2026, Month = 10 });
 
@@ -337,7 +337,7 @@ public class MonthlyBudgetConcurrencyTests
         {
             if (OnSavingChangesAsync != null && eventData.Context is AppDbContext context)
             {
-                var handler = OnSavingChangesAsync;
+                Func<AppDbContext, ValueTask> handler = OnSavingChangesAsync;
                 OnSavingChangesAsync = null; // Execute only once for the target operation
                 await handler(context);
                 if (ShouldThrow)

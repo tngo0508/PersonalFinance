@@ -18,13 +18,13 @@ using Serilog;
 Log.Logger = LoggingExtensions.CreateBootstrapLogger();
 
 // Captured once the host is built, so a cancellation during shutdown is not reported as a crash.
-var applicationStopping = CancellationToken.None;
+CancellationToken applicationStopping = CancellationToken.None;
 
 try
 {
     Log.Information("Starting {AppName} (v{Version})...", AppVersion.ApplicationName, AppVersion.Current);
 
-    var builder = WebApplication.CreateBuilder(args);
+    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
     // Pin culture to en-US (chiseled containers start in the invariant culture and format currency as "¤").
     AppCulture.ApplyDefault();
@@ -39,7 +39,7 @@ try
         .PersistKeysToDbContext<AppDbContext>(); // keeps cookies and antiforgery tokens valid across container restarts
 
     // Identity: CI/E2E runs disable email confirmation so a new account can sign in immediately.
-    var disableEmailConfirmationForE2E = Environment.GetEnvironmentVariable("E2E_DISABLE_EMAIL_CONFIRMATION") == "true";
+    bool disableEmailConfirmationForE2E = Environment.GetEnvironmentVariable("E2E_DISABLE_EMAIL_CONFIRMATION") == "true";
     builder.Services.AddDefaultIdentity<IdentityUser>(options =>
         {
             options.SignIn.RequireConfirmedAccount = !disableEmailConfirmationForE2E;
@@ -67,8 +67,8 @@ try
     });
 
     // Google sign-in, only when its credentials are configured.
-    var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
-    var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+    string? googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+    string? googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
     if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
     {
         builder.Services.AddAuthentication()
@@ -129,7 +129,7 @@ try
         });
     builder.Services.AddProblemDetails();
 
-    var app = builder.Build();
+    WebApplication app = builder.Build();
     applicationStopping = app.Lifetime.ApplicationStopping;
 
     app.UseSerilogRequestLogging();

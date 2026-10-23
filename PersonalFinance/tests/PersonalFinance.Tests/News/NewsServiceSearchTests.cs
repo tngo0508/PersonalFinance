@@ -32,20 +32,20 @@ public class NewsServiceSearchTests
     [InlineData("MORTGAGE", "Housing update")]
     public async Task GetFinanceNewsAsync_SearchMatchesTitleOrDescriptionIgnoringCase(string search, string expectedTitle)
     {
-        var service = CreateService();
+        NewsService service = CreateService();
 
-        var result = await service.GetFinanceNewsAsync(new NewsQueryOptions { Search = search });
+        List<NewsArticle> result = await service.GetFinanceNewsAsync(new NewsQueryOptions { Search = search });
 
-        var article = Assert.Single(result);
+        NewsArticle article = Assert.Single(result);
         Assert.Equal(expectedTitle, article.Title);
     }
 
     [Fact]
     public async Task GetFinanceNewsAsync_SearchMatchesSourceIgnoringCase()
     {
-        var service = CreateService();
+        NewsService service = CreateService();
 
-        var result = await service.GetFinanceNewsAsync(new NewsQueryOptions { Search = "bbc BUSINESS" });
+        List<NewsArticle> result = await service.GetFinanceNewsAsync(new NewsQueryOptions { Search = "bbc BUSINESS" });
 
         Assert.Equal(3, result.Count);
     }
@@ -53,9 +53,9 @@ public class NewsServiceSearchTests
     [Fact]
     public async Task GetFinanceNewsAsync_SearchWithNoMatchReturnsEmpty()
     {
-        var service = CreateService();
+        NewsService service = CreateService();
 
-        var result = await service.GetFinanceNewsAsync(new NewsQueryOptions { Search = "crypto" });
+        List<NewsArticle> result = await service.GetFinanceNewsAsync(new NewsQueryOptions { Search = "crypto" });
 
         Assert.Empty(result);
     }
@@ -65,7 +65,7 @@ public class NewsServiceSearchTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            var response = request.RequestUri?.ToString() == BbcFeedUrl
+            HttpResponseMessage response = request.RequestUri?.ToString() == BbcFeedUrl
                 ? new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(BbcFeed, Encoding.UTF8, "application/rss+xml")

@@ -27,7 +27,7 @@ public class CommunityService : ICommunityService
         var response = new CommunityResponseDto();
 
         // Fetch active polls with options and vote counts
-        var polls = await _dbContext.CommunityPolls
+        List<CommunityPoll> polls = await _dbContext.CommunityPolls
             .AsNoTracking()
             .Include(p => p.Options)
                 .ThenInclude(o => o.Votes)
@@ -57,7 +57,7 @@ public class CommunityService : ICommunityService
         }
 
         // Look up the poll by its code
-        var poll = await _dbContext.CommunityPolls
+        CommunityPoll? poll = await _dbContext.CommunityPolls
             .FirstOrDefaultAsync(p => p.PollCode == request.PollCode, cancellationToken);
 
         if (poll == null || !poll.IsActive)
@@ -67,7 +67,7 @@ public class CommunityService : ICommunityService
         }
 
         // Check if the option belongs to the poll
-        var option = await _dbContext.CommunityPollOptions
+        CommunityPollOption? option = await _dbContext.CommunityPollOptions
             .FirstOrDefaultAsync(o => o.Id == request.OptionId && o.PollId == poll.Id, cancellationToken);
 
         if (option == null)
@@ -76,7 +76,7 @@ public class CommunityService : ICommunityService
         }
 
         // Check if user already voted
-        var existingVote = await _dbContext.CommunityPollVotes
+        CommunityPollVote? existingVote = await _dbContext.CommunityPollVotes
             .FirstOrDefaultAsync(v => v.UserId == userId && v.PollId == poll.Id, cancellationToken);
 
         if (existingVote != null)
@@ -113,7 +113,7 @@ public class CommunityService : ICommunityService
 
         // Return updated community data
         var response = new CommunityResponseDto();
-        var updatedPolls = await _dbContext.CommunityPolls
+        List<CommunityPoll> updatedPolls = await _dbContext.CommunityPolls
             .AsNoTracking()
             .Include(p => p.Options)
                 .ThenInclude(o => o.Votes)
@@ -129,7 +129,7 @@ public class CommunityService : ICommunityService
 
     public async Task<CommunityCommentDto> AddCommentAsync(string userId, CommunityCommentRequestDto request, string authorName, CancellationToken cancellationToken = default)
     {
-        var trimmedText = request.Text.Trim();
+        string trimmedText = request.Text.Trim();
         if (string.IsNullOrEmpty(trimmedText))
         {
             throw new ArgumentException("Comment text cannot be empty.");
@@ -143,7 +143,7 @@ public class CommunityService : ICommunityService
         int? pollId = null;
         if (!string.IsNullOrEmpty(request.PollCode))
         {
-            var poll = await _dbContext.CommunityPolls
+            CommunityPoll? poll = await _dbContext.CommunityPolls
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PollCode == request.PollCode, cancellationToken);
             if (poll == null)
@@ -157,7 +157,7 @@ public class CommunityService : ICommunityService
         string? storyTitle = null;
         if (request.StoryId.HasValue && request.StoryId.Value > 0)
         {
-            var story = await _dbContext.CommunityStories
+            CommunityStory? story = await _dbContext.CommunityStories
                 .FindAsync([request.StoryId.Value], cancellationToken);
             if (story == null || !story.IsVisible)
             {
@@ -203,7 +203,7 @@ public class CommunityService : ICommunityService
 
     public async Task<CommentLikeResult> ToggleCommentLikeAsync(string userId, int commentId, CancellationToken cancellationToken = default)
     {
-        var comment = await _dbContext.CommunityComments
+        CommunityComment? comment = await _dbContext.CommunityComments
             .FirstOrDefaultAsync(c => c.Id == commentId && c.IsVisible, cancellationToken);
 
         if (comment == null)
@@ -211,7 +211,7 @@ public class CommunityService : ICommunityService
             throw new KeyNotFoundException("Comment not found.");
         }
 
-        var existingLike = await _dbContext.CommunityCommentLikes
+        CommunityCommentLike? existingLike = await _dbContext.CommunityCommentLikes
             .FirstOrDefaultAsync(l => l.UserId == userId && l.CommentId == commentId, cancellationToken);
 
         if (existingLike != null)
@@ -242,7 +242,7 @@ public class CommunityService : ICommunityService
 
     public async Task<List<CommunityCommentDto>> GetPollCommentsAsync(string pollCode, CancellationToken cancellationToken = default)
     {
-        var poll = await _dbContext.CommunityPolls
+        CommunityPoll? poll = await _dbContext.CommunityPolls
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.PollCode == pollCode, cancellationToken);
 
@@ -251,7 +251,7 @@ public class CommunityService : ICommunityService
             throw new KeyNotFoundException("Poll not found.");
         }
 
-        var comments = await _dbContext.CommunityComments
+        List<CommunityCommentDto> comments = await _dbContext.CommunityComments
             .AsNoTracking()
             .Where(c => c.IsVisible && c.PollId == poll.Id)
             .OrderByDescending(c => c.CreatedAt)
@@ -272,10 +272,10 @@ public class CommunityService : ICommunityService
 
     public async Task<CommunityStoryDto> SubmitStoryAsync(string userId, CommunityStoryRequestDto request, string authorName, CancellationToken cancellationToken = default)
     {
-        var trimmedTitle = request.Title.Trim();
-        var trimmedSummary = request.Summary.Trim();
-        var trimmedBody = request.Body.Trim();
-        var trimmedCategory = request.Category.Trim();
+        string trimmedTitle = request.Title.Trim();
+        string trimmedSummary = request.Summary.Trim();
+        string trimmedBody = request.Body.Trim();
+        string trimmedCategory = request.Category.Trim();
 
         if (string.IsNullOrEmpty(trimmedTitle) || trimmedTitle.Length > 500)
         {
@@ -302,8 +302,8 @@ public class CommunityService : ICommunityService
             throw new ArgumentException("Category is required and must be under 50 characters.");
         }
 
-        var wordCount = trimmedBody.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        var readTimeMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
+        int wordCount = trimmedBody.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        int readTimeMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
 
         var story = new PersonalFinance.Data.Entities.CommunityStory
         {
@@ -347,7 +347,7 @@ public class CommunityService : ICommunityService
 
     public async Task<StoryLikeResult> ToggleStoryLikeAsync(string userId, int storyId, CancellationToken cancellationToken = default)
     {
-        var story = await _dbContext.CommunityStories
+        CommunityStory? story = await _dbContext.CommunityStories
             .FirstOrDefaultAsync(s => s.Id == storyId && s.IsVisible, cancellationToken);
 
         if (story == null)
@@ -355,7 +355,7 @@ public class CommunityService : ICommunityService
             throw new KeyNotFoundException("Story not found.");
         }
 
-        var existingLike = await _dbContext.CommunityStoryLikes
+        CommunityStoryLike? existingLike = await _dbContext.CommunityStoryLikes
             .FirstOrDefaultAsync(l => l.UserId == userId && l.StoryId == storyId, cancellationToken);
 
         if (existingLike != null)
@@ -386,7 +386,7 @@ public class CommunityService : ICommunityService
 
     public async Task<CommunityStoryDto?> GetStoryByIdAsync(string userId, int storyId, CancellationToken cancellationToken = default)
     {
-        var story = await _dbContext.CommunityStories
+        CommunityStory? story = await _dbContext.CommunityStories
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == storyId && s.IsVisible, cancellationToken);
 
@@ -424,8 +424,8 @@ public class CommunityService : ICommunityService
 
     private static CommunityPollDto MapPollToDto(CommunityPoll p, string userId)
     {
-        var totalVotes = p.Votes.Count;
-        var userVote = userId != null ? p.Votes.FirstOrDefault(v => v.UserId == userId) : null;
+        int totalVotes = p.Votes.Count;
+        CommunityPollVote? userVote = userId != null ? p.Votes.FirstOrDefault(v => v.UserId == userId) : null;
 
         return new CommunityPollDto
         {
@@ -449,13 +449,13 @@ public class CommunityService : ICommunityService
 
     private async Task<List<CommunityStatDto>> GetQuickStatsAsync(CancellationToken cancellationToken)
     {
-        var totalPolls = await _dbContext.CommunityPolls.AsNoTracking().CountAsync(cancellationToken);
-        var totalVotes = await _dbContext.CommunityPollVotes.AsNoTracking().CountAsync(cancellationToken);
-        var totalComments = await _dbContext.CommunityComments
+        int totalPolls = await _dbContext.CommunityPolls.AsNoTracking().CountAsync(cancellationToken);
+        int totalVotes = await _dbContext.CommunityPollVotes.AsNoTracking().CountAsync(cancellationToken);
+        int totalComments = await _dbContext.CommunityComments
             .AsNoTracking()
             .Where(c => c.IsVisible)
             .CountAsync(cancellationToken);
-        var totalStories = await _dbContext.CommunityStories
+        int totalStories = await _dbContext.CommunityStories
             .AsNoTracking()
             .Where(s => s.IsVisible)
             .CountAsync(cancellationToken);
@@ -471,7 +471,7 @@ public class CommunityService : ICommunityService
 
     private async Task<List<CommunityStoryDto>> GetStoriesAsync(string? userId, CancellationToken cancellationToken)
     {
-        var stories = await _dbContext.CommunityStories
+        List<CommunityStory> stories = await _dbContext.CommunityStories
             .AsNoTracking()
             .Where(s => s.IsVisible)
             .OrderByDescending(s => s.IsFeatured)
@@ -484,7 +484,7 @@ public class CommunityService : ICommunityService
         var userLikes = new HashSet<int>();
         if (userId != null && storyIds.Count > 0)
         {
-            var likeStoryIds = await _dbContext.CommunityStoryLikes
+            List<int> likeStoryIds = await _dbContext.CommunityStoryLikes
                 .AsNoTracking()
                 .Where(l => l.UserId == userId && storyIds.Contains(l.StoryId))
                 .Select(l => l.StoryId)

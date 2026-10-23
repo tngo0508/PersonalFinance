@@ -37,8 +37,8 @@ public sealed class ApiServiceWarmer : IApiServiceWarmer
     /// <inheritdoc />
     public Task WarmUpAsync()
     {
-        var now = Environment.TickCount64;
-        var last = Interlocked.Read(ref _lastPingAt);
+        long now = Environment.TickCount64;
+        long last = Interlocked.Read(ref _lastPingAt);
         if (last != long.MinValue && now - last < ThrottleMilliseconds)
         {
             return Task.CompletedTask;
@@ -57,8 +57,8 @@ public sealed class ApiServiceWarmer : IApiServiceWarmer
     {
         try
         {
-            var client = _httpClientFactory.CreateClient(HttpClientName);
-            using var response = await client.GetAsync(AlivenessPath);
+            HttpClient client = _httpClientFactory.CreateClient(HttpClientName);
+            using HttpResponseMessage response = await client.GetAsync(AlivenessPath);
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug("ApiService warm-up ping answered {StatusCode}.", (int)response.StatusCode);

@@ -38,24 +38,24 @@ public static class MonthlyBudgetCalculator
     {
         var result = new List<CalculatedBudgetCategoryRow>();
 
-        var visibleCategories = allCategories
+        IOrderedEnumerable<BudgetCategory> visibleCategories = allCategories
             .Where(c => !c.IsDeleted ||
-                        (lineMap.TryGetValue(c.Id, out var l) && (l.PlannedAmount > 0 || l.ActualOverride.HasValue)) ||
+                        (lineMap.TryGetValue(c.Id, out MonthlyBudgetLine? l) && (l.PlannedAmount > 0 || l.ActualOverride.HasValue)) ||
                         txSumByCategory.ContainsKey(c.Id))
             .OrderBy(c => c.Kind)
             .ThenBy(c => c.SortOrder)
             .ThenBy(c => c.Id);
 
-        foreach (var cat in visibleCategories)
+        foreach (BudgetCategory? cat in visibleCategories)
         {
-            lineMap.TryGetValue(cat.Id, out var line);
-            var planned = line?.PlannedAmount ?? 0m;
-            var hasOverride = line?.ActualOverride.HasValue == true;
-            var actual = hasOverride
+            lineMap.TryGetValue(cat.Id, out MonthlyBudgetLine? line);
+            decimal planned = line?.PlannedAmount ?? 0m;
+            bool hasOverride = line?.ActualOverride.HasValue == true;
+            decimal actual = hasOverride
                 ? line!.ActualOverride!.Value
-                : (txSumByCategory.TryGetValue(cat.Id, out var txSum) ? txSum : 0m);
+                : (txSumByCategory.TryGetValue(cat.Id, out decimal txSum) ? txSum : 0m);
 
-            var diff = cat.Kind == BudgetCategoryKind.Expense
+            decimal diff = cat.Kind == BudgetCategoryKind.Expense
                 ? planned - actual
                 : actual - planned;
 

@@ -46,7 +46,7 @@ public sealed class JsonApiErrorsFilter : IExceptionFilter
             return;
         }
 
-        var action = context.ActionDescriptor.DisplayName;
+        string? action = context.ActionDescriptor.DisplayName;
         int statusCode;
         string message;
         switch (context.Exception)

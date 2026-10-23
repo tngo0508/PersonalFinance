@@ -93,11 +93,11 @@ public class RegisterModel : PageModel
 
         if (ModelState.IsValid)
         {
-            var user = CreateUser();
+            IdentityUser user = CreateUser();
 
             await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
             await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-            var result = await _userManager.CreateAsync(user, Input.Password);
+            IdentityResult result = await _userManager.CreateAsync(user, Input.Password);
 
             if (result.Succeeded)
             {
@@ -105,7 +105,7 @@ public class RegisterModel : PageModel
 
                 await _userManager.AssignDefaultRoleAsync(user, _logger);
 
-                var userId = await _userManager.GetUserIdAsync(user);
+                string userId = await _userManager.GetUserIdAsync(user);
 
                 // Save consent record
                 await _consentService.RecordConsentAsync(
@@ -113,16 +113,16 @@ public class RegisterModel : PageModel
                     AppVersion.Current,
                     HttpContext.Connection.RemoteIpAddress?.ToString());
 
-                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                string code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                 code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                var callbackUrl = Url.Page(
+                string? callbackUrl = Url.Page(
                     "/Account/ConfirmEmail",
                     pageHandler: null,
                     values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
                     protocol: Request.Scheme);
 
-                var appName = _brevoOptions.SenderName ?? "PersonalFinance";
-                var htmlBody = EmailTemplateHelper.BuildConfirmationEmail(callbackUrl ?? string.Empty, appName);
+                string appName = _brevoOptions.SenderName ?? "PersonalFinance";
+                string htmlBody = EmailTemplateHelper.BuildConfirmationEmail(callbackUrl ?? string.Empty, appName);
 
                 await _emailSender.SendEmailAsync(
                     Input.Email,
@@ -139,7 +139,7 @@ public class RegisterModel : PageModel
                     return LocalRedirect(returnUrl);
                 }
             }
-            foreach (var error in result.Errors)
+            foreach (IdentityError error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }

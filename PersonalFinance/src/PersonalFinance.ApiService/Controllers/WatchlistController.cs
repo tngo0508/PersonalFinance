@@ -1,9 +1,9 @@
-using PersonalFinance.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
-using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Services;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Watchlist;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -32,8 +32,8 @@ public class WatchlistController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetWatchlist(CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var articles = await _watchlistService.GetWatchlistAsync(userId, cancellationToken);
+        string userId = User.GetUserId();
+        List<SavedArticleResponseDto> articles = await _watchlistService.GetWatchlistAsync(userId, cancellationToken);
         return Ok(articles);
     }
 
@@ -46,8 +46,8 @@ public class WatchlistController : ControllerBase
     public async Task<IActionResult> SaveArticle([FromBody] SaveArticleRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var result = await _watchlistService.SaveArticleAsync(userId, request, cancellationToken);
+        string userId = User.GetUserId();
+        SaveArticleResultDto result = await _watchlistService.SaveArticleAsync(userId, request, cancellationToken);
         return Ok(new { success = result.Success, alreadySaved = result.AlreadySaved, id = result.Id });
     }
 
@@ -60,8 +60,8 @@ public class WatchlistController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveArticle(int id, CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var removed = await _watchlistService.RemoveArticleAsync(userId, id, cancellationToken);
+        string userId = User.GetUserId();
+        bool removed = await _watchlistService.RemoveArticleAsync(userId, id, cancellationToken);
         if (!removed) return NotFound();
         return Ok(new { success = true });
     }
@@ -75,8 +75,8 @@ public class WatchlistController : ControllerBase
     public async Task<IActionResult> CheckArticleSaved([FromQuery] string url,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var isSaved = await _watchlistService.IsArticleSavedAsync(userId, url, cancellationToken);
+        string userId = User.GetUserId();
+        bool isSaved = await _watchlistService.IsArticleSavedAsync(userId, url, cancellationToken);
         return Ok(new { isSaved });
     }
 }

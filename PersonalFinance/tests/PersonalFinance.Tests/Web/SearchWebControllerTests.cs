@@ -41,7 +41,7 @@ public class SearchWebControllerTests
         var results = new SearchResultsDto { SavingsGoals = [new SearchResultItemDto { Title = "Car" }] };
         var api = new FakeSearchApi { Results = results };
 
-        var result = await CreateController(api).Get("car");
+        IActionResult result = await CreateController(api).Get("car");
 
         Assert.Same(results, Assert.IsType<OkObjectResult>(result).Value);
         Assert.Equal("car", api.LastQuery);
@@ -56,14 +56,14 @@ public class SearchWebControllerTests
             Content = new StringContent("System.InvalidOperationException: secret stack trace", Encoding.UTF8,
                 "text/plain")
         };
-        var failure = await ApiException.Create(request, HttpMethod.Get, response, new RefitSettings());
-        var controller = CreateController(new FakeSearchApi { Failure = failure });
+        ApiException failure = await ApiException.Create(request, HttpMethod.Get, response, new RefitSettings());
+        SearchController controller = CreateController(new FakeSearchApi { Failure = failure });
 
-        var result = await FilteredAction.InvokeAsync(controller, () => controller.Get("car"));
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Get("car"));
 
-        var objectResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
-        var body = System.Text.Json.JsonSerializer.Serialize(objectResult.Value);
+        string body = System.Text.Json.JsonSerializer.Serialize(objectResult.Value);
         Assert.DoesNotContain("InvalidOperationException", body);
         Assert.DoesNotContain("stack trace", body);
     }
@@ -71,13 +71,13 @@ public class SearchWebControllerTests
     [Fact]
     public async Task Get_WhenApiServiceUnreachable_ReturnsBadGatewayWithGenericMessage()
     {
-        var controller = CreateController(new FakeSearchApi { Failure = new HttpRequestException("connection refused") });
+        SearchController controller = CreateController(new FakeSearchApi { Failure = new HttpRequestException("connection refused") });
 
-        var result = await FilteredAction.InvokeAsync(controller, () => controller.Get("car"));
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Get("car"));
 
-        var objectResult = Assert.IsType<ObjectResult>(result);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status502BadGateway, objectResult.StatusCode);
-        var body = System.Text.Json.JsonSerializer.Serialize(objectResult.Value);
+        string body = System.Text.Json.JsonSerializer.Serialize(objectResult.Value);
         Assert.Contains(JsonApiErrorsFilter.UnavailableMessage, body);
         Assert.DoesNotContain("connection refused", body);
     }

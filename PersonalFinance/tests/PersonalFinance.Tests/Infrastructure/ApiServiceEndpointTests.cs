@@ -16,7 +16,7 @@ public class ApiServiceEndpointTests
     public void ApiService_DevelopmentEnvironment_RegistersOpenApiAndHealthEndpoints()
     {
         // Arrange
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             EnvironmentName = "Development"
         });
@@ -32,7 +32,7 @@ public class ApiServiceEndpointTests
             });
         });
 
-        var app = builder.Build();
+        WebApplication app = builder.Build();
 
         // Act - register the standard endpoints mapped by ApiService Program.cs
         app.MapDefaultEndpoints();
@@ -50,7 +50,7 @@ public class ApiServiceEndpointTests
         }
 
         // Assert - endpoints inspection
-        var endpointDataSources = ((IEndpointRouteBuilder)app).DataSources;
+        ICollection<EndpointDataSource> endpointDataSources = ((IEndpointRouteBuilder)app).DataSources;
         var endpoints = endpointDataSources.SelectMany(ds => ds.Endpoints).ToList();
 
         // 1. Verify health & liveness endpoints

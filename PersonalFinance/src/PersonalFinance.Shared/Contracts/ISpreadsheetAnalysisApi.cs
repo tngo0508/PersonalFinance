@@ -1,5 +1,5 @@
-using Refit;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using Refit;
 
 namespace PersonalFinance.Shared.Contracts;
 

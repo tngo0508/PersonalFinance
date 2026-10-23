@@ -15,7 +15,7 @@ public class ManageNavPagesTests
     [Fact]
     public void IsActive_UsesActivePageFromViewData()
     {
-        var viewContext = CreateViewContext("/Account/Manage/SetPassword", activePage: ManageNavPages.ChangePassword);
+        ViewContext viewContext = CreateViewContext("/Account/Manage/SetPassword", activePage: ManageNavPages.ChangePassword);
 
         Assert.True(ManageNavPages.IsActive(viewContext, ManageNavPages.ChangePassword));
         Assert.False(ManageNavPages.IsActive(viewContext, ManageNavPages.Index));
@@ -24,7 +24,7 @@ public class ManageNavPagesTests
     [Fact]
     public void IsActive_WithoutActivePage_FallsBackToPageFileName()
     {
-        var viewContext = CreateViewContext("/Account/Manage/Email", activePage: null);
+        ViewContext viewContext = CreateViewContext("/Account/Manage/Email", activePage: null);
 
         Assert.True(ManageNavPages.IsActive(viewContext, ManageNavPages.Email));
         Assert.False(ManageNavPages.IsActive(viewContext, ManageNavPages.PersonalData));

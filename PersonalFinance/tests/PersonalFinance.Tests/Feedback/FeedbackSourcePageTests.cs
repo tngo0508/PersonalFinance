@@ -30,7 +30,7 @@ public class FeedbackSourcePageTests
     [Fact]
     public void From_DropsAQueryThatWouldMakeItTooLong()
     {
-        var query = "?q=" + new string('a', FeedbackLimits.PageUrlMaxLength);
+        string query = "?q=" + new string('a', FeedbackLimits.PageUrlMaxLength);
 
         Assert.Equal("/Search", FeedbackSourcePage.From(Request("/Search", query)));
     }

@@ -25,21 +25,21 @@ public static class RbacSeeder
         ILogger? logger = null,
         CancellationToken cancellationToken = default)
     {
-        var roleManager = services.GetService<RoleManager<IdentityRole>>();
-        var userManager = services.GetService<UserManager<IdentityUser>>();
+        RoleManager<IdentityRole>? roleManager = services.GetService<RoleManager<IdentityRole>>();
+        UserManager<IdentityUser>? userManager = services.GetService<UserManager<IdentityUser>>();
         if (roleManager is null || userManager is null)
         {
             logger?.LogInformation("Identity roles are not registered; skipping RBAC seeding.");
             return;
         }
 
-        var userRoleCreated = false;
-        foreach (var role in AppRoles.All)
+        bool userRoleCreated = false;
+        foreach (string role in AppRoles.All)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!await roleManager.RoleExistsAsync(role))
             {
-                var created = await roleManager.CreateAsync(new IdentityRole(role));
+                IdentityResult created = await roleManager.CreateAsync(new IdentityRole(role));
                 if (!created.Succeeded)
                 {
                     throw new InvalidOperationException(
@@ -61,7 +61,7 @@ public static class RbacSeeder
             await BackfillDefaultRoleAsync(services, userManager, logger, cancellationToken);
         }
 
-        var adminEmail = services.GetService<IConfiguration>()?[AdminEmailKey];
+        string? adminEmail = services.GetService<IConfiguration>()?[AdminEmailKey];
         if (string.IsNullOrWhiteSpace(adminEmail))
         {
             if (logger is not null && logger.IsEnabled(LogLevel.Information))
@@ -72,7 +72,7 @@ public static class RbacSeeder
             return;
         }
 
-        var user = await userManager.FindByEmailAsync(adminEmail.Trim());
+        IdentityUser? user = await userManager.FindByEmailAsync(adminEmail.Trim());
         if (user is null)
         {
             logger?.LogInformation("Configured admin account does not exist yet; restart after it registers.");
@@ -90,7 +90,7 @@ public static class RbacSeeder
             return;
         }
 
-        var added = await userManager.AddToRoleAsync(user, AppRoles.Admin);
+        IdentityResult added = await userManager.AddToRoleAsync(user, AppRoles.Admin);
         if (!added.Succeeded)
         {
             throw new InvalidOperationException(
@@ -107,21 +107,21 @@ public static class RbacSeeder
         ILogger? logger,
         CancellationToken cancellationToken)
     {
-        var db = services.GetRequiredService<AppDbContext>();
-        var userRoleId = await db.Roles.AsNoTracking()
+        AppDbContext db = services.GetRequiredService<AppDbContext>();
+        string userRoleId = await db.Roles.AsNoTracking()
             .Where(r => r.Name == AppRoles.User)
             .Select(r => r.Id)
             .SingleAsync(cancellationToken);
 
-        var missingIds = await db.Users.AsNoTracking()
+        List<string> missingIds = await db.Users.AsNoTracking()
             .Where(u => !db.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == userRoleId))
             .OrderBy(u => u.Id)
             .Select(u => u.Id)
             .ToListAsync(cancellationToken);
 
-        foreach (var id in missingIds)
+        foreach (string? id in missingIds)
         {
-            var account = await userManager.FindByIdAsync(id);
+            IdentityUser? account = await userManager.FindByIdAsync(id);
             if (account is not null)
             {
                 await userManager.AssignDefaultRoleAsync(account, logger);

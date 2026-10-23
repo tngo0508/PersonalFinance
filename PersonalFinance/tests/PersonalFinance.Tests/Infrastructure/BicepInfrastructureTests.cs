@@ -25,11 +25,11 @@ public class BicepInfrastructureTests
     [Fact]
     public void AllInfrastructureFiles_ExistAndAreNonEmpty()
     {
-        var root = FindProjectRoot();
-        var infraDir = Path.Combine(root, "infra");
-        var modulesDir = Path.Combine(infraDir, "modules");
+        string root = FindProjectRoot();
+        string infraDir = Path.Combine(root, "infra");
+        string modulesDir = Path.Combine(infraDir, "modules");
 
-        var expectedFiles = new[]
+        string[] expectedFiles = new[]
         {
             Path.Combine(infraDir, "main.bicep"),
             Path.Combine(infraDir, "main.parameters.json"),
@@ -43,10 +43,10 @@ public class BicepInfrastructureTests
             Path.Combine(modulesDir, "purge-job.bicep")
         };
 
-        foreach (var file in expectedFiles)
+        foreach (string? file in expectedFiles)
         {
             Assert.True(File.Exists(file), $"Expected infrastructure file '{file}' does not exist.");
-            var content = File.ReadAllText(file);
+            string content = File.ReadAllText(file);
             Assert.False(string.IsNullOrWhiteSpace(content), $"File '{file}' is unexpectedly empty.");
         }
     }
@@ -54,8 +54,8 @@ public class BicepInfrastructureTests
     [Fact]
     public void MainBicep_DeclaresExpectedModulesAndZeroCostDefaults()
     {
-        var root = FindProjectRoot();
-        var mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
+        string root = FindProjectRoot();
+        string mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
 
         Assert.Contains("targetScope = 'resourceGroup'", mainBicep);
         Assert.Contains("module logAnalytics 'modules/log-analytics.bicep'", mainBicep);
@@ -79,9 +79,9 @@ public class BicepInfrastructureTests
     [Fact]
     public void PurgeJobBicep_RunsTheApiImageDaily_WithPurgeOnly_AndTheConnectionStringAsASecret()
     {
-        var root = FindProjectRoot();
-        var jobBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "purge-job.bicep"));
-        var mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
+        string root = FindProjectRoot();
+        string jobBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "purge-job.bicep"));
+        string mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
 
         // A scheduled job, because the API scales to zero and cannot be relied on to run every day (ADR 0005)
         Assert.Contains("resource purgeJob 'Microsoft.App/jobs@", jobBicep);
@@ -104,8 +104,8 @@ public class BicepInfrastructureTests
     [Fact]
     public void ApiServiceBicep_ConfiguresInternalIngress_ScaleToZero_AndHealthProbes()
     {
-        var root = FindProjectRoot();
-        var apiBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "api-service.bicep"));
+        string root = FindProjectRoot();
+        string apiBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "api-service.bicep"));
 
         // Scale-to-zero for zero cost
         Assert.Contains("param minReplicas int = 0", apiBicep);
@@ -133,8 +133,8 @@ public class BicepInfrastructureTests
     [Fact]
     public void WebServiceBicep_ConfiguresExternalIngress_ScaleToZero_ForwardedHeaders_AndSecrets()
     {
-        var root = FindProjectRoot();
-        var webBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "web-service.bicep"));
+        string root = FindProjectRoot();
+        string webBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "web-service.bicep"));
 
         // Scale-to-zero for zero cost
         Assert.Contains("param minReplicas int = 0", webBicep);
@@ -169,8 +169,8 @@ public class BicepInfrastructureTests
     [Fact]
     public void LogAnalyticsBicep_ConfiguresPerGB2018Sku_AndRetention()
     {
-        var root = FindProjectRoot();
-        var laBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "log-analytics.bicep"));
+        string root = FindProjectRoot();
+        string laBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "log-analytics.bicep"));
 
         Assert.Contains("Microsoft.OperationalInsights/workspaces", laBicep);
         Assert.Contains("name: 'PerGB2018'", laBicep);
@@ -182,8 +182,8 @@ public class BicepInfrastructureTests
     [Fact]
     public void ContainerEnvBicep_ConfiguresConsumptionWorkloadProfile()
     {
-        var root = FindProjectRoot();
-        var caeBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "container-env.bicep"));
+        string root = FindProjectRoot();
+        string caeBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "container-env.bicep"));
 
         Assert.Contains("Microsoft.App/managedEnvironments", caeBicep);
         Assert.Contains("workloadProfileType: 'Consumption'", caeBicep);
@@ -193,8 +193,8 @@ public class BicepInfrastructureTests
     [Fact]
     public void SqlDatabaseBicep_ConfiguresBasicTier()
     {
-        var root = FindProjectRoot();
-        var sqlBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "sql-database.bicep"));
+        string root = FindProjectRoot();
+        string sqlBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "sql-database.bicep"));
 
         Assert.Contains("Microsoft.Sql/servers", sqlBicep);
         Assert.Contains("Microsoft.Sql/servers/databases", sqlBicep);
@@ -206,12 +206,12 @@ public class BicepInfrastructureTests
     [Fact]
     public void MainParametersJson_IsValidJson_AndContainsCoreKeys()
     {
-        var root = FindProjectRoot();
-        var jsonContent = File.ReadAllText(Path.Combine(root, "infra", "main.parameters.json"));
+        string root = FindProjectRoot();
+        string jsonContent = File.ReadAllText(Path.Combine(root, "infra", "main.parameters.json"));
 
         using var doc = JsonDocument.Parse(jsonContent);
-        var rootElem = doc.RootElement;
-        var parameters = rootElem.GetProperty("parameters");
+        JsonElement rootElem = doc.RootElement;
+        JsonElement parameters = rootElem.GetProperty("parameters");
 
         Assert.True(parameters.TryGetProperty("environmentName", out _));
         Assert.True(parameters.TryGetProperty("location", out _));
@@ -224,8 +224,8 @@ public class BicepInfrastructureTests
     [Fact]
     public void DeployScript_ContainsCoreAzureCliCommands_AndSwitches()
     {
-        var root = FindProjectRoot();
-        var scriptContent = File.ReadAllText(Path.Combine(root, "infra", "deploy.ps1"));
+        string root = FindProjectRoot();
+        string scriptContent = File.ReadAllText(Path.Combine(root, "infra", "deploy.ps1"));
 
         Assert.Contains("[switch]$ValidateOnly", scriptContent);
         Assert.Contains("[switch]$WhatIf", scriptContent);
@@ -239,12 +239,12 @@ public class BicepInfrastructureTests
     [Fact(Skip = "Requires PowerShell - skip on CI systems without pwsh")]
     public void DeployScript_ParameterAssembly_PassesDiscreteTokensForAzCli()
     {
-        var root = FindProjectRoot();
-        var deployScriptPath = Path.Combine(root, "infra", "deploy.ps1");
+        string root = FindProjectRoot();
+        string deployScriptPath = Path.Combine(root, "infra", "deploy.ps1");
         Assert.True(File.Exists(deployScriptPath));
 
         // Execute a PowerShell snippet mimicking deploy.ps1 parameter assembly to verify token discrete behavior
-        var psCommand = @"
+        string psCommand = @"
 $ParametersFile = 'dummy.parameters.json'
 $EnvironmentName = 'pf-prod'
 $Location = 'eastus'
@@ -295,8 +295,8 @@ if ($dynamicParams.Count -gt 0) {
 $paramArgs | ConvertTo-Json -Compress
 ";
 
-        var bytes = Encoding.Unicode.GetBytes(psCommand);
-        var base64Command = Convert.ToBase64String(bytes);
+        byte[] bytes = Encoding.Unicode.GetBytes(psCommand);
+        string base64Command = Convert.ToBase64String(bytes);
 
         var startInfo = new ProcessStartInfo
         {
@@ -310,14 +310,14 @@ $paramArgs | ConvertTo-Json -Compress
 
         using var process = Process.Start(startInfo);
         Assert.NotNull(process);
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
+        string output = process.StandardOutput.ReadToEnd();
+        string error = process.StandardError.ReadToEnd();
         process.WaitForExit(10000);
 
         Assert.True(process.ExitCode == 0, $"PowerShell failed with error: {error}");
         Assert.False(string.IsNullOrWhiteSpace(output), "PowerShell output was empty.");
 
-        var tokens = JsonSerializer.Deserialize<List<string>>(output);
+        List<string>? tokens = JsonSerializer.Deserialize<List<string>>(output);
         Assert.NotNull(tokens);
 
         // Verify discrete tokens
@@ -331,7 +331,7 @@ $paramArgs | ConvertTo-Json -Compress
         Assert.Contains("sqlAdministratorLoginPassword=TestPassword123!", tokens);
 
         // CRITICAL REGRESSION CHECK: No token should contain space-separated multiple assignments
-        foreach (var token in tokens)
+        foreach (string token in tokens)
         {
             if (token != "--parameters" && token.StartsWith("environmentName=", StringComparison.Ordinal))
             {
@@ -349,8 +349,8 @@ $paramArgs | ConvertTo-Json -Compress
     [Fact]
     public void ProgramCs_Web_ConfiguresForwardedHeaders_ForReverseProxy()
     {
-        var root = FindProjectRoot();
-        var programCs =
+        string root = FindProjectRoot();
+        string programCs =
             File.ReadAllText(Path.Combine(root, "PersonalFinance", "src", "PersonalFinance.Web", "Program.cs"));
 
         Assert.Contains("UseForwardedHeaders", programCs);

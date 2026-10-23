@@ -1,11 +1,12 @@
-using PersonalFinance.Shared.Helpers;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.ApiService.Validators;
-using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
-using FluentValidation;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -36,8 +37,8 @@ public class BudgetController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetBudgetCurrent(CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var budget = await _budgetService.GetBudgetAsync(userId, "current", cancellationToken);
+        string userId = User.GetUserId();
+        BudgetAllocationResponseDto? budget = await _budgetService.GetBudgetAsync(userId, "current", cancellationToken);
 
         if (budget is null)
         {
@@ -71,9 +72,9 @@ public class BudgetController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetBudget(string period, CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
 
-        var budget = await _budgetService.GetBudgetAsync(userId, period, cancellationToken);
+        BudgetAllocationResponseDto? budget = await _budgetService.GetBudgetAsync(userId, period, cancellationToken);
 
         if (budget is null)
         {
@@ -109,13 +110,13 @@ public class BudgetController : ControllerBase
     public async Task<IActionResult> SaveBudget([FromBody] SaveBudgetRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
+        ValidationResult validationResult = await _validator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
             return BadRequest(validationResult.Errors.Select(e => new { e.ErrorCode, e.ErrorMessage }));
         }
 
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         await _budgetService.SaveBudgetAsync(userId, request, cancellationToken);
         return Ok(new { success = true });
     }

@@ -10,7 +10,9 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
+using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
+using PersonalFinance.Shared.DTOs.Search;
 
 namespace PersonalFinance.Tests.Infrastructure;
 
@@ -40,7 +42,7 @@ public sealed class ApiServiceCultureTests : IDisposable
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"ApiCulture_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -65,7 +67,7 @@ public sealed class ApiServiceCultureTests : IDisposable
 
     private static async Task<string> GetDashboardGoalActivityAsync(AppDbContext db)
     {
-        var summary = await new DashboardService(db, TestBudgetDataProviderFactory.Create(db))
+        DashboardSummaryDto summary = await new DashboardService(db, TestBudgetDataProviderFactory.Create(db))
             .GetDashboardSummaryAsync(UserId);
         return Assert.Single(summary.RecentActivity, a => a.Type == "SavingsGoal").Description;
     }
@@ -74,11 +76,11 @@ public sealed class ApiServiceCultureTests : IDisposable
     public async Task DashboardRecentActivity_InInvariantCulture_UsesInvariantCurrencySymbol()
     {
         StartInInvariantCulture();
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.Add(NewGoal());
         await db.SaveChangesAsync();
 
-        var activity = await GetDashboardGoalActivityAsync(db);
+        string activity = await GetDashboardGoalActivityAsync(db);
 
         Assert.Equal("Target: ¤2,500.50 | Saved: ¤1,234.56", activity);
     }
@@ -88,11 +90,11 @@ public sealed class ApiServiceCultureTests : IDisposable
     {
         StartInInvariantCulture();
         AppCulture.ApplyDefault();
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SavingsGoals.Add(NewGoal());
         await db.SaveChangesAsync();
 
-        var activity = await GetDashboardGoalActivityAsync(db);
+        string activity = await GetDashboardGoalActivityAsync(db);
 
         Assert.Equal("Target: $2,500.50 | Saved: $1,234.56", activity);
         Assert.DoesNotContain(CurrencySymbolOfInvariantCulture, activity);
@@ -103,7 +105,7 @@ public sealed class ApiServiceCultureTests : IDisposable
     {
         StartInInvariantCulture();
         AppCulture.ApplyDefault();
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetTransactionRecords.Add(new SpreadsheetTransactionRecord
         {
             UserId = UserId,
@@ -117,8 +119,8 @@ public sealed class ApiServiceCultureTests : IDisposable
         await db.SaveChangesAsync();
         var service = new SearchService(db, new BudgetDataSourceService(db), TimeProvider.System);
 
-        var transactions = await service.SearchAsync(UserId, "culture");
-        var goals = await service.SearchAsync(UserId, "emergency");
+        SearchResultsDto transactions = await service.SearchAsync(UserId, "culture");
+        SearchResultsDto goals = await service.SearchAsync(UserId, "emergency");
 
         Assert.Equal("Oct 1, 2026 - Food - $1,234.56 (Expense)", Assert.Single(transactions.Transactions).Description);
         Assert.Equal("Target: $2,500.50", Assert.Single(goals.SavingsGoals).Description);
@@ -129,18 +131,18 @@ public sealed class ApiServiceCultureTests : IDisposable
     {
         StartInInvariantCulture();
         AppCulture.ApplyDefault();
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var goal = new SavingsGoal { UserId = UserId, Name = "Vacation", TargetAmount = 1_000m, CurrentAmount = 0m };
         db.SavingsGoals.Add(goal);
         await db.SaveChangesAsync();
         var notifications = new CapturingNotificationService();
         var service = new SavingsGoalService(db, NullLogger<SavingsGoalService>.Instance, notifications);
 
-        var updated = await service.UpdateSavingsGoalAsync(UserId, goal.Id,
+        bool updated = await service.UpdateSavingsGoalAsync(UserId, goal.Id,
             new UpdateSavingsGoalRequestDto { CurrentAmount = 600m });
 
         Assert.True(updated);
-        var notification = Assert.Single(notifications.Created);
+        CreateNotificationRequestDto notification = Assert.Single(notifications.Created);
         Assert.Equal("Your goal 'Vacation' has reached 50% of its target ($600.00 of $1,000.00).",
             notification.Message);
         Assert.DoesNotContain(CurrencySymbolOfInvariantCulture, notification.Message);
@@ -160,7 +162,7 @@ public sealed class ApiServiceCultureTests : IDisposable
     public async Task SaveBudget_WithoutPeriod_StoresInvariantYearMonthKeyUnderAnyCulture(string cultureName)
     {
         StartInCulture(cultureName);
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new BudgetService(db, NullLogger<BudgetService>.Instance, new CapturingNotificationService(),
             TestBudgetDataProviderFactory.Create(db));
 
@@ -170,8 +172,8 @@ public sealed class ApiServiceCultureTests : IDisposable
             Allocations = new BudgetAllocationsDto { Housing = 1_500m }
         });
 
-        var expectedPeriod = DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture);
-        var saved = await service.GetBudgetAsync(UserId, expectedPeriod);
+        string expectedPeriod = DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+        BudgetAllocationResponseDto? saved = await service.GetBudgetAsync(UserId, expectedPeriod);
         Assert.NotNull(saved);
         Assert.Equal(5_000m, saved.MonthlyIncome);
     }
@@ -182,7 +184,7 @@ public sealed class ApiServiceCultureTests : IDisposable
     public async Task SaveBudget_WithPeriodKey_ParsesYearAndMonthUnderAnyCulture(string cultureName)
     {
         StartInCulture(cultureName);
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.SpreadsheetBudgetSnapshots.Add(new SpreadsheetBudgetSnapshot
         {
             UserId = UserId,
@@ -206,7 +208,7 @@ public sealed class ApiServiceCultureTests : IDisposable
             Allocations = new BudgetAllocationsDto { Housing = 1_500m }
         });
 
-        var alert = Assert.Single(notifications.Created);
+        CreateNotificationRequestDto alert = Assert.Single(notifications.Created);
         Assert.Equal("Budget exceeded", alert.Title);
         Assert.EndsWith("for 2026-03.", alert.Message, StringComparison.Ordinal);
     }
@@ -215,7 +217,7 @@ public sealed class ApiServiceCultureTests : IDisposable
     public async Task AiAssistantTools_UnderGermanCulture_ReportFiguresInAppCulture()
     {
         StartInCulture("de-DE");
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         db.NetWorthParameters.Add(new NetWorthParameters
         {
             UserId = UserId,
@@ -242,7 +244,7 @@ public sealed class ApiServiceCultureTests : IDisposable
 
         await service.SendChatMessageAsync(UserId, new AiChatRequestDto { Message = "How am I doing?" });
 
-        var netWorth = outputs["get_net_worth_details"];
+        string? netWorth = outputs["get_net_worth_details"];
         Assert.Contains("Annual income: $120,000", netWorth);
         Assert.Contains("Annual spending: $60,000", netWorth);
         Assert.Contains("Starting/current net worth: $50,000", netWorth);
@@ -252,11 +254,11 @@ public sealed class ApiServiceCultureTests : IDisposable
     [Fact]
     public void ApiServiceProgram_AppliesDefaultCultureRightAfterCreateBuilder()
     {
-        var programPath = FindRepositoryFile("PersonalFinance", "src", "PersonalFinance.ApiService", "Program.cs");
+        string programPath = FindRepositoryFile("PersonalFinance", "src", "PersonalFinance.ApiService", "Program.cs");
 
-        var lines = File.ReadAllLines(programPath);
-        var createBuilder = Array.FindIndex(lines, l => l.Contains("WebApplication.CreateBuilder(args)"));
-        var applyDefault = Array.FindIndex(lines, l => l.Contains("AppCulture.ApplyDefault()"));
+        string[] lines = File.ReadAllLines(programPath);
+        int createBuilder = Array.FindIndex(lines, l => l.Contains("WebApplication.CreateBuilder(args)"));
+        int applyDefault = Array.FindIndex(lines, l => l.Contains("AppCulture.ApplyDefault()"));
 
         Assert.True(createBuilder >= 0, "ApiService Program.cs no longer calls WebApplication.CreateBuilder(args).");
         Assert.True(applyDefault > createBuilder,
@@ -271,7 +273,7 @@ public sealed class ApiServiceCultureTests : IDisposable
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            var candidate = Path.Combine([directory.FullName, .. relativeSegments]);
+            string candidate = Path.Combine([directory.FullName, .. relativeSegments]);
             if (File.Exists(candidate))
             {
                 return candidate;
@@ -290,9 +292,9 @@ public sealed class ApiServiceCultureTests : IDisposable
         public async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages,
             ChatOptions? options = null, CancellationToken cancellationToken = default)
         {
-            foreach (var name in toolNames)
+            foreach (string name in toolNames)
             {
-                var tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == name);
+                AIFunction tool = options!.Tools!.OfType<AIFunction>().Single(t => t.Name == name);
                 outputs[name] = (await tool.InvokeAsync(new AIFunctionArguments(), cancellationToken))?.ToString();
             }
 

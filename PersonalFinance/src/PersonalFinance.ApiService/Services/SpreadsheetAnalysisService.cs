@@ -33,13 +33,13 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     {
         if (month.HasValue)
         {
-            var monthData = await _budgetDataProvider.GetMonthAsync(userId, year, month.Value, cancellationToken);
+            BudgetMonthData? monthData = await _budgetDataProvider.GetMonthAsync(userId, year, month.Value, cancellationToken);
             if (monthData == null) return null;
 
-            var totalIncome = monthData.ActualIncome;
-            var totalExpenses = monthData.ActualExpenses;
-            var netSavings = totalIncome - totalExpenses;
-            var savingsRate = FinanceMetrics.ActualSavingsRatePercent(totalIncome, totalExpenses);
+            decimal totalIncome = monthData.ActualIncome;
+            decimal totalExpenses = monthData.ActualExpenses;
+            decimal netSavings = totalIncome - totalExpenses;
+            decimal savingsRate = FinanceMetrics.ActualSavingsRatePercent(totalIncome, totalExpenses);
 
             return new SummaryStatisticsDto
             {
@@ -55,15 +55,15 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         }
         else
         {
-            var months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
+            List<BudgetMonthData> months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
             if (months.Count == 0) return null;
 
-            var totalIncome = months.Sum(m => m.ActualIncome);
-            var totalExpenses = months.Sum(m => m.ActualExpenses);
-            var netSavings = totalIncome - totalExpenses;
-            var savingsRate = FinanceMetrics.ActualSavingsRatePercent(totalIncome, totalExpenses);
-            var firstMonth = months.FirstOrDefault()?.Month ?? 0;
-            var snapshotCount = months.Sum(m => m.SourceRecordCount);
+            decimal totalIncome = months.Sum(m => m.ActualIncome);
+            decimal totalExpenses = months.Sum(m => m.ActualExpenses);
+            decimal netSavings = totalIncome - totalExpenses;
+            decimal savingsRate = FinanceMetrics.ActualSavingsRatePercent(totalIncome, totalExpenses);
+            int firstMonth = months.FirstOrDefault()?.Month ?? 0;
+            int snapshotCount = months.Sum(m => m.SourceRecordCount);
 
             return new SummaryStatisticsDto
             {
@@ -82,14 +82,14 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     public async Task<SpendingVelocityDto?> GetSpendingVelocityAsync(string userId, int year, int? month = null,
         CancellationToken cancellationToken = default)
     {
-        var targetMonth = month ?? await GetCurrentMonthForVelocityAsync(userId, year, cancellationToken);
+        int targetMonth = month ?? await GetCurrentMonthForVelocityAsync(userId, year, cancellationToken);
         if (targetMonth == 0) return null;
 
-        var monthData = await _budgetDataProvider.GetMonthAsync(userId, year, targetMonth, cancellationToken);
+        BudgetMonthData? monthData = await _budgetDataProvider.GetMonthAsync(userId, year, targetMonth, cancellationToken);
         if (monthData == null) return null;
 
-        var now = DateTime.UtcNow;
-        var isCurrentMonth = now.Year == year && now.Month == targetMonth;
+        DateTime now = DateTime.UtcNow;
+        bool isCurrentMonth = now.Year == year && now.Month == targetMonth;
 
         // Calculate days elapsed in the month
         double daysElapsed;
@@ -109,14 +109,14 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             daysRemaining = 0;
         }
 
-        var totalExpenses = monthData.ActualExpenses;
-        var budgetedExpenses = monthData.BudgetedExpenses;
+        decimal totalExpenses = monthData.ActualExpenses;
+        decimal budgetedExpenses = monthData.BudgetedExpenses;
 
-        var dailyBurnRate = daysElapsed > 0 ? totalExpenses / (decimal)daysElapsed : 0;
-        var projectedMonthlySpend = daysInMonth > 0 ? dailyBurnRate * daysInMonth : 0;
+        decimal dailyBurnRate = daysElapsed > 0 ? totalExpenses / (decimal)daysElapsed : 0;
+        decimal projectedMonthlySpend = daysInMonth > 0 ? dailyBurnRate * daysInMonth : 0;
 
-        var budgetConsumptionPercent = budgetedExpenses > 0 ? (double)(totalExpenses / budgetedExpenses) * 100 : 0;
-        var timeElapsedPercent = daysInMonth > 0 ? daysElapsed / daysInMonth * 100 : 0;
+        double budgetConsumptionPercent = budgetedExpenses > 0 ? (double)(totalExpenses / budgetedExpenses) * 100 : 0;
+        double timeElapsedPercent = daysInMonth > 0 ? daysElapsed / daysInMonth * 100 : 0;
 
         string status;
         if (budgetConsumptionPercent > 100)
@@ -129,10 +129,10 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             status = "On Track";
 
         // Calculate weekly trend from transactions
-        var weeklyTrend = await CalculateWeeklyTrendAsync(userId, year, targetMonth, cancellationToken);
+        List<WeeklySpendingDto> weeklyTrend = await CalculateWeeklyTrendAsync(userId, year, targetMonth, cancellationToken);
 
         // Calculate category velocities
-        var categoryVelocities = CalculateCategoryVelocities(monthData, timeElapsedPercent);
+        List<CategoryVelocityDto> categoryVelocities = CalculateCategoryVelocities(monthData, timeElapsedPercent);
 
         return new SpendingVelocityDto
         {
@@ -155,7 +155,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     public async Task<TrendDataDto> GetTrendDataAsync(string userId, int year,
         CancellationToken cancellationToken = default)
     {
-        var records = await _budgetDataProvider.GetTrendRecordsAsync(userId, year, cancellationToken);
+        List<BudgetTrendRecordData> records = await _budgetDataProvider.GetTrendRecordsAsync(userId, year, cancellationToken);
 
         var trendPoints = records.Select(r => new MonthlyTrendPointDto
         {
@@ -177,16 +177,16 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     public async Task<CategoryInsightsDto?> GetCategoryInsightsAsync(string userId, int year, int? month = null,
         CancellationToken cancellationToken = default)
     {
-        var targetMonth = month ?? await GetMostRecentMonthNumberAsync(userId, year, cancellationToken);
+        int targetMonth = month ?? await GetMostRecentMonthNumberAsync(userId, year, cancellationToken);
         if (targetMonth == 0) return null;
 
-        var monthData = await _budgetDataProvider.GetMonthAsync(userId, year, targetMonth, cancellationToken);
+        BudgetMonthData? monthData = await _budgetDataProvider.GetMonthAsync(userId, year, targetMonth, cancellationToken);
         if (monthData == null) return null;
 
         var categoryList = monthData.Categories.Select(c =>
         {
-            var variance = c.Budgeted - c.Actual;
-            var percentageUsed = c.Budgeted > 0
+            decimal variance = c.Budgeted - c.Actual;
+            double percentageUsed = c.Budgeted > 0
                 ? Math.Round((double)(c.Actual / c.Budgeted) * 100, 1)
                 : 0;
             return new CategoryBreakdownDto
@@ -200,8 +200,8 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             };
         }).OrderByDescending(c => c.ActualAmount).ToList();
 
-        var totalSpent = categoryList.Sum(c => c.ActualAmount);
-        var totalBudgeted = categoryList.Sum(c => c.BudgetedAmount);
+        decimal totalSpent = categoryList.Sum(c => c.ActualAmount);
+        decimal totalBudgeted = categoryList.Sum(c => c.BudgetedAmount);
 
         return new CategoryInsightsDto
         {
@@ -217,16 +217,16 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     public async Task<BudgetVarianceDto?> GetBudgetVarianceAsync(string userId, int year, int? month = null,
         CancellationToken cancellationToken = default)
     {
-        var targetMonth = month ?? await GetMostRecentMonthNumberAsync(userId, year, cancellationToken);
+        int targetMonth = month ?? await GetMostRecentMonthNumberAsync(userId, year, cancellationToken);
         if (targetMonth == 0) return null;
 
-        var monthData = await _budgetDataProvider.GetMonthAsync(userId, year, targetMonth, cancellationToken);
+        BudgetMonthData? monthData = await _budgetDataProvider.GetMonthAsync(userId, year, targetMonth, cancellationToken);
         if (monthData == null) return null;
 
         var rankings = monthData.Categories.Select((c, index) =>
         {
-            var variance = c.Budgeted - c.Actual;
-            var variancePercent = c.Budgeted > 0 ? (double)(variance / c.Budgeted) * 100 : 0;
+            decimal variance = c.Budgeted - c.Actual;
+            double variancePercent = c.Budgeted > 0 ? (double)(variance / c.Budgeted) * 100 : 0;
 
             return new VarianceRankingDto
             {
@@ -241,7 +241,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
         }).OrderByDescending(r => r.ActualAmount - r.BudgetedAmount).ToList();
 
         // Re-rank after sorting
-        for (var i = 0; i < rankings.Count; i++) rankings[i].Rank = i + 1;
+        for (int i = 0; i < rankings.Count; i++) rankings[i].Rank = i + 1;
 
         return new BudgetVarianceDto
         {
@@ -260,20 +260,20 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     public async Task<List<int>> GetAvailableMonthsAsync(string userId, int year,
         CancellationToken cancellationToken = default)
     {
-        var months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
+        List<BudgetMonthData> months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
         return months.Select(m => m.Month).Distinct().OrderBy(m => m).ToList();
     }
 
     public async Task<(int year, int month)?> GetMostRecentMonthAsync(string userId,
         CancellationToken cancellationToken = default)
     {
-        var years = await _budgetDataProvider.GetAvailableYearsAsync(userId, cancellationToken);
-        foreach (var year in years.OrderByDescending(y => y))
+        List<int> years = await _budgetDataProvider.GetAvailableYearsAsync(userId, cancellationToken);
+        foreach (int year in years.OrderByDescending(y => y))
         {
-            var months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
+            List<BudgetMonthData> months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
             if (months.Count > 0)
             {
-                var latestMonth = months.Max(m => m.Month);
+                int latestMonth = months.Max(m => m.Month);
                 return (year, latestMonth);
             }
         }
@@ -297,7 +297,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     {
         try
         {
-            var connection = await _dbContext.GoogleDriveConnections
+            GoogleDriveConnection? connection = await _dbContext.GoogleDriveConnections
                 .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
 
             if (connection == null)
@@ -333,16 +333,16 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             }
 
             var conflicts = new List<MonthConflictInfo>();
-            foreach (var month in budgetReport.Months)
+            foreach (MonthlyBudgetMonthSummaryDto month in budgetReport.Months)
             {
-                var existing = await _dbContext.SpreadsheetBudgetSnapshots
+                bool existing = await _dbContext.SpreadsheetBudgetSnapshots
                     .AnyAsync(s => s.ConnectionId == connectionId
                                    && s.Year == budgetReport.Year
                                    && s.MonthNumber == month.MonthNumber, cancellationToken);
 
                 if (existing)
                 {
-                    var existingSnapshot = await _dbContext.SpreadsheetBudgetSnapshots
+                    SpreadsheetBudgetSnapshot? existingSnapshot = await _dbContext.SpreadsheetBudgetSnapshots
                         .FirstOrDefaultAsync(s => s.ConnectionId == connectionId
                                                   && s.Year == budgetReport.Year
                                                   && s.MonthNumber == month.MonthNumber, cancellationToken);
@@ -370,9 +370,9 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 
             if (overwrite)
             {
-                foreach (var conflict in conflicts)
+                foreach (MonthConflictInfo conflict in conflicts)
                 {
-                    var existingSnapshot = await _dbContext.SpreadsheetBudgetSnapshots
+                    SpreadsheetBudgetSnapshot? existingSnapshot = await _dbContext.SpreadsheetBudgetSnapshots
                         .FirstOrDefaultAsync(s => s.Id == conflict.SnapshotId, cancellationToken);
 
                     if (existingSnapshot != null) _dbContext.SpreadsheetBudgetSnapshots.Remove(existingSnapshot);
@@ -381,10 +381,10 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
 
-            var snapshotsCreated = 0;
-            foreach (var month in budgetReport.Months)
+            int snapshotsCreated = 0;
+            foreach (MonthlyBudgetMonthSummaryDto month in budgetReport.Months)
             {
-                var categoryJson = JsonSerializer.Serialize(
+                string categoryJson = JsonSerializer.Serialize(
                     month.Categories.Select(c => new
                     {
                         c.CategoryName,
@@ -434,21 +434,21 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 };
             }
 
-            var transactionsCreated = 0;
-            var snapshots = await _dbContext.SpreadsheetBudgetSnapshots
+            int transactionsCreated = 0;
+            Dictionary<int, SpreadsheetBudgetSnapshot> snapshots = await _dbContext.SpreadsheetBudgetSnapshots
                 .Where(s => s.ConnectionId == connectionId
                             && s.FileId == fileId
                             && s.Year == budgetReport.Year)
                 .ToDictionaryAsync(s => s.MonthNumber, cancellationToken);
 
-            foreach (var transaction in transactionsDto.Transactions)
+            foreach (SpreadsheetTransactionDto transaction in transactionsDto.Transactions)
             {
                 if (!transaction.Date.HasValue) continue;
 
-                var date = transaction.Date.Value;
-                var monthNumber = date.Month;
+                DateTime date = transaction.Date.Value;
+                int monthNumber = date.Month;
 
-                if (!snapshots.TryGetValue(monthNumber, out var snapshot)) continue;
+                if (!snapshots.TryGetValue(monthNumber, out SpreadsheetBudgetSnapshot? snapshot)) continue;
 
                 var record = new SpreadsheetTransactionRecord
                 {
@@ -509,7 +509,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
     private async Task<int> GetCurrentMonthForVelocityAsync(string userId, int year,
         CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
+        DateTime now = DateTime.UtcNow;
         if (now.Year == year) return now.Month;
 
         return await GetMostRecentMonthNumberAsync(userId, year, cancellationToken);
@@ -517,18 +517,18 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 
     private async Task<int> GetMostRecentMonthNumberAsync(string userId, int year, CancellationToken cancellationToken)
     {
-        var months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
+        List<BudgetMonthData> months = await _budgetDataProvider.GetMonthsAsync(userId, year, cancellationToken);
         return months.Count > 0 ? months.Max(m => m.Month) : 0;
     }
 
     private async Task<List<WeeklySpendingDto>> CalculateWeeklyTrendAsync(string userId, int year, int month,
         CancellationToken cancellationToken)
     {
-        var daysInMonth = DateTime.DaysInMonth(year, month);
+        int daysInMonth = DateTime.DaysInMonth(year, month);
         var fromDate = new DateOnly(year, month, 1);
         var toDate = new DateOnly(year, month, daysInMonth);
 
-        var transactions = await _budgetDataProvider.GetTransactionsAsync(
+        List<BudgetTransactionData> transactions = await _budgetDataProvider.GetTransactionsAsync(
             userId, fromDate, toDate, null, cancellationToken);
 
         var expenseTransactions = transactions
@@ -538,17 +538,17 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 
         if (expenseTransactions.Count == 0) return new List<WeeklySpendingDto>();
 
-        var weeksInMonth = (int)Math.Ceiling(daysInMonth / 7.0);
+        int weeksInMonth = (int)Math.Ceiling(daysInMonth / 7.0);
 
         var weeklyData = new List<WeeklySpendingDto>();
 
-        for (var week = 1; week <= weeksInMonth; week++)
+        for (int week = 1; week <= weeksInMonth; week++)
         {
-            var startDay = (week - 1) * 7 + 1;
-            var endDay = Math.Min(week * 7, daysInMonth);
+            int startDay = (week - 1) * 7 + 1;
+            int endDay = Math.Min(week * 7, daysInMonth);
 
-            var weekTransactions = expenseTransactions.Where(t => t.Date.Day >= startDay && t.Date.Day <= endDay);
-            var totalSpent = weekTransactions.Sum(t => t.Amount);
+            IEnumerable<BudgetTransactionData> weekTransactions = expenseTransactions.Where(t => t.Date.Day >= startDay && t.Date.Day <= endDay);
+            decimal totalSpent = weekTransactions.Sum(t => t.Amount);
 
             weeklyData.Add(new WeeklySpendingDto
             {
@@ -568,7 +568,7 @@ public class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 
         return monthData.Categories.Select(c =>
         {
-            var consumptionPercent = c.Budgeted > 0 ? (double)(c.Actual / c.Budgeted) * 100 : 0;
+            double consumptionPercent = c.Budgeted > 0 ? (double)(c.Actual / c.Budgeted) * 100 : 0;
 
             string status;
             if (consumptionPercent > 100)

@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Services;
+using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 namespace PersonalFinance.Tests.GoogleDrive;
 
@@ -13,9 +14,9 @@ public class SpreadsheetReaderTests
     [Fact]
     public async Task UndownloadableFile_ReturnsUnavailableReportWithReason()
     {
-        var reader = CreateReader();
+        SpreadsheetReaderService reader = CreateReader();
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026.xlsx", 7);
+        MonthlyBudgetReportDto report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026.xlsx", 7);
 
         Assert.Empty(report.Months);
         Assert.False(report.IsLiveSpreadsheetData);
@@ -26,9 +27,9 @@ public class SpreadsheetReaderTests
     [Fact]
     public async Task FileWithoutBudgetTable_ReturnsUnavailableReportWithReason()
     {
-        var reader = CreateReader(Csv("Shopping list\nMilk,Eggs,Bread"));
+        SpreadsheetReaderService reader = CreateReader(Csv("Shopping list\nMilk,Eggs,Bread"));
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026.csv");
+        MonthlyBudgetReportDto report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026.csv");
 
         Assert.Empty(report.Months);
         Assert.False(report.IsLiveSpreadsheetData);
@@ -38,11 +39,11 @@ public class SpreadsheetReaderTests
     [Fact]
     public async Task UnreadableWorkbook_FallsThroughToTheNextDownload()
     {
-        var reader = CreateReader(
+        SpreadsheetReaderService reader = CreateReader(
             new SpreadsheetDownload("Monthly budget 2026", SpreadsheetFormat.Xlsx, "not a zip"u8.ToArray(), "XLSX export"),
             Csv("Month,Planned Income,Actual Income,Planned Expenses,Actual Expenses\nMarch,5000,5200,3000,3100"));
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026");
+        MonthlyBudgetReportDto report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Monthly budget 2026");
 
         Assert.Equal(5200m, report.TotalAnnualIncome);
         Assert.Equal("CSV export", report.DataSource);
@@ -51,11 +52,11 @@ public class SpreadsheetReaderTests
     [Fact]
     public async Task MonthTotalsWithoutCategoryRows_HaveNoInventedCategoryBreakdown()
     {
-        var reader = CreateReader(Csv("Month,Planned Income,Actual Income,Planned Expenses,Actual Expenses\nMarch,5000,5200,3000,3100"));
+        SpreadsheetReaderService reader = CreateReader(Csv("Month,Planned Income,Actual Income,Planned Expenses,Actual Expenses\nMarch,5000,5200,3000,3100"));
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Budget 2026.csv");
+        MonthlyBudgetReportDto report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Budget 2026.csv");
 
-        var march = Assert.Single(report.Months, m => m.MonthNumber == 3);
+        MonthlyBudgetMonthSummaryDto march = Assert.Single(report.Months, m => m.MonthNumber == 3);
         Assert.Equal(5200m, march.ActualIncome);
         Assert.Equal(3100m, march.ActualExpenses);
         Assert.Empty(march.Categories);
@@ -64,9 +65,9 @@ public class SpreadsheetReaderTests
     [Fact]
     public async Task MonthsMissingFromTheSheet_StayEmptyInsteadOfCopyingAnotherMonth()
     {
-        var reader = CreateReader(Csv("Month,Planned Income,Actual Income,Planned Expenses,Actual Expenses\nMarch,5000,5200,3000,3100"));
+        SpreadsheetReaderService reader = CreateReader(Csv("Month,Planned Income,Actual Income,Planned Expenses,Actual Expenses\nMarch,5000,5200,3000,3100"));
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Budget 2026.csv");
+        MonthlyBudgetReportDto report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "file-1", "Budget 2026.csv");
 
         Assert.All(report.Months.Where(m => m.MonthNumber != 3), m =>
         {
@@ -80,9 +81,9 @@ public class SpreadsheetReaderTests
     [Fact]
     public async Task SampleFile_IsParsedFromTheBuiltInSampleWithoutDownloading()
     {
-        var reader = CreateReader();
+        SpreadsheetReaderService reader = CreateReader();
 
-        var report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "sample-sheet-budget-1",
+        MonthlyBudgetReportDto report = await reader.GetSpreadsheetBudgetReportAsync("account-1", "sample-sheet-budget-1",
             "Monthly budget 2026.xlsx");
 
         Assert.Equal("sample-sheet-budget-1", report.FileId);
@@ -94,9 +95,9 @@ public class SpreadsheetReaderTests
     [Fact]
     public async Task UndownloadableFile_TransactionsSayWhy()
     {
-        var reader = CreateReader();
+        SpreadsheetReaderService reader = CreateReader();
 
-        var transactions = await reader.GetSpreadsheetTransactionsAsync("account-1", "file-1", "Monthly budget 2026.xlsx");
+        SpreadsheetTransactionsDto transactions = await reader.GetSpreadsheetTransactionsAsync("account-1", "file-1", "Monthly budget 2026.xlsx");
 
         Assert.Empty(transactions.Transactions);
         Assert.False(transactions.IsLiveSpreadsheetData);
@@ -114,7 +115,7 @@ public class SpreadsheetReaderTests
         public async IAsyncEnumerable<SpreadsheetDownload> DownloadAsync(string userId, string fileId,
             string? fileName, int? connectionId, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            foreach (var download in downloads)
+            foreach (SpreadsheetDownload download in downloads)
             {
                 await Task.Yield();
                 yield return download;

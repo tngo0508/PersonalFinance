@@ -70,8 +70,8 @@ public class AdminService : IAdminService
 
     public async Task<AdminSummaryDto> GetSummaryAsync(CancellationToken cancellationToken = default)
     {
-        var total = await _db.Users.AsNoTracking().CountAsync(cancellationToken);
-        var confirmed = await _db.Users.AsNoTracking().CountAsync(u => u.EmailConfirmed, cancellationToken);
+        int total = await _db.Users.AsNoTracking().CountAsync(cancellationToken);
+        int confirmed = await _db.Users.AsNoTracking().CountAsync(u => u.EmailConfirmed, cancellationToken);
 
         var perRole = await (
                 from ur in _db.UserRoles.AsNoTracking()
@@ -93,7 +93,7 @@ public class AdminService : IAdminService
 
     public async Task<List<AdminUserDto>> GetUsersAsync(CancellationToken cancellationToken = default)
     {
-        var users = await _db.Users.AsNoTracking()
+        List<AdminUserDto> users = await _db.Users.AsNoTracking()
             .OrderBy(u => u.Email)
             .ThenBy(u => u.Id)
             .Select(u => new AdminUserDto
@@ -115,9 +115,9 @@ public class AdminService : IAdminService
             .GroupBy(a => a.UserId)
             .ToDictionary(g => g.Key, g => g.Select(a => a.RoleName).ToList());
 
-        foreach (var user in users)
+        foreach (AdminUserDto? user in users)
         {
-            if (byUser.TryGetValue(user.Id, out var roles))
+            if (byUser.TryGetValue(user.Id, out List<string>? roles))
             {
                 user.Roles = roles;
             }
@@ -150,7 +150,7 @@ public class AdminService : IAdminService
 
     public async Task<AdminOperationResult> CreateRoleAsync(string roleName)
     {
-        var name = (roleName ?? string.Empty).Trim();
+        string name = (roleName ?? string.Empty).Trim();
         if (name.Length == 0 || name.Length > MaxRoleNameLength)
         {
             return AdminOperationResult.Rejected($"Role name must be between 1 and {MaxRoleNameLength} characters.");
@@ -166,7 +166,7 @@ public class AdminService : IAdminService
             return AdminOperationResult.Rejected($"Role '{name}' already exists.");
         }
 
-        var result = await _roleManager.CreateAsync(new IdentityRole(name));
+        IdentityResult result = await _roleManager.CreateAsync(new IdentityRole(name));
         return result.Succeeded
             ? AdminOperationResult.Ok()
             : AdminOperationResult.Rejected("The role could not be created.");
@@ -174,7 +174,7 @@ public class AdminService : IAdminService
 
     public async Task<AdminOperationResult> DeleteRoleAsync(string roleName)
     {
-        var role = await _roleManager.FindByNameAsync(roleName);
+        IdentityRole? role = await _roleManager.FindByNameAsync(roleName);
         if (role is null)
         {
             return AdminOperationResult.NotFound($"Role '{roleName}' was not found.");
@@ -185,13 +185,13 @@ public class AdminService : IAdminService
             return AdminOperationResult.Rejected($"Built-in role '{role.Name}' cannot be deleted.");
         }
 
-        var members = await _userManager.GetUsersInRoleAsync(role.Name!);
+        IList<IdentityUser> members = await _userManager.GetUsersInRoleAsync(role.Name!);
         if (members.Count > 0)
         {
             return AdminOperationResult.Rejected($"Role '{role.Name}' still has {members.Count} account(s). Remove them first.");
         }
 
-        var result = await _roleManager.DeleteAsync(role);
+        IdentityResult result = await _roleManager.DeleteAsync(role);
         return result.Succeeded
             ? AdminOperationResult.Ok()
             : AdminOperationResult.Rejected("The role could not be deleted.");
@@ -199,13 +199,13 @@ public class AdminService : IAdminService
 
     public async Task<AdminOperationResult> AssignRoleAsync(string userId, string roleName)
     {
-        var user = await _userManager.FindByIdAsync(userId);
+        IdentityUser? user = await _userManager.FindByIdAsync(userId);
         if (user is null)
         {
             return AdminOperationResult.NotFound("Account not found.");
         }
 
-        var role = await _roleManager.FindByNameAsync(roleName);
+        IdentityRole? role = await _roleManager.FindByNameAsync(roleName);
         if (role is null)
         {
             return AdminOperationResult.NotFound($"Role '{roleName}' was not found.");
@@ -216,7 +216,7 @@ public class AdminService : IAdminService
             return AdminOperationResult.Ok();
         }
 
-        var result = await _userManager.AddToRoleAsync(user, role.Name!);
+        IdentityResult result = await _userManager.AddToRoleAsync(user, role.Name!);
         if (!result.Succeeded)
         {
             return AdminOperationResult.Rejected("The role could not be assigned.");
@@ -243,13 +243,13 @@ public class AdminService : IAdminService
 
     private async Task<AdminOperationResult> RemoveRoleCoreAsync(string actingUserId, string userId, string roleName)
     {
-        var user = await _userManager.FindByIdAsync(userId);
+        IdentityUser? user = await _userManager.FindByIdAsync(userId);
         if (user is null)
         {
             return AdminOperationResult.NotFound("Account not found.");
         }
 
-        var role = await _roleManager.FindByNameAsync(roleName);
+        IdentityRole? role = await _roleManager.FindByNameAsync(roleName);
         if (role is null)
         {
             return AdminOperationResult.NotFound($"Role '{roleName}' was not found.");
@@ -267,14 +267,14 @@ public class AdminService : IAdminService
                 return AdminOperationResult.Rejected("You cannot remove the Admin role from your own account.");
             }
 
-            var admins = await _userManager.GetUsersInRoleAsync(AppRoles.Admin);
+            IList<IdentityUser> admins = await _userManager.GetUsersInRoleAsync(AppRoles.Admin);
             if (admins.Count <= 1)
             {
                 return AdminOperationResult.Rejected("The last Admin cannot be removed.");
             }
         }
 
-        var result = await _userManager.RemoveFromRoleAsync(user, role.Name!);
+        IdentityResult result = await _userManager.RemoveFromRoleAsync(user, role.Name!);
         if (!result.Succeeded)
         {
             return AdminOperationResult.Rejected("The role could not be removed.");

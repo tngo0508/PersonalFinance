@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
@@ -52,7 +53,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             return;
         }
 
-        var hasAnyCategories = await _dbContext.BudgetCategories
+        bool hasAnyCategories = await _dbContext.BudgetCategories
             .IgnoreQueryFilters()
             .AnyAsync(c => c.UserId == userId, ct);
 
@@ -63,7 +64,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
         var categoriesToAdd = new List<BudgetCategory>();
 
-        for (var i = 0; i < DefaultExpenseCategories.Length; i++)
+        for (int i = 0; i < DefaultExpenseCategories.Length; i++)
         {
             categoriesToAdd.Add(new BudgetCategory
             {
@@ -74,7 +75,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             });
         }
 
-        for (var i = 0; i < DefaultIncomeCategories.Length; i++)
+        for (int i = 0; i < DefaultIncomeCategories.Length; i++)
         {
             categoriesToAdd.Add(new BudgetCategory
             {
@@ -92,16 +93,16 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         }
         catch (DbUpdateException)
         {
-            foreach (var entity in categoriesToAdd)
+            foreach (BudgetCategory entity in categoriesToAdd)
             {
-                var entry = _dbContext.Entry(entity);
+                EntityEntry<BudgetCategory> entry = _dbContext.Entry(entity);
                 if (entry.State != EntityState.Detached)
                 {
                     entry.State = EntityState.Detached;
                 }
             }
 
-            var countAfter = await _dbContext.BudgetCategories
+            int countAfter = await _dbContext.BudgetCategories
                 .IgnoreQueryFilters()
                 .CountAsync(c => c.UserId == userId, ct);
 
@@ -119,9 +120,9 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         await EnsureDefaultCategoriesAsync(userId, ct);
 
         var startDate = new DateOnly(year, month, 1);
-        var endDate = startDate.AddMonths(1);
+        DateOnly endDate = startDate.AddMonths(1);
 
-        var allCategories = await _dbContext.BudgetCategories
+        List<BudgetCategory> allCategories = await _dbContext.BudgetCategories
             .IgnoreQueryFilters()
             .Where(c => c.UserId == userId)
             .OrderBy(c => c.Kind)
@@ -131,7 +132,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
         var categoryMap = allCategories.ToDictionary(c => c.Id);
 
-        var transactions = await _dbContext.BudgetTransactions
+        List<BudgetTransaction> transactions = await _dbContext.BudgetTransactions
             .Where(t => t.UserId == userId && t.Date >= startDate && t.Date < endDate)
             .OrderBy(t => t.Date)
             .ThenBy(t => t.Id)
@@ -141,19 +142,19 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             .GroupBy(t => t.CategoryId)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
 
-        var plan = await _dbContext.MonthlyBudgetPlans
+        MonthlyBudgetPlan? plan = await _dbContext.MonthlyBudgetPlans
             .Include(p => p.Lines)
             .FirstOrDefaultAsync(p => p.UserId == userId && p.Year == year && p.Month == month, ct);
 
-        var lineMap = plan?.Lines.ToDictionary(l => l.CategoryId) ?? new Dictionary<int, MonthlyBudgetLine>();
+        Dictionary<int, MonthlyBudgetLine> lineMap = plan?.Lines.ToDictionary(l => l.CategoryId) ?? new Dictionary<int, MonthlyBudgetLine>();
 
-        var isInitialized = plan != null;
-        var canCopyFromPrevious = false;
+        bool isInitialized = plan != null;
+        bool canCopyFromPrevious = false;
         string? previousMonthLabel = null;
 
         if (!isInitialized)
         {
-            var earlierPlan = await _dbContext.MonthlyBudgetPlans
+            MonthlyBudgetPlan? earlierPlan = await _dbContext.MonthlyBudgetPlans
                 .Where(p => p.UserId == userId && (p.Year < year || (p.Year == year && p.Month < month)))
                 .OrderByDescending(p => p.Year)
                 .ThenByDescending(p => p.Month)
@@ -169,7 +170,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         }
 
         // Build calculated category rows using the unified calculation rules
-        var calculatedRows = MonthlyBudgetCalculator.BuildRows(allCategories, lineMap, txSumByCategory);
+        List<CalculatedBudgetCategoryRow> calculatedRows = MonthlyBudgetCalculator.BuildRows(allCategories, lineMap, txSumByCategory);
 
         var expenseRows = calculatedRows
             .Where(r => r.Kind == BudgetCategoryKind.Expense)
@@ -199,17 +200,17 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             })
             .ToList();
 
-        var expenseTotalPlanned = expenseRows.Sum(r => r.Planned);
-        var expenseTotalActual = expenseRows.Sum(r => r.Actual);
-        var expenseTotalDiff = expenseTotalPlanned - expenseTotalActual;
+        decimal expenseTotalPlanned = expenseRows.Sum(r => r.Planned);
+        decimal expenseTotalActual = expenseRows.Sum(r => r.Actual);
+        decimal expenseTotalDiff = expenseTotalPlanned - expenseTotalActual;
 
-        var incomeTotalPlanned = incomeRows.Sum(r => r.Planned);
-        var incomeTotalActual = incomeRows.Sum(r => r.Actual);
-        var incomeTotalDiff = incomeTotalActual - incomeTotalPlanned;
+        decimal incomeTotalPlanned = incomeRows.Sum(r => r.Planned);
+        decimal incomeTotalActual = incomeRows.Sum(r => r.Actual);
+        decimal incomeTotalDiff = incomeTotalActual - incomeTotalPlanned;
 
         var transactionDtos = transactions.Select(t =>
         {
-            categoryMap.TryGetValue(t.CategoryId, out var cat);
+            categoryMap.TryGetValue(t.CategoryId, out BudgetCategory? cat);
             return new BudgetTransactionDto
             {
                 Id = t.Id,
@@ -254,7 +255,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     {
         await EnsureDefaultCategoriesAsync(userId, ct);
 
-        var existingPlan = await _dbContext.MonthlyBudgetPlans
+        MonthlyBudgetPlan? existingPlan = await _dbContext.MonthlyBudgetPlans
             .Include(p => p.Lines)
             .FirstOrDefaultAsync(p => p.UserId == userId && p.Year == request.Year && p.Month == request.Month, ct);
 
@@ -270,7 +271,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
             if (request.CopyFromPrevious)
             {
-                var earlierPlan = await _dbContext.MonthlyBudgetPlans
+                MonthlyBudgetPlan? earlierPlan = await _dbContext.MonthlyBudgetPlans
                     .Include(p => p.Lines)
                     .Where(p => p.UserId == userId &&
                                 (p.Year < request.Year || (p.Year == request.Year && p.Month < request.Month)))
@@ -281,12 +282,12 @@ public class MonthlyBudgetService : IMonthlyBudgetService
                 if (earlierPlan != null)
                 {
                     // Copy ONLY lines for active (non-archived) categories belonging to this user
-                    var activeCategoryIds = await _dbContext.BudgetCategories
+                    HashSet<int> activeCategoryIds = await _dbContext.BudgetCategories
                         .Where(c => c.UserId == userId)
                         .Select(c => c.Id)
                         .ToHashSetAsync(ct);
 
-                    foreach (var line in earlierPlan.Lines.Where(l => activeCategoryIds.Contains(l.CategoryId)))
+                    foreach (MonthlyBudgetLine? line in earlierPlan.Lines.Where(l => activeCategoryIds.Contains(l.CategoryId)))
                     {
                         plan.Lines.Add(new MonthlyBudgetLine
                         {
@@ -306,22 +307,22 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             }
             catch (DbUpdateException)
             {
-                foreach (var line in plan.Lines)
+                foreach (MonthlyBudgetLine line in plan.Lines)
                 {
-                    var lineEntry = _dbContext.Entry(line);
+                    EntityEntry<MonthlyBudgetLine> lineEntry = _dbContext.Entry(line);
                     if (lineEntry.State != EntityState.Detached)
                     {
                         lineEntry.State = EntityState.Detached;
                     }
                 }
 
-                var planEntry = _dbContext.Entry(plan);
+                EntityEntry<MonthlyBudgetPlan> planEntry = _dbContext.Entry(plan);
                 if (planEntry.State != EntityState.Detached)
                 {
                     planEntry.State = EntityState.Detached;
                 }
 
-                var reloadedPlan = await _dbContext.MonthlyBudgetPlans
+                MonthlyBudgetPlan? reloadedPlan = await _dbContext.MonthlyBudgetPlans
                     .FirstOrDefaultAsync(p => p.UserId == userId && p.Year == request.Year && p.Month == request.Month,
                         ct);
 
@@ -339,7 +340,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     public async Task<MonthlyBudgetSheetDto> SetPlannedAsync(string userId, int year, int month, int categoryId,
         SetPlannedRequest request, CancellationToken ct = default)
     {
-        var category = await _dbContext.BudgetCategories
+        BudgetCategory? category = await _dbContext.BudgetCategories
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(c => c.Id == categoryId && c.UserId == userId, ct);
 
@@ -350,9 +351,9 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
         await EnsureArchivedCategoryIsEditableInMonthAsync(category, userId, year, month, ct);
 
-        var plan = await GetOrCreatePlanAsync(userId, year, month, ct);
+        MonthlyBudgetPlan plan = await GetOrCreatePlanAsync(userId, year, month, ct);
 
-        var line = plan.Lines.FirstOrDefault(l => l.CategoryId == categoryId);
+        MonthlyBudgetLine? line = plan.Lines.FirstOrDefault(l => l.CategoryId == categoryId);
         if (line != null)
         {
             line.PlannedAmount = request.Amount;
@@ -378,7 +379,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             }
             catch (DbUpdateException)
             {
-                var lineEntry = _dbContext.Entry(newLine);
+                EntityEntry<MonthlyBudgetLine> lineEntry = _dbContext.Entry(newLine);
                 if (lineEntry.State != EntityState.Detached)
                 {
                     lineEntry.State = EntityState.Detached;
@@ -386,7 +387,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
                 plan.Lines.Remove(newLine);
 
-                var existingLine = await _dbContext.MonthlyBudgetLines
+                MonthlyBudgetLine? existingLine = await _dbContext.MonthlyBudgetLines
                     .FirstOrDefaultAsync(l => l.PlanId == plan.Id && l.CategoryId == categoryId && l.UserId == userId,
                         ct);
 
@@ -415,7 +416,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     public async Task<MonthlyBudgetSheetDto> SetActualOverrideAsync(string userId, int year, int month, int categoryId,
         SetActualOverrideRequest request, CancellationToken ct = default)
     {
-        var category = await _dbContext.BudgetCategories
+        BudgetCategory? category = await _dbContext.BudgetCategories
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(c => c.Id == categoryId && c.UserId == userId, ct);
 
@@ -426,9 +427,9 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
         await EnsureArchivedCategoryIsEditableInMonthAsync(category, userId, year, month, ct);
 
-        var plan = await GetOrCreatePlanAsync(userId, year, month, ct);
+        MonthlyBudgetPlan plan = await GetOrCreatePlanAsync(userId, year, month, ct);
 
-        var line = plan.Lines.FirstOrDefault(l => l.CategoryId == categoryId);
+        MonthlyBudgetLine? line = plan.Lines.FirstOrDefault(l => l.CategoryId == categoryId);
         if (line != null)
         {
             line.ActualOverride = request.Amount;
@@ -454,7 +455,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             }
             catch (DbUpdateException)
             {
-                var lineEntry = _dbContext.Entry(newLine);
+                EntityEntry<MonthlyBudgetLine> lineEntry = _dbContext.Entry(newLine);
                 if (lineEntry.State != EntityState.Detached)
                 {
                     lineEntry.State = EntityState.Detached;
@@ -462,7 +463,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
                 plan.Lines.Remove(newLine);
 
-                var existingLine = await _dbContext.MonthlyBudgetLines
+                MonthlyBudgetLine? existingLine = await _dbContext.MonthlyBudgetLines
                     .FirstOrDefaultAsync(l => l.PlanId == plan.Id && l.CategoryId == categoryId && l.UserId == userId,
                         ct);
 
@@ -493,7 +494,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     {
         await EnsureDefaultCategoriesAsync(userId, ct);
 
-        var query = _dbContext.BudgetCategories.AsQueryable();
+        IQueryable<BudgetCategory> query = _dbContext.BudgetCategories.AsQueryable();
 
         if (includeArchived)
         {
@@ -522,8 +523,8 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     {
         await EnsureDefaultCategoriesAsync(userId, ct);
 
-        var name = request.Name.Trim();
-        var duplicate = await _dbContext.BudgetCategories
+        string name = request.Name.Trim();
+        bool duplicate = await _dbContext.BudgetCategories
             .Where(c => c.UserId == userId && c.Kind == request.Kind)
             .AnyAsync(NameEqualsIgnoreCase(name), ct);
 
@@ -547,13 +548,13 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         }
         catch (DbUpdateException)
         {
-            var entry = _dbContext.Entry(category);
+            EntityEntry<BudgetCategory> entry = _dbContext.Entry(category);
             if (entry.State != EntityState.Detached)
             {
                 entry.State = EntityState.Detached;
             }
 
-            var existing = await _dbContext.BudgetCategories
+            bool existing = await _dbContext.BudgetCategories
                 .Where(c => c.UserId == userId && c.Kind == request.Kind)
                 .AnyAsync(NameEqualsIgnoreCase(name), ct);
 
@@ -581,7 +582,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     public async Task<BudgetCategoryDto> UpdateCategoryAsync(string userId, int id, SaveCategoryRequest request,
         CancellationToken ct = default)
     {
-        var category = await _dbContext.BudgetCategories
+        BudgetCategory? category = await _dbContext.BudgetCategories
             .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId, ct);
 
         if (category == null)
@@ -594,8 +595,8 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             throw new ArgumentException("Category kind cannot be changed.");
         }
 
-        var name = request.Name.Trim();
-        var duplicate = await _dbContext.BudgetCategories
+        string name = request.Name.Trim();
+        bool duplicate = await _dbContext.BudgetCategories
             .Where(c => c.Id != id && c.UserId == userId && c.Kind == category.Kind)
             .AnyAsync(NameEqualsIgnoreCase(name), ct);
 
@@ -623,7 +624,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     /// <inheritdoc />
     public async Task DeleteCategoryAsync(string userId, int id, CancellationToken ct = default)
     {
-        var category = await _dbContext.BudgetCategories
+        BudgetCategory? category = await _dbContext.BudgetCategories
             .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId, ct);
 
         if (category == null)
@@ -640,12 +641,12 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     public async Task<BudgetTransactionDto> CreateTransactionAsync(string userId, SaveTransactionRequest request,
         CancellationToken ct = default)
     {
-        var category = await _dbContext.BudgetCategories
+        BudgetCategory? category = await _dbContext.BudgetCategories
             .FirstOrDefaultAsync(c => c.Id == request.CategoryId && c.UserId == userId, ct);
 
         if (category == null)
         {
-            var archivedCat = await _dbContext.BudgetCategories
+            BudgetCategory? archivedCat = await _dbContext.BudgetCategories
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(c => c.Id == request.CategoryId && c.UserId == userId, ct);
 
@@ -685,7 +686,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     public async Task<BudgetTransactionDto> UpdateTransactionAsync(string userId, int id,
         SaveTransactionRequest request, CancellationToken ct = default)
     {
-        var transaction = await _dbContext.BudgetTransactions
+        BudgetTransaction? transaction = await _dbContext.BudgetTransactions
             .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId, ct);
 
         if (transaction == null)
@@ -693,12 +694,12 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             throw new KeyNotFoundException("Transaction not found.");
         }
 
-        var category = await _dbContext.BudgetCategories
+        BudgetCategory? category = await _dbContext.BudgetCategories
             .FirstOrDefaultAsync(c => c.Id == request.CategoryId && c.UserId == userId, ct);
 
         if (category == null)
         {
-            var archivedCat = await _dbContext.BudgetCategories
+            BudgetCategory? archivedCat = await _dbContext.BudgetCategories
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(c => c.Id == request.CategoryId && c.UserId == userId, ct);
 
@@ -733,7 +734,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
     /// <inheritdoc />
     public async Task DeleteTransactionAsync(string userId, int id, CancellationToken ct = default)
     {
-        var transaction = await _dbContext.BudgetTransactions
+        BudgetTransaction? transaction = await _dbContext.BudgetTransactions
             .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId, ct);
 
         if (transaction == null)
@@ -748,7 +749,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
 
     private async Task<MonthlyBudgetPlan> GetOrCreatePlanAsync(string userId, int year, int month, CancellationToken ct)
     {
-        var plan = await _dbContext.MonthlyBudgetPlans
+        MonthlyBudgetPlan? plan = await _dbContext.MonthlyBudgetPlans
             .Include(p => p.Lines)
             .FirstOrDefaultAsync(p => p.UserId == userId && p.Year == year && p.Month == month, ct);
 
@@ -773,13 +774,13 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         }
         catch (DbUpdateException)
         {
-            var entry = _dbContext.Entry(plan);
+            EntityEntry<MonthlyBudgetPlan> entry = _dbContext.Entry(plan);
             if (entry.State != EntityState.Detached)
             {
                 entry.State = EntityState.Detached;
             }
 
-            var existingPlan = await _dbContext.MonthlyBudgetPlans
+            MonthlyBudgetPlan? existingPlan = await _dbContext.MonthlyBudgetPlans
                 .Include(p => p.Lines)
                 .FirstOrDefaultAsync(p => p.UserId == userId && p.Year == year && p.Month == month, ct);
 
@@ -809,15 +810,15 @@ public class MonthlyBudgetService : IMonthlyBudgetService
         }
 
         var startDate = new DateOnly(year, month, 1);
-        var endDate = startDate.AddMonths(1);
+        DateOnly endDate = startDate.AddMonths(1);
 
-        var existingPlanId = await _dbContext.MonthlyBudgetPlans
+        int? existingPlanId = await _dbContext.MonthlyBudgetPlans
             .AsNoTracking()
             .Where(p => p.UserId == userId && p.Year == year && p.Month == month)
             .Select(p => (int?)p.Id)
             .FirstOrDefaultAsync(ct);
 
-        var hasLineUsage = existingPlanId.HasValue
+        bool hasLineUsage = existingPlanId.HasValue
                            && await _dbContext.MonthlyBudgetLines
                                .AsNoTracking()
                                .AnyAsync(l => l.PlanId == existingPlanId.Value
@@ -829,7 +830,7 @@ public class MonthlyBudgetService : IMonthlyBudgetService
             return;
         }
 
-        var hasTransactions = await _dbContext.BudgetTransactions
+        bool hasTransactions = await _dbContext.BudgetTransactions
             .AnyAsync(t => t.UserId == userId
                            && t.CategoryId == category.Id
                            && t.Date >= startDate

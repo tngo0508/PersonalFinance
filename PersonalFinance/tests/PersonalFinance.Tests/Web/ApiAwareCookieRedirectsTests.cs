@@ -16,9 +16,9 @@ public class ApiAwareCookieRedirectsTests
         var events = new CookieAuthenticationEvents();
         ApiAwareCookieRedirects.Apply(events);
 
-        var login = CreateContext(path, accept, requestedWith);
+        RedirectContext<CookieAuthenticationOptions> login = CreateContext(path, accept, requestedWith);
         await events.OnRedirectToLogin(login);
-        var denied = CreateContext(path, accept, requestedWith);
+        RedirectContext<CookieAuthenticationOptions> denied = CreateContext(path, accept, requestedWith);
         await events.OnRedirectToAccessDenied(denied);
 
         Assert.Equal(StatusCodes.Status401Unauthorized, login.Response.StatusCode);
@@ -32,7 +32,7 @@ public class ApiAwareCookieRedirectsTests
         var events = new CookieAuthenticationEvents();
         ApiAwareCookieRedirects.Apply(events);
 
-        var context = CreateContext("/Dashboard", "text/html", null);
+        RedirectContext<CookieAuthenticationOptions> context = CreateContext("/Dashboard", "text/html", null);
         await events.OnRedirectToLogin(context);
 
         Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);

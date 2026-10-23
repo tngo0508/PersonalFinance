@@ -19,7 +19,7 @@ public class InternalApiClientRegistrationTests
     [Fact]
     public void EveryApiServiceContract_IsRegistered()
     {
-        using var provider = BuildProvider(out _);
+        using ServiceProvider provider = BuildProvider(out _);
 
         var contracts = typeof(IGoogleDriveApi).Assembly.GetTypes()
             .Where(t => t.IsInterface && t.Namespace == typeof(IGoogleDriveApi).Namespace)
@@ -34,7 +34,7 @@ public class InternalApiClientRegistrationTests
     [Fact]
     public async Task RegisteredClient_ForwardsSignedInAccountAndInternalKey()
     {
-        using var provider = BuildProvider(out var sentRequests);
+        using ServiceProvider provider = BuildProvider(out List<HttpRequestMessage>? sentRequests);
         provider.GetRequiredService<IHttpContextAccessor>().HttpContext = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -43,7 +43,7 @@ public class InternalApiClientRegistrationTests
 
         await provider.GetRequiredService<IGoogleDriveApi>().GetUserConnectionsAsync();
 
-        var request = Assert.Single(sentRequests);
+        HttpRequestMessage request = Assert.Single(sentRequests);
         Assert.Equal("http://apiservice.test/api/googledrive/connections", request.RequestUri!.ToString());
         Assert.Equal("account-1", request.Headers.GetValues("X-User-Id").Single());
         Assert.Equal("shared-secret", request.Headers.GetValues("X-Internal-Key").Single());
@@ -51,7 +51,7 @@ public class InternalApiClientRegistrationTests
 
     private static ServiceProvider BuildProvider(out List<HttpRequestMessage> sentRequests)
     {
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ApiSettings:BaseUrl"] = "http://apiservice.test",

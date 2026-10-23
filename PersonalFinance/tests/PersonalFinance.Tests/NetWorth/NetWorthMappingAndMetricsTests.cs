@@ -23,7 +23,7 @@ public class NetWorthMappingAndMetricsTests
     [Fact]
     public void SavedParameters_MapToProjectionRequestAndDto_WithEveryParameter()
     {
-        var saved = WithDistinctValues(new NetWorthParameters());
+        NetWorthParameters saved = WithDistinctValues(new NetWorthParameters());
 
         AssertSameParameters(saved, saved.ToProjectionRequest());
         AssertSameParameters(saved, saved.ToDto());
@@ -32,7 +32,7 @@ public class NetWorthMappingAndMetricsTests
     [Fact]
     public void SubmittedValues_AreAppliedToSavedParameters()
     {
-        var submitted = WithDistinctValues(new NetWorthProjectionRequestDto());
+        NetWorthProjectionRequestDto submitted = WithDistinctValues(new NetWorthProjectionRequestDto());
         var saved = new NetWorthParameters();
 
         saved.Apply(submitted);
@@ -43,7 +43,7 @@ public class NetWorthMappingAndMetricsTests
     [Fact]
     public void WebViewModel_RoundTripsEveryParameter()
     {
-        var saved = WithDistinctValues(new NetWorthParametersDto());
+        NetWorthParametersDto saved = WithDistinctValues(new NetWorthParametersDto());
         var model = new NetWorthViewModel();
 
         model.ApplySaved(saved);
@@ -85,10 +85,10 @@ public class NetWorthMappingAndMetricsTests
 
     private static T WithDistinctValues<T>(T target)
     {
-        var i = 1;
-        foreach (var name in ParameterNames)
+        int i = 1;
+        foreach (string name in ParameterNames)
         {
-            var property = typeof(T).GetProperty(name)!;
+            PropertyInfo property = typeof(T).GetProperty(name)!;
             property.SetValue(target, property.PropertyType == typeof(int)
                 ? 20 + i
                 : Convert.ChangeType(1000m + i, property.PropertyType, CultureInfo.InvariantCulture));
@@ -100,7 +100,7 @@ public class NetWorthMappingAndMetricsTests
 
     private static void AssertSameParameters(object expected, object actual)
     {
-        foreach (var name in ParameterNames)
+        foreach (string name in ParameterNames)
         {
             Assert.True(Equals(expected.GetType().GetProperty(name)!.GetValue(expected),
                     actual.GetType().GetProperty(name)!.GetValue(actual)),

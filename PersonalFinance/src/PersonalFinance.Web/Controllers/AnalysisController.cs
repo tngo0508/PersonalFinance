@@ -2,8 +2,8 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
-using PersonalFinance.Web.Models;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Web.Models;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -32,9 +32,9 @@ public class AnalysisController : Controller
         [FromQuery] int? month,
         CancellationToken cancellationToken = default)
     {
-        var result = await _api.GetAnalysisDashboardAsync(year, month, cancellationToken);
+        AnalysisDashboardDto result = await _api.GetAnalysisDashboardAsync(year, month, cancellationToken);
 
-        var model = MapToViewModel(result);
+        AnalysisDashboardViewModel model = MapToViewModel(result);
         model.StatusMessage = TempData["StatusMessage"] as string;
         model.ErrorMessage = TempData["ErrorMessage"] as string;
 
@@ -65,7 +65,7 @@ public class AnalysisController : Controller
             Overwrite = false
         };
 
-        var result = await _api.SyncSpreadsheetAsync(request, cancellationToken);
+        SyncSpreadsheetResponseDto result = await _api.SyncSpreadsheetAsync(request, cancellationToken);
 
         if (result.HasConflict)
         {
@@ -112,7 +112,7 @@ public class AnalysisController : Controller
             Overwrite = true
         };
 
-        var result = await _api.SyncSpreadsheetAsync(request, cancellationToken);
+        SyncSpreadsheetResponseDto result = await _api.SyncSpreadsheetAsync(request, cancellationToken);
 
         if (result.Success)
             TempData["StatusMessage"] =

@@ -32,7 +32,7 @@ public class BudgetService : IBudgetService
     public async Task<BudgetAllocationResponseDto?> GetBudgetAsync(string userId, string period,
         CancellationToken cancellationToken = default)
     {
-        var budget = await _dbContext.UserBudgetAllocations
+        UserBudgetAllocation? budget = await _dbContext.UserBudgetAllocations
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == period, cancellationToken);
 
@@ -51,9 +51,9 @@ public class BudgetService : IBudgetService
     public async Task SaveBudgetAsync(string userId, SaveBudgetRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var period = request.Period ?? DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+        string period = request.Period ?? DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture);
 
-        var budget = await _dbContext.UserBudgetAllocations
+        UserBudgetAllocation? budget = await _dbContext.UserBudgetAllocations
             .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == period, cancellationToken);
 
         if (budget is null)
@@ -97,16 +97,16 @@ public class BudgetService : IBudgetService
     {
         try
         {
-            var year = int.Parse(period.AsSpan(0, 4), CultureInfo.InvariantCulture);
-            var month = int.Parse(period.AsSpan(5, 2), CultureInfo.InvariantCulture);
+            int year = int.Parse(period.AsSpan(0, 4), CultureInfo.InvariantCulture);
+            int month = int.Parse(period.AsSpan(5, 2), CultureInfo.InvariantCulture);
 
-            var monthData = await _budgetDataProvider.GetMonthAsync(userId, year, month, cancellationToken);
+            BudgetMonthData? monthData = await _budgetDataProvider.GetMonthAsync(userId, year, month, cancellationToken);
             if (monthData == null)
             {
                 return;
             }
 
-            var budget = await _dbContext.UserBudgetAllocations
+            UserBudgetAllocation? budget = await _dbContext.UserBudgetAllocations
                 .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.UserId == userId && b.Period == period, cancellationToken);
 
@@ -115,15 +115,15 @@ public class BudgetService : IBudgetService
                 return;
             }
 
-            var totalBudgetedExpenses = monthData.BudgetedExpenses;
-            var totalActualExpenses = monthData.ActualExpenses;
+            decimal totalBudgetedExpenses = monthData.BudgetedExpenses;
+            decimal totalActualExpenses = monthData.ActualExpenses;
 
             if (totalBudgetedExpenses <= 0)
             {
                 return;
             }
 
-            var percentUsed = (totalActualExpenses / totalBudgetedExpenses) * 100;
+            decimal percentUsed = (totalActualExpenses / totalBudgetedExpenses) * 100;
 
             if (percentUsed >= 100)
             {

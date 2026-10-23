@@ -26,8 +26,8 @@ public static class AccountPurgeJob
     {
         await host.MigrateAndSeedDatabaseAsync(cancellationToken);
 
-        await using var scope = host.Services.CreateAsyncScope();
-        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(AccountPurgeJob));
+        await using AsyncServiceScope scope = host.Services.CreateAsyncScope();
+        ILogger logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(AccountPurgeJob));
         AccountPurgeSummary summary;
         try
         {

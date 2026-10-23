@@ -17,7 +17,7 @@ public class DashboardNetWorthSummaryTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"DashboardNetWorth_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -27,7 +27,7 @@ public class DashboardNetWorthSummaryTests
     {
         db.NetWorthParameters.AddRange(rows);
         await db.SaveChangesAsync();
-        var summary =
+        DashboardSummaryDto summary =
             await new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(UserId);
         return summary.NetWorth;
     }
@@ -47,9 +47,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task FiTarget_IsAnnualSpendingTimesTwentyFive()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(spending: 40_000m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(spending: 40_000m));
 
         Assert.Equal(1_000_000m, netWorth!.FiTarget);
     }
@@ -57,9 +57,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task ProgressToFi_IsNetWorthOverFiTarget()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 250_000m, spending: 40_000m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 250_000m, spending: 40_000m));
 
         Assert.Equal(25m, netWorth!.ProgressToFiPercent);
         Assert.False(netWorth.FiTargetReached);
@@ -68,9 +68,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task ProgressToFi_AboveOneHundredPercent_IsReportedUncappedAndMarkedReached()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 1_500_000m, spending: 40_000m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 1_500_000m, spending: 40_000m));
 
         Assert.Equal(150m, netWorth!.ProgressToFiPercent);
         Assert.True(netWorth.FiTargetReached);
@@ -79,9 +79,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task ProgressToFi_ExactlyAtTarget_IsMarkedReached()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 1_000_000m, spending: 40_000m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 1_000_000m, spending: 40_000m));
 
         Assert.Equal(100m, netWorth!.ProgressToFiPercent);
         Assert.True(netWorth.FiTargetReached);
@@ -90,9 +90,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task ProgressToFi_WhenSpendingIsZero_IsUnavailable()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 500_000m, spending: 0m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 500_000m, spending: 0m));
 
         Assert.Equal(0m, netWorth!.FiTarget);
         Assert.Null(netWorth.ProgressToFiPercent);
@@ -102,9 +102,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task SavingsRate_IsAnnualSavingsOverAnnualIncome()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(income: 80_000m, savings: 20_000m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(income: 80_000m, savings: 20_000m));
 
         Assert.Equal(25m, netWorth!.SavingsRatePercent);
     }
@@ -112,9 +112,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task SavingsRate_WhenIncomeIsZero_IsUnavailable()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(income: 0m, savings: 20_000m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(income: 0m, savings: 20_000m));
 
         Assert.Null(netWorth!.SavingsRatePercent);
     }
@@ -122,9 +122,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task Summary_ExposesCurrentNetWorthAndAges()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db, Parameters(balance: 123_456.78m));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 123_456.78m));
 
         Assert.Equal(123_456.78m, netWorth!.CurrentNetWorth);
         Assert.Equal(35, netWorth.CurrentAge);
@@ -134,9 +134,9 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task Summary_UsesOnlyTheRequestingUsersParameters()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
 
-        var netWorth = await GetNetWorthAsync(db,
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db,
             Parameters(balance: 999_999m, spending: 1m, userId: OtherUserId),
             Parameters(balance: 100_000m, spending: 40_000m));
 
@@ -147,12 +147,12 @@ public class DashboardNetWorthSummaryTests
     [Fact]
     public async Task Summary_ExcludesSoftDeletedParameters()
     {
-        await using var db = CreateContext();
-        var deleted = Parameters();
+        await using AppDbContext db = CreateContext();
+        NetWorthParameters deleted = Parameters();
         deleted.IsDeleted = true;
         deleted.DeletedAt = DateTime.UtcNow;
 
-        var netWorth = await GetNetWorthAsync(db, deleted);
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, deleted);
 
         Assert.Null(netWorth);
     }

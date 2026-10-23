@@ -14,7 +14,7 @@ internal static class DesignTimeDbContextFactoryHelper
 
         if (args != null)
         {
-            for (var i = 0; i < args.Length; i++)
+            for (int i = 0; i < args.Length; i++)
             {
                 if (args[i].Equals("--connection-string", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 {
@@ -43,7 +43,7 @@ public sealed class AzureSqlAppDbContextFactory : IDesignTimeDbContextFactory<Az
 {
     public AzureSqlAppDbContext CreateDbContext(string[] args)
     {
-        var connectionString = DesignTimeDbContextFactoryHelper.ResolveConnectionString(args);
+        string connectionString = DesignTimeDbContextFactoryHelper.ResolveConnectionString(args);
         var optionsBuilder = new DbContextOptionsBuilder<AzureSqlAppDbContext>();
         optionsBuilder.ConfigureAppDbContext(connectionString, DatabaseProviderType.AzureSql);
         return new AzureSqlAppDbContext(optionsBuilder.Options);
@@ -57,7 +57,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
 {
     public AppDbContext CreateDbContext(string[] args)
     {
-        var connectionString = DesignTimeDbContextFactoryHelper.ResolveConnectionString(args);
+        string connectionString = DesignTimeDbContextFactoryHelper.ResolveConnectionString(args);
         var optionsBuilder = new DbContextOptionsBuilder<AzureSqlAppDbContext>();
         optionsBuilder.ConfigureAppDbContext(connectionString, DatabaseProviderType.AzureSql);
         return new AzureSqlAppDbContext(optionsBuilder.Options);

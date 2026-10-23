@@ -14,7 +14,7 @@ public class ApiErrorMessagesForUserTests
     [Fact]
     public async Task RejectedRequest_ShowsApiServiceMessage()
     {
-        var ex = await CreateApiExceptionAsync(HttpStatusCode.Conflict, """{"error":"Category 'Food' already exists."}""");
+        ApiException ex = await CreateApiExceptionAsync(HttpStatusCode.Conflict, """{"error":"Category 'Food' already exists."}""");
 
         Assert.Equal("Category 'Food' already exists.", ApiErrorMessages.ForUser(ex, "fallback"));
     }
@@ -22,7 +22,7 @@ public class ApiErrorMessagesForUserTests
     [Fact]
     public async Task ApiServiceServerError_ShowsFallbackNotItsBody()
     {
-        var ex = await CreateApiExceptionAsync(HttpStatusCode.InternalServerError, """{"error":"NullReferenceException at ..."}""");
+        ApiException ex = await CreateApiExceptionAsync(HttpStatusCode.InternalServerError, """{"error":"NullReferenceException at ..."}""");
 
         Assert.Equal("fallback", ApiErrorMessages.ForUser(ex, "fallback"));
     }

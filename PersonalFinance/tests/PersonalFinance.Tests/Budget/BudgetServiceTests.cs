@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.Tests.Budget;
@@ -16,7 +17,7 @@ public class BudgetServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"Budget_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -40,21 +41,21 @@ public class BudgetServiceTests
     [Fact]
     public async Task Save_WhenHousingAmountIs700_StoresExactly700Amount()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
+        await using AppDbContext db = CreateContext();
+        BudgetService service = CreateService(db);
 
         await service.SaveBudgetAsync(UserId, CreateRequest(3_700m,
             new BudgetAllocationsDto { Housing = 700m }));
 
-        var stored = await db.UserBudgetAllocations.SingleAsync();
+        UserBudgetAllocation stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(700.00m, stored.HousingAmount);
     }
 
     [Fact]
     public async Task Save_StoresExactAmountForEveryCategory()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
+        await using AppDbContext db = CreateContext();
+        BudgetService service = CreateService(db);
         var allocations = new BudgetAllocationsDto
         {
             Housing = 370.37m,
@@ -71,7 +72,7 @@ public class BudgetServiceTests
 
         await service.SaveBudgetAsync(UserId, CreateRequest(1_234.57m, allocations));
 
-        var stored = await db.UserBudgetAllocations.SingleAsync();
+        UserBudgetAllocation stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(370.37m, stored.HousingAmount);
         Assert.Equal(154.32m, stored.FoodAmount);
         Assert.Equal(125.00m, stored.TransportationAmount);
@@ -87,25 +88,25 @@ public class BudgetServiceTests
     [Fact]
     public async Task Save_StoresSmallCentAmountsExactly()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
+        await using AppDbContext db = CreateContext();
+        BudgetService service = CreateService(db);
 
         await service.SaveBudgetAsync(UserId, CreateRequest(1_000m, new BudgetAllocationsDto { Housing = 0.01m }));
 
-        var stored = await db.UserBudgetAllocations.SingleAsync();
+        UserBudgetAllocation stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(0.01m, stored.HousingAmount);
     }
 
     [Fact]
     public async Task Save_WhenIncomeIsZero_StoresZeroAmounts()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
+        await using AppDbContext db = CreateContext();
+        BudgetService service = CreateService(db);
 
         await service.SaveBudgetAsync(UserId, CreateRequest(0m,
             new BudgetAllocationsDto { Housing = 0m, Food = 0m, Miscellaneous = 0m }));
 
-        var stored = await db.UserBudgetAllocations.SingleAsync();
+        UserBudgetAllocation stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(0m, stored.HousingAmount);
         Assert.Equal(0m, stored.FoodAmount);
         Assert.Equal(0m, stored.MiscellaneousAmount);
@@ -114,8 +115,8 @@ public class BudgetServiceTests
     [Fact]
     public async Task Get_AfterSave_ReturnsTheSameAmountsAndIncomeAsSaved()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
+        await using AppDbContext db = CreateContext();
+        BudgetService service = CreateService(db);
         var allocations = new BudgetAllocationsDto
         {
             Housing = 1110m,
@@ -131,11 +132,11 @@ public class BudgetServiceTests
         };
         await service.SaveBudgetAsync(UserId, CreateRequest(3_700m, allocations));
 
-        var response = await service.GetBudgetAsync(UserId, Period);
+        BudgetAllocationResponseDto? response = await service.GetBudgetAsync(UserId, Period);
 
         Assert.NotNull(response);
         Assert.Equal(3_700m, response.MonthlyIncome);
-        var returned = Assert.IsType<BudgetAllocationsDto>(response.Allocations);
+        BudgetAllocationsDto returned = Assert.IsType<BudgetAllocationsDto>(response.Allocations);
         Assert.Equal(1110m, returned.Housing);
         Assert.Equal(573.50m, returned.Food);
         Assert.Equal(370m, returned.Transportation);
@@ -151,13 +152,13 @@ public class BudgetServiceTests
     [Fact]
     public async Task Save_WhenPeriodAlreadySaved_UpdatesTheAmountsInsteadOfAddingARow()
     {
-        await using var db = CreateContext();
-        var service = CreateService(db);
+        await using AppDbContext db = CreateContext();
+        BudgetService service = CreateService(db);
         await service.SaveBudgetAsync(UserId, CreateRequest(3_700m, new BudgetAllocationsDto { Housing = 740m }));
 
         await service.SaveBudgetAsync(UserId, CreateRequest(4_000m, new BudgetAllocationsDto { Housing = 1_000m }));
 
-        var stored = await db.UserBudgetAllocations.SingleAsync();
+        UserBudgetAllocation stored = await db.UserBudgetAllocations.SingleAsync();
         Assert.Equal(4_000m, stored.MonthlyIncome);
         Assert.Equal(1_000m, stored.HousingAmount);
     }

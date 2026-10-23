@@ -10,14 +10,14 @@ public static class DatabasePathHelper
     /// </summary>
     public static string GetSolutionRoot()
     {
-        var candidateDirectories = new[]
+        string[] candidateDirectories = new[]
         {
             Directory.GetCurrentDirectory(),
             AppContext.BaseDirectory
         };
 
         // First pass: look specifically for .sln file
-        foreach (var startDir in candidateDirectories)
+        foreach (string? startDir in candidateDirectories)
         {
             if (string.IsNullOrWhiteSpace(startDir) || !Directory.Exists(startDir))
             {
@@ -37,7 +37,7 @@ public static class DatabasePathHelper
         }
 
         // Second pass: look for Directory.Packages.props or Directory.Build.props
-        foreach (var startDir in candidateDirectories)
+        foreach (string? startDir in candidateDirectories)
         {
             if (string.IsNullOrWhiteSpace(startDir) || !Directory.Exists(startDir))
             {

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.DataExport;
 using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
@@ -47,8 +48,8 @@ public class PersonalDataModel : PageModel
     {
         try
         {
-            var export = await _dataExportApi.ExportAsync(HttpContext.RequestAborted);
-            var fileName = string.Create(CultureInfo.InvariantCulture,
+            DataExportDto export = await _dataExportApi.ExportAsync(HttpContext.RequestAborted);
+            string fileName = string.Create(CultureInfo.InvariantCulture,
                 $"personal-finance-export-{export.ExportedAtUtc:yyyy-MM-dd}.json");
 
             Response.Headers.CacheControl = "no-store";

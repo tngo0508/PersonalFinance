@@ -5,7 +5,10 @@ Canonical definitions for the Personal Finance application domain and architectu
 ## Architecture
 
 ### Feature
-A vertical slice of functionality spanning entities, domain services, controllers, API contracts, DTOs, and views. Code is organized by type in the ApiService (`Controllers/`, `Services/`, `Validators/`) and Web layer, with feature-specific DTOs organized under `PersonalFinance.Shared/DTOs/`.
+A vertical slice of functionality named after what a user would call it (Budget Tracker, Feedback, Savings Goals).
+It spans everything that slice needs: entities, services, controllers, API contracts, DTOs, views and tests, and every
+part of it carries the Feature's name wherever it lives.
+_Avoid_: Area (an ASP.NET Core term with its own meaning), component
 
 ### Service
 A class that owns business logic and data access coordination for a feature. Injected directly into controllers via dependency injection, containing domain rules, validation, and database operations. Services live in `PersonalFinance.ApiService/Services/`.
@@ -73,6 +76,12 @@ shown as written by "Deleted User".
 
 ### Data Export
 A JSON file of the data an Account currently holds in the app, which the Account downloads for itself.
+
+### Account Lifecycle
+The stages an Account passes through after registration: active, then under a Deletion Request for its Grace Period
+(locked out, able only to cancel), then Purged. Data Export, the Deletion Request and the Purge together make up the
+lifecycle; it is the Feature that owns them.
+_Avoid_: Account management (that is the settings pages), offboarding
 
 ## Domain
 

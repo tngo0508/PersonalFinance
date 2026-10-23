@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
@@ -15,7 +16,7 @@ public class MonthlyBudgetInitializationTests
 
     private static AppDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"BudgetInit_{Guid.NewGuid():N}")
             .Options;
         return new AppDbContext(options);
@@ -24,10 +25,10 @@ public class MonthlyBudgetInitializationTests
     [Fact]
     public async Task CanCopyFromPrevious_IsFalse_WhenNoEarlierMonthHasPlan()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
 
-        var sheet = await service.GetSheetAsync(UserId, 2026, 10);
+        MonthlyBudgetSheetDto sheet = await service.GetSheetAsync(UserId, 2026, 10);
 
         Assert.False(sheet.IsInitialized);
         Assert.False(sheet.CanCopyFromPrevious);
@@ -37,15 +38,15 @@ public class MonthlyBudgetInitializationTests
     [Fact]
     public async Task CanCopyFromPrevious_IsTrue_WhenEarlierMonthHasPlan()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
         await service.SetPlannedAsync(UserId, 2026, 9, food.Id, new SetPlannedRequest { Amount = 600m });
 
         // Uninitialized October 2026 sheet should indicate September 2026 is available to copy
-        var octSheet = await service.GetSheetAsync(UserId, 2026, 10);
+        MonthlyBudgetSheetDto octSheet = await service.GetSheetAsync(UserId, 2026, 10);
 
         Assert.False(octSheet.IsInitialized);
         Assert.True(octSheet.CanCopyFromPrevious);
@@ -55,12 +56,12 @@ public class MonthlyBudgetInitializationTests
     [Fact]
     public async Task InitializeMonth_CopyFromPrevious_CopiesOnlyPlannedAmounts()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
-        var paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory paycheck = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Paycheck");
 
         // Set planned amounts, actual overrides, and transactions in September 2026
         await service.SetPlannedAsync(UserId, 2026, 9, food.Id, new SetPlannedRequest { Amount = 550m });
@@ -69,7 +70,7 @@ public class MonthlyBudgetInitializationTests
             new SetActualOverrideRequest { Amount = 300m }); // override
 
         // Initialize October 2026 copying from September
-        var octSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
+        MonthlyBudgetSheetDto octSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
         {
             Year = 2026,
             Month = 10,
@@ -78,12 +79,12 @@ public class MonthlyBudgetInitializationTests
 
         Assert.True(octSheet.IsInitialized);
 
-        var foodRow = octSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+        SheetRowDto foodRow = octSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
         Assert.Equal(550m, foodRow.Planned); // Planned copied
         Assert.Equal(0m, foodRow.Actual); // Actual is NOT copied
         Assert.False(foodRow.ActualIsOverride); // Override is NOT copied
 
-        var paycheckRow = octSheet.Income.Rows.Single(r => r.CategoryId == paycheck.Id);
+        SheetRowDto paycheckRow = octSheet.Income.Rows.Single(r => r.CategoryId == paycheck.Id);
         Assert.Equal(4500m, paycheckRow.Planned);
         Assert.Equal(0m, paycheckRow.Actual);
     }
@@ -91,11 +92,11 @@ public class MonthlyBudgetInitializationTests
     [Fact]
     public async Task InitializeMonth_CopyFromPrevious_SkipsArchivedCategories()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Old Hobby",
             Kind = BudgetCategoryKind.Expense,
@@ -109,7 +110,7 @@ public class MonthlyBudgetInitializationTests
         await service.DeleteCategoryAsync(UserId, customCat.Id);
 
         // Initialize October 2026 copying from September
-        var octSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
+        MonthlyBudgetSheetDto octSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
         {
             Year = 2026,
             Month = 10,
@@ -123,11 +124,11 @@ public class MonthlyBudgetInitializationTests
     [Fact]
     public async Task InitializeMonth_CopyFromPrevious_TakesNearestEarlierMonthWhenMonthsSkippedOrYearChanges()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
         // Seed two earlier plans with different amounts: October 2025 (500) and November 2025 (750)
         await service.SetPlannedAsync(UserId, 2025, 10, food.Id, new SetPlannedRequest { Amount = 500m });
@@ -137,13 +138,13 @@ public class MonthlyBudgetInitializationTests
         await service.SetPlannedAsync(UserId, 2026, 3, food.Id, new SetPlannedRequest { Amount = 1200m });
 
         // Uninitialized February 2026 sheet should show November 2025 as the nearest earlier month
-        var febBefore = await service.GetSheetAsync(UserId, 2026, 2);
+        MonthlyBudgetSheetDto febBefore = await service.GetSheetAsync(UserId, 2026, 2);
         Assert.False(febBefore.IsInitialized);
         Assert.True(febBefore.CanCopyFromPrevious);
         Assert.Equal("November 2025", febBefore.PreviousMonthLabel);
 
         // Initialize February 2026 copying from previous
-        var febSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
+        MonthlyBudgetSheetDto febSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
         {
             Year = 2026,
             Month = 2,
@@ -151,7 +152,7 @@ public class MonthlyBudgetInitializationTests
         });
 
         Assert.True(febSheet.IsInitialized);
-        var foodRow = febSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+        SheetRowDto foodRow = febSheet.Expenses.Rows.Single(r => r.CategoryId == food.Id);
         Assert.Equal(750m,
             foodRow.Planned); // Must copy 750 from November 2025 (not 500 from Oct 2025, not 1200 from Mar 2026)
     }
@@ -159,15 +160,15 @@ public class MonthlyBudgetInitializationTests
     [Fact]
     public async Task InitializeMonth_StartBlank_LeavesPlannedAmountsAtZero()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
         await service.SetPlannedAsync(UserId, 2026, 9, food.Id, new SetPlannedRequest { Amount = 550m });
 
         // Initialize October 2026 with CopyFromPrevious = false
-        var octSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
+        MonthlyBudgetSheetDto octSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
         {
             Year = 2026,
             Month = 10,
@@ -182,11 +183,11 @@ public class MonthlyBudgetInitializationTests
     [Fact]
     public async Task InitializeMonth_IsIdempotent_DoubleSubmitDoesNotThrowOrDuplicate()
     {
-        await using var db = CreateContext();
+        await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
         await service.EnsureDefaultCategoriesAsync(UserId);
 
-        var food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
         await service.SetPlannedAsync(UserId, 2026, 9, food.Id, new SetPlannedRequest { Amount = 600m });
         await service.SetPlannedAsync(UserId, 2026, 10, food.Id, new SetPlannedRequest { Amount = 350m });
 
@@ -197,20 +198,20 @@ public class MonthlyBudgetInitializationTests
             CopyFromPrevious = true
         };
 
-        var sheet1 = await service.InitializeMonthAsync(UserId, req);
-        var sheet2 = await service.InitializeMonthAsync(UserId, req);
+        MonthlyBudgetSheetDto sheet1 = await service.InitializeMonthAsync(UserId, req);
+        MonthlyBudgetSheetDto sheet2 = await service.InitializeMonthAsync(UserId, req);
 
         Assert.True(sheet1.IsInitialized);
         Assert.True(sheet2.IsInitialized);
         Assert.Equal(sheet1.Expenses.Rows.Count, sheet2.Expenses.Rows.Count);
 
         // Ensure exactly one plan row exists in database for this month
-        var planCount =
+        int planCount =
             await db.MonthlyBudgetPlans.CountAsync(p => p.UserId == UserId && p.Year == 2026 && p.Month == 10);
         Assert.Equal(1, planCount);
 
         // Ensure second initialization does not overwrite existing planned amount
-        var foodRow = sheet2.Expenses.Rows.Single(r => r.CategoryId == food.Id);
+        SheetRowDto foodRow = sheet2.Expenses.Rows.Single(r => r.CategoryId == food.Id);
         Assert.Equal(350m, foodRow.Planned);
     }
 }

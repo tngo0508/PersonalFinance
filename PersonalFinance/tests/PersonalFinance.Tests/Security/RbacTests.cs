@@ -12,6 +12,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Services;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.DTOs.Admin;
 using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Tests.Security;
@@ -37,12 +38,12 @@ public class RbacTests
             settings[XUserIdAuthenticationDefaults.InternalKeyConfig] = internalKey;
         }
 
-        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        IConfigurationRoot config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         services.AddSingleton<IConfiguration>(config);
 
-        var dbName = $"RbacTest_{Guid.NewGuid():N}";
+        string dbName = $"RbacTest_{Guid.NewGuid():N}";
         services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(dbName));
-        var builder = services.AddIdentityCore<IdentityUser>();
+        IdentityBuilder builder = services.AddIdentityCore<IdentityUser>();
         if (withRoles)
         {
             builder.AddRoles<IdentityRole>();
@@ -54,14 +55,14 @@ public class RbacTests
             .AddScheme<AuthenticationSchemeOptions, XUserIdAuthenticationHandler>(
                 XUserIdAuthenticationDefaults.Scheme, _ => { });
 
-        var provider = services.BuildServiceProvider();
+        ServiceProvider provider = services.BuildServiceProvider();
         provider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
         return provider;
     }
 
     private static async Task<IdentityUser> AddUserAsync(IServiceProvider sp, string email, bool confirmed)
     {
-        var userManager = sp.GetRequiredService<UserManager<IdentityUser>>();
+        UserManager<IdentityUser> userManager = sp.GetRequiredService<UserManager<IdentityUser>>();
         var user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = confirmed };
         Assert.True((await userManager.CreateAsync(user)).Succeeded);
         return user;
@@ -70,13 +71,13 @@ public class RbacTests
     [Fact]
     public async Task Seeder_CreatesAllRoles_AndIsIdempotent()
     {
-        using var provider = BuildProvider(adminEmail: null);
+        using ServiceProvider provider = BuildProvider(adminEmail: null);
 
         await RbacSeeder.SeedAsync(provider);
         await RbacSeeder.SeedAsync(provider);
 
-        var roleManager = provider.GetRequiredService<RoleManager<IdentityRole>>();
-        foreach (var role in AppRoles.All)
+        RoleManager<IdentityRole> roleManager = provider.GetRequiredService<RoleManager<IdentityRole>>();
+        foreach (string role in AppRoles.All)
         {
             Assert.True(await roleManager.RoleExistsAsync(role));
         }
@@ -87,14 +88,14 @@ public class RbacTests
     [Fact]
     public async Task Seeder_GrantsAdmin_ToConfirmedConfiguredAccount()
     {
-        using var provider = BuildProvider();
-        var user = await AddUserAsync(provider, AdminEmail, confirmed: true);
-        var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
-        var stampBefore = user.SecurityStamp;
+        using ServiceProvider provider = BuildProvider();
+        IdentityUser user = await AddUserAsync(provider, AdminEmail, confirmed: true);
+        UserManager<IdentityUser> userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        string? stampBefore = user.SecurityStamp;
 
         await RbacSeeder.SeedAsync(provider);
 
-        var reloaded = (await userManager.FindByIdAsync(user.Id))!;
+        IdentityUser reloaded = (await userManager.FindByIdAsync(user.Id))!;
         Assert.True(await userManager.IsInRoleAsync(reloaded, AppRoles.Admin));
         Assert.NotEqual(stampBefore, reloaded.SecurityStamp);
     }
@@ -102,25 +103,25 @@ public class RbacTests
     [Fact]
     public async Task Seeder_DoesNotGrantAdmin_ToUnconfirmedAccount()
     {
-        using var provider = BuildProvider();
-        var user = await AddUserAsync(provider, AdminEmail, confirmed: false);
+        using ServiceProvider provider = BuildProvider();
+        IdentityUser user = await AddUserAsync(provider, AdminEmail, confirmed: false);
 
         await RbacSeeder.SeedAsync(provider);
 
-        var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        UserManager<IdentityUser> userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
         Assert.False(await userManager.IsInRoleAsync(user, AppRoles.Admin));
     }
 
     [Fact]
     public async Task Seeder_IsNoOp_WhenConfigMissingOrAccountMissing()
     {
-        using var noConfig = BuildProvider(adminEmail: null);
-        var account = await AddUserAsync(noConfig, AdminEmail, confirmed: true);
+        using ServiceProvider noConfig = BuildProvider(adminEmail: null);
+        IdentityUser account = await AddUserAsync(noConfig, AdminEmail, confirmed: true);
         await RbacSeeder.SeedAsync(noConfig);
-        var noConfigManager = noConfig.GetRequiredService<UserManager<IdentityUser>>();
+        UserManager<IdentityUser> noConfigManager = noConfig.GetRequiredService<UserManager<IdentityUser>>();
         Assert.False(await noConfigManager.IsInRoleAsync(account, AppRoles.Admin));
 
-        using var noAccount = BuildProvider();
+        using ServiceProvider noAccount = BuildProvider();
         await RbacSeeder.SeedAsync(noAccount);
         Assert.Empty(await noAccount.GetRequiredService<AppDbContext>().UserRoles.ToListAsync());
     }
@@ -128,9 +129,9 @@ public class RbacTests
     [Fact]
     public async Task Seeder_BackfillsUserRole_ForExistingAccounts()
     {
-        using var provider = BuildProvider(adminEmail: null);
-        var user = await AddUserAsync(provider, "existing@example.com", confirmed: false);
-        var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        using ServiceProvider provider = BuildProvider(adminEmail: null);
+        IdentityUser user = await AddUserAsync(provider, "existing@example.com", confirmed: false);
+        UserManager<IdentityUser> userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
 
         await RbacSeeder.SeedAsync(provider);
         await RbacSeeder.SeedAsync(provider);
@@ -142,15 +143,15 @@ public class RbacTests
     [Fact]
     public async Task AssignDefaultRole_AddsUserRole_AndNeverThrowsWhenRoleMissing()
     {
-        using var provider = BuildProvider(adminEmail: null);
-        var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
-        var first = await AddUserAsync(provider, "first@example.com", confirmed: true);
+        using ServiceProvider provider = BuildProvider(adminEmail: null);
+        UserManager<IdentityUser> userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        IdentityUser first = await AddUserAsync(provider, "first@example.com", confirmed: true);
 
         await userManager.AssignDefaultRoleAsync(first);
         Assert.False(await userManager.IsInRoleAsync(first, AppRoles.User));
 
         await RbacSeeder.SeedAsync(provider);
-        var second = await AddUserAsync(provider, "second@example.com", confirmed: true);
+        IdentityUser second = await AddUserAsync(provider, "second@example.com", confirmed: true);
         await userManager.AssignDefaultRoleAsync(second);
         Assert.True(await userManager.IsInRoleAsync(second, AppRoles.User));
     }
@@ -158,10 +159,10 @@ public class RbacTests
     [Fact]
     public async Task Seeder_NeverRemovesExistingAdmins()
     {
-        using var provider = BuildProvider();
+        using ServiceProvider provider = BuildProvider();
         await RbacSeeder.SeedAsync(provider);
-        var other = await AddUserAsync(provider, "other@example.com", confirmed: true);
-        var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        IdentityUser other = await AddUserAsync(provider, "other@example.com", confirmed: true);
+        UserManager<IdentityUser> userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
         await userManager.AddToRoleAsync(other, AppRoles.Admin);
         await AddUserAsync(provider, AdminEmail, confirmed: true);
 
@@ -174,7 +175,7 @@ public class RbacTests
     [Fact]
     public async Task Seeder_SkipsGracefully_WhenRolesAreNotRegistered()
     {
-        using var provider = BuildProvider(withRoles: false);
+        using ServiceProvider provider = BuildProvider(withRoles: false);
         await RbacSeeder.SeedAsync(provider);
     }
 
@@ -191,7 +192,7 @@ public class RbacTests
             context.Request.Headers["X-User-Roles"] = rolesHeader;
         }
 
-        var result = await context.AuthenticateAsync(XUserIdAuthenticationDefaults.Scheme);
+        AuthenticateResult result = await context.AuthenticateAsync(XUserIdAuthenticationDefaults.Scheme);
         Assert.True(result.Succeeded);
         return result.Principal;
     }
@@ -199,8 +200,8 @@ public class RbacTests
     [Fact]
     public async Task AuthHandler_RejectsRequest_WhenInternalKeyConfiguredButMissingOrWrong()
     {
-        using var provider = BuildProvider();
-        var user = await AddUserAsync(provider, AdminEmail, confirmed: true);
+        using ServiceProvider provider = BuildProvider();
+        IdentityUser user = await AddUserAsync(provider, AdminEmail, confirmed: true);
         await RbacSeeder.SeedAsync(provider);
         var context = new DefaultHttpContext { RequestServices = provider };
         context.Request.Headers["X-User-Id"] = user.Id;
@@ -214,11 +215,11 @@ public class RbacTests
     [Fact]
     public async Task AuthHandler_AttachesNoRoles_WhenNoInternalKeyConfiguredOutsideDevelopment()
     {
-        using var provider = BuildProvider(internalKey: null);
-        var user = await AddUserAsync(provider, AdminEmail, confirmed: true);
+        using ServiceProvider provider = BuildProvider(internalKey: null);
+        IdentityUser user = await AddUserAsync(provider, AdminEmail, confirmed: true);
         await RbacSeeder.SeedAsync(provider);
 
-        var principal = await AuthenticateAsync(provider, user.Id, keyHeader: null);
+        ClaimsPrincipal? principal = await AuthenticateAsync(provider, user.Id, keyHeader: null);
 
         Assert.True(principal!.Identity!.IsAuthenticated);
         Assert.Empty(principal.FindAll(ClaimTypes.Role));
@@ -227,9 +228,9 @@ public class RbacTests
     [Fact]
     public async Task Seeder_DoesNotReAddUserRole_AfterItWasRemoved()
     {
-        using var provider = BuildProvider(adminEmail: null);
-        var user = await AddUserAsync(provider, "member@example.com", confirmed: true);
-        var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        using ServiceProvider provider = BuildProvider(adminEmail: null);
+        IdentityUser user = await AddUserAsync(provider, "member@example.com", confirmed: true);
+        UserManager<IdentityUser> userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
         await RbacSeeder.SeedAsync(provider);
         await userManager.RemoveFromRoleAsync(user, AppRoles.User);
 
@@ -241,12 +242,12 @@ public class RbacTests
     [Fact]
     public async Task AuthHandler_AddsRoleClaims_ForAdminAccount()
     {
-        using var provider = BuildProvider();
+        using ServiceProvider provider = BuildProvider();
         await RbacSeeder.SeedAsync(provider);
-        var user = await AddUserAsync(provider, AdminEmail, confirmed: true);
+        IdentityUser user = await AddUserAsync(provider, AdminEmail, confirmed: true);
         await RbacSeeder.SeedAsync(provider);
 
-        var principal = await AuthenticateAsync(provider, user.Id);
+        ClaimsPrincipal? principal = await AuthenticateAsync(provider, user.Id);
 
         Assert.True(principal!.IsInRole(AppRoles.Admin));
         Assert.Equal(user.Id, principal.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -255,12 +256,12 @@ public class RbacTests
     [Fact]
     public async Task AuthHandler_AddsNoRoleClaims_ForOrdinaryUnknownAndAnonymousIds_AndIgnoresSpoofedHeader()
     {
-        using var provider = BuildProvider();
-        var ordinary = await AddUserAsync(provider, "user@example.com", confirmed: true);
+        using ServiceProvider provider = BuildProvider();
+        IdentityUser ordinary = await AddUserAsync(provider, "user@example.com", confirmed: true);
 
-        foreach (var id in new[] { ordinary.Id, "does-not-exist", "anonymous" })
+        foreach (string? id in new[] { ordinary.Id, "does-not-exist", "anonymous" })
         {
-            var principal = await AuthenticateAsync(provider, id, rolesHeader: "Admin");
+            ClaimsPrincipal? principal = await AuthenticateAsync(provider, id, rolesHeader: "Admin");
             Assert.True(principal!.Identity!.IsAuthenticated);
             Assert.Empty(principal.FindAll(ClaimTypes.Role));
         }
@@ -269,14 +270,14 @@ public class RbacTests
     [Fact]
     public async Task AdminService_CountsAccountsAndRoles()
     {
-        using var provider = BuildProvider();
+        using ServiceProvider provider = BuildProvider();
         await RbacSeeder.SeedAsync(provider);
-        var admin = await AddUserAsync(provider, AdminEmail, confirmed: true);
+        IdentityUser admin = await AddUserAsync(provider, AdminEmail, confirmed: true);
         await AddUserAsync(provider, "a@example.com", confirmed: true);
         await AddUserAsync(provider, "b@example.com", confirmed: false);
         await RbacSeeder.SeedAsync(provider);
 
-        var summary = await CreateAdminService(provider).GetSummaryAsync();
+        AdminSummaryDto summary = await CreateAdminService(provider).GetSummaryAsync();
 
         Assert.Equal(3, summary.TotalAccounts);
         Assert.Equal(2, summary.ConfirmedAccounts);
@@ -293,10 +294,10 @@ public class RbacTests
     [Fact]
     public async Task AdminService_CreatesAndDeletesCustomRole_ButNotBuiltInOrNonEmpty()
     {
-        using var provider = BuildProvider(adminEmail: null);
+        using ServiceProvider provider = BuildProvider(adminEmail: null);
         await RbacSeeder.SeedAsync(provider);
-        var service = CreateAdminService(provider);
-        var user = await AddUserAsync(provider, "a@example.com", confirmed: true);
+        AdminService service = CreateAdminService(provider);
+        IdentityUser user = await AddUserAsync(provider, "a@example.com", confirmed: true);
 
         Assert.True((await service.CreateRoleAsync("ReadOnly")).Succeeded);
         Assert.False((await service.CreateRoleAsync("readonly")).Succeeded);
@@ -314,18 +315,18 @@ public class RbacTests
     [Fact]
     public async Task AdminService_AssignsRole_UpdatesStampAndListsIt()
     {
-        using var provider = BuildProvider(adminEmail: null);
+        using ServiceProvider provider = BuildProvider(adminEmail: null);
         await RbacSeeder.SeedAsync(provider);
-        var service = CreateAdminService(provider);
-        var user = await AddUserAsync(provider, "a@example.com", confirmed: true);
-        var stampBefore = user.SecurityStamp;
+        AdminService service = CreateAdminService(provider);
+        IdentityUser user = await AddUserAsync(provider, "a@example.com", confirmed: true);
+        string? stampBefore = user.SecurityStamp;
 
         Assert.True((await service.AssignRoleAsync(user.Id, AppRoles.Admin)).Succeeded);
         Assert.True((await service.AssignRoleAsync(user.Id, AppRoles.Admin)).Succeeded);
 
-        var listed = Assert.Single(await service.GetUsersAsync());
+        AdminUserDto listed = Assert.Single(await service.GetUsersAsync());
         Assert.Equal([AppRoles.Admin], listed.Roles);
-        var reloaded = (await provider.GetRequiredService<UserManager<IdentityUser>>().FindByIdAsync(user.Id))!;
+        IdentityUser reloaded = (await provider.GetRequiredService<UserManager<IdentityUser>>().FindByIdAsync(user.Id))!;
         Assert.NotEqual(stampBefore, reloaded.SecurityStamp);
         Assert.Equal(1, (await service.GetRolesAsync()).Single(r => r.Name == AppRoles.Admin).UserCount);
         Assert.Equal(AdminOperationStatus.NotFound, (await service.AssignRoleAsync("nope", AppRoles.Admin)).Status);
@@ -335,11 +336,11 @@ public class RbacTests
     [Fact]
     public async Task AdminService_RefusesSelfDemotionAndRemovingLastAdmin()
     {
-        using var provider = BuildProvider(adminEmail: null);
+        using ServiceProvider provider = BuildProvider(adminEmail: null);
         await RbacSeeder.SeedAsync(provider);
-        var service = CreateAdminService(provider);
-        var first = await AddUserAsync(provider, "a@example.com", confirmed: true);
-        var second = await AddUserAsync(provider, "b@example.com", confirmed: true);
+        AdminService service = CreateAdminService(provider);
+        IdentityUser first = await AddUserAsync(provider, "a@example.com", confirmed: true);
+        IdentityUser second = await AddUserAsync(provider, "b@example.com", confirmed: true);
         await service.AssignRoleAsync(first.Id, AppRoles.Admin);
 
         Assert.False((await service.RemoveRoleAsync(first.Id, first.Id, AppRoles.Admin)).Succeeded);
@@ -354,7 +355,7 @@ public class RbacTests
     [InlineData(typeof(PersonalFinance.ApiService.Controllers.AdminController))]
     public void AdminControllers_CarryTheRequireAdminPolicy(Type controller)
     {
-        var attribute = controller.GetCustomAttribute<AuthorizeAttribute>();
+        AuthorizeAttribute? attribute = controller.GetCustomAttribute<AuthorizeAttribute>();
 
         Assert.NotNull(attribute);
         Assert.Equal(AppPolicies.RequireAdmin, attribute!.Policy);
@@ -367,10 +368,10 @@ public class RbacTests
     [InlineData(typeof(PersonalFinance.ApiService.Controllers.FeedbackController), "ChangeStatus")]
     public void AdminFeedbackInboxEndpoints_RequireTheAdminPolicy(Type controller, string action)
     {
-        var method = controller.GetMethod(action);
+        MethodInfo? method = controller.GetMethod(action);
         Assert.NotNull(method);
 
-        var policies = method!.GetCustomAttributes<AuthorizeAttribute>()
+        IEnumerable<string?> policies = method!.GetCustomAttributes<AuthorizeAttribute>()
             .Concat(controller.GetCustomAttributes<AuthorizeAttribute>())
             .Select(a => a.Policy);
 
@@ -391,8 +392,8 @@ public class RbacTests
     [Fact]
     public async Task ResultHandler_Returns404_WhenAdminPolicyForbidden()
     {
-        var context = ContextWithPolicy(AppPolicies.RequireAdmin);
-        var nextCalled = false;
+        DefaultHttpContext context = ContextWithPolicy(AppPolicies.RequireAdmin);
+        bool nextCalled = false;
         var handler = new AdminNotFoundAuthorizationResultHandler();
 
         await handler.HandleAsync(
@@ -412,8 +413,8 @@ public class RbacTests
     [Fact]
     public async Task ResultHandler_DelegatesToDefault_ForOtherPoliciesAndSuccess()
     {
-        var context = ContextWithPolicy("SomethingElse");
-        var nextCalled = false;
+        DefaultHttpContext context = ContextWithPolicy("SomethingElse");
+        bool nextCalled = false;
         var handler = new AdminNotFoundAuthorizationResultHandler();
 
         await handler.HandleAsync(

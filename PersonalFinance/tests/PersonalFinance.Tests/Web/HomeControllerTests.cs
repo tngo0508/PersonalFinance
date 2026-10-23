@@ -58,12 +58,12 @@ public class HomeControllerTests
         };
 
         // Act
-        var result = controller.Index();
+        IActionResult result = controller.Index();
 
         // Assert
-        var viewResult = Assert.IsType<ViewResult>(result);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
         Assert.Null(viewResult.ViewName);
-        var model = Assert.IsType<LandingPageViewModel>(viewResult.Model);
+        LandingPageViewModel model = Assert.IsType<LandingPageViewModel>(viewResult.Model);
         Assert.Equal(ExpectedCoreFeatureTitles, model.CoreFeatures.Select(f => f.Title));
         Assert.Equal(ExpectedMoreFeatureTitles, model.MoreFeatures.Select(f => f.Title));
     }
@@ -78,10 +78,10 @@ public class HomeControllerTests
         };
 
         // Act
-        var result = controller.Index();
+        IActionResult result = controller.Index();
 
         // Assert
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal("Dashboard", redirect.ControllerName);
     }
@@ -98,19 +98,19 @@ public class HomeControllerTests
         };
 
         // Act
-        var result = controller.About();
+        IActionResult result = controller.About();
 
         // Assert
-        var viewResult = Assert.IsType<ViewResult>(result);
+        ViewResult viewResult = Assert.IsType<ViewResult>(result);
         Assert.Null(viewResult.ViewName);
     }
 
     [Fact]
     public void About_IsServedAtTheAboutRouteWithoutSignIn()
     {
-        var method = typeof(HomeController).GetMethod(nameof(HomeController.About))!;
+        MethodInfo method = typeof(HomeController).GetMethod(nameof(HomeController.About))!;
 
-        var route = Assert.Single(method.GetCustomAttributes<HttpGetAttribute>());
+        HttpGetAttribute route = Assert.Single(method.GetCustomAttributes<HttpGetAttribute>());
         Assert.Equal("/about", route.Template);
         Assert.Null(method.GetCustomAttribute<AuthorizeAttribute>());
     }

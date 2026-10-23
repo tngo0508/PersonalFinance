@@ -1,7 +1,7 @@
-using PersonalFinance.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
-using PersonalFinance.ApiService.Services;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Services;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Controllers;
 
@@ -29,8 +29,8 @@ public class NotificationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNotifications(CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var notifications = await _notificationService.GetNotificationsAsync(userId, cancellationToken);
+        string userId = User.GetUserId();
+        List<NotificationDto> notifications = await _notificationService.GetNotificationsAsync(userId, cancellationToken);
         return Ok(notifications);
     }
 
@@ -41,8 +41,8 @@ public class NotificationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUnreadCount(CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var count = await _notificationService.GetUnreadCountAsync(userId, cancellationToken);
+        string userId = User.GetUserId();
+        int count = await _notificationService.GetUnreadCountAsync(userId, cancellationToken);
         return Ok(new { count });
     }
 
@@ -54,8 +54,8 @@ public class NotificationController : ControllerBase
     public async Task<IActionResult> CreateNotification([FromBody] CreateNotificationRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var id = await _notificationService.CreateNotificationAsync(userId, request, cancellationToken);
+        string userId = User.GetUserId();
+        int id = await _notificationService.CreateNotificationAsync(userId, request, cancellationToken);
         return CreatedAtAction(nameof(GetNotifications), new { id });
     }
 
@@ -67,8 +67,8 @@ public class NotificationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkAsRead(int id, CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
-        var success = await _notificationService.MarkAsReadAsync(userId, id, cancellationToken);
+        string userId = User.GetUserId();
+        bool success = await _notificationService.MarkAsReadAsync(userId, id, cancellationToken);
 
         if (!success)
         {
@@ -85,7 +85,7 @@ public class NotificationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId();
+        string userId = User.GetUserId();
         await _notificationService.MarkAllAsReadAsync(userId, cancellationToken);
         return Ok(new { success = true });
     }
