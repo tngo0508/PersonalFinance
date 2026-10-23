@@ -53,8 +53,7 @@ public sealed class NewsController : Controller
             NewsFeedDto feed = await GetNewsAsync(query, cancellationToken);
 
             model.Sources = feed.Sources;
-            model.Categories = feed.Categories;
-            model.PersonalFinanceCategories = feed.PersonalFinanceCategories;
+            model.Topics = feed.Topics;
             model.Articles = feed.Articles;
             model.LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime;
             model.IsLoading = false;

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.2.15] - 2026-10-23
+
+### Fixed
+
+- **News Topic Filter Offers Only Topics That Match**: the Finance News "All Topics" filter now lists only the topics some configured source covers, Budgeting, Investing, Retirement and General, instead of a fixed list in which Saving and Debt could never match an article (#178).
+  - The six feeds send no category of their own, so an article's topic is its source's. General (BBC Business) can now be picked as a topic; Saving and Debt are gone.
+  - The topic names are one set of constants, `NewsTopics`, that every source is filed under, and the topics are derived from the source list.
+
+### Changed
+
+- **News Feed Response**: `NewsFeedDto.PersonalFinanceCategories` is renamed `Topics`, and `NewsFeedDto.Categories` (the categories of every fetched article) is removed with the matching `NewsViewModel` properties, since the page never showed it (#178).
+  - The 100-character filter limit is unchanged.
+  - The dead Forbes, Investopedia and CNN feeds found while deciding this are tracked in #183.
+
 ## [4.2.14] - 2026-10-23
 
 ### Fixed

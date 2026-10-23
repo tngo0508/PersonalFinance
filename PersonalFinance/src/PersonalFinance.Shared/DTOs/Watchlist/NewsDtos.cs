@@ -54,13 +54,10 @@ public class NewsFeedDto
     /// <summary>The articles matching the query, newest first.</summary>
     public List<NewsArticleDto> Articles { get; set; } = [];
 
-    /// <summary>The categories of every article in the feed, before filtering.</summary>
-    public List<string> Categories { get; set; } = [];
-
     public List<NewsSourceDto> Sources { get; set; } = [];
 
-    /// <summary>Budgeting, Saving, Investing, Debt and Retirement.</summary>
-    public List<string> PersonalFinanceCategories { get; set; } = [];
+    /// <summary>The topics some configured source covers, offered as the category filter, in source order.</summary>
+    public List<string> Topics { get; set; } = [];
 
     /// <summary>Why the filters were rejected; empty when they were applied.</summary>
     public List<string> Errors { get; set; } = [];
