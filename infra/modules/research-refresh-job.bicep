@@ -14,7 +14,7 @@ param containerImage string
 @secure()
 param dbConnectionString string = ''
 
-@description('User-Agent sent to SEC EDGAR: an application name and a contact email, as SEC fair-access rules require. Empty leaves the committed placeholder, which the job refuses to use.')
+@description('User-Agent sent to SEC EDGAR: an application name and a contact email, as SEC fair-access rules require. Empty leaves the committed placeholder, which the job will not send: it then rebuilds only the World Bank data and fails the run.')
 param secUserAgent string = ''
 
 @description('When the refresh runs (UTC cron). Off-peak, after SEC republishes its data at about 3:00 a.m. ET.')

@@ -9,6 +9,9 @@ internal interface IResearchDatasetRefresher
     /// <summary>The dataset this refresher builds (<see cref="ResearchDatasets"/>).</summary>
     string Dataset { get; }
 
+    /// <summary>The source the dataset is built from.</summary>
+    ResearchSources Source { get; }
+
     /// <summary>False when configuration gives the dataset nothing to build (e.g. no ETFs listed), so it is skipped.</summary>
     bool IsConfigured { get; }
 

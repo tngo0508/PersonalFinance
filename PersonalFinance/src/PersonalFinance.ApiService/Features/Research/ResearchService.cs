@@ -33,12 +33,20 @@ internal sealed class ResearchService : IResearchService
         GetAsync<WorldSnapshotDto>(ResearchDatasets.World, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default)
+    public async Task<ResearchRefreshSummary> RefreshAsync(ResearchSources sources = ResearchSources.All,
+        CancellationToken cancellationToken = default)
     {
         var summary = new ResearchRefreshSummary();
         foreach (IResearchDatasetRefresher refresher in _refreshers.Where(r => r.IsConfigured))
         {
-            await RefreshDatasetAsync(refresher, summary, cancellationToken);
+            if (sources.HasFlag(refresher.Source))
+            {
+                await RefreshDatasetAsync(refresher, summary, cancellationToken);
+            }
+            else
+            {
+                summary.Skipped.Add(refresher.Dataset);
+            }
         }
 
         return summary;

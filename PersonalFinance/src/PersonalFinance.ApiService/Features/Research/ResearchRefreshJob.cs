@@ -32,25 +32,28 @@ internal static class ResearchRefreshJob
     }
 
     /// <summary>
-    /// Rebuilds every dataset. Non-zero, so the job execution shows as failed, when SEC's User-Agent contact is not
-    /// configured or is still the committed placeholder (SEC's fair-access rules require a real one, so nothing is
-    /// fetched), or when any dataset failed; a failed dataset keeps its previous snapshot.
+    /// Rebuilds every dataset. When SEC's User-Agent contact is not configured or is still the committed placeholder,
+    /// SEC's fair-access rules forbid asking it anything, so its datasets (Sectors, ETFs) are skipped and keep their
+    /// snapshots while the World Bank's are still rebuilt. Non-zero, so the job execution shows as failed, when SEC
+    /// was skipped or any dataset failed; a failed dataset keeps its previous snapshot.
     /// </summary>
     internal static async Task<int> RefreshAsync(IServiceProvider services, CancellationToken cancellationToken = default)
     {
         ILogger logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(ResearchRefreshJob));
         string userAgent = services.GetRequiredService<SecEdgarSettings>().UserAgent;
-        if (string.IsNullOrWhiteSpace(userAgent)
-            || userAgent.Contains(PlaceholderContactDomain, StringComparison.OrdinalIgnoreCase))
+        bool secConfigured = !string.IsNullOrWhiteSpace(userAgent)
+            && !userAgent.Contains(PlaceholderContactDomain, StringComparison.OrdinalIgnoreCase);
+        if (!secConfigured)
         {
-            logger.LogError("Research refresh skipped: {Setting} is not configured.", $"{SecEdgarSettings.Section}:UserAgent");
-            return StartupExit.Failure;
+            logger.LogError("Research refresh skips the SEC datasets: {Setting} is not configured with a real contact.",
+                $"{SecEdgarSettings.Section}:UserAgent");
         }
 
         ResearchRefreshSummary summary;
         try
         {
-            summary = await services.GetRequiredService<IResearchService>().RefreshAsync(cancellationToken);
+            summary = await services.GetRequiredService<IResearchService>().RefreshAsync(
+                secConfigured ? ResearchSources.All : ResearchSources.WorldBank, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -61,10 +64,10 @@ internal static class ResearchRefreshJob
 
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Research refresh finished: built {Built}; failed {Failed}.",
-                string.Join(", ", summary.Built), string.Join(", ", summary.Failed));
+            logger.LogInformation("Research refresh finished: built {Built}; failed {Failed}; skipped {Skipped}.",
+                string.Join(", ", summary.Built), string.Join(", ", summary.Failed), string.Join(", ", summary.Skipped));
         }
 
-        return summary.Failed.Count == 0 ? StartupExit.Success : StartupExit.Failure;
+        return secConfigured && summary.Failed.Count == 0 ? StartupExit.Success : StartupExit.Failure;
     }
 }

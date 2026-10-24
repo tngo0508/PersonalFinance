@@ -34,6 +34,9 @@ internal sealed class WorldRefresher : IResearchDatasetRefresher
     public string Dataset => ResearchDatasets.World;
 
     /// <inheritdoc />
+    public ResearchSources Source => ResearchSources.WorldBank;
+
+    /// <inheritdoc />
     public bool IsConfigured => true;
 
     /// <inheritdoc />

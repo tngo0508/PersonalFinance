@@ -8,13 +8,16 @@ namespace PersonalFinance.Tests.Research;
 
 /// <summary>
 /// The <c>--refresh-research</c> mode the daily Container Apps Job runs: it rebuilds the Research datasets and exits,
-/// failing the run when a dataset could not be rebuilt or SEC's required User-Agent contact is not configured.
+/// failing the run when a dataset could not be rebuilt or SEC's required User-Agent contact is not configured (the
+/// World Bank datasets are still rebuilt then).
 /// </summary>
 public class ResearchRefreshJobTests
 {
     private sealed class FakeResearchService(params string[] failed) : IResearchService
     {
         public int Refreshes { get; private set; }
+
+        public ResearchSources? Sources { get; private set; }
 
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(null));
@@ -25,9 +28,11 @@ public class ResearchRefreshJobTests
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(null));
 
-        public Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default)
+        public Task<ResearchRefreshSummary> RefreshAsync(ResearchSources sources = ResearchSources.All,
+            CancellationToken cancellationToken = default)
         {
             Refreshes++;
+            Sources = sources;
             var summary = new ResearchRefreshSummary();
             summary.Built.Add("sectors");
             summary.Failed.AddRange(failed);
@@ -66,6 +71,7 @@ public class ResearchRefreshJobTests
 
         Assert.Equal(StartupExit.Success, exitCode);
         Assert.Equal(1, service.Refreshes);
+        Assert.Equal(ResearchSources.All, service.Sources);
     }
 
     [Fact]
@@ -81,12 +87,16 @@ public class ResearchRefreshJobTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("PersonalFinance research contact@example.com")] // the committed placeholder
-    public async Task RefreshAsync_WithoutAConfiguredUserAgent_FailsWithoutCallingSec(string userAgent)
+    public async Task RefreshAsync_WithoutAConfiguredUserAgent_StillRefreshesTheWorldBankDatasets_AndFails(
+        string userAgent)
     {
         var service = new FakeResearchService();
         await using ServiceProvider services = Services(service, userAgent);
 
+        // SEC's datasets are skipped (SEC's fair-access rules need a real contact), World is still refreshed, and
+        // the run fails so the missing setting shows in the job's history.
         Assert.Equal(StartupExit.Failure, await ResearchRefreshJob.RefreshAsync(services));
-        Assert.Equal(0, service.Refreshes);
+        Assert.Equal(1, service.Refreshes);
+        Assert.Equal(ResearchSources.WorldBank, service.Sources);
     }
 }

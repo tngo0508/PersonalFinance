@@ -31,6 +31,9 @@ internal sealed class SectorsRefresher : IResearchDatasetRefresher
     public string Dataset => ResearchDatasets.Sectors;
 
     /// <inheritdoc />
+    public ResearchSources Source => ResearchSources.SecEdgar;
+
+    /// <inheritdoc />
     public bool IsConfigured => true;
 
     /// <inheritdoc />

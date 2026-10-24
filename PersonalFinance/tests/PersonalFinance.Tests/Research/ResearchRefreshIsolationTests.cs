@@ -36,9 +36,33 @@ public class ResearchRefreshIsolationTests
         Assert.Null((await service.GetSectorsAsync()).Snapshot);
     }
 
-    private static ResearchService CreateService(AppDbContext db) =>
-        ResearchServiceFactory.Create(db, new FakeSecClient(), new FakeWorldBankClient(),
-            new ResearchSettings { SectorsFirstYear = 2025, WorldFirstYear = 2025 }, new FixedTimeProvider(Now));
+    [Fact]
+    public async Task RefreshAsync_WithTheWorldBankOnly_SkipsTheSecDatasetsWithoutCallingSec()
+    {
+        await using AppDbContext db = new(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"Isolation_{Guid.NewGuid():N}")
+            .Options);
+        var sec = new FakeSecClient();
+        ResearchService service = CreateService(db, sec);
+
+        ResearchRefreshSummary summary = await service.RefreshAsync(ResearchSources.WorldBank);
+
+        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Etfs], summary.Skipped);
+        Assert.Equal([ResearchDatasets.World], summary.Built);
+        Assert.Empty(summary.Failed);
+        Assert.Equal(0, sec.Calls);
+        Assert.NotNull((await service.GetWorldAsync()).Snapshot);
+    }
+
+    private static ResearchService CreateService(AppDbContext db, FakeSecClient? sec = null) =>
+        ResearchServiceFactory.Create(db, sec ?? new FakeSecClient(), new FakeWorldBankClient(),
+            new ResearchSettings
+            {
+                SectorsFirstYear = 2025,
+                WorldFirstYear = 2025,
+                Etfs = [new ResearchEtf("SPY", "SPDR S&P 500 ETF Trust", 884394)],
+            },
+            new FixedTimeProvider(Now));
 
     /// <summary>Throws on a save that adds or changes the snapshot of one of the given datasets.</summary>
     private sealed class FailingSaveInterceptor(params string[] datasets) : SaveChangesInterceptor
@@ -63,11 +87,16 @@ public class ResearchRefreshIsolationTests
     /// <summary>SEC with one filer's Public Float in 2025 and nothing else.</summary>
     private sealed class FakeSecClient : ISecEdgarClient
     {
+        public int Calls { get; private set; }
+
         public Task<IReadOnlyList<PublicFloatFact>> GetPublicFloatFrameAsync(int year, int quarter,
-            CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<PublicFloatFact>>(year == 2025 && quarter == 2
+            CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult<IReadOnlyList<PublicFloatFact>>(year == 2025 && quarter == 2
                 ? [new PublicFloatFact(1, "ONLY CO", new DateOnly(2025, 6, 30), 1_000_000_000m)]
                 : []);
+        }
 
         public Task<IReadOnlyList<TotalAssetsFact>> GetTotalAssetsFrameAsync(int year, int quarter,
             CancellationToken cancellationToken) =>
@@ -80,8 +109,11 @@ public class ResearchRefreshIsolationTests
             Task.FromResult<IReadOnlyList<SecFundSeries>>([]);
 
         public Task<IReadOnlyList<NportFilingRef>> GetNportFilingsAsync(string filer, DateOnly filedFrom,
-            CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<NportFilingRef>>([]);
+            CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult<IReadOnlyList<NportFilingRef>>([]);
+        }
 
         public Task<NportReport?> GetNportReportAsync(NportFilingRef filing, CancellationToken cancellationToken) =>
             Task.FromResult<NportReport?>(null);

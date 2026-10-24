@@ -30,6 +30,9 @@ internal sealed class EtfsRefresher : IResearchDatasetRefresher
     public string Dataset => ResearchDatasets.Etfs;
 
     /// <inheritdoc />
+    public ResearchSources Source => ResearchSources.SecEdgar;
+
+    /// <inheritdoc />
     public bool IsConfigured => _settings.Etfs.Count > 0;
 
     /// <summary>

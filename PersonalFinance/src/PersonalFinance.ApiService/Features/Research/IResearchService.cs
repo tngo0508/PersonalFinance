@@ -25,8 +25,10 @@ public interface IResearchService
     Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Rebuilds every dataset from its source, each on its own. A dataset's snapshot is replaced only when its build
-    /// succeeds; a failed build is logged and leaves the previous snapshot in place.
+    /// Rebuilds every dataset built from one of <paramref name="sources"/>, each on its own; the others are skipped.
+    /// A dataset's snapshot is replaced only when its build succeeds; a failed build is logged and leaves the previous
+    /// snapshot in place.
     /// </summary>
-    Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default);
+    Task<ResearchRefreshSummary> RefreshAsync(ResearchSources sources = ResearchSources.All,
+        CancellationToken cancellationToken = default);
 }

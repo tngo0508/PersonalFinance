@@ -42,7 +42,8 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(world));
 
-        public Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default) =>
+        public Task<ResearchRefreshSummary> RefreshAsync(ResearchSources sources = ResearchSources.All,
+            CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("The endpoint never refreshes.");
     }
 
