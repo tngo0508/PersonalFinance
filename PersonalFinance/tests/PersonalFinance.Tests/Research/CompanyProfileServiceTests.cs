@@ -94,8 +94,11 @@ public class CompanyProfileServiceTests
             new CompanyTickerIndexCache(research ?? new ResearchSettings(), timeProvider,
                 NullLogger<CompanyTickerIndexCache>.Instance),
             new CompanyProfileCache(timeProvider),
+            new CompanyPressReleaseCache(timeProvider),
             rateLimiter ??
             new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window),
+            research ?? new ResearchSettings(),
+            timeProvider,
             NullLogger<CompanyProfileService>.Instance);
     }
 
@@ -362,7 +365,10 @@ public class CompanyProfileServiceTests
             new CompanyTickerIndexCache(new ResearchSettings(), timeProvider,
                 NullLogger<CompanyTickerIndexCache>.Instance),
             new CompanyProfileCache(timeProvider),
+            new CompanyPressReleaseCache(timeProvider),
             new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window),
+            new ResearchSettings(),
+            timeProvider,
             NullLogger<CompanyProfileService>.Instance);
 
         CompanyLookupOutcome outcome = await service.LookUpAsync(UserId, "SWI");
@@ -387,6 +393,14 @@ public class CompanyProfileServiceTests
 
         public Task<SecCompanyFacts?> GetCompanyFactsAsync(long cik, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("An unexpected document shape.");
+
+        public Task<IReadOnlyList<string>> GetPressReleaseFileNamesAsync(long cik, string accessionNumber,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
+
+        public Task<string?> GetDocumentHeadAsync(long cik, string accessionNumber, string fileName,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(null);
     }
 
     [Fact]

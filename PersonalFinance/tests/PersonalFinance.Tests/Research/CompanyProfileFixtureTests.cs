@@ -93,6 +93,54 @@ public class CompanyProfileFixtureTests
         Assert.Equal(["6-K", "20-F"], profile.Filings.Select(f => f.Form));
     }
 
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private static async Task<CompanyPressReleasesResultDto> PressReleasesOfFixture(string ticker)
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [ResearchFixtureSeeder.Setting] = "true" })
+            .Build();
+        // The fixture's 8-Ks are dated May to August 2026; read them as of 24 October 2026.
+        await using ServiceProvider provider = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton<TimeProvider>(new FixedTimeProvider(new DateTimeOffset(2026, 10, 24, 12, 0, 0, TimeSpan.Zero)))
+            .AddResearchFeature(configuration, new Environment(Environments.Development))
+            .BuildServiceProvider();
+        using IServiceScope scope = provider.CreateScope();
+        CompanyPressReleasesOutcome outcome = await scope.ServiceProvider.GetRequiredService<ICompanyProfileService>()
+            .GetPressReleasesAsync("account-1", ticker);
+        return Assert.IsType<CompanyPressReleasesResultDto>(outcome.Result);
+    }
+
+    [Fact]
+    public async Task Fixture_ExampleCorp_HasThreePressReleases_OneWithAFallbackHeadline()
+    {
+        CompanyPressReleasesResultDto result = await PressReleasesOfFixture("EXMP");
+
+        Assert.Equal(CompanyLookupKinds.Profile, result.Kind);
+        Assert.Equal(
+        [
+            "Example Corp Reports Second Quarter 2026 Results",
+            "Example Corp Names Alex Rivera Chief Financial Officer",
+            "Results of operations · Regulation FD disclosure · Financial statements and exhibits",
+        ], result.Releases.Select(r => r.Headline));
+        Assert.Equal([true, true, false], result.Releases.Select(r => r.HeadlineRead));
+        Assert.All(result.Releases,
+            r => Assert.StartsWith("https://www.sec.gov/Archives/edgar/data/9000001/", r.Url, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Fixture_ExampleGlobal_HasNoPressReleases()
+    {
+        CompanyPressReleasesResultDto result = await PressReleasesOfFixture("EXGL");
+
+        Assert.Equal(CompanyLookupKinds.Profile, result.Kind);
+        Assert.Empty(result.Releases);
+    }
+
     [Fact]
     public async Task Fixture_ExampleIndexFund_IsAFund()
     {

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Research;
@@ -39,7 +40,7 @@ public class ResearchEtfsWebControllerTests
     };
 
     private static ResearchController CreateController(IResearchApi api) =>
-        new(api, NullLogger<ResearchController>.Instance)
+        new(api, new ConfigurationBuilder().Build(), NullLogger<ResearchController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

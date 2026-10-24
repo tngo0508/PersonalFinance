@@ -1,7 +1,7 @@
 /* ==========================================================================
    Research Companies tab (research-companies__*): the search combobox, the
    Company Profile's identity, four small bar charts over a table of annual
-   figures, and recent filings. Tokens come from site.css. The charts hide
+   figures, press releases and recent filings. Tokens come from site.css. The charts hide
    below 600px, where the table (which scrolls inside its card) is enough.
    ========================================================================== */
 
@@ -309,6 +309,51 @@
 
 .research-companies__all-filings {
     margin: var(--app-spacing-m) 0 0;
+}
+
+/* Press releases: the company's own announcements, loaded after the profile. */
+.research-companies__releases[hidden],
+.research-companies__releases-loading[hidden],
+.research-companies__release-list[hidden],
+.research-companies__releases-empty[hidden],
+.research-companies__releases-unavailable[hidden] {
+    display: none;
+}
+
+.research-companies__releases-loading,
+.research-companies__releases-empty {
+    margin: var(--app-spacing-s) 0;
+    color: var(--app-text-muted);
+}
+
+.research-companies__release-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-companies__release {
+    padding: var(--app-spacing-s) 0;
+    border-bottom: 1px solid var(--app-border);
+}
+
+.research-companies__release p {
+    margin: 0;
+}
+
+.research-companies__release-link {
+    display: inline-block;
+    min-height: 1.5rem;
+    font-weight: var(--app-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.research-companies__release-date {
+    font-size: var(--app-font-size-small);
+}
+
+.research-companies__releases-unavailable {
+    margin: var(--app-spacing-s) 0;
 }
 
 @media (max-width: 599px) {

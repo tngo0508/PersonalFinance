@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using PersonalFinance.ApiService.Features.Research.Domain;
@@ -20,6 +21,12 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
 
     // The most filings EDGAR's company browse feed lists on one page.
     private const int FilingListPageSize = 100;
+
+    /// <summary>How much of a document <see cref="GetDocumentHeadAsync"/> reads: its first 64 KB.</summary>
+    public const int DocumentHeadBytes = 64 * 1024;
+
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false,
+        throwOnInvalidBytes: true);
 
     private readonly HttpClient _httpClient;
     private readonly SecEdgarSettings _settings;
@@ -249,6 +256,75 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
         using JsonDocument document = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
         return ParseCompanyFacts(document.RootElement);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetPressReleaseFileNamesAsync(long cik, string accessionNumber,
+        CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await SendAsync(
+            ArchiveUrl(cik, accessionNumber, $"{accessionNumber}-index-headers.html"), cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return [];
+        }
+
+        response.EnsureSuccessStatusCode();
+        string indexHeaders = await response.Content.ReadAsStringAsync(cancellationToken);
+        return FilingIndexHeadersParser.PressReleaseFileNames(indexHeaders);
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> GetDocumentHeadAsync(long cik, string accessionNumber, string fileName,
+        CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response =
+            await SendAsync(ArchiveUrl(cik, accessionNumber, fileName), cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        // A release can run to a megabyte; only its head is read, and the rest is never downloaded.
+        await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        byte[] head = new byte[DocumentHeadBytes];
+        int length = 0;
+        int read;
+        while (length < head.Length
+               && (read = await body.ReadAsync(head.AsMemory(length), cancellationToken)) > 0)
+        {
+            length += read;
+        }
+
+        return DecodeHead(head, length);
+    }
+
+    /// <summary>
+    /// The text of a document's head: UTF-8 when it is valid UTF-8 (allowing a character cut off at the end of the
+    /// head), else Latin-1, which older filings use.
+    /// </summary>
+    private static string DecodeHead(byte[] head, int length)
+    {
+        int maxTrim = length == head.Length ? 3 : 0;
+        for (int trim = 0; trim <= maxTrim && trim < length; trim++)
+        {
+            try
+            {
+                return StrictUtf8.GetString(head, 0, length - trim);
+            }
+            catch (DecoderFallbackException)
+            {
+                // Try again without the last byte: a character may have been cut off by the head limit.
+            }
+        }
+
+        return Encoding.Latin1.GetString(head, 0, length);
+    }
+
+    /// <summary>A file of a filing: <c>Archives/edgar/data/{cik}/{accession without dashes}/{file}</c>.</summary>
+    private static string ArchiveUrl(long cik, string accessionNumber, string fileName) =>
+        string.Create(CultureInfo.InvariantCulture,
+            $"{WwwUrl}Archives/edgar/data/{cik}/{accessionNumber.Replace("-", string.Empty, StringComparison.Ordinal)}/{Uri.EscapeDataString(fileName)}");
 
     /// <summary>
     /// The concepts of <see cref="CompanyProfileConcepts"/> from a <c>companyfacts</c> document:

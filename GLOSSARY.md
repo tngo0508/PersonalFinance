@@ -244,7 +244,8 @@ _Avoid_: market cap (that includes insider holdings and needs live prices), valu
 ### Company Profile
 The identity, reported annual financial statements and recent SEC filings of one SEC-registered company, as the
 Companies tab of Research shows them, for information only. Figures are read as the company reported them under US
-GAAP in US dollars; nothing is converted, priced or scored.
+GAAP in US dollars; nothing is converted, priced or scored. Its press releases are the announcements the company
+attached to its SEC filings, never third-party coverage.
 _Avoid_: stock page, ticker lookup, quote
 
 ### Spreadsheet Analysis

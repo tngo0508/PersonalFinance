@@ -49,6 +49,7 @@ internal static class ResearchFeature
             EtfsFirstQuarter = configuration.GetValue($"{ResearchSettings.Section}:EtfsFirstQuarter",
                 new DateOnly(2019, 10, 1)),
             WorldFirstYear = configuration.GetValue($"{ResearchSettings.Section}:WorldFirstYear", 1975),
+            PressReleasesEnabled = configuration.GetValue($"{ResearchSettings.Section}:PressReleases:Enabled", true),
         });
         services.AddSingleton<SecRequestGate>();
         services.AddHttpClient<ISecEdgarClient, SecEdgarClient>(client => client.Timeout = SecTimeout);
@@ -73,6 +74,7 @@ internal static class ResearchFeature
 
         services.AddSingleton<CompanyTickerIndexCache>();
         services.AddSingleton<CompanyProfileCache>();
+        services.AddSingleton<CompanyPressReleaseCache>();
         services.AddKeyedSingleton<IRateLimiterService>(CompanyLookupRateLimit.Key, (_, _) =>
             new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window));
         services.AddScoped<ICompanyProfileService, CompanyProfileService>();

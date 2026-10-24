@@ -339,7 +339,8 @@ async function barHeights(page) {
 }
 
 /**
- * The Companies tab (spec #242): search, the profile, filings, Back, a fund, reduced motion and a phone.
+ * The Companies tab (spec #242): search, the profile, filings, press releases (spec #271), Back, a fund, reduced
+ * motion and a phone.
  * @param {{browser: import('playwright').Browser, context: import('playwright').BrowserContext,
  *          page: import('playwright').Page, base: string, pass: Function, fail: Function, watch: Function}} suite -
  *     The walkthrough's browser, signed-in context and page.
@@ -421,6 +422,44 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
             pass(`Company 4: ${hrefs.length} filings link to EDGAR, 8-K events in words`);
         } else {
             fail(`Company 4: events ${JSON.stringify(events)}, links ${JSON.stringify(hrefs.slice(0, 2))}`);
+        }
+    });
+
+    // Releases 1 (spec #271): Example Corp's press releases fill in after the profile, linking to sec.gov; the
+    // investor-day slides have no readable headline, so that entry shows its 8-K's events instead.
+    await step('Releases 1', fail, async () => {
+        const items = page.locator(`${panel} [data-research-releases-list] > li`);
+        await page.waitForSelector(`${panel} [data-research-releases-list]:not([hidden])`, {timeout: TIMEOUT});
+        const count = await items.count();
+        const headlines = (await page.locator(`${panel} .research-companies__release-link`).evaluateAll(
+            (links) => links.map((link) => link.firstChild.textContent.trim())));
+        const firstHref = await page.locator(`${panel} .research-companies__release-link`).first().getAttribute('href');
+        const fallback = headlines.some((h) => h.includes('Results of operations'));
+        const title = (await page.locator('#research-company-releases-title').textContent()).trim();
+        if (count === 3 && firstHref.startsWith('https://www.sec.gov/Archives/edgar/data/') && fallback &&
+            title === 'Press releases') {
+            pass(`Releases 1: 3 press releases, the first links to sec.gov, one shows its events: ${JSON.stringify(headlines)}`);
+        } else {
+            fail(`Releases 1: ${count} releases ${JSON.stringify(headlines)}, first link "${firstHref}", title "${title}"`);
+        }
+    });
+
+    // Releases 2: Example Global plc attached no press releases, which the section says plainly.
+    await step('Releases 2', fail, async () => {
+        const other = watch(await context.newPage());
+        try {
+            await other.goto(`${base}/Research?tab=companies&ticker=EXGL`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const empty = other.locator(`${panel} [data-research-releases-empty]`);
+            await empty.waitFor({state: 'visible', timeout: TIMEOUT});
+            const text = (await empty.textContent()).trim();
+            const listHidden = await other.locator(`${panel} [data-research-releases-list]`).isHidden();
+            if (/No press releases/.test(text) && listHidden) {
+                pass(`Releases 2: Example Global shows "${text}"`);
+            } else {
+                fail(`Releases 2: empty line "${text}", list hidden ${listHidden}`);
+            }
+        } finally {
+            await other.close();
         }
     });
 

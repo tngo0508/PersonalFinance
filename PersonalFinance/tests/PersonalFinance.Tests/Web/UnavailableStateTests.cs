@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.Shared.Contracts;
@@ -151,7 +152,7 @@ public class UnavailableStateTests
     public async Task ResearchIndex_WhenApiFails_RendersThePage_WithTheUnavailableStateOnTheSectorsTabOnly()
     {
         (IResearchApi? api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
-        ResearchController controller = WithContext(new ResearchController(api, NullLogger<ResearchController>.Instance));
+        ResearchController controller = WithContext(new ResearchController(api, new ConfigurationBuilder().Build(), NullLogger<ResearchController>.Instance));
 
         IActionResult result = await controller.Index();
 

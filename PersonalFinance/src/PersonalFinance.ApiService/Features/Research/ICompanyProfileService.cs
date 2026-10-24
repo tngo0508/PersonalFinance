@@ -19,4 +19,18 @@ public interface ICompanyProfileService
     /// company's profile, a fund, or a ticker SEC does not list. Counts toward the Account's lookup limit.
     /// </summary>
     Task<CompanyLookupOutcome> LookUpAsync(string userId, string ticker, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// True when the Company Profile's press releases are shown (<c>Research:PressReleases:Enabled</c>, on by
+    /// default); when false, <see cref="GetPressReleasesAsync"/> is not to be called.
+    /// </summary>
+    bool PressReleasesEnabled { get; }
+
+    /// <summary>
+    /// The press releases of <paramref name="ticker"/> for <paramref name="userId"/>: the announcements the company
+    /// attached to its 8-K filings in the last 12 months, newest first, at most 10; or a fund, or a ticker SEC does
+    /// not list. Counts toward the Account's lookup limit.
+    /// </summary>
+    Task<CompanyPressReleasesOutcome> GetPressReleasesAsync(string userId, string ticker,
+        CancellationToken cancellationToken = default);
 }

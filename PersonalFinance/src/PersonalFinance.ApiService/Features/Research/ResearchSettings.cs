@@ -56,4 +56,11 @@ internal sealed class ResearchSettings
     /// first year any country has a value.
     /// </summary>
     public int WorldFirstYear { get; init; } = 1975;
+
+    /// <summary>
+    /// True when Company Profiles show their press releases (<c>Research:PressReleases:Enabled</c>, on by default).
+    /// Switching it off answers 404 for the releases endpoint without a code change; the Web app reads the same key
+    /// to leave the section off the page.
+    /// </summary>
+    public bool PressReleasesEnabled { get; init; } = true;
 }

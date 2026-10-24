@@ -8,9 +8,12 @@ namespace PersonalFinance.ApiService.Features.Research.Adapters;
 /// <see cref="ResearchFixtureSeeder.IsEnabled"/>: CI and local E2E runs cannot reach SEC. It lists three tickers:
 /// <list type="bullet">
 /// <item><c>EXMP</c>, Example Corp: four fiscal years (2022 to 2025) of US GAAP figures, with no gross profit in 2022,
-/// a change of revenue concept in 2023, a restated 2024 net income, and 10-K, 10-Q and 8-K filings.</item>
+/// a change of revenue concept in 2023, a restated 2024 net income, and 10-K, 10-Q and 8-K filings. Its 8-Ks carry
+/// three press releases: an earnings release, an investor-day presentation (a PDF, so its headline falls back to the
+/// 8-K's events) and a leadership announcement.</item>
 /// <item><c>EXFD</c>, Example Index Fund: a fund share class.</item>
-/// <item><c>EXGL</c>, Example Global plc: a foreign company reporting under IFRS on Form 20-F.</item>
+/// <item><c>EXGL</c>, Example Global plc: a foreign company reporting under IFRS on Form 20-F, with no press
+/// releases.</item>
 /// </list>
 /// The figures are rounded illustrations, not source data, and are never used outside Development.
 /// </summary>
@@ -70,6 +73,40 @@ internal sealed class FixtureSecCompanyClient : ISecCompanyClient
             ExampleGlobalCik => new SecCompanyFacts(new Dictionary<string, IReadOnlyList<SecFact>>(), HasIfrsFacts: true),
             _ => null,
         });
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<string>> GetPressReleaseFileNamesAsync(long cik, string accessionNumber,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<string>>(ExhibitsOf(cik, accessionNumber).Select(e => e.File).ToList());
+
+    /// <inheritdoc />
+    public Task<string?> GetDocumentHeadAsync(long cik, string accessionNumber, string fileName,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(ExhibitsOf(cik, accessionNumber).FirstOrDefault(e => e.File == fileName).Head);
+
+    /// <summary>
+    /// Example Corp's exhibit 99 documents of one 8-K: each file name with the start of the document, or null for a
+    /// PDF, which is never read.
+    /// </summary>
+    private static (string File, string? Head)[] ExhibitsOf(long cik, string accessionNumber) =>
+        (cik, accessionNumber) switch
+        {
+            (ExampleCorpCik, "0009000001-26-000012") =>
+            [
+                ("exmp-20260804xex99d1.htm",
+                    "<html><head><title>EX-99.1</title></head><body><p>Exhibit 99.1</p>" +
+                    "<p><b>Example Corp Reports Second Quarter 2026 Results</b></p>" +
+                    "<p>Revenue grew 9% from a year earlier.</p></body></html>"),
+            ],
+            (ExampleCorpCik, "0009000001-26-000010") =>
+            [
+                ("exmp-20260612xex99d1.htm",
+                    "<html><head><title>EX-99.1</title></head><body><p>Exhibit 99.1</p>" +
+                    "<p><b>Example Corp Names Alex Rivera Chief Financial Officer</b></p></body></html>"),
+            ],
+            (ExampleCorpCik, "0009000001-26-000007") => [("exmp-20260505xex99d2.pdf", null)],
+            _ => [],
+        };
 
     private static SecFilingEntry Filing(string accession, string form, string filed, string? reported,
         string items = "") =>

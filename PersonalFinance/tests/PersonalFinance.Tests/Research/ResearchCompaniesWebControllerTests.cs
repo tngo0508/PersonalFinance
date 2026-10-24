@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Research;
@@ -17,8 +18,8 @@ namespace PersonalFinance.Tests.Research;
 /// </summary>
 public class ResearchCompaniesWebControllerTests
 {
-    private static ResearchController CreateController(IResearchApi api) =>
-        new(api, NullLogger<ResearchController>.Instance)
+    private static ResearchController CreateController(IResearchApi api, IConfiguration? configuration = null) =>
+        new(api, configuration ?? new ConfigurationBuilder().Build(), NullLogger<ResearchController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -124,9 +125,58 @@ public class ResearchCompaniesWebControllerTests
         Assert.Empty(proxy.Calls);
     }
 
+    [Fact]
+    public async Task Releases_ReturnsApiServicesPressReleases_AsJson()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        var releases = new CompanyPressReleasesResultDto
+        {
+            Kind = CompanyLookupKinds.Profile,
+            Ticker = "BRK-B",
+            Releases = [new CompanyPressReleaseDto { Headline = "Berkshire Hathaway Annual Meeting Results" }],
+        };
+        proxy.Returns(nameof(IResearchApi.GetCompanyPressReleasesAsync), releases);
+
+        IActionResult result = await CreateController(api).Releases("brk.b");
+
+        Assert.Same(releases, Assert.IsType<JsonResult>(result).Value);
+        Assert.Equal([nameof(IResearchApi.GetCompanyPressReleasesAsync)], proxy.Calls);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("AB/C")]
+    [InlineData("TOOLONGTICKER")]
+    public async Task Releases_ARejectedTicker_Is400_WithoutCallingApiService(string? ticker)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+
+        IActionResult result = await CreateController(api).Releases(ticker);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(proxy.Calls);
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("true", true)]
+    [InlineData("false", false)]
+    public async Task Index_CarriesThePressReleasesFlag(string? setting, bool expected)
+    {
+        (IResearchApi api, _) = ApiProxy.Create<IResearchApi>();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Research:PressReleases:Enabled"] = setting })
+            .Build();
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api, configuration).Index("companies", "MSFT"));
+
+        Assert.Equal(expected, model.PressReleasesEnabled);
+    }
+
     [Theory]
     [InlineData(nameof(ResearchController.Suggest))]
     [InlineData(nameof(ResearchController.Company))]
+    [InlineData(nameof(ResearchController.Releases))]
     public void CompanyActions_MapApiServiceFailuresToJsonErrors(string action)
     {
         // JsonApiErrorsFilter keeps ApiService's status code (429, 503) with a safe message, and never the detail.

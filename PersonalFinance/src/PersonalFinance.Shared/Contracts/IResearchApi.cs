@@ -45,4 +45,14 @@ public interface IResearchApi
     /// </summary>
     [Get("/api/Research/companies/{ticker}")]
     Task<CompanyLookupResultDto> GetCompanyAsync(string ticker, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a company's press releases by ticker: the announcements it attached to its 8-K filings in the last 12
+    /// months, or a fund, or a ticker SEC does not list. A rejected ticker answers 400, the section switched off 404,
+    /// too many lookups 429, and SEC EDGAR being unreachable with no cached list 503; Refit raises each as an
+    /// <see cref="ApiException"/>.
+    /// </summary>
+    [Get("/api/Research/companies/{ticker}/releases")]
+    Task<CompanyPressReleasesResultDto> GetCompanyPressReleasesAsync(string ticker,
+        CancellationToken cancellationToken = default);
 }

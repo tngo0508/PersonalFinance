@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Research;
@@ -44,7 +45,7 @@ public class ResearchWebControllerTests
     };
 
     private static ResearchController CreateController(IResearchApi api) =>
-        new(api, NullLogger<ResearchController>.Instance)
+        new(api, new ConfigurationBuilder().Build(), NullLogger<ResearchController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -94,8 +95,12 @@ public class ResearchWebControllerTests
         Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetEtfsAsync), nameof(IResearchApi.GetWorldAsync)],
             proxy.Calls);
         Assert.Same(Snapshot, model.Sectors.Snapshot);
-        // The only other actions are the Companies tab's search and lookup, which no snapshot tab uses.
-        Assert.Equal([nameof(ResearchController.Company), nameof(ResearchController.Index), nameof(ResearchController.Suggest)],
+        // The only other actions are the Companies tab's search, lookup and press releases, which no snapshot tab uses.
+        Assert.Equal(
+            [
+                nameof(ResearchController.Company), nameof(ResearchController.Index),
+                nameof(ResearchController.Releases), nameof(ResearchController.Suggest),
+            ],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Select(m => m.Name).Order(StringComparer.Ordinal));
     }
