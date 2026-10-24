@@ -141,6 +141,22 @@ public class ResearchFundsWebControllerTests
     }
 
     [Fact]
+    public async Task Index_HoldsTheMacroData_AndOpensThePerformanceTab()
+    {
+        var macro = new MacroSnapshotDto { AsOf = new DateOnly(2026, 9, 30) };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
+        proxy.Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+        proxy.Returns(nameof(IResearchApi.GetMacroAsync), macro);
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index(tab: "performance"));
+
+        Assert.Same(macro, model.Macro);
+        Assert.Equal(ResearchViewModel.PerformanceTab, model.SelectedTab);
+        Assert.Equal("performance", model.PerformanceUnavailableState.RetryRouteValues["tab"]);
+    }
+
+    [Fact]
     public async Task Index_WhenTheSectorsDataHasNeverLoaded_StillHoldsTheFunds()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();

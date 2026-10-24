@@ -16,11 +16,12 @@ internal static class ResearchServiceFactory
 {
     /// <summary>
     /// The service with its real refreshers. <paramref name="logs"/>, when given, receives every Research log entry.
-    /// Without <paramref name="fedClient"/> the Fed's rates cannot be read, as when its site is down.
+    /// Without <paramref name="fedClient"/> or <paramref name="usAgencyClient"/> those sources cannot be reached, as
+    /// when their sites are down, so no test goes out to the network.
     /// </summary>
     public static ResearchService Create(AppDbContext db, ISecEdgarClient secClient, IWorldBankClient worldBankClient,
         ResearchSettings settings, TimeProvider timeProvider, ILoggerProvider? logs = null,
-        IFedRatesClient? fedClient = null)
+        IFedRatesClient? fedClient = null, IUsAgencyClient? usAgencyClient = null)
     {
         IServiceCollection services = new ServiceCollection()
             .AddLogging(logging =>
@@ -35,6 +36,7 @@ internal static class ResearchServiceFactory
         services.Replace(ServiceDescriptor.Singleton(secClient));
         services.Replace(ServiceDescriptor.Singleton(worldBankClient));
         services.Replace(ServiceDescriptor.Singleton(fedClient ?? new OfflineFedRatesClient()));
+        services.Replace(ServiceDescriptor.Singleton(usAgencyClient ?? new OfflineUsAgencyClient()));
         services.Replace(ServiceDescriptor.Singleton(settings));
         services.Replace(ServiceDescriptor.Singleton(timeProvider));
         return (ResearchService)services.BuildServiceProvider().GetRequiredService<IResearchService>();
@@ -46,5 +48,20 @@ internal static class ResearchServiceFactory
         public Task<IReadOnlyList<(DateOnly Month, decimal Rate)>> GetTreasuryBillRatesAsync(
             CancellationToken cancellationToken) =>
             throw new HttpRequestException("The Fed's site is not reachable in tests.");
+
+        public Task<FedMonthlyRates> GetMonthlyRatesAsync(CancellationToken cancellationToken) =>
+            throw new HttpRequestException("The Fed's site is not reachable in tests.");
+    }
+
+    /// <summary>A BLS and Treasury client whose sites cannot be reached.</summary>
+    private sealed class OfflineUsAgencyClient : IUsAgencyClient
+    {
+        public Task<IReadOnlyList<(DateOnly Month, decimal Index)>> GetConsumerPricesAsync(int firstYear,
+            CancellationToken cancellationToken) =>
+            throw new HttpRequestException("BLS is not reachable in tests.");
+
+        public Task<IReadOnlyList<(DateOnly Month, decimal Rate)>> GetTreasuryBillRatesAsync(int year,
+            CancellationToken cancellationToken) =>
+            throw new HttpRequestException("The Treasury is not reachable in tests.");
     }
 }

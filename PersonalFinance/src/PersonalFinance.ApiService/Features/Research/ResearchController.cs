@@ -26,6 +26,9 @@ public class ResearchController : ControllerBase
     /// <summary>The 503 reason of a fund returns dataset that has never loaded.</summary>
     public const string FundReturnsNeverLoaded = "The fund returns data has not loaded yet.";
 
+    /// <summary>The 503 reason of a macro dataset that has never loaded.</summary>
+    public const string MacroNeverLoaded = "The inflation and interest rate data has not loaded yet.";
+
     /// <summary>The 503 reason of a World dataset that has never loaded.</summary>
     public const string WorldNeverLoaded = "The World data has not loaded yet.";
 
@@ -80,6 +83,18 @@ public class ResearchController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetFundReturns(CancellationToken cancellationToken = default) =>
         SnapshotOrUnavailable(await _researchService.GetFundReturnsAsync(cancellationToken), FundReturnsNeverLoaded);
+
+    /// <summary>
+    /// Gets the macro snapshot: monthly CPI-U from the Bureau of Labor Statistics, and the effective federal funds rate
+    /// and 3-month Treasury bill rate from the Fed Board's H.15 release. Answers 503 with the reason when the dataset
+    /// has never loaded.
+    /// </summary>
+    [HttpGet("macro")]
+    [ProducesResponseType(typeof(MacroSnapshotDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResearchUnavailableDto), StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMacro(CancellationToken cancellationToken = default) =>
+        SnapshotOrUnavailable(await _researchService.GetMacroAsync(cancellationToken), MacroNeverLoaded);
 
     /// <summary>
     /// Gets the World snapshot: each country's stock-market capitalisation and market cap as % of GDP per year, from

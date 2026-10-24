@@ -39,6 +39,10 @@ internal sealed class ResearchService : IResearchService
         GetAsync<FundReturnsSnapshotDto>(ResearchDatasets.FundReturns, cancellationToken);
 
     /// <inheritdoc />
+    public Task<ResearchSnapshotResult<MacroSnapshotDto>> GetMacroAsync(CancellationToken cancellationToken = default) =>
+        GetAsync<MacroSnapshotDto>(ResearchDatasets.Macro, cancellationToken);
+
+    /// <inheritdoc />
     public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
         GetAsync<WorldSnapshotDto>(ResearchDatasets.World, cancellationToken);
 
