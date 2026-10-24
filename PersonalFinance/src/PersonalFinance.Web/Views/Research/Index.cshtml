@@ -74,15 +74,23 @@
                     The @latest!.Ranked.Count largest of @((latest.Ranked.Count + latest.RestCount).ToString("N0", CultureInfo.GetCultureInfo("en-US"))) filers in @latest.Period,
                     by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.
                 </p>
-                <div class="research-sunburst__toolbar">
-                    <button type="button" class="research-chip" id="research-zoom-out" aria-disabled="true">
-                        Zoom out
-                    </button>
-                    <p class="research-sunburst__focus" id="research-sunburst-focus"></p>
+                <div class="research-chartbar">
+                    @* Where the chart is zoomed: each group above the focus is a button back to it. Drawn by research-sunburst.js. *@
+                    <nav class="research-breadcrumb" id="research-sectors-breadcrumb" aria-label="Sectors drill-down"></nav>
+                    <div class="research-view-toggle" role="group" aria-label="Chart type">
+                        <button type="button" class="research-view-toggle__button" data-research-view="sunburst" aria-pressed="true">Sunburst</button>
+                        <button type="button" class="research-view-toggle__button" data-research-view="treemap" aria-pressed="false">Treemap</button>
+                    </div>
                 </div>
-                @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made. *@
+                @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made.
+                   The treemap draws the same focus as the sunburst; one of the two shows at a time. *@
                 <div class="research-sunburst" id="research-sunburst"></div>
+                <div class="research-treemap" id="research-treemap" hidden></div>
                 <div class="research-tooltip" id="research-tooltip" aria-hidden="true" hidden></div>
+                @* The focused group's parts, largest first: the second keyboard path through the chart. Groups are
+                   buttons that zoom in; hovering or focusing a row lights its slice. Drawn by research-sunburst.js. *@
+                <h3 class="research-ranked__title" id="research-sectors-ranked-title" tabindex="-1"></h3>
+                <ol class="research-ranked" id="research-sectors-ranked" aria-labelledby="research-sectors-ranked-title"></ol>
                 <div class="research-card__actions">
                     <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
                             aria-controls="research-sectors-table">Show as table</button>
@@ -95,6 +103,8 @@
         <aside class="research-panel" aria-label="About the Sectors data">
             @if (showSectors)
             {
+                <h2 class="research-panel__title" id="research-sectors-takeaways-title">Key takeaways</h2>
+                <ul class="research-takeaways" id="research-sectors-takeaways" aria-labelledby="research-sectors-takeaways-title"></ul>
                 <h2 class="research-panel__title">View options</h2>
                 <button type="button" class="research-chip" id="research-tech-toggle" aria-pressed="false"
                         aria-describedby="research-tech-note">

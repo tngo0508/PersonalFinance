@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.3.0] - 2026-10-24
+
+### Added
+
+- **Sectors treemap view**: a Sunburst | Treemap toggle above the Sectors chart shows the same zoom, year and figures as tiles (#257).
+  - Tiles keep the office colours; industries or companies inside one office step in lightness so neighbours stay apart.
+  - Tiles are focusable: Enter zooms in and Escape zooms out. The switch fades in briefly, never with reduced motion.
+- **Sectors keyboard paths**: every level of the Sectors chart can be explored without a mouse, in two ways (#256).
+  - Arcs: one tab stop; the arrow keys move between neighbouring slices, Enter or Space zooms in, and Escape zooms out with focus back on the group left. A focused arc shows its tooltip.
+  - A ranked list under the chart shows the zoomed group's parts, largest first, each a button that zooms in; hovering or focusing a row lights its slice.
+- **Sectors takeaway cards**: a "Key takeaways" list in the side panel describes the zoomed group: total, largest part, top 10 companies, Technology share and change on the year before (#255).
+  - A card that would say nothing is left out, such as the Technology share inside Technology.
+
+### Changed
+
+- **Sectors breadcrumb**: a clickable breadcrumb above the chart replaces the "Zoom out" button and the focus label; every group above the focus jumps back to it (#255).
+- **Sectors tooltip**: a slice's tooltip now also gives its share of all filers and its rank among its neighbours (#255).
+
 ## [5.2.0] - 2026-10-24
 
 ### Added

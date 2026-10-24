@@ -187,19 +187,128 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 6: zoom into an office from the legend, then out.
+        // Step 6: zoom into an office from the legend; the breadcrumb shows it and its "All filers" link returns.
         await step('Research 6', fail, async () => {
             const office = page.locator('#research-sectors-legend button').first();
-            const zoomOut = page.locator('#research-zoom-out');
+            const officeName = (await office.textContent()).trim();
+            const current = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
             await office.click();
             const zoomedIn = await office.getAttribute('aria-pressed') === 'true' &&
-                await zoomOut.getAttribute('aria-disabled') === 'false';
-            await zoomOut.click();
-            const zoomedOut = await zoomOut.getAttribute('aria-disabled') === 'true';
+                (await current.textContent()).startsWith(officeName);
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
+            const zoomedOut = (await current.textContent()).startsWith('All filers') &&
+                await office.getAttribute('aria-pressed') === 'false' &&
+                await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link').count() === 0;
             if (zoomedIn && zoomedOut) {
-                pass('Research 6: a legend button zooms into its office and "Zoom out" returns');
+                pass(`Research 6: a legend button zooms into ${officeName}; the breadcrumb's "All filers" link returns`);
             } else {
                 fail(`Research 6: zoomed in ${zoomedIn}, zoomed out ${zoomedOut}`);
+            }
+        });
+
+        // Step 6a: the takeaway cards follow the zoom, and the tooltip gives the share of all filers and a rank.
+        await step('Research 6a', fail, async () => {
+            const cards = page.locator('#research-sectors-takeaways .research-takeaway');
+            const labels = await cards.locator('.research-takeaway__label').allTextContents();
+            const totalNote = page.locator('#research-sectors-takeaways .research-takeaway').first()
+                .locator('.research-takeaway__note');
+            const atRoot = labels[0] === 'Total' && labels.includes('Largest part') &&
+                (await totalNote.textContent()).startsWith('All filers');
+            await page.locator('#research-sectors-legend button').first().click();
+            const zoomedNote = (await totalNote.textContent()).includes('of all filers');
+            // The chart hides its tooltip on scroll, and the legend click may have scrolled: bring the chart into view
+            // and let any scroll event fire first. A ring segment's bounding-box centre often lies off the arc, so the
+            // pointer event goes to the arc itself.
+            await page.locator('#research-sunburst').scrollIntoViewIfNeeded();
+            await page.evaluate(() => new Promise((resolve) => {
+                requestAnimationFrame(() => requestAnimationFrame(resolve));
+            }));
+            await page.locator('#research-sunburst path.research-sunburst__arc:not([pointer-events="none"])').first()
+                .dispatchEvent('pointermove', {clientX: 200, clientY: 200, pointerType: 'mouse', bubbles: true});
+            const tooltip = page.locator('#research-tooltip');
+            await tooltip.waitFor({state: 'visible', timeout: TIMEOUT});
+            const tip = await tooltip.textContent();
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
+            if (atRoot && zoomedNote && /of all filers/.test(tip) && /#\d+ of \d+ in /.test(tip)) {
+                pass(`Research 6a: cards (${labels.join(', ')}) follow the zoom; the tooltip shows the share of all and a rank`);
+            } else {
+                fail(`Research 6a: cards ${JSON.stringify(labels)}, zoomed note ${zoomedNote}, tooltip "${tip}"`);
+            }
+        });
+
+        // Step 6b: both keyboard paths. Arcs: arrow keys move between siblings, Enter zooms in, Escape zooms out and
+        // returns focus to the group left. Ranked list: a row fades the other slices, and Enter zooms into it.
+        await step('Research 6b', fail, async () => {
+            const current = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
+            const activeKey = () => page.evaluate(() => document.activeElement.getAttribute('data-key'));
+            await page.locator('#research-sunburst path[tabindex="0"]').focus();
+            const first = await activeKey();
+            await page.keyboard.press('ArrowRight');
+            const second = await activeKey();
+            const moved = Boolean(first) && Boolean(second) && first !== second;
+            const office = second;
+            await page.keyboard.press('Enter');
+            const zoomedName = (await current.textContent()).split(' · ')[0];
+            const inside = await activeKey();
+            await page.keyboard.press('Escape');
+            const back = await activeKey();
+            const arcsOk = moved && zoomedName !== 'All filers' && Boolean(inside) && inside !== office &&
+                (await current.textContent()).startsWith('All filers') && back === office;
+
+            const row = page.locator('#research-sectors-ranked button').first();
+            const rowName = (await row.locator('.research-ranked__name').textContent()).trim();
+            await row.focus();
+            const faded = await page.locator('#research-sunburst .research-sunburst__arc--faded').count();
+            await page.keyboard.press('Enter');
+            const listZoom = (await current.textContent()).startsWith(rowName);
+            const listFocus = await page.evaluate(() => {
+                const list = document.getElementById('research-sectors-ranked');
+                const title = document.getElementById('research-sectors-ranked-title');
+                return list.contains(document.activeElement) || document.activeElement === title;
+            });
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
+            if (arcsOk && faded > 0 && listZoom && listFocus) {
+                pass(`Research 6b: arrows, Enter and Escape drive the arcs (back to ${office}); the ranked list zooms into ${rowName}`);
+            } else {
+                fail(`Research 6b: arcs ${arcsOk} (${first}→${second}, in ${zoomedName}/${inside}, back ${back}), ` +
+                    `faded ${faded}, list zoom ${listZoom}, list focus ${listFocus}`);
+            }
+        });
+
+        // Step 6c: the treemap toggle keeps the focus and the year; tiles drill in with Enter and back with Escape;
+        // inside one office, neighbouring tiles differ in fill.
+        await step('Research 6c', fail, async () => {
+            const current = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
+            const period = await periodLabel(page, 'sectors');
+            await page.locator('#research-sectors-legend button').first().click();
+            const office = (await current.textContent()).split(' · ')[0];
+            await page.click('[data-research-view="treemap"]');
+            const shown = await page.locator('#research-treemap').isVisible() &&
+                !(await page.locator('#research-sunburst').isVisible()) &&
+                await page.getAttribute('[data-research-view="treemap"]', 'aria-pressed') === 'true';
+            const keptFocus = (await current.textContent()).startsWith(office) &&
+                await periodLabel(page, 'sectors') === period;
+            const fills = await page.locator('#research-treemap .research-treemap__rect').evaluateAll(
+                (rects) => rects.map((r) => r.getAttribute('fill')));
+            const distinct = fills.length < 2 || new Set(fills).size === fills.length;
+            const zoomable = page.locator('#research-treemap g.research-treemap__tile[role="button"]').first();
+            let drilled = true;
+            if (await zoomable.count() > 0) {
+                await zoomable.focus();
+                await page.keyboard.press('Enter');
+                drilled = !(await current.textContent()).startsWith(office);
+                await page.locator('#research-treemap g.research-treemap__tile').first().focus();
+                await page.keyboard.press('Escape');
+                drilled = drilled && (await current.textContent()).startsWith(office);
+            }
+            await page.click('[data-research-view="sunburst"]');
+            const back = await page.locator('#research-sunburst').isVisible() &&
+                (await current.textContent()).startsWith(office);
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
+            if (shown && keptFocus && distinct && drilled && back) {
+                pass(`Research 6c: the treemap shows ${office} for ${period} (${fills.length} tiles, all distinct), drills with Enter/Escape, and toggles back`);
+            } else {
+                fail(`Research 6c: shown ${shown}, kept focus ${keptFocus}, fills ${JSON.stringify(fills)}, drilled ${drilled}, back ${back}`);
             }
         });
 

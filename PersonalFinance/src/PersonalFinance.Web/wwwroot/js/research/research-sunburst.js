@@ -6,8 +6,14 @@
  * no request of its own. Hover or tap a slice for its figures; the centre shows the total. The page's scrubber
  * (js/research/research-page.js) moves it between years through update(), and its table view reads table().
  * Click an office or industry (or press an office's legend button) to zoom in, so three rings show below it; the
- * centre and the Zoom out control zoom out. The "Technology (incl. chip makers)" toggle dims every slice outside the
- * industries the server flags as Technology. Both survive a change of year.
+ * centre zooms out one level, and the breadcrumb above the chart jumps to any level on the way back. The side panel's
+ * takeaway cards describe the focused group. Two keyboard paths reach every level: the arcs (one tab stop; arrow keys
+ * move between siblings, Enter zooms in, Escape zooms out and returns focus to the group left), and the ranked list
+ * under the chart (the focused group's parts as buttons; hovering or focusing a row lights its slice). A Sunburst |
+ * Treemap toggle swaps in a treemap of the same focus (tiles in office colours, siblings of one office stepped in
+ * lightness; Enter zooms in, Escape zooms out). The
+ * "Technology (incl. chip makers)" toggle dims every slice outside the
+ * industries the server flags as Technology. The zoom and the highlight survive a change of year.
  */
 (function () {
     'use strict';
@@ -24,8 +30,8 @@
     const LEGEND_ID = 'research-sectors-legend';
     const TOOLTIP_ID = 'research-tooltip';
     const SUBTITLE_ID = 'research-sectors-subtitle';
-    const ZOOM_OUT_ID = 'research-zoom-out';
-    const FOCUS_LABEL_ID = 'research-sunburst-focus';
+    const BREADCRUMB_ID = 'research-sectors-breadcrumb';
+    const TAKEAWAYS_ID = 'research-sectors-takeaways';
     const TECH_TOGGLE_ID = 'research-tech-toggle';
     const TECH_SHARE_ID = 'research-tech-share';
     const LIVE_ID = 'research-live';
@@ -36,6 +42,22 @@
     const MAX_SIZE = 640;
     const MIN_SIZE = 240;
     const RINGS = 3;
+    // The "Top 10 companies" takeaway shows only when the focus has more companies than this.
+    const TOP_COMPANIES = 10;
+    // How many of the focused group's parts the ranked list under the chart shows.
+    const RANKED_ROWS = 15;
+    const RANKED_ID = 'research-sectors-ranked';
+    const RANKED_TITLE_ID = 'research-sectors-ranked-title';
+    const TREEMAP_ID = 'research-treemap';
+    const VIEW_TOGGLE_SELECTOR = '[data-research-view]';
+    // The treemap's height as a share of its width, within limits.
+    const TREEMAP_RATIO = 0.62;
+    const TREEMAP_MIN_HEIGHT = 260;
+    const TREEMAP_MAX_HEIGHT = 520;
+    // How long switching between the sunburst and the treemap fades (none under reduced motion).
+    const SWITCH_MS = 220;
+    // Sibling tiles of one office step their lightness by this much (HSL lightness, 0 to 1) so they stay apart.
+    const TILE_LIGHTNESS_STEP = 0.12;
 
     // SEC industry offices in SEC office-number order; each takes the categorical slot of the same number.
     const OFFICE_SLOTS = [
@@ -155,12 +177,40 @@
     }
 
     /**
-     * Create the tooltip controller for the Research tooltip element.
+     * A share as a percentage with one decimal, e.g. "12.3%".
+     * @param {number} part - The part.
+     * @param {number} whole - The whole.
+     * @returns {string} The percentage, or "0.0%" when the whole is empty.
+     */
+    function percentOf (part, whole) {
+        return `${(whole > 0 ? part / whole * 100 : 0).toFixed(1)}%`;
+    }
+
+    /**
+     * A node's rank by Public float among its siblings, leaving out "Other" slices (they sum many filers).
+     * @param {Object} node - A d3 hierarchy node.
+     * @returns {{rank: number, of: number}|null} The rank (1 is largest) and how many siblings are ranked, or null
+     *     for an "Other" slice or a node without a parent.
+     */
+    function rankAmongSiblings (node) {
+        if (!node.parent || node.data.kind === 'other') {
+            return null;
+        }
+        const ranked = node.parent.children
+            .filter((d) => d.data.kind !== 'other')
+            .sort((a, b) => b.value - a.value);
+        return { rank: ranked.indexOf(node) + 1, of: ranked.length };
+    }
+
+    /**
+     * Create the tooltip controller for the Research tooltip element: a slice's name, kind and Public float, its share
+     * of its parent group (below the top ring) and of all filers, and its rank among its siblings.
      * @param {HTMLElement|null} tooltip - The tooltip element.
      * @returns {{show: function(PointerEvent, Object): void, hide: function(): void}} The controller.
      */
     function createTooltip (tooltip) {
         return page.createTooltip(tooltip, (line, node) => {
+            const root = node.ancestors().pop();
             const valueLine = document.createElement('span');
             valueLine.append(line(formatMoney(node.value), 'research-tooltip__value'), ' Public float');
             const parts = [
@@ -168,9 +218,14 @@
                 line(KIND_LABELS[node.data.kind](node), 'research-tooltip__muted'),
                 valueLine
             ];
-            if (node.parent && node.parent.value > 0) {
-                const share = (node.value / node.parent.value * 100).toFixed(1);
-                parts.push(line(`${share}% of ${node.parent.data.name}`, 'research-tooltip__muted'));
+            if (node.parent && node.parent !== root) {
+                parts.push(line(`${percentOf(node.value, node.parent.value)} of ${node.parent.data.name}`,
+                    'research-tooltip__muted'));
+            }
+            parts.push(line(`${percentOf(node.value, root.value)} of all filers`, 'research-tooltip__muted'));
+            const rank = rankAmongSiblings(node);
+            if (rank) {
+                parts.push(line(`#${rank.rank} of ${rank.of} in ${node.parent.data.name}`, 'research-tooltip__muted'));
             }
             return parts;
         });
@@ -272,6 +327,246 @@
     }
 
     /**
+     * Draw the breadcrumb above the chart: every group from all filers down to the focus, each a button that zooms to
+     * it, and the focus itself (with its Public float) as the current location. When the breadcrumb held keyboard
+     * focus, focus moves to the new current location, so it is not lost when the pressed button is redrawn.
+     * @param {HTMLElement|null} nav - The breadcrumb nav element.
+     * @param {Object} focus - The focused d3 hierarchy node.
+     * @param {function(string): void} onPick - Called with a group's node key when its button is pressed.
+     * @returns {void}
+     */
+    function renderBreadcrumb (nav, focus, onPick) {
+        if (!nav) {
+            return;
+        }
+        const hadFocus = nav.contains(document.activeElement);
+        const list = document.createElement('ol');
+        list.className = 'research-breadcrumb__list';
+        const trail = focus.ancestors().reverse();
+        trail.forEach((node, index) => {
+            const item = document.createElement('li');
+            item.className = 'research-breadcrumb__item';
+            if (index === trail.length - 1) {
+                const current = document.createElement('span');
+                current.className = 'research-breadcrumb__current';
+                current.setAttribute('aria-current', 'location');
+                current.tabIndex = -1;
+                current.textContent = `${node.data.name} · ${formatMoney(node.value || 0)}`;
+                item.append(current);
+            } else {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'research-breadcrumb__link';
+                button.dataset.key = node.data.key;
+                button.textContent = node.data.name;
+                button.addEventListener('click', () => onPick(node.data.key));
+                item.append(button);
+            }
+            list.append(item);
+        });
+        nav.replaceChildren(list);
+        if (hadFocus) {
+            nav.querySelector('.research-breadcrumb__current').focus();
+        }
+    }
+
+    /**
+     * The takeaway cards for the focused group. A card that would say nothing is left out: the largest part needs
+     * named parts, the top-10 share needs more than ten companies, the Technology share is left out when the group is
+     * all or none Technology, and the change needs the same group in the year before.
+     * @param {Object} root - The d3 hierarchy root of the period shown.
+     * @param {Object} focus - The focused d3 hierarchy node.
+     * @param {Object|null} previous - The d3 hierarchy root of the year before, or null for the first year.
+     * @param {string} periodLabel - The period shown.
+     * @returns {{label: string, value: string, note: string}[]} The cards, in display order.
+     */
+    function takeaways (root, focus, previous, periodLabel) {
+        const cards = [{
+            label: 'Total',
+            value: formatMoney(focus.value || 0),
+            note: focus.depth > 0
+                ? `${focus.data.name}, ${periodLabel}: ${percentOf(focus.value, root.value)} of all filers`
+                : `All filers, ${periodLabel}`
+        }];
+
+        const parts = (focus.children || []).filter((d) => d.data.kind !== 'other').sort((a, b) => b.value - a.value);
+        if (parts.length > 0) {
+            cards.push({ label: 'Largest part', value: percentOf(parts[0].value, focus.value), note: parts[0].data.name });
+        }
+
+        const companies = focus.leaves().filter((d) => d.data.kind === 'company').sort((a, b) => b.value - a.value);
+        if (companies.length > TOP_COMPANIES) {
+            const top = d3.sum(companies.slice(0, TOP_COMPANIES), (d) => d.value);
+            cards.push({
+                label: `Top ${TOP_COMPANIES} companies`,
+                value: percentOf(top, focus.value),
+                note: `of the ${companies.length} companies shown`
+            });
+        }
+
+        const lit = d3.sum(focus.leaves().filter((d) => d.technology), (d) => d.value);
+        if (lit > 0 && lit < focus.value) {
+            cards.push({ label: 'Technology (incl. chip makers)', value: percentOf(lit, focus.value), note: formatMoney(lit) });
+        }
+
+        const before = previous ? previous.descendants().find((d) => d.data.key === focus.data.key) : null;
+        if (before && before.value > 0) {
+            const change = (focus.value / before.value - 1) * 100;
+            cards.push({
+                label: 'Change on the year before',
+                value: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
+                note: `Same group, Public float (${formatMoney(before.value)} before)`
+            });
+        }
+        return cards;
+    }
+
+    /**
+     * Draw the takeaway cards into the side panel as a list, one card per item.
+     * @param {HTMLElement|null} host - The takeaways list element.
+     * @param {{label: string, value: string, note: string}[]} cards - The cards.
+     * @returns {void}
+     */
+    function renderTakeaways (host, cards) {
+        if (!host) {
+            return;
+        }
+        host.replaceChildren(...cards.map((card) => {
+            const item = document.createElement('li');
+            item.className = 'research-takeaway';
+            const label = document.createElement('span');
+            label.className = 'research-takeaway__label';
+            label.textContent = card.label;
+            const value = document.createElement('span');
+            value.className = 'research-takeaway__value';
+            value.textContent = card.value;
+            const note = document.createElement('span');
+            note.className = 'research-takeaway__note';
+            note.textContent = card.note;
+            item.append(label, value, note);
+            return item;
+        }));
+    }
+
+    /**
+     * Draw the ranked list under the chart: the focused group's parts, largest first (an industry's "Other" slice
+     * last), each with its share of the group, its Public float and a bar sized against the largest. A part that
+     * has parts of its own is a button that zooms into it; a company or "Other" slice is plain text. Pointer or
+     * keyboard on a row lights its slice through onHighlight.
+     * @param {HTMLElement|null} list - The ranked list element.
+     * @param {Object} focus - The focused d3 hierarchy node.
+     * @param {function(Element, string): string} colourOf - The fill colour of an office.
+     * @param {{onPick: function(string): void, onHighlight: function(string|null): void}} handlers - Called with a
+     *     row's node key when its button is pressed, and with the key (or null) to light or clear a slice.
+     * @returns {void}
+     */
+    function renderRanked (list, focus, colourOf, handlers) {
+        if (!list) {
+            return;
+        }
+        const isOther = (d) => (d.data.kind === 'other' ? 1 : 0);
+        const parts = (focus.children || []).filter((d) => d.value > 0)
+            .sort((a, b) => isOther(a) - isOther(b) || b.value - a.value);
+        const shown = parts.slice(0, RANKED_ROWS);
+        const largest = d3.max(shown, (d) => d.value) || 1;
+        const rows = shown.map((node, index) => {
+            const item = document.createElement('li');
+            item.className = 'research-ranked__item';
+            const row = document.createElement(node.children ? 'button' : 'div');
+            row.className = 'research-ranked__row';
+            if (node.children) {
+                row.type = 'button';
+                row.dataset.key = node.data.key;
+                row.setAttribute('aria-label', `${node.data.name}: ${formatMoney(node.value)} Public float, ` +
+                    `${percentOf(node.value, focus.value)} of ${focus.data.name}. Zoom in.`);
+                row.addEventListener('click', () => handlers.onPick(node.data.key));
+                row.addEventListener('focus', () => handlers.onHighlight(node.data.key));
+                row.addEventListener('blur', () => handlers.onHighlight(null));
+            }
+            item.addEventListener('pointerenter', () => handlers.onHighlight(node.data.key));
+            item.addEventListener('pointerleave', () => handlers.onHighlight(null));
+
+            const rank = document.createElement('span');
+            rank.className = 'research-ranked__rank';
+            rank.textContent = node.data.kind === 'other' ? '' : String(index + 1);
+            const name = document.createElement('span');
+            name.className = 'research-ranked__name';
+            name.textContent = node.data.kind === 'company' && node.data.ticker
+                ? `${node.data.name} (${node.data.ticker})`
+                : node.data.name;
+            const share = document.createElement('span');
+            share.className = 'research-ranked__share';
+            share.textContent = percentOf(node.value, focus.value);
+            const value = document.createElement('span');
+            value.className = 'research-ranked__value';
+            value.textContent = formatMoney(node.value);
+            const bar = document.createElement('span');
+            bar.className = 'research-ranked__bar';
+            bar.setAttribute('aria-hidden', 'true');
+            bar.style.width = `${node.value / largest * 100}%`;
+            bar.style.background = colourOf(list, node.data.office);
+            row.append(rank, name, share, value, bar);
+            item.append(row);
+            return item;
+        });
+        if (parts.length > shown.length) {
+            const more = document.createElement('li');
+            more.className = 'research-ranked__more';
+            more.textContent = `and ${parts.length - shown.length} more (see "Show as table")`;
+            rows.push(more);
+        }
+        list.replaceChildren(...rows);
+    }
+
+    /**
+     * A tile's fill: its office colour, with siblings that share one office stepped in lightness (alternately
+     * lighter and darker, growing with the index) so neighbouring industries or companies stay distinguishable.
+     * @param {string} base - The office colour.
+     * @param {number} index - The tile's index among its siblings.
+     * @param {boolean} step - Whether to step (false when the siblings already differ by office).
+     * @returns {string} The fill colour.
+     */
+    function tileColour (base, index, step) {
+        if (!step || index === 0) {
+            return base;
+        }
+        const colour = d3.hsl(base);
+        const amount = Math.ceil(index / 2) * TILE_LIGHTNESS_STEP * (index % 2 === 1 ? 1 : -1);
+        colour.l = Math.max(0.18, Math.min(0.82, colour.l + amount));
+        return colour.formatHex();
+    }
+
+    /**
+     * The label ink that reads on a fill: dark text on a light fill, light text on a dark one (by relative
+     * luminance).
+     * @param {string} fill - The fill colour.
+     * @returns {string} A CSS colour.
+     */
+    function inkFor (fill) {
+        const rgb = d3.rgb(fill);
+        const channel = (c) => {
+            const v = c / 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        };
+        const luminance = 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+        return luminance > 0.35 ? 'var(--research-label-dark)' : 'var(--research-label-light)';
+    }
+
+    /**
+     * The d3 hierarchy of one period, summed by Public float, sorted, and with the Technology flag marked.
+     * @param {Object} data - The Sectors snapshot.
+     * @param {Object} period - One entry of data.values.
+     * @returns {Object} The d3 hierarchy root.
+     */
+    function rootOf (data, period) {
+        const root = d3.hierarchy(buildTree(data, period))
+            .sum((d) => (d.children ? 0 : d.value || 0))
+            .sort(compareNodes);
+        markTechnology(root);
+        return root;
+    }
+
+    /**
      * The text of an arc's label, shortened to fit the ring.
      * @param {Object} node - A d3 hierarchy node.
      * @param {number} unit - The ring thickness in px.
@@ -318,17 +613,30 @@
      * @param {Object} tooltip - The tooltip controller.
      * @returns {{periods: string[], transitionMs: number, update: function(number, Object): string,
      *     table: function(number): Object, resize: function(): void, zoomTo: function(string): void,
-     *     zoomOut: function(): void, setTechnology: function(boolean): void}} The chart.
+     *     zoomOut: function(): void, setTechnology: function(boolean): void, setMode: function(string): void}} The
+     *     chart.
      */
     function createSunburst (host, data, tooltip) {
         const subtitle = document.getElementById(SUBTITLE_ID);
         const legend = document.getElementById(LEGEND_ID);
-        const zoomOutButton = document.getElementById(ZOOM_OUT_ID);
-        const focusLabel = document.getElementById(FOCUS_LABEL_ID);
+        const breadcrumb = document.getElementById(BREADCRUMB_ID);
+        const takeawaysList = document.getElementById(TAKEAWAYS_ID);
         const techToggle = document.getElementById(TECH_TOGGLE_ID);
         const techShare = document.getElementById(TECH_SHARE_ID);
         const live = document.getElementById(LIVE_ID);
-        const view = { focusKey: ROOT_KEY, technology: false };
+        const rankedList = document.getElementById(RANKED_ID);
+        const rankedTitle = document.getElementById(RANKED_TITLE_ID);
+        const treemapHost = document.getElementById(TREEMAP_ID);
+        const viewToggles = Array.from(document.querySelectorAll(VIEW_TOGGLE_SELECTOR));
+        // mode: which chart shows, 'sunburst' or 'treemap'; both draw the same focus.
+        const view = { focusKey: ROOT_KEY, technology: false, mode: 'sunburst' };
+        let treemapSvg = null;
+        let treemapWidth = 0;
+        let treemapHeight = 0;
+        // Keyboard state: the arc that holds the one tab stop (by node key), and where focus goes after the zoom a
+        // key press asked for ({ arc: key }, { firstArc: true } or { list: true }), or null.
+        let activeKey = null;
+        let pendingFocus = null;
         let periodIndex = data.values.length - 1;
         let focus = null;
         let unit = 0;
@@ -366,9 +674,10 @@
                 .outerRadius((d) => Math.max(d.y0 * unit, d.y1 * unit - 1));
 
             d3.select(host).selectAll('svg').remove();
+            // A group, not an image: the arcs inside are focusable and announce themselves.
             svg = d3.select(host).append('svg')
                 .attr('viewBox', [-size / 2, -size / 2, size, size].join(' '))
-                .attr('role', 'img');
+                .attr('role', 'group');
             arcLayer = svg.append('g');
             labelLayer = svg.append('g').attr('text-anchor', 'middle');
 
@@ -435,7 +744,14 @@
                     if (event.pointerType === 'mouse') {
                         tooltip.hide();
                     }
-                });
+                })
+                .on('keydown', (event, d) => onArcKey(event, d))
+                .on('focus', (event, d) => {
+                    activeKey = d.data.key;
+                    const box = event.currentTarget.getBoundingClientRect();
+                    tooltip.show({ clientX: box.right, clientY: box.top }, d);
+                })
+                .on('blur', () => tooltip.hide());
 
             // The fill follows the office and never changes with the view; the highlight only changes the opacity.
             const all = entering.merge(paths)
@@ -510,25 +826,331 @@
         }
 
         /**
-         * Show the focus in the centre and above the chart, and the state of the Zoom out control, the legend
+         * Size the treemap to its host's width and draw its empty layer.
+         * @returns {void}
+         */
+        function layoutTreemap () {
+            if (!treemapHost) {
+                return;
+            }
+            treemapWidth = Math.max(MIN_SIZE, treemapHost.clientWidth || host.clientWidth || MAX_SIZE);
+            treemapHeight = Math.round(Math.max(TREEMAP_MIN_HEIGHT,
+                Math.min(TREEMAP_MAX_HEIGHT, treemapWidth * TREEMAP_RATIO)));
+            d3.select(treemapHost).selectAll('svg').remove();
+            treemapSvg = d3.select(treemapHost).append('svg')
+                .attr('viewBox', [0, 0, treemapWidth, treemapHeight].join(' '))
+                .attr('role', 'group');
+        }
+
+        /**
+         * A treemap tile's label, shortened to its width.
+         * @param {Object} node - The tile's d3 hierarchy node.
+         * @param {number} width - The tile's width in px.
+         * @returns {string} The label, or empty when the tile is too small.
+         */
+        function tileLabel (node, width) {
+            const text = node.data.kind === 'company' && node.data.ticker ? node.data.ticker : node.data.name;
+            return width > 48 ? shorten(text, Math.floor((width - 12) / 6.5)) : '';
+        }
+
+        /**
+         * Draw the focus's parts as treemap tiles, in the same office colours (stepped in lightness when the parts
+         * share one office). Tiles are keyed, so a zoom or a change of year moves them when animated. The layout runs
+         * on a copy of the focus, because the sunburst's partition owns the nodes' own geometry; each tile carries
+         * the original node, so the tooltip, the zoom and the keyboard work on the real hierarchy.
+         * @param {boolean} animate - Whether to tween from what is drawn now.
+         * @returns {void}
+         */
+        function drawTreemap (animate) {
+            if (!treemapSvg || view.mode !== 'treemap') {
+                return;
+            }
+            const parts = new Map((focus.children || []).map((d) => [d.data.key, d]));
+            const isOther = (d) => (d.data.kind === 'other' ? 1 : 0);
+            const copy = d3.hierarchy(focus.data, (d) => d.children)
+                .sum((d) => (d.children ? 0 : d.value || 0))
+                .sort((a, b) => isOther(a) - isOther(b) || b.value - a.value);
+            d3.treemap().size([treemapWidth, treemapHeight]).paddingInner(2).round(true)(copy);
+            const step = focus.depth > 0;
+            const tiles = (copy.children || []).filter((d) => d.value > 0 && parts.has(d.data.key)).map((d, index) => ({
+                key: d.data.key,
+                node: parts.get(d.data.key),
+                x: d.x0,
+                y: d.y0,
+                w: Math.max(0, d.x1 - d.x0),
+                h: Math.max(0, d.y1 - d.y0),
+                fill: tileColour(officeColour(host, d.data.office), index, step)
+            }));
+            const duration = animate ? TRANSITION_MS : 0;
+
+            const joined = treemapSvg.selectAll('g.research-treemap__tile').data(tiles, (t) => t.key);
+            joined.exit().remove();
+            const entering = joined.enter().append('g')
+                .attr('class', 'research-treemap__tile')
+                .attr('transform', (t) => `translate(${t.x},${t.y})`)
+                .attr('tabindex', 0)
+                .on('click', (event, t) => {
+                    if (t.node.children) {
+                        zoomTo(t.key);
+                    }
+                })
+                .on('pointermove', (event, t) => tooltip.show(event, t.node))
+                .on('pointerdown', (event, t) => tooltip.show(event, t.node))
+                .on('pointerleave', (event) => {
+                    if (event.pointerType === 'mouse') {
+                        tooltip.hide();
+                    }
+                })
+                .on('focus', (event, t) => {
+                    const box = event.currentTarget.getBoundingClientRect();
+                    tooltip.show({ clientX: box.right, clientY: box.top }, t.node);
+                })
+                .on('blur', () => tooltip.hide())
+                .on('keydown', (event, t) => {
+                    if ((event.key === 'Enter' || event.key === ' ') && t.node.children) {
+                        event.preventDefault();
+                        pendingFocus = { tiles: true };
+                        zoomTo(t.key);
+                    } else if (event.key === 'Escape' && focus.parent) {
+                        event.preventDefault();
+                        pendingFocus = { tile: focus.data.key };
+                        zoomOut();
+                    }
+                });
+            entering.append('rect').attr('class', 'research-treemap__rect');
+            entering.append('text').attr('class', 'research-treemap__name').attr('x', 6).attr('y', 15);
+            entering.append('text').attr('class', 'research-treemap__value').attr('x', 6).attr('y', 30);
+
+            const all = entering.merge(joined)
+                .attr('role', (t) => (t.node.children ? 'button' : 'img'))
+                .attr('aria-label', (t) => {
+                    const share = `${percentOf(t.node.value, focus.value)} of ${focus.data.name}`;
+                    const hint = t.node.children ? '. Press Enter to zoom in, Escape to zoom out.' : '.';
+                    return `${t.node.data.name}: ${formatMoney(t.node.value)} Public float, ${share}${hint}`;
+                })
+                .classed('research-treemap__tile--zoomable', (t) => Boolean(t.node.children));
+            // Animated: tween from where the tiles are; otherwise apply at once (also under reduced motion).
+            const move = (selection) => (animate
+                ? selection.transition().duration(duration).ease(d3.easeCubicInOut)
+                : selection);
+            move(all).attr('transform', (t) => `translate(${t.x},${t.y})`);
+            move(all.select('rect'))
+                .attr('width', (t) => t.w)
+                .attr('height', (t) => t.h)
+                .attr('fill', (t) => t.fill)
+                .attr('fill-opacity', (t) => (t.node.data.kind === 'other' ? OTHER_OPACITY : (isLit(t.node) ? 1 : DIMMED_OPACITY)));
+            all.select('.research-treemap__name')
+                .attr('fill', (t) => inkFor(t.fill))
+                .text((t) => (t.h > 18 ? tileLabel(t.node, t.w) : ''));
+            all.select('.research-treemap__value')
+                .attr('fill', (t) => inkFor(t.fill))
+                .text((t) => (t.h > 36 && t.w > 64
+                    ? `${formatMoney(t.node.value)} · ${percentOf(t.node.value, focus.value)}`
+                    : ''));
+            treemapSvg.attr('aria-label', `Treemap of ${focus.data.name}: ${tiles.length} parts, ` +
+                `${formatMoney(focus.value || 0)} Public float in total.`);
+        }
+
+        /**
+         * Show the sunburst or the treemap. Both draw the same focus, so the breadcrumb, the cards and the ranked list
+         * stay as they are. The chart that appears fades and scales in briefly, unless the user asks for reduced
+         * motion.
+         * @param {string} mode - 'sunburst' or 'treemap'.
+         * @returns {void}
+         */
+        function setMode (mode) {
+            if (!treemapHost || (mode !== 'sunburst' && mode !== 'treemap') || mode === view.mode) {
+                return;
+            }
+            view.mode = mode;
+            tooltip.hide();
+            viewToggles.forEach((button) => {
+                button.setAttribute('aria-pressed', String(button.dataset.researchView === mode));
+            });
+            const showing = mode === 'treemap' ? treemapHost : host;
+            const leaving = mode === 'treemap' ? host : treemapHost;
+            leaving.hidden = true;
+            showing.hidden = false;
+            if (mode === 'treemap') {
+                layoutTreemap();
+            } else {
+                layout();
+            }
+            update(periodIndex, { animate: false });
+            if (!prefersReducedMotion() && typeof showing.animate === 'function') {
+                showing.animate([
+                    { opacity: 0, transform: 'scale(0.97)' },
+                    { opacity: 1, transform: 'none' }
+                ], { duration: SWITCH_MS, easing: 'ease-out' });
+            }
+            if (live) {
+                live.textContent = mode === 'treemap' ? 'Showing the treemap.' : 'Showing the sunburst.';
+            }
+        }
+
+        /**
+         * The drawn arc element of a node key, or null.
+         * @param {string} key - The node key.
+         * @returns {SVGPathElement|null} The arc.
+         */
+        function arcElement (key) {
+            return arcLayer.select(`path[data-key="${key}"]`).node();
+        }
+
+        /**
+         * The visible siblings of an arc's node (including itself), in drawing order, which is clockwise.
+         * @param {Object} node - A d3 hierarchy node.
+         * @returns {Object[]} The siblings.
+         */
+        function visibleSiblings (node) {
+            return (node.parent ? node.parent.children : [node]).filter((d) => d.target && isVisible(d.target));
+        }
+
+        /**
+         * Give the arcs their keyboard semantics: every visible arc is labelled and focusable by script, one of them
+         * (the one used last, or the focus's first part) holds the tab stop, and hidden arcs leave the tab order.
+         * @param {Object[]} nodes - The period's nodes, each with its `target` geometry.
+         * @returns {void}
+         */
+        function syncArcFocus (nodes) {
+            const visible = nodes.filter((d) => isVisible(d.target));
+            const entry = visible.find((d) => d.data.key === activeKey) ||
+                visible.find((d) => d.parent === focus) || visible[0];
+            activeKey = entry ? entry.data.key : null;
+            arcLayer.selectAll('path').each(function (d) {
+                const shown = Boolean(d && d.target && isVisible(d.target)) && this.getAttribute('pointer-events') !== 'none';
+                if (!shown) {
+                    this.removeAttribute('tabindex');
+                    this.removeAttribute('role');
+                    this.removeAttribute('aria-label');
+                    return;
+                }
+                this.setAttribute('tabindex', d.data.key === activeKey ? '0' : '-1');
+                this.setAttribute('role', d.children ? 'button' : 'img');
+                const share = d.parent ? `, ${percentOf(d.value, d.parent.value)} of ${d.parent.data.name}` : '';
+                const hint = d.children ? '. Press Enter to zoom in, Escape to zoom out.' : '.';
+                this.setAttribute('aria-label', `${d.data.name}: ${formatMoney(d.value)} Public float${share}${hint}`);
+            });
+        }
+
+        /**
+         * Move the tab stop to a node's arc and focus it.
+         * @param {Object|string} target - The d3 hierarchy node, or its key.
+         * @returns {void}
+         */
+        function focusArc (target) {
+            const key = typeof target === 'string' ? target : target.data.key;
+            const element = arcElement(key);
+            if (!element) {
+                return;
+            }
+            arcLayer.selectAll('path[tabindex="0"]').attr('tabindex', '-1');
+            activeKey = key;
+            element.setAttribute('tabindex', '0');
+            element.focus();
+        }
+
+        /**
+         * Arrow keys move between sibling arcs (wrapping), Enter or Space zooms into a group, and Escape zooms out
+         * with focus returned to the group the user came from.
+         * @param {KeyboardEvent} event - The key press on an arc.
+         * @param {Object} node - The arc's d3 hierarchy node.
+         * @returns {void}
+         */
+        function onArcKey (event, node) {
+            const siblings = visibleSiblings(node);
+            const index = siblings.indexOf(node);
+            if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key) && siblings.length > 0) {
+                event.preventDefault();
+                const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+                focusArc(siblings[(index + step + siblings.length) % siblings.length]);
+            } else if ((event.key === 'Enter' || event.key === ' ') && node.children) {
+                event.preventDefault();
+                pendingFocus = { firstArc: true };
+                zoomTo(node.data.key);
+            } else if (event.key === 'Escape' && focus.parent) {
+                event.preventDefault();
+                pendingFocus = { arc: focus.data.key };
+                zoomOut();
+            }
+        }
+
+        /**
+         * After a zoom asked for by a key press or the ranked list, put keyboard focus where the user expects it: on
+         * the group they came from, on the new focus's first part, or on the ranked list's first button (its title
+         * when the parts have no parts of their own).
+         * @returns {void}
+         */
+        function applyPendingFocus () {
+            const request = pendingFocus;
+            pendingFocus = null;
+            if (!request) {
+                return;
+            }
+            if (request.tiles || request.tile) {
+                const tiles = treemapSvg ? treemapSvg.selectAll('g.research-treemap__tile').nodes() : [];
+                const target = request.tile
+                    ? tiles.find((element) => d3.select(element).datum().key === request.tile)
+                    : tiles[0];
+                if (target) {
+                    target.focus();
+                }
+            } else if (request.list) {
+                const first = rankedList ? rankedList.querySelector('button') : null;
+                if (first) {
+                    first.focus();
+                } else if (rankedTitle) {
+                    rankedTitle.focus();
+                }
+            } else if (request.arc) {
+                focusArc(request.arc);
+            } else if (activeKey) {
+                focusArc(activeKey);
+            }
+        }
+
+        /**
+         * Fade every arc outside one group's slice (its arc and everything inside it), or clear the fade.
+         * @param {string|null} key - The group's node key, or null to clear.
+         * @returns {void}
+         */
+        function setHighlight (key) {
+            arcLayer.selectAll('path').classed('research-sunburst__arc--faded', (d) =>
+                Boolean(key) && Boolean(d) && !d.ancestors().some((a) => a.data.key === key));
+            if (treemapSvg) {
+                treemapSvg.selectAll('g.research-treemap__tile')
+                    .classed('research-treemap__tile--faded', (t) => Boolean(key) && t.key !== key);
+            }
+        }
+
+        /**
+         * Show the focus in the centre, in the breadcrumb and in the takeaway cards, and the state of the legend
          * buttons, the Technology toggle and its share.
+         * @param {Object} root - The d3 hierarchy root of the period shown.
+         * @param {Object|null} previous - The d3 hierarchy root of the year before, or null for the first year.
          * @param {string} periodLabel - The period shown.
          * @returns {{trail: string, techText: string}} Where the chart is (e.g. "All filers › Technology") and the
          *     Technology share of the focus.
          */
-        function describeView (periodLabel) {
+        function describeView (root, previous, periodLabel) {
             const zoomed = focus.depth > 0;
             const trail = focus.ancestors().reverse().map((d) => d.data.name).join(' › ');
             centreTitle.text(zoomed ? shorten(focus.data.name, Math.floor(unit / 3)) : periodLabel);
             centreValue.text(formatMoney(focus.value || 0));
             centreHint.text(zoomed ? 'Zoom out' : 'Public float');
             centre.classed('research-sunburst__centre--zoomed', zoomed);
-            if (focusLabel) {
-                focusLabel.textContent = `${trail}: ${formatMoney(focus.value || 0)}`;
+            renderBreadcrumb(breadcrumb, focus, zoomTo);
+            renderTakeaways(takeawaysList, takeaways(root, focus, previous, periodLabel));
+            if (rankedTitle) {
+                rankedTitle.textContent = `Largest parts of ${focus.data.name}, ${periodLabel}`;
             }
-            if (zoomOutButton) {
-                zoomOutButton.setAttribute('aria-disabled', String(!zoomed));
-            }
+            renderRanked(rankedList, focus, officeColour, {
+                onPick: (key) => {
+                    pendingFocus = { list: true };
+                    zoomTo(key);
+                },
+                onHighlight: setHighlight
+            });
             if (legend) {
                 const office = focus.ancestors().find((d) => d.depth === 1);
                 legend.querySelectorAll('.research-legend__button').forEach((button) => {
@@ -557,11 +1179,9 @@
         function update (index, options) {
             periodIndex = Math.max(0, Math.min(data.values.length - 1, index));
             const period = data.values[periodIndex];
-            const root = d3.hierarchy(buildTree(data, period))
-                .sum((d) => (d.children ? 0 : d.value || 0))
-                .sort(compareNodes);
+            const root = rootOf(data, period);
             d3.partition().size([2 * Math.PI, RINGS + 1])(root);
-            markTechnology(root);
+            const previous = periodIndex > 0 ? rootOf(data, data.values[periodIndex - 1]) : null;
 
             // Keep the focus by its key; a group the period does not have (or has no Public float in) falls back
             // to every filer.
@@ -577,8 +1197,12 @@
                 : null;
             drawArcs(nodes, transition);
             drawLabels(nodes, transition);
+            drawTreemap(Boolean(transition));
             renderLegend(legend, root, (key) => zoomTo(view.focusKey === key ? ROOT_KEY : key));
-            const { trail, techText } = describeView(period.period);
+            const { trail, techText } = describeView(root, previous, period.period);
+            setHighlight(null);
+            syncArcFocus(nodes);
+            applyPendingFocus();
 
             const largest = focus.leaves()
                 .filter((d) => d.data.kind === 'company')
@@ -618,6 +1242,8 @@
          */
         function zoomTo (key) {
             view.focusKey = key;
+            // A zoom moves the tab stop back to the new focus's first part (Escape then restores the group left).
+            activeKey = null;
             applyView();
         }
 
@@ -678,18 +1304,23 @@
          */
         function resize () {
             layout();
+            if (view.mode === 'treemap') {
+                layoutTreemap();
+            }
             update(periodIndex, { animate: false });
         }
 
-        if (zoomOutButton) {
-            zoomOutButton.addEventListener('click', zoomOut);
-        }
         if (techToggle) {
             techToggle.addEventListener('click', () => setTechnology(!view.technology));
         }
+        viewToggles.forEach((button) => {
+            button.addEventListener('click', () => setMode(button.dataset.researchView));
+        });
 
         layout();
-        return { periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize, zoomTo, zoomOut, setTechnology };
+        return {
+            periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize, zoomTo, zoomOut, setTechnology, setMode
+        };
     }
 
     /**
@@ -706,11 +1337,14 @@
         const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
         const chart = createSunburst(host, data, tooltip);
         page.registerTab(TAB_ID, chart);
-        let width = host.clientWidth;
+        const treemapHost = document.getElementById(TREEMAP_ID);
+        // The card holds both charts; watching it (not the chart host) ignores the host hiding when the treemap shows.
+        const card = host.parentElement || host;
+        let width = card.clientWidth;
 
-        // A tap outside the chart, or a scroll, puts the tooltip away.
+        // A tap outside the charts, or a scroll, puts the tooltip away.
         document.addEventListener('pointerdown', (event) => {
-            if (!host.contains(event.target)) {
+            if (!host.contains(event.target) && !(treemapHost && treemapHost.contains(event.target))) {
                 tooltip.hide();
             }
         });
@@ -718,13 +1352,13 @@
 
         if (typeof ResizeObserver !== 'undefined') {
             const observer = new ResizeObserver(() => {
-                if (host.clientWidth !== width) {
-                    width = host.clientWidth;
+                if (card.clientWidth !== width) {
+                    width = card.clientWidth;
                     tooltip.hide();
                     chart.resize();
                 }
             });
-            observer.observe(host);
+            observer.observe(card);
         }
     }
 
