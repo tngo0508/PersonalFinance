@@ -8,11 +8,14 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Tests.Security;
+using ProfileLookup = PersonalFinance.ApiService.Features.Research.CompanyLookupOutcome<PersonalFinance.Shared.DTOs.Research.CompanyLookupResultDto>;
+using ReleasesLookup = PersonalFinance.ApiService.Features.Research.CompanyLookupOutcome<PersonalFinance.Shared.DTOs.Research.CompanyPressReleasesResultDto>;
 
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The ApiService <c>GET /api/Research/companies/suggest</c> and <c>/api/Research/companies/{ticker}</c> endpoints:
+/// The ApiService <c>GET /api/Research/companies/suggest</c>, <c>/api/Research/companies/{ticker}</c> and
+/// <c>/api/Research/companies/{ticker}/releases</c> endpoints:
 /// signed-in only; input is checked before the service is called; each outcome maps to its status code.
 /// </summary>
 [Collection("ApiServiceHost")]
@@ -27,12 +30,23 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
         _host = host;
     }
 
-    private sealed class FakeCompanies(CompanyLookupOutcome outcome, List<CompanySuggestionDto>? suggestions = null)
+    private sealed class FakeCompanies(ProfileLookup outcome, List<CompanySuggestionDto>? suggestions = null,
+        ReleasesLookup? releases = null)
         : ICompanyProfileService
     {
         public string? LookedUp { get; private set; }
         public string? LookedUpBy { get; private set; }
         public string? Suggested { get; private set; }
+        public string? ReleasesOf { get; private set; }
+        public string? ReleasesFor { get; private set; }
+
+        public Task<ReleasesLookup> GetPressReleasesAsync(string userId, string ticker,
+            CancellationToken cancellationToken = default)
+        {
+            ReleasesFor = userId;
+            ReleasesOf = ticker;
+            return Task.FromResult(releases ?? ReleasesOutcome());
+        }
 
         public Task<List<CompanySuggestionDto>?> SuggestAsync(string query, CancellationToken cancellationToken = default)
         {
@@ -40,7 +54,7 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
             return Task.FromResult(suggestions);
         }
 
-        public Task<CompanyLookupOutcome> LookUpAsync(string userId, string ticker,
+        public Task<ProfileLookup> LookUpAsync(string userId, string ticker,
             CancellationToken cancellationToken = default)
         {
             LookedUpBy = userId;
@@ -61,8 +75,96 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
             },
         };
 
-    private static CompanyLookupOutcome ProfileOutcome() =>
-        CompanyLookupOutcome.Answer(CompanyLookupKinds.Profile, "MSFT", new CompanyProfileDto { Ticker = "MSFT" });
+    private static ProfileLookup ProfileOutcome(string kind = CompanyLookupKinds.Profile) =>
+        new ProfileLookup(new CompanyLookupResultDto
+        {
+            Kind = kind,
+            Ticker = "MSFT",
+            Profile = kind == CompanyLookupKinds.Profile ? new CompanyProfileDto { Ticker = "MSFT" } : null,
+        });
+
+    private static ReleasesLookup ReleasesOutcome(string kind = CompanyLookupKinds.Profile) =>
+        new ReleasesLookup(new CompanyPressReleasesResultDto
+        {
+            Kind = kind,
+            Ticker = "MSFT",
+            Releases = kind == CompanyLookupKinds.Profile
+                ? [new CompanyPressReleaseDto { Headline = "Microsoft Cloud and AI Strength Fuels Fourth Quarter Results" }]
+                : [],
+        });
+
+    [Fact]
+    public async Task Releases_NormalizesTheTicker_AndReadsThemForTheAccount()
+    {
+        var companies = new FakeCompanies(ProfileOutcome());
+
+        IActionResult result = await Controller(companies).Releases(" brk.b ");
+
+        CompanyPressReleasesResultDto body =
+            Assert.IsType<CompanyPressReleasesResultDto>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Single(body.Releases);
+        Assert.Equal("BRK-B", companies.ReleasesOf);
+        Assert.Equal("account-1", companies.ReleasesFor);
+    }
+
+    [Theory]
+    [InlineData(CompanyLookupKinds.Fund)]
+    [InlineData(CompanyLookupKinds.NotFound)]
+    public async Task Releases_OfAFundOrAnUnlistedTicker_Is200WithTheKind(string kind)
+    {
+        var companies = new FakeCompanies(ProfileOutcome(), releases: ReleasesOutcome(kind));
+
+        IActionResult result = await Controller(companies).Releases("MSFT");
+
+        Assert.Equal(kind,
+            Assert.IsType<CompanyPressReleasesResultDto>(Assert.IsType<OkObjectResult>(result).Value).Kind);
+    }
+
+    [Theory]
+    [InlineData("TOOLONGTICKER")]
+    [InlineData("<b>")]
+    public async Task Releases_ARejectedTicker_Is400_WithoutReadingThem(string ticker)
+    {
+        var companies = new FakeCompanies(ProfileOutcome());
+
+        IActionResult result = await Controller(companies).Releases(ticker);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Null(companies.ReleasesOf);
+    }
+
+    [Fact]
+    public async Task Releases_SwitchedOff_Is404()
+    {
+        var companies = new FakeCompanies(ProfileOutcome(), releases: new ReleasesLookup(null, SwitchedOff: true));
+
+        IActionResult result = await Controller(companies).Releases("MSFT");
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task Releases_TooManyLookups_Is429()
+    {
+        var companies = new FakeCompanies(ProfileOutcome(), releases: new ReleasesLookup(null, RateLimited: true));
+
+        IActionResult result = await Controller(companies).Releases("MSFT");
+
+        Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task Releases_SecUnavailable_Is503WithAReason()
+    {
+        var companies = new FakeCompanies(ProfileOutcome(), releases: new ReleasesLookup(Result: null));
+
+        IActionResult result = await Controller(companies).Releases("MSFT");
+
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
+        Assert.Equal(CompaniesController.ProfileUnavailable,
+            Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
+    }
 
     [Fact]
     public void Controller_RequiresAuthentication()
@@ -88,9 +190,7 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     [InlineData(CompanyLookupKinds.NotFound)]
     public async Task Get_AnAnswer_Is200WithIt(string kind)
     {
-        CompanyLookupOutcome outcome = CompanyLookupOutcome.Answer(kind, "MSFT");
-
-        IActionResult result = await Controller(new FakeCompanies(outcome)).Get("MSFT");
+        IActionResult result = await Controller(new FakeCompanies(ProfileOutcome(kind))).Get("MSFT");
 
         Assert.Equal(kind, Assert.IsType<CompanyLookupResultDto>(Assert.IsType<OkObjectResult>(result).Value).Kind);
     }
@@ -98,7 +198,7 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     [Fact]
     public async Task Get_TooManyLookups_Is429()
     {
-        IActionResult result = await Controller(new FakeCompanies(CompanyLookupOutcome.TooManyLookups())).Get("MSFT");
+        IActionResult result = await Controller(new FakeCompanies(new ProfileLookup(null, RateLimited: true))).Get("MSFT");
 
         Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsType<ObjectResult>(result).StatusCode);
     }
@@ -106,7 +206,7 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     [Fact]
     public async Task Get_SecUnavailable_Is503WithAReason()
     {
-        IActionResult result = await Controller(new FakeCompanies(CompanyLookupOutcome.SecUnavailable())).Get("MSFT");
+        IActionResult result = await Controller(new FakeCompanies(new ProfileLookup(Result: null))).Get("MSFT");
 
         ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
@@ -164,6 +264,7 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     [Theory]
     [InlineData("/api/Research/companies/MSFT")]
     [InlineData("/api/Research/companies/suggest?q=micro")]
+    [InlineData("/api/Research/companies/MSFT/releases")]
     public async Task OverHttp_WithoutTheSharedSecret_IsRejected(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -178,6 +279,7 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     [Theory]
     [InlineData("/api/Research/companies/TOOLONGTICKER")]
     [InlineData("/api/Research/companies/suggest?q=")]
+    [InlineData("/api/Research/companies/TOOLONGTICKER/releases")]
     public async Task OverHttp_SignedIn_ARejectedInput_Is400(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

@@ -90,8 +90,7 @@ internal static class CompanyProfileBuilder
 
     /// <summary>The filing's index page: <c>Archives/edgar/data/{cik}/{accession without dashes}/{accession}-index.htm</c>.</summary>
     private static string FilingIndexUrl(long cik, string accessionNumber) =>
-        string.Create(CultureInfo.InvariantCulture,
-            $"{EdgarUrl}Archives/edgar/data/{cik}/{accessionNumber.Replace("-", string.Empty, StringComparison.Ordinal)}/{accessionNumber}-index.htm");
+        EdgarArchive.FileUrl(cik, accessionNumber, $"{accessionNumber}-index.htm");
 
     /// <summary>The exchange SEC lists for <paramref name="ticker"/>, or for the company's first ticker.</summary>
     private static string? ExchangeOf(string ticker, SecCompanySubmissions submissions)

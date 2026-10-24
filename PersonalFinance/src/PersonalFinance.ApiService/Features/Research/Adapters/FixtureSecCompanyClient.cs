@@ -8,9 +8,12 @@ namespace PersonalFinance.ApiService.Features.Research.Adapters;
 /// <see cref="ResearchFixtureSeeder.IsEnabled"/>: CI and local E2E runs cannot reach SEC. It lists three tickers:
 /// <list type="bullet">
 /// <item><c>EXMP</c>, Example Corp: four fiscal years (2022 to 2025) of US GAAP figures, with no gross profit in 2022,
-/// a change of revenue concept in 2023, a restated 2024 net income, and 10-K, 10-Q and 8-K filings.</item>
+/// a change of revenue concept in 2023, a restated 2024 net income, and 10-K, 10-Q and 8-K filings. Its 8-Ks carry
+/// three press releases: an earnings release, an investor-day presentation (a PDF, so its headline falls back to the
+/// 8-K's events) and a leadership announcement.</item>
 /// <item><c>EXFD</c>, Example Index Fund: a fund share class.</item>
-/// <item><c>EXGL</c>, Example Global plc: a foreign company reporting under IFRS on Form 20-F.</item>
+/// <item><c>EXGL</c>, Example Global plc: a foreign company reporting under IFRS on Form 20-F, with no press
+/// releases.</item>
 /// </list>
 /// The figures are rounded illustrations, not source data, and are never used outside Development.
 /// </summary>
@@ -23,6 +26,13 @@ internal sealed class FixtureSecCompanyClient : ISecCompanyClient
     public const long ExampleGlobalCik = 9_000_003;
 
     private const long ExampleFundCik = 9_000_002;
+
+    private readonly TimeProvider _timeProvider;
+
+    public FixtureSecCompanyClient(TimeProvider timeProvider)
+    {
+        _timeProvider = timeProvider;
+    }
 
     /// <inheritdoc />
     public Task<IReadOnlyList<SecCompanyListing>> GetCompanyTickersAsync(CancellationToken cancellationToken) =>
@@ -38,29 +48,40 @@ internal sealed class FixtureSecCompanyClient : ISecCompanyClient
         Task.FromResult<IReadOnlyList<string>>(["EXFD"]);
 
     /// <inheritdoc />
-    public Task<SecCompanySubmissions?> GetCompanySubmissionsAsync(long cik, CancellationToken cancellationToken) =>
-        Task.FromResult(cik switch
+    /// <remarks>
+    /// Example Corp's 8-Ks, 10-Qs and Form 4 are dated in days before today (<see cref="TimeProvider"/>), so they stay
+    /// within the press releases' 12-month window whenever the walkthrough runs; on 24 October 2026 they fall on
+    /// 4 August, 12 June, 20 May and 5 May 2026. The 10-Ks keep the dates of the facts they report.
+    /// </remarks>
+    public Task<SecCompanySubmissions?> GetCompanySubmissionsAsync(long cik, CancellationToken cancellationToken)
+    {
+        DateOnly today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+        DateOnly earnings = today.AddDays(-81);
+        DateOnly leadership = today.AddDays(-134);
+        DateOnly investorDay = today.AddDays(-172);
+        return Task.FromResult(cik switch
         {
             ExampleCorpCik => new SecCompanySubmissions(ExampleCorpCik, "EXAMPLE CORP", ["EXMP"], ["NYSE"], "7372",
                 "SERVICES-PREPACKAGED SOFTWARE", "06 Technology", "DE", "1231",
             [
-                Filing("0009000001-26-000012", "8-K", "2026-08-04", "2026-08-04", "2.02,9.01"),
-                Filing("0009000001-26-000011", "10-Q", "2026-08-04", "2026-06-30"),
-                Filing("0009000001-26-000010", "8-K", "2026-06-12", "2026-06-10", "5.02"),
-                Filing("0009000001-26-000009", "4", "2026-05-20", null),
-                Filing("0009000001-26-000008", "10-Q", "2026-05-05", "2026-03-31"),
-                Filing("0009000001-26-000007", "8-K", "2026-05-05", "2026-05-05", "2.02,7.01,9.01"),
-                Filing("0009000001-26-000004", "10-K", "2026-02-20", "2025-12-31"),
-                Filing("0009000001-25-000004", "10-K", "2025-02-21", "2024-12-31"),
+                Filing("0009000001-26-000012", "8-K", earnings, earnings, "2.02,9.01"),
+                Filing("0009000001-26-000011", "10-Q", earnings, QuarterEndBefore(earnings)),
+                Filing("0009000001-26-000010", "8-K", leadership, leadership.AddDays(-2), "5.02"),
+                Filing("0009000001-26-000009", "4", today.AddDays(-157), null),
+                Filing("0009000001-26-000008", "10-Q", investorDay, QuarterEndBefore(investorDay)),
+                Filing("0009000001-26-000007", "8-K", investorDay, investorDay, "2.02,7.01,9.01"),
+                Filing("0009000001-26-000004", "10-K", Date("2026-02-20"), Date("2025-12-31")),
+                Filing("0009000001-25-000004", "10-K", Date("2025-02-21"), Date("2024-12-31")),
             ]),
             ExampleGlobalCik => new SecCompanySubmissions(ExampleGlobalCik, "Example Global plc", ["EXGL"], ["NYSE"],
                 "2834", "PHARMACEUTICAL PREPARATIONS", "03 Life Sciences", "United Kingdom", "1231",
             [
-                Filing("0009000003-26-000003", "6-K", "2026-07-30", "2026-06-30"),
-                Filing("0009000003-26-000001", "20-F", "2026-03-10", "2025-12-31"),
+                Filing("0009000003-26-000003", "6-K", Date("2026-07-30"), Date("2026-06-30")),
+                Filing("0009000003-26-000001", "20-F", Date("2026-03-10"), Date("2025-12-31")),
             ]),
             _ => null,
         });
+    }
 
     /// <inheritdoc />
     public Task<SecCompanyFacts?> GetCompanyFactsAsync(long cik, CancellationToken cancellationToken) =>
@@ -71,10 +92,47 @@ internal sealed class FixtureSecCompanyClient : ISecCompanyClient
             _ => null,
         });
 
-    private static SecFilingEntry Filing(string accession, string form, string filed, string? reported,
+    /// <inheritdoc />
+    public Task<IReadOnlyList<string>> GetPressReleaseFileNamesAsync(long cik, string accessionNumber,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<string>>(ExhibitsOf(cik, accessionNumber).Select(e => e.File).ToList());
+
+    /// <inheritdoc />
+    public Task<string?> GetDocumentHeadAsync(long cik, string accessionNumber, string fileName,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(ExhibitsOf(cik, accessionNumber).FirstOrDefault(e => e.File == fileName).Head);
+
+    /// <summary>
+    /// Example Corp's exhibit 99 documents of one 8-K: each file name with the start of the document, or null for a
+    /// PDF, which is never read.
+    /// </summary>
+    private static (string File, string? Head)[] ExhibitsOf(long cik, string accessionNumber) =>
+        (cik, accessionNumber) switch
+        {
+            (ExampleCorpCik, "0009000001-26-000012") =>
+            [
+                ("exmp-20260804xex99d1.htm",
+                    "<html><head><title>EX-99.1</title></head><body><p>Exhibit 99.1</p>" +
+                    "<p><b>Example Corp Reports Second Quarter 2026 Results</b></p>" +
+                    "<p>Revenue grew 9% from a year earlier.</p></body></html>"),
+            ],
+            (ExampleCorpCik, "0009000001-26-000010") =>
+            [
+                ("exmp-20260612xex99d1.htm",
+                    "<html><head><title>EX-99.1</title></head><body><p>Exhibit 99.1</p>" +
+                    "<p><b>Example Corp Names Alex Rivera Chief Financial Officer</b></p></body></html>"),
+            ],
+            (ExampleCorpCik, "0009000001-26-000007") => [("exmp-20260505xex99d2.pdf", null)],
+            _ => [],
+        };
+
+    private static SecFilingEntry Filing(string accession, string form, DateOnly filed, DateOnly? reported,
         string items = "") =>
-        new(accession, form, Date(filed), reported is null ? null : Date(reported),
-            items.Split(',', StringSplitOptions.RemoveEmptyEntries));
+        new(accession, form, filed, reported, items.Split(',', StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>The last day of the calendar quarter before the one <paramref name="date"/> falls in.</summary>
+    private static DateOnly QuarterEndBefore(DateOnly date) =>
+        new DateOnly(date.Year, (date.Month - 1) / 3 * 3 + 1, 1).AddDays(-1);
 
     /// <summary>Example Corp's facts, as its 10-Ks for fiscal 2023 to 2025 report them (each with the prior year).</summary>
     private static SecCompanyFacts ExampleCorpFacts()

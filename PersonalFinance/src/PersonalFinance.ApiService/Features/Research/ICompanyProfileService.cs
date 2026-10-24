@@ -16,7 +16,19 @@ public interface ICompanyProfileService
 
     /// <summary>
     /// Looks up <paramref name="ticker"/> (as SEC lists it, e.g. <c>BRK-B</c>) for <paramref name="userId"/>: the
-    /// company's profile, a fund, or a ticker SEC does not list. Counts toward the Account's lookup limit.
+    /// company's profile, a fund, or a ticker SEC does not list. Counts toward the Account's lookup limit. A profile
+    /// says whether its press releases can be read (<see cref="CompanyLookupResultDto.PressReleasesAvailable"/>).
     /// </summary>
-    Task<CompanyLookupOutcome> LookUpAsync(string userId, string ticker, CancellationToken cancellationToken = default);
+    Task<CompanyLookupOutcome<CompanyLookupResultDto>> LookUpAsync(string userId, string ticker,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The press releases of <paramref name="ticker"/> for <paramref name="userId"/>: the announcements the company
+    /// attached to its 8-K filings in the last 12 months, newest first, at most 10; or a fund, or a ticker SEC does
+    /// not list. Counts toward the Account's lookup limit. Switched off
+    /// (<see cref="CompanyLookupOutcome{TResult}.SwitchedOff"/>) without reading or counting anything when
+    /// <see cref="ResearchSettings.PressReleasesEnabledKey"/> is false.
+    /// </summary>
+    Task<CompanyLookupOutcome<CompanyPressReleasesResultDto>> GetPressReleasesAsync(string userId, string ticker,
+        CancellationToken cancellationToken = default);
 }

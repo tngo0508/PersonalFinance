@@ -94,8 +94,12 @@ public class ResearchWebControllerTests
         Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetEtfsAsync), nameof(IResearchApi.GetWorldAsync)],
             proxy.Calls);
         Assert.Same(Snapshot, model.Sectors.Snapshot);
-        // The only other actions are the Companies tab's search and lookup, which no snapshot tab uses.
-        Assert.Equal([nameof(ResearchController.Company), nameof(ResearchController.Index), nameof(ResearchController.Suggest)],
+        // The only other actions are the Companies tab's search, lookup and press releases, which no snapshot tab uses.
+        Assert.Equal(
+            [
+                nameof(ResearchController.Company), nameof(ResearchController.Index),
+                nameof(ResearchController.Releases), nameof(ResearchController.Suggest),
+            ],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Select(m => m.Name).Order(StringComparer.Ordinal));
     }
