@@ -778,6 +778,84 @@ public class ResearchFundsServiceTests
     /// <summary>One share class's monthly returns in a canned N-PORT filing (Item B.5): null is reported as N/A.</summary>
     private sealed record Return(string? ClassId, decimal? Month1, decimal? Month2, decimal? Month3);
 
+    // ---- Fund exposure ----
+
+    private static readonly string[] RegionSamples = ["US", "HK", "KY", "JE", "ZA", "XX"];
+
+    private static async Task<FundExposureSnapshotDto> RefreshExposureAsync(ResearchService service)
+    {
+        ResearchRefreshSummary summary = await service.RefreshAsync();
+        Assert.Contains(ResearchDatasets.FundExposure, summary.Built);
+        return (await service.GetFundExposureAsync()).Snapshot!;
+    }
+
+    [Fact]
+    public async Task RefreshAsync_TotalsEachFundsCountriesAndCurrencies_OverEveryHolding_WithCollateralLeftOut()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        // 27 US holdings of 3% (the top 25 of the category and two more) and three smaller Japanese holdings of 2%,
+        // outside the top 25; cash collateral of 10% flagged as an attribute (as IWM files it), and a 0.5% future with
+        // no country or currency.
+        Holding[] holdings = Enumerable.Range(0, 27)
+            .Select(i => new Holding($"US Company {i}", "EC", 3m, Country: "US", Currency: "USD"))
+            .Concat(Enumerable.Range(0, 3).Select(i => new Holding($"Japan Company {i}", "EC", 2m, Country: "JP", Currency: "JPY")))
+            .Append(new Holding("State Street Navigator Securities Lending", "STIV", 10m, Country: "US", Currency: "USD",
+                CollateralAsAttribute: true))
+            .Append(new Holding("E-mini future", "DE", 0.5m, Country: "N/A", Currency: "N/A"))
+            .ToArray();
+        handler.AddFiling("884394", "0000884394-26-000001", "2026-05-28", "2026-03-31", null, holdings);
+
+        FundExposureSnapshotDto snapshot = await RefreshExposureAsync(CreateService(db, handler, Spy));
+
+        FundExposureDto spy = Assert.Single(snapshot.Funds);
+        Assert.Equal([("US", "840", "North America", 81m), ("JP", "392", "Asia Pacific", 6m)],
+            spy.Countries.Select(c => (c.Code, c.MapId, c.Region, c.Percent)));
+        Assert.Equal([("USD", 81m), ("JPY", 6m)], spy.Currencies.Select(c => (c.Code, c.Percent)));
+        // 100 less the 87 with a country: the future, and cash not reported as a holding.
+        Assert.Equal((13m, 13m), (spy.UnallocatedCountry, spy.UnallocatedCurrency));
+        Assert.Equal(("0000884394-26-000001", new DateOnly(2026, 3, 31)), (spy.Accession, spy.ReportDate));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_KeepsTheStoredExposure_UntilAFundFilesANewerReport()
+    {
+        string database = $"Funds_{Guid.NewGuid():N}";
+        StubNportHandler handler = OverlapHandler();
+        AddSpy(handler, "0000884394-26-000001", "2026-05-28", "2026-03-31", new Holding("Apple Inc", "EC", 7m, Country: "US", Currency: "USD"));
+        await using (AppDbContext db = CreateContext(database))
+        {
+            await RefreshExposureAsync(CreateService(db, handler, Spy));
+        }
+
+        handler.Requests.Clear();
+        await using (AppDbContext db = CreateContext(database))
+        {
+            await CreateService(db, handler, Spy).RefreshAsync();
+        }
+        Assert.DoesNotContain(handler.Requests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal));
+
+        AddSpy(handler, "0000884394-26-000002", "2026-08-27", "2026-06-30", new Holding("Shell Plc", "EC", 4m, Country: "GB", Currency: "GBP"));
+        await using AppDbContext later = CreateContext(database);
+        FundExposureDto spy = Assert.Single((await RefreshExposureAsync(CreateService(later, handler, Spy))).Funds);
+        Assert.Equal([("GB", 4m)], spy.Countries.Select(c => (c.Code, c.Percent)));
+        Assert.Equal("0000884394-26-000002", spy.Accession);
+    }
+
+    [Fact]
+    public void CountryCodes_MapAlpha2ToTheMapsNumericIds_AndToRegions()
+    {
+        Assert.Equal(250, IsoCountryCodes.Count);
+        Assert.Equal(("840", "344", "702"), (IsoCountryCodes.NumericOfAlpha2("US"), IsoCountryCodes.NumericOfAlpha2("hk"),
+            IsoCountryCodes.NumericOfAlpha2("SG")));
+        Assert.Null(IsoCountryCodes.NumericOfAlpha2("XX"));
+        Assert.Equal("076", IsoCountryCodes.NumericOf("BRA"));
+        Assert.Equal(
+            [CountryRegions.NorthAmerica, CountryRegions.AsiaPacific, CountryRegions.LatinAmerica, CountryRegions.Europe,
+                CountryRegions.MiddleEastAfrica, CountryRegions.Other],
+            RegionSamples.Select(CountryRegions.Of));
+    }
+
     /// <summary>Records the message of every log entry from this solution's code.</summary>
     private sealed class AllLogs : ILoggerProvider
     {
@@ -800,7 +878,8 @@ public class ResearchFundsServiceTests
     /// when it has them and whether it is securities-lending cash collateral.
     /// </summary>
     private sealed record Holding(string Name, string Category, decimal Percent, string? Cusip = null,
-        string? Isin = null, bool CashCollateral = false);
+        string? Isin = null, bool CashCollateral = false, string? Country = null, string? Currency = null,
+        bool CollateralAsAttribute = false);
 
     private sealed record Filing(string ListedUnder, string Accession, string FiledOn, string FormType, long Cik,
         string Document);
@@ -927,7 +1006,11 @@ public class ResearchFundsServiceTests
                       <payoffProfile>Long</payoffProfile>
                       {category}
                       <issuerCat>CORP</issuerCat>
-                      <securityLending><isCashCollateral>{(h.CashCollateral ? "Y" : "N")}</isCashCollateral><isNonCashCollateral>N</isNonCashCollateral><isLoanByFund>N</isLoanByFund></securityLending>
+                      {(h.Country is null ? string.Empty : $"<invCountry>{h.Country}</invCountry>")}
+                      {(h.Currency is null ? string.Empty : h.Currency is "USD" or "N/A" ? $"<curCd>{h.Currency}</curCd>" : $"<currencyConditional curCd=\"{h.Currency}\" exchangeRt=\"1.5\"/>")}
+                      {(h.CollateralAsAttribute
+                          ? "<securityLending><cashCollateralCondition isCashCollateral=\"Y\" cashCollateralVal=\"100\"/><isNonCashCollateral>N</isNonCashCollateral><isLoanByFund>N</isLoanByFund></securityLending>"
+                          : $"<securityLending><isCashCollateral>{(h.CashCollateral ? "Y" : "N")}</isCashCollateral><isNonCashCollateral>N</isNonCashCollateral><isLoanByFund>N</isLoanByFund></securityLending>")}
                     </invstOrSec>
                     """);
             });

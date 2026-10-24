@@ -40,13 +40,16 @@ public sealed class ResearchViewModel
     /// <paramref name="fundReturns"/> leaves only that view of the Funds tab unavailable; a null
     /// <paramref name="fundReturns"/> also makes the Performance tab unavailable, and a null <paramref name="macro"/>
     /// leaves the Performance tab without its inflation adjustment. A null <paramref name="fundFacts"/> leaves the Risk vs
-    /// return tab without bubble sizes and expense ratios.
+    /// return tab without bubble sizes and expense ratios, and a null <paramref name="fundExposure"/> leaves the World tab
+    /// with its market view only.
     /// </summary>
     public ResearchViewModel(SectorsSnapshotDto? sectors, FundsSnapshotDto? funds, WorldSnapshotDto? world,
         string? tab = null, string? ticker = null, FundOverlapSnapshotDto? fundOverlap = null,
-        FundReturnsSnapshotDto? fundReturns = null, MacroSnapshotDto? macro = null, FundFactsSnapshotDto? fundFacts = null)
+        FundReturnsSnapshotDto? fundReturns = null, MacroSnapshotDto? macro = null, FundFactsSnapshotDto? fundFacts = null,
+        FundExposureSnapshotDto? fundExposure = null)
     {
         FundFacts = fundFacts;
+        FundExposure = fundExposure;
         Macro = macro;
         FundOverlap = fundOverlap;
         FundReturns = fundReturns;
@@ -135,6 +138,12 @@ public sealed class ResearchViewModel
         RetryController = "Research",
         RetryRouteValues = new Dictionary<string, string> { ["tab"] = RiskTab },
     };
+
+    /// <summary>
+    /// Each Tracked Fund's share by issuer country and currency, which the World tab's basket view weights; null when
+    /// it has never loaded.
+    /// </summary>
+    public FundExposureSnapshotDto? FundExposure { get; }
 
     /// <summary>The World tab, which opens on the latest year.</summary>
     public ResearchTabViewModel<WorldSnapshotDto, WorldPeriodDto> World { get; }

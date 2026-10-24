@@ -24,6 +24,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     private const string FundReturnsUrl = "/api/Research/funds/returns";
     private const string MacroUrl = "/api/Research/macro";
     private const string FundFactsUrl = "/api/Research/funds/facts";
+    private const string FundExposureUrl = "/api/Research/funds/exposure";
     private const string WorldUrl = "/api/Research/world";
     private const string InternalKey = "http-test-shared-secret";
 
@@ -36,7 +37,8 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 
     private sealed class FakeResearchService(SectorsSnapshotDto? sectors, WorldSnapshotDto? world = null,
         FundsSnapshotDto? funds = null, FundOverlapSnapshotDto? overlap = null,
-        FundReturnsSnapshotDto? returns = null, MacroSnapshotDto? macro = null, FundFactsSnapshotDto? facts = null) : IResearchService
+        FundReturnsSnapshotDto? returns = null, MacroSnapshotDto? macro = null, FundFactsSnapshotDto? facts = null,
+        FundExposureSnapshotDto? exposure = null) : IResearchService
     {
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(sectors));
@@ -55,6 +57,9 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 
         public Task<ResearchSnapshotResult<FundFactsSnapshotDto>> GetFundFactsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<FundFactsSnapshotDto>(facts));
+
+        public Task<ResearchSnapshotResult<FundExposureSnapshotDto>> GetFundExposureAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundExposureSnapshotDto>(exposure));
 
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(world));
@@ -188,6 +193,20 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         Assert.Equal(ResearchController.FundFactsNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
     }
 
+    [Fact]
+    public async Task GetFundExposure_WhenLoaded_ReturnsTheSnapshot_AndWhenNeverLoaded_Returns503WithAReason()
+    {
+        var snapshot = new FundExposureSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
+
+        IActionResult loaded = await new ResearchController(new FakeResearchService(null, exposure: snapshot)).GetFundExposure();
+        IActionResult never = await new ResearchController(new FakeResearchService(null)).GetFundExposure();
+
+        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(loaded).Value);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(never);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
+        Assert.Equal(ResearchController.FundExposureNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
+    }
+
     [Theory]
     [InlineData(SectorsUrl)]
     [InlineData(FundsUrl)]
@@ -195,6 +214,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     [InlineData(FundReturnsUrl)]
     [InlineData(MacroUrl)]
     [InlineData(FundFactsUrl)]
+    [InlineData(FundExposureUrl)]
     public async Task Get_OverHttp_WithoutTheSharedSecret_IsRejected(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -213,6 +233,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     [InlineData(FundReturnsUrl)]
     [InlineData(MacroUrl)]
     [InlineData(FundFactsUrl)]
+    [InlineData(FundExposureUrl)]
     public async Task Get_OverHttp_SignedIn_OnAnEmptyDatabase_Returns503WithAReason(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

@@ -703,6 +703,10 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');
+            // With a basket set (from the steps before), the tab opens on the basket map: switch to the market.
+            if (await page.locator('[data-world-view="market"][aria-pressed="false"]').count()) {
+                await page.click('[data-world-view="market"]');
+            }
             await page.waitForSelector('#research-world-map svg', {timeout: TIMEOUT});
             const legend = page.locator('#research-world-legend');
             const before = await legend.getAttribute('aria-label');
@@ -715,6 +719,53 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 pass(`Research 8: "% of GDP" changes the legend to "${after}"`);
             } else {
                 fail(`Research 8: legend "${before}" -> "${after}", first step "${firstStep}"`);
+            }
+        });
+
+        // Step 8b: without a basket the World tab opens on the market map with "Your basket" off; with SPY and QQQ it opens
+        // on the basket map, whose callouts and Hong Kong and Singapore dots match figures computed here from the fixture
+        // (Singapore under 0.05% reads "<0.1%"); the map zooms with dots kept their size; emptying the basket goes back.
+        await step('Research 8b', fail, async () => {
+            await page.goto(`${base}/Research?tab=world`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const marketFirst = await page.locator('#research-world-map svg').isVisible();
+            const basketOff = await page.locator('[data-world-view="basket"]').isDisabled();
+            await page.goto(`${base}/Research?tab=world&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-world-basket-map svg path', {timeout: TIMEOUT});
+            const expected = await page.evaluate(() => {
+                const data = JSON.parse(document.getElementById('research-fund-exposure-data').textContent);
+                const shares = { SPY: 0.6, QQQ: 0.4 };
+                const country = (code) => data.funds.reduce((sum, f) => sum + shares[f.ticker] * (f.countries.find((c) => c.code === code)?.percent || 0), 0);
+                const outside = data.funds.reduce((sum, f) => sum + shares[f.ticker] * f.countries.filter((c) => c.code !== 'US').reduce((a, c) => a + c.percent, 0), 0);
+                const fmt = (v) => (v > 0 && v < 0.05 ? '<0.1%' : `${v.toFixed(1)}%`);
+                return { hk: fmt(country('HK')), sg: fmt(country('SG')), outside: fmt(outside), ie: fmt(country('IE')) };
+            });
+            const basketOn = await page.locator('[data-world-view="basket"]').getAttribute('aria-pressed');
+            const marketHidden = !(await page.locator('#research-world-map').isVisible());
+            const values = (await page.locator('#research-world-basket-callouts .research-overlap__callout-value').allTextContents()).map((t) => t.trim());
+            const notes = (await page.locator('#research-world-basket-callouts .research-overlap__callout-note').allTextContents()).map((t) => t.trim());
+            const hk = await page.locator('.research-world-basket__dot[data-code="HK"]').getAttribute('aria-label');
+            const sg = await page.locator('.research-world-basket__dot[data-code="SG"]').getAttribute('aria-label');
+            const rBefore = Number(await page.locator('.research-world-basket__dot[data-code="HK"]').getAttribute('r'));
+            await page.locator('#research-world-basket-map').scrollIntoViewIfNeeded();
+            const box = await page.locator('#research-world-basket-map').boundingBox();
+            await page.mouse.move(box.x + box.width * 0.75, box.y + box.height * 0.45);
+            await page.mouse.wheel(0, -600);
+            await page.waitForTimeout(400);
+            const transform = await page.locator('#research-world-basket-map svg > g').getAttribute('transform');
+            const rAfter = Number(await page.locator('.research-world-basket__dot[data-code="HK"]').getAttribute('r'));
+            await page.click('#research-world-basket-reset');
+            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
+            await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
+            const backToMarket = await page.locator('[data-world-view="market"]').getAttribute('aria-pressed');
+            const ok = marketFirst && basketOff && basketOn === 'true' && marketHidden &&
+                values[0] === expected.outside && notes[0].includes(`Ireland, ${expected.ie}`) && notes[1].includes('HKD') &&
+                notes[2] === 'North America' && hk.endsWith(`${expected.hk} of your basket`) && sg.endsWith('<0.1% of your basket') &&
+                expected.sg === '<0.1%' && /scale\(/.test(transform || '') && rAfter < rBefore && backToMarket === 'true';
+            if (ok) {
+                pass(`Research 8b: market map without a basket; with SPY and QQQ the basket map shows ${expected.outside} outside the US (Ireland ${expected.ie}), Hong Kong ${expected.hk} and Singapore <0.1% as dots, zooms with dots kept their size, and an empty basket returns to the market`);
+            } else {
+                fail(`Research 8b: market ${marketFirst}/${basketOff}, basket ${basketOn}/${marketHidden}, callouts ${JSON.stringify(values)} ${JSON.stringify(notes)} vs ${JSON.stringify(expected)}, ` +
+                    `HK "${hk}", SG "${sg}", zoom ${transform} r ${rBefore}->${rAfter}, back ${backToMarket}`);
             }
         });
 

@@ -32,6 +32,9 @@ public class ResearchController : ControllerBase
     /// <summary>The 503 reason of a fund facts dataset that has never loaded.</summary>
     public const string FundFactsNeverLoaded = "The fund facts data has not loaded yet.";
 
+    /// <summary>The 503 reason of a fund exposure dataset that has never loaded.</summary>
+    public const string FundExposureNeverLoaded = "The fund exposure data has not loaded yet.";
+
     /// <summary>The 503 reason of a World dataset that has never loaded.</summary>
     public const string WorldNeverLoaded = "The World data has not loaded yet.";
 
@@ -109,6 +112,17 @@ public class ResearchController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetFundFacts(CancellationToken cancellationToken = default) =>
         SnapshotOrUnavailable(await _researchService.GetFundFactsAsync(cancellationToken), FundFactsNeverLoaded);
+
+    /// <summary>
+    /// Gets the fund exposure snapshot: each Tracked Fund's share of net assets by issuer country and by currency, from
+    /// every holding of its latest Form N-PORT report. Answers 503 with the reason when the dataset has never loaded.
+    /// </summary>
+    [HttpGet("funds/exposure")]
+    [ProducesResponseType(typeof(FundExposureSnapshotDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResearchUnavailableDto), StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetFundExposure(CancellationToken cancellationToken = default) =>
+        SnapshotOrUnavailable(await _researchService.GetFundExposureAsync(cancellationToken), FundExposureNeverLoaded);
 
     /// <summary>
     /// Gets the World snapshot: each country's stock-market capitalisation and market cap as % of GDP per year, from

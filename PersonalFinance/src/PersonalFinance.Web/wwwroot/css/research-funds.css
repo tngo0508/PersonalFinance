@@ -815,3 +815,54 @@
     stroke: #8a8983;
     stroke-width: 1;
 }
+
+/* --------------------------------------------------------------------------
+   World tab: the "World market | Your basket" switch and the basket map,
+   on the World tab's single-hue scale (the dataviz reference blue steps).
+   Dots for small places keep their size under zoom.
+   -------------------------------------------------------------------------- */
+
+.research-world__views {
+    grid-column: 1 / -1;
+}
+
+[data-world-view-part][hidden] {
+    display: none;
+}
+
+.research-world-basket__map {
+    cursor: grab;
+    touch-action: none;
+    overflow: hidden;
+    border-radius: var(--app-radius-m);
+}
+
+.research-world-basket__svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.research-world-basket__map .research-world__country {
+    stroke: var(--app-bg, #ffffff);
+    stroke-width: 0.5;
+}
+
+.research-world-basket__map .research-world__country[tabindex]:focus-visible,
+.research-world-basket__dot:focus-visible {
+    outline: none;
+    stroke: var(--app-text);
+    stroke-width: 1.5;
+}
+
+.research-world-basket__dot {
+    stroke: var(--app-bg, #ffffff);
+    stroke-width: 1;
+    cursor: pointer;
+}
+
+.research-world-basket__map-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--app-spacing-xs);
+}

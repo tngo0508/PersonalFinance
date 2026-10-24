@@ -52,9 +52,10 @@ public sealed class ResearchController : Controller
         Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, "fund returns", cancellationToken);
         Task<MacroSnapshotDto?> macro = ReadAsync(_researchApi.GetMacroAsync, "macro", cancellationToken);
         Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, "fund facts", cancellationToken);
-        await Task.WhenAll(sectors, funds, world, overlap, returns, macro, facts);
+        Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, "fund exposure", cancellationToken);
+        await Task.WhenAll(sectors, funds, world, overlap, returns, macro, facts, exposure);
         return View(new ResearchViewModel(await sectors, await funds, await world, tab, ticker, await overlap,
-            await returns, await macro, await facts));
+            await returns, await macro, await facts, await exposure));
     }
 
     /// <summary>

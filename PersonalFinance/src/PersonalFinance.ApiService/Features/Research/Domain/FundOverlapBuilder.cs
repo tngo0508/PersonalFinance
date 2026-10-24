@@ -13,17 +13,11 @@ internal static class FundOverlapBuilder
     /// <summary>How many of its largest shared holdings each pair lists.</summary>
     public const int SharedPerPair = 25;
 
-    /// <summary>One fund's latest report, read for the overlap.</summary>
-    /// <param name="Ticker">The fund's ticker.</param>
-    /// <param name="Accession">The report's EDGAR accession number.</param>
-    /// <param name="Report">The parsed report, with each holding's security key in memory.</param>
-    internal sealed record FundReport(string Ticker, string Accession, NportReport Report);
-
     /// <summary>
     /// The overlap of every pair of the given funds, in their order. A holding counts when it has a security key, a
     /// positive weight and is not securities-lending cash collateral; one security held in several lines is summed.
     /// </summary>
-    public static FundOverlapSnapshotDto Build(IReadOnlyList<FundReport> reports)
+    public static FundOverlapSnapshotDto Build(IReadOnlyList<LatestFundReport> reports)
     {
         List<Dictionary<string, (decimal Weight, string Name)>> weights = reports.Select(WeightsOf).ToList();
         // Each shared security gets one index, by its key (in memory only), so two securities with one issuer name
@@ -78,7 +72,7 @@ internal static class FundOverlapBuilder
     /// A fund's weight per security key, with the name to show for it (the first line's, tidied). Holdings without a
     /// key, with no positive weight, or that are cash collateral are left out.
     /// </summary>
-    private static Dictionary<string, (decimal Weight, string Name)> WeightsOf(FundReport report)
+    private static Dictionary<string, (decimal Weight, string Name)> WeightsOf(LatestFundReport report)
     {
         var result = new Dictionary<string, (decimal Weight, string Name)>(StringComparer.Ordinal);
         foreach (NportHolding holding in report.Report.Holdings)

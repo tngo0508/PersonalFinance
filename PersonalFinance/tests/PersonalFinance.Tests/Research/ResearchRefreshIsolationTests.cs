@@ -47,7 +47,8 @@ public class ResearchRefreshIsolationTests
 
         ResearchRefreshSummary summary = await service.RefreshAsync(ResearchSources.WorldBank);
 
-        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Funds, ResearchDatasets.FundReturns, ResearchDatasets.FundFacts, ResearchDatasets.Macro], summary.Skipped);
+        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Funds, ResearchDatasets.FundExposure, ResearchDatasets.FundReturns,
+                ResearchDatasets.FundFacts, ResearchDatasets.Macro], summary.Skipped);
         Assert.Equal([ResearchDatasets.World], summary.Built);
         Assert.Empty(summary.Failed);
         Assert.Equal(0, sec.Calls);

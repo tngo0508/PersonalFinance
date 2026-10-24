@@ -44,6 +44,12 @@ internal static class ResearchDatasets
     /// </summary>
     public const string FundReturnFilings = "fund-return-filings";
 
+    /// <summary>
+    /// The fund exposure snapshot: each Tracked Fund's share of net assets by issuer country and currency, from its
+    /// latest report.
+    /// </summary>
+    public const string FundExposure = "fund-exposure";
+
     /// <summary>The fund facts snapshot: each Tracked Fund's net assets and expense ratio.</summary>
     public const string FundFacts = "fund-facts";
 

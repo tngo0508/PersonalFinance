@@ -65,10 +65,12 @@ internal static class ResearchFeature
         services.AddHttpClient<IFedRatesClient, FedRatesClient>(client => client.Timeout = FedTimeout);
         services.AddHttpClient<IUsAgencyClient, UsAgencyClient>(client => client.Timeout = UsAgencyTimeout);
         services.AddScoped<ResearchSnapshotStore>();
+        services.AddScoped<LatestFundReports>();
         // Refreshed in this order, each on its own.
         services.AddScoped<IResearchDatasetRefresher, SectorsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundOverlapRefresher>();
+        services.AddScoped<IResearchDatasetRefresher, FundExposureRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundReturnsRefresher>();
         // After the funds refresh: it reads the net assets from the funds snapshot.
         services.AddScoped<IResearchDatasetRefresher, FundFactsRefresher>();

@@ -42,6 +42,12 @@ public interface IResearchService
     Task<ResearchSnapshotResult<FundFactsSnapshotDto>> GetFundFactsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the fund exposure snapshot (each Tracked Fund's share of net assets by issuer country and currency), or
+    /// "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<FundExposureSnapshotDto>> GetFundExposureAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot (each country's market cap and market cap as % of GDP per year, from the World Bank),
     /// or "never loaded".
     /// </summary>

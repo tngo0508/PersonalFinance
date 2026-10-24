@@ -4,15 +4,35 @@
 
 @{
     WorldSnapshotDto? world = Model.World.Unavailable ? null : Model.World.Snapshot;
+    FundExposureSnapshotDto? exposure = Model.FundExposure;
+    // The basket view needs the funds data (for the basket) and the exposure.
+    bool showBasketView = exposure is not null && !Model.Funds.Unavailable && exposure.Funds.Count > 0;
+    CultureInfo us = CultureInfo.GetCultureInfo("en-US");
+    string exposureDates = exposure is null || exposure.Funds.Count == 0
+        ? string.Empty
+        : exposure.Funds.Min(f => f.ReportDate) == exposure.AsOf
+            ? $"as of {exposure.AsOf.ToString("d MMMM yyyy", us)}"
+            : $"as of {exposure.Funds.Min(f => f.ReportDate).ToString("d MMMM yyyy", us)} to {exposure.AsOf.ToString("d MMMM yyyy", us)}";
 }
 
 @* The World tab panel: stock-market capitalisation by country (World Bank WDI), drawn by js/research/research-world.js as a
    choropleth from the data island below and the vendored world-atlas borders. Hidden until its tab is chosen. *@
 <section class="research-deck" id="research-panel-world" role="tabpanel" aria-labelledby="research-tab-world"
-         hidden="@(!Model.IsSelected(ResearchViewModel.WorldTab))">
+         data-research-basket hidden="@(!Model.IsSelected(ResearchViewModel.WorldTab))">
+    @if (showBasketView)
+    {
+        @* World market (the existing choropleth) or Your basket (its funds' issuer countries, weighted). It opens on Your
+           basket only when a Fund Basket is set; js/research/research-world-basket.js wires it. *@
+        <div class="research-world__views" id="research-world-views">
+            <div class="research-view-toggle" role="group" aria-label="Map view">
+                <button type="button" class="research-view-toggle__button" data-world-view="market" aria-pressed="true">World market</button>
+                <button type="button" class="research-view-toggle__button" data-world-view="basket" aria-pressed="false">Your basket</button>
+            </div>
+        </div>
+    }
     @if (world is not null)
     {
-        <div class="research-scrubber" data-research-scrubber>
+        <div class="research-scrubber" data-research-scrubber data-world-view-part="market">
             <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
                     aria-label="Play through the years">
                 <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
@@ -31,7 +51,7 @@
             <p class="research-scrubber__period" data-research-period aria-hidden="true">@world.Periods[^1]</p>
         </div>
     }
-    <div class="research-card">
+    <div class="research-card" data-world-view-part="market">
         <h2 class="research-card__title">Stock-market value by country</h2>
         @if (world is null)
         {
@@ -54,7 +74,7 @@
         <p class="research-card__source">Source: World Bank WDI / WFE (CC BY 4.0). Borders: Natural Earth</p>
     </div>
 
-    <aside class="research-panel" aria-label="About the World data">
+    <aside class="research-panel" aria-label="About the World data" data-world-view-part="market">
         @if (world is not null)
         {
             <h2 class="research-panel__title">Colour the map by</h2>
@@ -82,10 +102,63 @@
             @(Model.World.AsOf is { } asOf && world is not null ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
         </p>
     </aside>
+
+    @if (showBasketView)
+    {
+        <div class="research-card research-world-basket" id="research-world-basket" data-world-view-part="basket" hidden>
+            <h2 class="research-card__title">Your basket by issuer country</h2>
+            <p class="research-card__subtitle">
+                Where your basket's holdings are, weighted by your funds' shares: countries are where each holding's
+                issuer is organized, as each fund reports it, and this is not where companies earn their revenue.
+                From each fund's latest holdings report (@exposureDates).
+            </p>
+            <p class="research-overlap__prompt" id="research-world-basket-prompt">
+                Add funds to your Fund Basket to see where its holdings are.
+            </p>
+            <div class="research-overlap__view" id="research-world-basket-view" hidden>
+                <ul class="research-overlap__callouts" id="research-world-basket-callouts" aria-label="Your basket's exposure"></ul>
+                @* Scroll or pinch to zoom, drag to pan; countries and the small places drawn as dots are focusable. *@
+                <div class="research-world research-world-basket__map" id="research-world-basket-map" role="group"
+                     data-atlas-url="@Url.Content("~/lib/world-atlas/countries-110m.json")"></div>
+                <div class="research-world-basket__map-actions">
+                    <button type="button" class="research-chip" id="research-world-basket-reset">Reset zoom</button>
+                </div>
+                <ol class="research-legend" id="research-world-basket-legend" aria-label="Colour scale"></ol>
+                <p class="research-overlap__note" id="research-world-basket-note"></p>
+            </div>
+            <div class="research-tooltip" id="research-world-basket-tooltip" aria-hidden="true" hidden></div>
+            <p class="research-card__source">Source: SEC EDGAR (Form N-PORT holdings). Borders: Natural Earth</p>
+        </div>
+
+        <aside class="research-panel" data-world-view-part="basket" aria-label="About the basket exposure" hidden>
+            <h2 class="research-panel__title">How to read it</h2>
+            <p>
+                Each country's colour is its share of your basket. The scale tops out at the largest country outside
+                the US, so the rest of the world stays readable; the US always takes the darkest step, and its true share
+                is in its tooltip. Small places the map cannot draw, such as Hong Kong and Singapore, are dots sized by
+                their share. Shares under 0.05% read "&lt;0.1%".
+            </p>
+            <h2 class="research-panel__title">About this data</h2>
+            <p>
+                Funds report each holding's issuer country and currency on Form N-PORT. Funds follow their own
+                conventions: the same company can have a different country in different funds, and American
+                depositary receipts count as US dollars. Securities-lending collateral is left out, and cash not
+                reported as a holding is unallocated.
+            </p>
+            <h2 class="research-panel__title">Data as of</h2>
+            <p class="research-panel__as-of">@exposureDates</p>
+        </aside>
+    }
 </section>
 
 @if (world is not null)
 {
     @* The World snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-world.js. *@
     <script type="application/json" id="research-world-data">@Json.Serialize(world)</script>
+}
+
+@if (showBasketView)
+{
+    @* The fund exposure snapshot (country and currency shares per fund), read by research-world-basket.js. *@
+    <script type="application/json" id="research-fund-exposure-data">@Json.Serialize(exposure)</script>
 }
