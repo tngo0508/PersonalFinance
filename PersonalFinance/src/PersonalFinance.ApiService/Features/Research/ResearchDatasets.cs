@@ -27,6 +27,11 @@ internal static class ResearchDatasets
     /// <remarks>The key keeps its first name, so the filings already read are not fetched again.</remarks>
     public const string FundFilings = "etf-filings";
 
+    /// <summary>
+    /// The fund overlap snapshot: every pair of Tracked Funds' overlap by weight, from each fund's latest report.
+    /// </summary>
+    public const string FundOverlap = "fund-overlap";
+
     /// <summary>The World snapshot.</summary>
     public const string World = "world";
 }

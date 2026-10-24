@@ -23,6 +23,13 @@ public interface IResearchApi
     Task<FundsSnapshotDto> GetFundsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the fund overlap snapshot. A dataset that has never loaded answers 503 with a
+    /// <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
+    /// </summary>
+    [Get("/api/Research/funds/overlap")]
+    Task<FundOverlapSnapshotDto> GetFundOverlapAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot. A dataset that has never loaded answers 503 with a
     /// <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
     /// </summary>

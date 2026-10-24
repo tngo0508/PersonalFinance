@@ -3,7 +3,7 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// Small, made-up Sectors, funds and World snapshots for the E2E walkthrough (stored by
+/// Small, made-up Sectors, funds, fund overlap and World snapshots for the E2E walkthrough (stored by
 /// <see cref="ResearchFixtureSeeder"/>): six companies over three years, SPY and QQQ over three quarters and six
 /// countries over three years. The figures are rounded illustrations in the shape of the real snapshots, not source
 /// data, and are never stored outside Development.
@@ -59,6 +59,37 @@ internal static class ResearchFixtureSnapshots
             FundsQuarter("2025 Q4", new DateOnly(2025, 12, 31), 0m),
             FundsQuarter("2026 Q1", new DateOnly(2026, 3, 31), 0.3m),
             FundsQuarter("2026 Q2", new DateOnly(2026, 6, 30), 0.6m),
+        ],
+    };
+
+    /// <summary>
+    /// The fund overlap fixture: SPY and QQQ from their 2026 Q2 reports, overlapping by 44.1% through six shared
+    /// holdings.
+    /// </summary>
+    public static FundOverlapSnapshotDto FundOverlap() => new()
+    {
+        AsOf = new DateOnly(2026, 6, 30),
+        Funds =
+        [
+            new() { Ticker = "SPY", ReportDate = new DateOnly(2026, 6, 30), Accession = "0000000000-26-000001" },
+            new() { Ticker = "QQQ", ReportDate = new DateOnly(2026, 6, 30), Accession = "0000000000-26-000002" },
+        ],
+        Holdings = ["NVIDIA Corp", "Microsoft Corp", "Apple Inc", "Amazon.com Inc", "Broadcom Inc", "Meta Platforms Inc"],
+        Pairs =
+        [
+            new()
+            {
+                A = 0, B = 1, Overlap = 44.1m, CoveredA = 46.2m, CoveredB = 87.5m, SharedCount = 101,
+                Shared =
+                [
+                    new() { Holding = 0, WeightA = 7.7m, WeightB = 10.0m },
+                    new() { Holding = 1, WeightA = 6.4m, WeightB = 8.6m },
+                    new() { Holding = 2, WeightA = 6.0m, WeightB = 7.9m },
+                    new() { Holding = 3, WeightA = 3.9m, WeightB = 5.4m },
+                    new() { Holding = 4, WeightA = 2.5m, WeightB = 5.6m },
+                    new() { Holding = 5, WeightA = 2.9m, WeightB = 3.5m },
+                ],
+            },
         ],
     };
 

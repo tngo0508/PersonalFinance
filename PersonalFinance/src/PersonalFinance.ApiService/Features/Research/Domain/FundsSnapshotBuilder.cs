@@ -133,9 +133,9 @@ internal static class FundsSnapshotBuilder
     /// A holding's name for display: runs of spaces collapsed (futures are often padded, e.g. <c>MSCI EAFE     Sep26</c>)
     /// and title-cased when the report has it all in capitals.
     /// </summary>
-    private static string HoldingName(string name) =>
+    internal static string HoldingName(string name) =>
         SectorsClassifier.TitleCase(string.Join(' ', name.Split(' ', StringSplitOptions.RemoveEmptyEntries)));
 
-    private static decimal Round(decimal percent) =>
+    internal static decimal Round(decimal percent) =>
         Math.Round(percent, PercentDecimals, MidpointRounding.AwayFromZero);
 }

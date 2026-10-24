@@ -46,10 +46,13 @@ internal static class ResearchFixtureSeeder
         SectorsSnapshotDto sectors = ResearchFixtureSnapshots.Sectors();
         FundsSnapshotDto funds = ResearchFixtureSnapshots.Funds();
         WorldSnapshotDto world = ResearchFixtureSnapshots.World();
+        FundOverlapSnapshotDto overlap = ResearchFixtureSnapshots.FundOverlap();
+        List<string> overlapPeriods = ["2026Q2"];
         (string Dataset, List<string> Periods, DateOnly AsOf, object Snapshot)[] fixtures =
         [
             (ResearchDatasets.Sectors, sectors.Periods, sectors.AsOf, sectors),
             (ResearchDatasets.Funds, funds.Periods, funds.AsOf, funds),
+            (ResearchDatasets.FundOverlap, overlapPeriods, overlap.AsOf, overlap),
             (ResearchDatasets.World, world.Periods, world.AsOf, world),
         ];
 

@@ -11,7 +11,8 @@
  *
  * Reads the Tracked Funds (ticker, name, role) from the Funds tab's JSON data island. Other scripts read the basket
  * through `window.ResearchBasket.get()` and hear changes on the `research:basketchange` document event; the link
- * parser and formatter are exposed as `parse` and `format`.
+ * parser and formatter are exposed as `parse` and `format`. Each Tracked Fund has a fixed colour slot (1 to 8, by its
+ * place in the list), `slotOf(ticker)`, so a fund keeps its colour in every view; the ticker always goes with it.
  */
 (function () {
     'use strict';
@@ -28,6 +29,8 @@
     const PANEL_ATTRIBUTE = 'data-research-basket';
     const PARAM = 'basket';
     const MAX_FUNDS = 5;
+    const SLOT_COUNT = 8;
+    let trackedTickers = [];
     const NOTICE_INVALID = 'Some funds in this link aren\'t tracked and were left out.';
     const NOTICE_TOO_MANY = 'A Fund Basket holds up to five funds, so only the first five were kept.';
     const ENTRY = /^([A-Za-z0-9.-]{1,10})(?::(\d{1,3}))?$/;
@@ -78,6 +81,17 @@
         }
         const weighted = funds.every((f) => f.weight !== null);
         return funds.map((f) => (weighted ? `${f.ticker}:${f.weight}` : f.ticker)).join(',');
+    }
+
+    /**
+     * A Tracked Fund's fixed colour slot: its place in the list, wrapping after eight. The slot is the CSS
+     * `data-fund-slot` value that picks the fund's colour.
+     * @param {string} ticker - The fund's ticker.
+     * @returns {number} 1 to 8, or 0 for a ticker not tracked.
+     */
+    function slotOf (ticker) {
+        const index = trackedTickers.indexOf(ticker);
+        return index < 0 ? 0 : (index % SLOT_COUNT) + 1;
     }
 
     /**
@@ -143,12 +157,14 @@
 
         /**
          * The basket with each fund's details and share, for other scripts.
-         * @returns {{ticker: string, name: string, role: (string|null), weight: (number|null), share: number}[]} The
-         *     funds, in basket order.
+         * @returns {{ticker: string, name: string, role: (string|null), weight: (number|null), share: number,
+         *     slot: number}[]} The funds, in basket order.
          */
         function get () {
             const shares = sharesOf(funds);
-            return funds.map((f, i) => ({ ...byTicker.get(f.ticker), weight: f.weight, share: shares[i] }));
+            return funds.map((f, i) => ({
+                ...byTicker.get(f.ticker), weight: f.weight, share: shares[i], slot: slotOf(f.ticker)
+            }));
         }
 
         /**
@@ -181,6 +197,9 @@
                 const fund = byTicker.get(f.ticker);
                 const chip = element('li', 'research-basket__chip');
                 chip.dataset.ticker = f.ticker;
+                const swatch = element('span', 'research-fund-swatch');
+                swatch.dataset.fundSlot = String(slotOf(f.ticker));
+                swatch.setAttribute('aria-hidden', 'true');
                 const label = element('span', 'research-basket__chip-label');
                 label.append(element('strong', null, f.ticker), ` ${fund.name}`);
                 const input = element('input', 'research-basket__weight');
@@ -198,7 +217,7 @@
                 remove.type = 'button';
                 remove.setAttribute('aria-label', `Remove ${f.ticker} from the basket`);
                 remove.addEventListener('click', () => removeFund(f.ticker, true));
-                chip.append(label, input, unit);
+                chip.append(swatch, label, input, unit);
                 if (weighted && total !== 100) {
                     chip.append(element('span', 'research-basket__share', `= ${percent(shares[i])}`));
                 }
@@ -461,6 +480,7 @@
             return;
         }
         const tracked = data.funds.map((f) => ({ ticker: f.ticker, name: f.name, role: f.role || null }));
+        trackedTickers = tracked.map((f) => f.ticker);
         const basket = createBasket(bar, tracked);
         window.ResearchBasket.get = basket.get;
         const selected = document.querySelector('.research [role="tab"][aria-selected="true"]');
@@ -469,7 +489,7 @@
     }
 
     // The parser and formatter are available at once, and get() once the bar is wired.
-    window.ResearchBasket = { parse, format, sharesOf, get: () => [] };
+    window.ResearchBasket = { parse, format, sharesOf, slotOf, get: () => [] };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

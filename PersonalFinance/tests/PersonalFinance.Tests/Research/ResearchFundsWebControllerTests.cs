@@ -90,6 +90,35 @@ public class ResearchFundsWebControllerTests
     }
 
     [Fact]
+    public async Task Index_HoldsTheFundOverlap_ForTheFundsTab()
+    {
+        var overlap = new FundOverlapSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
+        proxy.Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+        proxy.Returns(nameof(IResearchApi.GetFundOverlapAsync), overlap);
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
+
+        Assert.Same(overlap, model.FundOverlap);
+    }
+
+    [Fact]
+    public async Task Index_WhenTheFundOverlapHasNeverLoaded_StillHoldsTheFunds_AndRetriesOnTheFundsTab()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
+        proxy.Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+        proxy.Throws(nameof(IResearchApi.GetFundOverlapAsync), await NeverLoaded("The fund overlap data has not loaded yet."));
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
+
+        Assert.Null(model.FundOverlap);
+        Assert.False(model.Funds.Unavailable);
+        Assert.Equal("funds", model.FundOverlapUnavailableState.RetryRouteValues["tab"]);
+    }
+
+    [Fact]
     public async Task Index_WhenTheSectorsDataHasNeverLoaded_StillHoldsTheFunds()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();

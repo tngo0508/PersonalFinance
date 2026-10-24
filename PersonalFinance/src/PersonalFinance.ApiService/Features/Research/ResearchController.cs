@@ -20,6 +20,9 @@ public class ResearchController : ControllerBase
     /// <summary>The 503 reason of a funds dataset that has never loaded.</summary>
     public const string FundsNeverLoaded = "The funds data has not loaded yet.";
 
+    /// <summary>The 503 reason of a fund overlap dataset that has never loaded.</summary>
+    public const string FundOverlapNeverLoaded = "The fund overlap data has not loaded yet.";
+
     /// <summary>The 503 reason of a World dataset that has never loaded.</summary>
     public const string WorldNeverLoaded = "The World data has not loaded yet.";
 
@@ -51,6 +54,17 @@ public class ResearchController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetFunds(CancellationToken cancellationToken = default) =>
         SnapshotOrUnavailable(await _researchService.GetFundsAsync(cancellationToken), FundsNeverLoaded);
+
+    /// <summary>
+    /// Gets the fund overlap snapshot: every pair of Tracked Funds' overlap by weight and largest shared holdings, from
+    /// each fund's latest Form N-PORT report. Answers 503 with the reason when the dataset has never loaded.
+    /// </summary>
+    [HttpGet("funds/overlap")]
+    [ProducesResponseType(typeof(FundOverlapSnapshotDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResearchUnavailableDto), StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetFundOverlap(CancellationToken cancellationToken = default) =>
+        SnapshotOrUnavailable(await _researchService.GetFundOverlapAsync(cancellationToken), FundOverlapNeverLoaded);
 
     /// <summary>
     /// Gets the World snapshot: each country's stock-market capitalisation and market cap as % of GDP per year, from

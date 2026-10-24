@@ -70,6 +70,20 @@ internal sealed class FundsRefresher : IResearchDatasetRefresher
     }
 
     /// <summary>
+    /// Where EDGAR lists a fund's N-PORT filings: under its trust's CIK when one is configured, or else under the series
+    /// SEC's fund ticker list gives for its ticker (ETFs and mutual funds alike). The series id, when known, is what a
+    /// report must belong to.
+    /// </summary>
+    /// <returns>The filer to list under, or null when the ticker is not in the list; and the series id, or null.</returns>
+    internal static (string? Filer, string? SeriesId) FilerOf(TrackedFund fund, IReadOnlyList<SecFundSeries> series)
+    {
+        string? seriesId = fund.Cik is null
+            ? series.FirstOrDefault(s => string.Equals(s.Ticker, fund.Ticker, StringComparison.OrdinalIgnoreCase))?.SeriesId
+            : null;
+        return (fund.Cik?.ToString(CultureInfo.InvariantCulture) ?? seriesId, seriesId);
+    }
+
+    /// <summary>
     /// Saves the filings read so far, so they are not fetched again. The cache's period range runs from the quarter
     /// of the earliest filing to that of the latest.
     /// </summary>
@@ -93,10 +107,7 @@ internal sealed class FundsRefresher : IResearchDatasetRefresher
     private async Task<int> ReadNewFilingsAsync(TrackedFund fund, IReadOnlyList<SecFundSeries> series,
         Dictionary<string, FundFilingRecord> records, CancellationToken cancellationToken)
     {
-        string? seriesId = fund.Cik is null
-            ? series.FirstOrDefault(s => string.Equals(s.Ticker, fund.Ticker, StringComparison.OrdinalIgnoreCase))?.SeriesId
-            : null;
-        string? filer = fund.Cik?.ToString(CultureInfo.InvariantCulture) ?? seriesId;
+        (string? filer, string? seriesId) = FilerOf(fund, series);
         if (filer is null)
         {
             _logger.LogWarning("Fund {Ticker} is not in SEC's fund ticker list; its filings are not read", fund.Ticker);

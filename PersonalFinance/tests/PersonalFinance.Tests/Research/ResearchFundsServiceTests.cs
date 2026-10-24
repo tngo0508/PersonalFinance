@@ -3,19 +3,24 @@ using System.Net;
 using System.Security;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Research;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
 /// The Research Feature's funds snapshot, built through the real SEC EDGAR client over canned Form N-PORT filings served
 /// by a stub HTTP handler and stored in an InMemory database: per quarter and fund, the asset-category weights, the
-/// top 25 holdings of each category with the rest summed into "Other", and the holding count.
+/// top 25 holdings of each category with the rest summed into "Other", and the holding count; and the fund overlap
+/// snapshot built from each fund's latest filing, whose securities are matched by identifiers that are never stored.
 /// </summary>
 public class ResearchFundsServiceTests
 {
@@ -29,7 +34,11 @@ public class ResearchFundsServiceTests
     private static AppDbContext CreateContext(string name) =>
         new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options);
 
-    private static ResearchService CreateService(AppDbContext db, StubNportHandler handler, params TrackedFund[] funds)
+    private static ResearchService CreateService(AppDbContext db, StubNportHandler handler, params TrackedFund[] funds) =>
+        CreateService(db, handler, null, funds);
+
+    private static ResearchService CreateService(AppDbContext db, StubNportHandler handler, ILoggerProvider? logs,
+        params TrackedFund[] funds)
     {
         var settings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
@@ -39,7 +48,20 @@ public class ResearchFundsServiceTests
         var research = new ResearchSettings { SectorsFirstYear = 2025, Funds = funds, FundsFirstQuarter = new DateOnly(2019, 10, 1) };
         var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
-        return ResearchServiceFactory.Create(db, client, worldClient, research, timeProvider);
+        return ResearchServiceFactory.Create(db, client, worldClient, research, timeProvider, logs);
+    }
+
+    /// <summary>
+    /// The requests of the funds refresh alone: those before the fund overlap refresh, which runs next, lists the
+    /// first fund's filings a second time.
+    /// </summary>
+    private static List<string> FundsRefreshRequests(StubNportHandler handler, string firstFundList)
+    {
+        int first = handler.Requests.FindIndex(url => url.Contains(firstFundList, StringComparison.Ordinal));
+        int overlapStart = first < 0
+            ? -1
+            : handler.Requests.FindIndex(first + 1, url => url.Contains(firstFundList, StringComparison.Ordinal));
+        return overlapStart < 0 ? handler.Requests : handler.Requests.Take(overlapStart).ToList();
     }
 
     private static async Task<FundsSnapshotDto> RefreshAndReadAsync(ResearchService service)
@@ -249,8 +271,9 @@ public class ResearchFundsServiceTests
         Assert.Equal(["2019 Q4", "2025 Q4"], snapshot.Periods);
         Assert.Equal(["SPY", "VTI"], snapshot.Funds.Select(f => f.Ticker));
         // Only the new fund's two filings were fetched; SPY's came from the filings already read.
-        Assert.Equal(2, handler.Requests.Count(url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal)));
-        Assert.DoesNotContain(handler.Requests, url => url.Contains("000088439426000001", StringComparison.Ordinal));
+        List<string> fundsRequests = FundsRefreshRequests(handler, "CIK=884394");
+        Assert.Equal(2, fundsRequests.Count(url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal)));
+        Assert.DoesNotContain(fundsRequests, url => url.Contains("000088439426000001", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -284,8 +307,9 @@ public class ResearchFundsServiceTests
 
         Assert.Equal(["SPY", "VTI"], Assert.Single(snapshot.Values).Funds.Select(f => f.Ticker));
         // SPY's filing was saved before the stop, so only VTI's is fetched on the next run.
-        Assert.Single(handler.Requests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal));
-        Assert.Contains(handler.Requests, url => url.Contains("000003640526000001", StringComparison.Ordinal));
+        List<string> fundsRequests = FundsRefreshRequests(handler, "CIK=884394");
+        Assert.Single(fundsRequests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal));
+        Assert.Contains(fundsRequests, url => url.Contains("000003640526000001", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -324,8 +348,256 @@ public class ResearchFundsServiceTests
         Assert.All(handler.UserAgents, ua => Assert.Equal(UserAgent, ua));
     }
 
-    /// <summary>A holding of a canned N-PORT filing: its name, asset category code and % of net assets.</summary>
-    private sealed record Holding(string Name, string Category, decimal Percent);
+    // ---- Fund overlap ----
+
+    private const string VtiSeries = "S000002848";
+
+    /// <summary>A handler with VTI in SEC's fund ticker list, so its filings are listed under its series.</summary>
+    private static StubNportHandler OverlapHandler()
+    {
+        var handler = new StubNportHandler();
+        handler.Tickers.Add((36405, VtiSeries, "C000007808", "VTI"));
+        return handler;
+    }
+
+    private static void AddSpy(StubNportHandler handler, string accession, string filedOn, string reportDate,
+        params Holding[] holdings) =>
+        handler.AddFiling("884394", accession, filedOn, reportDate, null, holdings);
+
+    private static void AddVti(StubNportHandler handler, string accession, string filedOn, string reportDate,
+        params Holding[] holdings) =>
+        handler.AddFiling(VtiSeries, accession, filedOn, reportDate, VtiSeries, holdings, cik: 36405);
+
+    private static async Task<FundOverlapSnapshotDto> RefreshOverlapAsync(ResearchService service)
+    {
+        ResearchRefreshSummary summary = await service.RefreshAsync();
+        Assert.Contains(ResearchDatasets.FundOverlap, summary.Built);
+        return (await service.GetFundOverlapAsync()).Snapshot!;
+    }
+
+    [Fact]
+    public async Task GetFundOverlapAsync_OnAnEmptyTable_ReturnsNeverLoaded()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+
+        ResearchSnapshotResult<FundOverlapSnapshotDto> result =
+            await CreateService(db, OverlapHandler(), Spy, Vti).GetFundOverlapAsync();
+
+        Assert.Null(result.Snapshot);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_BuildsTheOverlapByWeight_TheSumOfTheSmallerWeightOfEachSharedSecurity()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        AddSpy(handler, "0000884394-26-000001", "2026-05-28", "2026-03-31",
+            new Holding("NVIDIA CORP", "EC", 7m, Cusip: "67066G104"),
+            new Holding("Microsoft Corp", "EC", 6m, Cusip: "594918104"),
+            new Holding("Apple Inc", "EC", 5m, Cusip: "037833100"),
+            new Holding("Exxon Mobil Corp", "EC", 1m, Cusip: "30231G102"));
+        AddVti(handler, "0000036405-26-000001", "2026-05-29", "2026-03-31",
+            new Holding("NVIDIA CORP", "EC", 6m, Cusip: "67066G104"),
+            new Holding("Microsoft Corp", "EC", 5.5m, Cusip: "594918104"),
+            new Holding("Apple Inc", "EC", 4m, Cusip: "037833100"),
+            new Holding("Bloom Energy", "EC", 0.1m, Cusip: "093712107"));
+
+        FundOverlapSnapshotDto snapshot = await RefreshOverlapAsync(CreateService(db, handler, Spy, Vti));
+
+        Assert.Equal(new DateOnly(2026, 3, 31), snapshot.AsOf);
+        Assert.Equal(["SPY", "VTI"], snapshot.Funds.Select(f => f.Ticker));
+        Assert.Equal(["0000884394-26-000001", "0000036405-26-000001"], snapshot.Funds.Select(f => f.Accession));
+        FundOverlapPairDto pair = Assert.Single(snapshot.Pairs);
+        Assert.Equal((0, 1), (pair.A, pair.B));
+        Assert.Equal(15.5m, pair.Overlap); // 6 + 5.5 + 4
+        Assert.Equal(18m, pair.CoveredA); // SPY's weight in what VTI also holds
+        Assert.Equal(15.5m, pair.CoveredB);
+        Assert.Equal(3, pair.SharedCount);
+        Assert.Equal(["NVIDIA Corp", "Microsoft Corp", "Apple Inc"], pair.Shared.Select(h => snapshot.Holdings[h.Holding]));
+        Assert.Equal([(7m, 6m), (6m, 5.5m), (5m, 4m)], pair.Shared.Select(h => (h.WeightA, h.WeightB)));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_TwoFundsThatHoldTheSameCompaniesInVeryDifferentAmounts_OverlapLittle()
+    {
+        // The count-vs-weight trap (VTI and SCHD on real data: 97% of SCHD's holdings by count, 7% by weight). Every
+        // one of the first fund's holdings is in the second, but at a tiny weight there.
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        string[] cusips = ["191216100", "742718109", "717081103", "458140100"];
+        AddSpy(handler, "0000884394-26-000001", "2026-05-28", "2026-03-31",
+            cusips.Select((c, i) => new Holding($"Dividend Co {i}", "EC", 25m, Cusip: c)).ToArray());
+        AddVti(handler, "0000036405-26-000001", "2026-05-29", "2026-03-31",
+            cusips.Select((c, i) => new Holding($"Dividend Co {i}", "EC", 0.5m, Cusip: c))
+                .Append(new Holding("Everything Else Inc", "EC", 98m, Cusip: "88160R101")).ToArray());
+
+        FundOverlapPairDto pair = Assert.Single((await RefreshOverlapAsync(CreateService(db, handler, Spy, Vti))).Pairs);
+
+        Assert.Equal(4, pair.SharedCount);
+        Assert.Equal(2m, pair.Overlap);
+        Assert.Equal(100m, pair.CoveredA);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_MatchesByIsinElseCusip_SumsRepeatedLines_AndLeavesOutCashCollateralAndUnidentifiedHoldings()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        AddSpy(handler, "0000884394-26-000001", "2026-05-28", "2026-03-31",
+            // Matched by ISIN although the CUSIPs as reported differ.
+            new Holding("Shell Plc", "EC", 2m, Cusip: "780259305", Isin: "GB00BP6MXD84"),
+            // One security in two lines: 1 + 2.
+            new Holding("Apple Inc", "EC", 1m, Cusip: "037833100"),
+            new Holding("Apple Inc", "EC", 2m, Cusip: "037833100"),
+            new Holding("State Street Navigator Securities Lending", "STIV", 4m, Cusip: "857492706", CashCollateral: true),
+            new Holding("Unidentified Swap", "OTHER", 3m));
+        AddVti(handler, "0000036405-26-000001", "2026-05-29", "2026-03-31",
+            new Holding("Shell Plc", "EC", 1m, Cusip: "G80827101", Isin: "GB00BP6MXD84"),
+            new Holding("Apple Inc", "EC", 5m, Cusip: "037833100"),
+            new Holding("State Street Navigator Securities Lending", "STIV", 4m, Cusip: "857492706", CashCollateral: true),
+            new Holding("Unidentified Swap", "OTHER", 3m));
+
+        FundOverlapSnapshotDto snapshot = await RefreshOverlapAsync(CreateService(db, handler, Spy, Vti));
+
+        FundOverlapPairDto pair = Assert.Single(snapshot.Pairs);
+        Assert.Equal(2, pair.SharedCount);
+        Assert.Equal(4m, pair.Overlap); // Apple min(3, 5) + Shell min(2, 1)
+        Assert.Equal(["Apple Inc", "Shell Plc"], pair.Shared.Select(h => snapshot.Holdings[h.Holding]));
+        Assert.Equal(3m, pair.Shared[0].WeightA);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_KeepsTwoSecuritiesWithOneNameApart_SuchAsTwoShareClasses()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        Holding[] alphabet =
+        [
+            new Holding("Alphabet Inc", "EC", 2m, Cusip: "02079K305"),
+            new Holding("Alphabet Inc", "EC", 1.5m, Cusip: "02079K107"),
+        ];
+        AddSpy(handler, "0000884394-26-000001", "2026-05-28", "2026-03-31", alphabet);
+        AddVti(handler, "0000036405-26-000001", "2026-05-29", "2026-03-31", alphabet);
+
+        FundOverlapSnapshotDto snapshot = await RefreshOverlapAsync(CreateService(db, handler, Spy, Vti));
+
+        FundOverlapPairDto pair = Assert.Single(snapshot.Pairs);
+        Assert.Equal(2, pair.SharedCount);
+        Assert.Equal(3.5m, pair.Overlap);
+        Assert.Equal(["Alphabet Inc", "Alphabet Inc"], snapshot.Holdings);
+        Assert.Equal([0, 1], pair.Shared.Select(h => h.Holding));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_UsesEachFundsLatestReport_AndRebuildsTheOverlapOnlyWhenAFundHasFiledANewerOne()
+    {
+        string database = $"Funds_{Guid.NewGuid():N}";
+        StubNportHandler handler = OverlapHandler();
+        AddSpy(handler, "0000884394-26-000001", "2026-02-26", "2025-12-31", new Holding("Apple Inc", "EC", 9m, Cusip: "037833100"));
+        AddSpy(handler, "0000884394-26-000002", "2026-05-28", "2026-03-31", new Holding("Apple Inc", "EC", 7m, Cusip: "037833100"));
+        AddVti(handler, "0000036405-26-000001", "2026-05-29", "2026-03-31", new Holding("Apple Inc", "EC", 6m, Cusip: "037833100"));
+        await using (AppDbContext db = CreateContext(database))
+        {
+            FundOverlapSnapshotDto first = await RefreshOverlapAsync(CreateService(db, handler, Spy, Vti));
+            Assert.Equal(6m, Assert.Single(first.Pairs).Overlap);
+            Assert.Equal("0000884394-26-000002", first.Funds[0].Accession);
+        }
+
+        // Nothing new: the stored overlap is kept and no report is downloaded.
+        handler.Requests.Clear();
+        await using (AppDbContext db = CreateContext(database))
+        {
+            await CreateService(db, handler, Spy, Vti).RefreshAsync();
+        }
+        Assert.DoesNotContain(handler.Requests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal));
+
+        // SPY files a newer report: the overlap is rebuilt from it and VTI's latest.
+        AddSpy(handler, "0000884394-26-000003", "2026-08-27", "2026-06-30", new Holding("Apple Inc", "EC", 5m, Cusip: "037833100"));
+        await using AppDbContext later = CreateContext(database);
+        FundOverlapSnapshotDto rebuilt = await RefreshOverlapAsync(CreateService(later, handler, Spy, Vti));
+
+        Assert.Equal(5m, Assert.Single(rebuilt.Pairs).Overlap);
+        Assert.Equal(["0000884394-26-000003", "0000036405-26-000001"], rebuilt.Funds.Select(f => f.Accession));
+        Assert.Equal(new DateOnly(2026, 6, 30), rebuilt.AsOf);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WithFewerThanTwoReadableFunds_FailsTheOverlapAndLeavesItNeverLoaded()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        AddSpy(handler, "0000884394-26-000001", "2026-05-28", "2026-03-31", new Holding("Apple Inc", "EC", 7m, Cusip: "037833100"));
+        AddVti(handler, "0000036405-26-000001", "2026-05-29", "2026-03-31", new Holding("Apple Inc", "EC", 6m, Cusip: "037833100"));
+        handler.FailingDocuments.Add("0000036405-26-000001");
+        ResearchService service = CreateService(db, handler, Spy, Vti);
+
+        ResearchRefreshSummary summary = await service.RefreshAsync();
+
+        Assert.Contains(ResearchDatasets.FundOverlap, summary.Failed);
+        Assert.Null((await service.GetFundOverlapAsync()).Snapshot);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_NeverStoresLogsOrReturnsASecurityIdentifier()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        Holding[] holdings =
+        [
+            new Holding("Apple Inc", "EC", 7m, Cusip: "037833100", Isin: "US0378331005"),
+            new Holding("Shell Plc", "EC", 2m, Cusip: "780259305", Isin: "GB00BP6MXD84"),
+            new Holding("Microsoft Corp", "EC", 6m, Cusip: "594918104"),
+        ];
+        AddSpy(handler, "0000884394-26-000001", "2026-05-28", "2026-03-31", holdings);
+        AddVti(handler, "0000036405-26-000001", "2026-05-29", "2026-03-31", holdings);
+        // VTI's older report fails, so warnings are logged on the way.
+        AddVti(handler, "0000036405-26-000000", "2026-02-27", "2025-12-31", holdings);
+        handler.FailingDocuments.Add("0000036405-26-000000");
+        var logs = new AllLogs();
+        ResearchService service = CreateService(db, handler, logs, Spy, Vti);
+
+        FundOverlapSnapshotDto overlap = await RefreshOverlapAsync(service);
+        FundsSnapshotDto funds = (await service.GetFundsAsync()).Snapshot!;
+
+        List<string> texts = await db.ResearchSnapshots.AsNoTracking().Select(r => r.Payload).ToListAsync();
+        texts.Add(JsonSerializer.Serialize(overlap, JsonSerializerOptions.Web));
+        texts.Add(JsonSerializer.Serialize(funds, JsonSerializerOptions.Web));
+        Assert.NotEmpty(logs.Messages);
+        texts.AddRange(logs.Messages);
+        string[] identifiers = holdings.SelectMany(h => new[] { h.Cusip, h.Isin }).OfType<string>().ToArray();
+        var cusipShaped = new Regex(@"\b[0-9A-Z]{8}[0-9]\b");
+        var isinShaped = new Regex(@"\b[A-Z]{2}[0-9A-Z]{9}[0-9]\b");
+        Assert.All(texts, text =>
+        {
+            Assert.DoesNotContain(identifiers, text.Contains);
+            Assert.False(cusipShaped.IsMatch(text), "A CUSIP-shaped value was stored, logged or returned.");
+            Assert.False(isinShaped.IsMatch(text), "An ISIN-shaped value was stored, logged or returned.");
+        });
+    }
+
+    /// <summary>Records the message of every log entry from this solution's code.</summary>
+    private sealed class AllLogs : ILoggerProvider
+    {
+        private readonly RecordingLogger<AllLogs> _logger = new();
+
+        public List<string> Messages => _logger.Entries
+            .Select(e => e.Exception is null ? e.Message : $"{e.Message} {e.Exception}")
+            .ToList();
+
+        public ILogger CreateLogger(string categoryName) =>
+            categoryName.StartsWith("PersonalFinance", StringComparison.Ordinal) ? _logger : NullLogger.Instance;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    /// <summary>
+    /// A holding of a canned N-PORT filing: its name, asset category code and % of net assets, with its CUSIP and ISIN
+    /// when it has them and whether it is securities-lending cash collateral.
+    /// </summary>
+    private sealed record Holding(string Name, string Category, decimal Percent, string? Cusip = null,
+        string? Isin = null, bool CashCollateral = false);
 
     private sealed record Filing(string ListedUnder, string Accession, string FiledOn, string FormType, long Cik,
         string Document);
@@ -437,12 +709,14 @@ public class ResearchFundsServiceTests
                     <invstOrSec>
                       <name>{SecurityElement.Escape(h.Name)}</name>
                       <title>{SecurityElement.Escape(h.Name)}</title>
-                      <cusip>000000000</cusip>
+                      <cusip>{h.Cusip ?? "000000000"}</cusip>
+                      {(h.Isin is null ? string.Empty : $"<identifiers><isin value=\"{h.Isin}\"/></identifiers>")}
                       <valUSD>{h.Percent * 1000m}</valUSD>
                       <pctVal>{h.Percent}</pctVal>
                       <payoffProfile>Long</payoffProfile>
                       {category}
                       <issuerCat>CORP</issuerCat>
+                      <securityLending><isCashCollateral>{(h.CashCollateral ? "Y" : "N")}</isCashCollateral><isNonCashCollateral>N</isNonCashCollateral><isLoanByFund>N</isLoanByFund></securityLending>
                     </invstOrSec>
                     """);
             });

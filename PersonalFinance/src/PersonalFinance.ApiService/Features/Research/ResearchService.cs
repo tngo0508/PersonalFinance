@@ -29,6 +29,11 @@ internal sealed class ResearchService : IResearchService
         GetAsync<FundsSnapshotDto>(ResearchDatasets.Funds, cancellationToken);
 
     /// <inheritdoc />
+    public Task<ResearchSnapshotResult<FundOverlapSnapshotDto>> GetFundOverlapAsync(
+        CancellationToken cancellationToken = default) =>
+        GetAsync<FundOverlapSnapshotDto>(ResearchDatasets.FundOverlap, cancellationToken);
+
+    /// <inheritdoc />
     public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
         GetAsync<WorldSnapshotDto>(ResearchDatasets.World, cancellationToken);
 

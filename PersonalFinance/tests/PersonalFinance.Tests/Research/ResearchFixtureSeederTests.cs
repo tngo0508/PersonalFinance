@@ -15,7 +15,7 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The E2E Research fixtures: small Sectors, funds and World snapshots the ApiService stores at startup when
+/// The E2E Research fixtures: small Sectors, funds, fund overlap and World snapshots the ApiService stores at startup when
 /// <c>E2E_SEED_RESEARCH=true</c> in Development, so the Playwright walkthrough runs with no network to SEC or the
 /// World Bank. Never in Production.
 /// </summary>
@@ -50,6 +50,7 @@ public class ResearchFixtureSeederTests
         SectorsSnapshotDto? sectors = await GetAsync<SectorsSnapshotDto>(client, "sectors");
         FundsSnapshotDto? funds = await GetAsync<FundsSnapshotDto>(client, "funds");
         WorldSnapshotDto? world = await GetAsync<WorldSnapshotDto>(client, "world");
+        FundOverlapSnapshotDto? overlap = await GetAsync<FundOverlapSnapshotDto>(client, "funds/overlap");
 
         // What the walkthrough needs: several years to scrub, a Technology highlight, SPY and QQQ by quarter, and a
         // % of GDP figure for the World switch.
@@ -64,6 +65,11 @@ public class ResearchFixtureSeederTests
         Assert.Contains(" Q", funds.Periods[^1]);
         Assert.Equal(["SPY", "QQQ"], funds.Funds.Select(f => f.Ticker));
         Assert.Contains(funds.Values[^1].Funds.Single(f => f.Ticker == "SPY").Categories, c => c.Code == "EC");
+
+        Assert.NotNull(overlap);
+        Assert.Equal(["SPY", "QQQ"], overlap.Funds.Select(f => f.Ticker));
+        FundOverlapPairDto pair = Assert.Single(overlap.Pairs);
+        Assert.All(pair.Shared, h => Assert.InRange(h.Holding, 0, overlap.Holdings.Count - 1));
 
         Assert.NotNull(world);
         Assert.True(world.Periods.Count >= 2);
@@ -99,7 +105,7 @@ public class ResearchFixtureSeederTests
         await ResearchFixtureSeeder.SeedAsync(db, TimeProvider.System);
 
         List<ResearchSnapshot> rows = await db.ResearchSnapshots.AsNoTracking().OrderBy(s => s.Dataset).ToListAsync();
-        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.Sectors, ResearchDatasets.World],
+        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundOverlap, ResearchDatasets.Sectors, ResearchDatasets.World],
             rows.Select(r => r.Dataset));
         Assert.Equal("{}", rows.Single(r => r.Dataset == ResearchDatasets.World).Payload);
     }

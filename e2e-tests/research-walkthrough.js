@@ -407,6 +407,42 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 7d: with SPY and QQQ in the basket (from 7c), the overlap matrix, callouts and duplicated holdings show;
+        // focusing a cell gives the shared count and highlights the pair's rows; a fund's label filters the table;
+        // with one fund left the view asks for another.
+        await step('Research 7d', fail, async () => {
+            const view = page.locator('#research-overlap-view');
+            const cells = page.locator('#research-overlap-matrix td[tabindex="0"]');
+            const shown = await view.isVisible();
+            const cellCount = await cells.count();
+            const cellText = (await cells.first().textContent()).trim();
+            const values = (await page.locator('.research-overlap__callout-value').allTextContents()).map((t) => t.trim());
+            const largest = (await page.locator('.research-overlap__callout-note').nth(2).textContent()).trim();
+            const firstRow = (await page.locator('#research-overlap-table tbody tr td').first().textContent()).trim();
+            await cells.first().focus();
+            const tooltip = (await page.locator('#research-overlap-tooltip').textContent()).trim();
+            const highlighted = await page.locator('#research-overlap-table tr.is-highlighted').count();
+            await page.locator('#research-overlap-matrix button[data-filter-ticker="SPY"]').click();
+            const pressed = await page.locator('#research-overlap-matrix button[data-filter-ticker="SPY"]').getAttribute('aria-pressed');
+            const filterShown = await page.locator('#research-overlap-filter').isVisible();
+            await page.click('#research-overlap-filter-clear');
+            const filterCleared = !(await page.locator('#research-overlap-filter').isVisible());
+            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
+            const promptShown = await page.locator('#research-overlap-prompt').isVisible();
+            const viewHidden = !(await view.isVisible());
+            const ok = shown && cellCount === 2 && cellText === '44%' &&
+                values.join('|') === '44.1%|62.7%|8.6%' && largest.includes('NVIDIA Corp, held by SPY and QQQ') &&
+                firstRow === 'NVIDIA Corp' && tooltip.includes('101 securities in common') && highlighted === 6 &&
+                pressed === 'true' && filterShown && filterCleared && promptShown && viewHidden;
+            if (ok) {
+                pass('Research 7d: SPY and QQQ overlap 44.1% by weight, with callouts, a focusable cell that highlights their 6 shared holdings, a label filter and a prompt for one fund');
+            } else {
+                fail(`Research 7d: shown ${shown}, cells ${cellCount} "${cellText}", callouts ${values.join('|')}, largest "${largest}", ` +
+                    `first row "${firstRow}", tooltip "${tooltip}", highlighted ${highlighted}, pressed ${pressed}, ` +
+                    `filter ${filterShown}/${filterCleared}, prompt ${promptShown}/${viewHidden}`);
+            }
+        });
+
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');

@@ -57,6 +57,7 @@ internal static class ResearchFeature
         // Refreshed in this order, each on its own.
         services.AddScoped<IResearchDatasetRefresher, SectorsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundsRefresher>();
+        services.AddScoped<IResearchDatasetRefresher, FundOverlapRefresher>();
         services.AddScoped<IResearchDatasetRefresher, WorldRefresher>();
         services.AddScoped<IResearchService, ResearchService>();
 

@@ -20,6 +20,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 {
     private const string SectorsUrl = "/api/Research/sectors";
     private const string FundsUrl = "/api/Research/funds";
+    private const string FundOverlapUrl = "/api/Research/funds/overlap";
     private const string WorldUrl = "/api/Research/world";
     private const string InternalKey = "http-test-shared-secret";
 
@@ -31,13 +32,16 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     }
 
     private sealed class FakeResearchService(SectorsSnapshotDto? sectors, WorldSnapshotDto? world = null,
-        FundsSnapshotDto? funds = null) : IResearchService
+        FundsSnapshotDto? funds = null, FundOverlapSnapshotDto? overlap = null) : IResearchService
     {
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(sectors));
 
         public Task<ResearchSnapshotResult<FundsSnapshotDto>> GetFundsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<FundsSnapshotDto>(funds));
+
+        public Task<ResearchSnapshotResult<FundOverlapSnapshotDto>> GetFundOverlapAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundOverlapSnapshotDto>(overlap));
 
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(world));
@@ -93,9 +97,32 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         Assert.Equal(ResearchController.FundsNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
     }
 
+    [Fact]
+    public async Task GetFundOverlap_WhenLoaded_ReturnsTheSnapshot()
+    {
+        var snapshot = new FundOverlapSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
+
+        IActionResult result = await new ResearchController(new FakeResearchService(null, overlap: snapshot)).GetFundOverlap();
+
+        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    [Fact]
+    public async Task GetFundOverlap_WhenNeverLoaded_Returns503WithAReason()
+    {
+        IActionResult result = await new ResearchController(new FakeResearchService(null, funds: new FundsSnapshotDto()))
+            .GetFundOverlap();
+
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
+        Assert.Equal(ResearchController.FundOverlapNeverLoaded,
+            Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
+    }
+
     [Theory]
     [InlineData(SectorsUrl)]
     [InlineData(FundsUrl)]
+    [InlineData(FundOverlapUrl)]
     public async Task Get_OverHttp_WithoutTheSharedSecret_IsRejected(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -110,6 +137,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     [Theory]
     [InlineData(SectorsUrl)]
     [InlineData(FundsUrl)]
+    [InlineData(FundOverlapUrl)]
     public async Task Get_OverHttp_SignedIn_OnAnEmptyDatabase_Returns503WithAReason(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

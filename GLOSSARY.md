@@ -247,6 +247,15 @@ Companies tab of Research shows them, for information only. Figures are read as 
 GAAP in US dollars; nothing is converted, priced or scored.
 _Avoid_: stock page, ticker lookup, quote
 
+### Tracked Fund
+A fund, ETF or mutual fund, whose holdings the Research page reads, from a list the site owner keeps.
+_Avoid_: watchlist (that is the Watchlist feature), portfolio
+
+### Fund Basket
+A set of one to five Tracked Funds, each with a weight, that a user picks on the Research page to view together. It is
+never saved.
+_Avoid_: portfolio (that implies holdings the user owns), watchlist (the Watchlist feature), allocation (a Budget term)
+
 ### Spreadsheet Analysis
 Transaction and budget data analysis from Google Sheets. Provides dashboard views and sync operations.
 

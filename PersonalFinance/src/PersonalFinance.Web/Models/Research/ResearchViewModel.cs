@@ -1,5 +1,6 @@
 using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Shared.Helpers;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Models.Research;
 
@@ -29,11 +30,13 @@ public sealed class ResearchViewModel
     /// <summary>
     /// The page over each dataset; a null dataset makes its tab unavailable. It opens on <paramref name="tab"/> when
     /// that names a tab (the Funds tab's first id, <see cref="LegacyFundsTab"/>, included), and on the Companies tab
-    /// looks up <paramref name="ticker"/> when it is a valid ticker.
+    /// looks up <paramref name="ticker"/> when it is a valid ticker. A null <paramref name="fundOverlap"/> leaves only
+    /// the Funds tab's overlap view unavailable.
     /// </summary>
     public ResearchViewModel(SectorsSnapshotDto? sectors, FundsSnapshotDto? funds, WorldSnapshotDto? world,
-        string? tab = null, string? ticker = null)
+        string? tab = null, string? ticker = null, FundOverlapSnapshotDto? fundOverlap = null)
     {
+        FundOverlap = fundOverlap;
         Sectors = new(sectors, "We couldn't load the Sectors data");
         Funds = new(funds, "We couldn't load the funds data");
         World = new(world, "We couldn't load the World data");
@@ -59,6 +62,21 @@ public sealed class ResearchViewModel
 
     /// <summary>The Funds tab, which opens on the latest quarter.</summary>
     public ResearchTabViewModel<FundsSnapshotDto, FundsPeriodDto> Funds { get; }
+
+    /// <summary>
+    /// The fund overlap of every pair of Tracked Funds, which the Funds tab shows for the Fund Basket's funds; null when
+    /// it has never loaded.
+    /// </summary>
+    public FundOverlapSnapshotDto? FundOverlap { get; }
+
+    /// <summary>The overlap view's Unavailable State, shown on the Funds tab when <see cref="FundOverlap"/> is null.</summary>
+    public UnavailableStateViewModel FundOverlapUnavailableState { get; } = new()
+    {
+        PageTitle = "Research",
+        Heading = "We couldn't load the fund overlap data",
+        RetryController = "Research",
+        RetryRouteValues = new Dictionary<string, string> { ["tab"] = FundsTab },
+    };
 
     /// <summary>The World tab, which opens on the latest year.</summary>
     public ResearchTabViewModel<WorldSnapshotDto, WorldPeriodDto> World { get; }

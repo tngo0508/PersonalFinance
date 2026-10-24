@@ -6,15 +6,60 @@
     FundsPeriodDto? latest = Model.Funds.LatestPeriod;
     bool showFunds = !Model.Funds.Unavailable && latest is not null;
     CultureInfo us = CultureInfo.GetCultureInfo("en-US");
+    FundOverlapSnapshotDto? overlap = Model.FundOverlap;
+    string overlapDates = overlap is null || overlap.Funds.Count == 0
+        ? string.Empty
+        : overlap.Funds.Min(f => f.ReportDate) == overlap.Funds.Max(f => f.ReportDate)
+            ? $"as of {overlap.AsOf.ToString("d MMMM yyyy", us)}"
+            : $"as of {overlap.Funds.Min(f => f.ReportDate).ToString("d MMMM yyyy", us)} to {overlap.AsOf.ToString("d MMMM yyyy", us)}";
 }
 
-@* The Funds tab: a collapsible tree of what the Tracked Funds hold (fund, then N-PORT asset category, then holdings), one
+@* The Funds tab: the overlap of the Fund Basket's funds (js/research/research-overlap.js, from each fund's latest
+   report), then a collapsible tree of what the Tracked Funds hold (fund, then N-PORT asset category, then holdings), one
    quarter at a time. Drawn by js/research/research-funds.js from the data island below; the scrubber, live region and
    table view are wired by js/research/research-page.js. Hidden until its tab is chosen. *@
 <section class="research-deck research-deck--stacked" id="research-panel-funds" data-research-basket role="tabpanel" aria-labelledby="research-tab-funds"
          hidden="@(!Model.IsSelected(ResearchViewModel.FundsTab))">
     @if (showFunds)
     {
+        <div class="research-card research-overlap" id="research-overlap">
+            <h2 class="research-card__title">Overlap: same holdings</h2>
+            @if (overlap is null)
+            {
+                <partial name="_UnavailableState" model="Model.FundOverlapUnavailableState"/>
+            }
+            else
+            {
+                <p class="research-card__subtitle">
+                    How much of two funds' money is in the same securities, from each fund's latest reported holdings
+                    (@overlapDates). For each security both funds hold, the smaller of its two weights is counted, and
+                    those are added up.
+                </p>
+                <p class="research-overlap__prompt" id="research-overlap-prompt">
+                    Add at least two funds to your Fund Basket to see how much they overlap.
+                </p>
+                <div class="research-overlap__view" id="research-overlap-view" hidden>
+                    <ul class="research-overlap__callouts" id="research-overlap-callouts" aria-label="Overlap in this set"></ul>
+                    <div class="research-overlap__body">
+                        <div class="research-overlap__matrix" id="research-overlap-matrix"></div>
+                        <div class="research-overlap__duplicates">
+                            <div class="research-overlap__filter" id="research-overlap-filter" hidden>
+                                <span id="research-overlap-filter-text"></span>
+                                <button type="button" class="research-chip" id="research-overlap-filter-clear">Show all funds</button>
+                            </div>
+                            <div class="research-overlap__table" id="research-overlap-table"></div>
+                        </div>
+                    </div>
+                    <p class="research-overlap__note">
+                        Each fund's label filters the table to the holdings that fund shares; pointing at or focusing a
+                        cell highlights that pair's holdings. The table is built from the 25 largest holdings each pair
+                        shares. With three or more funds, the share held by two or more is a lower bound.
+                    </p>
+                </div>
+                <div class="research-tooltip" id="research-overlap-tooltip" aria-hidden="true" hidden></div>
+            }
+            <p class="research-card__source">Source: SEC EDGAR (Form N-PORT)</p>
+        </div>
         <div class="research-scrubber" data-research-scrubber>
             <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
                     aria-label="Play through the quarters">
@@ -87,4 +132,10 @@
 {
     @* The funds snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-funds.js. *@
     <script type="application/json" id="research-funds-data">@Json.Serialize(Model.Funds.Snapshot)</script>
+    if (overlap is not null)
+    {
+        @* The fund overlap snapshot (pair percentages and named shared holdings, never an identifier), read by
+           research-overlap.js. *@
+        <script type="application/json" id="research-fund-overlap-data">@Json.Serialize(overlap)</script>
+    }
 }
