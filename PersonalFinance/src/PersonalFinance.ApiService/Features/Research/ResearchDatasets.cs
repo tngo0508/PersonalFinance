@@ -32,6 +32,18 @@ internal static class ResearchDatasets
     /// </summary>
     public const string FundOverlap = "fund-overlap";
 
+    /// <summary>
+    /// The fund returns snapshot: each Tracked Fund's monthly total returns and the figures computed from them per
+    /// window.
+    /// </summary>
+    public const string FundReturns = "fund-returns";
+
+    /// <summary>
+    /// The N-PORT filings whose returns the fund returns refresh has read, kept so each is fetched only once. Not served
+    /// to the page.
+    /// </summary>
+    public const string FundReturnFilings = "fund-return-filings";
+
     /// <summary>The World snapshot.</summary>
     public const string World = "world";
 }

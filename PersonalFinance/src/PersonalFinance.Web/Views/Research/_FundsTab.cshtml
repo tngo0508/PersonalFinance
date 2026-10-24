@@ -7,6 +7,7 @@
     bool showFunds = !Model.Funds.Unavailable && latest is not null;
     CultureInfo us = CultureInfo.GetCultureInfo("en-US");
     FundOverlapSnapshotDto? overlap = Model.FundOverlap;
+    FundReturnsSnapshotDto? returns = Model.FundReturns;
     string overlapDates = overlap is null || overlap.Funds.Count == 0
         ? string.Empty
         : overlap.Funds.Min(f => f.ReportDate) == overlap.Funds.Max(f => f.ReportDate)
@@ -15,7 +16,7 @@
 }
 
 @* The Funds tab: the overlap of the Fund Basket's funds (js/research/research-overlap.js, from each fund's latest
-   report), then a collapsible tree of what the Tracked Funds hold (fund, then N-PORT asset category, then holdings), one
+   report) and how closely their returns move together (js/research/research-correlation.js), then a collapsible tree of what the Tracked Funds hold (fund, then N-PORT asset category, then holdings), one
    quarter at a time. Drawn by js/research/research-funds.js from the data island below; the scrubber, live region and
    table view are wired by js/research/research-page.js. Hidden until its tab is chosen. *@
 <section class="research-deck research-deck--stacked" id="research-panel-funds" data-research-basket role="tabpanel" aria-labelledby="research-tab-funds"
@@ -59,6 +60,43 @@
                 <div class="research-tooltip" id="research-overlap-tooltip" aria-hidden="true" hidden></div>
             }
             <p class="research-card__source">Source: SEC EDGAR (Form N-PORT)</p>
+        </div>
+        <div class="research-card research-correlation" id="research-correlation">
+            <h2 class="research-card__title">Correlation: move together</h2>
+            @if (returns is null)
+            {
+                <partial name="_UnavailableState" model="Model.FundReturnsUnavailableState"/>
+            }
+            else
+            {
+                <p class="research-card__subtitle">
+                    How closely two funds' monthly returns rose and fell together over the window: 1 is fully in step,
+                    0 is unrelated and &minus;1 is opposite. From monthly total returns of each fund's net asset value, to
+                    @returns.AsOf.ToString("MMMM yyyy", us).
+                </p>
+                <div class="research-correlation__controls">
+                    <div class="research-view-toggle" role="group" aria-label="Window">
+                        <button type="button" class="research-view-toggle__button" data-correlation-years="1" aria-pressed="false">1Y</button>
+                        <button type="button" class="research-view-toggle__button" data-correlation-years="3" aria-pressed="true">3Y</button>
+                        <button type="button" class="research-view-toggle__button" data-correlation-years="5" aria-pressed="false">5Y</button>
+                    </div>
+                    <button type="button" class="research-chip" id="research-correlation-all" aria-pressed="false">All tracked funds</button>
+                </div>
+                <p class="research-overlap__prompt" id="research-correlation-prompt">
+                    Add at least two funds to your Fund Basket, or choose All tracked funds, to see how closely they move together.
+                </p>
+                <div class="research-overlap__view" id="research-correlation-view" hidden>
+                    <ul class="research-overlap__callouts" id="research-correlation-callouts" aria-label="Correlation in this set"></ul>
+                    <div class="research-overlap__matrix" id="research-correlation-matrix"></div>
+                    <p class="research-overlap__note">
+                        Each value is the Pearson correlation of the two funds' monthly returns over the window's months,
+                        ending with the earlier of their latest months. It describes how they moved in the past only.
+                        A dash means a fund has too few months for the window.
+                    </p>
+                </div>
+                <div class="research-tooltip" id="research-correlation-tooltip" aria-hidden="true" hidden></div>
+            }
+            <p class="research-card__source">Source: SEC EDGAR (Form N-PORT monthly total returns)</p>
         </div>
         <div class="research-scrubber" data-research-scrubber>
             <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
@@ -137,5 +175,11 @@
         @* The fund overlap snapshot (pair percentages and named shared holdings, never an identifier), read by
            research-overlap.js. *@
         <script type="application/json" id="research-fund-overlap-data">@Json.Serialize(overlap)</script>
+    }
+    if (returns is not null)
+    {
+        @* The fund returns snapshot (monthly returns with every per-window figure precomputed), read by
+           research-correlation.js. *@
+        <script type="application/json" id="research-fund-returns-data">@Json.Serialize(returns)</script>
     }
 }

@@ -122,6 +122,68 @@ internal static class NportDocumentParser
     private static bool IsIdentifier(string? value, int length) =>
         value is not null && value.Length == length && value.All(char.IsLetterOrDigit) && value.Any(c => c is not '0');
 
+    /// <summary>
+    /// Parses only the head of the report: its series, report date and each class's monthly total returns
+    /// (<c>returnInfo/monthlyTotReturns/monthlyTotReturn</c>, attributes <c>classId</c>, <c>rtn1</c> to <c>rtn3</c>).
+    /// It stops at the holdings, so the rest of the document is never read. Throws <see cref="XmlException"/> on a
+    /// malformed head, and <see cref="FormatException"/> when it has no readable report date.
+    /// </summary>
+    public static async Task<NportReturns> ParseReturnsAsync(Stream document, CancellationToken cancellationToken)
+    {
+        using var reader = XmlReader.Create(document, ReaderSettings);
+        string? seriesId = null;
+        string? reportDate = null;
+        var classes = new List<NportClassReturns>();
+
+        bool more = await reader.ReadAsync();
+        while (more)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (reader.NodeType == XmlNodeType.Element)
+            {
+                switch (reader.LocalName)
+                {
+                    case "invstOrSecs":
+                        more = false;
+                        continue;
+                    case "seriesId" when seriesId is null:
+                        seriesId = (await reader.ReadElementContentAsStringAsync()).Trim();
+                        more = !reader.EOF;
+                        continue;
+                    case "repPdDate":
+                        reportDate = (await reader.ReadElementContentAsStringAsync()).Trim();
+                        more = !reader.EOF;
+                        continue;
+                    case "monthlyTotReturn":
+                        classes.Add(new NportClassReturns(BlankToNull(reader.GetAttribute("classId")),
+                            ParseReturn(reader.GetAttribute("rtn1")), ParseReturn(reader.GetAttribute("rtn2")),
+                            ParseReturn(reader.GetAttribute("rtn3"))));
+                        break;
+                }
+            }
+            else if (reader.NodeType == XmlNodeType.EndElement && reader.LocalName == "returnInfo")
+            {
+                break;
+            }
+
+            more = await reader.ReadAsync();
+        }
+
+        if (!DateOnly.TryParseExact(reportDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None,
+                out DateOnly date))
+        {
+            throw new FormatException("The N-PORT document has no readable report date (repPdDate).");
+        }
+
+        return new NportReturns(string.IsNullOrEmpty(seriesId) ? null : seriesId, date, classes);
+    }
+
+    /// <summary>A monthly return as reported, in percent; null when it is missing or not a number (e.g. N/A).</summary>
+    private static decimal? ParseReturn(string? value) =>
+        decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal parsed) ? parsed : null;
+
+    private static string? BlankToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
     private static decimal ParseDecimal(string? value) =>
         decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal parsed) ? parsed : 0m;
 }

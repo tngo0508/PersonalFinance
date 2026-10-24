@@ -119,6 +119,28 @@ public class ResearchFundsWebControllerTests
     }
 
     [Fact]
+    public async Task Index_HoldsTheFundReturns_AndWhenTheyHaveNeverLoaded_StillHoldsTheFunds()
+    {
+        var returns = new FundReturnsSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
+        proxy.Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+        proxy.Returns(nameof(IResearchApi.GetFundReturnsAsync), returns);
+        (IResearchApi failing, ApiProxy<IResearchApi> failingProxy) = ApiProxy.Create<IResearchApi>();
+        failingProxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
+        failingProxy.Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+        failingProxy.Throws(nameof(IResearchApi.GetFundReturnsAsync), await NeverLoaded("The fund returns data has not loaded yet."));
+
+        ResearchViewModel loaded = ViewModelOf(await CreateController(api).Index());
+        ResearchViewModel unavailable = ViewModelOf(await CreateController(failing).Index());
+
+        Assert.Same(returns, loaded.FundReturns);
+        Assert.Null(unavailable.FundReturns);
+        Assert.False(unavailable.Funds.Unavailable);
+        Assert.Equal("funds", unavailable.FundReturnsUnavailableState.RetryRouteValues["tab"]);
+    }
+
+    [Fact]
     public async Task Index_WhenTheSectorsDataHasNeverLoaded_StillHoldsTheFunds()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();

@@ -52,8 +52,8 @@ public class ResearchFundsServiceTests
     }
 
     /// <summary>
-    /// The requests of the funds refresh alone: those before the fund overlap refresh, which runs next, lists the
-    /// first fund's filings a second time.
+    /// The requests of the funds refresh alone: those before the next refresh (fund overlap, or fund returns with a
+    /// single fund) lists the first fund's filings a second time.
     /// </summary>
     private static List<string> FundsRefreshRequests(StubNportHandler handler, string firstFundList)
     {
@@ -223,8 +223,9 @@ public class ResearchFundsServiceTests
         FundsSnapshotDto snapshot = await RefreshAndReadAsync(CreateService(later, handler, Spy));
 
         Assert.Equal(["2025 Q4", "2026 Q1"], snapshot.Periods);
-        Assert.Single(handler.Requests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal));
-        Assert.Contains(handler.Requests, url => url.Contains("000088439426000002", StringComparison.Ordinal));
+        List<string> fundsRequests = FundsRefreshRequests(handler, "CIK=884394");
+        Assert.Single(fundsRequests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal));
+        Assert.Contains(fundsRequests, url => url.Contains("000088439426000002", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -575,6 +576,202 @@ public class ResearchFundsServiceTests
         });
     }
 
+    // ---- Fund returns ----
+
+    private static readonly TrackedFund Qqq = new("QQQ", "Invesco QQQ Trust", 1067839);
+
+    /// <summary>Monthly 3-month Treasury bill rates from the Fed: a flat 4% from 2025 to 2026.</summary>
+    private sealed class FlatBillClient : IFedRatesClient
+    {
+        public Task<IReadOnlyList<(DateOnly Month, decimal Rate)>> GetTreasuryBillRatesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<(DateOnly Month, decimal Rate)>>(Enumerable.Range(0, 24)
+                .Select(i => (new DateOnly(2025, 1, 1).AddMonths(i), 4.0m)).ToList());
+    }
+
+    private static ResearchService CreateReturnsService(AppDbContext db, StubNportHandler handler, IFedRatesClient? fed,
+        params TrackedFund[] funds)
+    {
+        var settings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
+        var timeProvider = new FixedTimeProvider(Now);
+        var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
+        var research = new ResearchSettings { SectorsFirstYear = 2025, Funds = funds, FundsFirstQuarter = new DateOnly(2019, 10, 1) };
+        var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
+        return ResearchServiceFactory.Create(db, client, worldClient, research, timeProvider, fedClient: fed);
+    }
+
+    private static async Task<FundReturnsSnapshotDto> RefreshReturnsAsync(ResearchService service)
+    {
+        ResearchRefreshSummary summary = await service.RefreshAsync();
+        Assert.Contains(ResearchDatasets.FundReturns, summary.Built);
+        return (await service.GetFundReturnsAsync()).Snapshot!;
+    }
+
+    private static Return[] Class(string? classId, decimal? r1, decimal? r2, decimal? r3) => [new Return(classId, r1, r2, r3)];
+
+    [Fact]
+    public async Task GetFundReturnsAsync_OnAnEmptyTable_ReturnsNeverLoaded()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+
+        ResearchSnapshotResult<FundReturnsSnapshotDto> result =
+            await CreateReturnsService(db, OverlapHandler(), null, Spy).GetFundReturnsAsync();
+
+        Assert.Null(result.Snapshot);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_AssignsAFilingsThreeReturnsToItsReportMonthAndTheTwoBefore_TakingTheTickersClass()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        // VTI's series reports six classes; only the ETF class (C000007808, from the ticker list) is VTI's.
+        handler.AddFiling(VtiSeries, "0000036405-26-000001", "2026-05-29", "2026-03-31", VtiSeries,
+            [new Holding("Apple Inc", "EC", 6m)], cik: 36405,
+            returns: [new Return("C000007806", 9m, 9m, 9m), new Return("C000007808", 1.1m, 2.2m, -3.3m)]);
+
+        FundReturnsSnapshotDto snapshot = await RefreshReturnsAsync(CreateReturnsService(db, handler, null, Vti));
+
+        FundReturnSeriesDto vti = Assert.Single(snapshot.Funds);
+        Assert.Equal("VTI", vti.Ticker);
+        Assert.Equal(new DateOnly(2026, 1, 1), vti.FirstMonth);
+        Assert.Equal(new DateOnly(2026, 3, 1), vti.LastMonth);
+        Assert.Equal([1.1m, 2.2m, -3.3m], vti.Returns);
+        Assert.Equal(new DateOnly(2026, 3, 31), snapshot.AsOf);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_KeepsTheLaterFiledReturnForAMonth_LeavesAnNaMonthOut_AndReadsEachFilingOnce()
+    {
+        string database = $"Funds_{Guid.NewGuid():N}";
+        StubNportHandler handler = OverlapHandler();
+        handler.AddFiling("884394", "0000884394-26-000001", "2026-02-26", "2025-12-31", null,
+            [new Holding("Apple Inc", "EC", 7m)], returns: Class(null, 1m, null, 3m));
+        // An amendment for the same quarter corrects December.
+        handler.AddFiling("884394", "0000884394-26-000002", "2026-03-10", "2025-12-31", null,
+            [new Holding("Apple Inc", "EC", 7m)], formType: "NPORT-P/A", returns: Class(null, 1m, null, 3.5m));
+        await using (AppDbContext db = CreateContext(database))
+        {
+            FundReturnsSnapshotDto snapshot = await RefreshReturnsAsync(CreateReturnsService(db, handler, null, Spy));
+            Assert.Equal([1m, null, 3.5m], Assert.Single(snapshot.Funds).Returns);
+        }
+
+        handler.Requests.Clear();
+        await using AppDbContext later = CreateContext(database);
+        await RefreshReturnsAsync(CreateReturnsService(later, handler, null, Spy));
+        Assert.DoesNotContain(handler.Requests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_JoinsQqqsTrustReturnsToItsEtfClass_AcrossThe2025Conversion()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        handler.Tickers.Add((1067839, "S000101292", "C000271435", "QQQ"));
+        // The trust reported one return with no class; after the conversion the ETF class reports under the same filer.
+        handler.AddFiling("1067839", "0001067839-25-000001", "2025-08-28", "2025-06-30", null,
+            [new Holding("Apple Inc", "EC", 8m)], cik: 1067839, returns: Class(null, 1m, 2m, 3m));
+        handler.AddFiling("1067839", "0001067839-25-000002", "2025-11-26", "2025-09-30", "S000101292",
+            [new Holding("Apple Inc", "EC", 8m)], cik: 1067839, returns: Class("C000271435", 4m, 5m, 6m));
+
+        FundReturnSeriesDto qqq = Assert.Single((await RefreshReturnsAsync(CreateReturnsService(db, handler, null, Qqq))).Funds);
+
+        Assert.Equal(new DateOnly(2025, 4, 1), qqq.FirstMonth);
+        Assert.Equal(new DateOnly(2025, 9, 1), qqq.LastMonth);
+        Assert.Equal([1m, 2m, 3m, 4m, 5m, 6m], qqq.Returns);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_PrecomputesEachWindowsFiguresAndCorrelations_AsComputedByHand()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        handler.Tickers.Add((1100663, "S000004344", "C000012074", "IWM"));
+        // Twelve months to June 2026. SPY alternates +2% and -1%; VTI moves twice as far the same way; IWM the opposite way.
+        decimal[] spy = [2, -1, 2, -1, 2, -1, 2, -1, 2, -1, 2, -1];
+        string[] reportDates = ["2025-09-30", "2025-12-31", "2026-03-31", "2026-06-30"];
+        for (int q = 0; q < 4; q++)
+        {
+            string filed = DateOnly.Parse(reportDates[q], CultureInfo.InvariantCulture).AddDays(58).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            decimal[] months = spy.Skip(q * 3).Take(3).ToArray();
+            handler.AddFiling("884394", $"0000884394-26-00000{q}", filed, reportDates[q], null, [new Holding("Apple Inc", "EC", 7m)],
+                returns: Class(null, months[0], months[1], months[2]));
+            handler.AddFiling(VtiSeries, $"0000036405-26-00000{q}", filed, reportDates[q], VtiSeries, [new Holding("Apple Inc", "EC", 6m)],
+                cik: 36405, returns: Class("C000007808", months[0] * 2, months[1] * 2, months[2] * 2));
+            handler.AddFiling("S000004344", $"0001100663-26-00000{q}", filed, reportDates[q], "S000004344", [new Holding("Bloom Energy", "EC", 1m)],
+                cik: 1100663, returns: Class("C000012074", 1 - months[0], 1 - months[1], 1 - months[2]));
+        }
+
+        FundReturnsSnapshotDto snapshot = await RefreshReturnsAsync(CreateReturnsService(db, handler, new FlatBillClient(), Spy, Vti, Iwm));
+
+        Assert.Equal([1, 3, 5], snapshot.Windows.Select(w => w.Years));
+        FundReturnsWindowDto oneYear = snapshot.Windows[0];
+        FundWindowMetricsDto spyYear = oneYear.Funds.Single(f => f.Ticker == "SPY");
+        // (1.02 x 0.99)^6 = 1.06026; sample sd of +2/-1 is 1.5667, x sqrt(12) = 5.4272; the worst fall is the 1% drop.
+        Assert.Equal((new DateOnly(2025, 7, 1), new DateOnly(2026, 6, 1)), (spyYear.Start, spyYear.End));
+        Assert.Equal(6.03m, spyYear.TotalReturn);
+        Assert.Equal(6.03m, spyYear.AnnualizedReturn);
+        Assert.Equal(5.43m, spyYear.Volatility);
+        Assert.Equal(-1.00m, spyYear.WorstFall);
+        Assert.Equal(4.00m, spyYear.TreasuryBill);
+        Assert.Equal(0.37m, spyYear.Sharpe); // (6.026 - 4) / 5.4272
+        Assert.Equal([("SPY", "VTI", 1.00m), ("SPY", "IWM", -1.00m), ("VTI", "IWM", -1.00m)],
+            oneYear.Correlations.Select(c => (snapshot.Funds[c.A].Ticker, snapshot.Funds[c.B].Ticker, c.Correlation)));
+        // Twelve months are too few for the 3- and 5-year windows.
+        Assert.All(snapshot.Windows.Skip(1), w => Assert.Empty(w.Funds));
+        Assert.All(snapshot.Windows.Skip(1), w => Assert.Empty(w.Correlations));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WhenTheFedsRatesCannotBeRead_StillBuildsTheReturns_WithoutSharpeRatios()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = OverlapHandler();
+        decimal[] spy = [2, -1, 2, -1, 2, -1, 2, -1, 2, -1, 2, -1];
+        string[] reportDates = ["2025-09-30", "2025-12-31", "2026-03-31", "2026-06-30"];
+        for (int q = 0; q < 4; q++)
+        {
+            decimal[] months = spy.Skip(q * 3).Take(3).ToArray();
+            handler.AddFiling("884394", $"0000884394-26-00000{q}", "2026-08-28", reportDates[q], null, [new Holding("Apple Inc", "EC", 7m)],
+                returns: Class(null, months[0], months[1], months[2]));
+        }
+
+        FundReturnsSnapshotDto snapshot = await RefreshReturnsAsync(CreateReturnsService(db, handler, null, Spy));
+
+        FundWindowMetricsDto year = Assert.Single(snapshot.Windows[0].Funds);
+        Assert.Null(year.Sharpe);
+        Assert.Null(year.TreasuryBill);
+        Assert.Equal(5.43m, year.Volatility);
+    }
+
+    [Fact]
+    public async Task FedRatesClient_ReadsOneMonthlySeries_DatedAtMonthEnd_SkippingOtherSeriesAndNoData()
+    {
+        const string document = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <message:MessageGroup xmlns:message="http://www.SDMX.org/resources/SDMXML/schemas/v1_0/message" xmlns:frb="http://www.federalreserve.gov/structure/compact/common">
+              <frb:DataSet id="H15" xmlns:kf="http://www.federalreserve.gov/structure/compact/H15_H15">
+                <kf:Series SERIES_NAME="RIFSGFSM03_N.B"><frb:Obs OBS_VALUE="9.99" TIME_PERIOD="2026-09-25" /></kf:Series>
+                <kf:Series SERIES_NAME="RIFSGFSM03_N.M">
+                  <frb:Obs OBS_STATUS="A" OBS_VALUE="3.72" TIME_PERIOD="2026-08-31" />
+                  <frb:Obs OBS_STATUS="ND" OBS_VALUE="ND" TIME_PERIOD="2026-09-30" />
+                  <frb:Obs OBS_STATUS="A" OBS_VALUE="3.94" TIME_PERIOD="2026-10-31" />
+                </kf:Series>
+                <kf:Series SERIES_NAME="RIFSGFSM03_N.A"><frb:Obs OBS_VALUE="8.88" TIME_PERIOD="2026" /></kf:Series>
+              </frb:DataSet>
+            </message:MessageGroup>
+            """;
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(document));
+
+        IReadOnlyList<(DateOnly Month, decimal Rate)> rates = await FedRatesClient.ReadSeriesAsync(stream, "RIFSGFSM03_N.M",
+            CancellationToken.None);
+
+        Assert.Equal([(new DateOnly(2026, 8, 1), 3.72m), (new DateOnly(2026, 10, 1), 3.94m)], rates);
+    }
+
+    /// <summary>One share class's monthly returns in a canned N-PORT filing (Item B.5): null is reported as N/A.</summary>
+    private sealed record Return(string? ClassId, decimal? Month1, decimal? Month2, decimal? Month3);
+
     /// <summary>Records the message of every log entry from this solution's code.</summary>
     private sealed class AllLogs : ILoggerProvider
     {
@@ -622,9 +819,10 @@ public class ResearchFundsServiceTests
         public Action<string>? OnRequest { get; set; }
 
         public void AddFiling(string listedUnder, string accession, string filedOn, string reportDate, string? seriesId,
-            IReadOnlyList<Holding> holdings, string formType = "NPORT-P", long cik = 884394) =>
+            IReadOnlyList<Holding> holdings, string formType = "NPORT-P", long cik = 884394,
+            IReadOnlyList<Return>? returns = null) =>
             _filings.Add(new Filing(listedUnder, accession, filedOn, formType, cik,
-                NportDocument(reportDate, seriesId, holdings)));
+                NportDocument(reportDate, seriesId, holdings, returns ?? [])));
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -697,8 +895,15 @@ public class ResearchFundsServiceTests
         }
 
         /// <summary>A Form N-PORT primary document as EDGAR serves it, cut down to the fields the snapshot reads.</summary>
-        private static string NportDocument(string reportDate, string? seriesId, IReadOnlyList<Holding> holdings)
+        private static string NportDocument(string reportDate, string? seriesId, IReadOnlyList<Holding> holdings,
+            IReadOnlyList<Return> returns)
         {
+            static string Rtn(decimal? value) => value?.ToString(CultureInfo.InvariantCulture) ?? "N/A";
+            string returnInfo = returns.Count == 0
+                ? string.Empty
+                : "<returnInfo><monthlyTotReturns>" + string.Concat(returns.Select(r =>
+                      $"<monthlyTotReturn {(r.ClassId is null ? string.Empty : $"classId=\"{r.ClassId}\" ")}rtn1=\"{Rtn(r.Month1)}\" rtn2=\"{Rtn(r.Month2)}\" rtn3=\"{Rtn(r.Month3)}\"/>"))
+                  + "</monthlyTotReturns></returnInfo>";
             string series = seriesId is null ? string.Empty : $"<seriesClassInfo><seriesId>{seriesId}</seriesId></seriesClassInfo>";
             IEnumerable<string> rows = holdings.Select(h =>
             {
@@ -726,7 +931,7 @@ public class ResearchFundsServiceTests
                   <headerData><submissionType>NPORT-P</submissionType>{series}</headerData>
                   <formData>
                     <genInfo><regName>Test Trust</regName><seriesName>N/A</seriesName><repPdEnd>2026-09-30</repPdEnd><repPdDate>{reportDate}</repPdDate></genInfo>
-                    <fundInfo><totAssets>1000000</totAssets><netAssets>100000</netAssets></fundInfo>
+                    <fundInfo><totAssets>1000000</totAssets><netAssets>100000</netAssets>{returnInfo}</fundInfo>
                     <invstOrSecs>
                       {string.Join('\n', rows)}
                     </invstOrSecs>

@@ -51,6 +51,7 @@ public class ResearchFixtureSeederTests
         FundsSnapshotDto? funds = await GetAsync<FundsSnapshotDto>(client, "funds");
         WorldSnapshotDto? world = await GetAsync<WorldSnapshotDto>(client, "world");
         FundOverlapSnapshotDto? overlap = await GetAsync<FundOverlapSnapshotDto>(client, "funds/overlap");
+        FundReturnsSnapshotDto? returns = await GetAsync<FundReturnsSnapshotDto>(client, "funds/returns");
 
         // What the walkthrough needs: several years to scrub, a Technology highlight, SPY and QQQ by quarter, and a
         // % of GDP figure for the World switch.
@@ -70,6 +71,12 @@ public class ResearchFixtureSeederTests
         Assert.Equal(["SPY", "QQQ"], overlap.Funds.Select(f => f.Ticker));
         FundOverlapPairDto pair = Assert.Single(overlap.Pairs);
         Assert.All(pair.Shared, h => Assert.InRange(h.Holding, 0, overlap.Holdings.Count - 1));
+
+        Assert.NotNull(returns);
+        Assert.Equal(["SPY", "QQQ"], returns.Funds.Select(f => f.Ticker));
+        Assert.All(returns.Funds, f => Assert.Equal(60, f.Returns.Count));
+        Assert.All(returns.Windows, w => Assert.Single(w.Correlations));
+        Assert.All(returns.Windows, w => Assert.All(w.Funds, f => Assert.NotNull(f.Sharpe)));
 
         Assert.NotNull(world);
         Assert.True(world.Periods.Count >= 2);
@@ -105,7 +112,8 @@ public class ResearchFixtureSeederTests
         await ResearchFixtureSeeder.SeedAsync(db, TimeProvider.System);
 
         List<ResearchSnapshot> rows = await db.ResearchSnapshots.AsNoTracking().OrderBy(s => s.Dataset).ToListAsync();
-        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundOverlap, ResearchDatasets.Sectors, ResearchDatasets.World],
+        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundOverlap, ResearchDatasets.FundReturns, ResearchDatasets.Sectors,
+                ResearchDatasets.World],
             rows.Select(r => r.Dataset));
         Assert.Equal("{}", rows.Single(r => r.Dataset == ResearchDatasets.World).Payload);
     }

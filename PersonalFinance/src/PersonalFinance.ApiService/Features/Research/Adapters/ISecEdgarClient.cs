@@ -45,4 +45,10 @@ internal interface ISecEdgarClient
     /// as does a document that cannot be parsed.
     /// </summary>
     Task<NportReport?> GetNportReportAsync(NportFilingRef filing, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads only the head of an N-PORT filing's primary document: its series, report date and monthly total returns
+    /// (Item B.5, which comes before the holdings). Null when EDGAR does not have the document.
+    /// </summary>
+    Task<NportReturns?> GetNportReturnsAsync(NportFilingRef filing, CancellationToken cancellationToken);
 }

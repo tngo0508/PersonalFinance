@@ -366,3 +366,23 @@
         transition: none;
     }
 }
+
+/* --------------------------------------------------------------------------
+   Correlation: move together. The same matrix as the overlap view, on a
+   diverging scale: the dataviz reference blue arm, a red arm stepped to the
+   same lightness, and the reference grey midpoint (each arm checked for
+   monotone lightness and a single hue with the dataviz validator). Values are
+   printed in every cell, so colour is never the only cue.
+   -------------------------------------------------------------------------- */
+
+.research-correlation__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    margin-bottom: var(--app-spacing-m);
+}
+
+.research-correlation__table .research-overlap__cell {
+    width: 3.75rem;
+}

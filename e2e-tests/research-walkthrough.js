@@ -416,8 +416,8 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const shown = await view.isVisible();
             const cellCount = await cells.count();
             const cellText = (await cells.first().textContent()).trim();
-            const values = (await page.locator('.research-overlap__callout-value').allTextContents()).map((t) => t.trim());
-            const largest = (await page.locator('.research-overlap__callout-note').nth(2).textContent()).trim();
+            const values = (await page.locator('#research-overlap-callouts .research-overlap__callout-value').allTextContents()).map((t) => t.trim());
+            const largest = (await page.locator('#research-overlap-callouts .research-overlap__callout-note').nth(2).textContent()).trim();
             const firstRow = (await page.locator('#research-overlap-table tbody tr td').first().textContent()).trim();
             await cells.first().focus();
             const tooltip = (await page.locator('#research-overlap-tooltip').textContent()).trim();
@@ -440,6 +440,40 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 fail(`Research 7d: shown ${shown}, cells ${cellCount} "${cellText}", callouts ${values.join('|')}, largest "${largest}", ` +
                     `first row "${firstRow}", tooltip "${tooltip}", highlighted ${highlighted}, pressed ${pressed}, ` +
                     `filter ${filterShown}/${filterCleared}, prompt ${promptShown}/${viewHidden}`);
+            }
+        });
+
+        // Step 7e: the correlation matrix shows the basket's funds with the precomputed 3-year value printed, switches to
+        // 1 year, asks for another fund with one left, and shows every tracked fund with "All tracked funds".
+        await step('Research 7e', fail, async () => {
+            await page.goto(`${base}/Research?tab=funds&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const expected = await page.evaluate(() => {
+                const data = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
+                const value = (years) => data.windows.find((w) => w.years === years).correlations[0].correlation.toFixed(2);
+                return {three: value(3), one: value(1)};
+            });
+            const cells = page.locator('#research-correlation-matrix td[tabindex="0"]');
+            const shown = await page.locator('#research-correlation-view').isVisible();
+            const cellCount = await cells.count();
+            const threeText = (await cells.first().textContent()).trim();
+            const threePressed = await page.locator('[data-correlation-years="3"]').getAttribute('aria-pressed');
+            const callouts = await page.locator('#research-correlation-callouts li').count();
+            await cells.first().focus();
+            const tooltip = (await page.locator('#research-correlation-tooltip').textContent()).trim();
+            await page.click('[data-correlation-years="1"]');
+            const oneText = (await cells.first().textContent()).trim();
+            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
+            const promptShown = await page.locator('#research-correlation-prompt').isVisible();
+            await page.click('#research-correlation-all');
+            const allShown = await page.locator('#research-correlation-view').isVisible();
+            const allColumns = await page.locator('#research-correlation-matrix thead th').count();
+            const ok = shown && cellCount === 2 && threeText === expected.three && threePressed === 'true' && callouts === 1 &&
+                tooltip.includes('36 months to June 2026') && oneText === expected.one && promptShown && allShown && allColumns === 2;
+            if (ok) {
+                pass(`Research 7e: SPY and QQQ correlate ${threeText} over 3 years and ${oneText} over 1 year, as precomputed; one fund prompts; "All tracked funds" shows the grid`);
+            } else {
+                fail(`Research 7e: shown ${shown}, cells ${cellCount} "${threeText}"/${expected.three}, pressed ${threePressed}, callouts ${callouts}, ` +
+                    `tooltip "${tooltip}", 1Y "${oneText}"/${expected.one}, prompt ${promptShown}, all ${allShown}/${allColumns}`);
             }
         });
 

@@ -25,6 +25,12 @@ public interface IResearchService
     Task<ResearchSnapshotResult<FundOverlapSnapshotDto>> GetFundOverlapAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the fund returns snapshot (each Tracked Fund's monthly total returns, with per-window figures and
+    /// correlations), or "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<FundReturnsSnapshotDto>> GetFundReturnsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot (each country's market cap and market cap as % of GDP per year, from the World Bank),
     /// or "never loaded".
     /// </summary>

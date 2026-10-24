@@ -46,7 +46,8 @@ public sealed class ResearchController : Controller
         FundsSnapshotDto? funds = await ReadAsync(_researchApi.GetFundsAsync, "funds", cancellationToken);
         WorldSnapshotDto? world = await ReadAsync(_researchApi.GetWorldAsync, "World", cancellationToken);
         FundOverlapSnapshotDto? overlap = await ReadAsync(_researchApi.GetFundOverlapAsync, "fund overlap", cancellationToken);
-        return View(new ResearchViewModel(sectors, funds, world, tab, ticker, overlap));
+        FundReturnsSnapshotDto? returns = await ReadAsync(_researchApi.GetFundReturnsAsync, "fund returns", cancellationToken);
+        return View(new ResearchViewModel(sectors, funds, world, tab, ticker, overlap, returns));
     }
 
     /// <summary>

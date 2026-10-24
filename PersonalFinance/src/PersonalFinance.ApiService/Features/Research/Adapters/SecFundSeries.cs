@@ -7,4 +7,4 @@ namespace PersonalFinance.ApiService.Features.Research.Adapters;
 /// <param name="Cik">The trust's SEC Central Index Key.</param>
 /// <param name="SeriesId">The series id, e.g. <c>S000002848</c>, which EDGAR lists the series' filings under.</param>
 /// <param name="Ticker">The share class's ticker, e.g. <c>VTI</c>.</param>
-internal sealed record SecFundSeries(long Cik, string SeriesId, string Ticker);
+internal sealed record SecFundSeries(long Cik, string SeriesId, string Ticker, string? ClassId = null);

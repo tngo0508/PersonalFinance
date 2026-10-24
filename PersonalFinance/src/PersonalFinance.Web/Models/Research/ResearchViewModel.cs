@@ -30,13 +30,15 @@ public sealed class ResearchViewModel
     /// <summary>
     /// The page over each dataset; a null dataset makes its tab unavailable. It opens on <paramref name="tab"/> when
     /// that names a tab (the Funds tab's first id, <see cref="LegacyFundsTab"/>, included), and on the Companies tab
-    /// looks up <paramref name="ticker"/> when it is a valid ticker. A null <paramref name="fundOverlap"/> leaves only
-    /// the Funds tab's overlap view unavailable.
+    /// looks up <paramref name="ticker"/> when it is a valid ticker. A null <paramref name="fundOverlap"/> or
+    /// <paramref name="fundReturns"/> leaves only that view of the Funds tab unavailable.
     /// </summary>
     public ResearchViewModel(SectorsSnapshotDto? sectors, FundsSnapshotDto? funds, WorldSnapshotDto? world,
-        string? tab = null, string? ticker = null, FundOverlapSnapshotDto? fundOverlap = null)
+        string? tab = null, string? ticker = null, FundOverlapSnapshotDto? fundOverlap = null,
+        FundReturnsSnapshotDto? fundReturns = null)
     {
         FundOverlap = fundOverlap;
+        FundReturns = fundReturns;
         Sectors = new(sectors, "We couldn't load the Sectors data");
         Funds = new(funds, "We couldn't load the funds data");
         World = new(world, "We couldn't load the World data");
@@ -74,6 +76,21 @@ public sealed class ResearchViewModel
     {
         PageTitle = "Research",
         Heading = "We couldn't load the fund overlap data",
+        RetryController = "Research",
+        RetryRouteValues = new Dictionary<string, string> { ["tab"] = FundsTab },
+    };
+
+    /// <summary>
+    /// Each Tracked Fund's monthly returns with per-window figures and correlations, which the Funds tab's correlation
+    /// view shows; null when it has never loaded.
+    /// </summary>
+    public FundReturnsSnapshotDto? FundReturns { get; }
+
+    /// <summary>The correlation view's Unavailable State, shown on the Funds tab when <see cref="FundReturns"/> is null.</summary>
+    public UnavailableStateViewModel FundReturnsUnavailableState { get; } = new()
+    {
+        PageTitle = "Research",
+        Heading = "We couldn't load the fund returns data",
         RetryController = "Research",
         RetryRouteValues = new Dictionary<string, string> { ["tab"] = FundsTab },
     };

@@ -28,6 +28,9 @@ public class ResearchRefreshJobTests
         public Task<ResearchSnapshotResult<FundOverlapSnapshotDto>> GetFundOverlapAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<FundOverlapSnapshotDto>(null));
 
+        public Task<ResearchSnapshotResult<FundReturnsSnapshotDto>> GetFundReturnsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundReturnsSnapshotDto>(null));
+
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(null));
 
