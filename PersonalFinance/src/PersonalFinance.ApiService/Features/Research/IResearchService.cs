@@ -37,6 +37,11 @@ public interface IResearchService
     Task<ResearchSnapshotResult<MacroSnapshotDto>> GetMacroAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the fund facts snapshot (each Tracked Fund's net assets and expense ratio), or "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<FundFactsSnapshotDto>> GetFundFactsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot (each country's market cap and market cap as % of GDP per year, from the World Bank),
     /// or "never loaded".
     /// </summary>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xbrl
+  xmlns="http://www.xbrl.org/2003/instance"
+  xmlns:dei="http://xbrl.sec.gov/dei/2025"
+  xmlns:iso4217="http://www.xbrl.org/2003/iso4217"
+  xmlns:link="http://www.xbrl.org/2003/linkbase"
+  xmlns:oef="http://xbrl.sec.gov/oef/2025"
+  xmlns:us-gaap="http://fasb.org/us-gaap/2025"
+  xmlns:vif="http://www.personal1.vanguard/20260630"
+  xmlns:xbrldi="http://xbrl.org/2006/xbrldi"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+    <context id="D20251231_20260630_C000007808Member">
+        <entity>
+            <identifier scheme="http://www.sec.gov/CIK">0000036405</identifier>
+            <segment>
+                <xbrldi:explicitMember dimension="oef:ClassAxis">vif:C000007808Member</xbrldi:explicitMember>
+            </segment>
+        </entity>
+        <period>
+            <startDate>2025-12-31</startDate>
+            <endDate>2026-06-30</endDate>
+        </period>
+    </context>
+    <context id="D20251231_20260630_C000007779Member">
+        <entity>
+            <identifier scheme="http://www.sec.gov/CIK">0000036405</identifier>
+            <segment>
+                <xbrldi:explicitMember dimension="oef:ClassAxis">vif:C000007779Member</xbrldi:explicitMember>
+            </segment>
+        </entity>
+        <period>
+            <startDate>2025-12-31</startDate>
+            <endDate>2026-06-30</endDate>
+        </period>
+    </context>
+    <context id="D20251231_20260630_C000007782Member">
+        <entity>
+            <identifier scheme="http://www.sec.gov/CIK">0000036405</identifier>
+            <segment>
+                <xbrldi:explicitMember dimension="oef:ClassAxis">vif:C000007782Member</xbrldi:explicitMember>
+            </segment>
+        </entity>
+        <period>
+            <startDate>2025-12-31</startDate>
+            <endDate>2026-06-30</endDate>
+        </period>
+    </context>
+    <unit id="pure">
+        <measure>pure</measure>
+    </unit>
+    <oef:ExpenseRatioPct
+      contextRef="D20251231_20260630_C000007779Member"
+      decimals="4"
+      id="h_2_d2e4565b_f294_4251_8695_a0b750a2ec95"
+      unitRef="pure">0.0019</oef:ExpenseRatioPct>
+    <oef:ExpenseRatioPct
+      contextRef="D20251231_20260630_C000007782Member"
+      decimals="4"
+      id="h_18_5fe8d83f_bc77_4f95_833f_c6dcb4fcf090"
+      unitRef="pure">0.0005</oef:ExpenseRatioPct>
+    <oef:ExpenseRatioPct
+      contextRef="D20251231_20260630_C000007808Member"
+      decimals="4"
+      id="h_482_fb9893bb_41c9_4efe_8c46_e45ab0fdd5d5"
+      unitRef="pure">0.0003</oef:ExpenseRatioPct>
+</xbrl>

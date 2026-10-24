@@ -611,6 +611,59 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 7i: the Risk vs return tab plots the funds' precomputed figures and the basket diamond computed here from the
+        // fixture; focusing a bubble opens its card (expense ratio, or n/a for SPY); the table sorts by Sharpe ratio and a
+        // negative Sharpe ratio reads with a minus sign.
+        await step('Research 7i', fail, async () => {
+            await page.goto(`${base}/Research?tab=risk&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const expected = await page.evaluate(() => {
+                const returns = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
+                const macro = JSON.parse(document.getElementById('research-macro-data').textContent);
+                const spy = returns.funds.find((f) => f.ticker === 'SPY').returns.slice(-36);
+                const qqq = returns.funds.find((f) => f.ticker === 'QQQ').returns.slice(-36);
+                const basket = spy.map((r, i) => 0.6 * r + 0.4 * qqq[i]);
+                const growth = basket.reduce((g, r) => g * (1 + r / 100), 1);
+                const annualized = (Math.pow(growth, 12 / 36) - 1) * 100;
+                const mean = basket.reduce((a, r) => a + r, 0) / 36;
+                const volatility = Math.sqrt(basket.reduce((a, r) => a + (r - mean) ** 2, 0) / 35) * Math.sqrt(12);
+                const bills = macro.months.slice(-36).map((m) => m.treasuryBill);
+                const bill = bills.reduce((a, b) => a + b, 0) / bills.length;
+                const fmt = (v, d) => (v < 0 ? `−${Math.abs(v).toFixed(d)}` : v.toFixed(d));
+                const oneYear = returns.windows.find((w) => w.years === 1).funds.find((f) => f.ticker === 'QQQ');
+                return {
+                    annualized: `Annualized return: ${fmt(annualized, 1)}% a year`,
+                    volatility: `Volatility: ${volatility.toFixed(1)}%`,
+                    sharpe: `Sharpe ratio: ${fmt((annualized - bill) / volatility, 2)} (Treasury bill ${bill.toFixed(2)}%)`,
+                    qqqOneYearSharpe: fmt(oneYear.sharpe, 2)
+                };
+            });
+            const card = async () => (await page.locator('#research-risk-card span').allTextContents()).map((t) => t.trim());
+            const bubbles = await page.locator('#research-risk-chart .research-risk__point:not(.research-risk__point--basket)').count();
+            await page.focus('#research-risk-chart [data-ticker="Your basket"]');
+            const basketCard = await card();
+            await page.focus('#research-risk-chart [data-ticker="SPY"]');
+            const spyCard = await card();
+            await page.focus('#research-risk-chart [data-ticker="QQQ"]');
+            const qqqCard = await card();
+            await page.click('[data-risk-years="1"]');
+            await page.click('#research-risk-table-toggle');
+            const rows = await page.locator('#research-risk-table tbody tr').evaluateAll((trs) => trs.map((tr) => ({
+                ticker: tr.dataset.ticker, sharpe: tr.children[3].textContent.trim()
+            })));
+            const qqqRow = rows.find((r) => r.ticker === 'QQQ');
+            const sorted = rows.every((r, i) => i === 0 || Number(r.sharpe.replace('−', '-')) <= Number(rows[i - 1].sharpe.replace('−', '-')));
+            const ok = bubbles === 2 && basketCard.includes(expected.annualized) && basketCard.includes(expected.volatility) &&
+                basketCard.includes(expected.sharpe) && spyCard.includes('Expense ratio: n/a') &&
+                qqqCard.includes('Expense ratio: 0.19%') && qqqCard.some((r) => r.startsWith('Net assets: $')) &&
+                qqqRow && qqqRow.sharpe === expected.qqqOneYearSharpe && qqqRow.sharpe.startsWith('−') && sorted && rows.length === 3;
+            if (ok) {
+                pass(`Research 7i: the basket diamond matches the fixture (${expected.annualized.split(': ')[1]}, ${expected.volatility.split(': ')[1]}); SPY's expense ratio reads n/a, QQQ's 0.19%; over 1 year QQQ's Sharpe ratio reads ${qqqRow.sharpe} in a table sorted by Sharpe`);
+            } else {
+                fail(`Research 7i: bubbles ${bubbles}, basket ${JSON.stringify(basketCard)} vs ${JSON.stringify(expected)}, SPY ${JSON.stringify(spyCard)}, ` +
+                    `QQQ ${JSON.stringify(qqqCard)}, rows ${JSON.stringify(rows)}`);
+            }
+        });
+
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');
@@ -683,7 +736,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 await mobile.goto(`${base}/Research?basket=SPY:70,QQQ:50`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await mobile.waitForSelector('#research-sunburst svg', {timeout: TIMEOUT});
                 const wide = [];
-                for (const tabId of ['sectors', 'funds', 'performance', 'world']) {
+                for (const tabId of ['sectors', 'funds', 'performance', 'risk', 'world']) {
                     await mobile.tap(`#research-tab-${tabId}`);
                     await mobile.waitForTimeout(300);
                     if (await scrollsSideways(mobile)) {

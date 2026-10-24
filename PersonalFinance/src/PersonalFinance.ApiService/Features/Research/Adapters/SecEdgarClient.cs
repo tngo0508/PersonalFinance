@@ -152,15 +152,78 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<NportFilingRef>> GetNportFilingsAsync(string filer, DateOnly filedFrom,
+    // EDGAR's type filter is a prefix match, so NPORT-P also lists the NPORT-P/A amendments.
+    public Task<IReadOnlyList<NportFilingRef>> GetNportFilingsAsync(string filer, DateOnly filedFrom,
+        CancellationToken cancellationToken) =>
+        GetFilingListAsync(filer, "NPORT-P", filedFrom, cancellationToken);
+
+    /// <inheritdoc />
+    // N-CSR also lists the semi-annual N-CSRS and the amendments.
+    public Task<IReadOnlyList<NportFilingRef>> GetShareholderReportFilingsAsync(string filer, DateOnly filedFrom,
+        CancellationToken cancellationToken) =>
+        GetFilingListAsync(filer, "N-CSR", filedFrom, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ClassExpenseRatio>?> GetExpenseRatiosAsync(NportFilingRef filing,
+        CancellationToken cancellationToken)
+    {
+        string folder = filing.DocumentUrl[..(filing.DocumentUrl.LastIndexOf('/') + 1)];
+        string? instance;
+        using (HttpResponseMessage index = await SendAsync($"{folder}index.json", cancellationToken))
+        {
+            if (index.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            index.EnsureSuccessStatusCode();
+            await using Stream body = await index.Content.ReadAsStreamAsync(cancellationToken);
+            instance = await XbrlInstanceOfAsync(body, cancellationToken);
+        }
+
+        if (instance is null)
+        {
+            return null;
+        }
+
+        using HttpResponseMessage response = await SendAsync(folder + instance, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using Stream xbrl = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return await XbrlExpenseRatioParser.ParseAsync(xbrl, cancellationToken);
+    }
+
+    /// <summary>
+    /// The XBRL instance a filing folder's <c>index.json</c> lists: the file EDGAR extracts from the inline XBRL report,
+    /// named <c>*_htm.xml</c>; null when there is none (a filing without XBRL, such as SPY's).
+    /// </summary>
+    internal static async Task<string?> XbrlInstanceOfAsync(Stream indexJson, CancellationToken cancellationToken)
+    {
+        using JsonDocument index = await JsonDocument.ParseAsync(indexJson, cancellationToken: cancellationToken);
+        if (!index.RootElement.TryGetProperty("directory", out JsonElement directory)
+            || !directory.TryGetProperty("item", out JsonElement items) || items.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        return items.EnumerateArray()
+            .Select(i => i.TryGetProperty("name", out JsonElement name) ? name.GetString() : null)
+            .FirstOrDefault(n => n is not null && n.EndsWith("_htm.xml", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The filings of a form type listed under a CIK or series id, filed on or after a date.</summary>
+    private async Task<IReadOnlyList<NportFilingRef>> GetFilingListAsync(string filer, string formType, DateOnly filedFrom,
         CancellationToken cancellationToken)
     {
         var filings = new List<NportFilingRef>();
         for (int start = 0;; start += FilingListPageSize)
         {
-            // EDGAR's type filter is a prefix match, so NPORT-P also lists the NPORT-P/A amendments.
             string url = string.Create(CultureInfo.InvariantCulture,
-                $"{WwwUrl}cgi-bin/browse-edgar?action=getcompany&CIK={Uri.EscapeDataString(filer)}&type=NPORT-P&dateb=&owner=include&start={start}&count={FilingListPageSize}&output=atom");
+                $"{WwwUrl}cgi-bin/browse-edgar?action=getcompany&CIK={Uri.EscapeDataString(filer)}&type={Uri.EscapeDataString(formType)}&dateb=&owner=include&start={start}&count={FilingListPageSize}&output=atom");
             using HttpResponseMessage response = await SendAsync(url, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {

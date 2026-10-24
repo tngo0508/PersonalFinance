@@ -51,6 +51,8 @@ internal static class ResearchFixtureSeeder
         FundReturnsSnapshotDto returns = ResearchFixtureSnapshots.FundReturns();
         List<string> returnPeriods = ["2021-07", "2026-06"];
         MacroSnapshotDto macro = ResearchFixtureSnapshots.Macro();
+        FundFactsSnapshotDto facts = ResearchFixtureSnapshots.FundFacts();
+        List<string> factsPeriods = ["2026-06"];
         List<string> macroPeriods = ["2020-07", "2026-06"];
         (string Dataset, List<string> Periods, DateOnly AsOf, object Snapshot)[] fixtures =
         [
@@ -59,6 +61,7 @@ internal static class ResearchFixtureSeeder
             (ResearchDatasets.FundOverlap, overlapPeriods, overlap.AsOf, overlap),
             (ResearchDatasets.FundReturns, returnPeriods, returns.AsOf, returns),
             (ResearchDatasets.Macro, macroPeriods, macro.AsOf, macro),
+            (ResearchDatasets.FundFacts, factsPeriods, facts.AsOf, facts),
             (ResearchDatasets.World, world.Periods, world.AsOf, world),
         ];
 

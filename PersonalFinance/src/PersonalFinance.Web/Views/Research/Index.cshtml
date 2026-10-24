@@ -29,7 +29,7 @@
     </header>
 
     <div class="research-tabs" role="tablist" aria-label="Research datasets">
-        @foreach ((string id, string label) in new[] { (ResearchViewModel.SectorsTab, "Sectors"), (ResearchViewModel.FundsTab, "Funds"), (ResearchViewModel.PerformanceTab, "Performance"), (ResearchViewModel.WorldTab, "World"), (ResearchViewModel.CompaniesTab, "Companies") })
+        @foreach ((string id, string label) in new[] { (ResearchViewModel.SectorsTab, "Sectors"), (ResearchViewModel.FundsTab, "Funds"), (ResearchViewModel.PerformanceTab, "Performance"), (ResearchViewModel.RiskTab, "Risk vs return"), (ResearchViewModel.WorldTab, "World"), (ResearchViewModel.CompaniesTab, "Companies") })
         {
             bool selected = Model.IsSelected(id);
             <button type="button" class="research-tabs__tab" id="research-tab-@id" role="tab" data-research-tab="@id"
@@ -161,6 +161,7 @@
 
     <partial name="_FundsTab" model="Model"/>
     <partial name="_PerformanceTab" model="Model"/>
+    <partial name="_RiskTab" model="Model"/>
     <partial name="_WorldTab" model="Model"/>
     <partial name="_CompaniesTab" model="Model"/>
 
@@ -201,6 +202,7 @@
     @if (showReturns)
     {
         <script src="~/js/research/research-performance.js" asp-append-version="true"></script>
+        <script src="~/js/research/research-risk.js" asp-append-version="true"></script>
     }
     @if (showWorld)
     {

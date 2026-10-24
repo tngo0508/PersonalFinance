@@ -95,25 +95,40 @@ internal sealed class UsAgencyClient : IUsAgencyClient
         var daily = new List<(DateOnly Month, decimal Rate)>();
         using var reader = XmlReader.Create(feed, ReaderSettings);
         DateOnly? date = null;
-        while (await reader.ReadAsync())
+        // Reading an element's content leaves the reader on the next node already, so the loop must not read again.
+        bool advance = true;
+        while (!advance || await reader.ReadAsync())
         {
+            advance = true;
             cancellationToken.ThrowIfCancellationRequested();
-            if (reader.NodeType != XmlNodeType.Element)
+            if (reader.EOF || reader.NodeType != XmlNodeType.Element)
             {
+                if (reader.EOF)
+                {
+                    break;
+                }
+
                 continue;
             }
 
-            if (reader.LocalName == "INDEX_DATE"
-                && DateTime.TryParse(await reader.ReadElementContentAsStringAsync(), CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTime parsed))
+            if (reader.LocalName == "INDEX_DATE")
             {
-                date = new DateOnly(parsed.Year, parsed.Month, 1);
+                string text = await reader.ReadElementContentAsStringAsync();
+                advance = false;
+                date = DateTime.TryParse(text, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTime parsed)
+                    ? new DateOnly(parsed.Year, parsed.Month, 1)
+                    : null;
             }
-            else if (reader.LocalName == "ROUND_B1_CLOSE_13WK_2" && date is { } month
-                     && decimal.TryParse(await reader.ReadElementContentAsStringAsync(), NumberStyles.Float,
-                         CultureInfo.InvariantCulture, out decimal rate))
+            else if (reader.LocalName == "ROUND_B1_CLOSE_13WK_2")
             {
-                daily.Add((month, rate));
+                string text = await reader.ReadElementContentAsStringAsync();
+                advance = false;
+                if (date is { } month
+                    && decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal rate))
+                {
+                    daily.Add((month, rate));
+                }
             }
         }
 

@@ -22,13 +22,16 @@ public sealed class ResearchViewModel
     /// <summary>The Performance tab's id.</summary>
     public const string PerformanceTab = "performance";
 
+    /// <summary>The Risk vs return tab's id.</summary>
+    public const string RiskTab = "risk";
+
     /// <summary>The World tab's id.</summary>
     public const string WorldTab = "world";
 
     /// <summary>The Companies tab's id.</summary>
     public const string CompaniesTab = "companies";
 
-    private static readonly string[] Tabs = [SectorsTab, FundsTab, PerformanceTab, WorldTab, CompaniesTab];
+    private static readonly string[] Tabs = [SectorsTab, FundsTab, PerformanceTab, RiskTab, WorldTab, CompaniesTab];
 
     /// <summary>
     /// The page over each dataset; a null dataset makes its tab unavailable. It opens on <paramref name="tab"/> when
@@ -36,12 +39,14 @@ public sealed class ResearchViewModel
     /// looks up <paramref name="ticker"/> when it is a valid ticker. A null <paramref name="fundOverlap"/> or
     /// <paramref name="fundReturns"/> leaves only that view of the Funds tab unavailable; a null
     /// <paramref name="fundReturns"/> also makes the Performance tab unavailable, and a null <paramref name="macro"/>
-    /// leaves the Performance tab without its inflation adjustment.
+    /// leaves the Performance tab without its inflation adjustment. A null <paramref name="fundFacts"/> leaves the Risk vs
+    /// return tab without bubble sizes and expense ratios.
     /// </summary>
     public ResearchViewModel(SectorsSnapshotDto? sectors, FundsSnapshotDto? funds, WorldSnapshotDto? world,
         string? tab = null, string? ticker = null, FundOverlapSnapshotDto? fundOverlap = null,
-        FundReturnsSnapshotDto? fundReturns = null, MacroSnapshotDto? macro = null)
+        FundReturnsSnapshotDto? fundReturns = null, MacroSnapshotDto? macro = null, FundFactsSnapshotDto? fundFacts = null)
     {
+        FundFacts = fundFacts;
         Macro = macro;
         FundOverlap = fundOverlap;
         FundReturns = fundReturns;
@@ -114,6 +119,21 @@ public sealed class ResearchViewModel
         Heading = "We couldn't load the fund returns data",
         RetryController = "Research",
         RetryRouteValues = new Dictionary<string, string> { ["tab"] = PerformanceTab },
+    };
+
+    /// <summary>
+    /// Each Tracked Fund's net assets and expense ratio, which the Risk vs return tab sizes bubbles by and shows in its
+    /// card; null when it has never loaded.
+    /// </summary>
+    public FundFactsSnapshotDto? FundFacts { get; }
+
+    /// <summary>The Risk vs return tab's Unavailable State, shown when <see cref="FundReturns"/> is null.</summary>
+    public UnavailableStateViewModel RiskUnavailableState { get; } = new()
+    {
+        PageTitle = "Research",
+        Heading = "We couldn't load the fund returns data",
+        RetryController = "Research",
+        RetryRouteValues = new Dictionary<string, string> { ["tab"] = RiskTab },
     };
 
     /// <summary>The World tab, which opens on the latest year.</summary>
