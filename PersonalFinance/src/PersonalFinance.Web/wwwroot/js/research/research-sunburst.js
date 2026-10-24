@@ -1,11 +1,13 @@
 /* global d3 */
 /**
- * Research page, Sectors tab: a D3 sunburst of the largest SEC filers by Public float for the latest year.
+ * Research page, Sectors tab: a D3 sunburst of the largest SEC filers by Public float, one year at a time.
  * Rings, inside out: SEC industry office, SIC industry, company (plus one "Other" slice per industry for the smaller
  * filers). Reads the Sectors snapshot from the JSON data island rendered by Views/Research/Index.cshtml, so it makes
- * no request of its own. Hover or tap a slice for its figures. Click an office or industry (or press an office's legend
- * button) to zoom in, so three rings show below it; the centre and the Zoom out control zoom out. The "Technology (incl.
- * chip makers)" toggle dims every slice outside the industries the server flags as Technology.
+ * no request of its own. Hover or tap a slice for its figures; the centre shows the total. The page's scrubber
+ * (js/research/research-page.js) moves it between years through update(), and its table view reads table().
+ * Click an office or industry (or press an office's legend button) to zoom in, so three rings show below it; the
+ * centre and the Zoom out control zoom out. The "Technology (incl. chip makers)" toggle dims every slice outside the
+ * industries the server flags as Technology. Both survive a change of year.
  */
 (function () {
     'use strict';
@@ -14,15 +16,19 @@
     const HOST_ID = 'research-sunburst';
     const LEGEND_ID = 'research-sectors-legend';
     const TOOLTIP_ID = 'research-tooltip';
+    const SUBTITLE_ID = 'research-sectors-subtitle';
     const ZOOM_OUT_ID = 'research-zoom-out';
     const FOCUS_LABEL_ID = 'research-sunburst-focus';
     const TECH_TOGGLE_ID = 'research-tech-toggle';
     const TECH_SHARE_ID = 'research-tech-share';
+    const LIVE_ID = 'research-live';
     const ROOT_KEY = 'root';
+    const TAB_ID = 'sectors';
+    const TRANSITION_MS = 750;
+    const TABLE_ROWS = 25;
     const MAX_SIZE = 640;
     const MIN_SIZE = 240;
     const RINGS = 3;
-    const TRANSITION_MS = 750;
 
     // SEC industry offices in SEC office-number order; each takes the categorical slot of the same number.
     const OFFICE_SLOTS = [
@@ -223,13 +229,12 @@
     }
 
     /**
-     * The duration of a zoom transition: none when the user asks for reduced motion.
-     * @returns {number} The duration in ms.
+     * Whether the user asks for reduced motion, so a zoom applies at once.
+     * @returns {boolean} True under prefers-reduced-motion.
      */
-    function transitionDuration () {
-        const reduced = typeof window.matchMedia === 'function' &&
+    function prefersReducedMotion () {
+        return typeof window.matchMedia === 'function' &&
             window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        return reduced ? 0 : TRANSITION_MS;
     }
 
     /**
@@ -247,7 +252,8 @@
     }
 
     /**
-     * A node's geometry relative to the focused node: the focus fills the full circle and sits at the centre.
+     * A node's geometry relative to the focused node: the focus fills the full circle and sits at the centre, so the
+     * three rings below it are the ones drawn.
      * @param {Object} node - A d3 hierarchy node.
      * @param {Object} focus - The focused d3 hierarchy node.
      * @returns {{x0: number, x1: number, y0: number, y1: number}} The geometry in radians and rings.
@@ -265,11 +271,11 @@
 
     /**
      * Whether an arc with this geometry is in one of the three visible rings.
-     * @param {Object} geometry - The arc geometry.
+     * @param {{x0: number, x1: number, y0: number, y1: number}} shape - The arc geometry.
      * @returns {boolean} True when the arc is drawn.
      */
-    function isVisible (geometry) {
-        return geometry.y0 >= 1 && geometry.y1 <= RINGS + 1 && geometry.x1 > geometry.x0;
+    function isVisible (shape) {
+        return shape.y0 >= 1 && shape.y1 <= RINGS + 1 && shape.x1 > shape.x0;
     }
 
     /**
@@ -283,7 +289,9 @@
     }
 
     /**
-     * Draw the office legend into the side panel: one button per office, which zooms to that office.
+     * Draw the office legend into the side panel: one button per office, which zooms to that office. The buttons
+     * are kept while the period has the same offices, so keyboard focus stays on the one pressed; when they are
+     * redrawn, focus moves to the new button of the same office.
      * @param {HTMLElement|null} legend - The legend list element.
      * @param {Object} root - The d3 hierarchy root.
      * @param {function(string): void} onPick - Called with the office's node key when its button is pressed.
@@ -293,6 +301,12 @@
         if (!legend) {
             return;
         }
+        const keys = (root.children || []).map((office) => office.data.key).join(',');
+        if (legend.dataset.keys === keys) {
+            return;
+        }
+        legend.dataset.keys = keys;
+        const focused = legend.contains(document.activeElement) ? document.activeElement.dataset.key : null;
         legend.replaceChildren(...(root.children || []).map((office) => {
             const item = document.createElement('li');
             item.className = 'research-legend__item';
@@ -312,6 +326,10 @@
             item.append(button);
             return item;
         }));
+        const refocus = focused ? legend.querySelector(`[data-key="${focused}"]`) : null;
+        if (refocus) {
+            refocus.focus();
+        }
     }
 
     /**
@@ -327,63 +345,247 @@
 
     /**
      * Place a label at the middle of its arc, reading outwards and never upside down.
-     * @param {Object} geometry - The arc geometry.
+     * @param {Object} node - A d3 hierarchy node.
      * @param {number} unit - The ring thickness in px.
      * @returns {string} The SVG transform.
      */
-    function labelTransform (geometry, unit) {
-        const angle = (geometry.x0 + geometry.x1) / 2 * 180 / Math.PI;
-        const radius = (geometry.y0 + geometry.y1) / 2 * unit;
+    function labelTransform (node, unit) {
+        const angle = (node.x0 + node.x1) / 2 * 180 / Math.PI;
+        const radius = (node.y0 + node.y1) / 2 * unit;
         return `rotate(${angle - 90}) translate(${radius},0) rotate(${angle < 180 ? 0 : 180})`;
     }
 
     /**
-     * Create the sunburst controller. The view (period, focus and Technology highlight) lives here, outside any one
-     * drawing, so a redraw at a new width, or of another period, keeps where the user has zoomed and what is lit.
+     * The same geometry with zero width at its start angle: where an entering arc grows from and a leaving one
+     * shrinks to.
+     * @param {{x0: number, x1: number, y0: number, y1: number}} shape - A geometry.
+     * @returns {{x0: number, x1: number, y0: number, y1: number}} The collapsed geometry.
+     */
+    function collapsed (shape) {
+        return { ...shape, x1: shape.x0 };
+    }
+
+    /**
+     * Create the Sectors sunburst in the host. It is drawn once, then moved between periods by update(): arcs and
+     * labels are keyed by office, industry and company, so an arc tweens from where it is drawn now; an arc that
+     * enters grows from zero width and one that leaves shrinks to zero width. Each element keeps the geometry it is
+     * drawn at in `__arc`, so an update that interrupts a running transition carries on from there.
+     *
+     * The view (the zoom focus and the Technology highlight) is kept here, outside any one period, and every update()
+     * draws in it: a scrubber step or a redraw at a new width keeps where the user has zoomed and what is lit. A zoom
+     * or a highlight change is an update() of the current period.
      * @param {HTMLElement} host - The chart host.
      * @param {Object} data - The Sectors snapshot.
      * @param {Object} tooltip - The tooltip controller.
-     * @returns {{draw: function(): void, zoomTo: function(string): void, zoomOut: function(): void,
-     *     setTechnology: function(boolean): void}} The controller.
+     * @returns {{periods: string[], transitionMs: number, update: function(number, Object): string,
+     *     table: function(number): Object, resize: function(): void, zoomTo: function(string): void,
+     *     zoomOut: function(): void, setTechnology: function(boolean): void}} The chart.
      */
     function createSunburst (host, data, tooltip) {
-        const view = { periodIndex: data.values.length - 1, focusKey: ROOT_KEY, technology: false };
+        const subtitle = document.getElementById(SUBTITLE_ID);
+        const legend = document.getElementById(LEGEND_ID);
         const zoomOutButton = document.getElementById(ZOOM_OUT_ID);
         const focusLabel = document.getElementById(FOCUS_LABEL_ID);
         const techToggle = document.getElementById(TECH_TOGGLE_ID);
         const techShare = document.getElementById(TECH_SHARE_ID);
-        const legend = document.getElementById(LEGEND_ID);
-        let chart = null;
+        const live = document.getElementById(LIVE_ID);
+        const view = { focusKey: ROOT_KEY, technology: false };
+        let periodIndex = data.values.length - 1;
+        let focus = null;
+        let unit = 0;
+        let arc = null;
+        let svg = null;
+        let arcLayer = null;
+        let labelLayer = null;
+        let centre = null;
+        let centreTitle = null;
+        let centreValue = null;
+        let centreHint = null;
 
-        // The focused node of the current drawing; a focus the period does not have falls back to every filer.
-        const focusNode = () => chart.root.descendants().find((d) => d.data.key === view.focusKey) || chart.root;
         const isLit = (node) => !view.technology || node.technology;
         const opacityOf = (node) => {
             if (!isVisible(node.target)) {
                 return 0;
             }
-            const base = node.data.kind === 'other' ? OTHER_OPACITY : RING_OPACITY[node.depth - chart.focus.depth];
+            const base = node.data.kind === 'other' ? OTHER_OPACITY : RING_OPACITY[node.depth - focus.depth];
             return isLit(node) ? base : DIMMED_OPACITY;
         };
-        const hasLabel = (node) => node.data.kind !== 'other' && isVisible(node.target) && isLit(node) &&
-            (node.target.x1 - node.target.x0) * (node.target.y0 + node.target.y1) / 2 * chart.unit > 13;
 
         /**
-         * Show the focus in the centre, the Zoom out control, the legend, the Technology share and the chart's label.
-         * @param {Object} focus - The focused d3 hierarchy node.
+         * Size the chart to the host's width and draw its empty layers.
          * @returns {void}
          */
-        function describeView (focus) {
-            const period = data.values[view.periodIndex].period;
-            const zoomed = focus.depth > 0;
-            chart.centreTitle.text(zoomed ? shorten(focus.data.name, Math.floor(chart.unit / 3)) : period);
-            chart.centreValue.text(formatMoney(focus.value));
-            chart.centreHint.text(zoomed ? 'Zoom out' : 'Public float');
-            chart.centre.classed('research-sunburst__centre--zoomed', zoomed);
+        function layout () {
+            const size = Math.max(MIN_SIZE, Math.min(host.clientWidth || MAX_SIZE, MAX_SIZE));
+            unit = size / 2 / (RINGS + 1);
+            arc = d3.arc()
+                .startAngle((d) => d.x0)
+                .endAngle((d) => d.x1)
+                .padAngle((d) => Math.min((d.x1 - d.x0) / 2, 0.003))
+                .padRadius(unit * 2)
+                .innerRadius((d) => d.y0 * unit)
+                .outerRadius((d) => Math.max(d.y0 * unit, d.y1 * unit - 1));
 
+            d3.select(host).selectAll('svg').remove();
+            svg = d3.select(host).append('svg')
+                .attr('viewBox', [-size / 2, -size / 2, size, size].join(' '))
+                .attr('role', 'img');
+            arcLayer = svg.append('g');
+            labelLayer = svg.append('g').attr('text-anchor', 'middle');
+
+            // The centre: the year (or the focused group's name), its total and a hint, scaled to fit the inner
+            // circle. A click on it zooms out.
+            const valueSize = Math.min(18, unit / 4);
+            const titleSize = Math.min(12, unit / 6);
+            centre = svg.append('g')
+                .attr('class', 'research-sunburst__centre')
+                .attr('text-anchor', 'middle')
+                .on('click', zoomOut);
+            centre.append('circle').attr('r', Math.max(0, unit - 1)).attr('fill', 'transparent');
+            centreTitle = centre.append('text')
+                .attr('class', 'research-sunburst__centre-title')
+                .style('font-size', `${titleSize}px`)
+                .attr('y', -valueSize * 0.9);
+            centreValue = centre.append('text')
+                .attr('class', 'research-sunburst__centre-value')
+                .style('font-size', `${valueSize}px`)
+                .attr('dy', '0.35em');
+            centreHint = centre.append('text')
+                .attr('class', 'research-sunburst__centre-title')
+                .style('font-size', `${titleSize}px`)
+                .attr('y', valueSize * 0.9 + titleSize * 0.8);
+        }
+
+        /**
+         * Draw the arcs of the period in the view, tweening from what is drawn now when animated.
+         * @param {Object[]} nodes - The period's nodes, each with its `target` geometry.
+         * @param {Object|null} transition - The shared d3 transition, or null to apply at once.
+         * @returns {void}
+         */
+        function drawArcs (nodes, transition) {
+            const paths = arcLayer.selectAll('path').data(nodes, (d) => d.data.key);
+            const leaving = paths.exit().attr('pointer-events', 'none');
+            if (transition) {
+                leaving.transition(transition)
+                    .attrTween('d', function () {
+                        const shrink = d3.interpolate(this.__arc, collapsed(this.__arc));
+                        return (t) => arc(this.__arc = shrink(t));
+                    })
+                    .remove();
+            } else {
+                leaving.remove();
+            }
+
+            const entering = paths.enter().append('path')
+                .attr('class', 'research-sunburst__arc')
+                .attr('data-key', (d) => d.data.key)
+                .each(function (d) {
+                    this.__arc = collapsed(d.target);
+                })
+                .attr('d', function () {
+                    return arc(this.__arc);
+                })
+                .on('click', (event, d) => {
+                    if (d.children) {
+                        zoomTo(d.data.key);
+                    }
+                })
+                .on('pointermove', (event, d) => tooltip.show(event, d))
+                .on('pointerdown', (event, d) => tooltip.show(event, d))
+                .on('pointerleave', (event) => {
+                    if (event.pointerType === 'mouse') {
+                        tooltip.hide();
+                    }
+                });
+
+            // The fill follows the office and never changes with the view; the highlight only changes the opacity.
+            const all = entering.merge(paths)
+                .attr('pointer-events', (d) => (isVisible(d.target) ? null : 'none'))
+                .classed('research-sunburst__arc--zoomable', (d) => Boolean(d.children) && isVisible(d.target))
+                .attr('fill', (d) => officeColour(host, d.data.office));
+            if (transition) {
+                all.transition(transition)
+                    .attr('fill-opacity', opacityOf)
+                    .attrTween('d', function (d) {
+                        const move = d3.interpolate(this.__arc, d.target);
+                        return (t) => arc(this.__arc = move(t));
+                    });
+            } else {
+                all.each(function (d) {
+                    this.__arc = d.target;
+                }).attr('d', function () {
+                    return arc(this.__arc);
+                }).attr('fill-opacity', opacityOf);
+            }
+        }
+
+        /**
+         * Draw the labels of the period: only on lit arcs in the visible rings that are tall enough for a line of
+         * text at their middle radius.
+         * @param {Object[]} nodes - The period's nodes, each with its `target` geometry.
+         * @param {Object|null} transition - The shared d3 transition, or null to apply at once.
+         * @returns {void}
+         */
+        function drawLabels (nodes, transition) {
+            const labelled = nodes.filter((d) => d.data.kind !== 'other' && isVisible(d.target) && isLit(d) &&
+                (d.target.x1 - d.target.x0) * (d.target.y0 + d.target.y1) / 2 * unit > 13);
+            const labels = labelLayer.selectAll('text').data(labelled, (d) => d.data.key);
+            if (transition) {
+                labels.exit().transition(transition).attr('fill-opacity', 0).remove();
+            } else {
+                labels.exit().remove();
+            }
+
+            const entering = labels.enter().append('text')
+                .attr('class', 'research-sunburst__label')
+                .attr('dy', '0.35em')
+                .each(function (d) {
+                    // Enter where the arc is drawn now, so a label rides in with its arc when zooming.
+                    const drawn = arcLayer.select(`path[data-key="${d.data.key}"]`).node();
+                    this.__arc = drawn && drawn.__arc ? drawn.__arc : d.target;
+                })
+                .attr('transform', function () {
+                    return labelTransform(this.__arc, unit);
+                })
+                .attr('fill-opacity', transition ? 0 : 1);
+
+            const all = entering.merge(labels)
+                .attr('fill', (d) => (DARK_LABEL_OFFICES.includes(d.data.office)
+                    ? 'var(--research-label-dark)'
+                    : 'var(--research-label-light)'))
+                .text((d) => labelText(d, unit));
+            if (transition) {
+                all.transition(transition)
+                    .attr('fill-opacity', 1)
+                    .attrTween('transform', function (d) {
+                        const move = d3.interpolate(this.__arc, d.target);
+                        return (t) => labelTransform(this.__arc = move(t), unit);
+                    });
+            } else {
+                all.each(function (d) {
+                    this.__arc = d.target;
+                }).attr('transform', function () {
+                    return labelTransform(this.__arc, unit);
+                }).attr('fill-opacity', 1);
+            }
+        }
+
+        /**
+         * Show the focus in the centre and above the chart, and the state of the Zoom out control, the legend
+         * buttons, the Technology toggle and its share.
+         * @param {string} periodLabel - The period shown.
+         * @returns {{trail: string, techText: string}} Where the chart is (e.g. "All filers › Technology") and the
+         *     Technology share of the focus.
+         */
+        function describeView (periodLabel) {
+            const zoomed = focus.depth > 0;
             const trail = focus.ancestors().reverse().map((d) => d.data.name).join(' › ');
+            centreTitle.text(zoomed ? shorten(focus.data.name, Math.floor(unit / 3)) : periodLabel);
+            centreValue.text(formatMoney(focus.value || 0));
+            centreHint.text(zoomed ? 'Zoom out' : 'Public float');
+            centre.classed('research-sunburst__centre--zoomed', zoomed);
             if (focusLabel) {
-                focusLabel.textContent = `${trail}: ${formatMoney(focus.value)}`;
+                focusLabel.textContent = `${trail}: ${formatMoney(focus.value || 0)}`;
             }
             if (zoomOutButton) {
                 zoomOutButton.setAttribute('aria-disabled', String(!zoomed));
@@ -397,72 +599,77 @@
             if (techToggle) {
                 techToggle.setAttribute('aria-pressed', String(view.technology));
             }
+            const lit = d3.sum(focus.leaves().filter((d) => d.technology), (d) => d.value);
+            const share = focus.value > 0 ? (lit / focus.value * 100).toFixed(1) : '0.0';
+            const techText = `${formatMoney(lit)}, ${share}% of ${focus.data.name} in ${periodLabel}.`;
             if (techShare) {
-                const lit = d3.sum(focus.leaves().filter((d) => d.technology), (d) => d.value);
-                const share = focus.value > 0 ? (lit / focus.value * 100).toFixed(1) : '0.0';
-                techShare.textContent = `${formatMoney(lit)}, ${share}% of ${focus.data.name}.`;
+                techShare.textContent = techText;
                 techShare.hidden = !view.technology;
             }
+            return { trail, techText };
+        }
+
+        /**
+         * Show one period, in the current view (zoom focus and Technology highlight).
+         * @param {number} index - The period's index in data.values.
+         * @param {{animate: boolean}} [options] - Whether to tween from what is drawn now.
+         * @returns {string} A one-sentence summary of the period, for the live region.
+         */
+        function update (index, options) {
+            periodIndex = Math.max(0, Math.min(data.values.length - 1, index));
+            const period = data.values[periodIndex];
+            const root = d3.hierarchy(buildTree(data, period))
+                .sum((d) => (d.children ? 0 : d.value || 0))
+                .sort(compareNodes);
+            d3.partition().size([2 * Math.PI, RINGS + 1])(root);
+            markTechnology(root);
+
+            // Keep the focus by its key; a group the period does not have (or has no Public float in) falls back
+            // to every filer.
+            focus = root.descendants().find((d) => d.data.key === view.focusKey && d.x1 > d.x0) || root;
+            view.focusKey = focus.data.key;
+            const nodes = root.descendants().slice(1).filter((d) => d.x1 > d.x0);
+            nodes.forEach((d) => { d.target = targetOf(d, focus); });
+
+            // A change without animation stops any transition still running, so nothing moves afterwards.
+            svg.selectAll('*').interrupt();
+            const transition = options && options.animate
+                ? svg.transition().duration(TRANSITION_MS).ease(d3.easeCubicInOut)
+                : null;
+            drawArcs(nodes, transition);
+            drawLabels(nodes, transition);
+            renderLegend(legend, root, (key) => zoomTo(view.focusKey === key ? ROOT_KEY : key));
+            const { trail, techText } = describeView(period.period);
 
             const largest = focus.leaves()
                 .filter((d) => d.data.kind === 'company')
                 .sort((a, b) => b.value - a.value)[0];
             const largestText = largest ? ` Largest company: ${largest.data.name}, ${formatMoney(largest.value)}.` : '';
-            chart.svg.attr('aria-label', `Sunburst of SEC filers by Public float in ${period}, showing ${trail}: ` +
-                `${formatMoney(focus.value)}.${largestText}`);
+            const offices = (root.children || []).length;
+            const total = `${formatMoney(root.value || 0)} in total across ${offices} SEC industry offices.`;
+            const where = focus.depth > 0 ? ` Showing ${trail}: ${formatMoney(focus.value || 0)}.` : '';
+            svg.attr('aria-label',
+                `Sunburst of SEC filers by Public float in ${period.period}: ${total}${where}${largestText}`);
+            if (subtitle) {
+                const filers = (period.ranked.length + (period.restCount || 0)).toLocaleString('en-US');
+                subtitle.textContent = `The ${period.ranked.length} largest of ${filers} filers in ${period.period}, ` +
+                    'by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.';
+            }
+            const tech = view.technology ? ` Technology (incl. chip makers): ${techText}` : '';
+            return `${period.period}: ${total}${where}${largestText}${tech}`;
         }
 
         /**
-         * Move the arcs and labels to the current view, tweening from where they are.
-         * @param {number} duration - The transition length in ms; 0 applies the view at once.
+         * Redraw the current period in a changed view, animated unless the user asks for reduced motion, and
+         * announce it in the page's live region.
          * @returns {void}
          */
-        function applyView (duration) {
-            const focus = focusNode();
-            view.focusKey = focus.data.key;
-            chart.focus = focus;
-            chart.nodes.forEach((node) => { node.target = targetOf(node, focus); });
-            const { unit, arc } = chart;
-
-            const paths = chart.arcs.selectAll('path')
-                .attr('pointer-events', (d) => (isVisible(d.target) ? 'auto' : 'none'))
-                .classed('research-sunburst__arc--zoomable', (d) => Boolean(d.children) && isVisible(d.target));
-            const labels = chart.labels.selectAll('text')
-                .data(chart.nodes.filter(hasLabel), (d) => d.data.key)
-                .join('text')
-                .attr('class', 'research-sunburst__label')
-                .attr('dy', '0.35em')
-                .attr('fill', (d) => (DARK_LABEL_OFFICES.includes(d.data.office)
-                    ? 'var(--research-label-dark)'
-                    : 'var(--research-label-light)'))
-                .text((d) => labelText(d, unit));
-
-            paths.interrupt();
-            labels.interrupt();
-            if (duration === 0) {
-                paths.each((d) => { d.current = d.target; })
-                    .attr('d', (d) => arc(d.target))
-                    .attr('fill-opacity', opacityOf);
-                labels.attr('transform', (d) => labelTransform(d.target, unit));
-            } else {
-                const t = chart.svg.transition().duration(duration).ease(d3.easeCubicInOut);
-                labels.attr('transform', (d) => labelTransform(d.current || d.target, unit))
-                    .transition(t)
-                    .attrTween('transform', (d) => {
-                        const between = d3.interpolate(d.current || d.target, d.target);
-                        return (step) => labelTransform(between(step), unit);
-                    });
-                paths.transition(t)
-                    .attr('fill-opacity', opacityOf)
-                    .attrTween('d', (d) => {
-                        const between = d3.interpolate(d.current || d.target, d.target);
-                        return (step) => {
-                            d.current = between(step);
-                            return arc(d.current);
-                        };
-                    });
+        function applyView () {
+            tooltip.hide();
+            const summary = update(periodIndex, { animate: !prefersReducedMotion() });
+            if (live) {
+                live.textContent = summary;
             }
-            describeView(focus);
         }
 
         /**
@@ -471,9 +678,8 @@
          * @returns {void}
          */
         function zoomTo (key) {
-            tooltip.hide();
             view.focusKey = key;
-            applyView(transitionDuration());
+            applyView();
         }
 
         /**
@@ -481,7 +687,6 @@
          * @returns {void}
          */
         function zoomOut () {
-            const focus = chart ? focusNode() : null;
             if (focus && focus.parent) {
                 zoomTo(focus.parent.data.key);
             }
@@ -494,84 +699,47 @@
          */
         function setTechnology (on) {
             view.technology = on;
-            applyView(transitionDuration());
+            applyView();
         }
 
         /**
-         * Draw the sunburst of the current period at the host's width, in the current view (focus and highlight).
+         * The period's largest companies, as the table view shows them.
+         * @param {number} index - The period's index in data.values.
+         * @returns {{caption: string, columns: Object[], rows: string[][]}} The table.
+         */
+        function table (index) {
+            const period = data.values[Math.max(0, Math.min(data.values.length - 1, index))];
+            const rows = period.ranked.slice(0, TABLE_ROWS).map((row, rank) => {
+                const company = data.companies[row.company];
+                const industry = data.industries[company.industry];
+                return [
+                    String(rank + 1),
+                    company.ticker ? `${company.name} (${company.ticker})` : company.name,
+                    industry.name,
+                    data.offices[industry.office],
+                    formatMoney(row.publicFloat)
+                ];
+            });
+            return {
+                caption: `The ${rows.length} largest SEC filers by Public float in ${period.period}`,
+                columns: [
+                    { label: 'Rank', numeric: true },
+                    { label: 'Company' },
+                    { label: 'SIC industry' },
+                    { label: 'SEC industry office' },
+                    { label: 'Public float', numeric: true }
+                ],
+                rows
+            };
+        }
+
+        /**
+         * Redraw at the host's new width, at the current period, without a transition.
          * @returns {void}
          */
-        function draw () {
-            const period = data.values[view.periodIndex];
-            const size = Math.max(MIN_SIZE, Math.min(host.clientWidth || MAX_SIZE, MAX_SIZE));
-            const unit = size / 2 / (RINGS + 1);
-
-            const root = d3.hierarchy(buildTree(data, period))
-                .sum((d) => (d.children ? 0 : d.value || 0))
-                .sort(compareNodes);
-            d3.partition().size([2 * Math.PI, RINGS + 1])(root);
-            markTechnology(root);
-
-            const arc = d3.arc()
-                .startAngle((d) => d.x0)
-                .endAngle((d) => d.x1)
-                .padAngle((d) => Math.min((d.x1 - d.x0) / 2, 0.003))
-                .padRadius(unit * 2)
-                .innerRadius((d) => d.y0 * unit)
-                .outerRadius((d) => Math.max(d.y0 * unit, d.y1 * unit - 1));
-
-            d3.select(host).selectAll('svg').remove();
-            const svg = d3.select(host).append('svg')
-                .attr('viewBox', [-size / 2, -size / 2, size, size].join(' '))
-                .attr('role', 'img');
-
-            const nodes = root.descendants().slice(1).filter((d) => d.x1 > d.x0);
-            const arcs = svg.append('g');
-            arcs.selectAll('path')
-                .data(nodes, (d) => d.data.key)
-                .join('path')
-                .attr('class', 'research-sunburst__arc')
-                .attr('data-key', (d) => d.data.key)
-                .attr('fill', (d) => officeColour(host, d.data.office))
-                .on('click', (event, d) => {
-                    if (d.children) {
-                        zoomTo(d.data.key);
-                    }
-                })
-                .on('pointermove', (event, d) => tooltip.show(event, d))
-                .on('pointerdown', (event, d) => tooltip.show(event, d))
-                .on('pointerleave', (event) => {
-                    if (event.pointerType === 'mouse') {
-                        tooltip.hide();
-                    }
-                });
-            const labels = svg.append('g').attr('text-anchor', 'middle');
-
-            // The centre: the period (or the focused group's name), its total and a hint. A click zooms out.
-            const valueSize = Math.min(18, unit / 4);
-            const titleSize = Math.min(12, unit / 6);
-            const centre = svg.append('g')
-                .attr('class', 'research-sunburst__centre')
-                .attr('text-anchor', 'middle')
-                .on('click', zoomOut);
-            centre.append('circle').attr('r', Math.max(0, unit - 1)).attr('fill', 'transparent');
-            const centreTitle = centre.append('text')
-                .attr('class', 'research-sunburst__centre-title')
-                .style('font-size', `${titleSize}px`)
-                .attr('y', -valueSize * 0.9);
-            const centreValue = centre.append('text')
-                .attr('class', 'research-sunburst__centre-value')
-                .style('font-size', `${valueSize}px`)
-                .attr('dy', '0.35em');
-            const centreHint = centre.append('text')
-                .attr('class', 'research-sunburst__centre-title')
-                .style('font-size', `${titleSize}px`)
-                .attr('y', valueSize * 0.9 + titleSize * 0.8);
-
-            chart = { root, nodes, unit, arc, svg, arcs, labels, centre, centreTitle, centreValue, centreHint, focus: root };
-            // Pressing the focused office's button again zooms back out to every filer.
-            renderLegend(legend, root, (key) => zoomTo(view.focusKey === key ? ROOT_KEY : key));
-            applyView(0);
+        function resize () {
+            layout();
+            update(periodIndex, { animate: false });
         }
 
         if (zoomOutButton) {
@@ -581,11 +749,13 @@
             techToggle.addEventListener('click', () => setTechnology(!view.technology));
         }
 
-        return { draw, zoomTo, zoomOut, setTechnology };
+        layout();
+        return { periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize, zoomTo, zoomOut, setTechnology };
     }
 
     /**
-     * Draw the sunburst when its host and data are on the page, and redraw it when the card changes width.
+     * Draw the sunburst when its host and data are on the page, hand it to the page's scrubber, and redraw it when
+     * the card changes width.
      * @returns {void}
      */
     function init () {
@@ -595,9 +765,13 @@
             return;
         }
         const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
-        const sunburst = createSunburst(host, data, tooltip);
+        const chart = createSunburst(host, data, tooltip);
+        if (window.ResearchPage) {
+            window.ResearchPage.registerTab(TAB_ID, chart);
+        } else {
+            chart.update(data.values.length - 1, { animate: false });
+        }
         let width = host.clientWidth;
-        sunburst.draw();
 
         // A tap outside the chart, or a scroll, puts the tooltip away.
         document.addEventListener('pointerdown', (event) => {
@@ -612,7 +786,7 @@
                 if (host.clientWidth !== width) {
                     width = host.clientWidth;
                     tooltip.hide();
-                    sunburst.draw();
+                    chart.resize();
                 }
             });
             observer.observe(host);

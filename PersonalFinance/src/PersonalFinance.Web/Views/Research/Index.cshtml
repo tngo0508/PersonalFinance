@@ -25,10 +25,33 @@
 
     <div class="research-tabs" role="tablist" aria-label="Research datasets">
         <button type="button" class="research-tabs__tab" id="research-tab-sectors" role="tab"
-                aria-selected="true" aria-controls="research-panel-sectors">Sectors</button>
+                aria-selected="true" aria-controls="research-panel-sectors" tabindex="0">Sectors</button>
     </div>
 
+    @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
+       the tabs, the scrubber, the live region and the table view. *@
     <section class="research-deck" id="research-panel-sectors" role="tabpanel" aria-labelledby="research-tab-sectors">
+        @if (showSectors)
+        {
+            <div class="research-scrubber" data-research-scrubber>
+                <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
+                        aria-label="Play through the years">
+                    <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
+                    <svg class="research-scrubber__icon research-scrubber__icon--pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+                </button>
+                <div class="research-scrubber__track">
+                    <label class="visually-hidden" for="research-sectors-year">Year</label>
+                    <input type="range" class="research-scrubber__range" id="research-sectors-year" data-research-range
+                           min="0" max="@(Model.Sectors!.Periods.Count - 1)" step="1" value="@(Model.Sectors.Periods.Count - 1)"
+                           aria-valuetext="@latest!.Period"/>
+                    <div class="research-scrubber__ends" aria-hidden="true">
+                        <span>@Model.Sectors.Periods[0]</span>
+                        <span>@Model.Sectors.Periods[^1]</span>
+                    </div>
+                </div>
+                <p class="research-scrubber__period" data-research-period aria-hidden="true">@latest.Period</p>
+            </div>
+        }
         <div class="research-card">
             <h2 class="research-card__title">Largest SEC filers by Public float</h2>
             @if (!showSectors)
@@ -37,19 +60,24 @@
             }
             else
             {
-                <p class="research-card__subtitle">
+                <p class="research-card__subtitle" id="research-sectors-subtitle">
                     The @latest!.Ranked.Count largest of @((latest.Ranked.Count + latest.RestCount).ToString("N0", CultureInfo.GetCultureInfo("en-US"))) filers in @latest.Period,
                     by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.
                 </p>
                 <div class="research-sunburst__toolbar">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="research-zoom-out" aria-disabled="true">
+                    <button type="button" class="research-chip" id="research-zoom-out" aria-disabled="true">
                         Zoom out
                     </button>
-                    <p class="research-sunburst__focus" id="research-sunburst-focus" aria-live="polite"></p>
+                    <p class="research-sunburst__focus" id="research-sunburst-focus"></p>
                 </div>
                 @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made. *@
                 <div class="research-sunburst" id="research-sunburst"></div>
                 <div class="research-tooltip" id="research-tooltip" aria-hidden="true" hidden></div>
+                <div class="research-card__actions">
+                    <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
+                            aria-controls="research-sectors-table">Show as table</button>
+                </div>
+                <div class="research-table-host" id="research-sectors-table" data-research-table hidden></div>
             }
             <p class="research-card__source">Source: SEC EDGAR</p>
         </div>
@@ -58,7 +86,7 @@
             @if (showSectors)
             {
                 <h2 class="research-panel__title">View options</h2>
-                <button type="button" class="research-toggle" id="research-tech-toggle" aria-pressed="false"
+                <button type="button" class="research-chip" id="research-tech-toggle" aria-pressed="false"
                         aria-describedby="research-tech-note">
                     Technology (incl. chip makers)
                 </button>
@@ -66,7 +94,7 @@
                     Lights SEC's Technology office plus computer hardware and semiconductor makers (SIC 3570–3579 and
                     3670–3679), which SEC reviews under Manufacturing.
                 </p>
-                <p class="research-panel__tech-share" id="research-tech-share" aria-live="polite" hidden></p>
+                <p class="research-panel__tech-share" id="research-tech-share" hidden></p>
                 <h2 class="research-panel__title">SEC industry offices</h2>
                 <p class="research-panel__note">Choose an office to zoom into it.</p>
                 <ul class="research-legend" id="research-sectors-legend"></ul>
@@ -88,6 +116,9 @@
             </p>
         </aside>
     </section>
+
+    @* Summarises each change of period for screen readers. *@
+    <p class="visually-hidden" id="research-live" aria-live="polite"></p>
 </div>
 
 @if (showSectors)
@@ -100,6 +131,7 @@
     @if (showSectors)
     {
         <script src="~/lib/d3/d3.min.js"></script>
+        <script src="~/js/research/research-page.js" asp-append-version="true"></script>
         <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>
     }
 }

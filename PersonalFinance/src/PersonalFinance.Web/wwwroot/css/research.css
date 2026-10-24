@@ -60,11 +60,109 @@
     color: var(--app-brand);
 }
 
+.research-tabs__tab:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: -2px;
+}
+
 .research-deck {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 18rem;
     gap: var(--app-spacing-m);
     align-items: start;
+}
+
+.research-deck[hidden] {
+    display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Time scrubber: play/pause, the year slider with its first and last year,
+   and the year in large type. It spans the tab panel above the card and the
+   side panel. The slider is the native range input, so keyboard (arrows,
+   Home, End, Page Up/Down) and touch dragging work as the platform does.
+   -------------------------------------------------------------------------- */
+
+.research-scrubber {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-m);
+    min-width: 0;
+    padding: var(--app-spacing-s) var(--app-spacing-l);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-l);
+    background: var(--app-bg);
+}
+
+.research-scrubber__play {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 1px solid var(--app-brand);
+    border-radius: 50%;
+    background: var(--app-brand);
+    color: #ffffff;
+}
+
+.research-scrubber__play:hover {
+    background: var(--app-brand-hover);
+}
+
+.research-scrubber__play:focus-visible,
+.research-scrubber__range:focus-visible,
+.research-chip:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-scrubber__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: currentColor;
+}
+
+.research-scrubber__play[data-state="paused"] .research-scrubber__icon--pause,
+.research-scrubber__play[data-state="playing"] .research-scrubber__icon--play {
+    display: none;
+}
+
+.research-scrubber__track {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.research-scrubber__range {
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    margin: 0;
+    accent-color: var(--app-brand);
+    touch-action: pan-y;
+}
+
+.research-scrubber__ends {
+    display: flex;
+    justify-content: space-between;
+    color: var(--app-text-muted);
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-small);
+}
+
+.research-scrubber__period {
+    flex: none;
+    min-width: 4ch;
+    margin: 0;
+    color: var(--app-text);
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-xxl);
+    font-weight: var(--app-font-weight-semibold);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
 .research-card,
@@ -103,21 +201,28 @@
 .research-panel .research-panel__tech-share {
     margin: 0;
     color: var(--app-text);
-    font-family: var(--app-font-mono);
 }
 
 .research-panel__tech-share[hidden] {
     display: none;
 }
 
-/* The Technology highlight: a toggle button, pressed while the highlight is on. */
-.research-toggle {
-    display: inline-flex;
-    align-items: center;
+.research-card__subtitle {
+    margin: 0 0 var(--app-spacing-m);
+    color: var(--app-text-muted);
+}
+
+.research-card__actions {
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--app-spacing-s);
-    min-height: 2.25rem;
+    margin-top: var(--app-spacing-m);
+}
+
+.research-chip {
+    min-height: 2.75rem;
     padding: var(--app-spacing-xs) var(--app-spacing-m);
-    border: 1px solid var(--app-border);
+    border: 1px solid var(--app-border-hover);
     border-radius: 999px;
     background: var(--app-bg);
     color: var(--app-text);
@@ -125,27 +230,62 @@
     font-weight: var(--app-font-weight-medium);
 }
 
-.research-toggle::before {
-    content: "";
-    width: 0.75rem;
-    height: 0.75rem;
-    border: 1px solid var(--app-text-muted);
-    border-radius: 50%;
+.research-chip:hover {
+    background: var(--app-surface-secondary);
 }
 
-.research-toggle[aria-pressed="true"] {
+.research-chip[aria-pressed="true"] {
     border-color: var(--app-brand);
     background: var(--app-brand-soft);
+    color: var(--app-brand-pressed);
 }
 
-.research-toggle[aria-pressed="true"]::before {
-    border-color: var(--app-brand);
-    background: var(--app-brand);
+/* The table view: the scrubbed year's largest filers, scrolling inside its
+   own box at narrow widths so the page never scrolls sideways. */
+.research-table-host {
+    margin-top: var(--app-spacing-m);
 }
 
-.research-card__subtitle {
-    margin: 0 0 var(--app-spacing-m);
+.research-table-host[hidden] {
+    display: none;
+}
+
+.research-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.research-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--app-font-size-small);
+}
+
+.research-table caption {
+    caption-side: top;
+    padding: 0 0 var(--app-spacing-s);
     color: var(--app-text-muted);
+}
+
+.research-table th,
+.research-table td {
+    padding: var(--app-spacing-xs) var(--app-spacing-s);
+    border-bottom: 1px solid var(--app-border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.research-table th {
+    color: var(--app-text-muted);
+    font-weight: var(--app-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.research-table .research-table__num {
+    font-family: var(--app-font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
 }
 
 .research-card__source {
@@ -210,11 +350,7 @@
     margin-bottom: var(--app-spacing-s);
 }
 
-.research-sunburst__toolbar .btn {
-    min-height: 2.25rem;
-}
-
-.research-sunburst__toolbar .btn[aria-disabled="true"] {
+.research-sunburst__toolbar .research-chip[aria-disabled="true"] {
     opacity: 0.55;
     cursor: default;
 }
@@ -318,8 +454,7 @@
     font-weight: var(--app-font-weight-semibold);
 }
 
-.research-legend__button:focus-visible,
-.research-toggle:focus-visible {
+.research-legend__button:focus-visible {
     outline: 2px solid var(--app-brand);
     outline-offset: 2px;
 }
@@ -341,5 +476,14 @@
     .research-card,
     .research-panel {
         padding: var(--app-spacing-m);
+    }
+
+    .research-scrubber {
+        gap: var(--app-spacing-s);
+        padding: var(--app-spacing-s) var(--app-spacing-m);
+    }
+
+    .research-scrubber__period {
+        font-size: var(--app-font-size-xl);
     }
 }

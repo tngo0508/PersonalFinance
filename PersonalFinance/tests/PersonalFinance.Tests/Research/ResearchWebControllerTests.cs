@@ -69,7 +69,7 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
-    public async Task Index_HoldsTheSectorsSnapshot_WithTheLatestYearRankedForTheTable()
+    public async Task Index_HoldsTheSectorsSnapshot_OpeningOnTheLatestYear()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
@@ -80,8 +80,6 @@ public class ResearchWebControllerTests
         Assert.Same(Snapshot, model.Sectors);
         Assert.Equal(new DateOnly(2025, 12, 31), model.SectorsAsOf);
         Assert.Equal("2025", model.SectorsLatestPeriod!.Period);
-        Assert.Equal([(1, "MICROSOFT CORP", 3_000m), (2, "APPLE INC", 2_600m)],
-            model.SectorsTableRows.Select(r => (r.Rank, r.Name, r.PublicFloat)));
     }
 
     [Fact]
@@ -113,7 +111,6 @@ public class ResearchWebControllerTests
         Assert.True(model.SectorsUnavailable);
         Assert.Null(model.Sectors);
         Assert.Null(model.SectorsAsOf);
-        Assert.Empty(model.SectorsTableRows);
         Assert.Equal("Research", model.SectorsUnavailableState.RetryController);
         Assert.False(string.IsNullOrWhiteSpace(model.SectorsUnavailableState.Heading));
     }
