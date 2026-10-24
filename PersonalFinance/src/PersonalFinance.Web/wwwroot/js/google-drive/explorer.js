@@ -4,7 +4,7 @@
 
     const KNOWN_TYPES = ['Folder', 'Spreadsheet', 'Document', 'PDF Document', 'Image', 'Presentation'];
 
-    $(function () {
+    $(() => {
         function showToast (message) {
             const toastEl = document.getElementById('pageToast');
             if (!toastEl || !message) { return; }
@@ -14,11 +14,6 @@
 
         // Success messages from the previous request (connect, sync, remove) show as a toast
         showToast($('.gd-page').data('status-message'));
-
-        // Sample folder link
-        $('#btnPasteSample').on('click', function () {
-            $('#folderUrlInput').val('https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link').trigger('focus');
-        });
 
         // Connect form spinner
         $('#driveExplorerForm').on('submit', function () {
@@ -30,14 +25,14 @@
         });
 
         // Sync form spinner
-        $('#syncForm').on('submit', function () {
+        $('#syncForm').on('submit', () => {
             $('#syncSpinner').removeClass('d-none');
             $('#syncIcon').addClass('d-none');
             $('#btnSyncDrive').prop('disabled', true);
         });
 
         // Fallback sync form spinner (error state)
-        $('#syncFormFallback').on('submit', function () {
+        $('#syncFormFallback').on('submit', () => {
             $('#syncSpinnerFallback').removeClass('d-none');
             $('#btnSyncDriveFallback').prop('disabled', true);
         });
@@ -46,16 +41,16 @@
         $('.btn-copy-id').on('click', function () {
             const folderId = $(this).data('id');
             if (navigator.clipboard && folderId) {
-                navigator.clipboard.writeText(folderId).then(function () {
+                navigator.clipboard.writeText(folderId).then(() => {
                     showToast('Folder ID copied to clipboard.');
-                }).catch(function () {
+                }).catch(() => {
                     showToast('Failed to copy folder ID. Please copy it manually.');
                 });
             }
         });
 
         // Keyboard shortcut: Ctrl+K / Cmd+K to focus search
-        $(document).on('keydown', function (e) {
+        $(document).on('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
                 const $search = $('#fileSearch');
@@ -125,9 +120,9 @@
             if (dataTable) {
                 let typePattern = '';
                 if (activeFilter === 'other') {
-                    typePattern = '^(?!\\s*(' + KNOWN_TYPES.join('|') + ')\\s*$).*$';
+                    typePattern = `^(?!\\s*(${ KNOWN_TYPES.join('|') })\\s*$).*$`;
                 } else if (activeFilter !== 'all') {
-                    typePattern = '^\\s*' + DataTable.util.escapeRegex(activeFilter) + '\\s*$';
+                    typePattern = `^\\s*${ DataTable.util.escapeRegex(activeFilter) }\\s*$`;
                 }
                 dataTable.column(1).search(typePattern, true, false);
                 dataTable.search(searchTerm).draw();
@@ -188,7 +183,7 @@
             applyFilters();
         }
 
-        $('#btnViewTable').on('click', function () { setView('table'); });
-        $('#btnViewGrid').on('click', function () { setView('grid'); });
+        $('#btnViewTable').on('click', () => { setView('table'); });
+        $('#btnViewGrid').on('click', () => { setView('grid'); });
     });
 })(jQuery);

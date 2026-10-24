@@ -43,7 +43,7 @@ public class GoogleDrivePersistenceTests
 
         var request = new ConnectGoogleDriveRequestDto
         {
-            FolderUrl = "https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "https://drive.google.com/drive/folders/1FakeFolderIdForTests0000000000ab",
             ConnectionName = "My Financial Docs",
             ApiKey = "AIzaSyTestApiKey123456"
         };
@@ -55,7 +55,7 @@ public class GoogleDrivePersistenceTests
         Assert.NotNull(result);
         Assert.True(result.Id > 0);
         Assert.Equal("user-101", result.UserId);
-        Assert.Equal("127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", result.FolderId);
+        Assert.Equal("1FakeFolderIdForTests0000000000ab", result.FolderId);
         Assert.True(result.HasApiKey);
         Assert.StartsWith("AIza", result.MaskedApiKey!);
         Assert.True(result.IsValid);
@@ -89,7 +89,7 @@ public class GoogleDrivePersistenceTests
         // First setup
         GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-subsequent", new ConnectGoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ConnectionName = "Saved Drive"
         });
 
@@ -115,7 +115,7 @@ public class GoogleDrivePersistenceTests
         // Connect Drive 1
         GoogleDriveConnectionDto drive1 = await service.ConnectDriveAsync("user-multi", new ConnectGoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ConnectionName = "Drive 1 - Financial"
         });
 
@@ -159,7 +159,7 @@ public class GoogleDrivePersistenceTests
         // Initial setup calls API once to cache
         GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-cache", new ConnectGoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ApiKey = "AIzaSyTest"
         });
 
@@ -209,7 +209,7 @@ public class GoogleDrivePersistenceTests
 
         GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-sync", new ConnectGoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ApiKey = "AIzaSyTest"
         });
 
@@ -253,7 +253,7 @@ public class GoogleDrivePersistenceTests
 
         GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-delete", new ConnectGoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_"
+            FolderUrl = "1FakeFolderIdForTests0000000000ab"
         });
 
         Assert.True(await dbContext.GoogleDriveConnections.AnyAsync(c => c.Id == conn.Id));
@@ -301,7 +301,7 @@ public class GoogleDrivePersistenceTests
         // Connect with invalid credentials
         GoogleDriveConnectionDto conn = await service.ConnectDriveAsync("user-auth", new ConnectGoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ApiKey = "ExpiredApiKey"
         });
 

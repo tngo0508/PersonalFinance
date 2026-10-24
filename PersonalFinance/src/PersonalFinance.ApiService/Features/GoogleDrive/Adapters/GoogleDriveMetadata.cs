@@ -17,10 +17,10 @@ internal static class GoogleDriveMetadata
     /// <summary>
     /// Extracts the Google Drive Folder ID from a full link or returns the string if already an ID.
     /// Supports formats:
-    /// - https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link
-    /// - https://drive.google.com/drive/u/0/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_
-    /// - https://drive.google.com/open?id=127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_
-    /// - 127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_
+    /// - https://drive.google.com/drive/folders/1FakeFolderIdForTests0000000000ab?usp=drive_link
+    /// - https://drive.google.com/drive/u/0/folders/1FakeFolderIdForTests0000000000ab
+    /// - https://drive.google.com/open?id=1FakeFolderIdForTests0000000000ab
+    /// - 1FakeFolderIdForTests0000000000ab
     /// </summary>
     public static string? ExtractFolderId(string? input)
     {
