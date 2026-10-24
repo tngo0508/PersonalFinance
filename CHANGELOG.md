@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.4.0] - 2026-10-24
+
+### Added
+
+- **Fund Basket bar**: on the Funds tab, pick one to five Tracked Funds from a searchable list grouped by role, each with an optional weight, to view together (#259).
+  - Weights that don't add up to 100% are scaled to 100% with a note, and "Use equal weights" resets them. A fund set to 0% is removed.
+  - Nothing is saved: the basket lives in the page address (`?basket=VTI:60,BND:40`), so a link or a reload keeps it. A link with untracked funds, repeats or bad weights keeps what it can and says what it left out.
+  - Each Tracked Fund keeps one colour wherever it appears, always next to its ticker.
+- **Overlap: same holdings**: a matrix of how much of each pair of basket funds' money is in the same securities, by weight, from each fund's latest N-PORT report (#260).
+  - A "Most duplicated holdings in your basket" table ranks shared holdings by their share of the basket. Choosing a fund's label filters it, and pointing at or focusing a cell highlights that pair's holdings.
+  - Callouts name the most overlapping pair, the share of the basket held by two or more of its funds, and the largest duplicated holding.
+  - Securities are matched by CUSIP or ISIN in memory during the refresh only; no identifier is stored, logged or shown (ADR 0010).
+- **Correlation: move together**: a matrix of how closely each pair of funds' monthly returns moved together over 1, 3 or 5 years (3 by default), for the basket or for all tracked funds (#261).
+  - Values are printed in every cell on a blue-to-red scale, with callouts for the most similar and the least correlated pair.
+  - Monthly NAV total returns come from N-PORT Item B.5, read once per filing from its head; QQQ's history runs on across its 2025 conversion.
+  - The refresh also computes each fund's total and annualized return, volatility, worst fall and Sharpe ratio per window (against the 3-month Treasury bill from the Fed Board's H.15 release), ready for the later Performance and Risk vs return tabs.
+- **Research API**: read endpoints for the fund overlap (`api/Research/funds/overlap`) and fund returns (`api/Research/funds/returns`) datasets.
+- **Glossary and ADR**: Tracked Fund and Fund Basket join the glossary; ADR 0010 records that Research never stores or shows security identifiers.
+
+### Changed
+
+- **ETFs tab is now the Funds tab**: it follows 20 Tracked Funds (ETFs and mutual funds), each with a role, up from 6 ETFs; an old `?tab=etfs` link still opens it (#258).
+  - The funds refresh saves the filings read after each fund, so a first run over the new funds that stops at the job's time limit carries on from there next time.
+
 ## [5.3.0] - 2026-10-24
 
 ### Added
