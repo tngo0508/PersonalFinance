@@ -769,11 +769,56 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 8c: the basket view's meters give their values to screen readers, focusing a region bar lights exactly its
+        // countries (choosing it keeps them lit), the currency bars list what holdings are priced in, and the required
+        // wording is there.
+        await step('Research 8c', fail, async () => {
+            await page.goto(`${base}/Research?tab=world&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-world-basket-map svg path', {timeout: TIMEOUT});
+            const expected = await page.evaluate(() => {
+                const data = JSON.parse(document.getElementById('research-fund-exposure-data').textContent);
+                const shares = { SPY: 0.6, QQQ: 0.4 };
+                const us = data.funds.reduce((sum, f) => sum + shares[f.ticker] * (f.countries.find((c) => c.code === 'US')?.percent || 0), 0);
+                const europe = [...new Set(data.funds.flatMap((f) => f.countries.filter((c) => c.region === 'Europe').map((c) => c.code)))].sort();
+                return { us: (Math.round(us * 10) / 10).toString(), europe };
+            });
+            const meters = await page.locator('#research-world-basket-meters [role="meter"]').evaluateAll((ms) => ms.map((m) => ({
+                now: m.getAttribute('aria-valuenow'), text: m.getAttribute('aria-valuetext'), label: document.getElementById(m.getAttribute('aria-labelledby')).textContent
+            })));
+            const regions = (await page.locator('#research-world-basket-regions button .research-world-basket__bar-label').allTextContents()).map((t) => t.trim());
+            await page.focus('#research-world-basket-regions button[data-region="Europe"]');
+            const lit = () => page.locator('#research-world-basket-map .is-lit').evaluateAll((els) => els.map((e) => e.getAttribute('data-code')).sort());
+            const litOnFocus = await lit();
+            await page.click('#research-world-basket-regions button[data-region="Europe"]');
+            await page.focus('#research-world-basket-reset');
+            const litPinned = await lit();
+            const pressed = await page.locator('#research-world-basket-regions button[data-region="Europe"]').getAttribute('aria-pressed');
+            const currencies = (await page.locator('#research-world-basket-currencies .research-world-basket__bar-label').allTextContents()).map((t) => t.trim());
+            const subtitle = (await page.locator('#research-world-basket .research-card__subtitle').textContent()).replace(/\s+/g, ' ');
+            const wording = ["where each holding's issuer is organized, as each fund reports it", 'count as US dollars', 'not where companies earn their revenue']
+                .every((phrase) => subtitle.includes(phrase));
+            const ok = meters.length === 2 && meters[0].now === expected.us && meters[0].text.includes('Rest of world') &&
+                meters[1].label.startsWith('US dollar vs other currencies') &&
+                regions.join('|') === 'North America|Europe|Asia Pacific|Latin America|Middle East & Africa' &&
+                litOnFocus.join() === expected.europe.join() && litPinned.join() === expected.europe.join() && pressed === 'true' &&
+                currencies.join('|') === 'USD|HKD' && wording;
+            if (ok) {
+                pass(`Research 8c: meters read US ${expected.us}% and US dollar; focusing or choosing Europe lights ${expected.europe.join(', ')}; currencies USD and HKD; the required wording is present`);
+            } else {
+                fail(`Research 8c: meters ${JSON.stringify(meters)} vs ${expected.us}, regions ${JSON.stringify(regions)}, lit ${litOnFocus}/${litPinned} vs ${expected.europe}, ` +
+                    `pressed ${pressed}, currencies ${JSON.stringify(currencies)}, wording ${wording} "${subtitle}"`);
+            }
+        });
+
         // Step 9: "Show as table" lists rows on each tab.
         await step('Research 9', fail, async () => {
             const counts = {};
             for (const tabId of ['sectors', 'funds', 'world']) {
                 await page.click(`#research-tab-${tabId}`);
+                // With a basket set, World opens on the basket map: the table belongs to the market view.
+                if (tabId === 'world' && await page.locator('[data-world-view="market"][aria-pressed="false"]').count()) {
+                    await page.click('[data-world-view="market"]');
+                }
                 await page.locator(`#research-panel-${tabId} [data-research-table-toggle]`).click();
                 counts[tabId] = await page.locator(`#research-panel-${tabId} [data-research-table] tbody tr`).count();
             }

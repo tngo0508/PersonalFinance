@@ -108,22 +108,36 @@
         <div class="research-card research-world-basket" id="research-world-basket" data-world-view-part="basket" hidden>
             <h2 class="research-card__title">Your basket by issuer country</h2>
             <p class="research-card__subtitle">
-                Where your basket's holdings are, weighted by your funds' shares: countries are where each holding's
-                issuer is organized, as each fund reports it, and this is not where companies earn their revenue.
-                From each fund's latest holdings report (@exposureDates).
+                Where your basket's holdings are, weighted by your funds' shares. Countries are where each holding's
+                issuer is organized, as each fund reports it; currency is what each holding is priced in, so American
+                depositary receipts (ADRs) count as US dollars. This is not where companies earn their revenue. From
+                each fund's latest holdings report (@exposureDates).
             </p>
             <p class="research-overlap__prompt" id="research-world-basket-prompt">
                 Add funds to your Fund Basket to see where its holdings are.
             </p>
             <div class="research-overlap__view" id="research-world-basket-view" hidden>
                 <ul class="research-overlap__callouts" id="research-world-basket-callouts" aria-label="Your basket's exposure"></ul>
-                @* Scroll or pinch to zoom, drag to pan; countries and the small places drawn as dots are focusable. *@
-                <div class="research-world research-world-basket__map" id="research-world-basket-map" role="group"
-                     data-atlas-url="@Url.Content("~/lib/world-atlas/countries-110m.json")"></div>
-                <div class="research-world-basket__map-actions">
-                    <button type="button" class="research-chip" id="research-world-basket-reset">Reset zoom</button>
+                @* Two home-bias meters: US issuers against the rest of the world, US dollars against other currencies. *@
+                <div class="research-world-basket__meters" id="research-world-basket-meters"></div>
+                <div class="research-world-basket__layout">
+                    <div class="research-world-basket__main">
+                        @* Scroll or pinch to zoom, drag to pan; countries and the small places drawn as dots are focusable. *@
+                        <div class="research-world research-world-basket__map" id="research-world-basket-map" role="group"
+                             data-atlas-url="@Url.Content("~/lib/world-atlas/countries-110m.json")"></div>
+                        <div class="research-world-basket__map-actions">
+                            <button type="button" class="research-chip" id="research-world-basket-reset">Reset zoom</button>
+                        </div>
+                        <ol class="research-legend" id="research-world-basket-legend" aria-label="Colour scale"></ol>
+                    </div>
+                    <div class="research-world-basket__bars">
+                        @* Each region lights its countries on the map while pointed at or focused; choosing it keeps them lit. *@
+                        <h3 class="research-world-basket__bars-title" id="research-world-basket-regions-title">Regions</h3>
+                        <ul class="research-world-basket__list" id="research-world-basket-regions" aria-labelledby="research-world-basket-regions-title"></ul>
+                        <h3 class="research-world-basket__bars-title" id="research-world-basket-currencies-title">Priced in</h3>
+                        <ul class="research-world-basket__list" id="research-world-basket-currencies" aria-labelledby="research-world-basket-currencies-title"></ul>
+                    </div>
                 </div>
-                <ol class="research-legend" id="research-world-basket-legend" aria-label="Colour scale"></ol>
                 <p class="research-overlap__note" id="research-world-basket-note"></p>
             </div>
             <div class="research-tooltip" id="research-world-basket-tooltip" aria-hidden="true" hidden></div>

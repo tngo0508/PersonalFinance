@@ -8,7 +8,10 @@
  * weight from a small coordinate table; dots keep their size under zoom. The single-hue scale tops out at the largest
  * country outside the US; the US always takes the darkest step, with its true share in the tooltip. Countries and dots
  * with weight are focusable. Callouts give the share outside the US (with the largest foreign country), the share not
- * priced in US dollars (with the largest currency) and the largest region. Shares under 0.05% read "<0.1%".
+ * priced in US dollars (with the largest currency) and the largest region. Shares under 0.05% read "<0.1%". Two
+ * meters show US issuers against the rest of the world and US dollars against other currencies; region bars beside the
+ * map light their countries while pointed at or focused (choosing one keeps them lit), and currency bars list what the
+ * holdings are priced in.
  *
  * The switch opens on Your basket only when a basket is set at load; the market view (research-world.js) is left
  * exactly as it was. Reads the `research-fund-exposure-data` island and the basket from `window.ResearchBasket`.
@@ -28,6 +31,11 @@
     const NOTE_ID = 'research-world-basket-note';
     const RESET_ID = 'research-world-basket-reset';
     const TOOLTIP_ID = 'research-world-basket-tooltip';
+    const METERS_ID = 'research-world-basket-meters';
+    const REGIONS_ID = 'research-world-basket-regions';
+    const CURRENCIES_ID = 'research-world-basket-currencies';
+    const REGION_ORDER = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'Middle East & Africa'];
+    const TOP_CURRENCIES = 5;
     const ANTARCTICA_ID = '010';
     const US = 'US';
     const ASPECT = 0.5;
@@ -157,6 +165,10 @@
         const note = document.getElementById(NOTE_ID);
         const reset = document.getElementById(RESET_ID);
         const buttons = Array.from(views.querySelectorAll('[data-world-view]'));
+        const meters = document.getElementById(METERS_ID);
+        const regionList = document.getElementById(REGIONS_ID);
+        const currencyList = document.getElementById(CURRENCIES_ID);
+        let pinnedRegion = null;
         const colours = readColours(host);
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, entry) => [
             line(countryName(entry.code), 'research-tooltip__name'),
@@ -225,6 +237,7 @@
                 })
                 .attr('tabindex', (f) => (byMapId.has(f.id) ? 0 : null))
                 .attr('data-code', (f) => (byMapId.has(f.id) ? byMapId.get(f.id).code : null))
+                .attr('data-region', (f) => (byMapId.has(f.id) ? byMapId.get(f.id).region : null))
                 .attr('aria-label', (f) => {
                     const entry = byMapId.get(f.id);
                     return entry ? `${countryName(entry.code)}: ${formatShare(entry.percent)} of your basket` : null;
@@ -245,6 +258,7 @@
             dots.selectAll('circle').data(small, (c) => c.code).join('circle')
                 .attr('class', 'research-world-basket__dot')
                 .attr('data-code', (c) => c.code)
+                .attr('data-region', (c) => c.region)
                 .attr('tabindex', 0)
                 .attr('aria-label', (c) => `${countryName(c.code)}: ${formatShare(c.percent)} of your basket`)
                 .attr('cx', (c) => projection(SMALL_PLACES[c.code])[0])
@@ -268,6 +282,125 @@
                 });
             svg.call(zoom);
             svg.attr('aria-label', `Map of your basket by issuer country. ${calloutText()}`);
+            highlight(pinnedRegion);
+        }
+
+        /**
+         * Light a region's countries and dots on the map and dim the rest, or clear it.
+         * @param {string|null} region - The region, or null.
+         * @returns {void}
+         */
+        function highlight (region) {
+            svg.classed('research-world-basket__svg--highlighting', Boolean(region));
+            [paths, dots.selectAll('circle')].forEach((selection) => selection
+                .classed('is-lit', function () {
+                    return Boolean(region) && this.getAttribute('data-region') === region;
+                }));
+        }
+
+        /**
+         * A bar row: the label, a bar as wide as its share of the largest, and the share written out.
+         * @param {string} label - The row's label.
+         * @param {number} value - Its share of the basket, in percent.
+         * @param {number} max - The largest share in the list.
+         * @param {string} tag - The row's element, "li" or "button".
+         * @returns {HTMLElement} The row's content element.
+         */
+        function barRow (label, value, max, tag) {
+            const row = element(tag, 'research-world-basket__bar-row');
+            const track = element('span', 'research-world-basket__bar-track');
+            const bar = element('span', 'research-world-basket__bar');
+            // A share that rounds to nothing draws no bar; any other at least a sliver.
+            bar.style.width = `${max > 0 && value >= 0.05 ? Math.max(1, value / max * 100) : 0}%`;
+            track.append(bar);
+            track.setAttribute('aria-hidden', 'true');
+            row.append(element('span', 'research-world-basket__bar-label', label), track,
+                element('span', 'research-world-basket__bar-value', formatShare(value)));
+            return row;
+        }
+
+        /**
+         * Draw the region bars, in the fixed region order: each a button that lights its countries.
+         * @returns {void}
+         */
+        function drawRegions () {
+            const shares = REGION_ORDER.map((region) => [region, exposure.regions.get(region) || 0]);
+            const max = Math.max(...shares.map(([, v]) => v));
+            if (pinnedRegion && !shares.some(([r, v]) => r === pinnedRegion && v > 0)) {
+                pinnedRegion = null;
+            }
+            regionList.replaceChildren(...shares.map(([region, value]) => {
+                const li = element('li');
+                const button = barRow(region, value, max, 'button');
+                button.type = 'button';
+                button.dataset.region = region;
+                button.setAttribute('aria-pressed', String(pinnedRegion === region));
+                button.setAttribute('aria-label', `${region}: ${formatShare(value)} of your basket. Light its countries on the map`);
+                button.addEventListener('pointerenter', () => highlight(region));
+                button.addEventListener('pointerleave', () => highlight(pinnedRegion));
+                button.addEventListener('focus', () => highlight(region));
+                button.addEventListener('blur', () => highlight(pinnedRegion));
+                button.addEventListener('click', () => {
+                    pinnedRegion = pinnedRegion === region ? null : region;
+                    regionList.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.region === pinnedRegion)));
+                    highlight(pinnedRegion);
+                });
+                li.append(button);
+                return li;
+            }));
+        }
+
+        /**
+         * Draw the currency bars: the largest few, then the rest together.
+         * @returns {void}
+         */
+        function drawCurrencies () {
+            const sorted = Array.from(exposure.currencies.entries()).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+            const top = sorted.slice(0, TOP_CURRENCIES);
+            const rest = sorted.slice(TOP_CURRENCIES).reduce((sum, [, v]) => sum + v, 0);
+            const rows = rest > 0 ? [...top, [`${sorted.length - TOP_CURRENCIES} others`, rest]] : top;
+            const max = Math.max(...rows.map(([, v]) => v), 0);
+            currencyList.replaceChildren(...rows.map(([code, value]) => barRow(code, value, max, 'li')));
+        }
+
+        /**
+         * Draw the two home-bias meters: US issuers against the rest of the world, US dollars against other currencies.
+         * @returns {void}
+         */
+        function drawMeters () {
+            const us = (exposure.countries.get(US) || { percent: 0 }).percent;
+            const rest = Array.from(exposure.countries.values()).filter((c) => c.code !== US).reduce((sum, c) => sum + c.percent, 0);
+            const usd = exposure.currencies.get('USD') || 0;
+            const other = Array.from(exposure.currencies.entries()).filter(([code]) => code !== 'USD').reduce((sum, [, v]) => sum + v, 0);
+            const meter = (title, homeLabel, home, awayLabel, away) => {
+                const unallocated = Math.max(0, 100 - home - away);
+                const wrap = element('div', 'research-world-basket__meter');
+                const id = `research-world-basket-meter-${homeLabel.replace(/\W+/g, '-').toLowerCase()}`;
+                const heading = element('p', 'research-world-basket__meter-title', title);
+                heading.id = id;
+                const bar = element('div', 'research-world-basket__meter-bar');
+                bar.setAttribute('role', 'meter');
+                bar.setAttribute('aria-labelledby', id);
+                bar.setAttribute('aria-valuemin', '0');
+                bar.setAttribute('aria-valuemax', '100');
+                bar.setAttribute('aria-valuenow', (Math.round(home * 10) / 10).toString());
+                bar.setAttribute('aria-valuetext', `${homeLabel} ${formatShare(home)}, ${awayLabel} ${formatShare(away)}`
+                    + `${unallocated >= 0.05 ? `, unallocated ${formatShare(unallocated)}` : ''}`);
+                const homePart = element('span', 'research-world-basket__meter-home');
+                homePart.style.width = `${home}%`;
+                const awayPart = element('span', 'research-world-basket__meter-away');
+                awayPart.style.width = `${away}%`;
+                bar.append(homePart, awayPart);
+                const legend = element('p', 'research-world-basket__meter-legend');
+                legend.setAttribute('aria-hidden', 'true');
+                legend.append(element('span', 'research-world-basket__meter-key research-world-basket__meter-key--home', `${homeLabel} ${formatShare(home)}`),
+                    element('span', 'research-world-basket__meter-key research-world-basket__meter-key--away', `${awayLabel} ${formatShare(away)}`));
+                wrap.append(heading, bar, legend);
+                return wrap;
+            };
+            meters.replaceChildren(
+                meter('US vs rest of world, by issuer country', 'US', us, 'Rest of world', rest),
+                meter('US dollar vs other currencies', 'US dollar', usd, 'Other currencies', other));
         }
 
         /**
@@ -354,6 +487,9 @@
                 ? `${exposure.missing.join(', ')} ${exposure.missing.length === 1 ? 'has' : 'have'} no holdings report yet, so the others' shares are scaled up to cover ${exposure.missing.length === 1 ? 'it' : 'them'}.`
                 : '';
             drawCallouts();
+            drawMeters();
+            drawRegions();
+            drawCurrencies();
             drawLegend();
             if (host.clientWidth > 0) {
                 layout();
