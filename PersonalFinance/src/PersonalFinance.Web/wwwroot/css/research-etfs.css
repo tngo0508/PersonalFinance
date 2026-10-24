@@ -7,6 +7,11 @@
    itself never scrolls sideways. The app has no dark mode yet.
    ========================================================================== */
 
+/* The tree needs its width more than the side panel does: the panel goes under the card at every width. */
+.research-deck--stacked {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .research-etfs-tree {
     max-width: 100%;
     overflow-x: auto;

@@ -21,6 +21,11 @@
     const TRANSITION_MS = 600;
     const ROW_HEIGHT = 24;
     const NARROW_WIDTH = 560;
+    const MIN_COLUMN = 120;
+    const MAX_COLUMN = 190;
+    const NARROW_LABELS = 230;
+    const WIDE_LABELS = 290;
+    const LEVELS = 3;
     const OPEN_FIRST = ['root', 'f:SPY', 'c:SPY:EC'];
     const KIND_LABELS = {
         root: 'Six well-known ETFs',
@@ -232,10 +237,9 @@
      * @returns {Object} The chart registered with ResearchPage.
      */
     function createTree (host, data, tooltip) {
-        const narrow = window.innerWidth < NARROW_WIDTH;
-        const columnWidth = narrow ? 120 : 190;
-        const labelSpace = narrow ? 230 : 300;
         const leftMargin = 70;
+        let columnWidth = MIN_COLUMN;
+        let labelSpace = WIDE_LABELS;
         const expanded = new Set(OPEN_FIRST);
         const previous = new Map();
         let index = data.values.length - 1;
@@ -256,6 +260,7 @@
          * @returns {void}
          */
         function render (sourceKey, animate) {
+            fitColumns();
             const root = d3.hierarchy(buildTree(data, index));
             root.each((d) => {
                 if (d.children && d.depth > 0 && !expanded.has(d.data.key)) {
@@ -346,6 +351,19 @@
 
             previous.clear();
             visible.forEach((d) => previous.set(d.data.key, { x: d.x, y: d.y }));
+        }
+
+        /**
+         * Size the columns so the whole tree fits the card where it can; below MIN_COLUMN (phones) the tree keeps
+         * its width and scrolls sideways inside the card. While the tab is hidden the host has no width, so the
+         * narrowest columns are used until it is shown (a ResizeObserver redraws then).
+         * @returns {void}
+         */
+        function fitColumns () {
+            const available = host.clientWidth;
+            labelSpace = available > 0 && available < NARROW_WIDTH ? NARROW_LABELS : WIDE_LABELS;
+            const fit = Math.floor((available - leftMargin - labelSpace) / LEVELS);
+            columnWidth = Math.max(MIN_COLUMN, Math.min(MAX_COLUMN, fit || MIN_COLUMN));
         }
 
         /**
@@ -511,6 +529,33 @@
                 ],
                 rows
             };
+        }
+
+        /**
+         * When the tree is wider than its card (phones), scroll it so the open SPY common-equity branch, and the
+         * holdings it lists, are in view rather than empty space to the right of the ETFs.
+         * @returns {void}
+         */
+        function revealOpenBranch () {
+            if (host.scrollWidth > host.clientWidth && expanded.has('c:SPY:EC')) {
+                host.scrollLeft = Math.max(0, leftMargin + columnWidth * 2 - 40);
+            }
+        }
+
+        // Redraw when the card's width changes, including when the hidden tab is first shown.
+        if (typeof ResizeObserver === 'function') {
+            let lastWidth = host.clientWidth;
+            let revealed = false;
+            new ResizeObserver(() => {
+                if (host.clientWidth !== lastWidth && host.clientWidth > 0) {
+                    lastWidth = host.clientWidth;
+                    render(null, false);
+                    if (!revealed) {
+                        revealed = true;
+                        revealOpenBranch();
+                    }
+                }
+            }).observe(host);
         }
 
         return {
