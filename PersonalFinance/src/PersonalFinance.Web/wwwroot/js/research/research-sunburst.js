@@ -1,9 +1,10 @@
 /* global d3 */
 /**
- * Research page, Sectors tab: a D3 sunburst of the largest SEC filers by Public float for the latest year.
+ * Research page, Sectors tab: a D3 sunburst of the largest SEC filers by Public float, one year at a time.
  * Rings, inside out: SEC industry office, SIC industry, company (plus one "Other" slice per industry for the smaller
  * filers). Reads the Sectors snapshot from the JSON data island rendered by Views/Research/Index.cshtml, so it makes
- * no request of its own. Hover or tap a slice for its figures; the centre shows the total.
+ * no request of its own. Hover or tap a slice for its figures; the centre shows the total. The page's scrubber
+ * (js/research/research-page.js) moves it between years through update(), and its table view reads table().
  */
 (function () {
     'use strict';
@@ -12,6 +13,10 @@
     const HOST_ID = 'research-sunburst';
     const LEGEND_ID = 'research-sectors-legend';
     const TOOLTIP_ID = 'research-tooltip';
+    const SUBTITLE_ID = 'research-sectors-subtitle';
+    const TAB_ID = 'sectors';
+    const TRANSITION_MS = 750;
+    const TABLE_ROWS = 25;
     const MAX_SIZE = 640;
     const MIN_SIZE = 240;
     const RINGS = 3;
@@ -254,99 +259,276 @@
     }
 
     /**
-     * Draw the sunburst into the host, sized to the host's width.
-     * @param {HTMLElement} host - The chart host.
-     * @param {Object} data - The Sectors snapshot.
-     * @param {Object} tooltip - The tooltip controller.
-     * @returns {void}
+     * An arc's geometry: its angles and rings, as d3.partition lays them out.
+     * @param {Object} node - A d3 hierarchy node, or a geometry.
+     * @returns {{x0: number, x1: number, y0: number, y1: number}} The geometry.
      */
-    function render (host, data, tooltip) {
-        const period = data.values[data.values.length - 1];
-        const size = Math.max(MIN_SIZE, Math.min(host.clientWidth || MAX_SIZE, MAX_SIZE));
-        const unit = size / 2 / (RINGS + 1);
-
-        const root = d3.hierarchy(buildTree(data, period))
-            .sum((d) => (d.children ? 0 : d.value || 0))
-            .sort(compareNodes);
-        d3.partition().size([2 * Math.PI, RINGS + 1])(root);
-
-        const arc = d3.arc()
-            .startAngle((d) => d.x0)
-            .endAngle((d) => d.x1)
-            .padAngle((d) => Math.min((d.x1 - d.x0) / 2, 0.003))
-            .padRadius(unit * 2)
-            .innerRadius((d) => d.y0 * unit)
-            .outerRadius((d) => d.y1 * unit - 1);
-
-        const nodes = root.descendants().slice(1).filter((d) => d.x1 > d.x0);
-        const largest = root.leaves()
-            .filter((d) => d.data.kind === 'company')
-            .sort((a, b) => b.value - a.value)[0];
-        const largestText = largest ? `. Largest company: ${largest.data.name}, ${formatMoney(largest.value)}.` : '.';
-
-        d3.select(host).selectAll('svg').remove();
-        const svg = d3.select(host).append('svg')
-            .attr('viewBox', [-size / 2, -size / 2, size, size].join(' '))
-            .attr('role', 'img')
-            .attr('aria-label', `Sunburst of SEC filers by Public float in ${period.period}: ` +
-                `${formatMoney(root.value)} in total across ${root.children.length} SEC industry offices${largestText}`);
-
-        svg.append('g')
-            .selectAll('path')
-            .data(nodes, (d) => d.data.key)
-            .join('path')
-            .attr('class', 'research-sunburst__arc')
-            .attr('d', arc)
-            .attr('fill', (d) => officeColour(host, d.data.office))
-            .attr('fill-opacity', (d) => (d.data.kind === 'other' ? OTHER_OPACITY : RING_OPACITY[d.depth]))
-            .on('pointermove', (event, d) => tooltip.show(event, d))
-            .on('pointerdown', (event, d) => tooltip.show(event, d))
-            .on('pointerleave', (event) => {
-                if (event.pointerType === 'mouse') {
-                    tooltip.hide();
-                }
-            });
-
-        // Labels only where the arc is tall enough for a line of text at its middle radius.
-        const labelled = nodes.filter((d) => d.data.kind !== 'other' && (d.x1 - d.x0) * (d.y0 + d.y1) / 2 * unit > 13);
-        svg.append('g')
-            .attr('text-anchor', 'middle')
-            .selectAll('text')
-            .data(labelled, (d) => d.data.key)
-            .join('text')
-            .attr('class', 'research-sunburst__label')
-            .attr('dy', '0.35em')
-            .attr('fill', (d) => (DARK_LABEL_OFFICES.includes(d.data.office)
-                ? 'var(--research-label-dark)'
-                : 'var(--research-label-light)'))
-            .attr('transform', (d) => labelTransform(d, unit))
-            .text((d) => labelText(d, unit));
-
-        // The centre: the year, the total and what it measures, scaled to fit the inner circle.
-        const valueSize = Math.min(18, unit / 4);
-        const titleSize = Math.min(12, unit / 6);
-        const centre = svg.append('g').attr('text-anchor', 'middle');
-        centre.append('text')
-            .attr('class', 'research-sunburst__centre-title')
-            .style('font-size', `${titleSize}px`)
-            .attr('y', -valueSize * 0.9)
-            .text(period.period);
-        centre.append('text')
-            .attr('class', 'research-sunburst__centre-value')
-            .style('font-size', `${valueSize}px`)
-            .attr('dy', '0.35em')
-            .text(formatMoney(root.value));
-        centre.append('text')
-            .attr('class', 'research-sunburst__centre-title')
-            .style('font-size', `${titleSize}px`)
-            .attr('y', valueSize * 0.9 + titleSize * 0.8)
-            .text('Public float');
-
-        renderLegend(document.getElementById(LEGEND_ID), root);
+    function geometry (node) {
+        return { x0: node.x0, x1: node.x1, y0: node.y0, y1: node.y1 };
     }
 
     /**
-     * Draw the sunburst when its host and data are on the page, and redraw it when the card changes width.
+     * The same geometry with zero width at its start angle: where an entering arc grows from and a leaving one
+     * shrinks to.
+     * @param {{x0: number, x1: number, y0: number, y1: number}} shape - A geometry.
+     * @returns {{x0: number, x1: number, y0: number, y1: number}} The collapsed geometry.
+     */
+    function collapsed (shape) {
+        return { ...shape, x1: shape.x0 };
+    }
+
+    /**
+     * Create the Sectors sunburst in the host. It is drawn once, then moved between periods by update(): arcs and
+     * labels are keyed by office, industry and company, so an arc tweens from where it is drawn now; an arc that
+     * enters grows from zero width and one that leaves shrinks to zero width. Each element keeps the geometry it is
+     * drawn at in `__arc`, so an update that interrupts a running transition carries on from there.
+     * @param {HTMLElement} host - The chart host.
+     * @param {Object} data - The Sectors snapshot.
+     * @param {Object} tooltip - The tooltip controller.
+     * @returns {{periods: string[], transitionMs: number, update: function(number, Object): string,
+     *     table: function(number): Object, resize: function(): void}} The chart.
+     */
+    function createSunburst (host, data, tooltip) {
+        const subtitle = document.getElementById(SUBTITLE_ID);
+        let periodIndex = data.values.length - 1;
+        let unit = 0;
+        let arc = null;
+        let svg = null;
+        let arcLayer = null;
+        let labelLayer = null;
+        let centreYear = null;
+        let centreValue = null;
+
+        /**
+         * Size the chart to the host's width and draw its empty layers.
+         * @returns {void}
+         */
+        function layout () {
+            const size = Math.max(MIN_SIZE, Math.min(host.clientWidth || MAX_SIZE, MAX_SIZE));
+            unit = size / 2 / (RINGS + 1);
+            arc = d3.arc()
+                .startAngle((d) => d.x0)
+                .endAngle((d) => d.x1)
+                .padAngle((d) => Math.min((d.x1 - d.x0) / 2, 0.003))
+                .padRadius(unit * 2)
+                .innerRadius((d) => d.y0 * unit)
+                .outerRadius((d) => Math.max(d.y0 * unit, d.y1 * unit - 1));
+
+            d3.select(host).selectAll('svg').remove();
+            svg = d3.select(host).append('svg')
+                .attr('viewBox', [-size / 2, -size / 2, size, size].join(' '))
+                .attr('role', 'img');
+            arcLayer = svg.append('g');
+            labelLayer = svg.append('g').attr('text-anchor', 'middle');
+
+            // The centre: the year, the total and what it measures, scaled to fit the inner circle.
+            const valueSize = Math.min(18, unit / 4);
+            const titleSize = Math.min(12, unit / 6);
+            const centre = svg.append('g').attr('text-anchor', 'middle');
+            centreYear = centre.append('text')
+                .attr('class', 'research-sunburst__centre-title')
+                .style('font-size', `${titleSize}px`)
+                .attr('y', -valueSize * 0.9);
+            centreValue = centre.append('text')
+                .attr('class', 'research-sunburst__centre-value')
+                .style('font-size', `${valueSize}px`)
+                .attr('dy', '0.35em');
+            centre.append('text')
+                .attr('class', 'research-sunburst__centre-title')
+                .style('font-size', `${titleSize}px`)
+                .attr('y', valueSize * 0.9 + titleSize * 0.8)
+                .text('Public float');
+        }
+
+        /**
+         * Draw the arcs of the period, tweening from what is drawn now when animated.
+         * @param {Object[]} nodes - The period's visible nodes.
+         * @param {Object|null} transition - The shared d3 transition, or null to apply at once.
+         * @returns {void}
+         */
+        function drawArcs (nodes, transition) {
+            const paths = arcLayer.selectAll('path').data(nodes, (d) => d.data.key);
+            const leaving = paths.exit().attr('pointer-events', 'none');
+            if (transition) {
+                leaving.transition(transition)
+                    .attrTween('d', function () {
+                        const shrink = d3.interpolate(this.__arc, collapsed(this.__arc));
+                        return (t) => arc(this.__arc = shrink(t));
+                    })
+                    .remove();
+            } else {
+                leaving.remove();
+            }
+
+            const entering = paths.enter().append('path')
+                .attr('class', 'research-sunburst__arc')
+                .each(function (d) {
+                    this.__arc = collapsed(geometry(d));
+                })
+                .attr('d', function () {
+                    return arc(this.__arc);
+                })
+                .on('pointermove', (event, d) => tooltip.show(event, d))
+                .on('pointerdown', (event, d) => tooltip.show(event, d))
+                .on('pointerleave', (event) => {
+                    if (event.pointerType === 'mouse') {
+                        tooltip.hide();
+                    }
+                });
+
+            const all = entering.merge(paths)
+                .attr('pointer-events', null)
+                .attr('fill', (d) => officeColour(host, d.data.office))
+                .attr('fill-opacity', (d) => (d.data.kind === 'other' ? OTHER_OPACITY : RING_OPACITY[d.depth]));
+            if (transition) {
+                all.transition(transition)
+                    .attrTween('d', function (d) {
+                        const move = d3.interpolate(this.__arc, geometry(d));
+                        return (t) => arc(this.__arc = move(t));
+                    });
+            } else {
+                all.each(function (d) {
+                    this.__arc = geometry(d);
+                }).attr('d', function () {
+                    return arc(this.__arc);
+                });
+            }
+        }
+
+        /**
+         * Draw the labels of the period: only where the arc is tall enough for a line of text at its middle radius.
+         * @param {Object[]} nodes - The period's visible nodes.
+         * @param {Object|null} transition - The shared d3 transition, or null to apply at once.
+         * @returns {void}
+         */
+        function drawLabels (nodes, transition) {
+            const labelled = nodes.filter((d) => d.data.kind !== 'other' &&
+                (d.x1 - d.x0) * (d.y0 + d.y1) / 2 * unit > 13);
+            const labels = labelLayer.selectAll('text').data(labelled, (d) => d.data.key);
+            if (transition) {
+                labels.exit().transition(transition).attr('fill-opacity', 0).remove();
+            } else {
+                labels.exit().remove();
+            }
+
+            const entering = labels.enter().append('text')
+                .attr('class', 'research-sunburst__label')
+                .attr('dy', '0.35em')
+                .each(function (d) {
+                    this.__arc = geometry(d);
+                })
+                .attr('transform', function () {
+                    return labelTransform(this.__arc, unit);
+                })
+                .attr('fill-opacity', transition ? 0 : 1);
+
+            const all = entering.merge(labels)
+                .attr('fill', (d) => (DARK_LABEL_OFFICES.includes(d.data.office)
+                    ? 'var(--research-label-dark)'
+                    : 'var(--research-label-light)'))
+                .text((d) => labelText(d, unit));
+            if (transition) {
+                all.transition(transition)
+                    .attr('fill-opacity', 1)
+                    .attrTween('transform', function (d) {
+                        const move = d3.interpolate(this.__arc, geometry(d));
+                        return (t) => labelTransform(this.__arc = move(t), unit);
+                    });
+            } else {
+                all.each(function (d) {
+                    this.__arc = geometry(d);
+                }).attr('transform', function () {
+                    return labelTransform(this.__arc, unit);
+                }).attr('fill-opacity', 1);
+            }
+        }
+
+        /**
+         * Show one period.
+         * @param {number} index - The period's index in data.values.
+         * @param {{animate: boolean}} [options] - Whether to tween from what is drawn now.
+         * @returns {string} A one-sentence summary of the period, for the live region.
+         */
+        function update (index, options) {
+            periodIndex = Math.max(0, Math.min(data.values.length - 1, index));
+            const period = data.values[periodIndex];
+            const root = d3.hierarchy(buildTree(data, period))
+                .sum((d) => (d.children ? 0 : d.value || 0))
+                .sort(compareNodes);
+            d3.partition().size([2 * Math.PI, RINGS + 1])(root);
+            const nodes = root.descendants().slice(1).filter((d) => d.x1 > d.x0);
+
+            // A change without animation stops any transition still running, so nothing moves afterwards.
+            svg.selectAll('*').interrupt();
+            const transition = options && options.animate ? svg.transition().duration(TRANSITION_MS) : null;
+            drawArcs(nodes, transition);
+            drawLabels(nodes, transition);
+
+            const largest = root.leaves()
+                .filter((d) => d.data.kind === 'company')
+                .sort((a, b) => b.value - a.value)[0];
+            const largestText = largest ? ` Largest company: ${largest.data.name}, ${formatMoney(largest.value)}.` : '';
+            const offices = (root.children || []).length;
+            const total = `${formatMoney(root.value || 0)} in total across ${offices} SEC industry offices.`;
+            svg.attr('aria-label', `Sunburst of SEC filers by Public float in ${period.period}: ${total}${largestText}`);
+            centreYear.text(period.period);
+            centreValue.text(formatMoney(root.value || 0));
+            if (subtitle) {
+                const filers = (period.ranked.length + (period.restCount || 0)).toLocaleString('en-US');
+                subtitle.textContent = `The ${period.ranked.length} largest of ${filers} filers in ${period.period}, ` +
+                    'by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.';
+            }
+            renderLegend(document.getElementById(LEGEND_ID), root);
+            return `${period.period}: ${total}${largestText}`;
+        }
+
+        /**
+         * The period's largest companies, as the table view shows them.
+         * @param {number} index - The period's index in data.values.
+         * @returns {{caption: string, columns: Object[], rows: string[][]}} The table.
+         */
+        function table (index) {
+            const period = data.values[Math.max(0, Math.min(data.values.length - 1, index))];
+            const rows = period.ranked.slice(0, TABLE_ROWS).map((row, rank) => {
+                const company = data.companies[row.company];
+                const industry = data.industries[company.industry];
+                return [
+                    String(rank + 1),
+                    company.ticker ? `${company.name} (${company.ticker})` : company.name,
+                    industry.name,
+                    data.offices[industry.office],
+                    formatMoney(row.publicFloat)
+                ];
+            });
+            return {
+                caption: `The ${rows.length} largest SEC filers by Public float in ${period.period}`,
+                columns: [
+                    { label: 'Rank', numeric: true },
+                    { label: 'Company' },
+                    { label: 'SIC industry' },
+                    { label: 'SEC industry office' },
+                    { label: 'Public float', numeric: true }
+                ],
+                rows
+            };
+        }
+
+        /**
+         * Redraw at the host's new width, at the current period, without a transition.
+         * @returns {void}
+         */
+        function resize () {
+            layout();
+            update(periodIndex, { animate: false });
+        }
+
+        layout();
+        return { periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize };
+    }
+
+    /**
+     * Draw the sunburst when its host and data are on the page, hand it to the page's scrubber, and redraw it when
+     * the card changes width.
      * @returns {void}
      */
     function init () {
@@ -356,8 +538,13 @@
             return;
         }
         const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
+        const chart = createSunburst(host, data, tooltip);
+        if (window.ResearchPage) {
+            window.ResearchPage.registerTab(TAB_ID, chart);
+        } else {
+            chart.update(data.values.length - 1, { animate: false });
+        }
         let width = host.clientWidth;
-        render(host, data, tooltip);
 
         // A tap outside the chart, or a scroll, puts the tooltip away.
         document.addEventListener('pointerdown', (event) => {
@@ -372,7 +559,7 @@
                 if (host.clientWidth !== width) {
                     width = host.clientWidth;
                     tooltip.hide();
-                    render(host, data, tooltip);
+                    chart.resize();
                 }
             });
             observer.observe(host);
