@@ -306,7 +306,7 @@ public class ResearchServiceTests
 
         // Only the Sectors entries: the World dataset fails here (the stub World Bank is down) and logs on its own.
         string entry = Assert.Single(logger.Entries,
-            e => !e.Message.Contains(ResearchService.WorldDataset, StringComparison.Ordinal)).Message;
+            e => !e.Message.Contains(ResearchDatasets.World, StringComparison.Ordinal)).Message;
         Assert.Contains("4321", entry);
         Assert.Contains("2025", entry);
         Assert.DoesNotContain("SECRETIVE", entry);

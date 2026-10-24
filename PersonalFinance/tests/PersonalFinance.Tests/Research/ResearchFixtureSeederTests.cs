@@ -91,7 +91,7 @@ public class ResearchFixtureSeederTests
             .UseInMemoryDatabase($"ResearchFixtures_{Guid.NewGuid():N}").Options);
         db.ResearchSnapshots.Add(new ResearchSnapshot
         {
-            Dataset = ResearchService.WorldDataset, FirstPeriod = "1990", LastPeriod = "2025", Payload = "{}",
+            Dataset = ResearchDatasets.World, FirstPeriod = "1990", LastPeriod = "2025", Payload = "{}",
             SourceAsOf = new DateOnly(2026, 7, 1),
         });
         await db.SaveChangesAsync();
@@ -99,9 +99,9 @@ public class ResearchFixtureSeederTests
         await ResearchFixtureSeeder.SeedAsync(db, TimeProvider.System);
 
         List<ResearchSnapshot> rows = await db.ResearchSnapshots.AsNoTracking().OrderBy(s => s.Dataset).ToListAsync();
-        Assert.Equal([ResearchService.EtfsDataset, ResearchService.SectorsDataset, ResearchService.WorldDataset],
+        Assert.Equal([ResearchDatasets.Etfs, ResearchDatasets.Sectors, ResearchDatasets.World],
             rows.Select(r => r.Dataset));
-        Assert.Equal("{}", rows.Single(r => r.Dataset == ResearchService.WorldDataset).Payload);
+        Assert.Equal("{}", rows.Single(r => r.Dataset == ResearchDatasets.World).Payload);
     }
 
     private static async Task<T?> GetAsync<T>(HttpClient client, string dataset)

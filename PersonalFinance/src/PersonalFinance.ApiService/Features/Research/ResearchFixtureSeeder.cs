@@ -48,9 +48,9 @@ internal static class ResearchFixtureSeeder
         WorldSnapshotDto world = ResearchFixtureSnapshots.World();
         (string Dataset, List<string> Periods, DateOnly AsOf, object Snapshot)[] fixtures =
         [
-            (ResearchService.SectorsDataset, sectors.Periods, sectors.AsOf, sectors),
-            (ResearchService.EtfsDataset, etfs.Periods, etfs.AsOf, etfs),
-            (ResearchService.WorldDataset, world.Periods, world.AsOf, world),
+            (ResearchDatasets.Sectors, sectors.Periods, sectors.AsOf, sectors),
+            (ResearchDatasets.Etfs, etfs.Periods, etfs.AsOf, etfs),
+            (ResearchDatasets.World, world.Periods, world.AsOf, world),
         ];
 
         List<string> stored = await db.ResearchSnapshots.AsNoTracking()

@@ -16,27 +16,6 @@ namespace PersonalFinance.ApiService.Features.Research;
 /// </summary>
 internal sealed class ResearchService : IResearchService
 {
-    /// <summary>The dataset key of the Sectors snapshot.</summary>
-    public const string SectorsDataset = "sectors";
-
-    /// <summary>
-    /// The dataset key of the SEC submissions read for the Sectors snapshot, kept so each refresh reads only the
-    /// filers it has not read before (and the latest year's largest). Not served to the page.
-    /// </summary>
-    public const string FilersDataset = "sec-filers";
-
-    /// <summary>The dataset key of the ETFs snapshot.</summary>
-    public const string EtfsDataset = "etfs";
-
-    /// <summary>
-    /// The dataset key of the N-PORT filings read for the ETFs snapshot, kept so each refresh fetches only the
-    /// filings it has not read before. Not served to the page.
-    /// </summary>
-    public const string EtfFilingsDataset = "etf-filings";
-
-    /// <summary>The dataset key of the World snapshot.</summary>
-    public const string WorldDataset = "world";
-
     /// <summary>The World Bank WDI indicator of market capitalisation of listed domestic companies (current US$).</summary>
     public const string MarketCapIndicator = "CM.MKT.LCAP.CD";
 
@@ -65,7 +44,7 @@ internal sealed class ResearchService : IResearchService
     public async Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(
         CancellationToken cancellationToken = default)
     {
-        string? payload = await SnapshotPayloadQuery(_db, SectorsDataset).FirstOrDefaultAsync(cancellationToken);
+        string? payload = await SnapshotPayloadQuery(_db, ResearchDatasets.Sectors).FirstOrDefaultAsync(cancellationToken);
         SectorsSnapshotDto? snapshot = payload is null
             ? null
             : JsonSerializer.Deserialize<SectorsSnapshotDto>(payload, JsonSerializerOptions.Web);
@@ -75,7 +54,7 @@ internal sealed class ResearchService : IResearchService
     /// <inheritdoc />
     public async Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default)
     {
-        string? payload = await SnapshotPayloadQuery(_db, EtfsDataset).FirstOrDefaultAsync(cancellationToken);
+        string? payload = await SnapshotPayloadQuery(_db, ResearchDatasets.Etfs).FirstOrDefaultAsync(cancellationToken);
         EtfsSnapshotDto? snapshot = payload is null
             ? null
             : JsonSerializer.Deserialize<EtfsSnapshotDto>(payload, JsonSerializerOptions.Web);
@@ -86,7 +65,7 @@ internal sealed class ResearchService : IResearchService
     public async Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(
         CancellationToken cancellationToken = default)
     {
-        string? payload = await SnapshotPayloadQuery(_db, WorldDataset).FirstOrDefaultAsync(cancellationToken);
+        string? payload = await SnapshotPayloadQuery(_db, ResearchDatasets.World).FirstOrDefaultAsync(cancellationToken);
         WorldSnapshotDto? snapshot = payload is null
             ? null
             : JsonSerializer.Deserialize<WorldSnapshotDto>(payload, JsonSerializerOptions.Web);
@@ -97,13 +76,13 @@ internal sealed class ResearchService : IResearchService
     public async Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default)
     {
         var summary = new ResearchRefreshSummary();
-        await RefreshDatasetAsync(SectorsDataset, RefreshSectorsAsync, summary, cancellationToken);
+        await RefreshDatasetAsync(ResearchDatasets.Sectors, RefreshSectorsAsync, summary, cancellationToken);
         if (_settings.Etfs.Count > 0)
         {
-            await RefreshDatasetAsync(EtfsDataset, RefreshEtfsAsync, summary, cancellationToken);
+            await RefreshDatasetAsync(ResearchDatasets.Etfs, RefreshEtfsAsync, summary, cancellationToken);
         }
 
-        await RefreshDatasetAsync(WorldDataset, RefreshWorldAsync, summary, cancellationToken);
+        await RefreshDatasetAsync(ResearchDatasets.World, RefreshWorldAsync, summary, cancellationToken);
         return summary;
     }
 
@@ -144,7 +123,7 @@ internal sealed class ResearchService : IResearchService
 
         WorldSnapshotDto snapshot = WorldSnapshotBuilder.Build(countries, marketCap, gdp, DateOnly.FromDateTime(now.UtcDateTime))
             ?? throw new InvalidOperationException("The World Bank returned no market cap for any country.");
-        await StoreAsync(WorldDataset, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
+        await StoreAsync(ResearchDatasets.World, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
             JsonSerializer.Serialize(snapshot, JsonSerializerOptions.Web), cancellationToken);
     }
 
@@ -178,9 +157,9 @@ internal sealed class ResearchService : IResearchService
         Dictionary<long, SecFiler> filers = await ReadFilersAsync(ranked, cancellationToken);
         SectorsSnapshotDto snapshot = SectorsSnapshotBuilder.Build(ranked, filers)
             ?? throw new InvalidOperationException("SEC returned no Public Float for any year.");
-        await StoreAsync(FilersDataset, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
+        await StoreAsync(ResearchDatasets.SecFilers, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
             JsonSerializer.Serialize(filers.Values.OrderBy(f => f.Cik), JsonSerializerOptions.Web), cancellationToken);
-        await StoreAsync(SectorsDataset, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
+        await StoreAsync(ResearchDatasets.Sectors, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
             JsonSerializer.Serialize(snapshot, JsonSerializerOptions.Web), cancellationToken);
     }
 
@@ -227,7 +206,7 @@ internal sealed class ResearchService : IResearchService
     private async Task<Dictionary<long, SecFiler>> ReadFilersAsync(List<SectorsRankedYear> ranked,
         CancellationToken cancellationToken)
     {
-        string? payload = await SnapshotPayloadQuery(_db, FilersDataset).FirstOrDefaultAsync(cancellationToken);
+        string? payload = await SnapshotPayloadQuery(_db, ResearchDatasets.SecFilers).FirstOrDefaultAsync(cancellationToken);
         Dictionary<long, SecFiler> filers = (payload is null
                 ? []
                 : JsonSerializer.Deserialize<List<SecFiler>>(payload, JsonSerializerOptions.Web) ?? [])
@@ -262,7 +241,7 @@ internal sealed class ResearchService : IResearchService
     /// </summary>
     private async Task RefreshEtfsAsync(CancellationToken cancellationToken)
     {
-        string? payload = await SnapshotPayloadQuery(_db, EtfFilingsDataset).FirstOrDefaultAsync(cancellationToken);
+        string? payload = await SnapshotPayloadQuery(_db, ResearchDatasets.EtfFilings).FirstOrDefaultAsync(cancellationToken);
         Dictionary<string, EtfFilingRecord> records = (payload is null
                 ? []
                 : JsonSerializer.Deserialize<List<EtfFilingRecord>>(payload, JsonSerializerOptions.Web) ?? [])
@@ -280,10 +259,10 @@ internal sealed class ResearchService : IResearchService
             ?? throw new InvalidOperationException("SEC returned no N-PORT report for any ETF.");
         string firstPeriod = snapshot.Periods[0].Replace(" ", string.Empty, StringComparison.Ordinal);
         string lastPeriod = snapshot.Periods[^1].Replace(" ", string.Empty, StringComparison.Ordinal);
-        await StoreAsync(EtfFilingsDataset, firstPeriod, lastPeriod, snapshot.AsOf,
+        await StoreAsync(ResearchDatasets.EtfFilings, firstPeriod, lastPeriod, snapshot.AsOf,
             JsonSerializer.Serialize(records.Values.OrderBy(r => r.AccessionNumber, StringComparer.Ordinal),
                 JsonSerializerOptions.Web), cancellationToken);
-        await StoreAsync(EtfsDataset, firstPeriod, lastPeriod, snapshot.AsOf,
+        await StoreAsync(ResearchDatasets.Etfs, firstPeriod, lastPeriod, snapshot.AsOf,
             JsonSerializer.Serialize(snapshot, JsonSerializerOptions.Web), cancellationToken);
     }
 
@@ -352,25 +331,36 @@ internal sealed class ResearchService : IResearchService
     }
 
     /// <summary>
-    /// Replaces the dataset's row with the new snapshot, or adds it on the first build.
+    /// Replaces the dataset's row with the new snapshot, or adds it on the first build. A failed save leaves nothing
+    /// tracked.
     /// </summary>
     private async Task StoreAsync(string dataset, string firstPeriod, string lastPeriod, DateOnly sourceAsOf,
         string payload, CancellationToken cancellationToken)
     {
-        ResearchSnapshot? row = await _db.ResearchSnapshots
-            .FirstOrDefaultAsync(s => s.Dataset == dataset, cancellationToken);
-        if (row is null)
+        try
         {
-            row = new ResearchSnapshot { Dataset = dataset };
-            _db.ResearchSnapshots.Add(row);
-        }
+            ResearchSnapshot? row = await _db.ResearchSnapshots
+                .FirstOrDefaultAsync(s => s.Dataset == dataset, cancellationToken);
+            if (row is null)
+            {
+                row = new ResearchSnapshot { Dataset = dataset };
+                _db.ResearchSnapshots.Add(row);
+            }
 
-        row.FirstPeriod = firstPeriod;
-        row.LastPeriod = lastPeriod;
-        row.SourceAsOf = sourceAsOf;
-        row.Payload = payload;
-        row.BuiltAt = _timeProvider.GetUtcNow().UtcDateTime;
-        await _db.SaveChangesAsync(cancellationToken);
+            row.FirstPeriod = firstPeriod;
+            row.LastPeriod = lastPeriod;
+            row.SourceAsOf = sourceAsOf;
+            row.Payload = payload;
+            row.BuiltAt = _timeProvider.GetUtcNow().UtcDateTime;
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // The context is shared by every dataset of the refresh: leave nothing tracked, so the next dataset's
+            // save does not try to save this one's changes again.
+            _db.ChangeTracker.Clear();
+            throw;
+        }
     }
 
     /// <summary>The stored payload of one dataset; a query of its own so tests can check it translates to Azure SQL.</summary>

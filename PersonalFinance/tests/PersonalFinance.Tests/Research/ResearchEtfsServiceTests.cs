@@ -46,7 +46,7 @@ public class ResearchEtfsServiceTests
     private static async Task<EtfsSnapshotDto> RefreshAndReadAsync(ResearchService service)
     {
         ResearchRefreshSummary summary = await service.RefreshAsync();
-        Assert.Contains(ResearchService.EtfsDataset, summary.Built);
+        Assert.Contains(ResearchDatasets.Etfs, summary.Built);
         return (await service.GetEtfsAsync()).Snapshot!;
     }
 
@@ -214,7 +214,7 @@ public class ResearchEtfsServiceTests
 
         ResearchRefreshSummary summary = await service.RefreshAsync();
 
-        Assert.Contains(ResearchService.EtfsDataset, summary.Failed);
+        Assert.Contains(ResearchDatasets.Etfs, summary.Failed);
         Assert.True((await service.GetEtfsAsync()).NeverLoaded);
     }
 
@@ -225,8 +225,8 @@ public class ResearchEtfsServiceTests
 
         ResearchRefreshSummary summary = await CreateService(db, new StubNportHandler()).RefreshAsync();
 
-        Assert.DoesNotContain(ResearchService.EtfsDataset, summary.Built);
-        Assert.DoesNotContain(ResearchService.EtfsDataset, summary.Failed);
+        Assert.DoesNotContain(ResearchDatasets.Etfs, summary.Built);
+        Assert.DoesNotContain(ResearchDatasets.Etfs, summary.Failed);
     }
 
     [Fact]
