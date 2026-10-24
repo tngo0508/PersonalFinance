@@ -126,6 +126,15 @@ _Avoid_: plan graph, Plan View, dependency map
 The public page served at `/` to signed-out visitors. It explains the product and leads to registration or sign-in.
 _Avoid_: Home page (ambiguous with Dashboard)
 
+### Headquarters
+The city the product is run from, Stanton, California, as shown on the Landing Page. It names a city, never a street
+address.
+_Avoid_: HQ address, office, home
+
+### Skyline
+The 3D view of Headquarters behind the Landing Page hero, drawn from OpenStreetMap buildings.
+_Avoid_: 3D map, city model, hero map
+
 ### Legal Pages
 The public pages that state the Terms of Service, the Privacy Policy, the disclaimer, the cookie policy and how to
 contact the operator.

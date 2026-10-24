@@ -238,6 +238,91 @@ const {runResearchWalkthrough} = require('./research-walkthrough');
             fail(`Default route failed: ${error.message}`);
         }
 
+        // =========================================================
+        // Test 1b: The Skyline never slows the Landing Page (ADR 0013)
+        // =========================================================
+        console.log('\n--- Test 1b: Landing Page Skyline ---');
+        const skylineFile = /maplibre-gl|skyline-poster|stanton-skyline/;
+
+        /**
+         * Open the Landing Page in a fresh context and report the Skyline's requests and final state.
+         * @param {object} contextOptions - Playwright context options (viewport, reducedMotion).
+         * @returns {Promise<{files: string[], state: object}>} The Skyline files requested and the container state.
+         */
+        async function visitSkyline(contextOptions) {
+            const skylineContext = await browser.newContext({ignoreHTTPSErrors: true, ...contextOptions});
+            try {
+                const skylinePage = await skylineContext.newPage();
+                const files = [];
+                skylinePage.on('request', request => {
+                    if (skylineFile.test(request.url())) {
+                        files.push(request.url());
+                    }
+                });
+                await skylinePage.goto(`${base}/`, {waitUntil: 'networkidle', timeout: 15000});
+                // The live scene starts once the browser is idle; give it time to settle either way.
+                await skylinePage.waitForFunction(() => {
+                    const el = document.querySelector('[data-skyline]');
+                    return !el || !el.dataset.skylineState || ['live', 'skipped'].includes(el.dataset.skylineState);
+                }, null, {timeout: 20000}).catch(() => {});
+                const state = await skylinePage.evaluate(() => {
+                    const el = document.querySelector('[data-skyline]');
+                    const loadStart = performance.getEntriesByType('navigation')[0].loadEventStart;
+                    const mapLibre = performance.getEntriesByType('resource').find(r => r.name.includes('maplibre-gl.js'));
+                    return {
+                        state: el ? el.dataset.skylineState : null,
+                        reason: el ? el.dataset.skylineReason : null,
+                        canvas: Boolean(el && el.querySelector('canvas')),
+                        mapLibreAfterLoad: mapLibre ? mapLibre.startTime >= loadStart : null,
+                        horizontalScroll: document.documentElement.scrollWidth > window.innerWidth
+                    };
+                });
+                return {files, state};
+            } finally {
+                await skylineContext.close();
+            }
+        }
+
+        try {
+            for (const vp of [{name: 'phone', width: 375, height: 667}, {name: 'tablet', width: 768, height: 1024}]) {
+                const {files, state} = await visitSkyline({viewport: {width: vp.width, height: vp.height}});
+                if (files.length === 0 && !state.state) {
+                    pass(`Skyline (${vp.name} ${vp.width}px): no MapLibre, data or poster requested`);
+                } else {
+                    fail(`Skyline (${vp.name} ${vp.width}px): expected no Skyline requests, got ${files.join(', ') || state.state}`);
+                }
+            }
+
+            const desktop = await visitSkyline({viewport: {width: 1280, height: 720}});
+            if (desktop.files.some(f => f.includes('skyline-poster'))) {
+                pass('Skyline (desktop): poster requested');
+            } else {
+                fail('Skyline (desktop): poster was not requested');
+            }
+            if (desktop.state.state === 'live' && desktop.state.mapLibreAfterLoad === true && desktop.state.canvas) {
+                pass('Skyline (desktop): MapLibre loaded after the load event and the scene is live');
+            } else if (desktop.state.state === 'skipped' && desktop.state.reason === 'no-webgl' && desktop.state.mapLibreAfterLoad === null) {
+                pass('Skyline (desktop): no WebGL in this browser, poster kept and MapLibre never requested');
+            } else {
+                fail(`Skyline (desktop): unexpected state ${JSON.stringify(desktop.state)}`);
+            }
+            if (!desktop.state.horizontalScroll) {
+                pass('Skyline (desktop): no horizontal scroll');
+            } else {
+                fail('Skyline (desktop): the Skyline adds a horizontal scrollbar');
+            }
+
+            const reduced = await visitSkyline({viewport: {width: 1280, height: 720}, reducedMotion: 'reduce'});
+            const reducedFiles = reduced.files.filter(f => !f.includes('skyline-poster'));
+            if (reduced.state.state === 'skipped' && reduced.state.reason === 'reduced-motion' && !reduced.state.canvas && reducedFiles.length === 0) {
+                pass('Skyline (reduced motion): poster kept, no WebGL canvas, MapLibre never requested');
+            } else {
+                fail(`Skyline (reduced motion): unexpected state ${JSON.stringify(reduced.state)}, requests ${reducedFiles.join(', ')}`);
+            }
+        } catch (error) {
+            fail(`Skyline test failed: ${error.message}`);
+        }
+
         // Signed-out visitors opening /Dashboard are sent to login with a return URL
         try {
             await page.goto(`${base}/Dashboard`, {

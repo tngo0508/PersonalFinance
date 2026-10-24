@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.8.0] - 2026-10-24
+
+### Added
+
+- **Landing Page Skyline**: a 3D view of Stanton, California, the product's Headquarters, now sits behind the Landing Page hero.
+  - The buildings rise outward from City Hall like a growth chart, then the camera slowly orbits. The Sample plan sits on top as a frosted card.
+  - It is drawn with MapLibre GL JS 5.24.0 (BSD-3, vendored) over a self-hosted OpenStreetMap extract, credited on the page and in the Terms. No third-party map service is contacted.
+  - It never slows the page: below 992px nothing is downloaded, MapLibre and the data load only after the page has loaded and the browser is idle, and under reduced motion, reduced data, slow connections or without WebGL a still poster stays.
+  - `scripts/extract-skyline.mjs` regenerates the data and `scripts/capture-skyline-poster.mjs` the poster. ADR 0013 records the choices; the glossary adds Headquarters and Skyline.
+
 ## [5.7.0] - 2026-10-24
 
 ### Added

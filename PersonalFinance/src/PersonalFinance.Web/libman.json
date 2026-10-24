@@ -134,6 +134,16 @@
       "files": [
         "countries-110m.json"
       ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "maplibre-gl@5.24.0",
+      "destination": "wwwroot/lib/maplibre-gl",
+      "files": [
+        "dist/maplibre-gl.js",
+        "dist/maplibre-gl.css",
+        "dist/LICENSE.txt"
+      ]
     }
   ]
 }
