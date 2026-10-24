@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml;
 using System.Xml.Linq;
+using PersonalFinance.ApiService.Features.Research.Domain;
 
 namespace PersonalFinance.ApiService.Features.Research.Adapters;
 

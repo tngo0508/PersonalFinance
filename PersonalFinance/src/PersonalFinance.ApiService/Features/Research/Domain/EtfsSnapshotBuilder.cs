@@ -1,5 +1,4 @@
 using System.Globalization;
-using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.Shared.DTOs.Research;
 
 namespace PersonalFinance.ApiService.Features.Research.Domain;

@@ -1,5 +1,3 @@
-using PersonalFinance.ApiService.Features.Research.Adapters;
-
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>What <see cref="PublicFloatCleaner.Clean"/> kept, per year, and the filer years it dropped.</summary>

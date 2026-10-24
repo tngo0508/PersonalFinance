@@ -1,4 +1,4 @@
-namespace PersonalFinance.ApiService.Features.Research.Adapters;
+namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
 /// What a filer's SEC submissions say about it: the fields the Sectors snapshot groups and labels it by.

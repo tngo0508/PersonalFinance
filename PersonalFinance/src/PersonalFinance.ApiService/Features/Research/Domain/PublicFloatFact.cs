@@ -1,4 +1,4 @@
-namespace PersonalFinance.ApiService.Features.Research.Adapters;
+namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
 /// One filer's <c>dei:EntityPublicFloat</c> in an SEC frame: the market value (US$) of its shares held by

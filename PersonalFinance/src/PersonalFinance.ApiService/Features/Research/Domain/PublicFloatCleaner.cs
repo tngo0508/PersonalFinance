@@ -1,5 +1,3 @@
-using PersonalFinance.ApiService.Features.Research.Adapters;
-
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>

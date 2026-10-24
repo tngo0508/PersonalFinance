@@ -1,4 +1,4 @@
-namespace PersonalFinance.ApiService.Features.Research.Adapters;
+namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
 /// The parts of a Form N-PORT report the ETF snapshot reads: whose report it is, the date its holdings are as of,

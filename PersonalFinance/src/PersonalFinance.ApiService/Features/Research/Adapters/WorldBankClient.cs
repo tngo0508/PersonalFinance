@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using PersonalFinance.ApiService.Features.Research.Domain;
 
 namespace PersonalFinance.ApiService.Features.Research.Adapters;
 

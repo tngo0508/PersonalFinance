@@ -1,4 +1,4 @@
-namespace PersonalFinance.ApiService.Features.Research.Adapters;
+namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
 /// One investment of a Form N-PORT report (<c>invstOrSec</c>).

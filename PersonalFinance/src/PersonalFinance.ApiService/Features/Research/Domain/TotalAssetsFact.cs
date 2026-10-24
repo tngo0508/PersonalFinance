@@ -1,4 +1,4 @@
-namespace PersonalFinance.ApiService.Features.Research.Adapters;
+namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
 /// One filer's <c>us-gaap:Assets</c> in an SEC frame: its total assets (US$) as of <see cref="End"/>.
