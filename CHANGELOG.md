@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.8.1] - 2026-10-24
+
+### Fixed
+
+- **Research toggle buttons**: a disabled option, such as "Adjusted for inflation" on the Performance tab before the inflation data has loaded, now looks disabled instead of like a button that ignores clicks.
+  - Screen readers announce the note explaining why it is disabled.
+
 ## [5.8.0] - 2026-10-24
 
 ### Added
