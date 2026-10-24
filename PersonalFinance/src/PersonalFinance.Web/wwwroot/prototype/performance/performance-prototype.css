@@ -1,0 +1,41 @@
+/* PROTOTYPE, throwaway (wayfinder ticket #239). Styles for js/research/research-performance-prototype.js only. */
+.pp-card { display: flex; flex-direction: column; gap: 0.75rem; }
+.pp-picker { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.po-picker__label { font-size: 0.85rem; font-weight: 600; margin-right: 0.25rem; }
+.po-fund { border: 2px solid var(--c); background: transparent; color: inherit; border-radius: 999px; padding: 0.2rem 0.75rem; font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.po-fund--on { background: var(--c); color: #fff; }
+.po-fund:disabled { opacity: 0.35; cursor: not-allowed; }
+.pp-controls { display: flex; flex-wrap: wrap; gap: 1rem; }
+.pp-seg { display: inline-flex; align-items: center; gap: 0.25rem; }
+.pp-seg__label { font-size: 0.8rem; color: var(--bs-secondary-color, #6b7280); margin-right: 0.25rem; }
+.pp-seg__btn { border: 1px solid var(--bs-border-color, #d1d5db); background: transparent; padding: 0.2rem 0.7rem; border-radius: 999px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+.pp-seg__btn[aria-pressed="true"] { background: var(--bs-body-color, #111); color: var(--bs-body-bg, #fff); border-color: transparent; }
+.pp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.5rem; }
+.po-stat { display: flex; flex-direction: column; padding: 0.5rem 0.75rem; border: 1px solid var(--bs-border-color, #e5e7eb); border-radius: 10px; }
+.po-stat__label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--bs-secondary-color, #6b7280); }
+.po-stat__value { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.po-stat__note { font-size: 0.8rem; color: var(--bs-secondary-color, #6b7280); }
+.pp-svg { width: 100%; height: auto; display: block; }
+.pp-grid line { stroke: var(--bs-border-color, #e5e7eb); }
+.pp-grid path, .pp-axis path { display: none; }
+.pp-grid text, .pp-axis text { fill: var(--bs-secondary-color, #6b7280); font-size: 11px; }
+.pp-baseline { stroke: var(--bs-secondary-color, #9ca3af); stroke-dasharray: 2 3; }
+.pp-band--recession { fill: #9ca3af; fill-opacity: 0.18; }
+.pp-band--hike { fill: #eda100; fill-opacity: 0.14; }
+.pp-band-label { font-size: 10px; fill: var(--bs-secondary-color, #6b7280); }
+.pp-end { font-size: 11px; font-weight: 700; }
+.pp-cross line { stroke: var(--bs-body-color, #111); stroke-opacity: 0.4; }
+.pp-overlay:focus { outline: none; }
+.pp-overlay:focus-visible { stroke: var(--bs-link-color, #2563eb); stroke-width: 2px; }
+.pp-brush .selection { fill: #2a78d6; fill-opacity: 0.15; stroke: #2a78d6; }
+.pp-h { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--bs-secondary-color, #6b7280); margin: 0.5rem 0 0.15rem; }
+.pp-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; font-size: 0.8rem; }
+.pp-swatch { display: inline-block; width: 16px; height: 3px; background: var(--c); margin-right: 6px; vertical-align: middle; border-radius: 2px; }
+.pp-multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.5rem 1rem; }
+.po-table { border-collapse: collapse; font-size: 0.85rem; width: 100%; }
+.po-table caption { caption-side: top; font-weight: 700; color: inherit; }
+.po-table th, .po-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--bs-border-color, #e5e7eb); text-align: left; }
+.po-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.pp-hint { font-size: 0.8rem; color: var(--bs-secondary-color, #6b7280); margin: 0; }
+.proto-switcher { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 2000; display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border-radius: 999px; background: #111; color: #fff; font: 600 13px/1 system-ui, sans-serif; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35); }
+.proto-switcher button { border: 0; background: #fbbf24; color: #111; border-radius: 999px; width: 28px; height: 28px; font-weight: 700; cursor: pointer; }
