@@ -231,6 +231,16 @@ Target savings goals tracking with progress monitoring.
 ### Watchlist
 Item tracking and article watchlist for financial news and interests.
 
+### Research
+A signed-in page of interactive visualisations of market data, for information only. It never gives buy or sell
+recommendations and stores nothing.
+_Avoid_: Explore, Markets, stock picker (distinct from News, which is headlines, and the Watchlist)
+
+### Public Float
+The market value of a company's shares held by outside investors, as the company reports it to the SEC once a year. The
+Research page uses it to size companies because no displayable price data is available.
+_Avoid_: market cap (that includes insider holdings and needs live prices), valuation
+
 ### Spreadsheet Analysis
 Transaction and budget data analysis from Google Sheets. Provides dashboard views and sync operations.
 

@@ -82,7 +82,7 @@ Web references `PersonalFinance.Data` only for ASP.NET Core Identity and consent
 - **Feature Folders** — ApiService and Web are organized by Feature in `Features/<Feature>/`, with shared code in `Infrastructure/`. See [ADR-0007](docs/adr/0007-feature-folders-with-interface-only-dependencies.md).
 - **Strict Backend/Frontend Separation** — Web controllers call Refit APIs; they never inject ApiService services directly. Business logic lives in ApiService, not in Web controllers.
 - **Soft Deletes** — All user-owned entities inherit from `AuditableEntity` with soft-delete support. EF Core global query filters exclude deleted records.
-- **Permissive Open-Source Only** — Dependencies are restricted to MIT, BSD, or Apache 2.0 licenses. MediatR and AutoMapper are banned due to commercial licensing.
+- **Permissive Open-Source Only** — Dependencies are restricted to MIT, BSD, Apache 2.0, or ISC licenses. MediatR and AutoMapper are banned due to commercial licensing.
 
 ### Projects
 
