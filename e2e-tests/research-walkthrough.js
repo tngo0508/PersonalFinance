@@ -1,10 +1,13 @@
 /**
  * Research first-session walkthrough (spec #217, Testing Decisions): the 11 steps a new Account takes through the
- * Sectors, ETFs and World tabs. Run from ui-test.js as Test 9c.
+ * Sectors, ETFs and World tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
+ * Test 9c.
  *
  * Needs the ApiService started in Development with E2E_SEED_RESEARCH=true, which stores small fixture snapshots
- * (PersonalFinance.ApiService/Features/Research/ResearchFixtureSeeder.cs), and the Web app with
- * E2E_DISABLE_EMAIL_CONFIRMATION=true so the fresh Account can sign in. No request leaves the two apps.
+ * (PersonalFinance.ApiService/Features/Research/ResearchFixtureSeeder.cs) and answers company lookups from a made-up
+ * SEC (Features/Research/Adapters/FixtureSecCompanyClient.cs: EXMP Example Corp, EXFD a fund, EXGL an IFRS filer),
+ * and the Web app with E2E_DISABLE_EMAIL_CONFIRMATION=true so the fresh Account can sign in. No request leaves the two
+ * apps.
  */
 
 const TIMEOUT = 15000;
@@ -318,9 +321,185 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 await phone.close();
             }
         });
+
+        await runCompaniesSteps({browser, context, page, base, pass, fail, watch});
     } finally {
         await context.close();
     }
+}
+
+/**
+ * The bar heights of the Companies tab's charts, in chart order.
+ * @param {import('playwright').Page} page - A page showing a Company Profile.
+ * @returns {Promise<string>} The heights, joined.
+ */
+async function barHeights(page) {
+    return page.evaluate(() => [...document.querySelectorAll('#research-panel-companies .research-companies__bar')]
+        .map((bar) => bar.getAttribute('height')).join('|'));
+}
+
+/**
+ * The Companies tab (spec #242): search, the profile, filings, Back, a fund, reduced motion and a phone.
+ * @param {{browser: import('playwright').Browser, context: import('playwright').BrowserContext,
+ *          page: import('playwright').Page, base: string, pass: Function, fail: Function, watch: Function}} suite -
+ *     The walkthrough's browser, signed-in context and page.
+ * @returns {Promise<void>}
+ */
+async function runCompaniesSteps({browser, context, page, base, pass, fail, watch}) {
+    const panel = '#research-panel-companies';
+
+    // Company 1: the tab puts itself in the address and opens on an empty search with no suggested companies.
+    await step('Company 1', fail, async () => {
+        await page.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.click('#research-tab-companies');
+        const url = new URL(page.url());
+        const placeholder = await page.locator('#research-company-input').getAttribute('placeholder');
+        const options = await page.locator('#research-company-suggestions [role="option"]').count();
+        const profileHidden = await page.locator(`${panel} [data-research-company-profile]`).isHidden();
+        if (url.searchParams.get('tab') === 'companies' && placeholder === 'e.g. MSFT or Microsoft' && options === 0 &&
+            profileHidden) {
+            pass('Company 1: the Companies tab sets tab=companies and opens on an empty search');
+        } else {
+            fail(`Company 1: url "${page.url()}", placeholder "${placeholder}", options ${options}, profile hidden ${profileHidden}`);
+        }
+    });
+
+    // Company 2: type "exa", arrow down to Example Corp and press Enter.
+    await step('Company 2', fail, async () => {
+        const input = page.locator('#research-company-input');
+        await input.click();
+        await input.pressSequentially('exa', {delay: 40});
+        await page.waitForSelector('#research-company-suggestions [role="option"]', {timeout: TIMEOUT});
+        const tickers = await page.locator('#research-company-suggestions .research-companies__option-ticker').allTextContents();
+        const index = tickers.indexOf('EXMP');
+        if (index < 0) {
+            fail(`Company 2: "exa" suggests ${JSON.stringify(tickers)}, not EXMP`);
+            return;
+        }
+        for (let i = 0; i <= index; i++) {
+            await page.keyboard.press('ArrowDown');
+        }
+        const active = await input.getAttribute('aria-activedescendant');
+        await page.keyboard.press('Enter');
+        await page.waitForSelector(`${panel} [data-research-company-profile]:not([hidden])`, {timeout: TIMEOUT});
+        await page.waitForFunction(() => document.getElementById('research-live').textContent.includes('Example Corp'),
+            null, {timeout: TIMEOUT});
+        const name = (await page.locator(`${panel} [data-field="name"]`).textContent()).trim();
+        const ticker = new URL(page.url()).searchParams.get('ticker');
+        if (active && name === 'Example Corp' && ticker === 'EXMP') {
+            pass('Company 2: arrow keys and Enter load Example Corp, set ticker=EXMP and announce it');
+        } else {
+            fail(`Company 2: active "${active}", name "${name}", ticker "${ticker}"`);
+        }
+    });
+
+    // Company 3: four charts and the table; a "Not reported" cell; a derived header shows its formula on focus.
+    await step('Company 3', fail, async () => {
+        const charts = await page.locator(`${panel} .research-companies__chart svg`).count();
+        const tableVisible = await page.locator(`${panel} [data-research-company-table] table`).isVisible();
+        const notReported = await page.locator(`${panel} td`, {hasText: 'Not reported'}).count();
+        const derived = page.locator(`${panel} th.research-companies__derived`).first();
+        await derived.focus();
+        const formula = derived.locator('.research-companies__formula');
+        await page.waitForFunction((el) => el.getBoundingClientRect().height > 0, await formula.elementHandle(),
+            {timeout: 2000});
+        const formulaText = (await formula.textContent()).trim();
+        if (charts === 4 && tableVisible && notReported > 0 && formulaText.includes('÷')) {
+            pass(`Company 3: 4 charts, the table, ${notReported} "Not reported" cell(s), and "${formulaText}" on focus`);
+        } else {
+            fail(`Company 3: charts ${charts}, table ${tableVisible}, not reported ${notReported}, formula "${formulaText}"`);
+        }
+    });
+
+    // Company 4: filings list 8-K events in words and link to EDGAR.
+    await step('Company 4', fail, async () => {
+        const events = await page.locator(`${panel} .research-companies__events`).allTextContents();
+        const hrefs = await page.locator(`${panel} .research-companies__filing-link`).evaluateAll(
+            (links) => links.map((link) => link.href));
+        if (events.some((e) => e.includes('Results of operations')) && hrefs.length > 0 &&
+            hrefs.every((h) => h.startsWith('https://www.sec.gov/Archives/edgar/data/'))) {
+            pass(`Company 4: ${hrefs.length} filings link to EDGAR, 8-K events in words`);
+        } else {
+            fail(`Company 4: events ${JSON.stringify(events)}, links ${JSON.stringify(hrefs.slice(0, 2))}`);
+        }
+    });
+
+    // Company 5: Back returns to the empty search.
+    await step('Company 5', fail, async () => {
+        await page.goBack({waitUntil: 'commit'});
+        await page.waitForSelector(`${panel} [data-research-company-profile][hidden]`, {state: 'attached', timeout: TIMEOUT});
+        const ticker = new URL(page.url()).searchParams.get('ticker');
+        const value = await page.locator('#research-company-input').inputValue();
+        if (!ticker && value === '' && await page.locator(panel).isVisible()) {
+            pass('Company 5: Back returns to the empty search on the Companies tab');
+        } else {
+            fail(`Company 5: url "${page.url()}", input "${value}"`);
+        }
+    });
+
+    // Company 6: a fund ticker says so and links to the ETFs tab.
+    await step('Company 6', fail, async () => {
+        const input = page.locator('#research-company-input');
+        await input.fill('EXFD');
+        await input.press('Enter');
+        const message = page.locator(`${panel} [data-research-company-message]`);
+        await message.waitFor({state: 'visible', timeout: TIMEOUT});
+        const text = await message.textContent();
+        await message.locator('a', {hasText: 'ETFs tab'}).click();
+        const etfsSelected = await page.locator('#research-tab-etfs').getAttribute('aria-selected');
+        if (/is a fund/.test(text) && etfsSelected === 'true') {
+            pass('Company 6: a fund ticker says it is a fund and its link opens the ETFs tab');
+        } else {
+            fail(`Company 6: message "${text}", ETFs selected "${etfsSelected}"`);
+        }
+    });
+
+    // Company 7: under reduced motion the bars are drawn at once.
+    await step('Company 7', fail, async () => {
+        const reduced = watch(await context.newPage());
+        try {
+            await reduced.emulateMedia({reducedMotion: 'reduce'});
+            await reduced.goto(`${base}/Research?tab=companies&ticker=EXMP`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await reduced.waitForSelector(`${panel} .research-companies__bar`, {timeout: TIMEOUT});
+            const atOnce = await barHeights(reduced);
+            await reduced.waitForTimeout(1200);
+            const settled = await barHeights(reduced);
+            if (atOnce === settled && !atOnce.split('|').includes('0')) {
+                pass('Company 7: with reduced motion the bars are drawn at once, with no transition');
+            } else {
+                fail(`Company 7: bars at once "${atOnce}", settled "${settled}"`);
+            }
+        } finally {
+            await reduced.close();
+        }
+    });
+
+    // Company 8: at 390 px no horizontal page scroll, charts hidden, the table scrolls inside its card.
+    await step('Company 8', fail, async () => {
+        const phone = await browser.newContext({
+            ignoreHTTPSErrors: true,
+            storageState: await context.storageState(),
+            viewport: {width: 390, height: 844},
+            hasTouch: true,
+            isMobile: true
+        });
+        try {
+            const mobile = watch(await phone.newPage());
+            await mobile.goto(`${base}/Research?tab=companies&ticker=EXMP`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await mobile.waitForSelector(`${panel} [data-research-company-table] table`, {timeout: TIMEOUT});
+            const wide = await scrollsSideways(mobile);
+            const chartsShown = await mobile.locator(`${panel} [data-research-company-charts]`).isVisible();
+            const tableScrolls = await mobile.locator(`${panel} [data-research-company-table]`).evaluate(
+                (host) => host.scrollWidth > host.clientWidth);
+            if (!wide && !chartsShown && tableScrolls) {
+                pass('Company 8: at 390 px no page scroll, charts hidden, the table scrolls in its card');
+            } else {
+                fail(`Company 8: page scrolls ${wide}, charts shown ${chartsShown}, table scrolls ${tableScrolls}`);
+            }
+        } finally {
+            await phone.close();
+        }
+    });
 }
 
 module.exports = {runResearchWalkthrough};

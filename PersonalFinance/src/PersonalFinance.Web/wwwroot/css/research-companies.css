@@ -1,0 +1,318 @@
+/* ==========================================================================
+   Research Companies tab (research-companies__*): the search combobox, the
+   Company Profile's identity, four small bar charts over a table of annual
+   figures, and recent filings. Tokens come from site.css. The charts hide
+   below 600px, where the table (which scrolls inside its card) is enough.
+   ========================================================================== */
+
+.research-companies__search {
+    margin-bottom: var(--app-spacing-m);
+}
+
+.research-companies__label {
+    display: block;
+    margin-bottom: var(--app-spacing-xs);
+    font-weight: var(--app-font-weight-medium);
+}
+
+.research-companies__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-s);
+}
+
+.research-companies__combo {
+    position: relative;
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+.research-companies__input {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: var(--app-spacing-xs) var(--app-spacing-m);
+    border: 1px solid var(--app-border-hover);
+    border-radius: var(--app-radius-m);
+    background: var(--app-bg);
+    color: var(--app-text);
+    font-size: var(--app-font-size-medium, 1rem);
+}
+
+.research-companies__input:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-companies__submit {
+    flex: none;
+}
+
+.research-companies__suggestions {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    max-height: 20rem;
+    margin: 0;
+    padding: var(--app-spacing-xs) 0;
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    background: var(--app-bg);
+    box-shadow: var(--app-shadow-16);
+}
+
+.research-companies__suggestions[hidden] {
+    display: none;
+}
+
+.research-companies__option {
+    display: flex;
+    align-items: baseline;
+    gap: var(--app-spacing-s);
+    min-height: 2.75rem;
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    cursor: pointer;
+}
+
+.research-companies__option:hover,
+.research-companies__option[aria-selected="true"] {
+    background: var(--app-brand-soft);
+}
+
+.research-companies__option-ticker {
+    flex: none;
+    min-width: 5ch;
+    font-family: var(--app-font-mono);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-companies__option-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.research-companies__option-meta {
+    flex: none;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-companies__message {
+    margin: var(--app-spacing-m) 0;
+    padding: var(--app-spacing-m);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    background: var(--app-surface-secondary);
+}
+
+.research-companies__message--error {
+    border-color: var(--app-accent-warning);
+    background: var(--app-accent-warning-soft);
+}
+
+.research-companies__message[hidden],
+.research-companies__loading[hidden],
+.research-companies__profile[hidden],
+.research-companies__notice[hidden],
+.research-companies__charts[hidden],
+.research-companies__table[hidden] {
+    display: none;
+}
+
+.research-companies__loading {
+    margin: var(--app-spacing-m) 0;
+    color: var(--app-text-muted);
+}
+
+.research-companies__identity {
+    margin-bottom: var(--app-spacing-m);
+}
+
+.research-companies__name {
+    margin: 0 0 var(--app-spacing-s);
+    font-size: var(--app-font-size-xl);
+    font-weight: var(--app-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.research-companies__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: var(--app-spacing-s) var(--app-spacing-m);
+    margin: 0;
+}
+
+.research-companies__facts dt {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-regular, 400);
+}
+
+.research-companies__facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.research-companies__notice {
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    border-left: 3px solid var(--app-accent-warning);
+    background: var(--app-accent-warning-soft);
+}
+
+.research-companies__section {
+    margin: var(--app-spacing-l) 0 var(--app-spacing-xs);
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-companies__hint {
+    margin: 0 0 var(--app-spacing-m);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+/* Four small multiples, two per row on wide cards. */
+.research-companies__charts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--app-spacing-m);
+    margin-bottom: var(--app-spacing-m);
+}
+
+.research-companies__chart {
+    min-width: 0;
+    margin: 0;
+}
+
+.research-companies__chart-title {
+    margin-bottom: var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-companies__chart svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    font-family: var(--app-font-family);
+    overflow: visible;
+}
+
+.research-companies__bar {
+    fill: var(--app-brand);
+}
+
+.research-companies__bar--negative {
+    fill: var(--app-accent-warning);
+}
+
+.research-companies__zero {
+    stroke: var(--app-text-muted);
+    stroke-width: 1px;
+}
+
+.research-companies__axis text {
+    fill: var(--app-text-muted);
+    font-size: 10px;
+}
+
+.research-companies__axis path,
+.research-companies__axis line {
+    stroke: var(--app-border);
+}
+
+.research-companies__table {
+    margin-bottom: var(--app-spacing-s);
+}
+
+.research-companies__table:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-companies__figures th[scope="row"] {
+    position: sticky;
+    left: 0;
+    background: var(--app-bg);
+    white-space: nowrap;
+}
+
+.research-companies__missing {
+    color: var(--app-text-muted);
+    font-family: var(--app-font-family);
+    font-style: italic;
+}
+
+/* A derived figure's formula: shown under its header on hover or keyboard focus, and read with the header. */
+.research-companies__derived {
+    cursor: help;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+}
+
+.research-companies__derived:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: -2px;
+}
+
+.research-companies__formula {
+    display: block;
+    max-height: 0;
+    overflow: hidden;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-regular, 400);
+    white-space: normal;
+}
+
+.research-companies__derived:hover .research-companies__formula,
+.research-companies__derived:focus .research-companies__formula {
+    max-height: 4rem;
+}
+
+.research-companies__filings {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-companies__filing {
+    padding: var(--app-spacing-s) 0;
+    border-bottom: 1px solid var(--app-border);
+}
+
+.research-companies__filing p {
+    margin: 0;
+}
+
+.research-companies__form {
+    font-family: var(--app-font-mono);
+}
+
+.research-companies__events {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-companies__filing-link {
+    display: inline-block;
+    min-height: 1.5rem;
+    margin-top: var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+}
+
+.research-companies__all-filings {
+    margin: var(--app-spacing-m) 0 0;
+}
+
+@media (max-width: 599px) {
+    .research-companies__charts {
+        display: none;
+    }
+}

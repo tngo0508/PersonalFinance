@@ -111,6 +111,6 @@ public class ResearchEtfsWebControllerTests
         proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
         proxy.Throws(nameof(IResearchApi.GetEtfsAsync), new OperationCanceledException(cts.Token));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cancellationToken: cts.Token));
     }
 }

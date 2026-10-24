@@ -7,10 +7,11 @@ using PersonalFinance.ApiService.Features.Research.Domain;
 namespace PersonalFinance.ApiService.Features.Research.Adapters;
 
 /// <summary>
-/// <see cref="ISecEdgarClient"/> over HTTP, registered as a typed <see cref="HttpClient"/>. Every request carries the
-/// configured User-Agent and first waits its turn at the shared <see cref="SecRequestGate"/>.
+/// <see cref="ISecEdgarClient"/> and <see cref="ISecCompanyClient"/> over HTTP, registered as a typed
+/// <see cref="HttpClient"/>. Every request carries the configured User-Agent and first waits its turn at the shared
+/// <see cref="SecRequestGate"/>.
 /// </summary>
-internal sealed class SecEdgarClient : ISecEdgarClient
+internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
 {
     private const string BaseUrl = "https://data.sec.gov/";
 
@@ -118,7 +119,8 @@ internal sealed class SecEdgarClient : ISecEdgarClient
     /// <inheritdoc />
     public async Task<IReadOnlyList<SecFundSeries>> GetFundSeriesAsync(CancellationToken cancellationToken)
     {
-        using HttpResponseMessage response = await SendAsync($"{WwwUrl}files/company_tickers_mf.json", cancellationToken);
+        using HttpResponseMessage response =
+            await SendAsync($"{WwwUrl}files/company_tickers_mf.json", cancellationToken);
         response.EnsureSuccessStatusCode();
         await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
         using JsonDocument list = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
@@ -144,7 +146,7 @@ internal sealed class SecEdgarClient : ISecEdgarClient
         CancellationToken cancellationToken)
     {
         var filings = new List<NportFilingRef>();
-        for (int start = 0; ; start += FilingListPageSize)
+        for (int start = 0;; start += FilingListPageSize)
         {
             // EDGAR's type filter is a prefix match, so NPORT-P also lists the NPORT-P/A amendments.
             string url = string.Create(CultureInfo.InvariantCulture,
@@ -180,6 +182,194 @@ internal sealed class SecEdgarClient : ISecEdgarClient
         return await NportDocumentParser.ParseAsync(body, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SecCompanyListing>> GetCompanyTickersAsync(CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response =
+            await SendAsync($"{WwwUrl}files/company_tickers_exchange.json", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using JsonDocument list = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
+
+        // { "fields": ["cik", "name", "ticker", "exchange"], "data": [[320193, "Apple Inc.", "AAPL", "Nasdaq"], ...] }
+        var listings = new List<SecCompanyListing>();
+        foreach (JsonElement row in list.RootElement.GetProperty("data").EnumerateArray())
+        {
+            if (row.ValueKind == JsonValueKind.Array
+                && row.GetArrayLength() >= 4
+                && row[0].ValueKind == JsonValueKind.Number
+                && row[0].TryGetInt64(out long cik)
+                && row[1].ValueKind == JsonValueKind.String
+                && row[2].ValueKind == JsonValueKind.String
+                && row[2].GetString() is { Length: > 0 } ticker)
+            {
+                string? exchange = row[3].ValueKind == JsonValueKind.String ? BlankToNull(row[3].GetString()) : null;
+                listings.Add(new SecCompanyListing(cik, ticker, row[1].GetString() ?? string.Empty, exchange));
+            }
+        }
+
+        return listings;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetFundTickersAsync(CancellationToken cancellationToken) =>
+        (await GetFundSeriesAsync(cancellationToken)).Select(s => s.Ticker).ToList();
+
+    /// <inheritdoc />
+    public async Task<SecCompanySubmissions?> GetCompanySubmissionsAsync(long cik, CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await SendAsync(
+            string.Create(CultureInfo.InvariantCulture, $"{BaseUrl}submissions/CIK{cik:0000000000}.json"),
+            cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        CompanySubmissionsResponse? submissions = await JsonSerializer.DeserializeAsync<CompanySubmissionsResponse>(
+            body, JsonSerializerOptions.Web, cancellationToken);
+        return submissions is null ? null : ToSubmissions(cik, submissions);
+    }
+
+    /// <inheritdoc />
+    public async Task<SecCompanyFacts?> GetCompanyFactsAsync(long cik, CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await SendAsync(
+            string.Create(CultureInfo.InvariantCulture, $"{BaseUrl}api/xbrl/companyfacts/CIK{cik:0000000000}.json"),
+            cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using JsonDocument document = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
+        return ParseCompanyFacts(document.RootElement);
+    }
+
+    /// <summary>
+    /// The concepts of <see cref="CompanyProfileConcepts"/> from a <c>companyfacts</c> document:
+    /// <c>{ "facts": { "us-gaap": { "Revenues": { "units": { "USD": [ { "start", "end", "val", "fy", "fp", "form",
+    /// "filed", "accn" } ] } } } } }</c>. A row without a readable value or date is skipped.
+    /// </summary>
+    internal static SecCompanyFacts ParseCompanyFacts(JsonElement root)
+    {
+        var facts = new Dictionary<string, IReadOnlyList<SecFact>>(StringComparer.Ordinal);
+        bool hasIfrs = false;
+        if (TryGetObjectProperty(root, "facts", out JsonElement taxonomies))
+        {
+            hasIfrs = TryGetObjectProperty(taxonomies, "ifrs-full", out JsonElement ifrs)
+                      && ifrs.ValueKind == JsonValueKind.Object
+                      && ifrs.EnumerateObject().Any();
+            foreach (CompanyConcept concept in CompanyProfileConcepts.All)
+            {
+                if (TryGetObjectProperty(taxonomies, concept.Taxonomy, out JsonElement taxonomy)
+                    && TryGetObjectProperty(taxonomy, concept.Name, out JsonElement element)
+                    && TryGetObjectProperty(element, "units", out JsonElement units)
+                    && TryGetObjectProperty(units, concept.Unit, out JsonElement rows)
+                    && rows.ValueKind == JsonValueKind.Array)
+                {
+                    facts[concept.Key] = rows.EnumerateArray().Select(ParseFact).OfType<SecFact>().ToList();
+                }
+            }
+        }
+
+        return new SecCompanyFacts(facts, hasIfrs);
+    }
+
+    /// <summary>
+    /// The property <paramref name="name"/> of <paramref name="element"/>; false when it is missing or the element is
+    /// not an object, where <see cref="JsonElement.TryGetProperty(string, out JsonElement)"/> would throw.
+    /// </summary>
+    private static bool TryGetObjectProperty(JsonElement element, string name, out JsonElement value)
+    {
+        value = default;
+        return element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out value);
+    }
+
+    private static SecFact? ParseFact(JsonElement row)
+    {
+        if (row.ValueKind != JsonValueKind.Object
+            || !TryGetDate(row, "end", out DateOnly end)
+            || !TryGetDate(row, "filed", out DateOnly filed)
+            || !row.TryGetProperty("val", out JsonElement val)
+            || val.ValueKind != JsonValueKind.Number
+            || !val.TryGetDecimal(out decimal value)
+            || GetString(row, "form") is not { } form
+            || GetString(row, "accn") is not { } accession)
+        {
+            return null;
+        }
+
+        DateOnly? start = TryGetDate(row, "start", out DateOnly s) ? s : null;
+        // SEC leaves fy null on facts from some filings; TryGetInt32 throws on anything but a number.
+        int? fiscalYear = row.TryGetProperty("fy", out JsonElement fy) && fy.ValueKind == JsonValueKind.Number
+                                                                       && fy.TryGetInt32(out int y)
+            ? y
+            : null;
+        return new SecFact(start, end, value, fiscalYear, GetString(row, "fp"), form, filed, accession);
+    }
+
+    private static string? GetString(JsonElement row, string name) =>
+        row.TryGetProperty(name, out JsonElement element) && element.ValueKind == JsonValueKind.String
+            ? BlankToNull(element.GetString())
+            : null;
+
+    private static bool TryGetDate(JsonElement row, string name, out DateOnly date)
+    {
+        date = default;
+        return GetString(row, name) is { } text
+               && DateOnly.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None,
+                   out date);
+    }
+
+    /// <summary>The submissions document as the profile reads it; filings missing a form or date are skipped.</summary>
+    private static SecCompanySubmissions ToSubmissions(long cik, CompanySubmissionsResponse response)
+    {
+        RecentFilingsResponse recent = response.Filings?.Recent ?? new RecentFilingsResponse();
+        var filings = new List<SecFilingEntry>();
+        int count = recent.AccessionNumber?.Count ?? 0;
+        for (int i = 0; i < count; i++)
+        {
+            string? accession = BlankToNull(recent.AccessionNumber![i]);
+            string? form = BlankToNull(At(recent.Form, i));
+            if (accession is null || form is null
+                                  || !DateOnly.TryParseExact(At(recent.FilingDate, i), "yyyy-MM-dd",
+                                      CultureInfo.InvariantCulture,
+                                      DateTimeStyles.None, out DateOnly filedOn))
+            {
+                continue;
+            }
+
+            DateOnly? reportedOn = DateOnly.TryParseExact(At(recent.ReportDate, i), "yyyy-MM-dd",
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly r)
+                ? r
+                : null;
+            List<string> items = (At(recent.Items, i) ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+            filings.Add(new SecFilingEntry(accession, form, filedOn, reportedOn, items));
+        }
+
+        return new SecCompanySubmissions(
+            cik,
+            response.Name ?? string.Empty,
+            response.Tickers ?? [],
+            (response.Exchanges ?? []).Select(BlankToNull).ToList(),
+            BlankToNull(response.Sic),
+            BlankToNull(response.SicDescription),
+            BlankToNull(response.OwnerOrg),
+            BlankToNull(response.StateOfIncorporationDescription) ?? BlankToNull(response.StateOfIncorporation),
+            BlankToNull(response.FiscalYearEnd),
+            filings);
+    }
+
+    private static string? At(List<string?>? values, int index) =>
+        values is not null && index < values.Count ? values[index] : null;
+
     /// <summary>
     /// Sends one GET to SEC once the shared gate allows it, with the configured User-Agent, returning as soon as the
     /// headers arrive so large documents are read as a stream.
@@ -201,6 +391,35 @@ internal sealed class SecEdgarClient : ISecEdgarClient
         public string? SicDescription { get; set; }
         public string? OwnerOrg { get; set; }
         public List<string>? Tickers { get; set; }
+    }
+
+    private sealed class CompanySubmissionsResponse
+    {
+        public string? Name { get; set; }
+        public string? Sic { get; set; }
+        public string? SicDescription { get; set; }
+        public string? OwnerOrg { get; set; }
+        public string? StateOfIncorporation { get; set; }
+        public string? StateOfIncorporationDescription { get; set; }
+        public string? FiscalYearEnd { get; set; }
+        public List<string>? Tickers { get; set; }
+        public List<string?>? Exchanges { get; set; }
+        public FilingsResponse? Filings { get; set; }
+    }
+
+    private sealed class FilingsResponse
+    {
+        public RecentFilingsResponse? Recent { get; set; }
+    }
+
+    // EDGAR lists recent filings as parallel arrays, one entry per filing in each.
+    private sealed class RecentFilingsResponse
+    {
+        public List<string?>? AccessionNumber { get; set; }
+        public List<string?>? FilingDate { get; set; }
+        public List<string?>? ReportDate { get; set; }
+        public List<string?>? Form { get; set; }
+        public List<string?>? Items { get; set; }
     }
 
     private sealed class FrameResponse

@@ -44,6 +44,12 @@
     display: flex;
     gap: var(--app-spacing-s);
     border-bottom: 1px solid var(--app-border);
+    /* Four tabs fit a 390px phone; anything narrower scrolls the tab bar, never the page. */
+    overflow-x: auto;
+}
+
+.research-tabs__tab {
+    flex: none;
 }
 
 .research-tabs__tab {

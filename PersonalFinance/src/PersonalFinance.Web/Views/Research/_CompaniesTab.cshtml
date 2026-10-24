@@ -1,0 +1,103 @@
+@model ResearchViewModel
+
+@* The Companies tab panel: look up a company registered with the SEC and see its Company Profile (GLOSSARY.md), for
+   information only. js/research/research-companies.js fetches suggestions and the profile from this controller's
+   Suggest and Company actions and fills the profile region below; nothing is stored. Without JavaScript the form still
+   submits as a plain GET. Hidden until its tab is chosen. *@
+<section class="research-deck" id="research-panel-companies" role="tabpanel" aria-labelledby="research-tab-companies"
+         hidden="@(!Model.IsSelected(ResearchViewModel.CompaniesTab))"
+         data-research-companies
+         data-suggest-url="@Url.Action("Suggest", "Research")"
+         data-company-url="@Url.Action("Company", "Research")"
+         data-initial-ticker="@Model.CompanyTicker">
+    <div class="research-card">
+        <h2 class="research-card__title">Look up a company</h2>
+        <p class="research-card__subtitle">
+            Look up any company registered with the SEC. Figures come from its own filings; there are no prices and no
+            recommendations.
+        </p>
+
+        <form class="research-companies__search" method="get" asp-controller="Research" asp-action="Index"
+              role="search" data-research-company-form>
+            <input type="hidden" name="tab" value="companies"/>
+            <label class="research-companies__label" for="research-company-input">Ticker or company name</label>
+            <div class="research-companies__row">
+                <div class="research-companies__combo">
+                    <input type="text" id="research-company-input" name="ticker" class="research-companies__input"
+                           role="combobox" aria-autocomplete="list" aria-expanded="false"
+                           aria-controls="research-company-suggestions" autocomplete="off" autocapitalize="characters"
+                           spellcheck="false" maxlength="40" placeholder="e.g. MSFT or Microsoft"
+                           value="@Model.CompanyTicker"/>
+                    <ul class="research-companies__suggestions" id="research-company-suggestions" role="listbox"
+                        aria-label="Matching companies" hidden></ul>
+                </div>
+                <button type="submit" class="research-chip research-companies__submit">Look up</button>
+            </div>
+        </form>
+
+        @* A message in place of a profile: a fund, a ticker SEC does not list, too many lookups, or SEC unreachable. *@
+        <div class="research-companies__message" data-research-company-message hidden></div>
+        <p class="research-companies__loading" data-research-company-loading role="status" hidden>Loading the company…</p>
+
+        <div class="research-companies__profile" data-research-company-profile hidden>
+            <header class="research-companies__identity">
+                <h3 class="research-companies__name" data-field="name" tabindex="-1"></h3>
+                <dl class="research-companies__facts">
+                    <div><dt>Ticker</dt><dd data-field="ticker"></dd></div>
+                    <div><dt>Exchange</dt><dd data-field="exchange"></dd></div>
+                    <div><dt>CIK</dt><dd data-field="cik"></dd></div>
+                    <div><dt>SIC industry</dt><dd data-field="industry"></dd></div>
+                    <div><dt>SEC industry office</dt><dd data-field="office"></dd></div>
+                    <div><dt>Incorporated in</dt><dd data-field="incorporated"></dd></div>
+                    <div><dt>Fiscal year ends</dt><dd data-field="fiscal-year-end"></dd></div>
+                </dl>
+            </header>
+
+            <p class="research-companies__notice" data-field="ifrs-note" hidden>
+                This company reports under IFRS, which this page does not read, so some or all of its figures show as
+                "Not reported".
+            </p>
+
+            <h3 class="research-companies__section">Annual figures</h3>
+            <p class="research-companies__hint" data-field="years-note"></p>
+            @* The charts repeat the table below, which is their accessible equivalent. *@
+            <div class="research-companies__charts" data-research-company-charts aria-hidden="true"></div>
+            <div class="research-tooltip" id="research-company-tooltip" aria-hidden="true" hidden></div>
+            <div class="research-table-wrap research-companies__table" data-research-company-table tabindex="0"
+                 role="region" aria-label="Annual figures"></div>
+
+            <h3 class="research-companies__section">Recent filings</h3>
+            <ol class="research-companies__filings" data-research-company-filings></ol>
+            <p class="research-companies__all-filings">
+                <a data-field="all-filings" href="https://www.sec.gov/edgar/search/" target="_blank" rel="noopener noreferrer">
+                    All filings on EDGAR<span class="visually-hidden"> (opens in a new tab)</span>
+                </a>
+            </p>
+        </div>
+
+        <p class="research-card__source">Source: SEC EDGAR</p>
+    </div>
+
+    <aside class="research-panel" aria-label="About the company data">
+        <h2 class="research-panel__title">About this data</h2>
+        <p>
+            Every figure is as the company reported it to the SEC in its annual reports (Form 10-K, or 20-F and 40-F
+            for some foreign companies), in US dollars under US accounting rules (US GAAP). A restated figure replaces
+            the original.
+        </p>
+        <p>
+            There are no share prices, market values or recommendations here. A figure the company did not report in
+            this form shows as "Not reported", never as zero, and nothing is converted from another currency.
+        </p>
+        <p>
+            Margins and growth are worked out from the reported figures. They show as "Not shown" when a figure is
+            missing or when the base is zero or negative. Liabilities include anything the company does not report as equity.
+        </p>
+        <p>
+            Banks and insurers often report revenue differently, so their revenue may be missing. Shares outstanding
+            and Public float are taken from the cover of each annual report.
+        </p>
+        <h2 class="research-panel__title">Data as of</h2>
+        <p class="research-panel__as-of" data-field="as-of">Look up a company to see its latest filing date.</p>
+    </aside>
+</section>

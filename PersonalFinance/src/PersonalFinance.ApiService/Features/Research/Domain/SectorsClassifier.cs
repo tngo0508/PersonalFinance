@@ -21,6 +21,37 @@ internal sealed class SectorsClassifier
 
     private static readonly HashSet<string> SmallWords = new(StringComparer.Ordinal) { "of", "and", "the", "for" };
 
+    // Companies whose own spelling title-casing cannot guess, keyed by SEC's all-capitals word.
+    private static readonly Dictionary<string, string> BrandSpellings = new(StringComparer.Ordinal)
+    {
+        ["JPMORGAN"] = "JPMorgan",
+        ["NVIDIA"] = "NVIDIA",
+        ["BLACKROCK"] = "BlackRock",
+        ["PAYPAL"] = "PayPal",
+        ["FEDEX"] = "FedEx",
+        ["EBAY"] = "eBay",
+        ["IQVIA"] = "IQVIA",
+        ["NEXTERA"] = "NextEra",
+        ["ONEOK"] = "ONEOK",
+        ["SALESFORCE"] = "Salesforce",
+        ["SERVICENOW"] = "ServiceNow",
+        ["CROWDSTRIKE"] = "CrowdStrike",
+        ["PEPSICO"] = "PepsiCo",
+        ["GLAXOSMITHKLINE"] = "GlaxoSmithKline",
+        ["ASTRAZENECA"] = "AstraZeneca",
+        ["ABBVIE"] = "AbbVie",
+        ["DUPONT"] = "DuPont",
+        ["SPDR"] = "SPDR",
+        ["ISHARES"] = "iShares",
+    };
+
+    // Initialisms and company-form abbreviations that stay in capitals.
+    private static readonly HashSet<string> Capitalised = new(StringComparer.Ordinal)
+    {
+        "AES", "AMN", "BNY", "CME", "CSX", "CVS", "DTE", "HP", "KLA", "MSCI", "NRG", "PNC", "PPG", "PPL", "RTX", "TJX",
+        "UPS", "USA", "ETF", "REIT", "LLC", "LLP", "LP", "PLC", "NV", "SA", "AG", "SE", "II", "III", "IV",
+    };
+
     private static readonly SectorsOffice Unassigned = new(int.MaxValue, UnassignedOffice);
 
     private readonly IReadOnlyDictionary<long, SecFiler> _filers;
@@ -114,16 +145,55 @@ internal sealed class SectorsClassifier
         }
 
         string[] words = cased.ToString().Split(' ');
-        for (int i = 1; i < words.Length; i++)
+        string[] original = name.Split(' ');
+        for (int i = 0; i < words.Length; i++)
         {
             string lower = words[i].ToLowerInvariant();
-            if (SmallWords.Contains(lower))
+            if (i > 0 && SmallWords.Contains(lower))
             {
                 words[i] = lower;
+            }
+            else
+            {
+                words[i] = CompanySpelling(original[i]) ?? words[i];
             }
         }
 
         return string.Join(' ', words);
+    }
+
+    /// <summary>
+    /// The spelling of one all-capitals word that title-casing would get wrong, keeping any punctuation around it, or
+    /// null to keep the title-cased word: a brand's own spelling (<c>JPMORGAN</c> is <c>JPMorgan</c>), an initialism
+    /// or company form (<c>CVS</c>, <c>PLC</c>), a short name joined by <c>&amp;</c> (<c>AT&amp;T</c>, <c>S&amp;P</c>),
+    /// or a <c>Mc</c> name (<c>MCKESSON</c> is <c>McKesson</c>).
+    /// </summary>
+    private static string? CompanySpelling(string word)
+    {
+        int start = 0;
+        int end = word.Length;
+        while (start < end && !char.IsLetterOrDigit(word[start]) && word[start] != '&')
+        {
+            start++;
+        }
+
+        while (end > start && !char.IsLetterOrDigit(word[end - 1]) && word[end - 1] != '&')
+        {
+            end--;
+        }
+
+        string core = word[start..end];
+        string? spelled = core switch
+        {
+            _ when BrandSpellings.TryGetValue(core, out string? brand) => brand,
+            _ when Capitalised.Contains(core) => core,
+            { Length: >= 3 and <= 5 } when core.Contains('&') && core.Replace("&", string.Empty).All(char.IsLetter) =>
+                core,
+            { Length: >= 5 } when core.StartsWith("MC", StringComparison.Ordinal) && core.All(char.IsLetter) =>
+                string.Concat("Mc", core[2..3], core[3..].ToLowerInvariant()),
+            _ => null,
+        };
+        return spelled is null ? null : string.Concat(word[..start], spelled, word[end..]);
     }
 
     /// <summary>

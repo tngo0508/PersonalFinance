@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.1.0] - 2026-10-24
+
+### Added
+
+- **Companies tab on Research**: look up any company registered with the SEC by ticker or name and see its Company Profile, from its own SEC filings, for information only (#242).
+  - **Identity:** name, ticker, exchange, CIK, SIC industry, SEC industry office, state of incorporation and fiscal year end.
+  - **Annual figures:** up to ten fiscal years of revenue, net income, diluted EPS and operating cash flow as bar charts, and a table that adds gross profit, assets, liabilities, equity, shares outstanding, Public Float, margins, growth and liabilities to equity, each derived figure with its formula.
+  - **Recent filings:** the 20 latest 10-K, 10-Q and 8-K reports, with 8-K events in plain words and links to EDGAR.
+  - Figures are read as reported under US GAAP in US dollars; a figure the company did not report that way shows as "Not reported", never zero. There are no prices and no recommendations.
+  - The lookup is kept in the address, so a profile can be bookmarked and Back returns to the previous one. A fund ticker points to the ETFs tab.
+  - Lookups are cached for a day, a cached profile is served while SEC is unreachable, and each Account may make 30 lookups a minute.
+- **Research tabs in the address**: the Research page opens on the tab named by `?tab=` and keeps the chosen tab there.
+
 ## [5.0.1] - 2026-10-23
 
 ### Fixed

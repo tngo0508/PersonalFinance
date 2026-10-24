@@ -1,0 +1,12 @@
+{
+ "fields": [ "cik", "name", "ticker", "exchange" ],
+ "data": [
+  [ 1234567, "SAMPLE WIDGETS INC", "SWI", "Nasdaq" ],
+  [ 1234567, "SAMPLE WIDGETS INC", "SWI-P", null ],
+  [ 2345678, "SWIFT HAULAGE CO", "SWIF", "NYSE" ],
+  [ 3456789, "ACME SWIMWEAR CORP", "ACSW", "NYSE" ],
+  [ 4567890, "BIG SWITCH NETWORKS", "BSN", "Nasdaq" ],
+  [ 5678901, "SAMPLE HOLDINGS INC", "SH-B", "NYSE" ],
+  [ 6789012, "SAMPLE INDEX TRUST", "SWFD", "NYSE Arca" ]
+ ]
+}
