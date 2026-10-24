@@ -9,9 +9,26 @@
     <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true"/>
 }
 
+@section Scripts {
+    <script src="~/js/landing/skyline.js" asp-append-version="true"></script>
+}
+
 <div class="lp-page">
     @* ---------- Hero ---------- *@
     <section class="lp-hero" aria-labelledby="lp-hero-title">
+        @* The Skyline: Headquarters in 3D, at 992px and wider only (ADR 0013). skyline.js loads MapLibre after the
+           page has loaded; until then, or when it does not run, landing.css shows the poster. *@
+        <div class="lp-skyline" data-skyline
+             data-skyline-script="@Url.Content("~/lib/maplibre-gl/dist/maplibre-gl.js")"
+             data-skyline-css="@Url.Content("~/lib/maplibre-gl/dist/maplibre-gl.css")"
+             data-skyline-data="@Url.Content("~/data/stanton-skyline.json")">
+            <div class="lp-skyline__map" data-skyline-map aria-hidden="true"></div>
+            <p class="lp-skyline__credit">
+                Stanton, California ·
+                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>
+            </p>
+        </div>
+
         <div class="lp-hero__copy">
             <h1 id="lp-hero-title" class="lp-hero__title">Know how much is enough, and when you will get there.</h1>
             <p class="lp-hero__lead">
