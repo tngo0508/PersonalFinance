@@ -976,7 +976,7 @@ Health check endpoints `/health` and `/alive` are available on port 8080 for bot
 
 ## 8. Azure Deployment & Infrastructure as Code (Bicep)
 
-The application provides Azure Infrastructure as Code (IaC) using modular Bicep templates targeting **Azure Container Apps (ACA) Consumption Profiles** with scale-to-zero autoscaling (0 to 1 replica), Log Analytics 5 GB/mo free grant, and Azure SQL Database Basic tier (~$5/month).
+The application provides Azure Infrastructure as Code (IaC) using modular Bicep templates targeting **Azure Container Apps (ACA) Consumption Profiles** with 0 to 1 replica autoscaling (production keeps 1 replica warm 08:00–22:00 Pacific and scales to zero overnight; ADR 0011), Log Analytics 5 GB/mo free grant, and Azure SQL Database Basic tier (~$5/month).
 
 ### Infrastructure Structure
 
@@ -1355,4 +1355,4 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 - **Logging**: Structured, high-contrast logging configured across all services via Serilog and `AnsiConsoleTheme.Code`.
 - **Health Checks & Telemetry**: Built-in `/health` and `/alive` uptime endpoints with full OpenTelemetry tracing and metrics integrated into the .NET Aspire dashboard.
 - **API Documentation**: Interactive OpenAPI documentation served via Scalar at `/scalar/v1`.
-- **Zero-Cost Azure Deployment & CI/CD**: Fully automated GitHub Actions workflow (`deploy-azure.yml`) using GitHub Container Registry (`ghcr.io`), Azure OIDC federated passwordless credentials, Bicep IaC, and Azure Container Apps Consumption (scale-to-zero) for a $0.00 to <$0.20/month operating cost.
+- **Zero-Cost Azure Deployment & CI/CD**: Fully automated GitHub Actions workflow (`deploy-azure.yml`) using GitHub Container Registry (`ghcr.io`), Azure OIDC federated passwordless credentials, Bicep IaC, and Azure Container Apps Consumption (warm 08:00–22:00 Pacific, scale-to-zero overnight) for about $10–20/month.
