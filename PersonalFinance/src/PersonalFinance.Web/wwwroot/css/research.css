@@ -96,6 +96,53 @@
     margin-top: var(--app-spacing-l);
 }
 
+.research-panel .research-panel__note {
+    margin: var(--app-spacing-xs) 0 var(--app-spacing-s);
+}
+
+.research-panel .research-panel__tech-share {
+    margin: 0;
+    color: var(--app-text);
+    font-family: var(--app-font-mono);
+}
+
+.research-panel__tech-share[hidden] {
+    display: none;
+}
+
+/* The Technology highlight: a toggle button, pressed while the highlight is on. */
+.research-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    min-height: 2.25rem;
+    padding: var(--app-spacing-xs) var(--app-spacing-m);
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
+    background: var(--app-bg);
+    color: var(--app-text);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+}
+
+.research-toggle::before {
+    content: "";
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1px solid var(--app-text-muted);
+    border-radius: 50%;
+}
+
+.research-toggle[aria-pressed="true"] {
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
+}
+
+.research-toggle[aria-pressed="true"]::before {
+    border-color: var(--app-brand);
+    background: var(--app-brand);
+}
+
 .research-card__subtitle {
     margin: 0 0 var(--app-spacing-m);
     color: var(--app-text-muted);
@@ -148,6 +195,36 @@
 .research-sunburst__arc {
     stroke: var(--app-bg);
     stroke-width: 1px;
+}
+
+.research-sunburst__arc--zoomable,
+.research-sunburst__centre--zoomed {
+    cursor: pointer;
+}
+
+.research-sunburst__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s) var(--app-spacing-m);
+    margin-bottom: var(--app-spacing-s);
+}
+
+.research-sunburst__toolbar .btn {
+    min-height: 2.25rem;
+}
+
+.research-sunburst__toolbar .btn[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.research-sunburst__focus {
+    min-width: 0;
+    margin: 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+    overflow-wrap: anywhere;
 }
 
 .research-sunburst__label {
@@ -214,6 +291,37 @@
     display: flex;
     align-items: center;
     gap: var(--app-spacing-s);
+}
+
+/* Each office is a button that zooms to it; pressed while the chart is inside that office. */
+.research-legend__button {
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    width: 100%;
+    min-height: 2.25rem;
+    padding: var(--app-spacing-xs) var(--app-spacing-s);
+    border: 1px solid transparent;
+    border-radius: var(--app-radius-m);
+    background: none;
+    color: var(--app-text);
+    text-align: left;
+}
+
+.research-legend__button:hover {
+    background: var(--app-surface-secondary);
+}
+
+.research-legend__button[aria-pressed="true"] {
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-legend__button:focus-visible,
+.research-toggle:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
 }
 
 .research-legend__swatch {
