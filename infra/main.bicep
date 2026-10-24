@@ -81,14 +81,17 @@ param exposeApiPublicly bool = false
 @description('Enable scheduled scaling: keep 1 replica warm during business hours, scale to 0 at night')
 param enableScheduledScaling bool = false
 
-@description('Business hours start hour in UTC (0-23, default 06:00 UTC)')
+@description('Business hours start hour (0-23, default 06:00), in businessHoursTimeZone')
 param businessHoursStartHour int = 6
 
-@description('Business hours start minute in UTC (0-59, default 00)')
+@description('Business hours start minute (0-59, default 00), in businessHoursTimeZone')
 param businessHoursStartMinute int = 0
 
-@description('Business hours end hour in UTC (0-23, scales to 0 at this hour, default 23:00 UTC)')
+@description('Business hours end hour (0-23, scales to 0 at this hour, default 23:00), in businessHoursTimeZone')
 param businessHoursEndHour int = 23
+
+@description('IANA time zone the business hours are in, e.g. America/Los_Angeles. The cron scaler follows its daylight saving changes.')
+param businessHoursTimeZone string = 'UTC'
 
 @description('When the daily Purge job runs (UTC cron). Default 15:00 UTC, inside business hours, when the database is usually awake.')
 param purgeJobCron string = '0 15 * * *'
@@ -103,7 +106,8 @@ param secUserAgent string = ''
 // BUDGET ESTIMATE (~$10/month total)
 // =============================================================================
 // Azure SQL Database (Basic tier):       ~$4.90/month  (2 GB storage, 5 DTUs)
-// ACA Consumption (scheduled scaling):   ~$3-5/month   (1 replica during business hours, 0 at night)
+// ACA Consumption (scheduled scaling):   ~$5-18/month  (1 replica per app during business hours, 0 at night;
+//                                                       production keeps 08:00-22:00 Pacific warm)
 // ACA Managed Environment:               ~$1.75/month  (Consumption tier base cost)
 // Log Analytics:                         ~$0/month     (5 GB/month free ingestion, 30-day retention)
 // ACA Job (daily Purge):                 ~$0/month     (seconds a day, within the Consumption free grant)
@@ -192,6 +196,7 @@ module apiService 'modules/api-service.bicep' = {
     businessHoursStartHour: businessHoursStartHour
     businessHoursStartMinute: businessHoursStartMinute
     businessHoursEndHour: businessHoursEndHour
+    businessHoursTimeZone: businessHoursTimeZone
     tags: tags
   }
 }
@@ -218,6 +223,7 @@ module webService 'modules/web-service.bicep' = {
     businessHoursStartHour: businessHoursStartHour
     businessHoursStartMinute: businessHoursStartMinute
     businessHoursEndHour: businessHoursEndHour
+    businessHoursTimeZone: businessHoursTimeZone
     customDomainName: customDomainName
     certificateId: certificateId
     tags: tags
