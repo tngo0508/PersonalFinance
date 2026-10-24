@@ -30,13 +30,16 @@ public class ResearchSectorsGroupingTests
         var timeProvider = new FixedTimeProvider(Now);
         var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
         var research = new ResearchSettings { SectorsFirstYear = 2025, SubmissionsPerRefresh = submissionsPerRefresh };
-        return new ResearchService(db, client, research, timeProvider, NullLogger<ResearchService>.Instance);
+        // The World Bank is down here: these tests are about the Sectors dataset, which is built on its own.
+        var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
+        return new ResearchService(db, client, worldClient, research, timeProvider, NullLogger<ResearchService>.Instance);
     }
 
     private static async Task<SectorsSnapshotDto> RefreshAndReadAsync(ResearchService service)
     {
         ResearchRefreshSummary summary = await service.RefreshAsync();
-        Assert.Equal(["sectors"], summary.Built);
+        Assert.Contains("sectors", summary.Built);
         return (await service.GetSectorsAsync()).Snapshot!;
     }
 

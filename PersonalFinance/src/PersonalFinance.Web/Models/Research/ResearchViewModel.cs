@@ -48,4 +48,20 @@ public sealed class ResearchViewModel
 
     /// <summary>The latest quarter of the ETFs data, which the tab opens on.</summary>
     public EtfsPeriodDto? EtfsLatestPeriod => Etfs?.Values.LastOrDefault();
+    /// <summary>The World snapshot, or null when the tab is unavailable.</summary>
+    public WorldSnapshotDto? World { get; init; }
+
+    /// <summary>True when the World tab shows the Unavailable State (never loaded, unreadable, or no year).</summary>
+    public bool WorldUnavailable => World is null || World.Values.Count == 0;
+
+    /// <summary>The World tab's Unavailable State.</summary>
+    public UnavailableStateViewModel WorldUnavailableState { get; } = new()
+    {
+        PageTitle = "Research",
+        Heading = "We couldn't load the World data",
+        RetryController = "Research",
+    };
+
+    /// <summary>The date the World data is as of ("Data as of").</summary>
+    public DateOnly? WorldAsOf => World?.AsOf;
 }

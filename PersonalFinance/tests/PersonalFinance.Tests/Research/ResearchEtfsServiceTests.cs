@@ -35,9 +35,12 @@ public class ResearchEtfsServiceTests
         var settings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
         var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
-        // No Public Float frames are served, so the Sectors dataset fails on its own; these tests read only ETFs.
+        // No Public Float frames are served and the World Bank is down, so the Sectors and World datasets fail on
+        // their own; these tests read only ETFs.
         var research = new ResearchSettings { SectorsFirstYear = 2025, Etfs = etfs, EtfsFirstQuarter = new DateOnly(2019, 10, 1) };
-        return new ResearchService(db, client, research, timeProvider, NullLogger<ResearchService>.Instance);
+        var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
+        return new ResearchService(db, client, worldClient, research, timeProvider, NullLogger<ResearchService>.Instance);
     }
 
     private static async Task<EtfsSnapshotDto> RefreshAndReadAsync(ResearchService service)

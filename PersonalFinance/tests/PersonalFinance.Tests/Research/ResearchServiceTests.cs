@@ -32,7 +32,10 @@ public class ResearchServiceTests
         var timeProvider = new FixedTimeProvider(Now);
         var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
         var research = new ResearchSettings { SectorsFirstYear = firstYear, PublicFloatExclusions = exclusions ?? [] };
-        return new ResearchService(db, client, research, timeProvider,
+        // The World Bank is down here: these tests are about the Sectors dataset, which is built on its own.
+        var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
+        return new ResearchService(db, client, worldClient, research, timeProvider,
             logger ?? NullLogger<ResearchService>.Instance);
     }
 
@@ -67,8 +70,8 @@ public class ResearchServiceTests
         ResearchRefreshSummary summary = await service.RefreshAsync();
         SectorsSnapshotDto snapshot = (await service.GetSectorsAsync()).Snapshot!;
 
-        Assert.Equal(["sectors"], summary.Built);
-        Assert.Empty(summary.Failed);
+        Assert.Contains("sectors", summary.Built);
+        Assert.DoesNotContain("sectors", summary.Failed);
         Assert.Equal(["2025"], snapshot.Periods);
         SectorsPeriodDto year = Assert.Single(snapshot.Values);
         Assert.Equal(
@@ -157,8 +160,8 @@ public class ResearchServiceTests
         ResearchRefreshSummary summary = await service.RefreshAsync();
         ResearchSnapshotResult<SectorsSnapshotDto> result = await service.GetSectorsAsync();
 
-        Assert.Equal(["sectors"], summary.Failed);
-        Assert.Empty(summary.Built);
+        Assert.Contains("sectors", summary.Failed);
+        Assert.DoesNotContain("sectors", summary.Built);
         Assert.False(result.NeverLoaded);
         Assert.Equal(new DateOnly(2025, 6, 30), result.Snapshot!.AsOf);
         Assert.Equal(10m, Assert.Single(result.Snapshot.Values[0].Ranked).PublicFloat);
@@ -172,7 +175,7 @@ public class ResearchServiceTests
         ResearchService service = CreateService(db, new StubSecHandler(), firstYear: 2025);
         ResearchRefreshSummary summary = await service.RefreshAsync();
 
-        Assert.Equal(["sectors"], summary.Failed);
+        Assert.Contains("sectors", summary.Failed);
         Assert.True((await service.GetSectorsAsync()).NeverLoaded);
     }
 
@@ -301,7 +304,9 @@ public class ResearchServiceTests
 
         await RefreshAndReadAsync(db, handler, logger: logger);
 
-        string entry = Assert.Single(logger.Entries).Message;
+        // Only the Sectors entries: the World dataset fails here (the stub World Bank is down) and logs on its own.
+        string entry = Assert.Single(logger.Entries,
+            e => !e.Message.Contains(ResearchService.WorldDataset, StringComparison.Ordinal)).Message;
         Assert.Contains("4321", entry);
         Assert.Contains("2025", entry);
         Assert.DoesNotContain("SECRETIVE", entry);
@@ -363,7 +368,7 @@ public class ResearchServiceTests
     {
         ResearchService service = CreateService(db, handler, firstYear: 2023, exclusions, logger);
         ResearchRefreshSummary summary = await service.RefreshAsync();
-        Assert.Equal(["sectors"], summary.Built);
+        Assert.Contains("sectors", summary.Built);
         return (await service.GetSectorsAsync()).Snapshot!;
     }
 

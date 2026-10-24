@@ -21,4 +21,9 @@ public interface IResearchApi
     /// </summary>
     [Get("/api/Research/etfs")]
     Task<EtfsSnapshotDto> GetEtfsAsync(CancellationToken cancellationToken = default);
+    /// Gets the World snapshot. A dataset that has never loaded answers 503 with a
+    /// <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
+    /// </summary>
+    [Get("/api/Research/world")]
+    Task<WorldSnapshotDto> GetWorldAsync(CancellationToken cancellationToken = default);
 }

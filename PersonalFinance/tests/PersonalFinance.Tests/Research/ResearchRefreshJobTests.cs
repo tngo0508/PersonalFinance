@@ -21,6 +21,8 @@ public class ResearchRefreshJobTests
 
         public Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<EtfsSnapshotDto>(null));
+        public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(null));
 
         public Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default)
         {

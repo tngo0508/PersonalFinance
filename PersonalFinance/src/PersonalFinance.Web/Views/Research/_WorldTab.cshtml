@@ -1,0 +1,90 @@
+@model ResearchViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+
+@{
+    WorldSnapshotDto? world = Model.WorldUnavailable ? null : Model.World;
+}
+
+@* The World tab panel: stock-market capitalisation by country (World Bank WDI), drawn by js/research/research-world.js as a
+   choropleth from the data island below and the vendored world-atlas borders. Hidden until its tab is chosen. *@
+<section class="research-deck" id="research-panel-world" role="tabpanel" aria-labelledby="research-tab-world" hidden>
+    @if (world is not null)
+    {
+        <div class="research-scrubber" data-research-scrubber>
+            <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
+                    aria-label="Play through the years">
+                <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
+                <svg class="research-scrubber__icon research-scrubber__icon--pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+            </button>
+            <div class="research-scrubber__track">
+                <label class="visually-hidden" for="research-world-year">Year</label>
+                <input type="range" class="research-scrubber__range" id="research-world-year" data-research-range
+                       min="0" max="@(world.Periods.Count - 1)" step="1" value="@(world.Periods.Count - 1)"
+                       aria-valuetext="@world.Periods[^1]"/>
+                <div class="research-scrubber__ends" aria-hidden="true">
+                    <span>@world.Periods[0]</span>
+                    <span>@world.Periods[^1]</span>
+                </div>
+            </div>
+            <p class="research-scrubber__period" data-research-period aria-hidden="true">@world.Periods[^1]</p>
+        </div>
+    }
+    <div class="research-card">
+        <h2 class="research-card__title">Stock-market value by country</h2>
+        @if (world is null)
+        {
+            <partial name="_UnavailableState" model="Model.WorldUnavailableState"/>
+        }
+        else
+        {
+            <p class="research-card__subtitle" id="research-world-subtitle">
+                Market capitalisation of listed domestic companies in @world.Periods[^1], by country.
+            </p>
+            <div class="research-world" id="research-world-map"
+                 data-atlas-url="@Url.Content("~/lib/world-atlas/countries-110m.json")"></div>
+            <div class="research-tooltip" id="research-world-tooltip" aria-hidden="true" hidden></div>
+            <div class="research-card__actions">
+                <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
+                        aria-controls="research-world-table">Show as table</button>
+            </div>
+            <div class="research-table-host" id="research-world-table" data-research-table hidden></div>
+        }
+        <p class="research-card__source">Source: World Bank WDI / WFE (CC BY 4.0). Borders: Natural Earth</p>
+    </div>
+
+    <aside class="research-panel" aria-label="About the World data">
+        @if (world is not null)
+        {
+            <h2 class="research-panel__title">Colour the map by</h2>
+            <div class="research-world__metrics" role="group" aria-label="Map metric">
+                <button type="button" class="research-chip" data-research-world-metric="marketCap"
+                        aria-pressed="true">Market cap</button>
+                <button type="button" class="research-chip" data-research-world-metric="percentOfGdp"
+                        aria-pressed="false">% of GDP</button>
+            </div>
+            <h2 class="research-panel__title">Legend</h2>
+            <ol class="research-legend" id="research-world-legend"></ol>
+        }
+        <h2 class="research-panel__title">About this data</h2>
+        <p>
+            Market capitalisation is the share price times the number of shares of the companies listed on a country's
+            stock exchanges, at the end of each year, in current US dollars. The World Bank publishes it from the World
+            Federation of Exchanges.
+        </p>
+        <p>
+            % of GDP compares it with the size of the country's economy in the same year. Countries without a stock
+            exchange, or that do not report, show as "No data".
+        </p>
+        <h2 class="research-panel__title">Data as of</h2>
+        <p class="research-panel__as-of">
+            @(Model.WorldAsOf is { } asOf && world is not null ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
+        </p>
+    </aside>
+</section>
+
+@if (world is not null)
+{
+    @* The World snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-world.js. *@
+    <script type="application/json" id="research-world-data">@Json.Serialize(world)</script>
+}

@@ -7,6 +7,7 @@
     SectorsPeriodDto? latest = Model.SectorsLatestPeriod;
     bool showSectors = !Model.SectorsUnavailable && latest is not null;
     bool showEtfs = !Model.EtfsUnavailable;
+    bool showWorld = !Model.WorldUnavailable;
 }
 
 @section Styles {
@@ -30,6 +31,8 @@
                 aria-selected="true" aria-controls="research-panel-sectors" tabindex="0">Sectors</button>
         <button type="button" class="research-tabs__tab" id="research-tab-etfs" role="tab"
                 aria-selected="false" aria-controls="research-panel-etfs" tabindex="-1">ETFs</button>
+        <button type="button" class="research-tabs__tab" id="research-tab-world" role="tab"
+                aria-selected="false" aria-controls="research-panel-world" tabindex="-1">World</button>
     </div>
 
     @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
@@ -122,6 +125,7 @@
     </section>
 
     <partial name="_EtfsTab" model="Model"/>
+    <partial name="_WorldTab" model="Model"/>
 
     @* Summarises each change of period for screen readers. *@
     <p class="visually-hidden" id="research-live" aria-live="polite"></p>
@@ -134,12 +138,12 @@
 }
 
 @section Scripts {
-    @* The tab shell is always loaded, so the tabs switch even when every tab is unavailable. *@
-    @if (showSectors || showEtfs)
+    @* The tab shell runs whatever loaded, so the tabs work even when a tab shows its Unavailable State. *@
+    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    @if (showSectors || showEtfs || showWorld)
     {
         <script src="~/lib/d3/d3.min.js"></script>
     }
-    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
     @if (showSectors)
     {
         <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>
@@ -147,5 +151,10 @@
     @if (showEtfs)
     {
         <script src="~/js/research/research-etfs.js" asp-append-version="true"></script>
+    }
+    @if (showWorld)
+    {
+        <script src="~/lib/topojson-client/dist/topojson-client.min.js"></script>
+        <script src="~/js/research/research-world.js" asp-append-version="true"></script>
     }
 }

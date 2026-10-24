@@ -487,3 +487,74 @@
         font-size: var(--app-font-size-xl);
     }
 }
+
+/* --------------------------------------------------------------------------
+   World choropleth. Eight steps of one blue hue, light to dark, interpolated
+   in OKLab along the dataviz reference blue ramp (steps 250 to just past 700)
+   and validated with the dataviz palette validator in ordinal mode on the
+   white card: monotone lightness, every adjacent gap >= 0.06 L, the lightest
+   step at 2.11:1, one hue. The dark steps (dark to light, low to high:
+   #184f95 #2062b4 #2976d2 #418ce6 #66a2ea #89b8f0 #accdf5 #cde2fb, ramp
+   steps 600 to 100) pass the same checks on #1a1a19 (2.15:1); the app has no
+   dark mode yet, so they are recorded here for when it does. "No data" is a
+   neutral grey with a 45-degree hatch, so it never reads as a low value.
+   -------------------------------------------------------------------------- */
+
+.research {
+    --research-world-step-1: #86b6ef;
+    --research-world-step-2: #64a2ea;
+    --research-world-step-3: #428ce6;
+    --research-world-step-4: #2a77d5;
+    --research-world-step-5: #2265b7;
+    --research-world-step-6: #19539b;
+    --research-world-step-7: #10417f;
+    --research-world-step-8: #0c3162;
+    --research-world-nodata: #ecebe8;
+    --research-world-nodata-ink: #b4b2ad;
+}
+
+.research-world {
+    width: 100%;
+    min-height: 8rem;
+}
+
+.research-world svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: manipulation;
+}
+
+.research-world__country {
+    stroke: var(--app-bg);
+    stroke-width: 0.5px;
+}
+
+.research-world__country:hover {
+    stroke: var(--app-text);
+    stroke-width: 1px;
+}
+
+.research-world__country--nodata {
+    fill: url(#research-world-nodata);
+}
+
+.research-world__metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-s);
+}
+
+.research-world__swatch {
+    border: 1px solid transparent;
+}
+
+.research-world__swatch--nodata {
+    border-color: var(--research-world-nodata-ink);
+    background: repeating-linear-gradient(45deg, var(--research-world-nodata) 0 2px,
+        var(--research-world-nodata-ink) 2px 3px);
+}
+
+.research-tooltip__line {
+    display: block;
+}

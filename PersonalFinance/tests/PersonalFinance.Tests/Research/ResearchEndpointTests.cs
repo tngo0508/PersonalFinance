@@ -12,7 +12,7 @@ using PersonalFinance.Tests.Security;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The ApiService <c>GET /api/Research/sectors</c> and <c>GET /api/Research/etfs</c> endpoints: signed-in only; each
+/// The ApiService <c>GET /api/Research/sectors</c>, <c>/etfs</c> and <c>/world</c> endpoints: signed-in only; each
 /// returns its stored snapshot, or 503 with a reason when the dataset has never loaded.
 /// </summary>
 [Collection("ApiServiceHost")]
@@ -20,6 +20,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 {
     private const string SectorsUrl = "/api/Research/sectors";
     private const string EtfsUrl = "/api/Research/etfs";
+    private const string WorldUrl = "/api/Research/world";
     private const string InternalKey = "http-test-shared-secret";
 
     private readonly ApiServiceInternalKeyHttpTests.ApiServiceHost _host;
@@ -29,13 +30,16 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         _host = host;
     }
 
-    private sealed class FakeResearchService(SectorsSnapshotDto? sectors, EtfsSnapshotDto? etfs = null) : IResearchService
+    private sealed class FakeResearchService(SectorsSnapshotDto? sectors, WorldSnapshotDto? world = null,
+        EtfsSnapshotDto? etfs = null) : IResearchService
     {
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(sectors));
 
         public Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<EtfsSnapshotDto>(etfs));
+        public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(world));
 
         public Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("The endpoint never refreshes.");
@@ -72,7 +76,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     {
         var snapshot = new EtfsSnapshotDto { AsOf = new DateOnly(2026, 6, 30), Periods = ["2026 Q2"] };
 
-        IActionResult result = await new ResearchController(new FakeResearchService(null, snapshot)).GetEtfs();
+        IActionResult result = await new ResearchController(new FakeResearchService(null, etfs: snapshot)).GetEtfs();
 
         Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
     }
@@ -116,5 +120,52 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         ResearchUnavailableDto? body = await response.Content.ReadFromJsonAsync<ResearchUnavailableDto>();
         Assert.False(string.IsNullOrWhiteSpace(body?.Reason));
+    }
+
+    [Fact]
+    public async Task GetWorld_WhenLoaded_ReturnsTheSnapshot()
+    {
+        var snapshot = new WorldSnapshotDto { AsOf = new DateOnly(2026, 10, 8), Periods = ["2024"] };
+
+        IActionResult result = await new ResearchController(new FakeResearchService(null, snapshot)).GetWorld();
+
+        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    [Fact]
+    public async Task GetWorld_WhenNeverLoaded_Returns503WithAReason()
+    {
+        IActionResult result = await new ResearchController(new FakeResearchService(null)).GetWorld();
+
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
+        Assert.Equal(ResearchController.WorldNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
+    }
+
+    [Fact]
+    public async Task GetWorld_OverHttp_WithoutTheSharedSecret_IsRejected()
+    {
+        HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        using var request = new HttpRequestMessage(HttpMethod.Get, WorldUrl);
+        request.Headers.Add("X-User-Id", "account-1");
+
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetWorld_OverHttp_SignedIn_OnAnEmptyDatabase_Returns503WithAReason()
+    {
+        HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        using var request = new HttpRequestMessage(HttpMethod.Get, WorldUrl);
+        request.Headers.Add("X-User-Id", "account-1");
+        request.Headers.Add("X-Internal-Key", InternalKey);
+
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        ResearchUnavailableDto? body = await response.Content.ReadFromJsonAsync<ResearchUnavailableDto>();
+        Assert.Equal(ResearchController.WorldNeverLoaded, body?.Reason);
     }
 }
