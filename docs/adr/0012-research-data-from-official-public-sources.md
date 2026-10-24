@@ -1,4 +1,4 @@
-# 0011 – Research Data Comes from Official Public Sources, Precomputed in a Daily Refresh
+# 0012 – Research Data Comes from Official Public Sources, Precomputed in a Daily Refresh
 
 **Date:** 2026-10-24  
 **Status:** Accepted

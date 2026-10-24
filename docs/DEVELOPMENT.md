@@ -362,7 +362,7 @@ dotnet user-secrets set "Rbac:AdminEmail" "you@example.com" --project PersonalFi
 
 ### Research Market Data (`Research:Sec:UserAgent` and the refresh)
 
-The Research page never calls a data source while someone browses. It reads saved copies (snapshots) from the `ResearchSnapshots` table, and only the **Research refresh** writes them: a run of the ApiService that downloads the public data, builds each dataset, saves it and exits. Until a refresh has run against a database, every Research tab shows the Unavailable State and the API answers `GET api/Research/*` with 503. Why these sources and not FRED: ADR 0011.
+The Research page never calls a data source while someone browses. It reads saved copies (snapshots) from the `ResearchSnapshots` table, and only the **Research refresh** writes them: a run of the ApiService that downloads the public data, builds each dataset, saves it and exits. Until a refresh has run against a database, every Research tab shows the Unavailable State and the API answers `GET api/Research/*` with 503. Why these sources and not FRED: ADR 0012.
 
 | Dataset | Endpoint | Source | Used by |
 |---|---|---|---|

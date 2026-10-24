@@ -110,7 +110,7 @@ For the rationale behind key design choices, see:
 - [ADR-0004](docs/adr/0004-rbac-roles-from-database-and-policy-checks.md) — RBAC: roles read from the database, code checks policies
 - [ADR-0006](docs/adr/0006-one-release-per-merged-pr.md) — One GitHub Release per merged PR, tagged from `AppVersion`
 - [ADR-0010](docs/adr/0010-research-never-stores-security-identifiers.md) — Research never stores or shows security identifiers (CUSIP, ISIN)
-- [ADR-0011](docs/adr/0011-research-data-from-official-public-sources.md) — Research data comes from official public sources (no FRED), precomputed in a daily refresh
+- [ADR-0012](docs/adr/0012-research-data-from-official-public-sources.md) — Research data comes from official public sources (no FRED), precomputed in a daily refresh
 
 For detailed setup instructions, secrets management, and EF Core migrations, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
 

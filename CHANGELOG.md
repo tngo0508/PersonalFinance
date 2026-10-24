@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fund facts dataset**: each Tracked Fund's net assets and expense ratio, at `api/Research/funds/facts` (#265).
   - The expense ratio is read from the XBRL of the fund's newest shareholder report (Form N-CSR or N-CSRS), for the share class matching its ticker; a report already read is not fetched again.
   - SPY, a unit investment trust, files no such report, so its expense ratio shows "n/a".
-- **ADR 0011**: Research data comes from official public sources (SEC EDGAR, the Bureau of Labor Statistics, the Fed Board, the Treasury, the World Bank), never FRED, precomputed in the daily refresh; the development guide lists every dataset with its endpoint and source.
+- **ADR 0012**: Research data comes from official public sources (SEC EDGAR, the Bureau of Labor Statistics, the Fed Board, the Treasury, the World Bank), never FRED, precomputed in the daily refresh; the development guide lists every dataset with its endpoint and source.
 
 ### Fixed
 
