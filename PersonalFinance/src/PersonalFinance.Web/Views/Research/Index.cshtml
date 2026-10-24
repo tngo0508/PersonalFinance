@@ -1,6 +1,7 @@
 @model ResearchViewModel
 @using System.Globalization
 @using PersonalFinance.Shared.DTOs.Research
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 
 @{
     ViewData["Title"] = "Research";
@@ -8,11 +9,17 @@
     bool showSectors = !Model.Sectors.Unavailable && latest is not null;
     bool showEtfs = !Model.Etfs.Unavailable;
     bool showWorld = !Model.World.Unavailable;
+    // PROTOTYPE (wayfinder #236): Development only, and only with ?variant= on the URL. Never merge.
+    bool overlapPrototype = Env.EnvironmentName == "Development" && Context.Request.Query.ContainsKey("variant");
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/research-etfs.css" asp-append-version="true"/>
+    @if (overlapPrototype)
+    {
+        <link rel="stylesheet" href="~/prototype/fund-overlap/overlap-prototype.css"/>
+    }
 }
 
 @* Research page, Control-deck layout: header, tab bar, then a chart card beside a side panel. The side panel stacks
@@ -151,6 +158,10 @@
     @if (showEtfs)
     {
         <script src="~/js/research/research-etfs.js" asp-append-version="true"></script>
+    }
+    @if (overlapPrototype)
+    {
+        <script src="~/js/research/research-overlap-prototype.js"></script>
     }
     @if (showWorld)
     {

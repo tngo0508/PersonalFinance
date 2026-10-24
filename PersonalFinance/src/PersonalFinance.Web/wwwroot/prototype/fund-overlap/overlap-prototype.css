@@ -1,0 +1,39 @@
+/* PROTOTYPE, throwaway (wayfinder ticket #236). Styles for js/research/research-overlap-prototype.js only. */
+.po-card { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
+.po-picker { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.po-picker__label { font-size: 0.85rem; font-weight: 600; margin-right: 0.25rem; }
+.po-fund { border: 2px solid var(--c); background: transparent; color: inherit; border-radius: 999px; padding: 0.2rem 0.75rem; font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.po-fund--on { background: var(--c); color: #fff; }
+.po-fund:disabled { opacity: 0.35; cursor: not-allowed; }
+.po-fund:focus-visible { outline: 2px solid var(--bs-link-color, #2563eb); outline-offset: 2px; }
+.po-controls { display: flex; gap: 1rem; }
+.po-slider { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; flex-wrap: wrap; }
+.po-slider output { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 3rem; }
+.po-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem; }
+.po-stat { display: flex; flex-direction: column; padding: 0.5rem 0.75rem; border: 1px solid var(--bs-border-color, #e5e7eb); border-radius: 10px; }
+.po-stat__label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--bs-secondary-color, #6b7280); }
+.po-stat__value { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.po-stat__note { font-size: 0.8rem; color: var(--bs-secondary-color, #6b7280); }
+.po-stage { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; justify-content: center; }
+.po-svg { width: 100%; max-width: 560px; height: auto; display: block; }
+.po-svg--matrix { max-width: 400px; }
+.po-stage .po-svg:only-child { max-width: 900px; }
+.po-svg { max-height: 560px; }
+.po-label { font-size: 12px; font-weight: 700; fill: var(--bs-body-color, #111); }
+.po-cell { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.po-node { cursor: pointer; }
+.po-node:focus { outline: none; }
+.po-node:focus-visible circle { stroke: var(--bs-body-color, #111); stroke-width: 3px; }
+.po-node-label { font-size: 12px; font-weight: 700; fill: #fff; pointer-events: none; }
+.po-sec-label { font-size: 9px; fill: #111; pointer-events: none; }
+.po-svg path[role="button"]:focus { outline: none; }
+.po-svg path[role="button"]:focus-visible { stroke: var(--bs-body-color, #111); stroke-width: 3px; }
+.po-svg rect[tabindex]:focus-visible { stroke: var(--bs-body-color, #111); stroke-width: 3px; outline: none; }
+.po-table { border-collapse: collapse; font-size: 0.85rem; min-width: 280px; flex: 1; }
+.po-table caption { caption-side: top; font-weight: 700; padding-bottom: 0.4rem; color: inherit; }
+.po-table th, .po-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--bs-border-color, #e5e7eb); text-align: left; }
+.po-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.po-chip { display: inline-block; margin: 0 0.2rem 0.1rem 0; padding: 0 0.4rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; color: #fff; background: var(--c); }
+.po-hint, .po-empty { font-size: 0.8rem; color: var(--bs-secondary-color, #6b7280); margin: 0; }
+.proto-switcher { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 2000; display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border-radius: 999px; background: #111; color: #fff; font: 600 13px/1 system-ui, sans-serif; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35); }
+.proto-switcher button { border: 0; background: #fbbf24; color: #111; border-radius: 999px; width: 28px; height: 28px; font-weight: 700; cursor: pointer; }
