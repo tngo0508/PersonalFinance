@@ -3,7 +3,6 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.Data;
@@ -33,7 +32,7 @@ public class ResearchSectorsGroupingTests
         // The World Bank is down here: these tests are about the Sectors dataset, which is built on its own.
         var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
-        return new ResearchService(db, client, worldClient, research, timeProvider, NullLogger<ResearchService>.Instance);
+        return ResearchServiceFactory.Create(db, client, worldClient, research, timeProvider);
     }
 
     private static async Task<SectorsSnapshotDto> RefreshAndReadAsync(ResearchService service)

@@ -14,7 +14,4 @@ public sealed class ResearchSnapshotResult<TSnapshot> where TSnapshot : class
 
     /// <summary>The snapshot, or null when the dataset has never loaded.</summary>
     public TSnapshot? Snapshot { get; }
-
-    /// <summary>True when no refresh has built the dataset yet.</summary>
-    public bool NeverLoaded => Snapshot is null;
 }

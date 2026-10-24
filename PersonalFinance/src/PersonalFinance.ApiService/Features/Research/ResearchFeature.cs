@@ -42,6 +42,11 @@ internal static class ResearchFeature
         services.AddSingleton<SecRequestGate>();
         services.AddHttpClient<ISecEdgarClient, SecEdgarClient>(client => client.Timeout = SecTimeout);
         services.AddHttpClient<IWorldBankClient, WorldBankClient>(client => client.Timeout = WorldBankTimeout);
+        services.AddScoped<ResearchSnapshotStore>();
+        // Refreshed in this order, each on its own.
+        services.AddScoped<IResearchDatasetRefresher, SectorsRefresher>();
+        services.AddScoped<IResearchDatasetRefresher, EtfsRefresher>();
+        services.AddScoped<IResearchDatasetRefresher, WorldRefresher>();
         services.AddScoped<IResearchService, ResearchService>();
         return services;
     }

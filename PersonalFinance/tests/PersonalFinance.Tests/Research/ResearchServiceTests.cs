@@ -26,7 +26,7 @@ public class ResearchServiceTests
         new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options);
 
     private static ResearchService CreateService(AppDbContext db, StubSecHandler handler, int firstYear = 2024,
-        IReadOnlyList<FilerYear>? exclusions = null, ILogger<ResearchService>? logger = null,
+        IReadOnlyList<FilerYear>? exclusions = null, ILoggerProvider? logs = null,
         IReadOnlyList<FilerYear>? keeps = null)
     {
         var settings = new SecEdgarSettings { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
@@ -39,8 +39,7 @@ public class ResearchServiceTests
         // The World Bank is down here: these tests are about the Sectors dataset, which is built on its own.
         var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
-        return new ResearchService(db, client, worldClient, research, timeProvider,
-            logger ?? NullLogger<ResearchService>.Instance);
+        return ResearchServiceFactory.Create(db, client, worldClient, research, timeProvider, logs);
     }
 
     [Fact]
@@ -50,7 +49,6 @@ public class ResearchServiceTests
 
         ResearchSnapshotResult<SectorsSnapshotDto> result = await CreateService(db, new StubSecHandler()).GetSectorsAsync();
 
-        Assert.True(result.NeverLoaded);
         Assert.Null(result.Snapshot);
     }
 
@@ -166,7 +164,6 @@ public class ResearchServiceTests
 
         Assert.Contains("sectors", summary.Failed);
         Assert.DoesNotContain("sectors", summary.Built);
-        Assert.False(result.NeverLoaded);
         Assert.Equal(new DateOnly(2025, 6, 30), result.Snapshot!.AsOf);
         Assert.Equal(10m, Assert.Single(result.Snapshot.Values[0].Ranked).PublicFloat);
     }
@@ -180,7 +177,7 @@ public class ResearchServiceTests
         ResearchRefreshSummary summary = await service.RefreshAsync();
 
         Assert.Contains("sectors", summary.Failed);
-        Assert.True((await service.GetSectorsAsync()).NeverLoaded);
+        Assert.Null((await service.GetSectorsAsync()).Snapshot);
     }
 
     [Fact]
@@ -338,13 +335,13 @@ public class ResearchServiceTests
         await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
         StubSecHandler handler = HandlerWithNvidia();
         AddFloat(handler, 2025, new Filer(4321, "SECRETIVE NAME CO", "2025-06-30", 6_800_000_000_000m));
-        var logger = new RecordingLogger<ResearchService>();
+        var logs = new SectorsLogs();
 
-        await RefreshAndReadAsync(db, handler, logger: logger);
+        await RefreshAndReadAsync(db, handler, logs: logs);
 
-        // Only the Sectors entries: the World dataset fails here (the stub World Bank is down) and logs on its own.
-        string entry = Assert.Single(logger.Entries,
-            e => !e.Message.Contains(ResearchDatasets.World, StringComparison.Ordinal)).Message;
+        // Only the Sectors refresher's entries: the World dataset fails here (the stub World Bank is down) and logs
+        // on its own.
+        string entry = Assert.Single(logs.Sectors.Entries).Message;
         Assert.Contains("4321", entry);
         Assert.Contains("2025", entry);
         Assert.DoesNotContain("SECRETIVE", entry);
@@ -357,7 +354,7 @@ public class ResearchServiceTests
     {
         using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
 
-        string sql = AzureSqlTranslation.AssertTranslates(ResearchService.SnapshotPayloadQuery(db, "sectors"));
+        string sql = AzureSqlTranslation.AssertTranslates(ResearchSnapshotStore.PayloadQuery(db, "sectors"));
 
         Assert.Contains("ResearchSnapshots", sql);
     }
@@ -402,10 +399,10 @@ public class ResearchServiceTests
 
     /// <summary>Refreshes 2023 to 2025 and reads the stored snapshot back.</summary>
     private static async Task<SectorsSnapshotDto> RefreshAndReadAsync(AppDbContext db, StubSecHandler handler,
-        IReadOnlyList<FilerYear>? exclusions = null, ILogger<ResearchService>? logger = null,
+        IReadOnlyList<FilerYear>? exclusions = null, ILoggerProvider? logs = null,
         IReadOnlyList<FilerYear>? keeps = null)
     {
-        ResearchService service = CreateService(db, handler, firstYear: 2023, exclusions, logger, keeps);
+        ResearchService service = CreateService(db, handler, firstYear: 2023, exclusions, logs, keeps);
         ResearchRefreshSummary summary = await service.RefreshAsync();
         Assert.Contains("sectors", summary.Built);
         return (await service.GetSectorsAsync()).Snapshot!;
@@ -485,6 +482,19 @@ public class ResearchServiceTests
             {
                 Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
             });
+        }
+    }
+
+    /// <summary>Records the Sectors refresher's log entries; every other category goes nowhere.</summary>
+    private sealed class SectorsLogs : ILoggerProvider
+    {
+        public RecordingLogger<SectorsRefresher> Sectors { get; } = new();
+
+        public ILogger CreateLogger(string categoryName) =>
+            categoryName == typeof(SectorsRefresher).FullName ? Sectors : NullLogger.Instance;
+
+        public void Dispose()
+        {
         }
     }
 

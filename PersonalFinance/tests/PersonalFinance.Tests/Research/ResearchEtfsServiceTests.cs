@@ -4,7 +4,6 @@ using System.Security;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
@@ -40,7 +39,7 @@ public class ResearchEtfsServiceTests
         var research = new ResearchSettings { SectorsFirstYear = 2025, Etfs = etfs, EtfsFirstQuarter = new DateOnly(2019, 10, 1) };
         var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
-        return new ResearchService(db, client, worldClient, research, timeProvider, NullLogger<ResearchService>.Instance);
+        return ResearchServiceFactory.Create(db, client, worldClient, research, timeProvider);
     }
 
     private static async Task<EtfsSnapshotDto> RefreshAndReadAsync(ResearchService service)
@@ -57,7 +56,7 @@ public class ResearchEtfsServiceTests
 
         ResearchSnapshotResult<EtfsSnapshotDto> result = await CreateService(db, new StubNportHandler(), Spy).GetEtfsAsync();
 
-        Assert.True(result.NeverLoaded);
+        Assert.Null(result.Snapshot);
     }
 
     [Fact]
@@ -215,7 +214,7 @@ public class ResearchEtfsServiceTests
         ResearchRefreshSummary summary = await service.RefreshAsync();
 
         Assert.Contains(ResearchDatasets.Etfs, summary.Failed);
-        Assert.True((await service.GetEtfsAsync()).NeverLoaded);
+        Assert.Null((await service.GetEtfsAsync()).Snapshot);
     }
 
     [Fact]

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
@@ -38,9 +37,8 @@ public class ResearchRefreshIsolationTests
     }
 
     private static ResearchService CreateService(AppDbContext db) =>
-        new(db, new FakeSecClient(), new FakeWorldBankClient(),
-            new ResearchSettings { SectorsFirstYear = 2025, WorldFirstYear = 2025 },
-            new FixedTimeProvider(Now), NullLogger<ResearchService>.Instance);
+        ResearchServiceFactory.Create(db, new FakeSecClient(), new FakeWorldBankClient(),
+            new ResearchSettings { SectorsFirstYear = 2025, WorldFirstYear = 2025 }, new FixedTimeProvider(Now));
 
     /// <summary>Throws on a save that adds or changes the snapshot of one of the given datasets.</summary>
     private sealed class FailingSaveInterceptor(params string[] datasets) : SaveChangesInterceptor

@@ -2,7 +2,6 @@ using System.Net;
 using System.Text;
 using System.Web;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.Data;
@@ -44,8 +43,7 @@ public class ResearchWorldServiceTests
             secSettings, new SecRequestGate(secSettings, timeProvider));
         var worldClient = new WorldBankClient(new HttpClient(handler));
         var research = new ResearchSettings { SectorsFirstYear = 2025, WorldFirstYear = 2024 };
-        return new ResearchService(db, secClient, worldClient, research, timeProvider,
-            NullLogger<ResearchService>.Instance);
+        return ResearchServiceFactory.Create(db, secClient, worldClient, research, timeProvider);
     }
 
     private static StubWorldBankHandler CannedHandler()
@@ -105,7 +103,7 @@ public class ResearchWorldServiceTests
 
         ResearchSnapshotResult<WorldSnapshotDto> result = await CreateService(db, CannedHandler()).GetWorldAsync();
 
-        Assert.True(result.NeverLoaded);
+        Assert.Null(result.Snapshot);
     }
 
     [Fact]
@@ -211,7 +209,7 @@ public class ResearchWorldServiceTests
         ResearchRefreshSummary summary = await service.RefreshAsync();
 
         Assert.Contains("world", summary.Failed);
-        Assert.True((await service.GetWorldAsync()).NeverLoaded);
+        Assert.Null((await service.GetWorldAsync()).Snapshot);
     }
 
     /// <summary>
