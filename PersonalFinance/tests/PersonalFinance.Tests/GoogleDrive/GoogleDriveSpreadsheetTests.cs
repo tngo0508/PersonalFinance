@@ -27,17 +27,17 @@ public class GoogleDriveSpreadsheetTests
     }
 
     [Theory]
-    [InlineData("https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link",
-        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("https://drive.google.com/drive/u/0/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
-        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
-        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("https://drive.google.com/open?id=127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
-        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("https://drive.google.com/file/d/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_/view",
-        "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
-    [InlineData("127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_")]
+    [InlineData("https://drive.google.com/drive/folders/1FakeFolderIdForTests0000000000ab?usp=drive_link",
+        "1FakeFolderIdForTests0000000000ab")]
+    [InlineData("https://drive.google.com/drive/u/0/folders/1FakeFolderIdForTests0000000000ab",
+        "1FakeFolderIdForTests0000000000ab")]
+    [InlineData("https://drive.google.com/drive/folders/1FakeFolderIdForTests0000000000ab",
+        "1FakeFolderIdForTests0000000000ab")]
+    [InlineData("https://drive.google.com/open?id=1FakeFolderIdForTests0000000000ab",
+        "1FakeFolderIdForTests0000000000ab")]
+    [InlineData("https://drive.google.com/file/d/1FakeFolderIdForTests0000000000ab/view",
+        "1FakeFolderIdForTests0000000000ab")]
+    [InlineData("1FakeFolderIdForTests0000000000ab", "1FakeFolderIdForTests0000000000ab")]
     public void ExtractFolderId_WithValidInputs_ExtractsCorrectId(string input, string expectedId)
     {
         string? result = GoogleDriveMetadata.ExtractFolderId(input);
@@ -104,13 +104,13 @@ public class GoogleDriveSpreadsheetTests
 
         var request = new GoogleDriveRequestDto
         {
-            FolderUrl = "https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link"
+            FolderUrl = "https://drive.google.com/drive/folders/1FakeFolderIdForTests0000000000ab?usp=drive_link"
         };
 
         GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request);
 
         Assert.True(response.Success);
-        Assert.Equal("127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_", response.FolderId);
+        Assert.Equal("1FakeFolderIdForTests0000000000ab", response.FolderId);
         Assert.NotEmpty(response.Files);
         Assert.True(response.IsDemoData);
         Assert.NotNull(response.WarningMessage);
@@ -150,7 +150,7 @@ public class GoogleDriveSpreadsheetTests
 
         var request = new GoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ApiKey = "AIzaSyFakeKey"
         };
 
@@ -180,7 +180,7 @@ public class GoogleDriveSpreadsheetTests
 
         var request = new GoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ApiKey = "AIzaSyFakeKey"
         };
 
@@ -209,7 +209,7 @@ public class GoogleDriveSpreadsheetTests
 
         var request = new GoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ApiKey = "AIzaSyFakeKey"
         };
 
@@ -240,7 +240,7 @@ public class GoogleDriveSpreadsheetTests
 
         var request = new GoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ApiKey = "AIzaSyFakeKey"
         };
 
@@ -272,7 +272,7 @@ public class GoogleDriveSpreadsheetTests
 
         var request = new GoogleDriveRequestDto
         {
-            FolderUrl = "127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_",
+            FolderUrl = "1FakeFolderIdForTests0000000000ab",
             ApiKey = "AIzaSyFakeKey"
         };
 

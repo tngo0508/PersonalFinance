@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.8.2] - 2026-10-24
+
+### Removed
+
+- **Google Drive sample link**: the Connect form no longer offers a link to the maintainer's own Drive folder.
+  - The "Use sample" button is gone, and the folder field now starts empty instead of pre-filled with that folder.
+
 ## [5.8.1] - 2026-10-24
 
 ### Fixed
