@@ -12,6 +12,13 @@
 (function () {
     'use strict';
 
+    // research-page.js loads first and holds the helpers every Research chart shares.
+    const page = window.ResearchPage;
+    if (!page) {
+        return;
+    }
+    const { prefersReducedMotion, formatMoney } = page;
+
     const DATA_ELEMENT_ID = 'research-sectors-data';
     const HOST_ID = 'research-sunburst';
     const LEGEND_ID = 'research-sectors-legend';
@@ -52,43 +59,6 @@
         company: (node) => (node.data.ticker ? `Ticker ${node.data.ticker}` : 'No ticker'),
         other: (node) => `Smaller filers in ${node.parent ? node.parent.data.name : 'this industry'}`
     };
-
-    /**
-     * Parse the Sectors data island.
-     * @returns {Object|null} The camelCase Sectors snapshot, or null when it is missing or malformed.
-     */
-    function readData () {
-        const element = document.getElementById(DATA_ELEMENT_ID);
-        if (!element) {
-            return null;
-        }
-        try {
-            return JSON.parse(element.textContent || 'null');
-        } catch (error) {
-            // eslint-disable-next-line no-console
-            console.warn('Research Sectors data could not be parsed:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Format a US$ amount compactly for labels, tooltips and the table view: $3.02T, $412.5B, $18.0M.
-     * @param {number} amount - The amount in US$.
-     * @returns {string} The formatted amount.
-     */
-    function formatMoney (amount) {
-        const absolute = Math.abs(amount);
-        if (absolute >= 1e12) {
-            return `$${(amount / 1e12).toFixed(2)}T`;
-        }
-        if (absolute >= 1e9) {
-            return `$${(amount / 1e9).toFixed(1)}B`;
-        }
-        if (absolute >= 1e6) {
-            return `$${(amount / 1e6).toFixed(1)}M`;
-        }
-        return `$${Math.round(amount).toLocaleString('en-US')}`;
-    }
 
     /**
      * The fill colour of an office, read from the page's CSS tokens.
@@ -190,51 +160,20 @@
      * @returns {{show: function(PointerEvent, Object): void, hide: function(): void}} The controller.
      */
     function createTooltip (tooltip) {
-        const line = (text, className) => {
-            const span = document.createElement('span');
-            span.className = className;
-            span.textContent = text;
-            return span;
-        };
-
-        const show = (event, node) => {
-            if (!tooltip) {
-                return;
-            }
+        return page.createTooltip(tooltip, (line, node) => {
             const valueLine = document.createElement('span');
             valueLine.append(line(formatMoney(node.value), 'research-tooltip__value'), ' Public float');
-            tooltip.replaceChildren(
+            const parts = [
                 line(node.data.name, 'research-tooltip__name'),
                 line(KIND_LABELS[node.data.kind](node), 'research-tooltip__muted'),
                 valueLine
-            );
+            ];
             if (node.parent && node.parent.value > 0) {
                 const share = (node.value / node.parent.value * 100).toFixed(1);
-                tooltip.append(line(`${share}% of ${node.parent.data.name}`, 'research-tooltip__muted'));
+                parts.push(line(`${share}% of ${node.parent.data.name}`, 'research-tooltip__muted'));
             }
-            tooltip.hidden = false;
-            const x = Math.min(event.clientX + 14, window.innerWidth - tooltip.offsetWidth - 8);
-            const y = Math.min(event.clientY + 14, window.innerHeight - tooltip.offsetHeight - 8);
-            tooltip.style.left = `${Math.max(8, x)}px`;
-            tooltip.style.top = `${Math.max(8, y)}px`;
-        };
-
-        const hide = () => {
-            if (tooltip) {
-                tooltip.hidden = true;
-            }
-        };
-
-        return { show, hide };
-    }
-
-    /**
-     * Whether the user asks for reduced motion, so a zoom applies at once.
-     * @returns {boolean} True under prefers-reduced-motion.
-     */
-    function prefersReducedMotion () {
-        return typeof window.matchMedia === 'function' &&
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            return parts;
+        });
     }
 
     /**
@@ -760,17 +699,13 @@
      */
     function init () {
         const host = document.getElementById(HOST_ID);
-        const data = readData();
+        const data = page.readData(DATA_ELEMENT_ID, 'Research Sectors data');
         if (!host || !data || !Array.isArray(data.values) || data.values.length === 0 || typeof d3 === 'undefined') {
             return;
         }
         const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
         const chart = createSunburst(host, data, tooltip);
-        if (window.ResearchPage) {
-            window.ResearchPage.registerTab(TAB_ID, chart);
-        } else {
-            chart.update(data.values.length - 1, { animate: false });
-        }
+        page.registerTab(TAB_ID, chart);
         let width = host.clientWidth;
 
         // A tap outside the chart, or a scroll, puts the tooltip away.

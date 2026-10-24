@@ -16,6 +16,9 @@
  * `[data-research-play]`, `[data-research-range]` and `[data-research-period]`), `[data-research-table-toggle]` and
  * `[data-research-table]`. The page opens each tab on its latest period. Under prefers-reduced-motion every change
  * applies at once.
+ *
+ * It also holds the helpers every chart shares (prefersReducedMotion, formatMoney, readData, createTooltip), so it
+ * must load before the chart scripts.
  */
 (function () {
     'use strict';
@@ -35,6 +38,86 @@
     function prefersReducedMotion () {
         return typeof window.matchMedia === 'function' &&
             window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    /**
+     * Format a US$ amount compactly for labels, tooltips and table views: $3.02T, $412.5B, $18.0M.
+     * @param {number} amount - The amount in US$.
+     * @returns {string} The formatted amount.
+     */
+    function formatMoney (amount) {
+        const absolute = Math.abs(amount);
+        if (absolute >= 1e12) {
+            return `$${(amount / 1e12).toFixed(2)}T`;
+        }
+        if (absolute >= 1e9) {
+            return `$${(amount / 1e9).toFixed(1)}B`;
+        }
+        if (absolute >= 1e6) {
+            return `$${(amount / 1e6).toFixed(1)}M`;
+        }
+        return `$${Math.round(amount).toLocaleString('en-US')}`;
+    }
+
+    /**
+     * Parse a tab's JSON data island.
+     * @param {string} elementId - The id of the `<script type="application/json">` element.
+     * @param {string} label - What the data is, for the console warning, e.g. 'Research World data'.
+     * @returns {Object|null} The camelCase snapshot, or null when it is missing or malformed.
+     */
+    function readData (elementId, label) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            return null;
+        }
+        try {
+            return JSON.parse(element.textContent || 'null');
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.warn(`${label} could not be parsed:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Create a tooltip controller that shows the tooltip element beside the pointer.
+     * @param {HTMLElement|null} tooltip - The tooltip element.
+     * @param {function(function(string, string): HTMLSpanElement, ...*): (Node[]|null)} render - Builds the content
+     *     from a `line(text, className)` span factory and the arguments given to show() after the event; null leaves
+     *     the tooltip as it is.
+     * @returns {{show: function(PointerEvent, ...*): void, hide: function(): void}} The controller.
+     */
+    function createTooltip (tooltip, render) {
+        const line = (text, className) => {
+            const span = document.createElement('span');
+            span.className = className;
+            span.textContent = text;
+            return span;
+        };
+
+        const show = (event, ...args) => {
+            if (!tooltip) {
+                return;
+            }
+            const parts = render(line, ...args);
+            if (!parts) {
+                return;
+            }
+            tooltip.replaceChildren(...parts);
+            tooltip.hidden = false;
+            const x = Math.min(event.clientX + 14, window.innerWidth - tooltip.offsetWidth - 8);
+            const y = Math.min(event.clientY + 14, window.innerHeight - tooltip.offsetHeight - 8);
+            tooltip.style.left = `${Math.max(8, x)}px`;
+            tooltip.style.top = `${Math.max(8, y)}px`;
+        };
+
+        const hide = () => {
+            if (tooltip) {
+                tooltip.hidden = true;
+            }
+        };
+
+        return { show, hide };
     }
 
     /**
@@ -322,7 +405,15 @@
         }
     }
 
-    window.ResearchPage = { registerTab, positionOf, refreshTable };
+    window.ResearchPage = {
+        registerTab,
+        positionOf,
+        refreshTable,
+        prefersReducedMotion,
+        formatMoney,
+        readData,
+        createTooltip
+    };
 
     /**
      * Wire the page's tablists.

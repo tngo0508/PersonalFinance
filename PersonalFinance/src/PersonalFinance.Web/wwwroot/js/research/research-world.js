@@ -11,6 +11,13 @@
 (function () {
     'use strict';
 
+    // research-page.js loads first and holds the helpers every Research chart shares.
+    const page = window.ResearchPage;
+    if (!page) {
+        return;
+    }
+    const { prefersReducedMotion, formatMoney } = page;
+
     const DATA_ELEMENT_ID = 'research-world-data';
     const HOST_ID = 'research-world-map';
     const LEGEND_ID = 'research-world-legend';
@@ -24,25 +31,6 @@
     const MIN_WIDTH = 280;
     const ASPECT = 0.5;
     const STEPS = 8;
-
-    /**
-     * Format a US$ amount compactly, as the server does: $3.02T, $412.5B, $18.0M.
-     * @param {number} amount - The amount in US$.
-     * @returns {string} The formatted amount.
-     */
-    function formatMoney (amount) {
-        const absolute = Math.abs(amount);
-        if (absolute >= 1e12) {
-            return `$${(amount / 1e12).toFixed(2)}T`;
-        }
-        if (absolute >= 1e9) {
-            return `$${(amount / 1e9).toFixed(1)}B`;
-        }
-        if (absolute >= 1e6) {
-            return `$${(amount / 1e6).toFixed(1)}M`;
-        }
-        return `$${Math.round(amount).toLocaleString('en-US')}`;
-    }
 
     /**
      * Format a percentage of GDP to one decimal place.
@@ -72,24 +60,6 @@
             format: formatPercent
         }
     };
-
-    /**
-     * Parse the World data island.
-     * @returns {Object|null} The camelCase World snapshot, or null when it is missing or malformed.
-     */
-    function readData () {
-        const element = document.getElementById(DATA_ELEMENT_ID);
-        if (!element) {
-            return null;
-        }
-        try {
-            return JSON.parse(element.textContent || 'null');
-        } catch (error) {
-            // eslint-disable-next-line no-console
-            console.warn('Research World data could not be parsed:', error);
-            return null;
-        }
-    }
 
     /**
      * Read the vendored world-atlas borders.
@@ -139,15 +109,6 @@
     }
 
     /**
-     * Whether the user asked the operating system to minimise motion.
-     * @returns {boolean} True when changes should apply without a transition.
-     */
-    function prefersReducedMotion () {
-        return typeof window.matchMedia === 'function' &&
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
-
-    /**
      * Index the snapshot for drawing: each year's figures by ISO numeric id, and each country's name.
      * @param {Object} data - The World snapshot.
      * @returns {{years: Map<string, Object>[], names: Map<string, string>}} The lookups, one map per period.
@@ -168,17 +129,7 @@
      *     controller: show(event, country name, figures or null, year).
      */
     function createTooltip (tooltip) {
-        const line = (text, className) => {
-            const span = document.createElement('span');
-            span.className = className;
-            span.textContent = text;
-            return span;
-        };
-
-        const show = (event, name, figures, year) => {
-            if (!tooltip) {
-                return;
-            }
+        return page.createTooltip(tooltip, (line, name, figures, year) => {
             const lines = [line(name, 'research-tooltip__name')];
             if (!figures) {
                 lines.push(line(`No data for ${year}`, 'research-tooltip__muted'));
@@ -194,21 +145,8 @@
                 figures.percentOfGdp === null || figures.percentOfGdp === undefined ? '' : ' of GDP');
                 lines.push(cap, share, line(year, 'research-tooltip__muted'));
             }
-            tooltip.replaceChildren(...lines);
-            tooltip.hidden = false;
-            const x = Math.min(event.clientX + 14, window.innerWidth - tooltip.offsetWidth - 8);
-            const y = Math.min(event.clientY + 14, window.innerHeight - tooltip.offsetHeight - 8);
-            tooltip.style.left = `${Math.max(8, x)}px`;
-            tooltip.style.top = `${Math.max(8, y)}px`;
-        };
-
-        const hide = () => {
-            if (tooltip) {
-                tooltip.hidden = true;
-            }
-        };
-
-        return { show, hide };
+            return lines;
+        });
     }
 
     /**
@@ -460,7 +398,7 @@
      */
     async function init () {
         const host = document.getElementById(HOST_ID);
-        const data = readData();
+        const data = page.readData(DATA_ELEMENT_ID, 'Research World data');
         if (!host || !data || !Array.isArray(data.values) || data.values.length === 0 ||
             typeof d3 === 'undefined' || typeof topojson === 'undefined') {
             return;
@@ -476,11 +414,7 @@
         const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
         const chart = createMap(host, data, features, tooltip);
         initMetricSwitch(chart);
-        if (window.ResearchPage) {
-            window.ResearchPage.registerTab(TAB_ID, chart);
-        } else {
-            chart.update(data.values.length - 1, { animate: false });
-        }
+        page.registerTab(TAB_ID, chart);
 
         // A tap outside the map, or a scroll, puts the tooltip away.
         document.addEventListener('pointerdown', (event) => {

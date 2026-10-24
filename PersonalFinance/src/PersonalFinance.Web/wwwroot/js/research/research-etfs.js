@@ -13,6 +13,13 @@
 (function () {
     'use strict';
 
+    // research-page.js loads first and holds the helpers every Research chart shares.
+    const page = window.ResearchPage;
+    if (!page) {
+        return;
+    }
+    const { prefersReducedMotion } = page;
+
     const DATA_ELEMENT_ID = 'research-etfs-data';
     const HOST_ID = 'research-etfs-tree';
     const TOOLTIP_ID = 'research-etfs-tooltip';
@@ -34,33 +41,6 @@
         holding: 'Holding',
         other: 'Smaller holdings, summed'
     };
-
-    /**
-     * Parse the ETFs data island.
-     * @returns {Object|null} The camelCase ETFs snapshot, or null when it is missing or malformed.
-     */
-    function readData () {
-        const element = document.getElementById(DATA_ELEMENT_ID);
-        if (!element) {
-            return null;
-        }
-        try {
-            return JSON.parse(element.textContent || 'null');
-        } catch (error) {
-            // eslint-disable-next-line no-console
-            console.warn('Research ETFs data could not be parsed:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Whether the user asked the operating system to minimise motion.
-     * @returns {boolean} True when changes should apply without a transition.
-     */
-    function prefersReducedMotion () {
-        return typeof window.matchMedia === 'function' &&
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
 
     /**
      * Format a % of net assets: one decimal from 10%, two below, and "<0.01%" for a sliver.
@@ -190,43 +170,25 @@
      * @returns {{show: Function, hide: Function}} Show it beside the pointer for a node; hide it.
      */
     function createTooltip (tooltip) {
-        const line = (text, className) => {
-            const span = document.createElement('span');
-            span.className = className;
-            span.textContent = text;
-            return span;
-        };
-        return {
-            show (event, node) {
-                if (!tooltip || node.data.kind === 'root') {
-                    return;
-                }
-                const d = node.data;
-                const parts = [line(d.kind === 'fund' ? `${d.name}, ${d.full}` : d.name, 'research-tooltip__name'),
-                    line(KIND_LABELS[d.kind], 'research-tooltip__muted')];
-                if (d.kind === 'fund') {
-                    parts.push(line(d.missing ? 'No report for this quarter' : `${d.count.toLocaleString('en-US')} holdings`,
-                        'research-tooltip__value'));
-                } else {
-                    const value = line(formatPercent(d.value), 'research-tooltip__value');
-                    const wrap = document.createElement('span');
-                    wrap.className = 'research-tooltip__muted';
-                    wrap.append(value, ` of ${d.fund} net assets`);
-                    parts.push(wrap);
-                }
-                tooltip.replaceChildren(...parts);
-                tooltip.hidden = false;
-                const x = Math.min(event.clientX + 14, window.innerWidth - tooltip.offsetWidth - 8);
-                const y = Math.min(event.clientY + 14, window.innerHeight - tooltip.offsetHeight - 8);
-                tooltip.style.left = `${Math.max(8, x)}px`;
-                tooltip.style.top = `${Math.max(8, y)}px`;
-            },
-            hide () {
-                if (tooltip) {
-                    tooltip.hidden = true;
-                }
+        return page.createTooltip(tooltip, (line, node) => {
+            if (node.data.kind === 'root') {
+                return null;
             }
-        };
+            const d = node.data;
+            const parts = [line(d.kind === 'fund' ? `${d.name}, ${d.full}` : d.name, 'research-tooltip__name'),
+                line(KIND_LABELS[d.kind], 'research-tooltip__muted')];
+            if (d.kind === 'fund') {
+                parts.push(line(d.missing ? 'No report for this quarter' : `${d.count.toLocaleString('en-US')} holdings`,
+                    'research-tooltip__value'));
+            } else {
+                const value = line(formatPercent(d.value), 'research-tooltip__value');
+                const wrap = document.createElement('span');
+                wrap.className = 'research-tooltip__muted';
+                wrap.append(value, ` of ${d.fund} net assets`);
+                parts.push(wrap);
+            }
+            return parts;
+        });
     }
 
     /**
@@ -399,9 +361,7 @@
             render(key, true);
             focusNode(key);
             announce(`${d.data.name} ${expanded.has(key) ? 'opened' : 'closed'}.`);
-            if (window.ResearchPage && window.ResearchPage.refreshTable) {
-                window.ResearchPage.refreshTable(TAB_ID);
-            }
+            page.refreshTable(TAB_ID);
         }
 
         /**
@@ -573,15 +533,13 @@
      */
     function init () {
         const host = document.getElementById(HOST_ID);
-        const data = readData();
+        const data = page.readData(DATA_ELEMENT_ID, 'Research ETFs data');
         if (!host || !data || !Array.isArray(data.values) || data.values.length === 0 || typeof d3 === 'undefined') {
             return;
         }
         const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
         const chart = createTree(host, data, tooltip);
-        if (window.ResearchPage) {
-            window.ResearchPage.registerTab(TAB_ID, chart);
-        }
+        page.registerTab(TAB_ID, chart);
         host.addEventListener('scroll', tooltip.hide, { passive: true });
         window.addEventListener('scroll', tooltip.hide, { passive: true });
     }
