@@ -1,0 +1,25 @@
+namespace PersonalFinance.ApiService.Features.Research;
+
+/// <summary>
+/// A Research dataset as last built, or "never loaded" when no refresh has built it yet.
+/// </summary>
+/// <typeparam name="TSnapshot">The dataset's Shared DTO.</typeparam>
+public sealed class ResearchSnapshotResult<TSnapshot> where TSnapshot : class
+{
+    private ResearchSnapshotResult(TSnapshot? snapshot)
+    {
+        Snapshot = snapshot;
+    }
+
+    /// <summary>The snapshot, or null when the dataset has never loaded.</summary>
+    public TSnapshot? Snapshot { get; }
+
+    /// <summary>True when no refresh has built the dataset yet.</summary>
+    public bool NeverLoaded => Snapshot is null;
+
+    /// <summary>A loaded snapshot.</summary>
+    public static ResearchSnapshotResult<TSnapshot> Loaded(TSnapshot snapshot) => new(snapshot);
+
+    /// <summary>The dataset has never loaded.</summary>
+    public static ResearchSnapshotResult<TSnapshot> NotLoaded() => new(null);
+}

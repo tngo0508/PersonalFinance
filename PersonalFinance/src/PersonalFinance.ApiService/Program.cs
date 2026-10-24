@@ -12,6 +12,7 @@ using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Features.NetWorth;
+using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.SavingsGoals;
 using PersonalFinance.ApiService.Features.Search;
 using PersonalFinance.ApiService.Features.Watchlist;
@@ -70,6 +71,7 @@ try
         .AddSavingsGoalsFeature()
         .AddCommunityFeature()
         .AddWatchlistFeature()
+        .AddResearchFeature(builder.Configuration)
         .AddAiAssistantFeature(builder.Configuration)
         .AddFeedbackFeature()
         .AddAdminFeature()
@@ -133,6 +135,12 @@ try
     if (AccountPurgeJob.IsRequested(args))
     {
         return await AccountPurgeJob.RunAsync(app);
+    }
+
+    // The daily Research refresh job runs this image with --refresh-research: migrate, rebuild the snapshots, exit.
+    if (ResearchRefreshJob.IsRequested(args))
+    {
+        return await ResearchRefreshJob.RunAsync(app);
     }
 
     await app.MigrateAndRunAsync(args);

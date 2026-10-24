@@ -93,6 +93,12 @@ param businessHoursEndHour int = 23
 @description('When the daily Purge job runs (UTC cron). Default 15:00 UTC, inside business hours, when the database is usually awake.')
 param purgeJobCron string = '0 15 * * *'
 
+@description('When the daily Research refresh job runs (UTC cron). Default 10:00 UTC: off-peak, after SEC republishes its data.')
+param researchRefreshJobCron string = '0 10 * * *'
+
+@description('User-Agent the Research refresh job sends to SEC EDGAR: an application name and a contact email (SEC fair-access rules)')
+param secUserAgent string = ''
+
 // =============================================================================
 // BUDGET ESTIMATE (~$10/month total)
 // =============================================================================
@@ -101,6 +107,7 @@ param purgeJobCron string = '0 15 * * *'
 // ACA Managed Environment:               ~$1.75/month  (Consumption tier base cost)
 // Log Analytics:                         ~$0/month     (5 GB/month free ingestion, 30-day retention)
 // ACA Job (daily Purge):                 ~$0/month     (seconds a day, within the Consumption free grant)
+// ACA Job (daily Research refresh):      ~$0/month     (minutes a day, within the Consumption free grant)
 // ---------------------------------------------------------------------------
 // Total estimated cost:                  ~$10/month
 // =============================================================================
@@ -123,6 +130,7 @@ var containerAppEnvironmentName = 'cae-${environmentName}-${locationSuffix}'
 var apiAppName = 'api-${environmentName}-${locationSuffix}'
 var webAppName = 'web-${environmentName}-${locationSuffix}'
 var purgeJobName = 'purge-${environmentName}-${locationSuffix}'
+var researchRefreshJobName = 'research-${environmentName}-${locationSuffix}'
 // Include the SQL region in the deterministic name. Azure SQL server names are
 // location-bound, and a failed deployment can leave a name reserved in the
 // original region even when provisioning did not complete.
@@ -226,6 +234,21 @@ module purgeJob 'modules/purge-job.bicep' = {
     containerImage: apiImage
     dbConnectionString: effectiveConnectionString
     cronExpression: purgeJobCron
+    tags: tags
+  }
+}
+
+// 7. Daily Research refresh job: runs the API image with --refresh-research to rebuild the Research snapshots
+module researchRefreshJob 'modules/research-refresh-job.bicep' = {
+  name: 'researchRefreshJobDeployment'
+  params: {
+    name: researchRefreshJobName
+    location: location
+    containerAppEnvironmentId: containerEnv.outputs.id
+    containerImage: apiImage
+    dbConnectionString: effectiveConnectionString
+    secUserAgent: secUserAgent
+    cronExpression: researchRefreshJobCron
     tags: tags
   }
 }

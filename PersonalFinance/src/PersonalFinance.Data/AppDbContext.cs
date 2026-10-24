@@ -146,6 +146,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<DeletionRequest> DeletionRequests => Set<DeletionRequest>();
 
     /// <summary>
+    /// Research snapshots — one row per public market dataset, replaced wholesale by the Research refresh job.
+    /// </summary>
+    public DbSet<ResearchSnapshot> ResearchSnapshots => Set<ResearchSnapshot>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -633,6 +638,17 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.CancelTokenHash).IsUnique();
             entity.HasIndex(e => new { e.Status, e.PurgeAfter });
+        });
+
+        // Configure ResearchSnapshot entity — not user-owned, one row per dataset, read by its key
+        builder.Entity<ResearchSnapshot>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Dataset).IsRequired().HasMaxLength(32);
+            entity.Property(e => e.FirstPeriod).IsRequired().HasMaxLength(16);
+            entity.Property(e => e.LastPeriod).IsRequired().HasMaxLength(16);
+            entity.Property(e => e.Payload).IsRequired();
+            entity.HasIndex(e => e.Dataset).IsUnique();
         });
     }
 }
