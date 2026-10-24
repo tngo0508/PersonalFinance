@@ -63,14 +63,17 @@ param maxReplicas int = 1
 @description('Enable scheduled scaling: keep 1 replica warm during business hours, scale to 0 at night')
 param enableScheduledScaling bool = false
 
-@description('Business hours start time in UTC (cron minute)')
+@description('Business hours start minute (0-59), in businessHoursTimeZone')
 param businessHoursStartMinute int = 0
 
-@description('Business hours start hour in UTC (0-23)')
+@description('Business hours start hour (0-23), in businessHoursTimeZone')
 param businessHoursStartHour int = 6
 
-@description('Business hours end hour in UTC (0-23, scales to 0 at this hour)')
+@description('Business hours end hour (0-23, scales to 0 at this hour), in businessHoursTimeZone')
 param businessHoursEndHour int = 23
+
+@description('IANA time zone the business hours are in, e.g. America/Los_Angeles. The cron scaler follows its daylight saving changes.')
+param businessHoursTimeZone string = 'UTC'
 
 @description('Optional custom domain name (e.g. app.mydomain.com)')
 param customDomainName string = ''
@@ -285,7 +288,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
               custom: {
                 type: 'cron'
                 metadata: {
-                  timezone: 'UTC'
+                  timezone: businessHoursTimeZone
                   start: '${string(businessHoursStartMinute)} ${string(businessHoursStartHour)} * * *'
                   end: '0 ${string(businessHoursEndHour)} * * *'
                   desiredReplicas: '1'

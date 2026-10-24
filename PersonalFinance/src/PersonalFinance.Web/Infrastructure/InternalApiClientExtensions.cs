@@ -19,7 +19,8 @@ public static class InternalApiClientExtensions
     /// <summary>
     /// Registers every ApiService Refit contract. Add new contracts here, not in <c>Program.cs</c>.
     /// </summary>
-    public static IServiceCollection AddInternalApiClients(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInternalApiClients(this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
         services.AddTransient<UserIdForwardingHandler>();
@@ -48,9 +49,11 @@ public static class InternalApiClientExtensions
         // page (and its Unavailable State) by several seconds per dataset.
         services.AddInternalApiClient<IResearchApi>(apiBaseUrl, retryServiceUnavailable: false);
 
-        // Anonymous liveness ping from the Login page, so ApiService is awake by the time the Dashboard loads.
+        // Anonymous liveness ping from the Login page and from Web startup, so ApiService is awake by the time the
+        // Dashboard loads.
         services.AddHttpClient(ApiServiceWarmer.HttpClientName, client => client.BaseAddress = apiBaseUrl);
         services.AddSingleton<IApiServiceWarmer, ApiServiceWarmer>();
+        services.AddHostedService<ApiServiceStartupWarmer>();
 
         return services;
     }
@@ -81,7 +84,8 @@ public static class InternalApiClientExtensions
             builder.AddStandardResilienceHandler(options =>
             {
                 options.Retry.ShouldHandle = args => ValueTask.FromResult(IsTransientExceptUnavailable(args.Outcome));
-                options.CircuitBreaker.ShouldHandle = args => ValueTask.FromResult(IsTransientExceptUnavailable(args.Outcome));
+                options.CircuitBreaker.ShouldHandle =
+                    args => ValueTask.FromResult(IsTransientExceptUnavailable(args.Outcome));
             });
         }
     }
