@@ -360,6 +360,33 @@ dotnet user-secrets set "Rbac:AdminEmail" "you@example.com" --project PersonalFi
 
 ---
 
+### Research Market Data (`Research:Sec:UserAgent` and the refresh)
+
+The Research page never calls SEC or the World Bank while someone browses. It reads saved copies (snapshots) from the `ResearchSnapshots` table, and only the **Research refresh** writes them: a run of the ApiService that downloads the public data, builds the Sectors, ETFs and World datasets, saves them and exits. Until a refresh has run against a database, every Research tab shows the Unavailable State and the API answers `GET api/Research/*` with 503.
+
+**1. Set the SEC contact (once per machine).** SEC's fair-access rules require a real contact email on every request. The committed `appsettings.json` has a placeholder on `example.com`, which the refresh refuses to send; it then skips Sectors and ETFs and rebuilds only World.
+
+```bash
+dotnet user-secrets set "Research:Sec:UserAgent" "PersonalFinance research you@yourdomain.com" --project PersonalFinance/src/PersonalFinance.ApiService
+```
+
+**2. Run the refresh** from a checkout that has the Research code, against the database your app uses (check with `dotnet user-secrets list --project PersonalFinance/src/PersonalFinance.ApiService`; never production):
+
+```bash
+dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --refresh-research
+```
+
+- It applies pending migrations, refreshes, logs `Research refresh finished: built ...; failed ...; skipped ...` and exits. Exit code 0 means every dataset was built.
+- The **first run takes 15 to 20 minutes**: it reads several thousand SEC company pages at SEC's rate limit, then about 180 ETF filings (around 400 MB). Company details are saved in the database, so later runs are much faster.
+- Each dataset refreshes on its own: one that fails keeps its previous snapshot.
+- Nothing schedules it locally. Run it again whenever you want newer data.
+- A branch without the Research code (before 5.0.0) ignores `--refresh-research` and starts the normal API instead.
+- With an InMemory database the refresh cannot fill the running app. Use made-up data instead: start the ApiService with `ASPNETCORE_ENVIRONMENT=Development` and `E2E_SEED_RESEARCH=true` (see "Running the E2E tests locally").
+
+**Production:** the `SEC_USER_AGENT` repository variable carries the contact (see "Repository Variables"), and a daily Container Apps Job runs the refresh (see `docs/deployment.md`).
+
+---
+
 ### Google Drive API Configuration
 
 To interact with Google Drive folders without entering a key in the web interface on each session:
@@ -852,6 +879,16 @@ The ApiService fails at startup (or every request fails) with *"This database ha
 2. Switch to the local container: follow "Local SQL Server (Docker)" in section 3, including the note on saving the Azure connection string first.
 3. Alternatively, choose "Continue using database with additional charges" on the database's Compute and Storage tab in the Azure Portal. This resumes the database immediately and bills you for the extra usage.
 
+### 10. Research Page: `Your data is safe. The service is temporarily unavailable.`
+**Symptom:**
+A Research tab shows the Unavailable State, and the ApiService logs `HTTP "GET" "/api/Research/sectors" responded 503` (or `etfs`, `world`).
+**Cause:**
+No Research refresh has stored that dataset in this database yet. On a new machine or a fresh database the table is empty. If only Sectors and ETFs are missing, the refresh ran without a real SEC contact.
+**Resolution:**
+1. Set `Research:Sec:UserAgent` and run the refresh, as in "Research Market Data" in section 3.
+2. Reload the Research page once the refresh logs `Research refresh finished`.
+3. In production, check that the `SEC_USER_AGENT` repository variable is set and that the Research job has run (see `docs/deployment.md`).
+
 ---
 
 ## 7. Containerization & Docker Builds
@@ -941,6 +978,7 @@ Deploy the full stack to Azure Container Apps:
 | `Brevo:SenderEmail` | `Brevo__SenderEmail` | Brevo verified sender email |
 | `GoogleDrive:ApiKey` | `google-drive-api-key` / `GoogleDrive__ApiKey` | Google Drive API v3 public folder access |
 | `ConnectionStrings:DefaultConnection` | `db-connection-string` / `ConnectionStrings__DefaultConnection` | Azure SQL connection string |
+| `Research:Sec:UserAgent` | `Research__Sec__UserAgent` (Research refresh job only) | SEC contact, from the `SEC_USER_AGENT` repository variable |
 | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` | Forwarded headers for SSL termination behind ACA ingress |
 
 ---
@@ -1014,6 +1052,7 @@ Configure the following secrets in GitHub Repository Settings &rarr; **Secrets a
 | `BREVO_SENDER_EMAIL` | Verified Brevo sender email address | `tngo0508@gmail.com` |
 | `BREVO_SENDER_NAME` | Sender display name | `PersonalFinance` |
 | `CUSTOM_DOMAIN_NAME` | *(Optional)* Custom domain name for the Web App | *(empty)* |
+| `SEC_USER_AGENT` | Contact the daily Research refresh job sends to SEC (an app name and a real email). Without it production gets World data only. Set it with `gh variable set SEC_USER_AGENT --repo tngo0508/PersonalFinance --body "PersonalFinance research <email>"`; a change takes effect at the next deploy | `PersonalFinance research tngo0508@gmail.com` |
 
 ---
 
