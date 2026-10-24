@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.ApiService.Features.BudgetTracker;
@@ -50,7 +51,8 @@ public class NavigationLayoutTests
             typeof(InvestmentCalculatorController),
             typeof(NewsController),
             typeof(CommunityController),
-            typeof(GoogleDriveController)
+            typeof(GoogleDriveController),
+            typeof(ResearchController)
         };
 
         foreach (Type? type in controllerTypes)
@@ -63,17 +65,39 @@ public class NavigationLayoutTests
     }
 
     [Fact]
-    public void LayoutView_DoesNotLinkResearchYet()
+    public void Sidebar_LinksToResearch_InTheResourcesGroup()
     {
-        // The Research page is reachable at /Research but stays out of the sidebar and bottom nav until its
-        // visualisations land (spec #217); the navigation ticket replaces this check with the entries.
-        string layoutPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Shared",
-            "_Layout.cshtml");
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        string resources = Between(sidebar, "Resources</div>", "<div class=\"sidebar-group\">");
 
-        string content = File.ReadAllText(layoutPath);
+        Assert.Contains("asp-controller=\"Research\" asp-action=\"Index\"", resources);
+        Assert.Contains("currentController == \"Research\" ? \"active\"", resources);
+        Assert.Contains("<span class=\"sidebar-link-text\">Research</span>", resources);
+    }
 
-        Assert.DoesNotContain("asp-controller=\"Research\"", content);
-        Assert.DoesNotContain("/Research", content);
+    [Fact]
+    public void BottomNav_KeepsFiveItems_AndLightsToolsOnResearch()
+    {
+        string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");
+
+        Assert.Equal(5, Regex.Matches(bottomNav, "class=\"bottom-nav-item").Count);
+        string tools = bottomNav[..bottomNav.IndexOf("<span>Tools</span>", StringComparison.Ordinal)];
+        tools = tools[tools.LastIndexOf("<a ", StringComparison.Ordinal)..];
+        Assert.Contains("currentController == \"Research\"", tools);
+    }
+
+    [Fact]
+    public void NetWorthPage_LinksToResearch_AndTheDashboardDoesNot()
+    {
+        Assert.Contains("asp-controller=\"Research\" asp-action=\"Index\"", ReadView("Networth", "_NetWorthContent.cshtml"));
+        Assert.DoesNotContain("asp-controller=\"Research\"", ReadView("Dashboard", "Index.cshtml"));
+    }
+
+    private static string Between(string content, string start, string end)
+    {
+        int from = content.IndexOf(start, StringComparison.Ordinal);
+        Assert.True(from >= 0, $"{start} not found.");
+        return content[from..content.IndexOf(end, from, StringComparison.Ordinal)];
     }
 
     [Fact]
@@ -101,6 +125,7 @@ public class NavigationLayoutTests
         Assert.Contains("asp-controller=\"News\"", content);
         Assert.Contains("asp-controller=\"Community\"", content);
         Assert.Contains("asp-controller=\"GoogleDrive\"", content);
+        Assert.Contains("asp-controller=\"Research\"", content);
 
         // Verify mobile bottom navigation bar exists with 5 items
         Assert.Contains("bottom-nav", content);

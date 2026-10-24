@@ -109,6 +109,17 @@
   white-space: nowrap;
 }
 
+.nw-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+a.nw-help-btn {
+  text-decoration: none;
+}
+
 .nw-help-btn:hover {
   background: var(--nw-surface-soft);
   border-color: var(--nw-border-hover);
@@ -1664,7 +1675,7 @@
     height: 38px;
   }
 
-  .nw-help-btn {
+  .nw-header__actions {
     align-self: flex-end;
   }
 
