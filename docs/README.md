@@ -12,4 +12,5 @@ This directory contains the project documentation for the Personal Finance App.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Architecture guide — projects, dependencies, request flow, how identity reaches ApiService, and the checklist for adding a feature. |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Developer guide — local setup, secrets management, EF Core migrations, OAuth configuration, troubleshooting, and detailed architecture. |
 | [deployment.md](deployment.md) | Deployment guide — Azure Container Apps, Docker, CI/CD pipelines, Infrastructure as Code (Bicep), and operational runbook. |
+| [CUSTOM_DOMAIN.md](CUSTOM_DOMAIN.md) | Custom domain runbook — buying an App Service Domain, Azure DNS records, Container Apps managed certificate, and keeping the binding across CI deploys. |
 | [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md) | ASP.NET Core Identity database schema — tables, foreign keys, and relational model documentation. |
