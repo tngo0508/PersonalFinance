@@ -1,3 +1,5 @@
+using PersonalFinance.ApiService.Features.Research.Domain;
+
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
@@ -13,4 +15,10 @@ internal sealed class ResearchSettings
     /// before 2011.
     /// </summary>
     public int SectorsFirstYear { get; init; } = 2011;
+
+    /// <summary>
+    /// The filer years whose Public Float the Sectors snapshot leaves out by hand
+    /// (<c>Research:PublicFloatExclusions</c>, a list of <c>{ "Cik": ..., "Year": ... }</c>).
+    /// </summary>
+    public IReadOnlyList<FilerYear> PublicFloatExclusions { get; init; } = [];
 }

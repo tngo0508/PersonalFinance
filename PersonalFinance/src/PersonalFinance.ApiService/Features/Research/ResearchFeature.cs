@@ -1,4 +1,5 @@
 using PersonalFinance.ApiService.Features.Research.Adapters;
+using PersonalFinance.ApiService.Features.Research.Domain;
 
 namespace PersonalFinance.ApiService.Features.Research;
 
@@ -23,6 +24,9 @@ internal static class ResearchFeature
         services.AddSingleton(new ResearchSettings
         {
             SectorsFirstYear = configuration.GetValue($"{ResearchSettings.Section}:SectorsFirstYear", 2011),
+            PublicFloatExclusions = configuration
+                .GetSection($"{ResearchSettings.Section}:PublicFloatExclusions")
+                .Get<List<FilerYear>>() ?? [],
         });
         services.AddSingleton<SecRequestGate>();
         services.AddHttpClient<ISecEdgarClient, SecEdgarClient>(client => client.Timeout = SecTimeout);

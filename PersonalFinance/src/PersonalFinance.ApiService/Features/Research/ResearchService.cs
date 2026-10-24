@@ -82,10 +82,45 @@ internal sealed class ResearchService : IResearchService
             factsByYear[year] = facts;
         }
 
-        SectorsSnapshotDto snapshot = SectorsSnapshotBuilder.Build(factsByYear)
+        IReadOnlyDictionary<int, IReadOnlyList<PublicFloatFact>> cleaned =
+            await CleanPublicFloatAsync(factsByYear, lastYear, cancellationToken);
+        SectorsSnapshotDto snapshot = SectorsSnapshotBuilder.Build(cleaned)
             ?? throw new InvalidOperationException("SEC returned no Public Float for any year.");
         await StoreAsync(SectorsDataset, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
             JsonSerializer.Serialize(snapshot, JsonSerializerOptions.Web), cancellationToken);
+    }
+
+    /// <summary>
+    /// Drops the Public Float values SEC holds wrongly (<see cref="PublicFloatCleaner"/>), checking them against the
+    /// filers' total assets in the Q2 and Q4 frames from the year before the first to last year. Dropped values are
+    /// logged by filer CIK and year only, never with their amount or name.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<int, IReadOnlyList<PublicFloatFact>>> CleanPublicFloatAsync(
+        Dictionary<int, IReadOnlyList<PublicFloatFact>> factsByYear, int lastYear, CancellationToken cancellationToken)
+    {
+        var totalAssets = new List<TotalAssetsFact>();
+        for (int year = _settings.SectorsFirstYear - 1; year <= lastYear; year++)
+        {
+            foreach (int quarter in (int[])[2, 4])
+            {
+                totalAssets.AddRange(await _secClient.GetTotalAssetsFrameAsync(year, quarter, cancellationToken));
+            }
+        }
+
+        PublicFloatCleaning cleaning =
+            PublicFloatCleaner.Clean(factsByYear, totalAssets, _settings.PublicFloatExclusions);
+        // One line a year: a refresh drops a hundred or more values a year, mostly from small filers.
+        foreach (IGrouping<int, FilerYear> year in cleaning.Dropped.GroupBy(d => d.Year))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Left out the Public Float of {Count} filers for {Year} from the Sectors snapshot, CIKs {Ciks}",
+                    year.Count(), year.Key, string.Join(',', year.Select(d => d.Cik)));
+            }
+        }
+
+        return cleaning.Kept;
     }
 
     /// <summary>

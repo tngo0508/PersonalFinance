@@ -11,4 +11,10 @@ internal interface ISecEdgarClient
     /// failure throws, so a refresh never builds from partial data.
     /// </summary>
     Task<IReadOnlyList<PublicFloatFact>> GetPublicFloatFrameAsync(int year, int quarter, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads the <c>us-gaap:Assets</c> instant frame of one calendar quarter (<c>CY{year}Q{quarter}I</c>), which the
+    /// cleaning of Public Float checks values against. Fails as <see cref="GetPublicFloatFrameAsync"/> does.
+    /// </summary>
+    Task<IReadOnlyList<TotalAssetsFact>> GetTotalAssetsFrameAsync(int year, int quarter, CancellationToken cancellationToken);
 }
