@@ -11,7 +11,7 @@
 @* The Funds tab: a collapsible tree of what the Tracked Funds hold (fund, then N-PORT asset category, then holdings), one
    quarter at a time. Drawn by js/research/research-funds.js from the data island below; the scrubber, live region and
    table view are wired by js/research/research-page.js. Hidden until its tab is chosen. *@
-<section class="research-deck research-deck--stacked" id="research-panel-funds" role="tabpanel" aria-labelledby="research-tab-funds"
+<section class="research-deck research-deck--stacked" id="research-panel-funds" data-research-basket role="tabpanel" aria-labelledby="research-tab-funds"
          hidden="@(!Model.IsSelected(ResearchViewModel.FundsTab))">
     @if (showFunds)
     {

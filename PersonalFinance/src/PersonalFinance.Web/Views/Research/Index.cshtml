@@ -37,6 +37,27 @@
         }
     </div>
 
+    @* The Fund Basket bar: one to five Tracked Funds viewed together by the tabs whose panel carries
+       data-research-basket. It is never saved; it lives in the address (?basket=VTI:60,BND:40). Wired by
+       js/research/research-basket.js, which keeps it hidden on other tabs and when the funds data is missing. *@
+    <section class="research-basket research-basket--empty" id="research-basket" aria-labelledby="research-basket-title" hidden>
+        <div class="research-basket__head">
+            <h2 class="research-basket__title" id="research-basket-title">Fund Basket</h2>
+            <p class="research-basket__hint">Pick up to five tracked funds to view together. Nothing is saved: the basket lives in this page's address.</p>
+        </div>
+        <ul class="research-basket__chips" id="research-basket-chips" aria-label="Funds in the basket"></ul>
+        <div class="research-basket__picker">
+            <label class="visually-hidden" for="research-basket-search">Add a fund to the basket</label>
+            <input type="text" class="research-basket__search" id="research-basket-search" role="combobox"
+                   aria-autocomplete="list" aria-expanded="false" aria-controls="research-basket-options" autocomplete="off"
+                   placeholder="Add a fund: type a ticker or name"/>
+            <div class="research-basket__options" id="research-basket-options" role="listbox" aria-label="Tracked funds" hidden></div>
+        </div>
+        <p class="research-basket__note" id="research-basket-note" hidden></p>
+        <button type="button" class="research-chip research-basket__equal" id="research-basket-equal" hidden>Use equal weights</button>
+        <p class="research-basket__notice" id="research-basket-notice" role="status" hidden></p>
+    </section>
+
     @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
        the tabs, the scrubber, the live region and the table view. *@
     <section class="research-deck" id="research-panel-sectors" role="tabpanel" aria-labelledby="research-tab-sectors"
@@ -154,6 +175,7 @@
 @section Scripts {
     @* The tab shell runs whatever loaded, so the tabs work even when a tab shows its Unavailable State. *@
     <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
     @* D3 always loads: the Companies tab draws its charts whenever a profile loads. *@
     <script src="~/lib/d3/d3.min.js"></script>
     <script src="~/js/research/research-companies.js" asp-append-version="true"></script>

@@ -334,6 +334,79 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 7b: the Fund Basket bar shows on the Funds tab only; funds are picked by keyboard, weights scale to 100%,
+        // "Use equal weights" resets them, and the basket lives in the address so a reload keeps it.
+        await step('Research 7b', fail, async () => {
+            const bar = page.locator('#research-basket');
+            const search = page.locator('#research-basket-search');
+            const basketParam = () => new URL(page.url()).searchParams.get('basket');
+            const shownOnFunds = await bar.isVisible();
+            await page.click('#research-tab-sectors');
+            const hiddenOnSectors = !(await bar.isVisible());
+            await page.click('#research-tab-funds');
+
+            await search.fill('qq');
+            const option = page.locator('#research-basket-options [role="option"]', {hasText: 'QQQ'});
+            const grouped = await page.locator('#research-basket-options .research-basket__group-label').first().textContent();
+            await search.press('Enter');
+            await search.press('ArrowDown');
+            await search.press('Enter');
+            const picked = basketParam();
+            await page.locator('#research-basket-chips [data-ticker="SPY"] input').fill('70');
+            await page.locator('#research-basket-chips [data-ticker="SPY"] input').press('Tab');
+            const weighted = basketParam();
+            const scaled = await page.locator('#research-basket-note').isVisible();
+            await page.click('#research-basket-equal');
+            const equal = basketParam();
+            await page.reload({waitUntil: 'networkidle'});
+            const restored = await page.locator('#research-basket-chips [data-ticker]').evaluateAll(
+                (chips) => chips.map((c) => c.dataset.ticker));
+            // At 320 px, the narrowest common phone width, the chips wrap and their names shrink, so the page never
+            // scrolls sideways (a chip that could not shrink pushed the page wider).
+            await page.setViewportSize({width: 320, height: 800});
+            // The charts redraw at the new width on their resize observers; let them settle before measuring.
+            await page.waitForTimeout(400);
+            const narrowFits = !(await scrollsSideways(page));
+            await page.setViewportSize({width: 1280, height: 800});
+            await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
+            const removed = basketParam();
+            const ok = shownOnFunds && hiddenOnSectors && (await option.count()) === 0 && Boolean(grouped) &&
+                picked === 'QQQ,SPY' && weighted === 'QQQ:50,SPY:70' && scaled && equal === 'QQQ,SPY' &&
+                restored.join(',') === 'QQQ,SPY' && narrowFits && removed === 'QQQ';
+            if (ok) {
+                pass(`Research 7b: the basket bar picks QQQ then SPY by keyboard (grouped under "${grouped.trim()}"), scales 50/70, resets to equal, survives a reload and removes SPY`);
+            } else {
+                fail(`Research 7b: shown ${shownOnFunds}/${!hiddenOnSectors}, picked ${picked}, weighted ${weighted}, ` +
+                    `scaled ${scaled}, equal ${equal}, restored ${restored}, fits at 320px ${narrowFits}, removed ${removed}`);
+            }
+        });
+
+        // Step 7c: a link with an untracked fund keeps the rest and says so; the parser drops bad weights and repeats,
+        // and keeps only the first five funds.
+        await step('Research 7c', fail, async () => {
+            await page.goto(`${base}/Research?tab=funds&basket=SPY:60,XYZ:20,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const notice = (await page.locator('#research-basket-notice').textContent()).trim();
+            const kept = new URL(page.url()).searchParams.get('basket');
+            const parsed = await page.evaluate(() => {
+                const parse = window.ResearchBasket.parse;
+                const six = parse('A,B,C,D,E,F', ['A', 'B', 'C', 'D', 'E', 'F']);
+                const bad = parse('SPY:0,QQQ:abc,SPY,QQQ:101', ['SPY', 'QQQ']);
+                const mixed = parse('spy:60,qqq', ['SPY', 'QQQ']);
+                return {
+                    six: [six.funds.length, six.tooMany, six.invalid],
+                    bad: [bad.funds.map((f) => f.ticker).join(','), bad.invalid],
+                    mixed: mixed.funds.map((f) => `${f.ticker}:${f.weight}`).join(',')
+                };
+            });
+            const ok = notice === 'Some funds in this link aren\'t tracked and were left out.' && kept === 'SPY:60,QQQ:40' &&
+                parsed.six.join() === '5,true,false' && parsed.bad.join() === 'SPY,true' && parsed.mixed === 'SPY:null,QQQ:null';
+            if (ok) {
+                pass('Research 7c: an untracked fund is left out with a notice; bad weights, repeats and a sixth fund are dropped');
+            } else {
+                fail(`Research 7c: notice "${notice}", kept ${kept}, parsed ${JSON.stringify(parsed)}`);
+            }
+        });
+
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');
@@ -402,7 +475,8 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             });
             try {
                 const mobile = watch(await phone.newPage());
-                await mobile.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                // With a weighted basket, so the Funds tab's check covers the Fund Basket bar's chips too.
+                await mobile.goto(`${base}/Research?basket=SPY:70,QQQ:50`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await mobile.waitForSelector('#research-sunburst svg', {timeout: TIMEOUT});
                 const wide = [];
                 for (const tabId of ['sectors', 'funds', 'world']) {
