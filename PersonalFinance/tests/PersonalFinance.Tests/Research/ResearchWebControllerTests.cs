@@ -91,7 +91,7 @@ public class ResearchWebControllerTests
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
         // The view embeds the whole snapshot as JSON for the sunburst, so the page makes no API call of its own.
-        Assert.Equal([nameof(IResearchApi.GetSectorsAsync)], proxy.Calls);
+        Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetEtfsAsync)], proxy.Calls);
         Assert.Same(Snapshot, model.Sectors);
         Assert.Equal([nameof(ResearchController.Index)],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)

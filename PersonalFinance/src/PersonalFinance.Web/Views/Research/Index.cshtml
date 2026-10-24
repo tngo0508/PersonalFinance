@@ -6,10 +6,12 @@
     ViewData["Title"] = "Research";
     SectorsPeriodDto? latest = Model.SectorsLatestPeriod;
     bool showSectors = !Model.SectorsUnavailable && latest is not null;
+    bool showEtfs = !Model.EtfsUnavailable;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/research-etfs.css" asp-append-version="true"/>
 }
 
 @* Research page, Control-deck layout: header, tab bar, then a chart card beside a side panel. The side panel stacks
@@ -26,6 +28,8 @@
     <div class="research-tabs" role="tablist" aria-label="Research datasets">
         <button type="button" class="research-tabs__tab" id="research-tab-sectors" role="tab"
                 aria-selected="true" aria-controls="research-panel-sectors" tabindex="0">Sectors</button>
+        <button type="button" class="research-tabs__tab" id="research-tab-etfs" role="tab"
+                aria-selected="false" aria-controls="research-panel-etfs" tabindex="-1">ETFs</button>
     </div>
 
     @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
@@ -117,6 +121,8 @@
         </aside>
     </section>
 
+    <partial name="_EtfsTab" model="Model"/>
+
     @* Summarises each change of period for screen readers. *@
     <p class="visually-hidden" id="research-live" aria-live="polite"></p>
 </div>
@@ -128,10 +134,18 @@
 }
 
 @section Scripts {
-    @if (showSectors)
+    @* The tab shell is always loaded, so the tabs switch even when every tab is unavailable. *@
+    @if (showSectors || showEtfs)
     {
         <script src="~/lib/d3/d3.min.js"></script>
-        <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    }
+    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    @if (showSectors)
+    {
         <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>
+    }
+    @if (showEtfs)
+    {
+        <script src="~/js/research/research-etfs.js" asp-append-version="true"></script>
     }
 }

@@ -35,7 +35,8 @@ public sealed class ResearchController : Controller
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
         SectorsSnapshotDto? sectors = await GetSectorsAsync(cancellationToken);
-        return View(new ResearchViewModel { Sectors = sectors });
+        EtfsSnapshotDto? etfs = await GetEtfsAsync(cancellationToken);
+        return View(new ResearchViewModel { Sectors = sectors, Etfs = etfs });
     }
 
     /// <summary>
@@ -51,6 +52,23 @@ public sealed class ResearchController : Controller
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Could not load the Research Sectors data");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads the ETFs dataset; null when it has never loaded or ApiService cannot be reached, so only that tab shows
+    /// the Unavailable State.
+    /// </summary>
+    private async Task<EtfsSnapshotDto?> GetEtfsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _researchApi.GetEtfsAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Could not load the Research ETFs data");
             return null;
         }
     }

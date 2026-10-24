@@ -7,6 +7,7 @@
  *     window.ResearchPage.registerTab('sectors', {
  *         periods: ['2011', ..., '2025'],   // period labels, oldest first
  *         transitionMs: 750,                // how long one animated update takes
+ *         playLabel: 'Play through the years', // optional: the play button's label while paused
  *         update (index, { animate }) {},   // show period `index`; returns a one-sentence summary to announce
  *         table (index) {}                  // { caption, columns: [{ label, numeric }], rows: [[cell, ...]] }
  *     });
@@ -111,7 +112,7 @@
         }
         const playing = playingTab === tab;
         tab.play.dataset.state = playing ? 'playing' : 'paused';
-        tab.play.setAttribute('aria-label', playing ? 'Pause' : 'Play through the years');
+        tab.play.setAttribute('aria-label', playing ? 'Pause' : (tab.chart.playLabel || 'Play through the years'));
     }
 
     /**
@@ -309,7 +310,19 @@
         return tab ? tab.position : null;
     }
 
-    window.ResearchPage = { registerTab, positionOf };
+    /**
+     * Redraw a registered tab's table for its current period, e.g. after the chart changed what the table lists.
+     * @param {string} tabId - The tab's id.
+     * @returns {void}
+     */
+    function refreshTable (tabId) {
+        const tab = tabs.get(tabId);
+        if (tab) {
+            renderTable(tab);
+        }
+    }
+
+    window.ResearchPage = { registerTab, positionOf, refreshTable };
 
     /**
      * Wire the page's tablists.

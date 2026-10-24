@@ -28,4 +28,24 @@ public sealed class ResearchViewModel
 
     /// <summary>The latest year of the Sectors data, which the page opens on.</summary>
     public SectorsPeriodDto? SectorsLatestPeriod => Sectors?.Values.LastOrDefault();
+
+    /// <summary>The ETFs snapshot, or null when the tab is unavailable.</summary>
+    public EtfsSnapshotDto? Etfs { get; init; }
+
+    /// <summary>True when the ETFs tab shows the Unavailable State.</summary>
+    public bool EtfsUnavailable => Etfs is null || Etfs.Values.Count == 0;
+
+    /// <summary>The ETFs tab's Unavailable State.</summary>
+    public UnavailableStateViewModel EtfsUnavailableState { get; } = new()
+    {
+        PageTitle = "Research",
+        Heading = "We couldn't load the ETFs data",
+        RetryController = "Research",
+    };
+
+    /// <summary>The latest report date of the ETFs data ("Data as of").</summary>
+    public DateOnly? EtfsAsOf => Etfs?.AsOf;
+
+    /// <summary>The latest quarter of the ETFs data, which the tab opens on.</summary>
+    public EtfsPeriodDto? EtfsLatestPeriod => Etfs?.Values.LastOrDefault();
 }
