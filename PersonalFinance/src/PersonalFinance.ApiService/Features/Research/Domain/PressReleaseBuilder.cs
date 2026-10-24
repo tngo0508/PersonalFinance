@@ -62,6 +62,10 @@ internal static class PressReleaseBuilder
     private static readonly Regex ExhibitNumber = new(@"^(?:ex|exhibit)99\d*$",
         RegexOptions.CultureInvariant, MatchTimeout);
 
+    // The exhibit label anywhere in a line: "EX-99.1", "Exhibit 99.1", "Exhibit 99".
+    private static readonly Regex ExhibitLabel = new(@"\b(?:ex|exhibit)[\s\-]*99(?:\.\d+)?\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, MatchTimeout);
+
     /// <summary>
     /// The filings whose exhibits may be press releases: 8-K and 8-K/A filings of the <see cref="MonthsBack"/> months
     /// up to <paramref name="today"/>, newest first.
@@ -120,17 +124,25 @@ internal static class PressReleaseBuilder
     /// <summary>
     /// The document's text, one collapsed, non-empty line per block. The document's own line breaks are whitespace,
     /// as a browser treats them, so a headline wrapped across source lines stays one line; only block tags break it.
+    /// In a block that also carries the exhibit label (<c>Exhibit 99.1</c>), the source lines holding the label are
+    /// dropped first, so a slide title is not run together with its "September 2026 Exhibit 99.1" footer.
     /// </summary>
     private static IEnumerable<string> TextLines(string head)
     {
         string text = Comments.Replace(head, string.Empty);
         text = ScriptsAndStyles.Replace(text, string.Empty);
-        text = Whitespace.Replace(text, " ");
-        text = BlockTags.Replace(text, "\n");
-        text = Tags.Replace(text, string.Empty);
-        return text.Split('\n')
-            .Select(line => Whitespace.Replace(WebUtility.HtmlDecode(line), " ").Trim())
-            .Where(line => line.Length > 0);
+        foreach (string block in BlockTags.Split(text))
+        {
+            string[] sourceLines = WebUtility.HtmlDecode(Tags.Replace(block, string.Empty)).Split('\n');
+            IEnumerable<string> kept = sourceLines.Any(ExhibitLabel.IsMatch)
+                ? sourceLines.Where(line => !ExhibitLabel.IsMatch(line))
+                : sourceLines;
+            string line = Whitespace.Replace(string.Join(' ', kept), " ").Trim();
+            if (line.Length > 0)
+            {
+                yield return line;
+            }
+        }
     }
 
     /// <summary>Letters and digits only, in lower case: <c>Exhibit 99.1</c> is <c>exhibit991</c>.</summary>
