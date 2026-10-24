@@ -1,25 +1,23 @@
-using PersonalFinance.Shared.DTOs.Research;
-
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
-/// What a Company Profile lookup came to: an answer (a profile, a fund, or a ticker SEC does not list), too many
-/// lookups by the Account, or SEC EDGAR unreachable with no kept profile to serve.
+/// What a Companies tab request by ticker came to, for a Company Profile lookup
+/// (<see cref="PersonalFinance.Shared.DTOs.Research.CompanyLookupResultDto"/>) or its press releases
+/// (<see cref="PersonalFinance.Shared.DTOs.Research.CompanyPressReleasesResultDto"/>): an answer (a company's, a fund,
+/// or a ticker SEC does not list), too many lookups by the Account, press releases switched off, or SEC EDGAR
+/// unreachable with nothing kept to serve. Build one with named arguments: <c>new(result)</c>,
+/// <c>new(null, RateLimited: true)</c>, <c>new(null, SwitchedOff: true)</c>, or <c>new(Result: null)</c> for
+/// unavailable.
 /// </summary>
-/// <param name="Result">The answer, or null when <see cref="RateLimited"/> or <see cref="Unavailable"/>.</param>
+/// <typeparam name="TResult">The answer's DTO.</typeparam>
+/// <param name="Result">The answer, or null when <see cref="RateLimited"/>, <see cref="SwitchedOff"/> or
+/// <see cref="Unavailable"/>.</param>
 /// <param name="RateLimited">True when the Account made too many lookups in the last minute.</param>
-public sealed record CompanyLookupOutcome(CompanyLookupResultDto? Result, bool RateLimited = false)
+/// <param name="SwitchedOff">True when what was asked for is switched off
+/// (<see cref="ResearchSettings.PressReleasesEnabledKey"/>).</param>
+public sealed record CompanyLookupOutcome<TResult>(TResult? Result, bool RateLimited = false, bool SwitchedOff = false)
+    where TResult : class
 {
     /// <summary>True when there is no answer because SEC EDGAR could not be reached.</summary>
-    public bool Unavailable => Result is null && !RateLimited;
-
-    /// <summary>An answer.</summary>
-    public static CompanyLookupOutcome Answer(string kind, string ticker, CompanyProfileDto? profile = null) =>
-        new(new CompanyLookupResultDto { Kind = kind, Ticker = ticker, Profile = profile });
-
-    /// <summary>Too many lookups.</summary>
-    public static CompanyLookupOutcome TooManyLookups() => new(null, RateLimited: true);
-
-    /// <summary>SEC EDGAR unreachable.</summary>
-    public static CompanyLookupOutcome SecUnavailable() => new(Result: null);
+    public bool Unavailable => Result is null && !RateLimited && !SwitchedOff;
 }
