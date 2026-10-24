@@ -1,3 +1,5 @@
+using System.Text.Json;
+using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
 using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Shared.Helpers;
@@ -22,10 +24,13 @@ public class CompanyProfileBuilderTests
         new(null, end, value, fiscalYear, "FY", "10-K", filedOn, accession);
 
     private static SecCompanyFacts Facts(params (string Key, SecFact Fact)[] facts) =>
-        new(facts.GroupBy(f => f.Key).ToDictionary(g => g.Key, g => (IReadOnlyList<SecFact>)g.Select(f => f.Fact).ToList()),
+        new(
+            facts.GroupBy(f => f.Key)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<SecFact>)g.Select(f => f.Fact).ToList()),
             HasIfrsFacts: false);
 
-    private static CompanyProfileDto Build(SecCompanyFacts facts) => CompanyProfileBuilder.Build("EXR", Submissions, facts);
+    private static CompanyProfileDto Build(SecCompanyFacts facts) =>
+        CompanyProfileBuilder.Build("EXR", Submissions, facts);
 
     [Fact]
     public void FiscalYears_AreLabelledAsTheCompanyLabelsThem_EvenWhenTheYearEndsInTheNextCalendarYear()
@@ -66,7 +71,8 @@ public class CompanyProfileBuilderTests
         SecCompanyFacts facts = Facts(
             ("us-gaap:Revenues", Flow(new DateOnly(2024, 1, 1), new DateOnly(2024, 12, 31), 0m, 2025, "a", filed)),
             ("us-gaap:Revenues", Flow(new DateOnly(2025, 1, 1), new DateOnly(2025, 12, 31), 0m, 2025, "a", filed)),
-            ("us-gaap:NetIncomeLoss", Flow(new DateOnly(2025, 1, 1), new DateOnly(2025, 12, 31), -5m, 2025, "a", filed)));
+            ("us-gaap:NetIncomeLoss",
+                Flow(new DateOnly(2025, 1, 1), new DateOnly(2025, 12, 31), -5m, 2025, "a", filed)));
 
         CompanyFiscalYearDto year = Build(facts).FiscalYears[^1];
 
@@ -124,6 +130,28 @@ public class CompanyProfileBuilderTests
     }
 
     [Fact]
+    public void ParsingFacts_SkipsNullFields_AsSecPublishesThem()
+    {
+        // SEC leaves fy and fp null on facts from some filings (Microsoft's file has over a thousand), and a row may
+        // lack a value; neither may stop the rest of the file being read.
+        using JsonDocument document = JsonDocument.Parse("""
+                                                         { "facts": { "us-gaap": { "Revenues": { "units": { "USD": [
+                                                           { "start": "2024-01-01", "end": "2024-12-31", "val": 7, "accn": "a", "fy": null, "fp": null, "form": "8-K", "filed": "2025-01-10" },
+                                                           { "start": "2024-01-01", "end": "2024-12-31", "val": null, "accn": "b", "fy": 2024, "fp": "FY", "form": "10-K", "filed": "2025-02-10" },
+                                                           { "start": "2024-01-01", "end": "2024-12-31", "val": 9, "accn": "c", "fy": "2024", "fp": "FY", "form": "10-K", "filed": "2025-02-11" },
+                                                           { "start": "2024-01-01", "end": "2024-12-31", "val": 10, "accn": "d", "fy": 2024, "fp": "FY", "form": "10-K", "filed": "2025-02-12" }
+                                                         ] } } } } }
+                                                         """);
+
+        IReadOnlyList<SecFact> facts = SecEdgarClient.ParseCompanyFacts(document.RootElement)
+            .Of(CompanyProfileConcepts.All[0]);
+
+        Assert.Equal(["a", "c", "d"], facts.Select(f => f.AccessionNumber));
+        Assert.Equal([null, null, 2024], facts.Select(f => f.FiscalYear));
+        Assert.Null(facts[0].FiscalPeriod);
+    }
+
+    [Fact]
     public void EveryEightKItem_HasPlainWords()
     {
         string[] items =
@@ -170,6 +198,7 @@ public class CompanyProfileBuilderTests
     public void QueryRules_AcceptOneToFortyCharacters(string input, bool valid)
     {
         Assert.Equal(valid, CompanyLookupRules.TryNormalizeQuery(input, out _));
-        Assert.False(CompanyLookupRules.TryNormalizeQuery(new string('a', CompanyLookupRules.MaxQueryLength + 1), out _));
+        Assert.False(
+            CompanyLookupRules.TryNormalizeQuery(new string('a', CompanyLookupRules.MaxQueryLength + 1), out _));
     }
 }

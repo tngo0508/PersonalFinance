@@ -119,7 +119,8 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
     /// <inheritdoc />
     public async Task<IReadOnlyList<SecFundSeries>> GetFundSeriesAsync(CancellationToken cancellationToken)
     {
-        using HttpResponseMessage response = await SendAsync($"{WwwUrl}files/company_tickers_mf.json", cancellationToken);
+        using HttpResponseMessage response =
+            await SendAsync($"{WwwUrl}files/company_tickers_mf.json", cancellationToken);
         response.EnsureSuccessStatusCode();
         await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
         using JsonDocument list = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
@@ -145,7 +146,7 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
         CancellationToken cancellationToken)
     {
         var filings = new List<NportFilingRef>();
-        for (int start = 0; ; start += FilingListPageSize)
+        for (int start = 0;; start += FilingListPageSize)
         {
             // EDGAR's type filter is a prefix match, so NPORT-P also lists the NPORT-P/A amendments.
             string url = string.Create(CultureInfo.InvariantCulture,
@@ -194,9 +195,12 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
         var listings = new List<SecCompanyListing>();
         foreach (JsonElement row in list.RootElement.GetProperty("data").EnumerateArray())
         {
-            if (row.GetArrayLength() >= 4
+            if (row.ValueKind == JsonValueKind.Array
+                && row.GetArrayLength() >= 4
+                && row[0].ValueKind == JsonValueKind.Number
                 && row[0].TryGetInt64(out long cik)
                 && row[1].ValueKind == JsonValueKind.String
+                && row[2].ValueKind == JsonValueKind.String
                 && row[2].GetString() is { Length: > 0 } ticker)
             {
                 string? exchange = row[3].ValueKind == JsonValueKind.String ? BlankToNull(row[3].GetString()) : null;
@@ -255,17 +259,17 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
     {
         var facts = new Dictionary<string, IReadOnlyList<SecFact>>(StringComparer.Ordinal);
         bool hasIfrs = false;
-        if (root.TryGetProperty("facts", out JsonElement taxonomies) && taxonomies.ValueKind == JsonValueKind.Object)
+        if (TryGetObjectProperty(root, "facts", out JsonElement taxonomies))
         {
-            hasIfrs = taxonomies.TryGetProperty("ifrs-full", out JsonElement ifrs)
+            hasIfrs = TryGetObjectProperty(taxonomies, "ifrs-full", out JsonElement ifrs)
                       && ifrs.ValueKind == JsonValueKind.Object
                       && ifrs.EnumerateObject().Any();
             foreach (CompanyConcept concept in CompanyProfileConcepts.All)
             {
-                if (taxonomies.TryGetProperty(concept.Taxonomy, out JsonElement taxonomy)
-                    && taxonomy.TryGetProperty(concept.Name, out JsonElement element)
-                    && element.TryGetProperty("units", out JsonElement units)
-                    && units.TryGetProperty(concept.Unit, out JsonElement rows)
+                if (TryGetObjectProperty(taxonomies, concept.Taxonomy, out JsonElement taxonomy)
+                    && TryGetObjectProperty(taxonomy, concept.Name, out JsonElement element)
+                    && TryGetObjectProperty(element, "units", out JsonElement units)
+                    && TryGetObjectProperty(units, concept.Unit, out JsonElement rows)
                     && rows.ValueKind == JsonValueKind.Array)
                 {
                     facts[concept.Key] = rows.EnumerateArray().Select(ParseFact).OfType<SecFact>().ToList();
@@ -276,11 +280,23 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
         return new SecCompanyFacts(facts, hasIfrs);
     }
 
+    /// <summary>
+    /// The property <paramref name="name"/> of <paramref name="element"/>; false when it is missing or the element is
+    /// not an object, where <see cref="JsonElement.TryGetProperty(string, out JsonElement)"/> would throw.
+    /// </summary>
+    private static bool TryGetObjectProperty(JsonElement element, string name, out JsonElement value)
+    {
+        value = default;
+        return element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out value);
+    }
+
     private static SecFact? ParseFact(JsonElement row)
     {
-        if (!TryGetDate(row, "end", out DateOnly end)
+        if (row.ValueKind != JsonValueKind.Object
+            || !TryGetDate(row, "end", out DateOnly end)
             || !TryGetDate(row, "filed", out DateOnly filed)
             || !row.TryGetProperty("val", out JsonElement val)
+            || val.ValueKind != JsonValueKind.Number
             || !val.TryGetDecimal(out decimal value)
             || GetString(row, "form") is not { } form
             || GetString(row, "accn") is not { } accession)
@@ -289,7 +305,11 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
         }
 
         DateOnly? start = TryGetDate(row, "start", out DateOnly s) ? s : null;
-        int? fiscalYear = row.TryGetProperty("fy", out JsonElement fy) && fy.TryGetInt32(out int y) ? y : null;
+        // SEC leaves fy null on facts from some filings; TryGetInt32 throws on anything but a number.
+        int? fiscalYear = row.TryGetProperty("fy", out JsonElement fy) && fy.ValueKind == JsonValueKind.Number
+                                                                       && fy.TryGetInt32(out int y)
+            ? y
+            : null;
         return new SecFact(start, end, value, fiscalYear, GetString(row, "fp"), form, filed, accession);
     }
 
@@ -317,8 +337,9 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
             string? accession = BlankToNull(recent.AccessionNumber![i]);
             string? form = BlankToNull(At(recent.Form, i));
             if (accession is null || form is null
-                || !DateOnly.TryParseExact(At(recent.FilingDate, i), "yyyy-MM-dd", CultureInfo.InvariantCulture,
-                    DateTimeStyles.None, out DateOnly filedOn))
+                                  || !DateOnly.TryParseExact(At(recent.FilingDate, i), "yyyy-MM-dd",
+                                      CultureInfo.InvariantCulture,
+                                      DateTimeStyles.None, out DateOnly filedOn))
             {
                 continue;
             }

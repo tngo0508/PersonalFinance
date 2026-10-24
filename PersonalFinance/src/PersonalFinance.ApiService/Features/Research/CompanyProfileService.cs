@@ -1,4 +1,3 @@
-using System.Text.Json;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
 using PersonalFinance.ApiService.Infrastructure;
@@ -20,7 +19,8 @@ internal sealed class CompanyProfileService : ICompanyProfileService
     private readonly ILogger<CompanyProfileService> _logger;
 
     public CompanyProfileService(ISecCompanyClient client, CompanyTickerIndexCache index, CompanyProfileCache profiles,
-        [FromKeyedServices(CompanyLookupRateLimit.Key)] IRateLimiterService rateLimiter,
+        [FromKeyedServices(CompanyLookupRateLimit.Key)]
+        IRateLimiterService rateLimiter,
         ILogger<CompanyProfileService> logger)
     {
         _client = client;
@@ -68,7 +68,8 @@ internal sealed class CompanyProfileService : ICompanyProfileService
 
         try
         {
-            SecCompanySubmissions? submissions = await _client.GetCompanySubmissionsAsync(listing.Cik, cancellationToken);
+            SecCompanySubmissions? submissions =
+                await _client.GetCompanySubmissionsAsync(listing.Cik, cancellationToken);
             if (submissions is null)
             {
                 return CompanyLookupOutcome.Answer(CompanyLookupKinds.NotFound, ticker);
@@ -80,9 +81,9 @@ internal sealed class CompanyProfileService : ICompanyProfileService
             _profiles.Set(ticker, profile);
             return CompanyLookupOutcome.Answer(CompanyLookupKinds.Profile, ticker, profile);
         }
-        // A timeout surfaces as a cancellation the caller did not ask for.
-        catch (Exception ex) when ((ex is HttpRequestException or JsonException or OperationCanceledException)
-                                   && !cancellationToken.IsCancellationRequested)
+        // Any failure to read or understand SEC's documents (unreachable, a timeout, a shape the parser does not
+        // expect) serves the kept profile or answers 503, never a 500; only the caller cancelling propagates.
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Could not read SEC EDGAR for a Company Profile; {Fallback}",
                 kept is null ? "no kept profile to serve" : "serving the kept profile");

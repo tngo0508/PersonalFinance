@@ -24,7 +24,8 @@ public class CompanyProfileServiceTests
     private sealed class StubSec : HttpMessageHandler
     {
         private static readonly string Samples =
-            Path.Combine(RepositoryRoot.Find(), "PersonalFinance", "tests", "PersonalFinance.Tests", "Research", "CompanySamples");
+            Path.Combine(RepositoryRoot.Find(), "PersonalFinance", "tests", "PersonalFinance.Tests", "Research",
+                "CompanySamples");
 
         public ConcurrentDictionary<string, int> Requests { get; } = new();
 
@@ -33,6 +34,9 @@ public class CompanyProfileServiceTests
 
         /// <summary>True to answer 500 for the ticker lists.</summary>
         public bool TickerListsFail { get; set; }
+
+        /// <summary>A company-facts document to serve instead of the sample, or null for the sample.</summary>
+        public string? CompanyFactsBody { get; set; }
 
         public int CompanyDocumentRequests =>
             Requests.Where(r => r.Key.Contains("CIK", StringComparison.Ordinal)).Sum(r => r.Value);
@@ -46,10 +50,14 @@ public class CompanyProfileServiceTests
 
             (string? file, bool fails) = url switch
             {
-                "https://www.sec.gov/files/company_tickers_exchange.json" => ("company-tickers-sample.json", TickerListsFail),
-                "https://www.sec.gov/files/company_tickers_mf.json" => ("company-tickers-mf-sample.json", TickerListsFail),
-                "https://data.sec.gov/submissions/CIK0001234567.json" => ("submissions-sample-widgets.json", CompanyDocumentsFail),
-                "https://data.sec.gov/api/xbrl/companyfacts/CIK0001234567.json" => ("companyfacts-sample-widgets.json", CompanyDocumentsFail),
+                "https://www.sec.gov/files/company_tickers_exchange.json" => ("company-tickers-sample.json",
+                    TickerListsFail),
+                "https://www.sec.gov/files/company_tickers_mf.json" => ("company-tickers-mf-sample.json",
+                    TickerListsFail),
+                "https://data.sec.gov/submissions/CIK0001234567.json" => ("submissions-sample-widgets.json",
+                    CompanyDocumentsFail),
+                "https://data.sec.gov/api/xbrl/companyfacts/CIK0001234567.json" => ("companyfacts-sample-widgets.json",
+                    CompanyDocumentsFail),
                 _ => (null, false),
             };
             HttpResponseMessage response = fails
@@ -58,8 +66,11 @@ public class CompanyProfileServiceTests
                     ? new HttpResponseMessage(HttpStatusCode.NotFound)
                     : new HttpResponseMessage(HttpStatusCode.OK)
                     {
-                        Content = new StringContent(File.ReadAllText(Path.Combine(Samples, file)), Encoding.UTF8,
-                            "application/json"),
+                        Content = new StringContent(
+                            file.StartsWith("companyfacts", StringComparison.Ordinal) && CompanyFactsBody is { } body
+                                ? body
+                                : File.ReadAllText(Path.Combine(Samples, file)),
+                            Encoding.UTF8, "application/json"),
                     };
             return Task.FromResult(response);
         }
@@ -76,12 +87,15 @@ public class CompanyProfileServiceTests
         IRateLimiterService? rateLimiter = null, ResearchSettings? research = null)
     {
         timeProvider ??= new MovableTimeProvider(Now);
-        var settings = new SecEdgarSettings { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
+        var settings = new SecEdgarSettings
+            { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
         var client = new SecEdgarClient(new HttpClient(sec), settings, new SecRequestGate(settings, timeProvider));
         return new CompanyProfileService(client,
-            new CompanyTickerIndexCache(research ?? new ResearchSettings(), timeProvider, NullLogger<CompanyTickerIndexCache>.Instance),
+            new CompanyTickerIndexCache(research ?? new ResearchSettings(), timeProvider,
+                NullLogger<CompanyTickerIndexCache>.Instance),
             new CompanyProfileCache(timeProvider),
-            rateLimiter ?? new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window),
+            rateLimiter ??
+            new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window),
             NullLogger<CompanyProfileService>.Instance);
     }
 
@@ -225,7 +239,8 @@ public class CompanyProfileServiceTests
         CompanyFilingDto latest = profile.Filings[0];
         Assert.Equal("8-K", latest.Form);
         Assert.Equal(["9.99"], latest.Events); // An unknown item code is shown as it is.
-        Assert.Equal("https://www.sec.gov/Archives/edgar/data/1234567/000123456726000041/0001234567-26-000041-index.htm",
+        Assert.Equal(
+            "https://www.sec.gov/Archives/edgar/data/1234567/000123456726000041/0001234567-26-000041-index.htm",
             latest.Url);
         Assert.Equal(["Departure or appointment of directors or officers"], profile.Filings[1].Events);
         Assert.Equal(["Results of operations", "Financial statements and exhibits"], profile.Filings[2].Events);
@@ -328,6 +343,53 @@ public class CompanyProfileServiceTests
     }
 
     [Fact]
+    public async Task LookUp_WhenSecSendsSomethingTheParserDoesNotExpect_IsUnavailable_NotAnError()
+    {
+        // Facts whose taxonomy is a number, not an object: the lookup must not escape as a 500.
+        var sec = new StubSec { CompanyFactsBody = """{ "facts": { "us-gaap": 5, "dei": [1, 2] } }""" };
+
+        CompanyLookupOutcome outcome = await CreateService(sec).LookUpAsync(UserId, "SWI");
+
+        Assert.Equal(CompanyLookupKinds.Profile, outcome.Result?.Kind);
+        Assert.Empty(outcome.Result!.Profile!.FiscalYears);
+    }
+
+    [Fact]
+    public async Task LookUp_WhenReadingSecThrowsAnythingElse_ServesNoErrorButUnavailable()
+    {
+        var timeProvider = new MovableTimeProvider(Now);
+        var service = new CompanyProfileService(new ThrowingFactsClient(),
+            new CompanyTickerIndexCache(new ResearchSettings(), timeProvider,
+                NullLogger<CompanyTickerIndexCache>.Instance),
+            new CompanyProfileCache(timeProvider),
+            new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window),
+            NullLogger<CompanyProfileService>.Instance);
+
+        CompanyLookupOutcome outcome = await service.LookUpAsync(UserId, "SWI");
+
+        Assert.True(outcome.Unavailable);
+    }
+
+    private sealed class ThrowingFactsClient : ISecCompanyClient
+    {
+        public Task<IReadOnlyList<SecCompanyListing>> GetCompanyTickersAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<SecCompanyListing>>([
+                new SecCompanyListing(1234567, "SWI", "SAMPLE WIDGETS INC", null)
+            ]);
+
+        public Task<IReadOnlyList<string>> GetFundTickersAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
+
+        public Task<SecCompanySubmissions?> GetCompanySubmissionsAsync(long cik, CancellationToken cancellationToken) =>
+            Task.FromResult<SecCompanySubmissions?>(new SecCompanySubmissions(cik, "SAMPLE WIDGETS INC", ["SWI"],
+                [null],
+                null, null, null, null, null, []));
+
+        public Task<SecCompanyFacts?> GetCompanyFactsAsync(long cik, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("An unexpected document shape.");
+    }
+
+    [Fact]
     public async Task LookUp_WhenTheTickerListCannotBeRead_IsUnavailable()
     {
         CompanyLookupOutcome outcome =
@@ -340,7 +402,8 @@ public class CompanyProfileServiceTests
     public async Task LookUp_RefusesTheLookupOverTheLimit_PerAccount()
     {
         var sec = new StubSec();
-        CompanyProfileService service = CreateService(sec, rateLimiter: new RateLimiterService(3, TimeSpan.FromMinutes(1)));
+        CompanyProfileService service =
+            CreateService(sec, rateLimiter: new RateLimiterService(3, TimeSpan.FromMinutes(1)));
 
         for (int i = 0; i < 3; i++)
         {
@@ -358,7 +421,8 @@ public class CompanyProfileServiceTests
     [Fact]
     public async Task Suggest_DoesNotCountTowardTheLookupLimit()
     {
-        CompanyProfileService service = CreateService(new StubSec(), rateLimiter: new RateLimiterService(1, TimeSpan.FromMinutes(1)));
+        CompanyProfileService service =
+            CreateService(new StubSec(), rateLimiter: new RateLimiterService(1, TimeSpan.FromMinutes(1)));
 
         for (int i = 0; i < 5; i++)
         {
