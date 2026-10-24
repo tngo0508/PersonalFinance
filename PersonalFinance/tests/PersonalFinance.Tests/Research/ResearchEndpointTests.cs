@@ -38,6 +38,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 
         public Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<EtfsSnapshotDto>(etfs));
+
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(world));
 

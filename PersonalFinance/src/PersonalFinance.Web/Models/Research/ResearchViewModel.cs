@@ -48,6 +48,7 @@ public sealed class ResearchViewModel
 
     /// <summary>The latest quarter of the ETFs data, which the tab opens on.</summary>
     public EtfsPeriodDto? EtfsLatestPeriod => Etfs?.Values.LastOrDefault();
+
     /// <summary>The World snapshot, or null when the tab is unavailable.</summary>
     public WorldSnapshotDto? World { get; init; }
 

@@ -19,6 +19,7 @@ public class ResearchController : ControllerBase
 
     /// <summary>The 503 reason of an ETFs dataset that has never loaded.</summary>
     public const string EtfsNeverLoaded = "The ETFs data has not loaded yet.";
+
     /// <summary>The 503 reason of a World dataset that has never loaded.</summary>
     public const string WorldNeverLoaded = "The World data has not loaded yet.";
 

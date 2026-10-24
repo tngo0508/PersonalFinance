@@ -33,6 +33,7 @@ internal sealed class ResearchService : IResearchService
     /// filings it has not read before. Not served to the page.
     /// </summary>
     public const string EtfFilingsDataset = "etf-filings";
+
     /// <summary>The dataset key of the World snapshot.</summary>
     public const string WorldDataset = "world";
 

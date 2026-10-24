@@ -1,9 +1,10 @@
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
-/// One Research dataset (Sectors, and later ETFs and World) as last built from its public source. It is not
-/// user-owned, so it is not an <see cref="AuditableEntity"/> and is never soft-deleted: a refresh replaces the row
-/// wholesale, and only when the build succeeded, so a failed refresh keeps the previous snapshot.
+/// One Research dataset (Sectors, ETFs or World, or a cache of the SEC reads a refresh builds them from) as last
+/// built from its public source. It is not user-owned, so it is not an <see cref="AuditableEntity"/> and is never
+/// soft-deleted: a refresh replaces the row wholesale, and only when the build succeeded, so a failed refresh keeps
+/// the previous snapshot.
 /// </summary>
 public class ResearchSnapshot
 {

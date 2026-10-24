@@ -17,6 +17,8 @@ public interface IResearchService
     /// Gets the ETFs snapshot (what a few well-known ETFs held each quarter, from Form N-PORT), or "never loaded".
     /// </summary>
     Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot (each country's market cap and market cap as % of GDP per year, from the World Bank),
     /// or "never loaded".
     /// </summary>

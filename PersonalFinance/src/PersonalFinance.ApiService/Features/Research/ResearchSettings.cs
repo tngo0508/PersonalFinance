@@ -41,6 +41,8 @@ internal sealed class ResearchSettings
     /// the first quarter of public Form N-PORT reports.
     /// </summary>
     public DateOnly EtfsFirstQuarter { get; init; } = new(2019, 10, 1);
+
+    /// <summary>
     /// The first year of the World dataset (<c>Research:WorldFirstYear</c>). The World Bank's market-cap series starts
     /// in 1975, but before 1990 only a few dozen countries report.
     /// </summary>

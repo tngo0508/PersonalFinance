@@ -72,7 +72,7 @@
     }
 
     /**
-     * Format a US$ amount compactly, as the server does: $3.02T, $412.5B, $18.0M.
+     * Format a US$ amount compactly for labels, tooltips and the table view: $3.02T, $412.5B, $18.0M.
      * @param {number} amount - The amount in US$.
      * @returns {string} The formatted amount.
      */
