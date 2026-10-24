@@ -83,6 +83,7 @@ internal static class SectorsSnapshotBuilder
                 SicCode = g.Key.SicCode,
                 Name = g.Select(p => p.Industry).Order(StringComparer.Ordinal).First(),
                 Office = g.Key.Office,
+                Technology = SectorsClassifier.IsTechnology(offices[g.Key.Office].Name, g.Key.SicCode),
             })
             .ToList();
         Dictionary<(int Office, string? SicCode), int> industryIndex = industries

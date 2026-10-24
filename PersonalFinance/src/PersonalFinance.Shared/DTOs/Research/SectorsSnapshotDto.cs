@@ -42,6 +42,13 @@ public sealed class SectorsIndustryDto
 
     /// <summary>The industry's office: its index in <see cref="SectorsSnapshotDto.Offices"/>.</summary>
     public int Office { get; set; }
+
+    /// <summary>
+    /// Whether the industry, and so each of its companies and its "Other" slice, is lit by the "Technology (incl. chip
+    /// makers)" highlight: its office is Technology, or its SIC code is 3570-3579 (computer and office equipment) or
+    /// 3670-3679 (electronic components and semiconductors, where SEC files NVIDIA and Broadcom under Manufacturing).
+    /// </summary>
+    public bool Technology { get; set; }
 }
 
 /// <summary>
