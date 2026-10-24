@@ -81,6 +81,14 @@ Only MIT, BSD (2/3-clause), Apache 2.0 and ISC dependencies ([ADR 0009](docs/adr
 4. Keep the change focused: no unrelated refactoring, no leftover TODOs or debug code.
 5. Final report: what was implemented, files changed, DB changes, exact commands run and results, outstanding issues.
 
+## Parallel worktrees
+
+Sessions started with `claude -w <name>` work in `.claude/worktrees/<name>`, on their own branch, alongside other sessions. `.worktreeinclude` copies `.env` and the local settings into each one.
+
+- Run `npm install` first: a new worktree has no `node_modules`.
+- All worktrees share one local database and one set of ports. Schema migrations and running the app or E2E go one worktree at a time.
+- Parallel branches pick the same next version. After rebasing onto a newer `main`, re-bump `AppVersion` and rename the `CHANGELOG.md` section to the next free version.
+
 ## C# style
 
 PascalCase for types and public members, camelCase for private fields and locals, `I` prefix for interfaces, `Async` suffix on async methods, suffixes `Service`/`Controller`/`Dto`/`ViewModel`. File name matches the class name.
