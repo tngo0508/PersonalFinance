@@ -642,7 +642,7 @@ jobs:
             openAiApiKey=${{ secrets.OPENAI_API_KEY }}
             rbacAdminEmail=${{ vars.RBAC_ADMIN_EMAIL || 'tngo0508@gmail.com' }}
             internalApiKey=${{ secrets.INTERNAL_API_KEY }}
-            secUserAgent=${{ vars.SEC_USER_AGENT || '' }}
+            secUserAgent="${{ vars.SEC_USER_AGENT || '' }}"
             deploySqlDatabase=${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}
             sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
             customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}

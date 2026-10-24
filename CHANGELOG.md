@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.0.1] - 2026-10-23
+
+### Fixed
+
+- **Production deploy**: the deploy no longer fails with "Unable to parse parameter: research" when the `SEC_USER_AGENT` repository variable contains spaces (#217).
+  - The workflow now quotes `secUserAgent`, so `azure/arm-deploy` passes it to Bicep as one value.
+
 ## [5.0.0] - 2026-10-23
 
 ### Added
