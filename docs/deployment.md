@@ -1,6 +1,6 @@
 # Personal Finance Application - Deployment Guide
 
-This guide provides deterministic, step-by-step instructions for deploying the **Personal Finance** application across multiple environments. The architecture targets **low operating cost** (~$5–10/month) using Azure Container Apps Consumption (scale-to-zero), GitHub Container Registry (free), Log Analytics free 5GB/mo, and Azure SQL Database Basic tier (~$5/month) alongside local containerized options.
+This guide provides deterministic, step-by-step instructions for deploying the **Personal Finance** application across multiple environments. The architecture targets **low operating cost** (~$10–20/month) using Azure Container Apps Consumption (warm 08:00–22:00 Pacific, scale-to-zero overnight; ADR 0011), GitHub Container Registry (free), Log Analytics free 5GB/mo, and Azure SQL Database Basic tier (~$5/month) alongside local containerized options.
 
 ---
 
@@ -226,8 +226,8 @@ flowchart LR
 |---|---|---|---|
 | Log Analytics workspace | `log-analytics.bicep` | `law-<env>-<hash>` | First 5 GB/month ingestion free |
 | Container Apps environment | `container-env.bicep` | `cae-<env>-<hash>` | No charge itself (Consumption profile) |
-| Container App (API) | `api-service.bicep` | `api-<env>-<hash>` | Consumption; scales to zero; monthly free grant |
-| Container App (Web) | `web-service.bicep` | `web-<env>-<hash>` | Consumption; scales to zero; monthly free grant |
+| Container App (API) | `api-service.bicep` | `api-<env>-<hash>` | Consumption; production keeps 1 replica 08:00–22:00 Pacific, 0 overnight (ADR 0011) |
+| Container App (Web) | `web-service.bicep` | `web-<env>-<hash>` | Consumption; production keeps 1 replica 08:00–22:00 Pacific, 0 overnight (ADR 0011) |
 | Azure SQL server + database | `sql-database.bicep` | `sql-<env>-<hash>` / `PersonalFinance` | Basic tier (~$5/month, 2 GB, 5 DTUs) |
 | Container images | *(GitHub)* | `ghcr.io/<owner>/personalfinance-{api,web}` | Free for public packages |
 
@@ -262,7 +262,7 @@ sequenceDiagram
 Key points:
 - **The browser only ever talks to Web.** Web is a backend-for-frontend: it owns authentication, then calls the API server-to-server.
 - **The database is shared.** Both apps use the same `AppDbContext` and the same Azure SQL database (Identity tables plus Google Drive tables).
-- **The serverless database auto-pauses when idle.** The first query after a pause can take up to about a minute; `EnableRetryOnFailure` in `PersonalFinance.Data` absorbs it.
+- **The production database is always on.** It is Azure SQL Basic, which never pauses, so a slow first page is a container cold start, not the database. Only the local-development database (`local-dev.bicep`, Serverless Free Tier) auto-pauses; the first query after a pause can take up to about a minute, and `EnableRetryOnFailure` in `PersonalFinance.Data` absorbs it.
 
 ### 1.6 Configuration & Secrets Flow
 
@@ -308,9 +308,11 @@ stateDiagram-v2
 ```
 
 - **Scale rule**: HTTP, 100 concurrent requests per replica, `minReplicas: 0`, `maxReplicas: 1`. With zero replicas the app costs nothing, but the first request waits for a cold start; the smoke test retries `/health` up to 30 times for this reason.
+- **Scheduled scaling (production)**: `deploy-azure.yml` sets `enableScheduledScaling=true` with `businessHoursTimeZone=America/Los_Angeles`, start `08:00` and end `22:00`. A KEDA cron rule then keeps one replica of both the Web and the API warm from 08:00 to 22:00 Pacific (it follows daylight saving), and both scale to zero outside that window. A cold start takes about 25 seconds per app, and the Web's call to a cold API can hit the 30-second total request timeout, which renders the Dashboard empty or in the Unavailable State; the warm window removes that during the day. A warm replica that serves no requests is billed at the idle rate, so the window costs roughly $5–18 a month beyond the free grant, depending on how much of it is active. To change it, edit those parameters (any IANA time zone works); `enableScheduledScaling=false` returns to pure scale-to-zero. Why this window and not `minReplicas: 1`: ADR 0011.
+- **Web wakes the API**: outside the window, a Web replica that starts pings the API's anonymous `/alive` at once (`ApiServiceStartupWarmer`), and the Login page pings it too (`ApiServiceWarmer`, at most once every two minutes). The two containers then wake in parallel instead of one after the other. A visitor who reaches a warm Web while the API is asleep still waits for the API's cold start.
 - **Migrations at startup**: both `Program.cs` files call `MigrateAndSeedDatabaseAsync()`, so a deploy that adds a migration applies it when the new revision starts. `--migrate-only` / `MIGRATE_ONLY=true` runs migrations and exits, for use as a one-off job; it exits non-zero when startup or a migration fails.
 - **Daily Purge job**: `infra/modules/purge-job.bicep` deploys a Container Apps Job that runs the API image with `--purge-only` (or `PURGE_ONLY=true`) every day at `purgeJobCron` (default `0 15 * * *`, UTC). It applies pending migrations, permanently erases Accounts whose 30-day Grace Period has ended (ADR 0005), and exits non-zero if any Account failed; those are retried the next day. It runs as a job because the API scales to zero. To run it now: `az containerapp job start --name <purge job> --resource-group <rg>`; executions and logs: `az containerapp job execution list --name <purge job> --resource-group <rg>`.
-- **Daily Research refresh job**: `infra/modules/research-refresh-job.bicep` deploys a Container Apps Job named `research-<environment>-<location suffix>` that runs the API image with `--refresh-research` (or `REFRESH_RESEARCH=true`) every day at `researchRefreshJobCron` (default `0 10 * * *`, UTC). It applies pending migrations, rebuilds the Research snapshots from SEC and the World Bank, and exits. It exits non-zero if any dataset failed (that one keeps its previous snapshot) or if `vars.SEC_USER_AGENT` is unset, in which case only World is rebuilt. Until its first run the Research page shows the Unavailable State, so after the first deploy start it once instead of waiting for 10:00 UTC: `az containerapp job start --name <research job> --resource-group <rg>` (or **Run now** on the job in the Azure Portal); executions: `az containerapp job execution list --name <research job> --resource-group <rg>`.
+- **Daily Research refresh job**: `infra/modules/research-refresh-job.bicep` deploys a Container Apps Job named `research-<environment>-<location suffix>` that runs the API image with `--refresh-research` (or `REFRESH_RESEARCH=true`) every day at `researchRefreshJobCron` (default `0 10 * * *`, UTC). It applies pending migrations, rebuilds the Research snapshots from SEC and the World Bank, and exits. It exits non-zero if any dataset failed (that one keeps its previous snapshot) or if `vars.SEC_USER_AGENT` is unset, in which case only World is rebuilt. Until its first run the Research page shows the Unavailable State, so after the first deploy start it once instead of waiting for 10:00 UTC: `az containerapp job start --name <research job> --resource-group <rg>` (or **Run now** on the job in the Azure Portal); executions: `az containerapp job execution list --name <research job> --resource-group <rg>`. Start it the same way after any release that adds or changes a Research dataset: deploying does not refresh the data. The full steps, with how to follow the logs, are in `docs/DEVELOPMENT.md` under "Refreshing production by hand".
 - **Logs**: container stdout (Serilog console output) goes to the Log Analytics workspace (`ContainerAppConsoleLogs_CL`). See Section 8.6 for live tailing.
 
 ### 1.8 Environments at a Glance
@@ -358,7 +360,7 @@ Gaps to understand (and fix before handling real financial data):
 - **.NET Aspire**: one set of service defaults (telemetry, health, resilience) used by both the local AppHost and the cloud deployment.
 - **Backend-for-frontend**: an MVC app that owns authentication and calls an internal API through a shared, typed Refit contract.
 - **12-factor configuration**: the same code is configured per environment through environment variables and User Secrets.
-- **Serverless data**: cost-optimized Azure SQL with auto-pause, and resilient connections that tolerate cold starts.
+- **Cost-optimized data**: Azure SQL Basic in production, a Serverless Free Tier database with auto-pause for local development, and resilient connections that tolerate a paused database.
 
 ---
 
@@ -1012,7 +1014,7 @@ Use the following runbook to diagnose and remediate common operational and deplo
 
 ### 2. Container Cold-Start & Readiness Timeout
 - **Symptom**: `smoke-test.ps1` returns HTTP 503 or connection timeout on the first few attempts immediately after deployment.
-- **Root Cause**: Azure Container Apps Consumption profile scales instances to zero when idle. Waking from zero replicas takes ~15–30 seconds.
+- **Root Cause**: Azure Container Apps Consumption profile scales instances to zero when idle (in production, only outside 08:00–22:00 Pacific; ADR 0011). A new revision also starts cold. Waking from zero replicas takes ~15–30 seconds.
 - **Remediation**:
   - The application includes built-in retry backoff (5 retries with exponential backoff) during startup database migration.
   - Run `smoke-test.ps1` with `-MaxRetries 45` to allow the initial container revision to finish warming up and completing migrations.

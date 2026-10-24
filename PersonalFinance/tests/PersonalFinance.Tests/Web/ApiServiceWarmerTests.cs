@@ -1,13 +1,14 @@
 using System.Net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
 using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Tests.Web;
 
 /// <summary>
-/// The Login page wakes ApiService with an anonymous, throttled <c>/alive</c> ping that never throws.
+/// The Login page and Web startup wake ApiService with an anonymous, throttled <c>/alive</c> ping that never throws.
 /// </summary>
 public class ApiServiceWarmerTests
 {
@@ -57,7 +58,47 @@ public class ApiServiceWarmerTests
         Assert.Null(exception);
     }
 
-    private static ServiceProvider BuildProvider(Func<HttpRequestMessage, HttpResponseMessage> respond)
+    [Fact]
+    public async Task WebStartup_SendsOneWarmUpPing()
+    {
+        var requests = new List<HttpRequestMessage>();
+        using ServiceProvider provider = BuildProvider(request =>
+        {
+            requests.Add(request);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        await StartHostedServicesAsync(provider);
+
+        HttpRequestMessage request = Assert.Single(requests);
+        Assert.Equal("http://apiservice.test/alive", request.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task WebStartup_DoesNotWaitForApiServiceToAnswer()
+    {
+        var pingSent = new TaskCompletionSource();
+        using ServiceProvider provider = BuildProvider(async (_, cancellationToken) =>
+        {
+            pingSent.TrySetResult();
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        Task start = StartHostedServicesAsync(provider);
+
+        Assert.True(start.IsCompletedSuccessfully);
+        await pingSent.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    private static Task StartHostedServicesAsync(IServiceProvider provider) =>
+        Task.WhenAll(provider.GetServices<IHostedService>().Select(service => service.StartAsync(CancellationToken.None)));
+
+    private static ServiceProvider BuildProvider(Func<HttpRequestMessage, HttpResponseMessage> respond) =>
+        BuildProvider((request, _) => Task.FromResult(respond(request)));
+
+    private static ServiceProvider BuildProvider(
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond)
     {
         IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["ApiSettings:BaseUrl"] = "http://apiservice.test" })
@@ -69,7 +110,7 @@ public class ApiServiceWarmerTests
         services.AddInternalApiClients(configuration);
         services.ConfigureAll<HttpClientFactoryOptions>(options =>
             options.HttpMessageHandlerBuilderActions.Add(builder =>
-                builder.PrimaryHandler = new DelegatingTestHandler((request, _) => Task.FromResult(respond(request)))));
+                builder.PrimaryHandler = new DelegatingTestHandler(respond)));
 
         return services.BuildServiceProvider();
     }
