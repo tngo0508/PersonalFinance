@@ -23,6 +23,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     private const string FundOverlapUrl = "/api/Research/funds/overlap";
     private const string FundReturnsUrl = "/api/Research/funds/returns";
     private const string MacroUrl = "/api/Research/macro";
+    private const string FundFactsUrl = "/api/Research/funds/facts";
     private const string WorldUrl = "/api/Research/world";
     private const string InternalKey = "http-test-shared-secret";
 
@@ -35,7 +36,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 
     private sealed class FakeResearchService(SectorsSnapshotDto? sectors, WorldSnapshotDto? world = null,
         FundsSnapshotDto? funds = null, FundOverlapSnapshotDto? overlap = null,
-        FundReturnsSnapshotDto? returns = null, MacroSnapshotDto? macro = null) : IResearchService
+        FundReturnsSnapshotDto? returns = null, MacroSnapshotDto? macro = null, FundFactsSnapshotDto? facts = null) : IResearchService
     {
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(sectors));
@@ -51,6 +52,9 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 
         public Task<ResearchSnapshotResult<MacroSnapshotDto>> GetMacroAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<MacroSnapshotDto>(macro));
+
+        public Task<ResearchSnapshotResult<FundFactsSnapshotDto>> GetFundFactsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundFactsSnapshotDto>(facts));
 
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(world));
@@ -170,12 +174,27 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         Assert.Equal(ResearchController.MacroNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
     }
 
+    [Fact]
+    public async Task GetFundFacts_WhenLoaded_ReturnsTheSnapshot_AndWhenNeverLoaded_Returns503WithAReason()
+    {
+        var snapshot = new FundFactsSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
+
+        IActionResult loaded = await new ResearchController(new FakeResearchService(null, facts: snapshot)).GetFundFacts();
+        IActionResult never = await new ResearchController(new FakeResearchService(null)).GetFundFacts();
+
+        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(loaded).Value);
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(never);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
+        Assert.Equal(ResearchController.FundFactsNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
+    }
+
     [Theory]
     [InlineData(SectorsUrl)]
     [InlineData(FundsUrl)]
     [InlineData(FundOverlapUrl)]
     [InlineData(FundReturnsUrl)]
     [InlineData(MacroUrl)]
+    [InlineData(FundFactsUrl)]
     public async Task Get_OverHttp_WithoutTheSharedSecret_IsRejected(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -193,6 +212,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     [InlineData(FundOverlapUrl)]
     [InlineData(FundReturnsUrl)]
     [InlineData(MacroUrl)]
+    [InlineData(FundFactsUrl)]
     public async Task Get_OverHttp_SignedIn_OnAnEmptyDatabase_Returns503WithAReason(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

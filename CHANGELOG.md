@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.6.0] - 2026-10-24
+
+### Added
+
+- **Risk vs return tab on Research**: each Tracked Fund's annualized return against its volatility over a 1-, 3- or 5-year window (3 years by default), for information only (#265).
+  - Bubble area follows each fund's net assets, and each fund keeps its colour; your Fund Basket is a dark diamond, computed from its funds' monthly returns rebalanced to its weights.
+  - Every point is focusable and opens a card with its annualized return, volatility, Sharpe ratio (with the Treasury bill rate it uses), expense ratio and net assets.
+  - "Show as table" lists the funds and the basket sorted by Sharpe ratio, with inline return and volatility bars; a negative Sharpe ratio reads with a minus sign.
+- **Role filter, quadrants and labels**: role chips narrow the funds shown while the basket stays and no colour or point moves; dashed lines cross at the basket with descriptive corner labels such as "Higher return, smaller swings than your basket"; labels move aside on short leader lines when funds cluster (#266).
+- **Fund facts dataset**: each Tracked Fund's net assets and expense ratio, at `api/Research/funds/facts` (#265).
+  - The expense ratio is read from the XBRL of the fund's newest shareholder report (Form N-CSR or N-CSRS), for the share class matching its ticker; a report already read is not fetched again.
+  - SPY, a unit investment trust, files no such report, so its expense ratio shows "n/a".
+- **ADR 0012**: Research data comes from official public sources (SEC EDGAR, the Bureau of Labor Statistics, the Fed Board, the Treasury, the World Bank), never FRED, precomputed in the daily refresh; the development guide lists every dataset with its endpoint and source.
+
+### Fixed
+
+- **Research XML readers**: the XBRL and Treasury bill readers no longer skip the element after one whose content they read, which made the expense ratio reader miss every other class.
+
 ## [5.5.0] - 2026-10-24
 
 ### Added

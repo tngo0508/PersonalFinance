@@ -1,0 +1,32 @@
+{
+  "directory": {
+    "item": [
+      {
+        "last-modified": "2026-08-27 11:09:45",
+        "name": "cik0000036405-20260630.xsd",
+        "type": "text.gif",
+        "size": "102421"
+      },
+      {
+        "last-modified": "2026-08-27 11:09:45",
+        "name": "FilingSummary.xml",
+        "type": "text.gif",
+        "size": "3293"
+      },
+      {
+        "last-modified": "2026-08-27 11:09:45",
+        "name": "tm2620528d1_ncsrs.htm",
+        "type": "text.gif",
+        "size": "23721562"
+      },
+      {
+        "last-modified": "2026-08-27 11:09:45",
+        "name": "tm2620528d1_ncsrs_htm.xml",
+        "type": "text.gif",
+        "size": "1229683"
+      }
+    ],
+    "name": "/Archives/edgar/data/36405/000110465926102230",
+    "parent-dir": "/Archives/edgar/data/36405"
+  }
+}

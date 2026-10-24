@@ -4,7 +4,7 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// Small, made-up Sectors, funds, fund overlap, fund returns, macro and World snapshots for the E2E walkthrough (stored by
+/// Small, made-up Sectors, funds, fund overlap, fund returns, fund facts, macro and World snapshots for the E2E walkthrough (stored by
 /// <see cref="ResearchFixtureSeeder"/>): six companies over three years, SPY and QQQ over three quarters and six
 /// countries over three years. The figures are rounded illustrations in the shape of the real snapshots, not source
 /// data, and are never stored outside Development.
@@ -96,7 +96,7 @@ internal static class ResearchFixtureSnapshots
 
     /// <summary>
     /// The fund returns fixture: SPY and QQQ with five years of made-up monthly returns (July 2021 to June 2026) that
-    /// rise and fall together, and a flat 4% Treasury bill, put through the real builder so every figure is computed
+    /// rise and fall together (QQQ falling over the last year), and a flat 4% Treasury bill, put through the real builder so every figure is computed
     /// the way the refresh computes it.
     /// </summary>
     public static FundReturnsSnapshotDto FundReturns()
@@ -116,7 +116,8 @@ internal static class ResearchFixtureSnapshots
             {
                 int i = quarter * 3 + k;
                 spy.Add(Math.Round((decimal)(1.0 + 3.0 * Math.Sin(i * 0.7)), 2));
-                qqq.Add(Math.Round((decimal)(1.3 + 4.2 * Math.Sin(i * 0.7 + 0.3) + 0.8 * Math.Cos(i * 1.9)), 2));
+                // QQQ has a weak last year, so its 1-year Sharpe ratio is negative.
+                qqq.Add(Math.Round((decimal)(1.3 + 4.2 * Math.Sin(i * 0.7 + 0.3) + 0.8 * Math.Cos(i * 1.9) - (i >= 48 ? 2.5 : 0)), 2));
                 bills.Add((first.AddMonths(i), 4.0m));
             }
 
@@ -126,6 +127,30 @@ internal static class ResearchFixtureSnapshots
         }
 
         return FundReturnsBuilder.Build(funds, records, bills)!;
+    }
+
+    /// <summary>
+    /// The fund facts fixture: each fund's net assets from the funds fixture's latest quarter; QQQ with a 0.19% expense
+    /// ratio and SPY without one, as a unit investment trust files no shareholder report with XBRL.
+    /// </summary>
+    public static FundFactsSnapshotDto FundFacts()
+    {
+        FundsPeriodDto latest = Funds().Values[^1];
+        FundFactsDto Facts(string ticker, decimal? expenseRatio)
+        {
+            FundHoldingsDto fund = latest.Funds.Single(f => f.Ticker == ticker);
+            return new FundFactsDto
+            {
+                Ticker = ticker,
+                NetAssets = fund.NetAssets,
+                NetAssetsAsOf = fund.ReportDate,
+                ExpenseRatio = expenseRatio,
+                ExpenseRatioAsOf = expenseRatio is null ? null : new DateOnly(2026, 3, 31),
+                ShareholderReport = expenseRatio is null ? null : "0000000000-26-000099",
+            };
+        }
+
+        return new FundFactsSnapshotDto { AsOf = new DateOnly(2026, 6, 30), Funds = [Facts("SPY", null), Facts("QQQ", 0.19m)] };
     }
 
     /// <summary>

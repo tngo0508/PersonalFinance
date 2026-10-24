@@ -362,7 +362,19 @@ dotnet user-secrets set "Rbac:AdminEmail" "you@example.com" --project PersonalFi
 
 ### Research Market Data (`Research:Sec:UserAgent` and the refresh)
 
-The Research page never calls SEC or the World Bank while someone browses. It reads saved copies (snapshots) from the `ResearchSnapshots` table, and only the **Research refresh** writes them: a run of the ApiService that downloads the public data, builds the Sectors, funds and World datasets, saves them and exits. Until a refresh has run against a database, every Research tab shows the Unavailable State and the API answers `GET api/Research/*` with 503.
+The Research page never calls a data source while someone browses. It reads saved copies (snapshots) from the `ResearchSnapshots` table, and only the **Research refresh** writes them: a run of the ApiService that downloads the public data, builds each dataset, saves it and exits. Until a refresh has run against a database, every Research tab shows the Unavailable State and the API answers `GET api/Research/*` with 503. Why these sources and not FRED: ADR 0012.
+
+| Dataset | Endpoint | Source | Used by |
+|---|---|---|---|
+| `sectors` | `api/Research/sectors` | SEC EDGAR Public Float frames | Sectors tab |
+| `etfs` (funds) | `api/Research/funds` | SEC Form N-PORT holdings | Funds tab tree |
+| `fund-overlap` | `api/Research/funds/overlap` | N-PORT, each fund's latest report | Funds tab overlap |
+| `fund-returns` | `api/Research/funds/returns` | N-PORT Item B.5, H.15 bill rate | Funds correlation, Performance, Risk vs return |
+| `fund-facts` | `api/Research/funds/facts` | Funds snapshot net assets, N-CSR XBRL expense ratios | Risk vs return |
+| `macro` | `api/Research/macro` | BLS CPI-U, Fed H.15 (Treasury fallback), `Research:Recessions` | Performance |
+| `world` | `api/Research/world` | World Bank | World tab |
+
+`etf-filings` and `fund-return-filings` are caches of filings already read; they are not served.
 
 **1. Set the SEC contact (once per machine).** SEC's fair-access rules require a real contact email on every request. The committed `appsettings.json` has a placeholder on `example.com`, which the refresh refuses to send; it then skips Sectors and funds and rebuilds only World.
 
@@ -377,8 +389,9 @@ dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --refresh
 ```
 
 - It applies pending migrations, refreshes, logs `Research refresh finished: built ...; failed ...; skipped ...` and exits. Exit code 0 means every dataset was built.
-- The **first run takes 15 to 20 minutes**: it reads several thousand SEC company pages at SEC's rate limit, then the Form N-PORT filings of the 20 Tracked Funds (about 30 per fund since late 2019, several GB in all: the bond and international funds each report thousands of holdings). Company details and the filings read are saved in the database, the filings after each fund, so a run stopped part-way carries on where it left off and later runs are much faster. The fund overlap is then built from each fund's latest report, read again because security identifiers are never stored (ADR 0010); later runs rebuild it only when some fund has filed a newer report. The fund returns read only the head of each filing (its monthly returns), once per filing, and their Sharpe ratios use the 3-month Treasury bill from the Fed Board's H.15 release (a 4 MB download each run); if the Fed's site cannot be reached, the returns are still built, without Sharpe ratios. The macro dataset (CPI-U from the Bureau of Labor Statistics, the effective federal funds rate and 3-month Treasury bill from H.15) is rebuilt each run with the same contact; when the Fed cannot be read, the Treasury bill comes from the Treasury's daily bill rates and the federal funds rate keeps its stored months.
+- The **first run takes 15 to 20 minutes**: it reads several thousand SEC company pages at SEC's rate limit, then the Form N-PORT filings of the 20 Tracked Funds (about 30 per fund since late 2019, several GB in all: the bond and international funds each report thousands of holdings). Company details and the filings read are saved in the database, the filings after each fund, so a run stopped part-way carries on where it left off and later runs are much faster. The fund overlap is then built from each fund's latest report, read again because security identifiers are never stored (ADR 0010); later runs rebuild it only when some fund has filed a newer report. The fund facts read each fund's newest shareholder report (Form N-CSR or N-CSRS) once, for its expense ratio; SPY files none, so it shows "n/a". The fund returns read only the head of each filing (its monthly returns), once per filing, and their Sharpe ratios use the 3-month Treasury bill from the Fed Board's H.15 release (a 4 MB download each run); if the Fed's site cannot be reached, the returns are still built, without Sharpe ratios. The macro dataset (CPI-U from the Bureau of Labor Statistics, the effective federal funds rate and 3-month Treasury bill from H.15) is rebuilt each run with the same contact; when the Fed cannot be read, the Treasury bill comes from the Treasury's daily bill rates and the federal funds rate keeps its stored months.
 - Each dataset refreshes on its own: one that fails keeps its previous snapshot.
+- Recessions shaded on the Performance chart are configuration (`Research:Recessions` in the ApiService's `appsettings.json`, each a `Start` and `End` month and a `Label`). They are read when the page loads, so a new entry needs neither a code change nor a refresh.
 - Nothing schedules it locally. Run it again whenever you want newer data.
 - A branch without the Research code (before 5.0.0) ignores `--refresh-research` and starts the normal API instead.
 - With an InMemory database the refresh cannot fill the running app. Use made-up data instead: start the ApiService with `ASPNETCORE_ENVIRONMENT=Development` and `E2E_SEED_RESEARCH=true` (see "Running the E2E tests locally").

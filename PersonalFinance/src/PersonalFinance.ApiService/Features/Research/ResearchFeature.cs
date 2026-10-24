@@ -70,6 +70,8 @@ internal static class ResearchFeature
         services.AddScoped<IResearchDatasetRefresher, FundsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundOverlapRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundReturnsRefresher>();
+        // After the funds refresh: it reads the net assets from the funds snapshot.
+        services.AddScoped<IResearchDatasetRefresher, FundFactsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, MacroRefresher>();
         services.AddScoped<IResearchDatasetRefresher, WorldRefresher>();
         services.AddScoped<IResearchService, ResearchService>();

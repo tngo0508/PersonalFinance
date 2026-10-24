@@ -664,3 +664,154 @@
     border-radius: 50%;
     background: var(--app-bg, #ffffff);
 }
+
+/* --------------------------------------------------------------------------
+   Risk vs return: a scatter on one y-axis, each fund a bubble in its fixed
+   colour with its ticker beside it, the basket a dark diamond. Points are
+   focusable; the card is the shared tooltip. Inline bars in the table.
+   -------------------------------------------------------------------------- */
+
+.research-risk__figure {
+    margin: 0;
+}
+
+.research-risk__chart {
+    width: 100%;
+    min-height: 22rem;
+}
+
+.research-risk__svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.research-risk__point {
+    cursor: pointer;
+    outline: none;
+}
+
+.research-risk__bubble {
+    fill: var(--research-fund-colour, var(--research-office-neutral));
+    fill-opacity: 0.78;
+    stroke: var(--app-bg, #ffffff);
+    stroke-width: 1.5;
+}
+
+.research-risk__point:focus-visible .research-risk__bubble,
+.research-risk__point:hover .research-risk__bubble {
+    fill-opacity: 1;
+    stroke: var(--app-text);
+    stroke-width: 2;
+}
+
+.research-risk__diamond {
+    fill: var(--app-text);
+    stroke: var(--app-bg, #ffffff);
+    stroke-width: 2;
+}
+
+.research-risk__point:focus-visible .research-risk__diamond {
+    stroke: var(--app-brand);
+    stroke-width: 3;
+}
+
+.research-risk__label {
+    fill: var(--app-text-muted);
+    font-size: 11px;
+    font-weight: var(--app-font-weight-semibold);
+    pointer-events: none;
+}
+
+.research-risk__label--basket {
+    fill: var(--app-text);
+}
+
+.research-risk__legend-bubble {
+    display: inline-block;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 50%;
+    background: var(--research-office-1);
+    opacity: 0.78;
+}
+
+.research-risk__legend-diamond {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.625rem;
+    background: var(--app-text);
+    transform: rotate(45deg);
+}
+
+.research-overlap__table[hidden] {
+    display: none;
+}
+
+.research-risk__bar-cell {
+    position: relative;
+    min-width: 8rem;
+}
+
+.research-risk__bar {
+    position: absolute;
+    left: var(--app-spacing-s);
+    top: 50%;
+    height: 0.5rem;
+    max-width: calc(100% - 4.5rem);
+    border-radius: 2px;
+    transform: translateY(-50%);
+}
+
+.research-risk__bar--return {
+    background: #2a78d6;
+}
+
+.research-risk__bar--volatility {
+    background: #9ca3af;
+}
+
+.research-risk__bar--negative {
+    background: #eb6834;
+}
+
+.research-risk__bar-value {
+    position: relative;
+}
+
+/* Risk vs return: role chips, dashed lines through the basket with neutral
+   corner labels, and leader lines for labels moved aside. */
+
+.research-risk__roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-xs);
+    margin-bottom: var(--app-spacing-s);
+}
+
+.research-risk__roles[hidden] {
+    display: none;
+}
+
+.research-risk__role[aria-pressed="true"] {
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
+    color: var(--app-brand-pressed);
+}
+
+.research-risk__quadrants line {
+    stroke: #8a8983;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+.research-risk__quadrant {
+    fill: var(--app-text-muted);
+    font-size: 10px;
+}
+
+.research-risk__leader {
+    stroke: #8a8983;
+    stroke-width: 1;
+}

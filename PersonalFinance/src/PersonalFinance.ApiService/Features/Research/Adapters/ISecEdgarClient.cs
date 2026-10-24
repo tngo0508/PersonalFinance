@@ -51,4 +51,17 @@ internal interface ISecEdgarClient
     /// (Item B.5, which comes before the holdings). Null when EDGAR does not have the document.
     /// </summary>
     Task<NportReturns?> GetNportReturnsAsync(NportFilingRef filing, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lists the shareholder reports (Form N-CSR and N-CSRS, with amendments) filed under a CIK or series id on or after
+    /// <paramref name="filedFrom"/>, newest first as EDGAR lists them.
+    /// </summary>
+    Task<IReadOnlyList<NportFilingRef>> GetShareholderReportFilingsAsync(string filer, DateOnly filedFrom,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The expense ratios in a shareholder report's XBRL instance, one per class it reports; null when EDGAR has no
+    /// instance for the filing (it was filed without XBRL).
+    /// </summary>
+    Task<IReadOnlyList<ClassExpenseRatio>?> GetExpenseRatiosAsync(NportFilingRef filing, CancellationToken cancellationToken);
 }

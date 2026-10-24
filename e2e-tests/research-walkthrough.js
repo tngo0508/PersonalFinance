@@ -611,6 +611,95 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 7i: the Risk vs return tab plots the funds' precomputed figures and the basket diamond computed here from the
+        // fixture; focusing a bubble opens its card (expense ratio, or n/a for SPY); the table sorts by Sharpe ratio and a
+        // negative Sharpe ratio reads with a minus sign.
+        await step('Research 7i', fail, async () => {
+            await page.goto(`${base}/Research?tab=risk&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const expected = await page.evaluate(() => {
+                const returns = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
+                const macro = JSON.parse(document.getElementById('research-macro-data').textContent);
+                const spy = returns.funds.find((f) => f.ticker === 'SPY').returns.slice(-36);
+                const qqq = returns.funds.find((f) => f.ticker === 'QQQ').returns.slice(-36);
+                const basket = spy.map((r, i) => 0.6 * r + 0.4 * qqq[i]);
+                const growth = basket.reduce((g, r) => g * (1 + r / 100), 1);
+                const annualized = (Math.pow(growth, 12 / 36) - 1) * 100;
+                const mean = basket.reduce((a, r) => a + r, 0) / 36;
+                const volatility = Math.sqrt(basket.reduce((a, r) => a + (r - mean) ** 2, 0) / 35) * Math.sqrt(12);
+                const bills = macro.months.slice(-36).map((m) => m.treasuryBill);
+                const bill = bills.reduce((a, b) => a + b, 0) / bills.length;
+                const fmt = (v, d) => (v < 0 ? `−${Math.abs(v).toFixed(d)}` : v.toFixed(d));
+                const oneYear = returns.windows.find((w) => w.years === 1).funds.find((f) => f.ticker === 'QQQ');
+                return {
+                    annualized: `Annualized return: ${fmt(annualized, 1)}% a year`,
+                    volatility: `Volatility: ${volatility.toFixed(1)}%`,
+                    sharpe: `Sharpe ratio: ${fmt((annualized - bill) / volatility, 2)} (Treasury bill ${bill.toFixed(2)}%)`,
+                    qqqOneYearSharpe: fmt(oneYear.sharpe, 2)
+                };
+            });
+            const card = async () => (await page.locator('#research-risk-card span').allTextContents()).map((t) => t.trim());
+            const bubbles = await page.locator('#research-risk-chart .research-risk__point:not(.research-risk__point--basket)').count();
+            await page.focus('#research-risk-chart [data-ticker="Your basket"]');
+            const basketCard = await card();
+            await page.focus('#research-risk-chart [data-ticker="SPY"]');
+            const spyCard = await card();
+            await page.focus('#research-risk-chart [data-ticker="QQQ"]');
+            const qqqCard = await card();
+            await page.click('[data-risk-years="1"]');
+            await page.click('#research-risk-table-toggle');
+            const rows = await page.locator('#research-risk-table tbody tr').evaluateAll((trs) => trs.map((tr) => ({
+                ticker: tr.dataset.ticker, sharpe: tr.children[3].textContent.trim()
+            })));
+            const qqqRow = rows.find((r) => r.ticker === 'QQQ');
+            const sorted = rows.every((r, i) => i === 0 || Number(r.sharpe.replace('−', '-')) <= Number(rows[i - 1].sharpe.replace('−', '-')));
+            const ok = bubbles === 2 && basketCard.includes(expected.annualized) && basketCard.includes(expected.volatility) &&
+                basketCard.includes(expected.sharpe) && spyCard.includes('Expense ratio: n/a') &&
+                qqqCard.includes('Expense ratio: 0.19%') && qqqCard.some((r) => r.startsWith('Net assets: $')) &&
+                qqqRow && qqqRow.sharpe === expected.qqqOneYearSharpe && qqqRow.sharpe.startsWith('−') && sorted && rows.length === 3;
+            if (ok) {
+                pass(`Research 7i: the basket diamond matches the fixture (${expected.annualized.split(': ')[1]}, ${expected.volatility.split(': ')[1]}); SPY's expense ratio reads n/a, QQQ's 0.19%; over 1 year QQQ's Sharpe ratio reads ${qqqRow.sharpe} in a table sorted by Sharpe`);
+            } else {
+                fail(`Research 7i: bubbles ${bubbles}, basket ${JSON.stringify(basketCard)} vs ${JSON.stringify(expected)}, SPY ${JSON.stringify(spyCard)}, ` +
+                    `QQQ ${JSON.stringify(qqqCard)}, rows ${JSON.stringify(rows)}`);
+            }
+        });
+
+        // Step 7j: with SPY alone in the basket the diamond sits on SPY's bubble, and the labels still don't overlap (one
+        // moves aside on a leader line); role chips hide funds without repainting the rest; the corners are described
+        // against the basket, and nothing on the tab gives advice.
+        await step('Research 7j', fail, async () => {
+            await page.goto(`${base}/Research?tab=risk&basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const labelBoxes = () => page.evaluate(() => Array.from(document.querySelectorAll('#research-risk-chart .research-risk__label'))
+                .map((t) => { const b = t.getBBox(); return { label: t.textContent, x: b.x, y: b.y, w: b.width, h: b.height }; }));
+            const boxes = await labelBoxes();
+            const overlapping = boxes.some((a, i) => boxes.some((b, j) => j > i &&
+                a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h));
+            const leaders = await page.locator('#research-risk-chart .research-risk__leader').count();
+            await page.goto(`${base}/Research?tab=risk&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const quadrants = (await page.locator('.research-risk__quadrant').allTextContents()).map((t) => t.trim());
+            const fill = () => page.evaluate(() => getComputedStyle(document.querySelector('#research-risk-chart [data-ticker="SPY"] circle')).fill);
+            const spyBefore = await fill();
+            const chips = (await page.locator('#research-risk-roles button').allTextContents()).map((t) => t.trim());
+            await page.locator('#research-risk-roles button', {hasText: 'US broad'}).click();
+            const shownAfter = await page.locator('#research-risk-chart .research-risk__point').evaluateAll((g) => g.map((n) => n.getAttribute('data-ticker')));
+            const spyAfter = await fill();
+            const pressed = await page.locator('#research-risk-roles button', {hasText: 'US broad'}).getAttribute('aria-pressed');
+            await page.locator('#research-risk-roles button', {hasText: 'US broad'}).click();
+            const restored = await page.locator('#research-risk-chart .research-risk__point').count();
+            const words = (await page.locator('#research-panel-risk').innerText()).toLowerCase();
+            const advice = ['efficient', ' best', ' buy', 'should', 'recommend'].filter((w) => words.includes(w));
+            const ok = boxes.length === 3 && !overlapping && leaders >= 1 &&
+                quadrants.length === 4 && quadrants.includes('Higher return, smaller swings than your basket') &&
+                chips.join('|') === 'US broad|Growth, sector and thematic' && pressed === 'true' &&
+                shownAfter.join(',') === 'SPY,Your basket' && spyBefore === spyAfter && restored === 3 && advice.length === 0;
+            if (ok) {
+                pass(`Research 7j: SPY and the basket on one spot keep apart labels (${leaders} leader); "US broad" leaves SPY and the basket in the same colour; four corners described against the basket; no advice wording`);
+            } else {
+                fail(`Research 7j: boxes ${JSON.stringify(boxes)} overlapping ${overlapping}, leaders ${leaders}, quadrants ${JSON.stringify(quadrants)}, chips ${JSON.stringify(chips)}, ` +
+                    `pressed ${pressed}, shown ${shownAfter}, fill ${spyBefore}/${spyAfter}, restored ${restored}, advice ${JSON.stringify(advice)}`);
+            }
+        });
+
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');
@@ -683,7 +772,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 await mobile.goto(`${base}/Research?basket=SPY:70,QQQ:50`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await mobile.waitForSelector('#research-sunburst svg', {timeout: TIMEOUT});
                 const wide = [];
-                for (const tabId of ['sectors', 'funds', 'performance', 'world']) {
+                for (const tabId of ['sectors', 'funds', 'performance', 'risk', 'world']) {
                     await mobile.tap(`#research-tab-${tabId}`);
                     await mobile.waitForTimeout(300);
                     if (await scrollsSideways(mobile)) {

@@ -41,6 +41,10 @@ internal sealed class ResearchService : IResearchService
         GetAsync<FundReturnsSnapshotDto>(ResearchDatasets.FundReturns, cancellationToken);
 
     /// <inheritdoc />
+    public Task<ResearchSnapshotResult<FundFactsSnapshotDto>> GetFundFactsAsync(CancellationToken cancellationToken = default) =>
+        GetAsync<FundFactsSnapshotDto>(ResearchDatasets.FundFacts, cancellationToken);
+
+    /// <inheritdoc />
     /// <remarks>
     /// The recessions come from configuration as the snapshot is read, not from the refresh, so a new entry shows at
     /// once. An entry whose months cannot be read is left out.

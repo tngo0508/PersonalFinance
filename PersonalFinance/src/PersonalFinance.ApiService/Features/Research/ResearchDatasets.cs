@@ -44,6 +44,9 @@ internal static class ResearchDatasets
     /// </summary>
     public const string FundReturnFilings = "fund-return-filings";
 
+    /// <summary>The fund facts snapshot: each Tracked Fund's net assets and expense ratio.</summary>
+    public const string FundFacts = "fund-facts";
+
     /// <summary>The macro snapshot: monthly CPI-U, effective federal funds rate and 3-month Treasury bill rate.</summary>
     public const string Macro = "macro";
 

@@ -47,7 +47,7 @@ public class ResearchRefreshIsolationTests
 
         ResearchRefreshSummary summary = await service.RefreshAsync(ResearchSources.WorldBank);
 
-        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Funds, ResearchDatasets.FundReturns, ResearchDatasets.Macro], summary.Skipped);
+        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Funds, ResearchDatasets.FundReturns, ResearchDatasets.FundFacts, ResearchDatasets.Macro], summary.Skipped);
         Assert.Equal([ResearchDatasets.World], summary.Built);
         Assert.Empty(summary.Failed);
         Assert.Equal(0, sec.Calls);
@@ -120,6 +120,14 @@ public class ResearchRefreshIsolationTests
 
         public Task<NportReturns?> GetNportReturnsAsync(NportFilingRef filing, CancellationToken cancellationToken) =>
             Task.FromResult<NportReturns?>(null);
+
+        public Task<IReadOnlyList<NportFilingRef>> GetShareholderReportFilingsAsync(string filer, DateOnly filedFrom,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<NportFilingRef>>([]);
+
+        public Task<IReadOnlyList<ClassExpenseRatio>?> GetExpenseRatiosAsync(NportFilingRef filing,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<ClassExpenseRatio>?>(null);
     }
 
     /// <summary>The World Bank with one country's market cap in 2025.</summary>

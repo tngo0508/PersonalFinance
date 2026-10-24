@@ -53,6 +53,7 @@ public class ResearchFixtureSeederTests
         FundOverlapSnapshotDto? overlap = await GetAsync<FundOverlapSnapshotDto>(client, "funds/overlap");
         FundReturnsSnapshotDto? returns = await GetAsync<FundReturnsSnapshotDto>(client, "funds/returns");
         MacroSnapshotDto? macro = await GetAsync<MacroSnapshotDto>(client, "macro");
+        FundFactsSnapshotDto? facts = await GetAsync<FundFactsSnapshotDto>(client, "funds/facts");
 
         // What the walkthrough needs: several years to scrub, a Technology highlight, SPY and QQQ by quarter, and a
         // % of GDP figure for the World switch.
@@ -83,6 +84,11 @@ public class ResearchFixtureSeederTests
         // CPI for the month before the returns' first month, the base of an inflation-adjusted line, and every month.
         Assert.True(macro.Months[0].Month < returns.Funds[0].FirstMonth);
         Assert.All(macro.Months, m => Assert.NotNull(m.ConsumerPrices));
+
+        Assert.NotNull(facts);
+        Assert.Equal(["SPY", "QQQ"], facts.Funds.Select(f => f.Ticker));
+        Assert.Null(facts.Funds[0].ExpenseRatio);
+        Assert.All(facts.Funds, f => Assert.True(f.NetAssets > 0));
 
         Assert.NotNull(world);
         Assert.True(world.Periods.Count >= 2);
@@ -118,8 +124,8 @@ public class ResearchFixtureSeederTests
         await ResearchFixtureSeeder.SeedAsync(db, TimeProvider.System);
 
         List<ResearchSnapshot> rows = await db.ResearchSnapshots.AsNoTracking().OrderBy(s => s.Dataset).ToListAsync();
-        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundOverlap, ResearchDatasets.FundReturns, ResearchDatasets.Macro,
-                ResearchDatasets.Sectors, ResearchDatasets.World],
+        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundFacts, ResearchDatasets.FundOverlap, ResearchDatasets.FundReturns,
+                ResearchDatasets.Macro, ResearchDatasets.Sectors, ResearchDatasets.World],
             rows.Select(r => r.Dataset));
         Assert.Equal("{}", rows.Single(r => r.Dataset == ResearchDatasets.World).Payload);
     }

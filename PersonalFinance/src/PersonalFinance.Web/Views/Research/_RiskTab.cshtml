@@ -1,0 +1,90 @@
+@model ResearchViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+
+@{
+    FundReturnsSnapshotDto? returns = Model.FundReturns;
+    FundFactsSnapshotDto? facts = Model.FundFacts;
+    bool showRisk = returns is not null && !Model.Funds.Unavailable;
+    CultureInfo us = CultureInfo.GetCultureInfo("en-US");
+}
+
+@* The Risk vs return tab: each Tracked Fund's annualized return against its volatility over a window, from the
+   precomputed figures of the fund returns snapshot, with bubble area from net assets (fund facts). The Fund Basket is a
+   diamond the browser computes from the monthly returns. Drawn by js/research/research-risk.js. *@
+<section class="research-deck" id="research-panel-risk" data-research-basket role="tabpanel"
+         aria-labelledby="research-tab-risk" hidden="@(!Model.IsSelected(ResearchViewModel.RiskTab))">
+    <div class="research-card research-risk" id="research-risk">
+        <h2 class="research-card__title">Risk vs return</h2>
+        @if (!showRisk)
+        {
+            <partial name="_UnavailableState" model="Model.RiskUnavailableState"/>
+        }
+        else
+        {
+            <p class="research-card__subtitle">
+                Each fund's annualized return against its volatility, how much its monthly returns swung (as a yearly
+                figure), over the window. Bubble area follows the fund's net assets; your basket is the dark diamond.
+            </p>
+            <div class="research-correlation__controls">
+                <div class="research-view-toggle" role="group" aria-label="Window">
+                    <button type="button" class="research-view-toggle__button" data-risk-years="1" aria-pressed="false">1Y</button>
+                    <button type="button" class="research-view-toggle__button" data-risk-years="3" aria-pressed="true">3Y</button>
+                    <button type="button" class="research-view-toggle__button" data-risk-years="5" aria-pressed="false">5Y</button>
+                </div>
+                <button type="button" class="research-chip" id="research-risk-table-toggle" aria-pressed="false"
+                        aria-controls="research-risk-table">Show as table</button>
+            </div>
+            @* Role filters: each shows or hides the funds of one role; with none chosen every fund shows. The basket
+               always stays, and a fund keeps its colour whatever is shown. *@
+            <div class="research-risk__roles" id="research-risk-roles" role="group" aria-label="Show funds by role"></div>
+            @if (facts is null)
+            {
+                <p class="research-overlap__note">The fund facts have not loaded yet, so every bubble has the same size.</p>
+            }
+            <figure class="research-risk__figure">
+                @* Each bubble is focusable and opens a card with its figures. *@
+                <div class="research-risk__chart" id="research-risk-chart" role="group"></div>
+                <ul class="research-performance__legend" id="research-risk-legend" aria-label="Marks"></ul>
+            </figure>
+            <p class="research-overlap__note" id="research-risk-note"></p>
+            <div class="research-overlap__table" id="research-risk-table" hidden></div>
+            <div class="research-tooltip research-risk__card" id="research-risk-card" aria-hidden="true" hidden></div>
+        }
+        <p class="research-card__source">
+            Sources: SEC EDGAR (Form N-PORT monthly total returns and net assets; Form N-CSR expense ratios). Treasury bill
+            rate: Board of Governors of the Federal Reserve System, H.15 Selected Interest Rates.
+        </p>
+    </div>
+
+    <aside class="research-panel" aria-label="About the risk and return data">
+        <h2 class="research-panel__title">How to read it</h2>
+        <p>
+            Higher up means a higher annualized return over the window; further right means bigger swings from month
+            to month. No part of the chart is better than another: it shows how the funds behaved, not what to choose.
+        </p>
+        <p>
+            The dashed lines cross at your basket, so each corner reads against it: higher or lower return, smaller or
+            bigger swings than your basket over the window.
+        </p>
+        <p>
+            The Sharpe ratio is the return above the 3-month Treasury bill rate for each point of volatility. It is
+            negative when a fund returned less than the bill.
+        </p>
+        <h2 class="research-panel__title">About this data</h2>
+        <p>
+            Returns are on each fund's net asset value at month ends, from Form N-PORT. Expense ratios are from each
+            fund's latest shareholder report; SPY, a unit investment trust, files none with machine-readable figures.
+        </p>
+        <h2 class="research-panel__title">Data as of</h2>
+        <p class="research-panel__as-of">
+            @(returns is null ? "Not loaded yet" : $"Returns to {returns.AsOf.ToString("MMMM yyyy", us)}")
+        </p>
+    </aside>
+</section>
+
+@if (showRisk && facts is not null)
+{
+    @* The fund facts snapshot (net assets and expense ratios), read by research-risk.js. *@
+    <script type="application/json" id="research-fund-facts-data">@Json.Serialize(facts)</script>
+}
