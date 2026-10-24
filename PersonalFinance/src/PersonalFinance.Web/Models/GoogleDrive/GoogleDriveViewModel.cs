@@ -12,7 +12,7 @@ public class GoogleDriveViewModel
     /// Google Drive folder URL or ID entered by the user.
     /// </summary>
     [Display(Name = "Google Drive Folder URL / ID")]
-    public string FolderUrl { get; set; } = "https://drive.google.com/drive/folders/127ViLEHTWIEsAN0x8gbRGTJiwOpbH3g_?usp=drive_link";
+    public string FolderUrl { get; set; } = string.Empty;
 
     /// <summary>
     /// Optional friendly name for the connection (e.g., 'Work Invoices', 'Tax Receipts').

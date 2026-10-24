@@ -600,7 +600,7 @@ Navigate to **Settings** &rarr; **Secrets and variables** &rarr; **Actions** &ra
 |---|---|---|
 | `BREVO_SENDER_EMAIL` | `tngo0508@gmail.com` | Verified sender email address for transactional emails (from Step 3). |
 | `BREVO_SENDER_NAME` | `PersonalFinance` | Display name for transactional email sender. |
-| `CUSTOM_DOMAIN_NAME` | *(empty)* | Optional custom domain name (e.g., `finance.mydomain.com`). Leave empty for auto-generated Azure Container Apps domain. |
+| `CUSTOM_DOMAIN_NAME` | *(empty)* | Optional custom domain name (e.g., `finance.mydomain.com`). Leave empty for auto-generated Azure Container Apps domain. Full setup in [CUSTOM_DOMAIN.md](CUSTOM_DOMAIN.md). |
 | `SEC_USER_AGENT` | `PersonalFinance research tngo0508@gmail.com` | Contact the daily Research refresh job sends to SEC (fair-access rule). Without it the Research Sectors and Funds tabs get no data. |
 
 > **Note**: If you do not create these variables, the workflow will use the default values shown above.

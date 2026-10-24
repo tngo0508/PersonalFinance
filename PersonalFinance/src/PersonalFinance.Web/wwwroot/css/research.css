@@ -862,6 +862,13 @@ button.research-ranked__row:focus-visible {
     outline-offset: -2px;
 }
 
+/* A disabled option (e.g. inflation before its data has loaded) must not look clickable. */
+.research-view-toggle__button:disabled {
+    background: var(--app-bg);
+    color: var(--app-text-disabled);
+    cursor: not-allowed;
+}
+
 /* The Sectors treemap: the focus's parts as tiles, in office colours. */
 
 .research-treemap {

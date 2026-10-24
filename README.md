@@ -111,6 +111,7 @@ For the rationale behind key design choices, see:
 - [ADR-0006](docs/adr/0006-one-release-per-merged-pr.md) — One GitHub Release per merged PR, tagged from `AppVersion`
 - [ADR-0010](docs/adr/0010-research-never-stores-security-identifiers.md) — Research never stores or shows security identifiers (CUSIP, ISIN)
 - [ADR-0012](docs/adr/0012-research-data-from-official-public-sources.md) — Research data comes from official public sources (no FRED), precomputed in a daily refresh
+- [ADR-0013](docs/adr/0013-landing-page-skyline-maplibre-self-hosted-osm.md) — The Landing Page Skyline: MapLibre over a self-hosted OpenStreetMap extract, never slowing the page
 
 For detailed setup instructions, secrets management, and EF Core migrations, see [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md).
 
