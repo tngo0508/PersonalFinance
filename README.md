@@ -163,7 +163,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.AppHost
 | **Observability** | OpenTelemetry (metrics, tracing, health checks) |
 | **Containerization** | Multi-stage Dockerfiles, chiseled non-root images |
 | **CI/CD** | GitHub Actions, GHCR, Azure OIDC (passwordless) |
-| **Infrastructure** | Azure Bicep IaC, Container Apps (Consumption, scale-to-zero) |
+| **Infrastructure** | Azure Bicep IaC, Container Apps (Consumption, warm 08:00–22:00 Pacific, scale-to-zero overnight) |
 | **Testing** | xUnit with EF Core InMemory (500+ tests), Playwright e2e |
 
 ---

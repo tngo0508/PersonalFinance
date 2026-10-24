@@ -396,7 +396,60 @@ dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --refresh
 - A branch without the Research code (before 5.0.0) ignores `--refresh-research` and starts the normal API instead.
 - With an InMemory database the refresh cannot fill the running app. Use made-up data instead: start the ApiService with `ASPNETCORE_ENVIRONMENT=Development` and `E2E_SEED_RESEARCH=true` (see "Running the E2E tests locally").
 
-**Production:** the `SEC_USER_AGENT` repository variable carries the contact (see "Repository Variables"), and a daily Container Apps Job runs the refresh (see `docs/deployment.md`).
+**Production:** the `SEC_USER_AGENT` repository variable carries the contact (see "Repository Variables"), and a daily Container Apps Job runs the refresh at 10:00 UTC (see `docs/deployment.md`).
+
+#### Refreshing production by hand
+
+Deploying a release does not refresh the data. The job only picks up the new image at the deploy, and its next scheduled run may be hours away. After a release that adds a Research dataset or changes how one is built (5.4.0 added the fund overlap and fund returns), start the job yourself; until it has run, the new views show the Unavailable State and reloading the page does not help.
+
+The commands need the Azure CLI signed in to the production subscription and its `containerapp` extension (`az extension add --name containerapp`; `job logs show` asks to install it otherwise and fails in a non-interactive shell).
+
+**1. Find the job.** Its name ends in a generated suffix:
+
+```bash
+az containerapp job list -g rg-personalfinance-prod --query "[?contains(name,'research')].name" -o tsv
+JOB=research-pf-prod-cdknljx37hrso   # the name printed above
+```
+
+**2. Check it runs the new image** (the tag is the merge commit's short SHA) and that no run is in progress:
+
+```bash
+az containerapp job show -n $JOB -g rg-personalfinance-prod --query "properties.template.containers[0].image" -o tsv
+az containerapp job execution list -n $JOB -g rg-personalfinance-prod \
+  --query "[0:5].{name:name, status:properties.status, start:properties.startTime, image:properties.template.containers[0].image}" -o table
+```
+
+Each run records the image it used, so the list also tells you whether the last scheduled run already had the new code.
+
+**3. Start it.** This prints the run's name:
+
+```bash
+az containerapp job start -n $JOB -g rg-personalfinance-prod --query name -o tsv
+RUN=research-pf-prod-cdknljx37hrso-xxxxxxx   # the name printed above
+```
+
+The Azure Portal's **Run now** on the job does the same.
+
+**4. Follow it.** Most lines are SEC requests; this keeps the progress lines and the final summary:
+
+```bash
+az containerapp job logs show -n $JOB -g rg-personalfinance-prod --execution $RUN --container research-refresh \
+  --follow --tail 300 --format text \
+  | grep --line-buffered '\[[0-9:]* [A-Z]*\]' | grep --line-buffered -v -E 'HTTP request|HTTP response|Execution attempt'
+```
+
+Or check only the status (`Running`, then `Succeeded` or `Failed`):
+
+```bash
+az containerapp job execution show -n $JOB -g rg-personalfinance-prod --job-execution-name $RUN --query properties.status -o tsv
+```
+
+**5. Read the result.** The run ends with `Research refresh finished: built ...; failed ...; skipped ...`; reload the Research page once it has.
+
+- The datasets run in order: Sectors, funds, fund overlap, fund returns, World. A run stopped by the job's 30-minute limit (`replicaTimeout`) never reaches the later ones; Azure retries a failed run once.
+- The funds refresh saves the filings read after each fund, so a stopped run is not wasted. If the run still fails, start it again; after a release that adds funds it can take two or three runs before every dataset is built.
+- `Failed` with `Research refresh skips the SEC datasets` in the log means `SEC_USER_AGENT` is not set: only World was rebuilt. Set the variable and redeploy (it takes effect at the deploy), then start the job.
+- A dataset that failed keeps its previous snapshot, so the page still shows the older data.
 
 ---
 
@@ -900,7 +953,7 @@ No Research refresh has stored that dataset in this database yet. On a new machi
 **Resolution:**
 1. Set `Research:Sec:UserAgent` and run the refresh, as in "Research Market Data" in section 3.
 2. Reload the Research page once the refresh logs `Research refresh finished`.
-3. In production, check that the `SEC_USER_AGENT` repository variable is set and that the Research job has run (see `docs/deployment.md`).
+3. In production, check that the `SEC_USER_AGENT` repository variable is set and that the Research job has run on the deployed image, and start it if not (see "Refreshing production by hand" in section 3).
 
 ---
 
@@ -936,7 +989,7 @@ Health check endpoints `/health` and `/alive` are available on port 8080 for bot
 
 ## 8. Azure Deployment & Infrastructure as Code (Bicep)
 
-The application provides Azure Infrastructure as Code (IaC) using modular Bicep templates targeting **Azure Container Apps (ACA) Consumption Profiles** with scale-to-zero autoscaling (0 to 1 replica), Log Analytics 5 GB/mo free grant, and Azure SQL Database Basic tier (~$5/month).
+The application provides Azure Infrastructure as Code (IaC) using modular Bicep templates targeting **Azure Container Apps (ACA) Consumption Profiles** with 0 to 1 replica autoscaling (production keeps 1 replica warm 08:00–22:00 Pacific and scales to zero overnight; ADR 0011), Log Analytics 5 GB/mo free grant, and Azure SQL Database Basic tier (~$5/month).
 
 ### Infrastructure Structure
 
@@ -1315,4 +1368,4 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 - **Logging**: Structured, high-contrast logging configured across all services via Serilog and `AnsiConsoleTheme.Code`.
 - **Health Checks & Telemetry**: Built-in `/health` and `/alive` uptime endpoints with full OpenTelemetry tracing and metrics integrated into the .NET Aspire dashboard.
 - **API Documentation**: Interactive OpenAPI documentation served via Scalar at `/scalar/v1`.
-- **Zero-Cost Azure Deployment & CI/CD**: Fully automated GitHub Actions workflow (`deploy-azure.yml`) using GitHub Container Registry (`ghcr.io`), Azure OIDC federated passwordless credentials, Bicep IaC, and Azure Container Apps Consumption (scale-to-zero) for a $0.00 to <$0.20/month operating cost.
+- **Zero-Cost Azure Deployment & CI/CD**: Fully automated GitHub Actions workflow (`deploy-azure.yml`) using GitHub Container Registry (`ghcr.io`), Azure OIDC federated passwordless credentials, Bicep IaC, and Azure Container Apps Consumption (warm 08:00–22:00 Pacific, scale-to-zero overnight) for about $10–20/month.

@@ -43,6 +43,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - When the Fed's release cannot be read, the Treasury bill rate comes from the Treasury's daily bill rates instead; FRED is not used, because its terms forbid caching.
   - Days H.15 marks as having no data are left out, and a month BLS did not publish (October 2025) is filled in between its neighbours on the chart.
 
+## [5.4.2] - 2026-10-24
+
+### Fixed
+
+- **Web wakes the API when it starts**: a Web replica that starts from zero now pings the API at once, so both containers start in parallel.
+  - Before, only the Login page woke the API. A visitor who was already signed in, or one who signed in quickly with Google, reached the Dashboard while the API was still waking, waited 30 seconds, and saw an empty Dashboard.
+  - The ping is anonymous, throttled to once every two minutes, and never delays Web startup.
+
+## [5.4.1] - 2026-10-24
+
+### Changed
+
+- **Warm during Pacific hours**: production keeps one Web and one API replica running from 08:00 to 22:00 Pacific, so daytime visitors no longer wait for a cold start.
+  - Before, both apps scaled to zero after a few idle minutes. Waking each one took about 25 seconds, and the Web's call to a still-waking API often hit the 30-second timeout, leaving the Dashboard empty or in the Unavailable State.
+  - The window follows daylight saving through a new `businessHoursTimeZone` deployment parameter. Outside it, both apps still scale to zero.
+  - ADR 0011 records why this window was chosen over warm replicas around the clock; ADR 0005 has a matching amendment.
+
 ## [5.4.0] - 2026-10-24
 
 ### Added

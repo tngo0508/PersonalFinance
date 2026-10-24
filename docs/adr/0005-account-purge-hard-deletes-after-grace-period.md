@@ -66,7 +66,11 @@ deletion alone. The original #65 asked for soft deletion only.
 - **No OAuth token to revoke (2026-10-23, #143).** The app stores no Google OAuth token: Google sign-in keeps none, and
   a Google Drive connection holds the Account's own API key, encrypted, which cannot be revoked from here. The Purge
   deletes it with the connection row.
+- **Production now has a warm window (2026-10-24, ADR 0011).** Scheduled scaling is on in production: the ApiService
+  keeps one replica from 08:00 to 22:00 Pacific and scales to zero overnight. The Purge stays a job: the window is
+  deployment configuration that can be switched off, and a timer inside the ApiService would still stop overnight.
 
 ## Related Decisions
 
 - [0004 – RBAC: ApiService Reads Roles from the Database, Code Checks Policies](0004-rbac-roles-from-database-and-policy-checks.md)
+- [0011 – Production Stays Warm 08:00–22:00 Pacific, Scales to Zero Overnight](0011-warm-window-instead-of-always-on-replicas.md)
