@@ -7,7 +7,10 @@
  * (js/research/research-page.js) moves it between years through update(), and its table view reads table().
  * Click an office or industry (or press an office's legend button) to zoom in, so three rings show below it; the
  * centre zooms out one level, and the breadcrumb above the chart jumps to any level on the way back. The side panel's
- * takeaway cards describe the focused group. The "Technology (incl. chip makers)" toggle dims every slice outside the
+ * takeaway cards describe the focused group. Two keyboard paths reach every level: the arcs (one tab stop; arrow keys
+ * move between siblings, Enter zooms in, Escape zooms out and returns focus to the group left), and the ranked list
+ * under the chart (the focused group's parts as buttons; hovering or focusing a row lights its slice). The
+ * "Technology (incl. chip makers)" toggle dims every slice outside the
  * industries the server flags as Technology. The zoom and the highlight survive a change of year.
  */
 (function () {
@@ -39,6 +42,10 @@
     const RINGS = 3;
     // The "Top 10 companies" takeaway shows only when the focus has more companies than this.
     const TOP_COMPANIES = 10;
+    // How many of the focused group's parts the ranked list under the chart shows.
+    const RANKED_ROWS = 15;
+    const RANKED_ID = 'research-sectors-ranked';
+    const RANKED_TITLE_ID = 'research-sectors-ranked-title';
 
     // SEC industry offices in SEC office-number order; each takes the categorical slot of the same number.
     const OFFICE_SLOTS = [
@@ -430,6 +437,76 @@
     }
 
     /**
+     * Draw the ranked list under the chart: the focused group's parts, largest first (an industry's "Other" slice
+     * last), each with its share of the group, its Public float and a bar sized against the largest. A part that
+     * has parts of its own is a button that zooms into it; a company or "Other" slice is plain text. Pointer or
+     * keyboard on a row lights its slice through onHighlight.
+     * @param {HTMLElement|null} list - The ranked list element.
+     * @param {Object} focus - The focused d3 hierarchy node.
+     * @param {function(Element, string): string} colourOf - The fill colour of an office.
+     * @param {{onPick: function(string): void, onHighlight: function(string|null): void}} handlers - Called with a
+     *     row's node key when its button is pressed, and with the key (or null) to light or clear a slice.
+     * @returns {void}
+     */
+    function renderRanked (list, focus, colourOf, handlers) {
+        if (!list) {
+            return;
+        }
+        const isOther = (d) => (d.data.kind === 'other' ? 1 : 0);
+        const parts = (focus.children || []).filter((d) => d.value > 0)
+            .sort((a, b) => isOther(a) - isOther(b) || b.value - a.value);
+        const shown = parts.slice(0, RANKED_ROWS);
+        const largest = d3.max(shown, (d) => d.value) || 1;
+        const rows = shown.map((node, index) => {
+            const item = document.createElement('li');
+            item.className = 'research-ranked__item';
+            const row = document.createElement(node.children ? 'button' : 'div');
+            row.className = 'research-ranked__row';
+            if (node.children) {
+                row.type = 'button';
+                row.dataset.key = node.data.key;
+                row.setAttribute('aria-label', `${node.data.name}: ${formatMoney(node.value)} Public float, ` +
+                    `${percentOf(node.value, focus.value)} of ${focus.data.name}. Zoom in.`);
+                row.addEventListener('click', () => handlers.onPick(node.data.key));
+                row.addEventListener('focus', () => handlers.onHighlight(node.data.key));
+                row.addEventListener('blur', () => handlers.onHighlight(null));
+            }
+            item.addEventListener('pointerenter', () => handlers.onHighlight(node.data.key));
+            item.addEventListener('pointerleave', () => handlers.onHighlight(null));
+
+            const rank = document.createElement('span');
+            rank.className = 'research-ranked__rank';
+            rank.textContent = node.data.kind === 'other' ? '' : String(index + 1);
+            const name = document.createElement('span');
+            name.className = 'research-ranked__name';
+            name.textContent = node.data.kind === 'company' && node.data.ticker
+                ? `${node.data.name} (${node.data.ticker})`
+                : node.data.name;
+            const share = document.createElement('span');
+            share.className = 'research-ranked__share';
+            share.textContent = percentOf(node.value, focus.value);
+            const value = document.createElement('span');
+            value.className = 'research-ranked__value';
+            value.textContent = formatMoney(node.value);
+            const bar = document.createElement('span');
+            bar.className = 'research-ranked__bar';
+            bar.setAttribute('aria-hidden', 'true');
+            bar.style.width = `${node.value / largest * 100}%`;
+            bar.style.background = colourOf(list, node.data.office);
+            row.append(rank, name, share, value, bar);
+            item.append(row);
+            return item;
+        });
+        if (parts.length > shown.length) {
+            const more = document.createElement('li');
+            more.className = 'research-ranked__more';
+            more.textContent = `and ${parts.length - shown.length} more (see "Show as table")`;
+            rows.push(more);
+        }
+        list.replaceChildren(...rows);
+    }
+
+    /**
      * The d3 hierarchy of one period, summed by Public float, sorted, and with the Technology flag marked.
      * @param {Object} data - The Sectors snapshot.
      * @param {Object} period - One entry of data.values.
@@ -500,7 +577,13 @@
         const techToggle = document.getElementById(TECH_TOGGLE_ID);
         const techShare = document.getElementById(TECH_SHARE_ID);
         const live = document.getElementById(LIVE_ID);
+        const rankedList = document.getElementById(RANKED_ID);
+        const rankedTitle = document.getElementById(RANKED_TITLE_ID);
         const view = { focusKey: ROOT_KEY, technology: false };
+        // Keyboard state: the arc that holds the one tab stop (by node key), and where focus goes after the zoom a
+        // key press asked for ({ arc: key }, { firstArc: true } or { list: true }), or null.
+        let activeKey = null;
+        let pendingFocus = null;
         let periodIndex = data.values.length - 1;
         let focus = null;
         let unit = 0;
@@ -538,9 +621,10 @@
                 .outerRadius((d) => Math.max(d.y0 * unit, d.y1 * unit - 1));
 
             d3.select(host).selectAll('svg').remove();
+            // A group, not an image: the arcs inside are focusable and announce themselves.
             svg = d3.select(host).append('svg')
                 .attr('viewBox', [-size / 2, -size / 2, size, size].join(' '))
-                .attr('role', 'img');
+                .attr('role', 'group');
             arcLayer = svg.append('g');
             labelLayer = svg.append('g').attr('text-anchor', 'middle');
 
@@ -607,7 +691,14 @@
                     if (event.pointerType === 'mouse') {
                         tooltip.hide();
                     }
-                });
+                })
+                .on('keydown', (event, d) => onArcKey(event, d))
+                .on('focus', (event, d) => {
+                    activeKey = d.data.key;
+                    const box = event.currentTarget.getBoundingClientRect();
+                    tooltip.show({ clientX: box.right, clientY: box.top }, d);
+                })
+                .on('blur', () => tooltip.hide());
 
             // The fill follows the office and never changes with the view; the highlight only changes the opacity.
             const all = entering.merge(paths)
@@ -682,6 +773,129 @@
         }
 
         /**
+         * The drawn arc element of a node key, or null.
+         * @param {string} key - The node key.
+         * @returns {SVGPathElement|null} The arc.
+         */
+        function arcElement (key) {
+            return arcLayer.select(`path[data-key="${key}"]`).node();
+        }
+
+        /**
+         * The visible siblings of an arc's node (including itself), in drawing order, which is clockwise.
+         * @param {Object} node - A d3 hierarchy node.
+         * @returns {Object[]} The siblings.
+         */
+        function visibleSiblings (node) {
+            return (node.parent ? node.parent.children : [node]).filter((d) => d.target && isVisible(d.target));
+        }
+
+        /**
+         * Give the arcs their keyboard semantics: every visible arc is labelled and focusable by script, one of them
+         * (the one used last, or the focus's first part) holds the tab stop, and hidden arcs leave the tab order.
+         * @param {Object[]} nodes - The period's nodes, each with its `target` geometry.
+         * @returns {void}
+         */
+        function syncArcFocus (nodes) {
+            const visible = nodes.filter((d) => isVisible(d.target));
+            const entry = visible.find((d) => d.data.key === activeKey) ||
+                visible.find((d) => d.parent === focus) || visible[0];
+            activeKey = entry ? entry.data.key : null;
+            arcLayer.selectAll('path').each(function (d) {
+                const shown = Boolean(d && d.target && isVisible(d.target)) && this.getAttribute('pointer-events') !== 'none';
+                if (!shown) {
+                    this.removeAttribute('tabindex');
+                    this.removeAttribute('role');
+                    this.removeAttribute('aria-label');
+                    return;
+                }
+                this.setAttribute('tabindex', d.data.key === activeKey ? '0' : '-1');
+                this.setAttribute('role', d.children ? 'button' : 'img');
+                const share = d.parent ? `, ${percentOf(d.value, d.parent.value)} of ${d.parent.data.name}` : '';
+                const hint = d.children ? '. Press Enter to zoom in, Escape to zoom out.' : '.';
+                this.setAttribute('aria-label', `${d.data.name}: ${formatMoney(d.value)} Public float${share}${hint}`);
+            });
+        }
+
+        /**
+         * Move the tab stop to a node's arc and focus it.
+         * @param {Object|string} target - The d3 hierarchy node, or its key.
+         * @returns {void}
+         */
+        function focusArc (target) {
+            const key = typeof target === 'string' ? target : target.data.key;
+            const element = arcElement(key);
+            if (!element) {
+                return;
+            }
+            arcLayer.selectAll('path[tabindex="0"]').attr('tabindex', '-1');
+            activeKey = key;
+            element.setAttribute('tabindex', '0');
+            element.focus();
+        }
+
+        /**
+         * Arrow keys move between sibling arcs (wrapping), Enter or Space zooms into a group, and Escape zooms out
+         * with focus returned to the group the user came from.
+         * @param {KeyboardEvent} event - The key press on an arc.
+         * @param {Object} node - The arc's d3 hierarchy node.
+         * @returns {void}
+         */
+        function onArcKey (event, node) {
+            const siblings = visibleSiblings(node);
+            const index = siblings.indexOf(node);
+            if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key) && siblings.length > 0) {
+                event.preventDefault();
+                const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+                focusArc(siblings[(index + step + siblings.length) % siblings.length]);
+            } else if ((event.key === 'Enter' || event.key === ' ') && node.children) {
+                event.preventDefault();
+                pendingFocus = { firstArc: true };
+                zoomTo(node.data.key);
+            } else if (event.key === 'Escape' && focus.parent) {
+                event.preventDefault();
+                pendingFocus = { arc: focus.data.key };
+                zoomOut();
+            }
+        }
+
+        /**
+         * After a zoom asked for by a key press or the ranked list, put keyboard focus where the user expects it: on
+         * the group they came from, on the new focus's first part, or on the ranked list's first button (its title
+         * when the parts have no parts of their own).
+         * @returns {void}
+         */
+        function applyPendingFocus () {
+            const request = pendingFocus;
+            pendingFocus = null;
+            if (!request) {
+                return;
+            }
+            if (request.list) {
+                const first = rankedList ? rankedList.querySelector('button') : null;
+                if (first) {
+                    first.focus();
+                } else if (rankedTitle) {
+                    rankedTitle.focus();
+                }
+            } else if (request.arc) {
+                focusArc(request.arc);
+            } else if (activeKey) {
+                focusArc(activeKey);
+            }
+        }
+
+        /**
+         * Fade every arc outside one group's slice (its arc and everything inside it), or clear the fade.
+         * @param {string|null} key - The group's node key, or null to clear.
+         * @returns {void}
+         */
+        function setHighlight (key) {
+            arcLayer.selectAll('path').classed('research-sunburst__arc--faded', (d) =>
+                Boolean(key) && Boolean(d) && !d.ancestors().some((a) => a.data.key === key));
+        }
+
+        /**
          * Show the focus in the centre, in the breadcrumb and in the takeaway cards, and the state of the legend
          * buttons, the Technology toggle and its share.
          * @param {Object} root - The d3 hierarchy root of the period shown.
@@ -699,6 +913,16 @@
             centre.classed('research-sunburst__centre--zoomed', zoomed);
             renderBreadcrumb(breadcrumb, focus, zoomTo);
             renderTakeaways(takeawaysList, takeaways(root, focus, previous, periodLabel));
+            if (rankedTitle) {
+                rankedTitle.textContent = `Largest parts of ${focus.data.name}, ${periodLabel}`;
+            }
+            renderRanked(rankedList, focus, officeColour, {
+                onPick: (key) => {
+                    pendingFocus = { list: true };
+                    zoomTo(key);
+                },
+                onHighlight: setHighlight
+            });
             if (legend) {
                 const office = focus.ancestors().find((d) => d.depth === 1);
                 legend.querySelectorAll('.research-legend__button').forEach((button) => {
@@ -747,6 +971,9 @@
             drawLabels(nodes, transition);
             renderLegend(legend, root, (key) => zoomTo(view.focusKey === key ? ROOT_KEY : key));
             const { trail, techText } = describeView(root, previous, period.period);
+            setHighlight(null);
+            syncArcFocus(nodes);
+            applyPendingFocus();
 
             const largest = focus.leaves()
                 .filter((d) => d.data.kind === 'company')
@@ -786,6 +1013,8 @@
          */
         function zoomTo (key) {
             view.focusKey = key;
+            // A zoom moves the tab stop back to the new focus's first part (Escape then restores the group left).
+            activeKey = null;
             applyView();
         }
 

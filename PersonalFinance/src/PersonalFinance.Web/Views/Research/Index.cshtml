@@ -79,6 +79,10 @@
                 @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made. *@
                 <div class="research-sunburst" id="research-sunburst"></div>
                 <div class="research-tooltip" id="research-tooltip" aria-hidden="true" hidden></div>
+                @* The focused group's parts, largest first: the second keyboard path through the chart. Groups are
+                   buttons that zoom in; hovering or focusing a row lights its slice. Drawn by research-sunburst.js. *@
+                <h3 class="research-ranked__title" id="research-sectors-ranked-title" tabindex="-1"></h3>
+                <ol class="research-ranked" id="research-sectors-ranked" aria-labelledby="research-sectors-ranked-title"></ol>
                 <div class="research-card__actions">
                     <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
                             aria-controls="research-sectors-table">Show as table</button>

@@ -348,6 +348,118 @@
     cursor: pointer;
 }
 
+/* Keyboard focus on an arc: a ring in the page's text colour (arcs carry no
+   outline, so the stroke draws it). */
+.research-sunburst__arc:focus {
+    outline: none;
+}
+
+.research-sunburst__arc:focus-visible {
+    stroke: var(--app-text);
+    stroke-width: 3px;
+    paint-order: stroke;
+}
+
+/* A row of the ranked list under the hover or keyboard focus fades every
+   slice outside its own. */
+.research-sunburst__arc--faded {
+    opacity: 0.25;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .research-sunburst__arc {
+        transition: opacity 150ms ease;
+    }
+}
+
+/* The ranked list under the Sectors chart: the focus's parts, largest first.
+   Groups are buttons; a bar under each row is sized against the largest. */
+
+.research-ranked__title {
+    margin: var(--app-spacing-m) 0 var(--app-spacing-xs);
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-ranked__title:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-ranked {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-ranked__row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr) auto auto;
+    gap: var(--app-spacing-s);
+    align-items: center;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: var(--app-spacing-xs) var(--app-spacing-s) calc(var(--app-spacing-xs) + 4px);
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--app-text);
+    font: inherit;
+    font-size: var(--app-font-size-small);
+    text-align: left;
+    overflow: hidden;
+}
+
+button.research-ranked__row {
+    cursor: pointer;
+}
+
+button.research-ranked__row:hover,
+button.research-ranked__row:focus-visible {
+    background: var(--app-surface-secondary);
+}
+
+button.research-ranked__row:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: -2px;
+}
+
+.research-ranked__rank,
+.research-ranked__value {
+    color: var(--app-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.research-ranked__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.research-ranked__share {
+    font-weight: var(--app-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.research-ranked__bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 4px;
+    border-radius: 0 4px 4px 0;
+}
+
+.research-ranked__more {
+    padding: var(--app-spacing-xs) var(--app-spacing-s);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
 /* The Sectors breadcrumb: each group above the focus is a button back to it;
    the focus itself is the current location with its Public float. */
 

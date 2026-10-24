@@ -236,6 +236,45 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 6b: both keyboard paths. Arcs: arrow keys move between siblings, Enter zooms in, Escape zooms out and
+        // returns focus to the group left. Ranked list: a row fades the other slices, and Enter zooms into it.
+        await step('Research 6b', fail, async () => {
+            const current = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
+            const activeKey = () => page.evaluate(() => document.activeElement.getAttribute('data-key'));
+            await page.locator('#research-sunburst path[tabindex="0"]').focus();
+            const first = await activeKey();
+            await page.keyboard.press('ArrowRight');
+            const second = await activeKey();
+            const moved = Boolean(first) && Boolean(second) && first !== second;
+            const office = second;
+            await page.keyboard.press('Enter');
+            const zoomedName = (await current.textContent()).split(' · ')[0];
+            const inside = await activeKey();
+            await page.keyboard.press('Escape');
+            const back = await activeKey();
+            const arcsOk = moved && zoomedName !== 'All filers' && Boolean(inside) && inside !== office &&
+                (await current.textContent()).startsWith('All filers') && back === office;
+
+            const row = page.locator('#research-sectors-ranked button').first();
+            const rowName = (await row.locator('.research-ranked__name').textContent()).trim();
+            await row.focus();
+            const faded = await page.locator('#research-sunburst .research-sunburst__arc--faded').count();
+            await page.keyboard.press('Enter');
+            const listZoom = (await current.textContent()).startsWith(rowName);
+            const listFocus = await page.evaluate(() => {
+                const list = document.getElementById('research-sectors-ranked');
+                const title = document.getElementById('research-sectors-ranked-title');
+                return list.contains(document.activeElement) || document.activeElement === title;
+            });
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
+            if (arcsOk && faded > 0 && listZoom && listFocus) {
+                pass(`Research 6b: arrows, Enter and Escape drive the arcs (back to ${office}); the ranked list zooms into ${rowName}`);
+            } else {
+                fail(`Research 6b: arcs ${arcsOk} (${first}→${second}, in ${zoomedName}/${inside}, back ${back}), ` +
+                    `faded ${faded}, list zoom ${listZoom}, list focus ${listFocus}`);
+            }
+        });
+
         // Step 7: ETFs opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters.
         await step('Research 7', fail, async () => {
             await page.click('#research-tab-etfs');
