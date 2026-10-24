@@ -1,0 +1,504 @@
+name	country	percent
+Aflac Inc	US	0.083321585405
+AES Corp/The	US	0.016219210941
+AT&T Inc	US	0.223137596366
+Abbott Laboratories	US	0.245195772960
+AbbVie Inc	US	0.689781930470
+Adobe Inc	US	0.128558058103
+Advanced Micro Devices Inc	US	1.469416714247
+Agilent Technologies Inc	US	0.058239422157
+Airbnb Inc	US	0.092779470225
+Air Products and Chemicals Inc	US	0.101317313126
+Akamai Technologies Inc	US	0.026660139429
+Albemarle Corp	US	0.024671621894
+Alexandria Real Estate Equities Inc	US	0.012811808619
+Align Technology Inc	US	0.017239275198
+Alliant Energy Corp	US	0.030395337731
+Allstate Corp/The	US	0.095019640599
+Alphabet Inc	US	2.590423554935
+Alphabet Inc	US	3.250423295919
+Altria Group Inc	US	0.186398045631
+Amazon.com Inc	US	3.618949790060
+Ameren Corp	US	0.048518784587
+American Electric Power Co Inc	US	0.115480545706
+American Express Co	US	0.279271699315
+American International Group Inc	US	0.061303181605
+American Tower Corp	US	0.118225796104
+American Water Works Co Inc	US	0.039860380837
+Cencora Inc	US	0.085420352604
+Ameriprise Financial Inc	US	0.063977377569
+AMETEK Inc	US	0.086034061308
+Amgen Inc	US	0.302898411271
+Amphenol Corp	US	0.336519097240
+Analog Devices Inc	US	0.300816023280
+Elevance Health Inc	US	0.130294222673
+APA Corp	US	0.017860575928
+Apollo Global Management Inc	US	0.084650678087
+Apple Inc	US	6.592036434374
+Applied Materials Inc	US	0.889657786887
+AppLovin Corp	US	0.215056648999
+Archer-Daniels-Midland Co	US	0.057120131370
+Ares Management Corp	US	0.036421230598
+Arista Networks Inc	US	0.272121452773
+Assurant Inc	US	0.020648642426
+Atmos Energy Corp	US	0.044371094826
+Autodesk Inc	US	0.063680997979
+Automatic Data Processing Inc	US	0.138885293286
+AutoZone Inc	US	0.081618319039
+AvalonBay Communities Inc	US	0.040675423800
+Avery Dennison Corp	US	0.019261381110
+Axon Enterprise Inc	US	0.070112699488
+Baker Hughes Co	US	0.085432483465
+Ball Corp	US	0.025772773267
+Bank of America Corp	US	0.576766551856
+Bank of New York Mellon Corp/The	US	0.153988371221
+Baxter International Inc	US	0.017161777371
+Becton Dickinson & Co	US	0.064692152565
+W R Berkley Corp	US	0.032177739465
+Berkshire Hathaway Inc	US	1.423092856564
+Best Buy Co Inc	US	0.023146750540
+Biogen Inc	US	0.049556246316
+Bio-Techne Corp	US	0.017189637659
+Blackstone Inc	US	0.135618896373
+Blackrock Inc	US	0.215385122824
+Boeing Co/The	US	0.264736882598
+Booking Holdings Inc	US	0.214267245334
+BXP Inc	US	0.015203116713
+Boston Scientific Corp	US	0.098414745520
+Bristol-Myers Squibb Co	US	0.182540134417
+Broadridge Financial Solutions Inc	US	0.024572023502
+Broadcom Inc	US	2.774279376612
+Brown & Brown Inc	US	0.029009918605
+Brown-Forman Corp	US	0.006961453054
+Builders FirstSource Inc	US	0.014929100759
+Cboe Global Markets Inc	US	0.039476000615
+CBRE Group Inc	US	0.061188097215
+CDW Corp/DE	US	0.027873221497
+CF Industries Holdings Inc	US	0.025802417361
+CH Robinson Worldwide Inc	US	0.034436984066
+Cigna Group/The	US	0.113130527240
+CME Group Inc	US	0.124140623519
+CMS Energy Corp	US	0.036492097004
+CSX Corp	US	0.137015767668
+CVS Health Corp	US	0.204774405373
+Cadence Design Systems Inc	US	0.160602926436
+Camden Property Trust	US	0.017851417255
+Capital One Financial Corp	US	0.193687090360
+Cardinal Health Inc	US	0.086321568859
+Carrier Global Corp	US	0.088841204333
+Carvana Co	US	0.073141174579
+Casey's General Stores Inc	US	0.045644507953
+Caterpillar Inc	US	0.760489293015
+Centene Corp	US	0.046649522694
+CenterPoint Energy Inc	US	0.044677880336
+Charles River Laboratories International Inc	US	0.016947423178
+Charter Communications Inc	US	0.018445766265
+Expand Energy Corp	US	0.033870505266
+Chevron Corp	US	0.481092533838
+Chipotle Mexican Grill Inc	US	0.067659357790
+Church & Dwight Co Inc	US	0.035520531137
+Ciena Corp	US	0.107365219698
+Cincinnati Financial Corp	US	0.044434920241
+Cisco Systems Inc	US	0.719363509332
+Cintas Corp	US	0.089507311925
+Citigroup Inc	US	0.370214128867
+Citizens Financial Group Inc	US	0.045968960706
+Clorox Co/The	US	0.018001239779
+Coca-Cola Co/The	US	0.487867055929
+Cognizant Technology Solutions Corp	US	0.028473534538
+Coherent Corp	US	0.119713655159
+Coinbase Global Inc	US	0.050445924757
+Colgate-Palmolive Co	US	0.113813985353
+Comfort Systems USA Inc	US	0.108005128199
+Comcast Corp	US	0.135694556527
+ConocoPhillips	US	0.196488103823
+Consolidated Edison Inc	US	0.063257597136
+Constellation Brands Inc	US	0.030094291477
+Constellation Energy Corp	US	0.123173435479
+Cooper Cos Inc/The	US	0.021701240363
+Copart Inc	US	0.038759568422
+Corning Inc	US	0.310352099726
+Corpay Inc	US	0.033797480867
+Corteva Inc	US	0.087876645179
+Costco Wholesale Corp	US	0.643472061814
+CoStar Group Inc	US	0.017942110263
+Crowdstrike Holdings Inc	US	0.301387347877
+Crown Castle Inc	US	0.051366562397
+Cummins Inc	US	0.152680423632
+DR Horton Inc	US	0.066643618232
+DTE Energy Co	US	0.049176382088
+Danaher Corp	US	0.186145232755
+Darden Restaurants Inc	US	0.036599969981
+Datadog Inc	US	0.133633506609
+DaVita Inc	US	0.011084913476
+Deckers Outdoor Corp	US	0.021787055457
+Deere & Co	US	0.247224057577
+Dell Technologies Inc	US	0.193643409228
+Delta Air Lines Inc	US	0.094847087619
+Devon Energy Corp	US	0.076812369183
+Dexcom Inc	US	0.040182589359
+Diamondback Energy Inc	US	0.052927499897
+Digital Realty Trust Inc	US	0.092021486601
+Walt Disney Co/The	US	0.259293961239
+Dollar General Corp	US	0.039375651547
+Dollar Tree Inc	US	0.033980683632
+Dominion Energy Inc	US	0.093176991769
+Domino's Pizza Inc	US	0.014059940232
+DoorDash Inc	US	0.108331849666
+Dover Corp	US	0.046892184090
+Dow Inc	US	0.030484272393
+Duke Energy Corp	US	0.153095100650
+DuPont de Nemours Inc	US	0.028943005313
+EOG Resources Inc	US	0.107200222560
+EQT Corp	US	0.051591833651
+eBay Inc	US	0.076972284900
+EchoStar Corp	US	0.021272010896
+Ecolab Inc	US	0.109486230841
+Edison International	US	0.044444071407
+Edwards Lifesciences Corp	US	0.080808459997
+Electronic Arts Inc	US	0.071652920586
+EMCOR Group Inc	US	0.057231090728
+Emerson Electric Co	US	0.124395255519
+Entergy Corp	US	0.081588740297
+Equifax Inc	US	0.029319366214
+Equinix Inc	US	0.159335824393
+Equity Residential	US	0.035933673177
+Erie Indemnity Co	US	0.009442515777
+Essex Property Trust Inc	US	0.029060164359
+Evergy Inc	US	0.030911844382
+Eversource Energy	US	0.042104387571
+Exelon Corp	US	0.074003930609
+Expedia Group Inc	US	0.045445485633
+Expeditors International of Washington Inc	US	0.033071558208
+Extra Space Storage Inc	US	0.047617619807
+Exxon Mobil Corp	US	0.879171774595
+Meta Platforms Inc	US	1.918865488966
+FactSet Research Systems Inc	US	0.013002238094
+Fair Isaac Corp	US	0.042945244480
+Fastenal Co	US	0.085542593187
+Federal Realty Investment Trust	US	0.015104960561
+FedEx Corp	US	0.106633226664
+Fedex Freight Holding Co Inc	US	0.025387980817
+F5 Inc	US	0.036362567622
+Fidelity National Information Services Inc	US	0.031178541084
+Fifth Third Bancorp	US	0.079065924942
+First Solar Inc	US	0.039300767074
+Fiserv Inc	US	0.040577805837
+FirstEnergy Corp	US	0.038393204615
+Ford Motor Co	US	0.084399117965
+Fortinet Inc	US	0.148417164923
+Fortive Corp	US	0.028894096960
+Fox Corp	US	0.016141746860
+Fox Corp	US	0.010165582014
+Franklin Resources Inc	US	0.015825140104
+Freeport-McMoRan Inc	US	0.140257147373
+GE HealthCare Technologies Inc	US	0.045174537473
+Arthur J Gallagher & Co	US	0.091498436919
+Gartner Inc	US	0.013465439966
+GE Vernova Inc	US	0.489435871526
+Generac Holdings Inc	US	0.026491323855
+General Dynamics Corp	US	0.139487886674
+General Electric Co	US	0.604542959555
+General Mills Inc	US	0.028811714405
+General Motors Co	US	0.107825227429
+Genuine Parts Co	US	0.025191641151
+Gilead Sciences Inc	US	0.243355282306
+Global Payments Inc	US	0.026174720959
+Globe Life Inc	US	0.021523721543
+GoDaddy Inc	US	0.017437612263
+Goldman Sachs Group Inc/The	US	0.462553266445
+WW Grainger Inc	US	0.091654337377
+HCA Healthcare Inc	US	0.093928793599
+HP Inc	US	0.031147924739
+Halliburton Co	US	0.043985467774
+Hartford Insurance Group Inc/The	US	0.056359733534
+Hasbro Inc	US	0.017090167563
+Healthpeak Properties Inc	US	0.022978864959
+Jack Henry & Associates Inc	US	0.015180038773
+Hershey Co/The	US	0.040419117127
+Hewlett Packard Enterprise Co	US	0.092826170697
+Hilton Worldwide Holdings Inc	US	0.116710980439
+Home Depot Inc/The	US	0.544596241004
+Honeywell Aerospace Inc	US	0.108660896229
+Honeywell International Inc	US	0.110046927202
+Hormel Foods Corp	US	0.011230151973
+Host Hotels & Resorts Inc	US	0.023428472454
+Howmet Aerospace Inc	US	0.166887964274
+Hubbell Inc	US	0.042907029627
+Humana Inc	US	0.074001889282
+JB Hunt Transport Services Inc	US	0.033432753387
+Huntington Bancshares Inc/OH	US	0.055758748271
+Huntington Ingalls Industries Inc	US	0.017028568158
+IDEX Corp	US	0.026060082179
+IDEXX Laboratories Inc	US	0.064435704789
+Illinois Tool Works Inc	US	0.109860406154
+Incyte Corp	US	0.029305355989
+Ingersoll Rand Inc	US	0.045252092686
+Insulet Corp	US	0.016359078458
+Intel Corp	US	1.022897425320
+Interactive Brokers Group Inc	US	0.060153273859
+Intercontinental Exchange Inc	US	0.108010596804
+International Business Machines Corp	US	0.409908218948
+International Flavors & Fragrances Inc	US	0.031451771676
+International Paper Co	US	0.031230608116
+Intuit Inc	US	0.111972900310
+Intuitive Surgical Inc	US	0.218494216052
+Invitation Homes Inc	US	0.025614573875
+IQVIA Holdings Inc	US	0.050034032472
+Iron Mountain Inc	US	0.058297552016
+JPMorgan Chase & Co	US	1.360597323362
+Jabil Inc	US	0.063093790021
+Jacobs Solutions Inc	US	0.023077328727
+Johnson & Johnson	US	0.948441295379
+KLA Corp	US	0.611014864070
+KKR & Co Inc	US	0.098442372194
+Kenvue Inc	US	0.056922981625
+Keurig Dr Pepper Inc	US	0.069085571835
+KeyCorp	US	0.032955454537
+Keysight Technologies Inc	US	0.092919410671
+Kimberly-Clark Corp	US	0.056524205319
+Kimco Realty Corp	US	0.026522601133
+Kinder Morgan Inc	US	0.097105756570
+Kraft Heinz Co/The	US	0.031383916544
+Kroger Co/The	US	0.048867878016
+L3Harris Technologies Inc	US	0.083986318892
+Labcorp Holdings Inc	US	0.035629719001
+Lam Research Corp	US	0.840253483111
+Las Vegas Sands Corp	US	0.021367034444
+Estee Lauder Cos Inc/The	US	0.030193115272
+Leidos Holdings Inc	US	0.020094515306
+Lennar Corp	US	0.030219005318
+Lennox International Inc	US	0.028132011034
+Eli Lilly & Co	US	1.471872349457
+Live Nation Entertainment Inc	US	0.044957169103
+Lockheed Martin Corp	US	0.160119389494
+Loews Corp	US	0.029636342347
+Lowe's Cos Inc	US	0.191585253823
+Lululemon Athletica Inc	US	0.018551313357
+Lumentum Holdings Inc	US	0.103558399181
+M&T Bank Corp	US	0.054076386372
+MGM Resorts International	US	0.014067038264
+MSCI Inc	US	0.063243840853
+Marathon Petroleum Corp	US	0.115789526105
+Marsh & McLennan Cos Inc	US	0.124574521084
+Marriott International Inc/MD	US	0.125833985582
+Martin Marietta Materials Inc	US	0.053729686736
+Marvell Technology Inc	US	0.404501334428
+Masco Corp	US	0.025550148143
+Mastercard Inc	US	0.642515783419
+McCormick & Co Inc/MD	US	0.019928408076
+McDonald's Corp	US	0.297959081921
+McKesson Corp	US	0.140926727211
+Merck & Co Inc	US	0.492205338080
+MetLife Inc	US	0.070943712057
+Mettler-Toledo International Inc	US	0.039823327466
+Microsoft Corp	US	4.298076594561
+Microchip Technology Inc	US	0.076568137073
+Micron Technology Inc	US	2.019256984805
+Mid-America Apartment Communities Inc	US	0.025081197097
+Moderna Inc	US	0.038368210379
+Molson Coors Beverage Co	US	0.009696724557
+Mondelez International Inc	US	0.115232100545
+Monolithic Power Systems Inc	US	0.105312841789
+Monster Beverage Corp	US	0.106406072718
+Moody's Corp	US	0.105566418325
+Morgan Stanley	US	0.388625452624
+Mosaic Co/The	US	0.010525031965
+Motorola Solutions Inc	US	0.106916104756
+NRG Energy Inc	US	0.047805042024
+NVR Inc	US	0.028357300277
+Nasdaq Inc	US	0.054632683884
+NetApp Inc	US	0.047445055995
+Netflix Inc	US	0.466105080885
+Newmont Corp	US	0.154693036287
+News Corp	US	0.014055280195
+News Corp	US	0.005309863115
+NextEra Energy Inc	US	0.283952241244
+NIKE Inc	US	0.076388816681
+NiSource Inc	US	0.035267574089
+Nordson Corp	US	0.024809683030
+Norfolk Southern Corp	US	0.109670004088
+Northern Trust Corp	US	0.049902092566
+Northrop Grumman Corp	US	0.105478416934
+Gen Digital Inc	US	0.021164537389
+Nucor Corp	US	0.078702243202
+NVIDIA Corp	US	7.517011844111
+O'Reilly Automotive Inc	US	0.118393590116
+Occidental Petroleum Corp	US	0.054711558058
+Old Dominion Freight Line Inc	US	0.061496200106
+Omnicom Group Inc	US	0.032200827981
+ON Semiconductor Corp	US	0.057478803097
+ONEOK Inc	US	0.084975934643
+Oracle Corp	US	0.385518154403
+Otis Worldwide Corp	US	0.042620507112
+PG&E Corp	US	0.057465071780
+PNC Financial Services Group Inc/The	US	0.153395732190
+PPG Industries Inc	US	0.041940465401
+PPL Corp	US	0.042427289511
+PTC Inc	US	0.020359094389
+PACCAR Inc	US	0.098074487355
+Packaging Corp of America	US	0.032724679842
+Palantir Technologies Inc	US	0.415286911258
+Palo Alto Networks Inc	US	0.428918558110
+Paramount Skydance Corp	US	0.004806963621
+Parker-Hannifin Corp	US	0.191321219352
+Paychex Inc	US	0.049200151580
+PayPal Holdings Inc	US	0.059090261774
+PepsiCo Inc	US	0.287098904180
+Revvity Inc	US	0.019259135373
+Pfizer Inc	US	0.212858602052
+Philip Morris International Inc	US	0.437283808465
+Phillips 66	US	0.105146053410
+Pinnacle West Capital Corp	US	0.020129065916
+T Rowe Price Group Inc	US	0.037790442324
+Principal Financial Group Inc	US	0.032856563620
+Procter & Gamble Co/The	US	0.529392113183
+Progressive Corp/The	US	0.198037001842
+Prologis Inc	US	0.195846732856
+Prudential Financial Inc	US	0.058100809399
+Public Service Enterprise Group Inc	US	0.062745116299
+Public Storage	US	0.078029885854
+PulteGroup Inc	US	0.040543304719
+Qnity Electronics Inc	US	0.053003483786
+QUALCOMM Inc	US	0.302163724746
+Quanta Services Inc	US	0.167626999282
+Quest Diagnostics Inc	US	0.036396093851
+Ralph Lauren Corp	US	0.024136481734
+Raymond James Financial Inc	US	0.040915296542
+RTX Corp	US	0.396263307106
+Realty Income Corp	US	0.089632555675
+Regency Centers Corp	US	0.020386762521
+Regeneron Pharmaceuticals Inc	US	0.096664524048
+Regions Financial Corp	US	0.039983455954
+Republic Services Inc	US	0.066108029747
+ResMed Inc	US	0.043853838444
+Robinhood Markets Inc	US	0.123150959962
+Rockwell Automation Inc	US	0.085445865161
+Rollins Inc	US	0.019019637302
+Roper Technologies Inc	US	0.052966196637
+Ross Stores Inc	US	0.106382049011
+S&P Global Inc	US	0.191575966578
+SBA Communications Corp	US	0.029028603032
+Salesforce Inc	US	0.198817888320
+Sandisk Corp	US	0.522022023287
+Henry Schein Inc	US	0.012545274002
+SLB Ltd	CW	0.107827794915
+Charles Schwab Corp/The	US	0.234010388289
+Sempra	US	0.094020529808
+ServiceNow Inc	US	0.158848318309
+Sherwin-Williams Co/The	US	0.122526421798
+Simon Property Group Inc	US	0.112515302737
+Skyworks Solutions Inc	US	0.015819001602
+A O Smith Corp	US	0.010890368749
+J M Smucker Co/The	US	0.018615573351
+Snap-on Inc	US	0.032338183840
+Solventum Corp	US	0.017616246609
+Southern Co/The	US	0.167382597799
+Southwest Airlines Co	US	0.038978356729
+Block Inc	US	0.063101698654
+Stanley Black & Decker Inc	US	0.022698183009
+Starbucks Corp	US	0.180685913651
+State Street Corp	US	0.072816491620
+Steel Dynamics Inc	US	0.048265889034
+Stryker Corp	US	0.168524540777
+Super Micro Computer Inc	US	0.025605924056
+Synopsys Inc	US	0.132565875423
+Synchrony Financial	US	0.039685922165
+Sysco Corp	US	0.062002307500
+TJX Cos Inc/The	US	0.259906083022
+TKO Group Holdings Inc	US	0.019659675550
+T-Mobile US Inc	US	0.121093831605
+Take-Two Interactive Software Inc	US	0.067507529427
+Tapestry Inc	US	0.045954699376
+Target Corp	US	0.091860949969
+Targa Resources Corp	US	0.089282075091
+Teledyne Technologies Inc	US	0.047939541290
+Teradyne Inc	US	0.117459283484
+Tesla Inc	US	1.836836490297
+Texas Instruments Inc	US	0.420821197542
+Texas Pacific Land Corp	US	0.039317460922
+Textron Inc	US	0.024691773300
+Trade Desk Inc/The	US	0.011976367690
+Thermo Fisher Scientific Inc	US	0.289033407983
+3M Co	US	0.131006434765
+Tractor Supply Co	US	0.025718783522
+TransDigm Group Inc	US	0.115546396728
+Travelers Cos Inc/The	US	0.108898470571
+Trimble Inc	US	0.018508548892
+Truist Financial Corp	US	0.096293808219
+Tyler Technologies Inc	US	0.019122034966
+Tyson Foods Inc	US	0.025058063419
+UDR Inc	US	0.018310172833
+US Bancorp	US	0.145458354025
+Uber Technologies Inc	US	0.227883186732
+Ulta Beauty Inc	US	0.030468601248
+Union Pacific Corp	US	0.250532699310
+United Airlines Holdings Inc	US	0.068474638609
+United Parcel Service Inc	US	0.124513593604
+United Rentals Inc	US	0.110078102674
+UnitedHealth Group Inc	US	0.585191167982
+Universal Health Services Inc	US	0.012294299053
+Valero Energy Corp	US	0.119971067917
+Veeva Systems Inc	US	0.041336923037
+Ventas Inc	US	0.066978172204
+Veralto Corp	US	0.033786176355
+VeriSign Inc	US	0.031952439359
+Verizon Communications Inc	US	0.274274600648
+Verisk Analytics Inc	US	0.036493393568
+Vertex Pharmaceuticals Inc	US	0.195584310070
+Vertiv Holdings Co	US	0.199399851073
+Viatris Inc	US	0.028658864537
+VICI Properties Inc	US	0.044965451345
+Visa Inc	US	0.882934709224
+Vistra Corp	US	0.078004875406
+Vulcan Materials Co	US	0.059381011520
+WEC Energy Group Inc	US	0.059009301483
+Westinghouse Air Brake Technologies Corp	US	0.070960027592
+Walmart Inc	US	0.769899122507
+Warner Bros Discovery Inc	US	0.102505672376
+Waste Management Inc	US	0.127744755588
+Waters Corp	US	0.057052452464
+Wells Fargo & Co	US	0.392207240993
+Welltower Inc	US	0.248564018367
+West Pharmaceutical Services Inc	US	0.039346629602
+Western Digital Corp	US	0.341428502391
+Weyerhaeuser Co	US	0.026575960499
+Williams Cos Inc/The	US	0.140804506512
+Williams-Sonoma Inc	US	0.042575730668
+Workday Inc	US	0.038687856769
+Wynn Resorts Ltd	US	0.012626552906
+Xcel Energy Inc	US	0.077770300972
+Xylem Inc/NY	US	0.043591980844
+Yum! Brands Inc	US	0.068359070141
+Zebra Technologies Corp	US	0.019461769355
+Zimmer Biomet Holdings Inc	US	0.025837705019
+Zoetis Inc	US	0.046737188170
+Allegion plc	IE	0.018516619165
+Amcor PLC	JE	0.030874973481
+Aon PLC	IE	0.109907760405
+Arch Capital Group Ltd	BM	0.052400647405
+Accenture PLC	IE	0.118525340513
+Carnival Corp Ltd	BM	0.056818643477
+CRH PLC	IE	0.110917640270
+Eaton Corp PLC	IE	0.256694318954
+Everest Group Ltd	BM	0.021932551616
+Aptiv PLC	JE	0.020176125972
+Invesco Ltd	BM	0.018188711922
+Johnson Controls International plc	IE	0.138302977855
+Linde PLC	IE	0.372100293282
+Medtronic PLC	IE	0.155818304155
+Norwegian Cruise Line Holdings Ltd	BM	0.015140593029
+Seagate Technology Holdings PLC	IE	0.335576242007
+Pentair PLC	IE	0.019221345900
+Smurfit Westrock PLC	IE	0.037665781465
+STERIS PLC	IE	0.032040412394
+TE Connectivity PLC	IE	0.091296151348
+Trane Technologies PLC	IE	0.168434127589
+Willis Towers Watson PLC	IE	0.038302893820
+Bunge Global SA	CH	0.022557868043
+Chubb Ltd	CH	0.190676013456
+Garmin Ltd	CH	0.060198547159
+LyondellBasell Industries NV	NL	0.021168695030
+NXP Semiconductors NV	NL	0.110095898178
+Royal Caribbean Cruises Ltd	LR	0.122886998578
+Flex Ltd	SG	0.092443621657

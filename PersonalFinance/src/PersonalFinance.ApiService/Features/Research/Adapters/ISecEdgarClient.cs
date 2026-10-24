@@ -27,6 +27,12 @@ internal interface ISecEdgarClient
     Task<SecFiler?> GetFilerAsync(long cik, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Reads SEC's company ticker list (<c>www.sec.gov/files/company_tickers_exchange.json</c>): the company names the
+    /// fund industries match holdings against. Any failure throws.
+    /// </summary>
+    Task<IReadOnlyList<SecCompanyListing>> GetCompanyTickersAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Reads SEC's fund ticker list (<c>www.sec.gov/files/company_tickers_mf.json</c>): every mutual fund and ETF share
     /// class with its series and trust. Any failure throws.
     /// </summary>

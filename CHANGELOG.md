@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.9.0] - 2026-10-24
+
+### Added
+
+- **Your basket on the Sectors tab**: a "Market | Your basket" switch shows your Fund Basket in the Sectors sunburst and treemap, with the same breadcrumb, keyboard paths and cards; it opens on Your basket when a basket is set (#269).
+  - The hierarchy is SEC industry office, SIC industry and the ten largest companies of each industry with "Other (n companies)", then "Not classified by the SEC" by country, Bonds by issuer type, and Cash and other.
+  - Every percent is of your basket. Companies with no SEC industry, mostly foreign ones that file no reports with the SEC, are hatched grey and explained in a card with the largest countries; International Corp Fin and Crypto Assets are neutral grey.
+  - The basket's data is fetched when the view is first shown, so pages that never open it do not carry it.
+- **Lean vs the market**: under the basket chart, each SEC office's share of the SEC-classified part of your basket against its share of every filer's Public float in the scrubber's year, with the difference in points (#270).
+  - Each difference has a sign, an arrow and a bar on one axis, in blue (more) or orange (less), so it never relies on colour; a row zooms the chart into its office. It describes your basket and is not a target.
+- **Fund industries dataset**: each Tracked Fund's share of net assets by SEC industry office and SIC industry, with the rest by issuer country, bond issuer type and cash, over every holding of its latest N-PORT report, at `api/Research/funds/industries` (#269).
+  - Holdings are matched to SEC filers by issuer name only, never by a security identifier; `Research:IssuerCikOverrides` names companies renamed or delisted since a fund reported them.
+  - On recorded June 2026 reports, names alone match 98.9% of SPY's and 99.5% of QQQ's stock weight.
+  - A refresh reads at most `Research:FundIndustrySubmissionsPerRefresh` (1,000) new company submissions, so the first runs classify more each day.
+
 ## [5.8.2] - 2026-10-24
 
 ### Removed

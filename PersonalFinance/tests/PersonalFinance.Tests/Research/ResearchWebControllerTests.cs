@@ -111,7 +111,7 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
-    public async Task Index_ReadsTheSectorsSnapshotOnce_AndOnlyTheCompaniesTabFetchesMore_SoTheSunburstNeedsNoFurtherRoundTrip()
+    public async Task Index_ReadsTheSectorsSnapshotOnce_AndOnlyTheCompaniesTabAndTheSectorsBasketFetchMore_SoTheSunburstNeedsNoFurtherRoundTrip()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
@@ -124,10 +124,11 @@ public class ResearchWebControllerTests
                 nameof(IResearchApi.GetFundFactsAsync), nameof(IResearchApi.GetFundExposureAsync)],
             proxy.Calls);
         Assert.Same(Snapshot, model.Sectors.Snapshot);
-        // The only other actions are the Companies tab's search, lookup and press releases, which no snapshot tab uses.
+        // The only other actions are the Companies tab's search, lookup and press releases, and the Sectors basket view's
+        // data, which it fetches when first shown so the page does not carry it.
         Assert.Equal(
             [
-                nameof(ResearchController.Company), nameof(ResearchController.Index),
+                nameof(ResearchController.Company), nameof(ResearchController.FundIndustries), nameof(ResearchController.Index),
                 nameof(ResearchController.Releases), nameof(ResearchController.Suggest),
             ],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)

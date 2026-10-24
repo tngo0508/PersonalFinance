@@ -521,9 +521,167 @@
     --research-office-6: #008300; /* Technology */
     --research-office-7: #6250d6; /* Trade & Services */
     --research-office-8: #e34948; /* Industrial Applications and Services */
-    --research-office-neutral: #9ca3af; /* Crypto Assets, Unassigned */
+    --research-office-neutral: #9ca3af; /* Crypto Assets, International Corp Fin, Unassigned, Bonds, Cash */
     --research-label-light: #ffffff;
     --research-label-dark: #0b0b0b;
+    /* Stocks SEC does not classify (the basket view): grey lines at 45 degrees on light grey, never an office colour. */
+    --research-hatch-ground: #e5e7eb;
+    --research-hatch-line: #8a919c;
+}
+
+/* The Sectors tab's "Market | Your basket" switch, and the parts that belong to one view only. */
+.research-sectors__views {
+    grid-column: 1 / -1;
+}
+
+[data-sectors-view-part][hidden] {
+    display: none;
+}
+
+.research-legend__swatch--hatched,
+.research-ranked__bar--hatched {
+    background: repeating-linear-gradient(45deg, var(--research-hatch-line) 0 2px, var(--research-hatch-ground) 2px 5px);
+}
+
+/* Lean vs the market, under the basket chart. A diverging pair validated on the white card with the dataviz palette
+   validator (blue where the basket leans more, orange where less, neutral when level); the difference text takes darker
+   steps of the same hues (5.9:1 and 5.1:1) and always carries a sign and an arrow, so it never relies on colour. */
+.research {
+    --research-lean-more: #2a78d6;
+    --research-lean-less: #e0661f;
+    --research-lean-more-ink: #1d64b8;
+    --research-lean-less-ink: #b4501a;
+}
+
+.research-lean {
+    margin-top: var(--app-spacing-l);
+    padding-top: var(--app-spacing-m);
+    border-top: 1px solid var(--app-border);
+}
+
+.research-lean[hidden] {
+    display: none;
+}
+
+.research-lean__title {
+    margin: 0 0 var(--app-spacing-xs);
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-lean__note {
+    margin: 0 0 var(--app-spacing-s);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-lean__head,
+.research-lean__row {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(4.5rem, 1fr));
+    gap: var(--app-spacing-s);
+    align-items: center;
+}
+
+.research-lean__head {
+    padding: 0 var(--app-spacing-s) var(--app-spacing-xs);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-lean__head span:not(:first-child),
+.research-lean__value,
+.research-lean__difference {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.research-lean__rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-lean__row {
+    position: relative;
+    width: 100%;
+    padding: var(--app-spacing-xs) var(--app-spacing-s);
+    border: 0;
+    border-radius: var(--app-radius-s);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+button.research-lean__row {
+    cursor: pointer;
+}
+
+.research-lean__row:hover {
+    background: var(--app-surface-secondary);
+}
+
+.research-lean__row:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-lean__office {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.research-lean__difference {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-lean__difference--more {
+    color: var(--research-lean-more-ink);
+}
+
+.research-lean__difference--less {
+    color: var(--research-lean-less-ink);
+}
+
+/* One axis for every row: zero in the middle of the Difference column's bar track. */
+.research-lean__bar {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(var(--app-border), var(--app-border)) center / 1px 100% no-repeat;
+}
+
+.research-lean__fill {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 2px;
+}
+
+.research-lean__fill--more {
+    left: 50%;
+    background: var(--research-lean-more);
+}
+
+.research-lean__fill--less {
+    right: 50%;
+    background: var(--research-lean-less);
+}
+
+@media (max-width: 480px) {
+    .research-lean__head,
+    .research-lean__row {
+        grid-template-columns: minmax(0, 1fr) repeat(3, minmax(3.5rem, auto));
+        gap: var(--app-spacing-xs);
+        font-size: var(--app-font-size-small);
+    }
 }
 
 .research-sunburst {
