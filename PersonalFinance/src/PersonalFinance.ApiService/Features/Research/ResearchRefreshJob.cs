@@ -33,7 +33,7 @@ internal static class ResearchRefreshJob
 
     /// <summary>
     /// Rebuilds every dataset. When SEC's User-Agent contact is not configured or is still the committed placeholder,
-    /// SEC's fair-access rules forbid asking it anything, so its datasets (Sectors, ETFs) are skipped and keep their
+    /// SEC's fair-access rules forbid asking it anything, so its datasets (Sectors, funds) are skipped and keep their
     /// snapshots while the World Bank's are still rebuilt. Non-zero, so the job execution shows as failed, when SEC
     /// was skipped or any dataset failed; a failed dataset keeps its previous snapshot.
     /// </summary>

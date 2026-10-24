@@ -99,7 +99,7 @@ public class ResearchFeatureTests
     }
 
     [Fact]
-    public void ShippedEtfList_HoldsTheSixEtfs_WithTheTrustCikOnlyForTheSingleFundTrusts()
+    public void ShippedFundList_HoldsTheTrackedFunds_WithTheTrustCikOnlyForTheSingleFundTrusts()
     {
         IConfiguration configuration = new ConfigurationBuilder()
             .AddJsonFile(Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.ApiService"), "appsettings.json"))
@@ -107,17 +107,28 @@ public class ResearchFeatureTests
 
         ResearchSettings settings = SettingsFrom(configuration);
 
+        // About 20 building blocks across asset classes, ETFs and two index mutual funds (spec #248).
+        Assert.Equal(
+            ["SPY", "VTI", "IWM", "VUG", "VTV", "SCHD", "QQQ", "VGT", "AIQ", "VXUS", "VEA", "VWO", "VT", "BND", "AGG",
+                "BNDX", "TIP", "VNQ", "FXAIX", "FTIHX"],
+            settings.Funds.Select(e => e.Ticker));
         // SPY's trust is not in SEC's fund ticker list and QQQ's filed without a series until 2026, so both are
-        // listed by trust CIK; the others are found through the ticker list.
-        Assert.Equal(["SPY", "QQQ", "VTI", "VT", "IWM", "AIQ"], settings.Etfs.Select(e => e.Ticker));
-        Assert.Equal([884394L, 1067839L, null, null, null, null], settings.Etfs.Select(e => e.Cik));
-        Assert.All(settings.Etfs, e => Assert.False(string.IsNullOrWhiteSpace(e.Name)));
-        Assert.Equal(new DateOnly(2019, 10, 1), settings.EtfsFirstQuarter);
+        // listed by trust CIK; the others (mutual funds included) are found through the ticker list.
+        Assert.Equal(new Dictionary<string, long> { ["SPY"] = 884394L, ["QQQ"] = 1067839L },
+            settings.Funds.Where(e => e.Cik is not null).ToDictionary(e => e.Ticker, e => e.Cik!.Value));
+        Assert.All(settings.Funds, e => Assert.False(string.IsNullOrWhiteSpace(e.Name)));
+        // Every fund has one of the roles the Fund Basket picker groups by, and the list keeps each role together.
+        string[] roles =
+            ["US broad", "US style and income", "Growth, sector and thematic", "International", "Bonds", "Real estate",
+                "Index mutual funds"];
+        Assert.All(settings.Funds, e => Assert.Contains(e.Role, roles));
+        Assert.Equal(roles, settings.Funds.Select(e => e.Role!).Distinct());
+        Assert.Equal(new DateOnly(2019, 10, 1), settings.FundsFirstQuarter);
     }
 
     [Fact]
-    public void AddResearchFeature_WithNoEtfsConfigured_BuildsNoEtfs()
+    public void AddResearchFeature_WithNoFundsConfigured_BuildsNoFunds()
     {
-        Assert.Empty(SettingsFrom(new ConfigurationBuilder().Build()).Etfs);
+        Assert.Empty(SettingsFrom(new ConfigurationBuilder().Build()).Funds);
     }
 }

@@ -5,9 +5,11 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Research;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Models.Research;
 using ApiException = Refit.ApiException;
 using RefitSettings = Refit.RefitSettings;
@@ -63,6 +65,32 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
+    public async Task Index_LogsANeverLoadedDatasetAsOneLine_AndOtherFailuresAsWarningsWithTheError()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
+        proxy.Throws(nameof(IResearchApi.GetFundOverlapAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable,
+            """{"reason":"The fund overlap data has not loaded yet."}"""));
+        proxy.Throws(nameof(IResearchApi.GetWorldAsync), await ApiFailure(HttpStatusCode.InternalServerError, "{}"));
+        var logger = new RecordingLogger<ResearchController>();
+        var controller = new ResearchController(api, logger)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+
+        await controller.Index();
+
+        (LogLevel Level, string Message, Exception? Exception) neverLoaded =
+            Assert.Single(logger.Entries, e => e.Message.Contains("fund overlap", StringComparison.Ordinal));
+        Assert.Equal((LogLevel.Information, "The Research fund overlap data has not loaded yet"), (neverLoaded.Level, neverLoaded.Message));
+        Assert.Null(neverLoaded.Exception);
+        (LogLevel Level, string Message, Exception? Exception) failed =
+            Assert.Single(logger.Entries, e => e.Message.Contains("World", StringComparison.Ordinal));
+        Assert.Equal(LogLevel.Warning, failed.Level);
+        Assert.NotNull(failed.Exception);
+    }
+
+    [Fact]
     public void Controller_RequiresSignIn()
     {
         Assert.NotNull(typeof(ResearchController).GetCustomAttribute<AuthorizeAttribute>());
@@ -91,7 +119,8 @@ public class ResearchWebControllerTests
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
         // The view embeds the whole snapshot as JSON for the sunburst, so the page makes no API call of its own.
-        Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetEtfsAsync), nameof(IResearchApi.GetWorldAsync)],
+        Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetFundsAsync), nameof(IResearchApi.GetWorldAsync),
+                nameof(IResearchApi.GetFundOverlapAsync), nameof(IResearchApi.GetFundReturnsAsync)],
             proxy.Calls);
         Assert.Same(Snapshot, model.Sectors.Snapshot);
         // The only other actions are the Companies tab's search, lookup and press releases, which no snapshot tab uses.

@@ -16,11 +16,25 @@ public interface IResearchApi
     Task<SectorsSnapshotDto> GetSectorsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the ETFs snapshot. A dataset that has never loaded answers 503 with a <see cref="ResearchUnavailableDto"/>,
+    /// Gets the funds snapshot. A dataset that has never loaded answers 503 with a <see cref="ResearchUnavailableDto"/>,
     /// which Refit raises as an <see cref="ApiException"/>.
     /// </summary>
-    [Get("/api/Research/etfs")]
-    Task<EtfsSnapshotDto> GetEtfsAsync(CancellationToken cancellationToken = default);
+    [Get("/api/Research/funds")]
+    Task<FundsSnapshotDto> GetFundsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the fund overlap snapshot. A dataset that has never loaded answers 503 with a
+    /// <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
+    /// </summary>
+    [Get("/api/Research/funds/overlap")]
+    Task<FundOverlapSnapshotDto> GetFundOverlapAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the fund returns snapshot. A dataset that has never loaded answers 503 with a
+    /// <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
+    /// </summary>
+    [Get("/api/Research/funds/returns")]
+    Task<FundReturnsSnapshotDto> GetFundReturnsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the World snapshot. A dataset that has never loaded answers 503 with a

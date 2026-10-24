@@ -4,10 +4,10 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// Builds the ETFs snapshot: summarises each N-PORT report into asset categories with their largest holdings, then
+/// Builds the funds snapshot: summarises each N-PORT report into asset categories with their largest holdings, then
 /// places each fund's reports in calendar quarters.
 /// </summary>
-internal static class EtfsSnapshotBuilder
+internal static class FundsSnapshotBuilder
 {
     /// <summary>How many holdings of each asset category are listed; the rest are summed into "Other".</summary>
     public const int TopHoldings = 25;
@@ -45,7 +45,7 @@ internal static class EtfsSnapshotBuilder
     /// category's <see cref="TopHoldings"/> largest holdings listed and the rest summed, so a category's weight is
     /// exactly its listed holdings plus its "Other".
     /// </summary>
-    public static EtfHoldingsDto Summarize(string ticker, NportReport report) => new()
+    public static FundHoldingsDto Summarize(string ticker, NportReport report) => new()
     {
         Ticker = ticker,
         ReportDate = report.ReportDate,
@@ -59,18 +59,18 @@ internal static class EtfsSnapshotBuilder
             .ToList(),
     };
 
-    private static EtfCategoryDto Category(IGrouping<string, NportHolding> holdings)
+    private static FundCategoryDto Category(IGrouping<string, NportHolding> holdings)
     {
         List<(string Name, decimal Percent)> ranked = holdings
             .Select(h => (Name: HoldingName(h.Name), h.Percent))
             .OrderByDescending(h => h.Percent)
             .ThenBy(h => h.Name, StringComparer.Ordinal)
             .ToList();
-        List<EtfHoldingDto> top = ranked.Take(TopHoldings)
-            .Select(h => new EtfHoldingDto { Name = h.Name, Percent = Round(h.Percent) })
+        List<FundHoldingDto> top = ranked.Take(TopHoldings)
+            .Select(h => new FundHoldingDto { Name = h.Name, Percent = Round(h.Percent) })
             .ToList();
         decimal otherPercent = Round(ranked.Skip(TopHoldings).Sum(h => h.Percent));
-        return new EtfCategoryDto
+        return new FundCategoryDto
         {
             Code = holdings.Key,
             Name = CategoryNames.GetValueOrDefault(holdings.Key, holdings.Key),
@@ -83,16 +83,16 @@ internal static class EtfsSnapshotBuilder
     }
 
     /// <summary>
-    /// The snapshot from the filings read so far: for each configured ETF and calendar quarter from
+    /// The snapshot from the filings read so far: for each Tracked Fund and calendar quarter from
     /// <paramref name="firstQuarter"/>, the report with the latest date in the quarter (of two for the same date, the
     /// later filed). A quarter lists the funds that reported for it, so one fund's missing report leaves the others.
     /// Null when no fund has a report.
     /// </summary>
-    public static EtfsSnapshotDto? Build(IReadOnlyList<ResearchEtf> etfs, IEnumerable<EtfFilingRecord> records,
+    public static FundsSnapshotDto? Build(IReadOnlyList<TrackedFund> funds, IEnumerable<FundFilingRecord> records,
         DateOnly firstQuarter)
     {
-        List<string> tickers = etfs.Select(e => e.Ticker).ToList();
-        Dictionary<(string Ticker, string Quarter), EtfHoldingsDto> chosen = records
+        List<string> tickers = funds.Select(e => e.Ticker).ToList();
+        Dictionary<(string Ticker, string Quarter), FundHoldingsDto> chosen = records
             .Where(r => r.Holdings is not null && r.Holdings.ReportDate >= firstQuarter && tickers.Contains(r.Ticker))
             .GroupBy(r => (r.Ticker, Quarter: QuarterLabel(r.Holdings!.ReportDate)))
             .ToDictionary(g => g.Key, g => g
@@ -106,15 +106,15 @@ internal static class EtfsSnapshotBuilder
         }
 
         List<string> periods = chosen.Keys.Select(k => k.Quarter).Distinct().Order(StringComparer.Ordinal).ToList();
-        return new EtfsSnapshotDto
+        return new FundsSnapshotDto
         {
             AsOf = chosen.Values.Max(h => h.ReportDate),
             Periods = periods,
-            Funds = etfs
+            Funds = funds
                 .Where(e => chosen.Keys.Any(k => k.Ticker == e.Ticker))
-                .Select(e => new EtfFundDto { Ticker = e.Ticker, Name = e.Name })
+                .Select(e => new TrackedFundDto { Ticker = e.Ticker, Name = e.Name, Role = e.Role })
                 .ToList(),
-            Values = periods.Select(period => new EtfsPeriodDto
+            Values = periods.Select(period => new FundsPeriodDto
             {
                 Period = period,
                 Funds = tickers
@@ -133,9 +133,9 @@ internal static class EtfsSnapshotBuilder
     /// A holding's name for display: runs of spaces collapsed (futures are often padded, e.g. <c>MSCI EAFE     Sep26</c>)
     /// and title-cased when the report has it all in capitals.
     /// </summary>
-    private static string HoldingName(string name) =>
+    internal static string HoldingName(string name) =>
         SectorsClassifier.TitleCase(string.Join(' ', name.Split(' ', StringSplitOptions.RemoveEmptyEntries)));
 
-    private static decimal Round(decimal percent) =>
+    internal static decimal Round(decimal percent) =>
         Math.Round(percent, PercentDecimals, MidpointRounding.AwayFromZero);
 }

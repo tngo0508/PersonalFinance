@@ -3,7 +3,7 @@ using PersonalFinance.ApiService.Features.Research.Domain;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// How Research shows SEC's all-capitals company names (the Sectors and ETFs tabs, and the Companies tab's
+/// How Research shows SEC's all-capitals company names (the Sectors and Funds tabs, and the Companies tab's
 /// suggestions and Company Profile): title-cased, except for the brand spellings, initialisms, company forms, short
 /// <c>&amp;</c> names and <c>Mc</c> names that title-casing would get wrong.
 /// </summary>

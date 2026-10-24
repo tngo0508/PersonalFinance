@@ -39,16 +39,18 @@ internal sealed class ResearchSettings
     public IReadOnlyList<FilerYear> PublicFloatKeeps { get; init; } = [];
 
     /// <summary>
-    /// The ETFs of the ETFs dataset (<c>Research:Etfs</c>, a list of <c>{ "Ticker", "Name", "Cik" }</c>), in the
-    /// order the page lists them. With none configured the dataset is not built.
+    /// The Tracked Funds of the funds dataset (<c>Research:Funds</c>, a list of
+    /// <c>{ "Ticker", "Name", "Cik", "Role" }</c>), in the order the page lists them. ETFs and mutual funds alike; a
+    /// fund added later is read back to the first quarter on the next refresh. With none configured the dataset is not
+    /// built.
     /// </summary>
-    public IReadOnlyList<ResearchEtf> Etfs { get; init; } = [];
+    public IReadOnlyList<TrackedFund> Funds { get; init; } = [];
 
     /// <summary>
-    /// The first day of the first quarter of the ETFs dataset (<c>Research:EtfsFirstQuarter</c>): 1 October 2019,
+    /// The first day of the first quarter of the funds dataset (<c>Research:FundsFirstQuarter</c>): 1 October 2019,
     /// the first quarter of public Form N-PORT reports.
     /// </summary>
-    public DateOnly EtfsFirstQuarter { get; init; } = new(2019, 10, 1);
+    public DateOnly FundsFirstQuarter { get; init; } = new(2019, 10, 1);
 
     /// <summary>
     /// The first year the World dataset asks the World Bank for (<c>Research:WorldFirstYear</c>): 1975, where its

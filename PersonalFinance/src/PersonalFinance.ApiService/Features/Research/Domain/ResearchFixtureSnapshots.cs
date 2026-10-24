@@ -1,9 +1,10 @@
+using System.Globalization;
 using PersonalFinance.Shared.DTOs.Research;
 
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// Small, made-up Sectors, ETFs and World snapshots for the E2E walkthrough (stored by
+/// Small, made-up Sectors, funds, fund overlap, fund returns and World snapshots for the E2E walkthrough (stored by
 /// <see cref="ResearchFixtureSeeder"/>): six companies over three years, SPY and QQQ over three quarters and six
 /// countries over three years. The figures are rounded illustrations in the shape of the real snapshots, not source
 /// data, and are never stored outside Development.
@@ -44,23 +45,88 @@ internal static class ResearchFixtureSnapshots
         ],
     };
 
-    /// <summary>The ETFs fixture: SPY and QQQ for three quarters, SPY with common equity and cash vehicles.</summary>
-    public static EtfsSnapshotDto Etfs() => new()
+    /// <summary>The funds fixture: SPY and QQQ for three quarters, SPY with common equity and cash vehicles.</summary>
+    public static FundsSnapshotDto Funds() => new()
     {
         AsOf = new DateOnly(2026, 6, 30),
         Periods = ["2025 Q4", "2026 Q1", "2026 Q2"],
         Funds =
         [
-            new() { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust" },
-            new() { Ticker = "QQQ", Name = "Invesco QQQ Trust" },
+            new() { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust", Role = "US broad" },
+            new() { Ticker = "QQQ", Name = "Invesco QQQ Trust", Role = "Growth, sector and thematic" },
         ],
         Values =
         [
-            EtfsQuarter("2025 Q4", new DateOnly(2025, 12, 31), 0m),
-            EtfsQuarter("2026 Q1", new DateOnly(2026, 3, 31), 0.3m),
-            EtfsQuarter("2026 Q2", new DateOnly(2026, 6, 30), 0.6m),
+            FundsQuarter("2025 Q4", new DateOnly(2025, 12, 31), 0m),
+            FundsQuarter("2026 Q1", new DateOnly(2026, 3, 31), 0.3m),
+            FundsQuarter("2026 Q2", new DateOnly(2026, 6, 30), 0.6m),
         ],
     };
+
+    /// <summary>
+    /// The fund overlap fixture: SPY and QQQ from their 2026 Q2 reports, overlapping by 44.1% through six shared
+    /// holdings.
+    /// </summary>
+    public static FundOverlapSnapshotDto FundOverlap() => new()
+    {
+        AsOf = new DateOnly(2026, 6, 30),
+        Funds =
+        [
+            new() { Ticker = "SPY", ReportDate = new DateOnly(2026, 6, 30), Accession = "0000000000-26-000001" },
+            new() { Ticker = "QQQ", ReportDate = new DateOnly(2026, 6, 30), Accession = "0000000000-26-000002" },
+        ],
+        Holdings = ["NVIDIA Corp", "Microsoft Corp", "Apple Inc", "Amazon.com Inc", "Broadcom Inc", "Meta Platforms Inc"],
+        Pairs =
+        [
+            new()
+            {
+                A = 0, B = 1, Overlap = 44.1m, CoveredA = 46.2m, CoveredB = 87.5m, SharedCount = 101,
+                Shared =
+                [
+                    new() { Holding = 0, WeightA = 7.7m, WeightB = 10.0m },
+                    new() { Holding = 1, WeightA = 6.4m, WeightB = 8.6m },
+                    new() { Holding = 2, WeightA = 6.0m, WeightB = 7.9m },
+                    new() { Holding = 3, WeightA = 3.9m, WeightB = 5.4m },
+                    new() { Holding = 4, WeightA = 2.5m, WeightB = 5.6m },
+                    new() { Holding = 5, WeightA = 2.9m, WeightB = 3.5m },
+                ],
+            },
+        ],
+    };
+
+    /// <summary>
+    /// The fund returns fixture: SPY and QQQ with five years of made-up monthly returns (July 2021 to June 2026) that
+    /// rise and fall together, and a flat 4% Treasury bill, put through the real builder so every figure is computed
+    /// the way the refresh computes it.
+    /// </summary>
+    public static FundReturnsSnapshotDto FundReturns()
+    {
+        TrackedFund[] funds = [new("SPY", "SPDR S&P 500 ETF Trust", 884394), new("QQQ", "Invesco QQQ Trust", 1067839)];
+        var first = new DateOnly(2021, 7, 1);
+        const int months = 60;
+        var records = new List<FundReturnFilingRecord>();
+        var bills = new List<(DateOnly Month, decimal Rate)>();
+        for (int quarter = 0; quarter < months / 3; quarter++)
+        {
+            DateOnly reportMonth = first.AddMonths(quarter * 3 + 2);
+            DateOnly reportDate = reportMonth.AddMonths(1).AddDays(-1);
+            List<decimal?> spy = [];
+            List<decimal?> qqq = [];
+            for (int k = 0; k < 3; k++)
+            {
+                int i = quarter * 3 + k;
+                spy.Add(Math.Round((decimal)(1.0 + 3.0 * Math.Sin(i * 0.7)), 2));
+                qqq.Add(Math.Round((decimal)(1.3 + 4.2 * Math.Sin(i * 0.7 + 0.3) + 0.8 * Math.Cos(i * 1.9)), 2));
+                bills.Add((first.AddMonths(i), 4.0m));
+            }
+
+            string accession = string.Create(CultureInfo.InvariantCulture, $"0000000000-26-{quarter:D6}");
+            records.Add(new FundReturnFilingRecord($"{accession}1", "SPY", reportDate.AddDays(60), reportDate, spy));
+            records.Add(new FundReturnFilingRecord($"{accession}2", "QQQ", reportDate.AddDays(60), reportDate, qqq));
+        }
+
+        return FundReturnsBuilder.Build(funds, records, bills)!;
+    }
 
     /// <summary>The World fixture: six countries for 2022 to 2024, one of them without a GDP figure in 2022.</summary>
     public static WorldSnapshotDto World() => new()
@@ -106,8 +172,8 @@ internal static class ResearchFixtureSnapshots
         };
     }
 
-    /// <summary>One ETFs quarter; <paramref name="drift"/> moves the weights a little so quarters differ.</summary>
-    private static EtfsPeriodDto EtfsQuarter(string period, DateOnly reportDate, decimal drift) => new()
+    /// <summary>One funds quarter; <paramref name="drift"/> moves the weights a little so quarters differ.</summary>
+    private static FundsPeriodDto FundsQuarter(string period, DateOnly reportDate, decimal drift) => new()
     {
         Period = period,
         Funds =
@@ -141,13 +207,13 @@ internal static class ResearchFixtureSnapshots
     };
 
     /// <summary>A category whose weight is its listed holdings plus <paramref name="otherPercent"/>.</summary>
-    private static EtfCategoryDto Category(string code, string name, int holdingCount, decimal otherPercent,
+    private static FundCategoryDto Category(string code, string name, int holdingCount, decimal otherPercent,
         (string Name, decimal Percent)[] top) => new()
     {
         Code = code,
         Name = name,
         HoldingCount = holdingCount,
-        Top = top.Select(t => new EtfHoldingDto { Name = t.Name, Percent = t.Percent }).ToList(),
+        Top = top.Select(t => new FundHoldingDto { Name = t.Name, Percent = t.Percent }).ToList(),
         OtherCount = holdingCount - top.Length,
         OtherPercent = otherPercent,
         Percent = top.Sum(t => t.Percent) + otherPercent,

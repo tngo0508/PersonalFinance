@@ -1,0 +1,185 @@
+@model ResearchViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+
+@{
+    FundsPeriodDto? latest = Model.Funds.LatestPeriod;
+    bool showFunds = !Model.Funds.Unavailable && latest is not null;
+    CultureInfo us = CultureInfo.GetCultureInfo("en-US");
+    FundOverlapSnapshotDto? overlap = Model.FundOverlap;
+    FundReturnsSnapshotDto? returns = Model.FundReturns;
+    string overlapDates = overlap is null || overlap.Funds.Count == 0
+        ? string.Empty
+        : overlap.Funds.Min(f => f.ReportDate) == overlap.Funds.Max(f => f.ReportDate)
+            ? $"as of {overlap.AsOf.ToString("d MMMM yyyy", us)}"
+            : $"as of {overlap.Funds.Min(f => f.ReportDate).ToString("d MMMM yyyy", us)} to {overlap.AsOf.ToString("d MMMM yyyy", us)}";
+}
+
+@* The Funds tab: the overlap of the Fund Basket's funds (js/research/research-overlap.js, from each fund's latest
+   report) and how closely their returns move together (js/research/research-correlation.js), then a collapsible tree of what the Tracked Funds hold (fund, then N-PORT asset category, then holdings), one
+   quarter at a time. Drawn by js/research/research-funds.js from the data island below; the scrubber, live region and
+   table view are wired by js/research/research-page.js. Hidden until its tab is chosen. *@
+<section class="research-deck research-deck--stacked" id="research-panel-funds" data-research-basket role="tabpanel" aria-labelledby="research-tab-funds"
+         hidden="@(!Model.IsSelected(ResearchViewModel.FundsTab))">
+    @if (showFunds)
+    {
+        <div class="research-card research-overlap" id="research-overlap">
+            <h2 class="research-card__title">Overlap: same holdings</h2>
+            @if (overlap is null)
+            {
+                <partial name="_UnavailableState" model="Model.FundOverlapUnavailableState"/>
+            }
+            else
+            {
+                <p class="research-card__subtitle">
+                    How much of two funds' money is in the same securities, from each fund's latest reported holdings
+                    (@overlapDates). For each security both funds hold, the smaller of its two weights is counted, and
+                    those are added up.
+                </p>
+                <p class="research-overlap__prompt" id="research-overlap-prompt">
+                    Add at least two funds to your Fund Basket to see how much they overlap.
+                </p>
+                <div class="research-overlap__view" id="research-overlap-view" hidden>
+                    <ul class="research-overlap__callouts" id="research-overlap-callouts" aria-label="Overlap in this set"></ul>
+                    <div class="research-overlap__body">
+                        <div class="research-overlap__matrix" id="research-overlap-matrix"></div>
+                        <div class="research-overlap__duplicates">
+                            <div class="research-overlap__filter" id="research-overlap-filter" hidden>
+                                <span id="research-overlap-filter-text"></span>
+                                <button type="button" class="research-chip" id="research-overlap-filter-clear">Show all funds</button>
+                            </div>
+                            <div class="research-overlap__table" id="research-overlap-table"></div>
+                        </div>
+                    </div>
+                    <p class="research-overlap__note">
+                        Each fund's label filters the table to the holdings that fund shares; pointing at or focusing a
+                        cell highlights that pair's holdings. The table is built from the 25 largest holdings each pair
+                        shares. With three or more funds, the share held by two or more is a lower bound.
+                    </p>
+                </div>
+                <div class="research-tooltip" id="research-overlap-tooltip" aria-hidden="true" hidden></div>
+            }
+            <p class="research-card__source">Source: SEC EDGAR (Form N-PORT)</p>
+        </div>
+        <div class="research-card research-correlation" id="research-correlation">
+            <h2 class="research-card__title">Correlation: move together</h2>
+            @if (returns is null)
+            {
+                <partial name="_UnavailableState" model="Model.FundReturnsUnavailableState"/>
+            }
+            else
+            {
+                <p class="research-card__subtitle">
+                    How closely two funds' monthly returns rose and fell together over the window: 1 is fully in step,
+                    0 is unrelated and &minus;1 is opposite. From monthly total returns of each fund's net asset value, to
+                    @returns.AsOf.ToString("MMMM yyyy", us).
+                </p>
+                <div class="research-correlation__controls">
+                    <div class="research-view-toggle" role="group" aria-label="Window">
+                        <button type="button" class="research-view-toggle__button" data-correlation-years="1" aria-pressed="false">1Y</button>
+                        <button type="button" class="research-view-toggle__button" data-correlation-years="3" aria-pressed="true">3Y</button>
+                        <button type="button" class="research-view-toggle__button" data-correlation-years="5" aria-pressed="false">5Y</button>
+                    </div>
+                    <button type="button" class="research-chip" id="research-correlation-all" aria-pressed="false">All tracked funds</button>
+                </div>
+                <p class="research-overlap__prompt" id="research-correlation-prompt">
+                    Add at least two funds to your Fund Basket, or choose All tracked funds, to see how closely they move together.
+                </p>
+                <div class="research-overlap__view" id="research-correlation-view" hidden>
+                    <ul class="research-overlap__callouts" id="research-correlation-callouts" aria-label="Correlation in this set"></ul>
+                    <div class="research-overlap__matrix" id="research-correlation-matrix"></div>
+                    <p class="research-overlap__note">
+                        Each value is the Pearson correlation of the two funds' monthly returns over the window's months,
+                        ending with the earlier of their latest months. It describes how they moved in the past only.
+                        A dash means a fund has too few months for the window.
+                    </p>
+                </div>
+                <div class="research-tooltip" id="research-correlation-tooltip" aria-hidden="true" hidden></div>
+            }
+            <p class="research-card__source">Source: SEC EDGAR (Form N-PORT monthly total returns)</p>
+        </div>
+        <div class="research-scrubber" data-research-scrubber>
+            <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
+                    aria-label="Play through the quarters">
+                <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
+                <svg class="research-scrubber__icon research-scrubber__icon--pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+            </button>
+            <div class="research-scrubber__track">
+                <label class="visually-hidden" for="research-funds-quarter">Quarter</label>
+                <input type="range" class="research-scrubber__range" id="research-funds-quarter" data-research-range
+                       min="0" max="@(Model.Funds.Snapshot!.Periods.Count - 1)" step="1" value="@(Model.Funds.Snapshot.Periods.Count - 1)"
+                       aria-valuetext="@latest!.Period"/>
+                <div class="research-scrubber__ends" aria-hidden="true">
+                    <span>@Model.Funds.Snapshot.Periods[0]</span>
+                    <span>@Model.Funds.Snapshot.Periods[^1]</span>
+                </div>
+            </div>
+            <p class="research-scrubber__period" data-research-period aria-hidden="true">@latest.Period</p>
+        </div>
+    }
+    <div class="research-card">
+        <h2 class="research-card__title">What the tracked funds hold</h2>
+        @if (!showFunds)
+        {
+            <partial name="_UnavailableState" model="Model.Funds.UnavailableState"/>
+        }
+        else
+        {
+            <p class="research-card__subtitle" id="research-funds-subtitle">
+                Holdings reported for @latest!.Period, by asset category. Choose a fund or a category to open or close
+                it; each category lists its 25 largest holdings.
+            </p>
+            <div class="research-funds-tree" id="research-funds-tree"></div>
+            <div class="research-tooltip" id="research-funds-tooltip" aria-hidden="true" hidden></div>
+            <div class="research-card__actions">
+                <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
+                        aria-controls="research-funds-table">Show as table</button>
+            </div>
+            <div class="research-table-host" id="research-funds-table" data-research-table hidden></div>
+        }
+        <p class="research-card__source">Source: SEC EDGAR (Form N-PORT)</p>
+    </div>
+
+    <aside class="research-panel" aria-label="About the funds data">
+        @if (showFunds)
+        {
+            <h2 class="research-panel__title">How to read the tree</h2>
+            <p>
+                Each circle's size follows its share of the fund's net assets. A filled circle has more inside it;
+                use Enter or Space on a focused item to open or close it, and the arrow keys to move between items.
+            </p>
+        }
+        <h2 class="research-panel__title">About this data</h2>
+        <p>
+            Funds report their holdings to the SEC on Form N-PORT. The reports for the last month of each fiscal
+            quarter are public, so the holdings are quarterly snapshots, not daily, and are published some weeks after
+            the date they are as of.
+        </p>
+        <p>
+            Shares are of each fund's net assets. Vanguard's ETFs are share classes of larger Vanguard funds, so their
+            figures are for the whole fund. Derivatives can show a small negative share.
+        </p>
+        <h2 class="research-panel__title">Data as of</h2>
+        <p class="research-panel__as-of">
+            @(Model.Funds.AsOf is { } asOf ? asOf.ToString("d MMMM yyyy", us) : "Not loaded yet")
+        </p>
+    </aside>
+</section>
+
+@if (showFunds)
+{
+    @* The funds snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-funds.js. *@
+    <script type="application/json" id="research-funds-data">@Json.Serialize(Model.Funds.Snapshot)</script>
+    if (overlap is not null)
+    {
+        @* The fund overlap snapshot (pair percentages and named shared holdings, never an identifier), read by
+           research-overlap.js. *@
+        <script type="application/json" id="research-fund-overlap-data">@Json.Serialize(overlap)</script>
+    }
+    if (returns is not null)
+    {
+        @* The fund returns snapshot (monthly returns with every per-window figure precomputed), read by
+           research-correlation.js. *@
+        <script type="application/json" id="research-fund-returns-data">@Json.Serialize(returns)</script>
+    }
+}

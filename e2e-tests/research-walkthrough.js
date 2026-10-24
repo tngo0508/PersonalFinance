@@ -1,6 +1,6 @@
 /**
  * Research first-session walkthrough (spec #217, Testing Decisions): the 11 steps a new Account takes through the
- * Sectors, ETFs and World tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
+ * Sectors, Funds and World tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
  * Test 9c.
  *
  * Needs the ApiService started in Development with E2E_SEED_RESEARCH=true, which stores small fixture snapshots
@@ -44,7 +44,7 @@ async function registerFreshAccount(page, base) {
 /**
  * The period labels a tab's data island holds, oldest first.
  * @param {import('playwright').Page} page - A page showing /Research.
- * @param {string} tabId - sectors, etfs or world.
+ * @param {string} tabId - sectors, funds or world.
  * @returns {Promise<string[]>} The period labels, or [] when the island is missing.
  */
 async function periodsOf(page, tabId) {
@@ -57,7 +57,7 @@ async function periodsOf(page, tabId) {
 /**
  * The text of a tab's scrubber period label.
  * @param {import('playwright').Page} page - A page showing /Research.
- * @param {string} tabId - sectors, etfs or world.
+ * @param {string} tabId - sectors, funds or world.
  * @returns {Promise<string>} The label, trimmed.
  */
 async function periodLabel(page, tabId) {
@@ -312,25 +312,168 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 7: ETFs opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters.
+        // Step 7: Funds opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters.
         await step('Research 7', fail, async () => {
-            await page.click('#research-tab-etfs');
-            await page.waitForSelector('#research-etfs-tree [role="tree"]', {timeout: TIMEOUT});
-            const spy = page.locator('#research-etfs-tree [role="treeitem"][aria-label^="SPY "]');
-            const qqq = page.locator('#research-etfs-tree [role="treeitem"][aria-label^="QQQ "]');
+            await page.click('#research-tab-funds');
+            await page.waitForSelector('#research-funds-tree [role="tree"]', {timeout: TIMEOUT});
+            const spy = page.locator('#research-funds-tree [role="treeitem"][aria-label^="SPY "]');
+            const qqq = page.locator('#research-funds-tree [role="treeitem"][aria-label^="QQQ "]');
             const spyOpen = await spy.getAttribute('aria-expanded');
             const qqqBefore = await qqq.getAttribute('aria-expanded');
             await qqq.focus();
             await page.keyboard.press('Enter');
             await page.waitForFunction(() => {
-                const node = document.querySelector('#research-etfs-tree [role="treeitem"][aria-label^="QQQ "]');
+                const node = document.querySelector('#research-funds-tree [role="treeitem"][aria-label^="QQQ "]');
                 return node && node.getAttribute('aria-expanded') === 'true';
             }, null, {timeout: 5000});
-            const quarter = await periodLabel(page, 'etfs');
+            const quarter = await periodLabel(page, 'funds');
             if (spyOpen === 'true' && qqqBefore === 'false' && /^\d{4} Q[1-4]$/.test(quarter)) {
                 pass(`Research 7: SPY starts open, QQQ opens with Enter, the scrubber shows ${quarter}`);
             } else {
                 fail(`Research 7: SPY expanded "${spyOpen}", QQQ before "${qqqBefore}", quarter "${quarter}"`);
+            }
+        });
+
+        // Step 7b: the Fund Basket bar shows on the Funds tab only; funds are picked by keyboard, weights scale to 100%,
+        // "Use equal weights" resets them, and the basket lives in the address so a reload keeps it.
+        await step('Research 7b', fail, async () => {
+            const bar = page.locator('#research-basket');
+            const search = page.locator('#research-basket-search');
+            const basketParam = () => new URL(page.url()).searchParams.get('basket');
+            const shownOnFunds = await bar.isVisible();
+            await page.click('#research-tab-sectors');
+            const hiddenOnSectors = !(await bar.isVisible());
+            await page.click('#research-tab-funds');
+
+            await search.fill('qq');
+            const option = page.locator('#research-basket-options [role="option"]', {hasText: 'QQQ'});
+            const grouped = await page.locator('#research-basket-options .research-basket__group-label').first().textContent();
+            await search.press('Enter');
+            await search.press('ArrowDown');
+            await search.press('Enter');
+            const picked = basketParam();
+            await page.locator('#research-basket-chips [data-ticker="SPY"] input').fill('70');
+            await page.locator('#research-basket-chips [data-ticker="SPY"] input').press('Tab');
+            const weighted = basketParam();
+            const scaled = await page.locator('#research-basket-note').isVisible();
+            await page.click('#research-basket-equal');
+            const equal = basketParam();
+            await page.reload({waitUntil: 'networkidle'});
+            const restored = await page.locator('#research-basket-chips [data-ticker]').evaluateAll(
+                (chips) => chips.map((c) => c.dataset.ticker));
+            // At 320 px, the narrowest common phone width, the chips wrap and their names shrink, so the page never
+            // scrolls sideways (a chip that could not shrink pushed the page wider).
+            await page.setViewportSize({width: 320, height: 800});
+            // The charts redraw at the new width on their resize observers; let them settle before measuring.
+            await page.waitForTimeout(400);
+            const narrowFits = !(await scrollsSideways(page));
+            await page.setViewportSize({width: 1280, height: 800});
+            await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
+            const removed = basketParam();
+            const ok = shownOnFunds && hiddenOnSectors && (await option.count()) === 0 && Boolean(grouped) &&
+                picked === 'QQQ,SPY' && weighted === 'QQQ:50,SPY:70' && scaled && equal === 'QQQ,SPY' &&
+                restored.join(',') === 'QQQ,SPY' && narrowFits && removed === 'QQQ';
+            if (ok) {
+                pass(`Research 7b: the basket bar picks QQQ then SPY by keyboard (grouped under "${grouped.trim()}"), scales 50/70, resets to equal, survives a reload and removes SPY`);
+            } else {
+                fail(`Research 7b: shown ${shownOnFunds}/${!hiddenOnSectors}, picked ${picked}, weighted ${weighted}, ` +
+                    `scaled ${scaled}, equal ${equal}, restored ${restored}, fits at 320px ${narrowFits}, removed ${removed}`);
+            }
+        });
+
+        // Step 7c: a link with an untracked fund keeps the rest and says so; the parser drops bad weights and repeats,
+        // and keeps only the first five funds.
+        await step('Research 7c', fail, async () => {
+            await page.goto(`${base}/Research?tab=funds&basket=SPY:60,XYZ:20,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const notice = (await page.locator('#research-basket-notice').textContent()).trim();
+            const kept = new URL(page.url()).searchParams.get('basket');
+            const parsed = await page.evaluate(() => {
+                const parse = window.ResearchBasket.parse;
+                const six = parse('A,B,C,D,E,F', ['A', 'B', 'C', 'D', 'E', 'F']);
+                const bad = parse('SPY:0,QQQ:abc,SPY,QQQ:101', ['SPY', 'QQQ']);
+                const mixed = parse('spy:60,qqq', ['SPY', 'QQQ']);
+                return {
+                    six: [six.funds.length, six.tooMany, six.invalid],
+                    bad: [bad.funds.map((f) => f.ticker).join(','), bad.invalid],
+                    mixed: mixed.funds.map((f) => `${f.ticker}:${f.weight}`).join(',')
+                };
+            });
+            const ok = notice === 'Some funds in this link aren\'t tracked and were left out.' && kept === 'SPY:60,QQQ:40' &&
+                parsed.six.join() === '5,true,false' && parsed.bad.join() === 'SPY,true' && parsed.mixed === 'SPY:null,QQQ:null';
+            if (ok) {
+                pass('Research 7c: an untracked fund is left out with a notice; bad weights, repeats and a sixth fund are dropped');
+            } else {
+                fail(`Research 7c: notice "${notice}", kept ${kept}, parsed ${JSON.stringify(parsed)}`);
+            }
+        });
+
+        // Step 7d: with SPY and QQQ in the basket (from 7c), the overlap matrix, callouts and duplicated holdings show;
+        // focusing a cell gives the shared count and highlights the pair's rows; a fund's label filters the table;
+        // with one fund left the view asks for another.
+        await step('Research 7d', fail, async () => {
+            const view = page.locator('#research-overlap-view');
+            const cells = page.locator('#research-overlap-matrix td[tabindex="0"]');
+            const shown = await view.isVisible();
+            const cellCount = await cells.count();
+            const cellText = (await cells.first().textContent()).trim();
+            const values = (await page.locator('#research-overlap-callouts .research-overlap__callout-value').allTextContents()).map((t) => t.trim());
+            const largest = (await page.locator('#research-overlap-callouts .research-overlap__callout-note').nth(2).textContent()).trim();
+            const firstRow = (await page.locator('#research-overlap-table tbody tr td').first().textContent()).trim();
+            await cells.first().focus();
+            const tooltip = (await page.locator('#research-overlap-tooltip').textContent()).trim();
+            const highlighted = await page.locator('#research-overlap-table tr.is-highlighted').count();
+            await page.locator('#research-overlap-matrix button[data-filter-ticker="SPY"]').click();
+            const pressed = await page.locator('#research-overlap-matrix button[data-filter-ticker="SPY"]').getAttribute('aria-pressed');
+            const filterShown = await page.locator('#research-overlap-filter').isVisible();
+            await page.click('#research-overlap-filter-clear');
+            const filterCleared = !(await page.locator('#research-overlap-filter').isVisible());
+            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
+            const promptShown = await page.locator('#research-overlap-prompt').isVisible();
+            const viewHidden = !(await view.isVisible());
+            const ok = shown && cellCount === 2 && cellText === '44%' &&
+                values.join('|') === '44.1%|62.7%|8.6%' && largest.includes('NVIDIA Corp, held by SPY and QQQ') &&
+                firstRow === 'NVIDIA Corp' && tooltip.includes('101 securities in common') && highlighted === 6 &&
+                pressed === 'true' && filterShown && filterCleared && promptShown && viewHidden;
+            if (ok) {
+                pass('Research 7d: SPY and QQQ overlap 44.1% by weight, with callouts, a focusable cell that highlights their 6 shared holdings, a label filter and a prompt for one fund');
+            } else {
+                fail(`Research 7d: shown ${shown}, cells ${cellCount} "${cellText}", callouts ${values.join('|')}, largest "${largest}", ` +
+                    `first row "${firstRow}", tooltip "${tooltip}", highlighted ${highlighted}, pressed ${pressed}, ` +
+                    `filter ${filterShown}/${filterCleared}, prompt ${promptShown}/${viewHidden}`);
+            }
+        });
+
+        // Step 7e: the correlation matrix shows the basket's funds with the precomputed 3-year value printed, switches to
+        // 1 year, asks for another fund with one left, and shows every tracked fund with "All tracked funds".
+        await step('Research 7e', fail, async () => {
+            await page.goto(`${base}/Research?tab=funds&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const expected = await page.evaluate(() => {
+                const data = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
+                const value = (years) => data.windows.find((w) => w.years === years).correlations[0].correlation.toFixed(2);
+                return {three: value(3), one: value(1)};
+            });
+            const cells = page.locator('#research-correlation-matrix td[tabindex="0"]');
+            const shown = await page.locator('#research-correlation-view').isVisible();
+            const cellCount = await cells.count();
+            const threeText = (await cells.first().textContent()).trim();
+            const threePressed = await page.locator('[data-correlation-years="3"]').getAttribute('aria-pressed');
+            const callouts = await page.locator('#research-correlation-callouts li').count();
+            await cells.first().focus();
+            const tooltip = (await page.locator('#research-correlation-tooltip').textContent()).trim();
+            await page.click('[data-correlation-years="1"]');
+            const oneText = (await cells.first().textContent()).trim();
+            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
+            const promptShown = await page.locator('#research-correlation-prompt').isVisible();
+            await page.click('#research-correlation-all');
+            const allShown = await page.locator('#research-correlation-view').isVisible();
+            const allColumns = await page.locator('#research-correlation-matrix thead th').count();
+            const ok = shown && cellCount === 2 && threeText === expected.three && threePressed === 'true' && callouts === 1 &&
+                tooltip.includes('36 months to June 2026') && oneText === expected.one && promptShown && allShown && allColumns === 2;
+            if (ok) {
+                pass(`Research 7e: SPY and QQQ correlate ${threeText} over 3 years and ${oneText} over 1 year, as precomputed; one fund prompts; "All tracked funds" shows the grid`);
+            } else {
+                fail(`Research 7e: shown ${shown}, cells ${cellCount} "${threeText}"/${expected.three}, pressed ${threePressed}, callouts ${callouts}, ` +
+                    `tooltip "${tooltip}", 1Y "${oneText}"/${expected.one}, prompt ${promptShown}, all ${allShown}/${allColumns}`);
             }
         });
 
@@ -355,7 +498,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // Step 9: "Show as table" lists rows on each tab.
         await step('Research 9', fail, async () => {
             const counts = {};
-            for (const tabId of ['sectors', 'etfs', 'world']) {
+            for (const tabId of ['sectors', 'funds', 'world']) {
                 await page.click(`#research-tab-${tabId}`);
                 await page.locator(`#research-panel-${tabId} [data-research-table-toggle]`).click();
                 counts[tabId] = await page.locator(`#research-panel-${tabId} [data-research-table] tbody tr`).count();
@@ -402,10 +545,11 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             });
             try {
                 const mobile = watch(await phone.newPage());
-                await mobile.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                // With a weighted basket, so the Funds tab's check covers the Fund Basket bar's chips too.
+                await mobile.goto(`${base}/Research?basket=SPY:70,QQQ:50`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await mobile.waitForSelector('#research-sunburst svg', {timeout: TIMEOUT});
                 const wide = [];
-                for (const tabId of ['sectors', 'etfs', 'world']) {
+                for (const tabId of ['sectors', 'funds', 'world']) {
                     await mobile.tap(`#research-tab-${tabId}`);
                     await mobile.waitForTimeout(300);
                     if (await scrollsSideways(mobile)) {
@@ -606,7 +750,7 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
         }
     });
 
-    // Company 6: a fund ticker says so and links to the ETFs tab.
+    // Company 6: a fund ticker says so and links to the Funds tab.
     await step('Company 6', fail, async () => {
         const input = page.locator('#research-company-input');
         await input.fill('EXFD');
@@ -614,12 +758,12 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
         const message = page.locator(`${panel} [data-research-company-message]`);
         await message.waitFor({state: 'visible', timeout: TIMEOUT});
         const text = await message.textContent();
-        await message.locator('a', {hasText: 'ETFs tab'}).click();
-        const etfsSelected = await page.locator('#research-tab-etfs').getAttribute('aria-selected');
-        if (/is a fund/.test(text) && etfsSelected === 'true') {
-            pass('Company 6: a fund ticker says it is a fund and its link opens the ETFs tab');
+        await message.locator('a', {hasText: 'Funds tab'}).click();
+        const fundsSelected = await page.locator('#research-tab-funds').getAttribute('aria-selected');
+        if (/is a fund/.test(text) && fundsSelected === 'true') {
+            pass('Company 6: a fund ticker says it is a fund and its link opens the Funds tab');
         } else {
-            fail(`Company 6: message "${text}", ETFs selected "${etfsSelected}"`);
+            fail(`Company 6: message "${text}", Funds selected "${fundsSelected}"`);
         }
     });
 

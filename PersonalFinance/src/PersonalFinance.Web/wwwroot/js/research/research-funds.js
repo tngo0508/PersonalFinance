@@ -1,8 +1,8 @@
 /* global d3 */
 /**
- * Research page, ETFs tab: a D3 collapsible tree of what six ETFs hold, one quarter at a time. Levels: the six ETFs,
+ * Research page, Funds tab: a D3 collapsible tree of what the Tracked Funds hold, one quarter at a time. Levels: the funds,
  * then each fund's N-PORT asset categories, then each category's 25 largest holdings and an "Other" node for the rest.
- * A node's radius is 3 + 1.05 x the square root of its % of net assets. Reads the ETFs snapshot from the JSON data
+ * A node's radius is 3 + 1.05 x the square root of its % of net assets. Reads the funds snapshot from the JSON data
  * island rendered by Views/Research/_EtfsTab.cshtml, so it makes no request of its own.
  *
  * The tree is a WAI-ARIA tree: one node is in the tab order at a time; Enter or Space opens or closes it, the arrow
@@ -20,11 +20,11 @@
     }
     const { prefersReducedMotion } = page;
 
-    const DATA_ELEMENT_ID = 'research-etfs-data';
-    const HOST_ID = 'research-etfs-tree';
-    const TOOLTIP_ID = 'research-etfs-tooltip';
-    const SUBTITLE_ID = 'research-etfs-subtitle';
-    const TAB_ID = 'etfs';
+    const DATA_ELEMENT_ID = 'research-funds-data';
+    const HOST_ID = 'research-funds-tree';
+    const TOOLTIP_ID = 'research-funds-tooltip';
+    const SUBTITLE_ID = 'research-funds-subtitle';
+    const TAB_ID = 'funds';
     const TRANSITION_MS = 600;
     const ROW_HEIGHT = 24;
     const NARROW_WIDTH = 560;
@@ -35,8 +35,8 @@
     const LEVELS = 3;
     const OPEN_FIRST = ['root', 'f:SPY', 'c:SPY:EC'];
     const KIND_LABELS = {
-        root: 'Six well-known ETFs',
-        fund: 'ETF',
+        root: 'Tracked funds',
+        fund: 'Fund',
         category: 'Asset category',
         holding: 'Holding',
         other: 'Smaller holdings, summed'
@@ -65,7 +65,7 @@
 
     /**
      * Build the tree data of one quarter. Keys stay the same across quarters, so open nodes stay open.
-     * @param {Object} data - The ETFs snapshot.
+     * @param {Object} data - The funds snapshot.
      * @param {number} index - The quarter's index in data.values.
      * @returns {Object} The root node data for d3.hierarchy.
      */
@@ -83,7 +83,7 @@
             return node;
         });
         return {
-            key: 'root', kind: 'root', name: `${data.funds.length} ETFs`, value: 100, children: funds
+            key: 'root', kind: 'root', name: `${data.funds.length} funds`, value: 100, children: funds
         };
     }
 
@@ -161,11 +161,11 @@
         if (d.kind === 'category') {
             return `${d.name}, ${formatPercent(d.value)} of ${d.fund} net assets, ${d.count.toLocaleString('en-US')} holdings`;
         }
-        return `${d.name}: what six well-known ETFs hold`;
+        return `${d.name}: what the tracked funds hold`;
     }
 
     /**
-     * Create the tooltip controller for the ETFs tooltip element.
+     * Create the tooltip controller for the funds tooltip element.
      * @param {HTMLElement|null} tooltip - The tooltip element.
      * @returns {{show: Function, hide: Function}} Show it beside the pointer for a node; hide it.
      */
@@ -194,7 +194,7 @@
     /**
      * Create the collapsible tree in its host.
      * @param {HTMLElement} host - The element to draw into; it scrolls sideways when the tree is wider.
-     * @param {Object} data - The ETFs snapshot.
+     * @param {Object} data - The funds snapshot.
      * @param {Object} tooltip - The tooltip controller.
      * @returns {Object} The chart registered with ResearchPage.
      */
@@ -209,10 +209,10 @@
         let visible = [];
 
         const svg = d3.select(host).append('svg')
-            .attr('class', 'research-etfs__svg')
+            .attr('class', 'research-funds__svg')
             .attr('role', 'tree')
-            .attr('aria-label', 'What six ETFs hold, by asset category and holding');
-        const linkLayer = svg.append('g').attr('class', 'research-etfs__links').attr('aria-hidden', 'true');
+            .attr('aria-label', 'What the tracked funds hold, by asset category and holding');
+        const linkLayer = svg.append('g').attr('class', 'research-funds__links').attr('aria-hidden', 'true');
         const nodeLayer = svg.append('g');
 
         /**
@@ -252,9 +252,9 @@
             const from = (key) => previous.get(key) || previous.get(sourceKey) || { x: source.x, y: source.y };
             const at = (p) => `translate(${p.y},${p.x})`;
 
-            const node = nodeLayer.selectAll('g.research-etfs__node').data(visible, (d) => d.data.key);
+            const node = nodeLayer.selectAll('g.research-funds__node').data(visible, (d) => d.data.key);
             const entered = node.enter().append('g')
-                .attr('class', 'research-etfs__node')
+                .attr('class', 'research-funds__node')
                 .attr('role', 'treeitem')
                 .attr('transform', (d) => at(from(d.parent ? d.parent.data.key : 'root')))
                 .attr('opacity', 0)
@@ -268,8 +268,8 @@
                 })
                 .on('pointermove', (event, d) => tooltip.show(event, d))
                 .on('pointerleave', tooltip.hide);
-            entered.append('circle').attr('class', 'research-etfs__dot');
-            entered.append('text').attr('class', 'research-etfs__label').attr('dy', '0.32em');
+            entered.append('circle').attr('class', 'research-funds__dot');
+            entered.append('text').attr('class', 'research-funds__label').attr('dy', '0.32em');
 
             const merged = entered.merge(node);
             merged
@@ -371,7 +371,7 @@
          */
         function focusNode (key) {
             focusKey = key;
-            nodeLayer.selectAll('g.research-etfs__node').attr('tabindex', (d) => (d.data.key === key ? 0 : -1));
+            nodeLayer.selectAll('g.research-funds__node').attr('tabindex', (d) => (d.data.key === key ? 0 : -1));
             const element = nodeLayer.select(`g[data-key="${CSS.escape(key)}"]`).node();
             if (element) {
                 element.focus();
@@ -442,21 +442,21 @@
             const period = data.values[index];
             const subtitle = document.getElementById(SUBTITLE_ID);
             if (subtitle) {
-                subtitle.textContent = `Holdings reported for ${period.period}, by asset category. Choose an ETF or a ` +
+                subtitle.textContent = `Holdings reported for ${period.period}, by asset category. Choose a fund or a ` +
                     'category to open or close it; each category lists its 25 largest holdings.';
             }
             const first = period.funds[0];
             const category = first && first.categories[0];
             const top = category && category.top[0];
             if (!top) {
-                return `${period.period}: ${period.funds.length} of ${data.funds.length} ETFs reported.`;
+                return `${period.period}: ${period.funds.length} of ${data.funds.length} funds reported.`;
             }
-            return `${period.period}: ${period.funds.length} of ${data.funds.length} ETFs reported. ${first.ticker}'s ` +
+            return `${period.period}: ${period.funds.length} of ${data.funds.length} funds reported. ${first.ticker}'s ` +
                 `largest holding is ${top.name}, ${formatPercent(top.percent)} of net assets.`;
         }
 
         /**
-         * The table view of a quarter: each open ETF's categories and listed holdings.
+         * The table view of a quarter: each open fund's categories and listed holdings.
          * @param {number} at - The quarter's index.
          * @returns {{caption: string, columns: Array, rows: Array}} The table model.
          */
@@ -479,10 +479,10 @@
             });
             return {
                 caption: rows.length > 0
-                    ? `Holdings of the open ETFs, ${period.period}, as % of each fund's net assets`
-                    : `No ETF is open. Open one in the tree to list its holdings for ${period.period}.`,
+                    ? `Holdings of the open funds, ${period.period}, as % of each fund's net assets`
+                    : `No fund is open. Open one in the tree to list its holdings for ${period.period}.`,
                 columns: [
-                    { label: 'ETF', numeric: false },
+                    { label: 'Fund', numeric: false },
                     { label: 'Asset category', numeric: false },
                     { label: 'Holding', numeric: false },
                     { label: '% of net assets', numeric: true }
@@ -493,7 +493,7 @@
 
         /**
          * When the tree is wider than its card (phones), scroll it so the open SPY common-equity branch, and the
-         * holdings it lists, are in view rather than empty space to the right of the ETFs.
+         * holdings it lists, are in view rather than empty space to the right of the funds.
          * @returns {void}
          */
         function revealOpenBranch () {
@@ -533,7 +533,7 @@
      */
     function init () {
         const host = document.getElementById(HOST_ID);
-        const data = page.readData(DATA_ELEMENT_ID, 'Research ETFs data');
+        const data = page.readData(DATA_ELEMENT_ID, 'Research funds data');
         if (!host || !data || !Array.isArray(data.values) || data.values.length === 0 || typeof d3 === 'undefined') {
             return;
         }

@@ -22,8 +22,14 @@ public class ResearchRefreshJobTests
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(null));
 
-        public Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ResearchSnapshotResult<EtfsSnapshotDto>(null));
+        public Task<ResearchSnapshotResult<FundsSnapshotDto>> GetFundsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundsSnapshotDto>(null));
+
+        public Task<ResearchSnapshotResult<FundOverlapSnapshotDto>> GetFundOverlapAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundOverlapSnapshotDto>(null));
+
+        public Task<ResearchSnapshotResult<FundReturnsSnapshotDto>> GetFundReturnsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundReturnsSnapshotDto>(null));
 
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(null));

@@ -749,11 +749,11 @@
                 }
                 profileHost.hidden = true;
                 if (result.kind === 'fund') {
-                    const link = element('a', '', 'See funds on the ETFs tab');
-                    link.href = '?tab=etfs';
+                    const link = element('a', '', 'See funds on the Funds tab');
+                    link.href = '?tab=funds';
                     link.addEventListener('click', (event) => {
                         event.preventDefault();
-                        page.selectTabById('etfs');
+                        page.selectTabById('funds');
                     });
                     showMessage([`${normalized} is a fund, not a company. `, link, '.']);
                     page.announce(`${normalized} is a fund, not a company.`);

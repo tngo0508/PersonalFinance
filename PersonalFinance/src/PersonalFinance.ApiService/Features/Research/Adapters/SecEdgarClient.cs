@@ -141,7 +141,10 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
                 && row[1].GetString() is { Length: > 0 } seriesId
                 && row[3].GetString() is { Length: > 0 } ticker)
             {
-                series.Add(new SecFundSeries(cik, seriesId, ticker));
+                string? classId = row[2].ValueKind == JsonValueKind.String && row[2].GetString() is { Length: > 0 } id
+                    ? id
+                    : null;
+                series.Add(new SecFundSeries(cik, seriesId, ticker, classId));
             }
         }
 
@@ -187,6 +190,21 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
         response.EnsureSuccessStatusCode();
         await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
         return await NportDocumentParser.ParseAsync(body, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<NportReturns?> GetNportReturnsAsync(NportFilingRef filing, CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await SendAsync(filing.DocumentUrl, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        // Only the head is read: disposing the response stops the download before the holdings.
+        await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return await NportDocumentParser.ParseReturnsAsync(body, cancellationToken);
     }
 
     /// <inheritdoc />

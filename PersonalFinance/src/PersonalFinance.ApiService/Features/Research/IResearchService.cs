@@ -14,9 +14,21 @@ public interface IResearchService
     Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the ETFs snapshot (what a few well-known ETFs held each quarter, from Form N-PORT), or "never loaded".
+    /// Gets the funds snapshot (what each Tracked Fund held each quarter, from Form N-PORT), or "never loaded".
     /// </summary>
-    Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default);
+    Task<ResearchSnapshotResult<FundsSnapshotDto>> GetFundsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the fund overlap snapshot (every pair of Tracked Funds' overlap by weight, from each fund's latest
+    /// Form N-PORT report), or "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<FundOverlapSnapshotDto>> GetFundOverlapAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the fund returns snapshot (each Tracked Fund's monthly total returns, with per-window figures and
+    /// correlations), or "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<FundReturnsSnapshotDto>> GetFundReturnsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the World snapshot (each country's market cap and market cap as % of GDP per year, from the World Bank),

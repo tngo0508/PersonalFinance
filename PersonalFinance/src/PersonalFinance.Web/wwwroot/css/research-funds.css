@@ -1,0 +1,388 @@
+/* ==========================================================================
+   Research page, Funds tab (research-funds-*): the collapsible holdings tree.
+   One hue: identity is carried by position and label, not colour. A filled
+   brand dot has closed children, an open node is a ring on the surface, a
+   holding is a soft brand dot and "Other" is grey. The tree keeps its own
+   width and scrolls sideways inside its card on narrow screens, so the page
+   itself never scrolls sideways. The app has no dark mode yet.
+   ========================================================================== */
+
+/* The tree needs its width more than the side panel does: the panel goes under the card at every width. */
+.research-deck--stacked {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.research-funds-tree {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.research-funds__svg {
+    display: block;
+    font-family: var(--app-font-family);
+    font-size: 12px;
+}
+
+.research-funds__links path {
+    fill: none;
+    stroke: var(--app-border);
+    stroke-width: 1.5px;
+}
+
+.research-funds__node {
+    cursor: pointer;
+    outline: none;
+}
+
+.research-funds__dot {
+    fill: var(--app-surface);
+    stroke: var(--app-brand);
+    stroke-width: 2px;
+}
+
+.research-funds__node.is-collapsed .research-funds__dot {
+    fill: var(--app-brand);
+}
+
+.research-funds__node[data-kind="holding"] .research-funds__dot {
+    fill: var(--app-brand-soft);
+}
+
+.research-funds__node[data-kind="other"] .research-funds__dot {
+    fill: var(--app-surface-secondary);
+    stroke: var(--app-text-muted);
+}
+
+.research-funds__node.is-missing .research-funds__dot {
+    fill: var(--app-surface);
+    stroke: var(--app-text-muted);
+    stroke-dasharray: 3 2;
+}
+
+.research-funds__label {
+    fill: var(--app-text);
+    paint-order: stroke;
+    stroke: var(--app-bg);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    user-select: none;
+}
+
+.research-funds__node[data-kind="root"] .research-funds__label,
+.research-funds__node[data-kind="fund"] .research-funds__label {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-funds__node.is-missing .research-funds__label,
+.research-funds__node[data-kind="other"] .research-funds__label {
+    fill: var(--app-text-muted);
+}
+
+.research-funds__node:focus-visible .research-funds__dot {
+    stroke: var(--app-text);
+    stroke-width: 3px;
+}
+
+.research-funds__node:focus-visible .research-funds__label {
+    text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Fund colours. Each Tracked Fund keeps one categorical slot everywhere it
+   appears (js/research/research-basket.js slotOf: its place in the list,
+   wrapping after eight), from the dataviz reference categorical palette, the
+   same validated order as the Sectors offices. The ticker always goes with
+   the swatch, so colour is never the only cue.
+   -------------------------------------------------------------------------- */
+
+.research-fund-swatch {
+    flex: 0 0 auto;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: var(--research-fund-colour, var(--research-office-neutral));
+    box-shadow: 0 0 0 1px rgba(11, 11, 11, 0.1);
+}
+
+[data-fund-slot="1"] { --research-fund-colour: var(--research-office-1); }
+[data-fund-slot="2"] { --research-fund-colour: var(--research-office-2); }
+[data-fund-slot="3"] { --research-fund-colour: var(--research-office-3); }
+[data-fund-slot="4"] { --research-fund-colour: var(--research-office-4); }
+[data-fund-slot="5"] { --research-fund-colour: var(--research-office-5); }
+[data-fund-slot="6"] { --research-fund-colour: var(--research-office-6); }
+[data-fund-slot="7"] { --research-fund-colour: var(--research-office-7); }
+[data-fund-slot="8"] { --research-fund-colour: var(--research-office-8); }
+
+/* --------------------------------------------------------------------------
+   Overlap: same holdings. A matrix on the dataviz reference sequential blue
+   (values printed in every cell) beside the duplicated holdings table.
+   -------------------------------------------------------------------------- */
+
+.research-overlap__prompt,
+.research-overlap__note {
+    margin: 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-overlap__prompt[hidden],
+.research-overlap__view[hidden],
+.research-overlap__filter[hidden] {
+    display: none;
+}
+
+.research-overlap__view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-m);
+}
+
+.research-overlap__callouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: var(--app-spacing-s);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-overlap__callout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.research-overlap__callout-label {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-overlap__callout-value {
+    color: var(--app-text);
+    font-size: 1.25rem;
+    font-weight: var(--app-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.research-overlap__callout-note {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+    overflow-wrap: anywhere;
+}
+
+.research-overlap__body {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: var(--app-spacing-l);
+    align-items: start;
+}
+
+@media (max-width: 767.98px) {
+    .research-overlap__body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.research-overlap__matrix {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.research-overlap__matrix-table {
+    border-collapse: separate;
+    border-spacing: 2px;
+}
+
+.research-overlap__column,
+.research-overlap__row {
+    padding: var(--app-spacing-xs);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.research-overlap__column {
+    text-align: center;
+}
+
+.research-overlap__row {
+    text-align: right;
+}
+
+.research-overlap__row-button {
+    min-height: 2.75rem;
+    padding: 0 var(--app-spacing-s);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--app-text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.research-overlap__row-button:hover {
+    background: var(--app-surface-secondary);
+}
+
+.research-overlap__row-button[aria-pressed="true"] {
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
+}
+
+.research-overlap__row-button:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-overlap__fund {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.research-overlap__cell {
+    width: 3.5rem;
+    height: 3rem;
+    border-radius: 4px;
+    background: var(--research-overlap-fill, var(--app-surface-secondary));
+    color: #0b0b0b;
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.research-overlap__cell--light-ink {
+    color: #ffffff;
+}
+
+.research-overlap__cell--same,
+.research-overlap__cell--none {
+    background: var(--app-surface-secondary);
+    color: var(--app-text-muted);
+}
+
+.research-overlap__cell:focus-visible {
+    outline: 2px solid var(--app-text);
+    outline-offset: 1px;
+}
+
+.research-overlap__legend {
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-xs);
+    margin-top: var(--app-spacing-xs);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-overlap__ramp {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.research-overlap__ramp-step {
+    width: 1rem;
+    height: 0.625rem;
+    border-radius: 2px;
+    background: var(--research-overlap-fill);
+}
+
+.research-overlap__filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    margin-bottom: var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+}
+
+.research-overlap__table {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.research-overlap__duplicates-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--app-font-size-small);
+}
+
+.research-overlap__duplicates-table caption {
+    caption-side: top;
+    padding: 0 0 var(--app-spacing-xs);
+    color: var(--app-text);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-overlap__duplicates-table th,
+.research-overlap__duplicates-table td {
+    padding: var(--app-spacing-xs) var(--app-spacing-s);
+    border-bottom: 1px solid var(--app-border);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.research-overlap__duplicates-table .research-overlap__number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.research-overlap__duplicates-table td.research-overlap__number {
+    white-space: nowrap;
+}
+
+.research-overlap__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-xs) var(--app-spacing-s);
+}
+
+.research-overlap__duplicates-table tbody tr {
+    transition: opacity 120ms ease;
+}
+
+.research-overlap__duplicates-table--highlighting tbody tr:not(.is-highlighted) {
+    opacity: 0.35;
+}
+
+.research-overlap__duplicates-table tbody tr.is-highlighted {
+    background: var(--app-brand-soft);
+}
+
+.research-overlap__none {
+    color: var(--app-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .research-overlap__duplicates-table tbody tr {
+        transition: none;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Correlation: move together. The same matrix as the overlap view, on a
+   diverging scale: the dataviz reference blue arm, a red arm stepped to the
+   same lightness, and the reference grey midpoint (each arm checked for
+   monotone lightness and a single hue with the dataviz validator). Values are
+   printed in every cell, so colour is never the only cue.
+   -------------------------------------------------------------------------- */
+
+.research-correlation__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    margin-bottom: var(--app-spacing-m);
+}
+
+.research-correlation__table .research-overlap__cell {
+    width: 3.75rem;
+}

@@ -271,11 +271,11 @@ public class CompanyProfileServiceTests
     [Theory]
     [InlineData("SWFD")] // In SEC's company and fund lists.
     [InlineData("SWFDX")] // Only in SEC's fund list.
-    [InlineData("SPY")] // A ticker of the ETFs tab.
+    [InlineData("SPY")] // A Tracked Fund's ticker.
     public async Task LookUp_OfAFund_SaysItIsAFund_WithoutReadingAProfile(string ticker)
     {
         var sec = new StubSec();
-        var research = new ResearchSettings { Etfs = [new ResearchEtf("SPY", "SPDR S&P 500 ETF Trust", 884394)] };
+        var research = new ResearchSettings { Funds = [new TrackedFund("SPY", "SPDR S&P 500 ETF Trust", 884394)] };
 
         CompanyLookupOutcome<CompanyLookupResultDto> outcome = await CreateService(sec, research: research).LookUpAsync(UserId, ticker);
 

@@ -362,9 +362,9 @@ dotnet user-secrets set "Rbac:AdminEmail" "you@example.com" --project PersonalFi
 
 ### Research Market Data (`Research:Sec:UserAgent` and the refresh)
 
-The Research page never calls SEC or the World Bank while someone browses. It reads saved copies (snapshots) from the `ResearchSnapshots` table, and only the **Research refresh** writes them: a run of the ApiService that downloads the public data, builds the Sectors, ETFs and World datasets, saves them and exits. Until a refresh has run against a database, every Research tab shows the Unavailable State and the API answers `GET api/Research/*` with 503.
+The Research page never calls SEC or the World Bank while someone browses. It reads saved copies (snapshots) from the `ResearchSnapshots` table, and only the **Research refresh** writes them: a run of the ApiService that downloads the public data, builds the Sectors, funds and World datasets, saves them and exits. Until a refresh has run against a database, every Research tab shows the Unavailable State and the API answers `GET api/Research/*` with 503.
 
-**1. Set the SEC contact (once per machine).** SEC's fair-access rules require a real contact email on every request. The committed `appsettings.json` has a placeholder on `example.com`, which the refresh refuses to send; it then skips Sectors and ETFs and rebuilds only World.
+**1. Set the SEC contact (once per machine).** SEC's fair-access rules require a real contact email on every request. The committed `appsettings.json` has a placeholder on `example.com`, which the refresh refuses to send; it then skips Sectors and funds and rebuilds only World.
 
 ```bash
 dotnet user-secrets set "Research:Sec:UserAgent" "PersonalFinance research you@yourdomain.com" --project PersonalFinance/src/PersonalFinance.ApiService
@@ -377,7 +377,7 @@ dotnet run --project PersonalFinance/src/PersonalFinance.ApiService -- --refresh
 ```
 
 - It applies pending migrations, refreshes, logs `Research refresh finished: built ...; failed ...; skipped ...` and exits. Exit code 0 means every dataset was built.
-- The **first run takes 15 to 20 minutes**: it reads several thousand SEC company pages at SEC's rate limit, then about 180 ETF filings (around 400 MB). Company details are saved in the database, so later runs are much faster.
+- The **first run takes 15 to 20 minutes**: it reads several thousand SEC company pages at SEC's rate limit, then the Form N-PORT filings of the 20 Tracked Funds (about 30 per fund since late 2019, several GB in all: the bond and international funds each report thousands of holdings). Company details and the filings read are saved in the database, the filings after each fund, so a run stopped part-way carries on where it left off and later runs are much faster. The fund overlap is then built from each fund's latest report, read again because security identifiers are never stored (ADR 0010); later runs rebuild it only when some fund has filed a newer report. The fund returns read only the head of each filing (its monthly returns), once per filing, and their Sharpe ratios use the 3-month Treasury bill from the Fed Board's H.15 release (a 4 MB download each run); if the Fed's site cannot be reached, the returns are still built, without Sharpe ratios.
 - Each dataset refreshes on its own: one that fails keeps its previous snapshot.
 - Nothing schedules it locally. Run it again whenever you want newer data.
 - A branch without the Research code (before 5.0.0) ignores `--refresh-research` and starts the normal API instead.
@@ -733,7 +733,7 @@ If the database is not on `localhost:1433` (for example a container started with
 same settings the CI e2e job uses:
 
 - `E2E_DISABLE_EMAIL_CONFIRMATION=true` on the Web app, so the account registered by Test 9 can sign in without email confirmation.
-- `E2E_SEED_RESEARCH=true` on the ApiService, so the Research walkthrough (Test 9c) has data. In Development only, the ApiService then stores small made-up Sectors, ETFs and World snapshots at startup (`Features/Research/ResearchFixtureSeeder.cs`), leaving any dataset already stored alone (on a SQL Server database the fixture rows stay until a Research refresh replaces them); it needs no network to SEC or the World Bank. The setting is ignored in every other environment, so it never seeds Production.
+- `E2E_SEED_RESEARCH=true` on the ApiService, so the Research walkthrough (Test 9c) has data. In Development only, the ApiService then stores small made-up Sectors, funds and World snapshots at startup (`Features/Research/ResearchFixtureSeeder.cs`), leaving any dataset already stored alone (on a SQL Server database the fixture rows stay until a Research refresh replaces them); it needs no network to SEC or the World Bank. The setting is ignored in every other environment, so it never seeds Production.
 - `DATABASE_PROVIDER=InMemory` and `ConnectionStrings__DefaultConnection=InMemory:<name>` on both apps if no SQL Server is reachable, as CI does; set `DATABASE_PROVIDER=InMemory` for `npm run e2e:preflight` too, so it skips the SQL Server check.
 - `ApiSettings__BaseUrl=http://localhost:5100` on the Web app. Without the AppHost, nothing resolves the default `https+http://apiservice` address.
 - `--urls http://localhost:<port>` on both apps. Otherwise the ApiService redirects HTTP to HTTPS, and Web-to-API calls fail if the ASP.NET Core dev certificate is not trusted.
@@ -881,9 +881,9 @@ The ApiService fails at startup (or every request fails) with *"This database ha
 
 ### 10. Research Page: `Your data is safe. The service is temporarily unavailable.`
 **Symptom:**
-A Research tab shows the Unavailable State, and the ApiService logs `HTTP "GET" "/api/Research/sectors" responded 503` (or `etfs`, `world`).
+A Research tab shows the Unavailable State, and the ApiService logs `HTTP "GET" "/api/Research/sectors" responded 503` (or `funds`, `world`).
 **Cause:**
-No Research refresh has stored that dataset in this database yet. On a new machine or a fresh database the table is empty. If only Sectors and ETFs are missing, the refresh ran without a real SEC contact.
+No Research refresh has stored that dataset in this database yet. On a new machine or a fresh database the table is empty. If only Sectors and funds are missing, the refresh ran without a real SEC contact.
 **Resolution:**
 1. Set `Research:Sec:UserAgent` and run the refresh, as in "Research Market Data" in section 3.
 2. Reload the Research page once the refresh logs `Research refresh finished`.

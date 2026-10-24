@@ -8,7 +8,7 @@ public static class CompanyLookupKinds
     /// <summary>An SEC-registered company: <see cref="CompanyLookupResultDto.Profile"/> holds its Company Profile.</summary>
     public const string Profile = "profile";
 
-    /// <summary>A mutual fund or ETF share class: funds are shown on the ETFs tab, not as a Company Profile.</summary>
+    /// <summary>A mutual fund or ETF share class: funds are shown on the Funds tab, not as a Company Profile.</summary>
     public const string Fund = "fund";
 
     /// <summary>A ticker SEC does not list.</summary>
@@ -29,7 +29,7 @@ public sealed class CompanySuggestionDto
     /// <summary>The exchange the ticker trades on, e.g. <c>Nasdaq</c>, or null when SEC lists none.</summary>
     public string? Exchange { get; set; }
 
-    /// <summary>True when the ticker is a fund share class, which the ETFs tab covers instead.</summary>
+    /// <summary>True when the ticker is a fund share class, which the Funds tab covers instead.</summary>
     public bool IsFund { get; set; }
 }
 
