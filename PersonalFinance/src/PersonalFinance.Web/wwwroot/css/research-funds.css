@@ -482,3 +482,124 @@
 .research-performance__table th[scope="row"] {
     font-weight: var(--app-font-weight-semibold);
 }
+
+/* Performance panels: the federal funds rate, the difference from a chosen
+   fund (blue ahead, orange behind: never red and green), one crosshair
+   across every panel, and the brush strip that chooses the period. */
+
+.research-performance__chart:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 4px;
+    border-radius: var(--app-radius-s, 4px);
+}
+
+.research-performance__panel-title {
+    fill: var(--app-text-muted);
+    font-size: 11px;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-performance__rate {
+    fill: none;
+    stroke: var(--app-text-muted);
+    stroke-width: 2;
+}
+
+.research-performance__difference {
+    opacity: 0.85;
+}
+
+.research-performance__zero {
+    stroke: #8a8983;
+    stroke-width: 1;
+}
+
+.research-performance__empty {
+    fill: var(--app-text-muted);
+    font-size: 12px;
+}
+
+.research-performance__overlay {
+    fill: transparent;
+    cursor: crosshair;
+}
+
+.research-performance__crosshair[hidden] {
+    display: none;
+}
+
+.research-performance__crosshair line {
+    stroke: var(--app-text);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    pointer-events: none;
+}
+
+.research-performance__dot {
+    fill: var(--research-fund-colour, var(--app-text));
+    stroke: var(--app-bg, #ffffff);
+    stroke-width: 2;
+    pointer-events: none;
+}
+
+.research-performance__dot--basket {
+    fill: var(--app-text);
+}
+
+.research-performance__dot--rate {
+    fill: var(--app-text-muted);
+}
+
+.research-performance__dot--difference {
+    fill: var(--app-text);
+}
+
+.research-performance__compare {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-xs) var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+}
+
+.research-performance__select {
+    min-height: 2.75rem;
+    max-width: 100%;
+    padding: 0 var(--app-spacing-s);
+    border: 1px solid var(--app-border-hover);
+    border-radius: var(--app-radius-s, 4px);
+    background: var(--app-bg);
+    color: var(--app-text);
+    font: inherit;
+}
+
+.research-performance__range {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    margin-top: var(--app-spacing-m);
+}
+
+.research-performance__brush {
+    flex: 1 1 18rem;
+    min-width: 0;
+}
+
+.research-performance__brush-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.research-performance__brush-line {
+    fill: none;
+    stroke: var(--app-text-muted);
+    stroke-width: 1.5;
+}
+
+.research-performance__brush-area .selection {
+    fill: var(--app-brand-soft);
+    fill-opacity: 0.6;
+    stroke: var(--app-brand);
+}

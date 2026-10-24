@@ -44,15 +44,38 @@
             </p>
             <div class="research-overlap__view" id="research-performance-view" hidden>
                 <ul class="research-overlap__callouts" id="research-performance-callouts" aria-label="Your basket over the period"></ul>
+                <div class="research-performance__compare">
+                    <label for="research-performance-compare">Compare your basket with</label>
+                    <select class="research-performance__select" id="research-performance-compare"></select>
+                </div>
                 <figure class="research-performance__figure">
-                    <div class="research-performance__chart" id="research-performance-chart" role="img"></div>
+                    @* Three panels on one time axis: growth of 100, the federal funds rate, and the basket minus the
+                       chosen fund. One crosshair spans them; with the chart focused, the arrow keys move it. *@
+                    <div class="research-performance__chart" id="research-performance-chart" tabindex="0" role="group"
+                         aria-describedby="research-performance-keys"></div>
+                    <p class="visually-hidden" id="research-performance-keys">
+                        Use the left and right arrow keys to move through the months, Home and End for the first and last.
+                    </p>
+                    <p class="visually-hidden" id="research-performance-readout" aria-live="polite"></p>
                     <ul class="research-performance__legend" id="research-performance-legend" aria-label="Lines"></ul>
+                    <div class="research-performance__range">
+                        <div class="research-view-toggle" role="group" aria-label="Period">
+                            <button type="button" class="research-view-toggle__button" data-performance-range="12" aria-pressed="false">1Y</button>
+                            <button type="button" class="research-view-toggle__button" data-performance-range="36" aria-pressed="false">3Y</button>
+                            <button type="button" class="research-view-toggle__button" data-performance-range="60" aria-pressed="false">5Y</button>
+                            <button type="button" class="research-view-toggle__button" data-performance-range="max" aria-pressed="true">Max</button>
+                        </div>
+                        <div class="research-performance__brush" id="research-performance-brush"
+                             aria-label="Drag across the strip to choose the period; the buttons set it too"></div>
+                    </div>
                 </figure>
+                <div class="research-tooltip" id="research-performance-tooltip" aria-hidden="true" hidden></div>
                 <div class="research-overlap__table" id="research-performance-table"></div>
             </div>
         }
         <p class="research-card__source">
             Sources: SEC EDGAR (Form N-PORT monthly total returns). Inflation: U.S. Bureau of Labor Statistics, CPI-U.
+            Interest rates: Board of Governors of the Federal Reserve System, H.15 Selected Interest Rates.
         </p>
     </div>
 
@@ -66,6 +89,12 @@
             Adjusted for inflation divides each line by how much consumer prices rose since the start, so it shows
             growth in buying power. A month the Bureau of Labor Statistics did not publish (October 2025, during the
             government shutdown) is filled in between the months either side.
+        </p>
+        <p>
+            The lower panels share the chart's months: the effective federal funds rate, and your basket minus the fund
+            you compare it with, in points of the growth of 100 (blue where the basket is ahead, orange where it is
+            behind). Drag across the strip under the chart, or use the period buttons, to zoom; every line then starts
+            at 100 again and the figures cover that period.
         </p>
         <h2 class="research-panel__title">About this data</h2>
         <p>

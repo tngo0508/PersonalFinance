@@ -533,6 +533,55 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 7g: with SPY in the basket, the chart compares it with QQQ; the crosshair moves by keyboard and stays on one
+        // x across the three panels; the 1Y preset sets the brush, and the table follows it.
+        await step('Research 7g', fail, async () => {
+            await page.goto(`${base}/Research?tab=performance&basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const tip = async () => (await page.locator('#research-performance-tooltip span').allTextContents()).map((t) => t.trim());
+            const aligned = () => page.evaluate(() => {
+                const group = document.querySelector('.research-performance__crosshair');
+                const x = group.querySelector('line').getAttribute('x1');
+                return Array.from(group.querySelectorAll('circle')).every((c) => c.getAttribute('cx') === x);
+            });
+            const compare = await page.locator('#research-performance-compare').inputValue();
+            const areas = await page.locator('path.research-performance__difference').count();
+            await page.focus('#research-performance-chart');
+            const atEnd = await tip();
+            await page.keyboard.press('ArrowLeft');
+            const left = await tip();
+            const leftAligned = await aligned();
+            await page.keyboard.press('Home');
+            const home = await tip();
+            const readout = (await page.locator('#research-performance-readout').textContent()).trim();
+            await page.click('[data-performance-range="12"]');
+            const pressed = await page.locator('[data-performance-range="12"]').getAttribute('aria-pressed');
+            const caption = (await page.locator('#research-performance-table caption').textContent()).trim();
+            const spyTotal = (await page.locator('#research-performance-table tr[data-line="SPY"] td').nth(1).textContent()).trim();
+            const brushWidth = Number(await page.locator('#research-performance-brush .selection').getAttribute('width'));
+            const stripWidth = Number((await page.locator('#research-performance-brush svg').getAttribute('viewBox')).split(' ')[2]);
+            const expected = await page.evaluate(() => {
+                const returns = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
+                const spy = returns.funds.find((f) => f.ticker === 'SPY').returns.slice(-12);
+                const total = (spy.reduce((g, r) => g * (1 + r / 100), 1) - 1) * 100;
+                const r = Math.round(total * 10) / 10;
+                return r < 0 ? `−${Math.abs(r).toFixed(1)}%` : `+${r.toFixed(1)}%`;
+            });
+            await page.click('[data-performance-range="max"]');
+            const maxCaption = (await page.locator('#research-performance-table caption').textContent()).trim();
+            const ok = compare === 'QQQ' && areas === 2 && atEnd[0] === 'June 2026' && left[0] === 'May 2026' && leftAligned &&
+                home[0] === 'June 2021' && left.some((r) => r.startsWith('Basket minus QQQ:')) &&
+                left.some((r) => /^Federal funds rate: [0-9.]+%$/.test(r)) && readout.startsWith('June 2021') &&
+                pressed === 'true' && caption === 'Returns from July 2025 to June 2026' && spyTotal === expected &&
+                brushWidth > 0 && brushWidth < stripWidth / 3 && maxCaption === 'Returns from July 2021 to June 2026';
+            if (ok) {
+                pass(`Research 7g: SPY against QQQ; ← and Home move one crosshair across the three panels (${left.length} tooltip rows); 1Y sets the brush and the table (SPY ${spyTotal}); Max restores it`);
+            } else {
+                fail(`Research 7g: compare ${compare}, areas ${areas}, end ${JSON.stringify(atEnd)}, left ${JSON.stringify(left)} aligned ${leftAligned}, ` +
+                    `home ${home[0]}, readout "${readout.slice(0, 40)}", pressed ${pressed}, caption "${caption}", SPY ${spyTotal}/${expected}, ` +
+                    `brush ${brushWidth}/${stripWidth}, max "${maxCaption}"`);
+            }
+        });
+
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');
