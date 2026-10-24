@@ -14,6 +14,12 @@
  * lightness; Enter zooms in, Escape zooms out). The
  * "Technology (incl. chip makers)" toggle dims every slice outside the
  * industries the server flags as Technology. The zoom and the highlight survive a change of year.
+ *
+ * The chart draws one of two sources. The market (above) is the default; js/research/research-sectors-basket.js can
+ * switch it to the Fund Basket through setSource('basket', provider), where the provider gives the basket's tree, its
+ * takeaway cards, table and wording. In the basket every figure is a share of the basket (never of a group), the
+ * year does not change the chart, and stocks SEC does not classify are hatched grey (data.hatched), never in an office
+ * colour. window.ResearchSunburst holds the chart once it is drawn.
  */
 (function () {
     'use strict';
@@ -58,6 +64,16 @@
     const SWITCH_MS = 220;
     // Sibling tiles of one office step their lightness by this much (HSL lightness, 0 to 1) so they stay apart.
     const TILE_LIGHTNESS_STEP = 0.12;
+    // The hatch pattern of stocks SEC does not classify; each chart's SVG defines its own copy.
+    const HATCH_ID = 'research-hatch';
+    const HATCH_SIZE = 6;
+    // How the market's figures read: US$ of Public float, with shares of the group and of every filer.
+    const MARKET_MEASURE = {
+        format: formatMoney,
+        unit: 'Public float',
+        describe: (value) => `${formatMoney(value)} Public float`,
+        relative: true
+    };
 
     // SEC industry offices in SEC office-number order; each takes the categorical slot of the same number.
     const OFFICE_SLOTS = [
@@ -79,7 +95,13 @@
         office: () => 'SEC industry office',
         industry: () => 'SIC industry',
         company: (node) => (node.data.ticker ? `Ticker ${node.data.ticker}` : 'No ticker'),
-        other: (node) => `Smaller filers in ${node.parent ? node.parent.data.name : 'this industry'}`
+        other: (node) => node.data.note || `Smaller filers in ${node.parent ? node.parent.data.name : 'this industry'}`,
+        unclassified: () => 'Foreign companies that file no reports with the SEC',
+        country: () => 'Issuer country, not classified by the SEC',
+        issuer: () => 'Company not classified by the SEC',
+        bonds: () => 'Bonds and other debt',
+        bondType: () => 'Bond issuer type',
+        cash: () => 'Money-market funds, derivatives, cash and other'
     };
 
     /**
@@ -92,6 +114,30 @@
         const slot = OFFICE_SLOTS.indexOf(office);
         const token = slot >= 0 ? `--research-office-${slot + 1}` : '--research-office-neutral';
         return getComputedStyle(element).getPropertyValue(token).trim();
+    }
+
+    /**
+     * Add the hatch pattern for stocks SEC does not classify to a chart's SVG: grey lines at 45 degrees on a light grey
+     * ground, from the page's CSS tokens.
+     * @param {Object} svg - The d3 selection of the SVG.
+     * @param {string} id - The pattern's element id.
+     * @returns {void}
+     */
+    function appendHatch (svg, id) {
+        const pattern = svg.append('defs').append('pattern')
+            .attr('id', id)
+            .attr('patternUnits', 'userSpaceOnUse')
+            .attr('width', HATCH_SIZE)
+            .attr('height', HATCH_SIZE)
+            .attr('patternTransform', 'rotate(45)');
+        pattern.append('rect')
+            .attr('width', HATCH_SIZE)
+            .attr('height', HATCH_SIZE)
+            .style('fill', 'var(--research-hatch-ground)');
+        pattern.append('line')
+            .attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', HATCH_SIZE)
+            .style('stroke', 'var(--research-hatch-line)')
+            .style('stroke-width', 2.5);
     }
 
     /**
@@ -203,26 +249,30 @@
     }
 
     /**
-     * Create the tooltip controller for the Research tooltip element: a slice's name, kind and Public float, its share
-     * of its parent group (below the top ring) and of all filers, and its rank among its siblings.
+     * Create the tooltip controller for the Research tooltip element: a slice's name, kind and figure, in the market
+     * its share of its parent group (below the top ring) and of all filers, and its rank among its siblings.
      * @param {HTMLElement|null} tooltip - The tooltip element.
+     * @param {function(): Object} measureOf - The measure of the source shown (MARKET_MEASURE or the basket's).
      * @returns {{show: function(PointerEvent, Object): void, hide: function(): void}} The controller.
      */
-    function createTooltip (tooltip) {
+    function createTooltip (tooltip, measureOf) {
         return page.createTooltip(tooltip, (line, node) => {
+            const measure = measureOf();
             const root = node.ancestors().pop();
             const valueLine = document.createElement('span');
-            valueLine.append(line(formatMoney(node.value), 'research-tooltip__value'), ' Public float');
+            valueLine.append(line(measure.format(node.value), 'research-tooltip__value'), ` ${measure.unit}`);
             const parts = [
                 line(node.data.name, 'research-tooltip__name'),
                 line(KIND_LABELS[node.data.kind](node), 'research-tooltip__muted'),
                 valueLine
             ];
-            if (node.parent && node.parent !== root) {
+            if (measure.relative && node.parent && node.parent !== root) {
                 parts.push(line(`${percentOf(node.value, node.parent.value)} of ${node.parent.data.name}`,
                     'research-tooltip__muted'));
             }
-            parts.push(line(`${percentOf(node.value, root.value)} of all filers`, 'research-tooltip__muted'));
+            if (measure.relative) {
+                parts.push(line(`${percentOf(node.value, root.value)} of all filers`, 'research-tooltip__muted'));
+            }
             const rank = rankAmongSiblings(node);
             if (rank) {
                 parts.push(line(`#${rank.rank} of ${rank.of} in ${node.parent.data.name}`, 'research-tooltip__muted'));
@@ -312,7 +362,11 @@
             const swatch = document.createElement('span');
             swatch.className = 'research-legend__swatch';
             swatch.setAttribute('aria-hidden', 'true');
-            swatch.style.background = officeColour(legend, office.data.office);
+            if (office.data.hatched) {
+                swatch.classList.add('research-legend__swatch--hatched');
+            } else {
+                swatch.style.background = officeColour(legend, office.data.office);
+            }
             const name = document.createElement('span');
             name.textContent = office.data.name;
             button.append(swatch, name);
@@ -333,9 +387,10 @@
      * @param {HTMLElement|null} nav - The breadcrumb nav element.
      * @param {Object} focus - The focused d3 hierarchy node.
      * @param {function(string): void} onPick - Called with a group's node key when its button is pressed.
+     * @param {Object} measure - How figures read (MARKET_MEASURE or the basket's).
      * @returns {void}
      */
-    function renderBreadcrumb (nav, focus, onPick) {
+    function renderBreadcrumb (nav, focus, onPick, measure) {
         if (!nav) {
             return;
         }
@@ -351,7 +406,7 @@
                 current.className = 'research-breadcrumb__current';
                 current.setAttribute('aria-current', 'location');
                 current.tabIndex = -1;
-                current.textContent = `${node.data.name} · ${formatMoney(node.value || 0)}`;
+                current.textContent = `${node.data.name} · ${measure.format(node.value || 0)}`;
                 item.append(current);
             } else {
                 const button = document.createElement('button');
@@ -458,9 +513,11 @@
      * @param {function(Element, string): string} colourOf - The fill colour of an office.
      * @param {{onPick: function(string): void, onHighlight: function(string|null): void}} handlers - Called with a
      *     row's node key when its button is pressed, and with the key (or null) to light or clear a slice.
+     * @param {Object} measure - How figures read: in the market the share column is of the group and the value is
+     *     Public float; in the basket the share column is of the basket and there is no value column.
      * @returns {void}
      */
-    function renderRanked (list, focus, colourOf, handlers) {
+    function renderRanked (list, focus, colourOf, handlers, measure) {
         if (!list) {
             return;
         }
@@ -477,8 +534,8 @@
             if (node.children) {
                 row.type = 'button';
                 row.dataset.key = node.data.key;
-                row.setAttribute('aria-label', `${node.data.name}: ${formatMoney(node.value)} Public float, ` +
-                    `${percentOf(node.value, focus.value)} of ${focus.data.name}. Zoom in.`);
+                const share = measure.relative ? `, ${percentOf(node.value, focus.value)} of ${focus.data.name}` : '';
+                row.setAttribute('aria-label', `${node.data.name}: ${measure.describe(node.value)}${share}. Zoom in.`);
                 row.addEventListener('click', () => handlers.onPick(node.data.key));
                 row.addEventListener('focus', () => handlers.onHighlight(node.data.key));
                 row.addEventListener('blur', () => handlers.onHighlight(null));
@@ -496,15 +553,19 @@
                 : node.data.name;
             const share = document.createElement('span');
             share.className = 'research-ranked__share';
-            share.textContent = percentOf(node.value, focus.value);
+            share.textContent = measure.relative ? percentOf(node.value, focus.value) : measure.format(node.value);
             const value = document.createElement('span');
             value.className = 'research-ranked__value';
-            value.textContent = formatMoney(node.value);
+            value.textContent = measure.relative ? formatMoney(node.value) : '';
             const bar = document.createElement('span');
             bar.className = 'research-ranked__bar';
             bar.setAttribute('aria-hidden', 'true');
             bar.style.width = `${node.value / largest * 100}%`;
-            bar.style.background = colourOf(list, node.data.office);
+            if (node.data.hatched) {
+                bar.classList.add('research-ranked__bar--hatched');
+            } else {
+                bar.style.background = colourOf(list, node.data.office);
+            }
             row.append(rank, name, share, value, bar);
             item.append(row);
             return item;
@@ -559,7 +620,16 @@
      * @returns {Object} The d3 hierarchy root.
      */
     function rootOf (data, period) {
-        const root = d3.hierarchy(buildTree(data, period))
+        return hierarchyOf(buildTree(data, period));
+    }
+
+    /**
+     * The d3 hierarchy of a tree (the market's or the basket's), summed, sorted, and with the Technology flag marked.
+     * @param {Object} tree - The root node data.
+     * @returns {Object} The d3 hierarchy root.
+     */
+    function hierarchyOf (tree) {
+        const root = d3.hierarchy(tree)
             .sum((d) => (d.children ? 0 : d.value || 0))
             .sort(compareNodes);
         markTechnology(root);
@@ -613,7 +683,8 @@
      * @param {Object} tooltip - The tooltip controller.
      * @returns {{periods: string[], transitionMs: number, update: function(number, Object): string,
      *     table: function(number): Object, resize: function(): void, zoomTo: function(string): void,
-     *     zoomOut: function(): void, setTechnology: function(boolean): void, setMode: function(string): void}} The
+     *     zoomOut: function(): void, setTechnology: function(boolean): void, setMode: function(string): void,
+     *     setSource: function(string, Object=): void, refresh: function(): void, measure: function(): Object}} The
      *     chart.
      */
     function createSunburst (host, data, tooltip) {
@@ -628,8 +699,10 @@
         const rankedTitle = document.getElementById(RANKED_TITLE_ID);
         const treemapHost = document.getElementById(TREEMAP_ID);
         const viewToggles = Array.from(document.querySelectorAll(VIEW_TOGGLE_SELECTOR));
-        // mode: which chart shows, 'sunburst' or 'treemap'; both draw the same focus.
-        const view = { focusKey: ROOT_KEY, technology: false, mode: 'sunburst' };
+        // mode: which chart shows, 'sunburst' or 'treemap'; both draw the same focus. source: 'market' or 'basket'.
+        const view = { focusKey: ROOT_KEY, technology: false, mode: 'sunburst', source: 'market' };
+        // The basket's provider, once research-sectors-basket.js has set one.
+        let basket = null;
         let treemapSvg = null;
         let treemapWidth = 0;
         let treemapHeight = 0;
@@ -650,6 +723,9 @@
         let centreHint = null;
 
         const isLit = (node) => !view.technology || node.technology;
+        const showsBasket = () => view.source === 'basket' && basket !== null;
+        const measure = () => (showsBasket() ? basket.measure : MARKET_MEASURE);
+        const fillOf = (node, hatchId) => (node.data.hatched ? `url(#${hatchId})` : officeColour(host, node.data.office));
         const opacityOf = (node) => {
             if (!isVisible(node.target)) {
                 return 0;
@@ -678,6 +754,7 @@
             svg = d3.select(host).append('svg')
                 .attr('viewBox', [-size / 2, -size / 2, size, size].join(' '))
                 .attr('role', 'group');
+            appendHatch(svg, `${HATCH_ID}-sunburst`);
             arcLayer = svg.append('g');
             labelLayer = svg.append('g').attr('text-anchor', 'middle');
 
@@ -757,7 +834,7 @@
             const all = entering.merge(paths)
                 .attr('pointer-events', (d) => (isVisible(d.target) ? null : 'none'))
                 .classed('research-sunburst__arc--zoomable', (d) => Boolean(d.children) && isVisible(d.target))
-                .attr('fill', (d) => officeColour(host, d.data.office));
+                .attr('fill', (d) => fillOf(d, `${HATCH_ID}-sunburst`));
             if (transition) {
                 all.transition(transition)
                     .attr('fill-opacity', opacityOf)
@@ -805,7 +882,7 @@
                 .attr('fill-opacity', transition ? 0 : 1);
 
             const all = entering.merge(labels)
-                .attr('fill', (d) => (DARK_LABEL_OFFICES.includes(d.data.office)
+                .attr('fill', (d) => (d.data.hatched || DARK_LABEL_OFFICES.includes(d.data.office)
                     ? 'var(--research-label-dark)'
                     : 'var(--research-label-light)'))
                 .text((d) => labelText(d, unit));
@@ -840,6 +917,7 @@
             treemapSvg = d3.select(treemapHost).append('svg')
                 .attr('viewBox', [0, 0, treemapWidth, treemapHeight].join(' '))
                 .attr('role', 'group');
+            appendHatch(treemapSvg, `${HATCH_ID}-treemap`);
         }
 
         /**
@@ -879,8 +957,12 @@
                 y: d.y0,
                 w: Math.max(0, d.x1 - d.x0),
                 h: Math.max(0, d.y1 - d.y0),
-                fill: tileColour(officeColour(host, d.data.office), index, step)
+                hatched: d.data.hatched === true,
+                fill: d.data.hatched
+                    ? `url(#${HATCH_ID}-treemap)`
+                    : tileColour(officeColour(host, d.data.office), index, step)
             }));
+            const figures = measure();
             const duration = animate ? TRANSITION_MS : 0;
 
             const joined = treemapSvg.selectAll('g.research-treemap__tile').data(tiles, (t) => t.key);
@@ -924,9 +1006,9 @@
             const all = entering.merge(joined)
                 .attr('role', (t) => (t.node.children ? 'button' : 'img'))
                 .attr('aria-label', (t) => {
-                    const share = `${percentOf(t.node.value, focus.value)} of ${focus.data.name}`;
+                    const share = figures.relative ? `, ${percentOf(t.node.value, focus.value)} of ${focus.data.name}` : '';
                     const hint = t.node.children ? '. Press Enter to zoom in, Escape to zoom out.' : '.';
-                    return `${t.node.data.name}: ${formatMoney(t.node.value)} Public float, ${share}${hint}`;
+                    return `${t.node.data.name}: ${figures.describe(t.node.value)}${share}${hint}`;
                 })
                 .classed('research-treemap__tile--zoomable', (t) => Boolean(t.node.children));
             // Animated: tween from where the tiles are; otherwise apply at once (also under reduced motion).
@@ -939,16 +1021,22 @@
                 .attr('height', (t) => t.h)
                 .attr('fill', (t) => t.fill)
                 .attr('fill-opacity', (t) => (t.node.data.kind === 'other' ? OTHER_OPACITY : (isLit(t.node) ? 1 : DIMMED_OPACITY)));
+            const inkOf = (t) => (t.hatched ? 'var(--research-label-dark)' : inkFor(t.fill));
             all.select('.research-treemap__name')
-                .attr('fill', (t) => inkFor(t.fill))
+                .attr('fill', inkOf)
                 .text((t) => (t.h > 18 ? tileLabel(t.node, t.w) : ''));
             all.select('.research-treemap__value')
-                .attr('fill', (t) => inkFor(t.fill))
-                .text((t) => (t.h > 36 && t.w > 64
-                    ? `${formatMoney(t.node.value)} · ${percentOf(t.node.value, focus.value)}`
-                    : ''));
+                .attr('fill', inkOf)
+                .text((t) => {
+                    if (t.h <= 36 || t.w <= 64) {
+                        return '';
+                    }
+                    return figures.relative
+                        ? `${formatMoney(t.node.value)} · ${percentOf(t.node.value, focus.value)}`
+                        : figures.format(t.node.value);
+                });
             treemapSvg.attr('aria-label', `Treemap of ${focus.data.name}: ${tiles.length} parts, ` +
-                `${formatMoney(focus.value || 0)} Public float in total.`);
+                `${figures.describe(focus.value || 0)} in total.`);
         }
 
         /**
@@ -1134,15 +1222,20 @@
          */
         function describeView (root, previous, periodLabel) {
             const zoomed = focus.depth > 0;
+            const figures = measure();
             const trail = focus.ancestors().reverse().map((d) => d.data.name).join(' › ');
-            centreTitle.text(zoomed ? shorten(focus.data.name, Math.floor(unit / 3)) : periodLabel);
-            centreValue.text(formatMoney(focus.value || 0));
-            centreHint.text(zoomed ? 'Zoom out' : 'Public float');
+            centreTitle.text(zoomed ? shorten(focus.data.name, Math.floor(unit / 3)) : (showsBasket() ? root.data.name : periodLabel));
+            centreValue.text(figures.format(focus.value || 0));
+            centreHint.text(zoomed ? 'Zoom out' : figures.unit);
             centre.classed('research-sunburst__centre--zoomed', zoomed);
-            renderBreadcrumb(breadcrumb, focus, zoomTo);
-            renderTakeaways(takeawaysList, takeaways(root, focus, previous, periodLabel));
+            renderBreadcrumb(breadcrumb, focus, zoomTo, figures);
+            renderTakeaways(takeawaysList, showsBasket()
+                ? basket.takeaways(root, focus)
+                : takeaways(root, focus, previous, periodLabel));
             if (rankedTitle) {
-                rankedTitle.textContent = `Largest parts of ${focus.data.name}, ${periodLabel}`;
+                rankedTitle.textContent = showsBasket()
+                    ? `Largest parts of ${focus.data.name}`
+                    : `Largest parts of ${focus.data.name}, ${periodLabel}`;
             }
             renderRanked(rankedList, focus, officeColour, {
                 onPick: (key) => {
@@ -1150,7 +1243,7 @@
                     zoomTo(key);
                 },
                 onHighlight: setHighlight
-            });
+            }, figures);
             if (legend) {
                 const office = focus.ancestors().find((d) => d.depth === 1);
                 legend.querySelectorAll('.research-legend__button').forEach((button) => {
@@ -1162,7 +1255,9 @@
             }
             const lit = d3.sum(focus.leaves().filter((d) => d.technology), (d) => d.value);
             const share = focus.value > 0 ? (lit / focus.value * 100).toFixed(1) : '0.0';
-            const techText = `${formatMoney(lit)}, ${share}% of ${focus.data.name} in ${periodLabel}.`;
+            const techText = showsBasket()
+                ? `${figures.describe(lit)}.`
+                : `${formatMoney(lit)}, ${share}% of ${focus.data.name} in ${periodLabel}.`;
             if (techShare) {
                 techShare.textContent = techText;
                 techShare.hidden = !view.technology;
@@ -1179,9 +1274,10 @@
         function update (index, options) {
             periodIndex = Math.max(0, Math.min(data.values.length - 1, index));
             const period = data.values[periodIndex];
-            const root = rootOf(data, period);
+            // The basket has no years: the scrubber's period leaves it as it is.
+            const root = showsBasket() ? hierarchyOf(basket.tree()) : rootOf(data, period);
             d3.partition().size([2 * Math.PI, RINGS + 1])(root);
-            const previous = periodIndex > 0 ? rootOf(data, data.values[periodIndex - 1]) : null;
+            const previous = !showsBasket() && periodIndex > 0 ? rootOf(data, data.values[periodIndex - 1]) : null;
 
             // Keep the focus by its key; a group the period does not have (or has no Public float in) falls back
             // to every filer.
@@ -1203,6 +1299,16 @@
             setHighlight(null);
             syncArcFocus(nodes);
             applyPendingFocus();
+
+            if (showsBasket()) {
+                const described = basket.describe(root, focus, trail);
+                svg.attr('aria-label', described.aria);
+                if (subtitle) {
+                    subtitle.textContent = described.subtitle;
+                }
+                const tech = view.technology ? ` Technology (incl. chip makers): ${techText}` : '';
+                return `${described.summary}${tech}`;
+            }
 
             const largest = focus.leaves()
                 .filter((d) => d.data.kind === 'company')
@@ -1273,6 +1379,9 @@
          * @returns {{caption: string, columns: Object[], rows: string[][]}} The table.
          */
         function table (index) {
+            if (showsBasket()) {
+                return basket.table();
+            }
             const period = data.values[Math.max(0, Math.min(data.values.length - 1, index))];
             const rows = period.ranked.slice(0, TABLE_ROWS).map((row, rank) => {
                 const company = data.companies[row.company];
@@ -1299,6 +1408,38 @@
         }
 
         /**
+         * Show the market or the basket. The zoom goes back to the top, since the two have different groups; the
+         * change is animated unless the user asks for reduced motion.
+         * @param {string} source - 'market' or 'basket'.
+         * @param {Object} [provider] - The basket's provider: tree(), takeaways(root, focus), table(),
+         *     describe(root, focus, trail) and measure. Kept for later switches.
+         * @returns {void}
+         */
+        function setSource (source, provider) {
+            if (provider) {
+                basket = provider;
+            }
+            const next = source === 'basket' && basket ? 'basket' : 'market';
+            if (next === view.source) {
+                return;
+            }
+            view.source = next;
+            view.focusKey = ROOT_KEY;
+            activeKey = null;
+            applyView();
+        }
+
+        /**
+         * Redraw the source shown without a transition, e.g. after the basket changed; the zoom is kept where the
+         * group still exists.
+         * @returns {void}
+         */
+        function refresh () {
+            tooltip.hide();
+            update(periodIndex, { animate: false });
+        }
+
+        /**
          * Redraw at the host's new width, at the current period, without a transition.
          * @returns {void}
          */
@@ -1319,7 +1460,18 @@
 
         layout();
         return {
-            periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize, zoomTo, zoomOut, setTechnology, setMode
+            periods: data.periods,
+            transitionMs: TRANSITION_MS,
+            update,
+            table,
+            resize,
+            zoomTo,
+            zoomOut,
+            setTechnology,
+            setMode,
+            setSource,
+            refresh,
+            measure
         };
     }
 
@@ -1334,9 +1486,11 @@
         if (!host || !data || !Array.isArray(data.values) || data.values.length === 0 || typeof d3 === 'undefined') {
             return;
         }
-        const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
-        const chart = createSunburst(host, data, tooltip);
+        let chart = null;
+        const tooltip = createTooltip(document.getElementById(TOOLTIP_ID), () => (chart ? chart.measure() : MARKET_MEASURE));
+        chart = createSunburst(host, data, tooltip);
         page.registerTab(TAB_ID, chart);
+        window.ResearchSunburst = chart;
         const treemapHost = document.getElementById(TREEMAP_ID);
         // The card holds both charts; watching it (not the chart host) ignores the host hiding when the treemap shows.
         const card = host.parentElement || host;

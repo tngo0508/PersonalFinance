@@ -50,6 +50,18 @@ internal static class ResearchDatasets
     /// </summary>
     public const string FundExposure = "fund-exposure";
 
+    /// <summary>
+    /// The fund industries snapshot: each Tracked Fund's share of net assets by SEC industry office and SIC industry,
+    /// and the rest by issuer country, bond issuer type and cash, from its latest report.
+    /// </summary>
+    public const string FundIndustries = "fund-industries";
+
+    /// <summary>
+    /// The SEC submissions the fund industries refresh has read for holdings the Sectors snapshot has not, kept so each
+    /// is read only once. Not served to the page.
+    /// </summary>
+    public const string FundIndustryFilers = "fund-industry-filers";
+
     /// <summary>The fund facts snapshot: each Tracked Fund's net assets and expense ratio.</summary>
     public const string FundFacts = "fund-facts";
 

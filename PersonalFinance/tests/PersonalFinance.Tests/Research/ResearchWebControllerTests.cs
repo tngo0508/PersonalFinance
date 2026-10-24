@@ -121,7 +121,8 @@ public class ResearchWebControllerTests
         // The view embeds the whole snapshot as JSON for the sunburst, so the page makes no API call of its own.
         Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetFundsAsync), nameof(IResearchApi.GetWorldAsync),
                 nameof(IResearchApi.GetFundOverlapAsync), nameof(IResearchApi.GetFundReturnsAsync), nameof(IResearchApi.GetMacroAsync),
-                nameof(IResearchApi.GetFundFactsAsync), nameof(IResearchApi.GetFundExposureAsync)],
+                nameof(IResearchApi.GetFundFactsAsync), nameof(IResearchApi.GetFundExposureAsync),
+                nameof(IResearchApi.GetFundIndustriesAsync)],
             proxy.Calls);
         Assert.Same(Snapshot, model.Sectors.Snapshot);
         // The only other actions are the Companies tab's search, lookup and press releases, which no snapshot tab uses.

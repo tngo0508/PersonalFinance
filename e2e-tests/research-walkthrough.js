@@ -313,6 +313,118 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         });
 
         // Step 7: Funds opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters.
+        // Step 6d: the Sectors basket view. Without a basket the switch opens on Market with Your basket disabled; with
+        // SPY 60 and QQQ 40 it opens on Your basket, every figure a share of the basket, stocks SEC does not classify
+        // hatched grey (never in an office colour), and International Corp Fin neutral. A drill-down reaches an
+        // industry's companies and "Other (n companies)", the unclassified card names the largest countries, the treemap
+        // keeps the hatch, and the table lists the basket's largest companies.
+        await step('Research 6d', fail, async () => {
+            await page.goto(`${base}/Research?tab=sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const marketFirst = await page.locator('[data-sectors-view="market"]').getAttribute('aria-pressed') === 'true';
+            const basketOff = await page.locator('[data-sectors-view="basket"]').isDisabled();
+            const barShown = await page.locator('#research-basket').isVisible();
+            await page.goto(`${base}/Research?tab=sectors&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-sunburst svg path[data-key="bu"]', {timeout: TIMEOUT});
+            const expected = await page.evaluate(() => {
+                const data = JSON.parse(document.getElementById('research-fund-industries-data').textContent);
+                const shares = { SPY: 0.6, QQQ: 0.4 };
+                const fmt = (v) => (v > 0 && v < 0.05 ? '<0.1%' : `${v.toFixed(1)}%`);
+                const sum = (pick) => data.funds.reduce((s, f) => s + shares[f.ticker] * pick(f), 0);
+                const classified = sum((f) => f.industries.reduce((a, i) => a + i.percent, 0));
+                const unclassified = sum((f) => f.unclassified.reduce((a, c) => a + c.percent, 0));
+                const country = (code) => sum((f) => (f.unclassified.find((c) => c.country === code) || { percent: 0 }).percent);
+                const officeShare = (name) => sum((f) => f.industries
+                    .filter((i) => data.offices[data.industries[i.industry].office] === name).reduce((a, i) => a + i.percent, 0));
+                const company = (name) => sum((f) => f.companies
+                    .filter((c) => data.companies[c.company].name === name).reduce((a, c) => a + c.percent, 0));
+                const software = data.industries.findIndex((i) => i.sicCode === '7372');
+                const softwareCount = Math.max(...data.funds.map((f) => (f.industries.find((i) => i.industry === software) || { companyCount: 0 }).companyCount));
+                return {
+                    classified: fmt(classified),
+                    unclassified: fmt(unclassified),
+                    nl: fmt(country('NL')),
+                    technology: fmt(officeShare('Technology')),
+                    nvidia: fmt(company('Nvidia Corp')),
+                    others: softwareCount - 2
+                };
+            });
+            const basketOn = await page.locator('[data-sectors-view="basket"]').getAttribute('aria-pressed') === 'true';
+            const title = (await page.locator('#research-sectors-title').textContent()).trim();
+            const scrubberHidden = !(await page.locator('#research-panel-sectors [data-research-scrubber]').isVisible());
+            const subtitle = await page.locator('#research-sectors-subtitle').textContent();
+            const centre = (await page.locator('.research-sunburst__centre').textContent()).replace(/\s+/g, ' ');
+            const cards = await page.locator('#research-sectors-takeaways .research-takeaway').evaluateAll((items) => items.map((i) => ({
+                label: i.querySelector('.research-takeaway__label').textContent,
+                value: i.querySelector('.research-takeaway__value').textContent,
+                note: i.querySelector('.research-takeaway__note').textContent
+            })));
+            const card = (label) => cards.find((c) => c.label === label) || { value: '', note: '' };
+            const fills = await page.evaluate(() => {
+                const fillOf = (key) => document.querySelector(`#research-sunburst path[data-key="${key}"]`)?.getAttribute('fill');
+                const hatchedKeys = Array.from(document.querySelectorAll('#research-sunburst path[data-key^="bu"]')).map((p) => p.getAttribute('fill'));
+                const neutral = getComputedStyle(document.querySelector('.research')).getPropertyValue('--research-office-neutral').trim();
+                const data = JSON.parse(document.getElementById('research-fund-industries-data').textContent);
+                const intl = data.offices.indexOf('International Corp Fin');
+                return { unclassified: fillOf('bu'), allHatched: hatchedKeys.every((f) => f === 'url(#research-hatch-sunburst)'), intl: fillOf(`bo${intl}`), neutral };
+            });
+            const hatchedSwatch = await page.locator('#research-sectors-legend .research-legend__button', {hasText: 'Not classified by the SEC'})
+                .locator('.research-legend__swatch--hatched').count();
+
+            // Drill: the Technology office, then its software industry from the ranked list.
+            await page.locator('#research-sectors-legend .research-legend__button', {hasText: 'Technology'}).click();
+            const crumb = (await page.locator('#research-sectors-breadcrumb [aria-current="location"]').textContent()).trim();
+            await page.locator('#research-sectors-ranked button', {hasText: 'Services-Prepackaged Software'}).click();
+            const leaves = (await page.locator('#research-sectors-ranked .research-ranked__name').allTextContents()).map((t) => t.trim());
+            // The unclassified stocks: their card names the largest countries; the treemap keeps the hatch.
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'Your basket'}).click();
+            await page.locator('#research-sectors-legend .research-legend__button', {hasText: 'Not classified by the SEC'}).click();
+            const unclassifiedNote = await page.locator('#research-sectors-takeaways .research-takeaway').evaluateAll((items) => {
+                const item = items.find((i) => i.querySelector('.research-takeaway__label').textContent === 'Not classified by the SEC');
+                return item ? item.querySelector('.research-takeaway__note').textContent : '';
+            });
+            await page.click('[data-research-view="treemap"]');
+            const tileFills = await page.locator('#research-treemap .research-treemap__rect').evaluateAll((rects) => rects.map((r) => r.getAttribute('fill')));
+            await page.click('[data-research-view="sunburst"]');
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'Your basket'}).click();
+            await page.click('#research-panel-sectors [data-research-table-toggle]');
+            const caption = await page.locator('#research-sectors-table caption').textContent();
+            const firstRow = (await page.locator('#research-sectors-table tbody tr').first().locator('td').allTextContents()).map((t) => t.trim());
+            await page.click('#research-panel-sectors [data-research-table-toggle]');
+            const words = (await page.locator('#research-panel-sectors').innerText()).toLowerCase();
+            const advice = ['best', 'efficient', ' buy'].filter((w) => words.includes(w));
+
+            // Back to Market: the title, the scrubber and the year return.
+            await page.click('[data-sectors-view="market"]');
+            const marketTitle = (await page.locator('#research-sectors-title').textContent()).trim();
+            const scrubberBack = await page.locator('#research-panel-sectors [data-research-scrubber]').isVisible();
+            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
+            await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
+
+            const ok = marketFirst && basketOff && barShown && basketOn && title === 'Your basket by SEC industry' && scrubberHidden &&
+                subtitle.includes('Every percent is of your basket') && centre.includes('Your basket') && centre.includes('100.0%') &&
+                card('Classified by the SEC').value === expected.classified &&
+                card('Not classified by the SEC').value === expected.unclassified &&
+                card('Not classified by the SEC').note.includes(`Netherlands ${expected.nl}`) &&
+                card('Largest SEC industry office').value === expected.technology &&
+                card('Largest company').value === expected.nvidia && card('Largest company').note.includes('Nvidia Corp') &&
+                fills.unclassified === 'url(#research-hatch-sunburst)' && fills.allHatched && fills.intl === fills.neutral &&
+                hatchedSwatch === 1 && crumb === `Technology · ${expected.technology}` &&
+                leaves.includes('Microsoft Corp (MSFT)') && leaves.includes(`Other (${expected.others} companies)`) &&
+                unclassifiedNote.includes(`Largest countries: Netherlands ${expected.nl}`) &&
+                tileFills.length > 0 && tileFills.every((f) => f === 'url(#research-hatch-treemap)') &&
+                caption.includes('largest companies in your basket') && firstRow[1] === 'Nvidia Corp (NVDA)' &&
+                firstRow[4] === expected.nvidia && advice.length === 0 &&
+                marketTitle === 'Largest SEC filers by Public float' && scrubberBack;
+            if (ok) {
+                pass(`Research 6d: Market first; with SPY and QQQ the basket view shows ${expected.classified} classified by the SEC and ${expected.unclassified} not (Netherlands ${expected.nl}), Technology ${expected.technology}, Nvidia ${expected.nvidia}; hatched unclassified, neutral International Corp Fin; drills to "Other (${expected.others} companies)"; the table and Market return`);
+            } else {
+                fail(`Research 6d: market ${marketFirst}/${basketOff}/${barShown}, basket ${basketOn} "${title}" scrubber hidden ${scrubberHidden}, ` +
+                    `centre "${centre}", cards ${JSON.stringify(cards)} vs ${JSON.stringify(expected)}, fills ${JSON.stringify(fills)} swatch ${hatchedSwatch}, ` +
+                    `crumb "${crumb}", leaves ${JSON.stringify(leaves)}, note "${unclassifiedNote}", tiles ${JSON.stringify(tileFills)}, ` +
+                    `table "${caption}" ${JSON.stringify(firstRow)}, advice ${advice}, market "${marketTitle}" ${scrubberBack}`);
+            }
+        });
+
         await step('Research 7', fail, async () => {
             await page.click('#research-tab-funds');
             await page.waitForSelector('#research-funds-tree [role="tree"]', {timeout: TIMEOUT});
@@ -341,8 +453,11 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const search = page.locator('#research-basket-search');
             const basketParam = () => new URL(page.url()).searchParams.get('basket');
             const shownOnFunds = await bar.isVisible();
+            // The Sectors tab has a basket view, so the bar shows there too; the Companies tab has none.
             await page.click('#research-tab-sectors');
-            const hiddenOnSectors = !(await bar.isVisible());
+            const shownOnSectors = await bar.isVisible();
+            await page.click('#research-tab-companies');
+            const hiddenOnCompanies = !(await bar.isVisible());
             await page.click('#research-tab-funds');
 
             await search.fill('qq');
@@ -370,13 +485,13 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             await page.setViewportSize({width: 1280, height: 800});
             await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
             const removed = basketParam();
-            const ok = shownOnFunds && hiddenOnSectors && (await option.count()) === 0 && Boolean(grouped) &&
+            const ok = shownOnFunds && shownOnSectors && hiddenOnCompanies && (await option.count()) === 0 && Boolean(grouped) &&
                 picked === 'QQQ,SPY' && weighted === 'QQQ:50,SPY:70' && scaled && equal === 'QQQ,SPY' &&
                 restored.join(',') === 'QQQ,SPY' && narrowFits && removed === 'QQQ';
             if (ok) {
                 pass(`Research 7b: the basket bar picks QQQ then SPY by keyboard (grouped under "${grouped.trim()}"), scales 50/70, resets to equal, survives a reload and removes SPY`);
             } else {
-                fail(`Research 7b: shown ${shownOnFunds}/${!hiddenOnSectors}, picked ${picked}, weighted ${weighted}, ` +
+                fail(`Research 7b: shown ${shownOnFunds}/${shownOnSectors}/${!hiddenOnCompanies}, picked ${picked}, weighted ${weighted}, ` +
                     `scaled ${scaled}, equal ${equal}, restored ${restored}, fits at 320px ${narrowFits}, removed ${removed}`);
             }
         });
@@ -876,6 +991,8 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                     }
                 }
                 await mobile.tap('#research-tab-sectors');
+                // With a basket set, Sectors opens on Your basket, which has no years: the slider is the market's.
+                await mobile.tap('[data-sectors-view="market"]');
                 const box = await mobile.locator('#research-sectors-year').boundingBox();
                 await mobile.touchscreen.tap(box.x + 2, box.y + box.height / 2);
                 const label = await periodLabel(mobile, 'sectors');

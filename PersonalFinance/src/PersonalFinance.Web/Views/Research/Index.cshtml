@@ -9,6 +9,15 @@
     bool showFunds = !Model.Funds.Unavailable;
     bool showWorld = !Model.World.Unavailable;
     bool showReturns = showFunds && Model.FundReturns is not null;
+    FundIndustriesSnapshotDto? industries = Model.FundIndustries;
+    // The Sectors basket view needs the market chart (it draws in it), the funds data (for the basket) and the industries.
+    bool showSectorsBasket = showSectors && showFunds && industries is not null && industries.Funds.Count > 0;
+    CultureInfo us = CultureInfo.GetCultureInfo("en-US");
+    string holdingsDates = !showSectorsBasket
+        ? string.Empty
+        : industries!.Funds.Min(f => f.ReportDate) == industries.AsOf
+            ? industries.AsOf.ToString("d MMMM yyyy", us)
+            : $"{industries.Funds.Min(f => f.ReportDate).ToString("d MMMM yyyy", us)} to {industries.AsOf.ToString("d MMMM yyyy", us)}";
 }
 
 @section Styles {
@@ -62,10 +71,22 @@
     @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
        the tabs, the scrubber, the live region and the table view. *@
     <section class="research-deck" id="research-panel-sectors" role="tabpanel" aria-labelledby="research-tab-sectors"
+             data-research-basket="@(showSectorsBasket ? string.Empty : null)"
              hidden="@(!Model.IsSelected(ResearchViewModel.SectorsTab))">
+        @if (showSectorsBasket)
+        {
+            @* Market (the largest filers by Public float) or Your basket (its funds' holdings by SEC industry, weighted).
+               It opens on Your basket only when a Fund Basket is set; js/research/research-sectors-basket.js wires it. *@
+            <div class="research-sectors__views" id="research-sectors-views">
+                <div class="research-view-toggle" role="group" aria-label="Sectors view">
+                    <button type="button" class="research-view-toggle__button" data-sectors-view="market" aria-pressed="true">Market</button>
+                    <button type="button" class="research-view-toggle__button" data-sectors-view="basket" aria-pressed="false">Your basket</button>
+                </div>
+            </div>
+        }
         @if (showSectors)
         {
-            <div class="research-scrubber" data-research-scrubber>
+            <div class="research-scrubber" data-research-scrubber data-sectors-view-part="@(showSectorsBasket ? "market" : null)">
                 <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
                         aria-label="Play through the years">
                     <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
@@ -85,7 +106,7 @@
             </div>
         }
         <div class="research-card">
-            <h2 class="research-card__title">Largest SEC filers by Public float</h2>
+            <h2 class="research-card__title" id="research-sectors-title">Largest SEC filers by Public float</h2>
             @if (!showSectors)
             {
                 <partial name="_UnavailableState" model="Model.Sectors.UnavailableState"/>
@@ -96,6 +117,10 @@
                     The @latest!.Ranked.Count largest of @((latest.Ranked.Count + latest.RestCount).ToString("N0", CultureInfo.GetCultureInfo("en-US"))) filers in @latest.Period,
                     by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.
                 </p>
+                @if (showSectorsBasket)
+                {
+                    <p class="research-overlap__note" id="research-sectors-basket-note" role="status" hidden></p>
+                }
                 <div class="research-chartbar">
                     @* Where the chart is zoomed: each group above the focus is a button back to it. Drawn by research-sunburst.js. *@
                     <nav class="research-breadcrumb" id="research-sectors-breadcrumb" aria-label="Sectors drill-down"></nav>
@@ -142,20 +167,39 @@
                 <ul class="research-legend" id="research-sectors-legend"></ul>
             }
             <h2 class="research-panel__title">About this data</h2>
-            <p>
+            @if (showSectorsBasket)
+            {
+                <div data-sectors-view-part="basket" hidden>
+                    <p>
+                        Your basket view adds up each fund's holdings from its latest Form N-PORT report, weighted by the
+                        fund's share of your basket. Every percent is of your basket, counting stocks, bonds and cash.
+                    </p>
+                    <p>
+                        Each stock is matched to an SEC filer by company name and grouped by that filer's SEC industry
+                        office and SIC industry. Foreign companies that file no reports with the SEC have no SEC industry,
+                        so they are shown hatched grey under "Not classified by the SEC", by the country where each issuer
+                        is organized. Each industry lists its ten largest companies; the rest are summed into "Other".
+                    </p>
+                </div>
+            }
+            <p data-sectors-view-part="@(showSectorsBasket ? "market" : null)">
                 Public float is the market value of a company's shares held by investors other than its insiders, as
                 the company reports it once a year to the SEC. It leaves out insiders' holdings, so it is smaller than
                 the company's total value, and it changes only once a year.
             </p>
-            <p>
+            <p data-sectors-view-part="@(showSectorsBasket ? "market" : null)">
                 Only US SEC filers are included, so small companies and some foreign companies (those filing annual
                 reports on Form 20-F) are missing. Each company is grouped by the SEC office that reviews its filings
                 and by its SIC industry code.
             </p>
             <h2 class="research-panel__title">Data as of</h2>
-            <p class="research-panel__as-of">
+            <p class="research-panel__as-of" data-sectors-view-part="@(showSectorsBasket ? "market" : null)">
                 @(Model.Sectors.AsOf is { } asOf ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
             </p>
+            @if (showSectorsBasket)
+            {
+                <p class="research-panel__as-of" data-sectors-view-part="basket" hidden>Fund holdings as of @holdingsDates</p>
+            }
         </aside>
     </section>
 
@@ -175,6 +219,12 @@
     <script type="application/json" id="research-sectors-data">@Json.Serialize(Model.Sectors.Snapshot)</script>
 }
 
+@if (showSectorsBasket)
+{
+    @* Each fund's holdings by SEC industry, with the rest by country, bond type and cash, read by research-sectors-basket.js. *@
+    <script type="application/json" id="research-fund-industries-data">@Json.Serialize(industries)</script>
+}
+
 @if (showReturns)
 {
     @* The fund returns snapshot (monthly returns with every per-window figure precomputed), read by
@@ -192,6 +242,10 @@
     @if (showSectors)
     {
         <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>
+    }
+    @if (showSectorsBasket)
+    {
+        <script src="~/js/research/research-sectors-basket.js" asp-append-version="true"></script>
     }
     @if (showFunds)
     {

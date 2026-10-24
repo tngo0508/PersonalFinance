@@ -188,6 +188,21 @@ public class ResearchFundsWebControllerTests
     }
 
     [Fact]
+    public async Task Index_HoldsTheFundIndustries_ForTheSectorsTab()
+    {
+        var industries = new FundIndustriesSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
+        proxy.Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+        proxy.Returns(nameof(IResearchApi.GetFundIndustriesAsync), industries);
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
+
+        Assert.Same(industries, model.FundIndustries);
+        Assert.Equal(ResearchViewModel.SectorsTab, model.SelectedTab);
+    }
+
+    [Fact]
     public async Task Index_WhenTheSectorsDataHasNeverLoaded_StillHoldsTheFunds()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
