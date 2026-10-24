@@ -20,7 +20,7 @@ internal sealed class FundIndustriesRefresher : IResearchDatasetRefresher
     private const string DatasetName = "industries";
 
     // Raised when the matching or the build changes, so the next refresh rebuilds from the same reports.
-    private const string BuildVersion = "1";
+    private const string BuildVersion = "2";
 
     // Ends the signature of a snapshot built while some matched filers were still unread.
     private const string UnreadMark = "+unread";

@@ -319,14 +319,26 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // industry's companies and "Other (n companies)", the unclassified card names the largest countries, the treemap
         // keeps the hatch, and the table lists the basket's largest companies.
         await step('Research 6d', fail, async () => {
+            // Without a basket the page neither carries nor fetches the basket's data.
+            const fetched = [];
+            const onRequest = (request) => {
+                if (request.url().includes('/Research/FundIndustries')) {
+                    fetched.push(request.url());
+                }
+            };
+            page.on('request', onRequest);
             await page.goto(`${base}/Research?tab=sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const notCarried = await page.locator('script#research-fund-industries-data').count() === 0 && fetched.length === 0;
             const marketFirst = await page.locator('[data-sectors-view="market"]').getAttribute('aria-pressed') === 'true';
             const basketOff = await page.locator('[data-sectors-view="basket"]').isDisabled();
             const barShown = await page.locator('#research-basket').isVisible();
             await page.goto(`${base}/Research?tab=sectors&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.waitForSelector('#research-sunburst svg path[data-key="bu"]', {timeout: TIMEOUT});
-            const expected = await page.evaluate(() => {
-                const data = JSON.parse(document.getElementById('research-fund-industries-data').textContent);
+            const fetchedOnce = fetched.length === 1;
+            page.off('request', onRequest);
+            const asOf = (await page.locator('#research-sectors-holdings-as-of').textContent()).trim();
+            const expected = await page.evaluate(async () => {
+                const data = await (await fetch(document.getElementById('research-sectors-views').dataset.industriesUrl)).json();
                 const shares = { SPY: 0.6, QQQ: 0.4 };
                 const fmt = (v) => (v > 0 && v < 0.05 ? '<0.1%' : `${v.toFixed(1)}%`);
                 const sum = (pick) => data.funds.reduce((s, f) => s + shares[f.ticker] * pick(f), 0);
@@ -350,7 +362,8 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             });
             const basketOn = await page.locator('[data-sectors-view="basket"]').getAttribute('aria-pressed') === 'true';
             const title = (await page.locator('#research-sectors-title').textContent()).trim();
-            const scrubberHidden = !(await page.locator('#research-panel-sectors [data-research-scrubber]').isVisible());
+            // The scrubber stays: the basket's lean section follows its year.
+            const scrubberShown = await page.locator('#research-panel-sectors [data-research-scrubber]').isVisible();
             const subtitle = await page.locator('#research-sectors-subtitle').textContent();
             const centre = (await page.locator('.research-sunburst__centre').textContent()).replace(/\s+/g, ' ');
             const cards = await page.locator('#research-sectors-takeaways .research-takeaway').evaluateAll((items) => items.map((i) => ({
@@ -359,11 +372,11 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 note: i.querySelector('.research-takeaway__note').textContent
             })));
             const card = (label) => cards.find((c) => c.label === label) || { value: '', note: '' };
-            const fills = await page.evaluate(() => {
+            const fills = await page.evaluate(async () => {
                 const fillOf = (key) => document.querySelector(`#research-sunburst path[data-key="${key}"]`)?.getAttribute('fill');
                 const hatchedKeys = Array.from(document.querySelectorAll('#research-sunburst path[data-key^="bu"]')).map((p) => p.getAttribute('fill'));
                 const neutral = getComputedStyle(document.querySelector('.research')).getPropertyValue('--research-office-neutral').trim();
-                const data = JSON.parse(document.getElementById('research-fund-industries-data').textContent);
+                const data = await (await fetch(document.getElementById('research-sectors-views').dataset.industriesUrl)).json();
                 const intl = data.offices.indexOf('International Corp Fin');
                 return { unclassified: fillOf('bu'), allHatched: hatchedKeys.every((f) => f === 'url(#research-hatch-sunburst)'), intl: fillOf(`bo${intl}`), neutral };
             });
@@ -396,11 +409,12 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             // Back to Market: the title, the scrubber and the year return.
             await page.click('[data-sectors-view="market"]');
             const marketTitle = (await page.locator('#research-sectors-title').textContent()).trim();
-            const scrubberBack = await page.locator('#research-panel-sectors [data-research-scrubber]').isVisible();
+            const scrubberBack = await page.locator('#research-panel-sectors [data-research-scrubber]').isVisible() &&
+                !(await page.locator('#research-lean').isVisible());
             await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
             await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
 
-            const ok = marketFirst && basketOff && barShown && basketOn && title === 'Your basket by SEC industry' && scrubberHidden &&
+            const ok = notCarried && fetchedOnce && asOf === 'Fund holdings as of 30 June 2026' && marketFirst && basketOff && barShown && basketOn && title === 'Your basket by SEC industry' && scrubberShown &&
                 subtitle.includes('Every percent is of your basket') && centre.includes('Your basket') && centre.includes('100.0%') &&
                 card('Classified by the SEC').value === expected.classified &&
                 card('Not classified by the SEC').value === expected.unclassified &&
@@ -418,10 +432,87 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             if (ok) {
                 pass(`Research 6d: Market first; with SPY and QQQ the basket view shows ${expected.classified} classified by the SEC and ${expected.unclassified} not (Netherlands ${expected.nl}), Technology ${expected.technology}, Nvidia ${expected.nvidia}; hatched unclassified, neutral International Corp Fin; drills to "Other (${expected.others} companies)"; the table and Market return`);
             } else {
-                fail(`Research 6d: market ${marketFirst}/${basketOff}/${barShown}, basket ${basketOn} "${title}" scrubber hidden ${scrubberHidden}, ` +
+                fail(`Research 6d: fetch ${notCarried}/${fetched.length} "${asOf}", market ${marketFirst}/${basketOff}/${barShown}, basket ${basketOn} "${title}" scrubber shown ${scrubberShown}, ` +
                     `centre "${centre}", cards ${JSON.stringify(cards)} vs ${JSON.stringify(expected)}, fills ${JSON.stringify(fills)} swatch ${hatchedSwatch}, ` +
                     `crumb "${crumb}", leaves ${JSON.stringify(leaves)}, note "${unclassifiedNote}", tiles ${JSON.stringify(tileFills)}, ` +
                     `table "${caption}" ${JSON.stringify(firstRow)}, advice ${advice}, market "${marketTitle}" ${scrubberBack}`);
+            }
+        });
+
+        // Step 6e: Lean vs the market, under the basket chart. Each office's share of the SEC-classified part of the
+        // basket against its share of every filer's Public float in the scrubber's year, with a signed difference in
+        // points (an arrow and a colour too, never colour alone); the year follows the scrubber, rows are reachable by
+        // keyboard, and a row zooms the chart into its office.
+        await step('Research 6e', fail, async () => {
+            await page.goto(`${base}/Research?tab=sectors&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-lean-rows .research-lean__row', {timeout: TIMEOUT});
+            const expectedFor = (index) => page.evaluate(async (periodIndex) => {
+                const data = await (await fetch(document.getElementById('research-sectors-views').dataset.industriesUrl)).json();
+                const sectors = JSON.parse(document.getElementById('research-sectors-data').textContent);
+                const shares = { SPY: 0.6, QQQ: 0.4 };
+                const fmt = (v) => (v > 0 && v < 0.05 ? '<0.1%' : `${v.toFixed(1)}%`);
+                const pts = (v) => (Math.abs(v) < 0.05 ? '0.0 pts' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(1)} pts`);
+                const officeOf = (i) => data.offices[data.industries[i].office];
+                const classified = data.funds.reduce((s, f) => s + shares[f.ticker] * f.industries.reduce((a, i) => a + i.percent, 0), 0);
+                const tech = data.funds.reduce((s, f) => s + shares[f.ticker] * f.industries
+                    .filter((i) => officeOf(i.industry) === 'Technology').reduce((a, i) => a + i.percent, 0), 0) / classified * 100;
+                const period = sectors.values[periodIndex];
+                const byOffice = new Map();
+                const add = (industry, value) => {
+                    const office = sectors.offices[sectors.industries[industry].office];
+                    byOffice.set(office, (byOffice.get(office) || 0) + value);
+                };
+                period.ranked.forEach((r) => add(sectors.companies[r.company].industry, r.publicFloat));
+                period.other.forEach((o) => add(o.industry, o.publicFloat));
+                const total = Array.from(byOffice.values()).reduce((a, v) => a + v, 0);
+                const market = (byOffice.get('Technology') || 0) / total * 100;
+                return { year: period.period, classified: fmt(classified), basket: fmt(tech), market: fmt(market), difference: pts(tech - market), more: tech > market };
+            }, index);
+            const rowOf = async (office) => page.locator('#research-lean-rows .research-lean__row', {hasText: office}).first().evaluate((row) => ({
+                values: Array.from(row.querySelectorAll('.research-lean__value')).map((v) => v.textContent),
+                difference: row.querySelector('.research-lean__difference').textContent.trim(),
+                more: row.querySelector('.research-lean__difference').classList.contains('research-lean__difference--more'),
+                arrow: row.querySelector('.research-lean__difference [aria-hidden="true"]').textContent.trim(),
+                fill: getComputedStyle(row.querySelector('.research-lean__fill')).backgroundColor,
+                label: row.getAttribute('aria-label') || ''
+            }));
+            const last = await expectedFor((await periodsOf(page, 'sectors')).length - 1);
+            const title = (await page.locator('#research-lean-title').textContent()).trim();
+            const note = await page.locator('#research-lean-note').textContent();
+            const tech = await rowOf('Technology');
+            const lastOk = title === `Lean vs the market, ${last.year}` && note.includes(`SEC-classified part of your basket (${last.classified} of it)`) &&
+                note.includes('it is not a target') && tech.values[0] === last.basket && tech.values[1] === last.market &&
+                tech.difference.endsWith(last.difference) && tech.more === last.more && tech.arrow === (last.more ? '▲' : '▼') &&
+                tech.label.includes(`${last.basket} of the SEC-classified part of your basket`);
+
+            // The year follows the scrubber: at the start, the market's shares are the first year's.
+            await page.locator('#research-sectors-year').fill('0');
+            await page.waitForTimeout(300);
+            const first = await expectedFor(0);
+            const firstTitle = (await page.locator('#research-lean-title').textContent()).trim();
+            const techFirst = await rowOf('Technology');
+            const followsYear = firstTitle === `Lean vs the market, ${first.year}` && techFirst.values[1] === first.market &&
+                techFirst.difference.endsWith(first.difference);
+
+            // Keyboard: Tab moves from one row to the next; a row zooms the chart into its office.
+            await page.locator('#research-lean-rows .research-lean__row').first().focus();
+            await page.keyboard.press('Tab');
+            const nextIsRow = await page.evaluate(() => document.activeElement.classList.contains('research-lean__row'));
+            await page.locator('#research-lean-rows button.research-lean__row', {hasText: 'Technology'}).click();
+            await page.waitForTimeout(900);
+            const crumb = (await page.locator('#research-sectors-breadcrumb [aria-current="location"]').textContent()).trim();
+            const words = (await page.locator('#research-lean').innerText()).toLowerCase();
+            const advice = ['best', 'efficient', ' buy', 'should'].filter((w) => words.includes(w));
+            await page.locator('#research-sectors-year').fill(String((await periodsOf(page, 'sectors')).length - 1));
+            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
+            await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
+            const hiddenInMarket = !(await page.locator('#research-lean').isVisible());
+
+            if (lastOk && followsYear && nextIsRow && crumb.startsWith('Technology') && advice.length === 0 && hiddenInMarket) {
+                pass(`Research 6e: Technology is ${last.basket} of the SEC-classified part (${last.classified}) against ${last.market} of the market in ${last.year} (${last.difference}, ${last.more ? '▲' : '▼'}); ${first.year} reads ${first.market} (${first.difference}); rows tab in order and zoom the chart; hidden in Market`);
+            } else {
+                fail(`Research 6e: "${title}" note "${note}", Technology ${JSON.stringify(tech)} vs ${JSON.stringify(last)}, ` +
+                    `first "${firstTitle}" ${JSON.stringify(techFirst)} vs ${JSON.stringify(first)}, tab ${nextIsRow}, crumb "${crumb}", advice ${advice}, hidden ${hiddenInMarket}`);
             }
         });
 

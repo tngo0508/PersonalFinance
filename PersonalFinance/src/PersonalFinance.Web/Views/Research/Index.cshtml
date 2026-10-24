@@ -9,15 +9,9 @@
     bool showFunds = !Model.Funds.Unavailable;
     bool showWorld = !Model.World.Unavailable;
     bool showReturns = showFunds && Model.FundReturns is not null;
-    FundIndustriesSnapshotDto? industries = Model.FundIndustries;
-    // The Sectors basket view needs the market chart (it draws in it), the funds data (for the basket) and the industries.
-    bool showSectorsBasket = showSectors && showFunds && industries is not null && industries.Funds.Count > 0;
-    CultureInfo us = CultureInfo.GetCultureInfo("en-US");
-    string holdingsDates = !showSectorsBasket
-        ? string.Empty
-        : industries!.Funds.Min(f => f.ReportDate) == industries.AsOf
-            ? industries.AsOf.ToString("d MMMM yyyy", us)
-            : $"{industries.Funds.Min(f => f.ReportDate).ToString("d MMMM yyyy", us)} to {industries.AsOf.ToString("d MMMM yyyy", us)}";
+    // The Sectors basket view needs the market chart (it draws in it) and the funds data (for the basket); its own data
+    // is fetched from the FundIndustries action when the view is first shown, so the page does not carry it.
+    bool showSectorsBasket = showSectors && showFunds;
 }
 
 @section Styles {
@@ -77,7 +71,8 @@
         {
             @* Market (the largest filers by Public float) or Your basket (its funds' holdings by SEC industry, weighted).
                It opens on Your basket only when a Fund Basket is set; js/research/research-sectors-basket.js wires it. *@
-            <div class="research-sectors__views" id="research-sectors-views">
+            <div class="research-sectors__views" id="research-sectors-views"
+                 data-industries-url="@Url.Action("FundIndustries", "Research")">
                 <div class="research-view-toggle" role="group" aria-label="Sectors view">
                     <button type="button" class="research-view-toggle__button" data-sectors-view="market" aria-pressed="true">Market</button>
                     <button type="button" class="research-view-toggle__button" data-sectors-view="basket" aria-pressed="false">Your basket</button>
@@ -86,7 +81,8 @@
         }
         @if (showSectors)
         {
-            <div class="research-scrubber" data-research-scrubber data-sectors-view-part="@(showSectorsBasket ? "market" : null)">
+            @* Both views keep the scrubber: the market chart follows the year, and so does the basket's lean section. *@
+            <div class="research-scrubber" data-research-scrubber>
                 <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
                         aria-label="Play through the years">
                     <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
@@ -143,6 +139,20 @@
                             aria-controls="research-sectors-table">Show as table</button>
                 </div>
                 <div class="research-table-host" id="research-sectors-table" data-research-table hidden></div>
+                @if (showSectorsBasket)
+                {
+                    @* Lean vs the market: each SEC office's share of the SEC-classified part of the basket against its
+                       share of every filer's Public float in the scrubber's year. Drawn by research-sectors-basket.js. *@
+                    <section class="research-lean" id="research-lean" data-sectors-view-part="basket"
+                             aria-labelledby="research-lean-title" hidden>
+                        <h3 class="research-lean__title" id="research-lean-title">Lean vs the market</h3>
+                        <p class="research-lean__note" id="research-lean-note"></p>
+                        <div class="research-lean__head" aria-hidden="true">
+                            <span>SEC industry office</span><span>Your basket</span><span>Market</span><span>Difference</span>
+                        </div>
+                        <ol class="research-lean__rows" id="research-lean-rows" aria-labelledby="research-lean-title"></ol>
+                    </section>
+                }
             }
             <p class="research-card__source">Source: SEC EDGAR</p>
         </div>
@@ -177,8 +187,10 @@
                     <p>
                         Each stock is matched to an SEC filer by company name and grouped by that filer's SEC industry
                         office and SIC industry. Foreign companies that file no reports with the SEC have no SEC industry,
+                        and a few companies match no SEC filer by name (often ones renamed or delisted since the report),
                         so they are shown hatched grey under "Not classified by the SEC", by the country where each issuer
-                        is organized. Each industry lists its ten largest companies; the rest are summed into "Other".
+                        is organized. Shares of other funds count as cash and other. Each industry lists its ten largest
+                        companies; the rest are summed into "Other".
                     </p>
                 </div>
             }
@@ -198,7 +210,7 @@
             </p>
             @if (showSectorsBasket)
             {
-                <p class="research-panel__as-of" data-sectors-view-part="basket" hidden>Fund holdings as of @holdingsDates</p>
+                <p class="research-panel__as-of" id="research-sectors-holdings-as-of" data-sectors-view-part="basket" hidden></p>
             }
         </aside>
     </section>
@@ -219,11 +231,6 @@
     <script type="application/json" id="research-sectors-data">@Json.Serialize(Model.Sectors.Snapshot)</script>
 }
 
-@if (showSectorsBasket)
-{
-    @* Each fund's holdings by SEC industry, with the rest by country, bond type and cash, read by research-sectors-basket.js. *@
-    <script type="application/json" id="research-fund-industries-data">@Json.Serialize(industries)</script>
-}
 
 @if (showReturns)
 {

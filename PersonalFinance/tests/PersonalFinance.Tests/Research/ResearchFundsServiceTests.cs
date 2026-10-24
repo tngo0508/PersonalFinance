@@ -943,7 +943,9 @@ public class ResearchFundsServiceTests
         StubNportHandler handler = IndustriesHandler();
         // Twelve banks of 1% to 1.2% by 0.02 (eleven of them first, so the twelfth decides the top 10), Apple, TSMC
         // (Taiwan, a 20-F filer), Tencent in two lines and Samsung (no SEC filer: its ADR registrant is not the
-        // company), a UK filer with no SIC code, two bonds, a money-market fund, and cash collateral left out.
+        // company), a UK filer with no SIC code, two bonds, a money-market fund, another fund's shares filed as a fund
+        // and as a corporate stock (cash and other, as VNQ files its holding of a Vanguard fund), and cash collateral left
+        // out.
         Holding[] holdings = Enumerable.Range(1, 12)
             .Select(i => new Holding($"Bank {i} Corp", "EC", 0.98m + 0.02m * i, Country: "US"))
             .Concat([
@@ -956,6 +958,8 @@ public class ResearchFundsServiceTests
                 new Holding("United States Treasury Note", "DBT", 3m, Country: "US", IssuerCategory: "UST"),
                 new Holding("Acme Corp 4% 2030", "DBT", 1m, Country: "US"),
                 new Holding("Money Market Fund", "STIV", 0.4m, Country: "US", IssuerCategory: "RF"),
+                new Holding("Some Registered Fund", "EC", 0.5m, Country: "US", IssuerCategory: "RF"),
+                new Holding("Vanguard Real Estate II Index Fund", "EC", 0.5m, Country: "US"),
                 new Holding("State Street Navigator Securities Lending", "STIV", 9m, Country: "US", CashCollateral: true),
             ])
             .ToArray();
@@ -986,7 +990,7 @@ public class ResearchFundsServiceTests
             spy.Unclassified.Select(c => (c.Country, c.Percent, c.IssuerCount)));
         Assert.Equal(("Tencent Holdings Ltd", 2m), (spy.Unclassified[0].Issuers[0].Name, spy.Unclassified[0].Issuers[0].Percent));
         Assert.Equal([("US Treasury", 3m), ("Corporate", 1m)], spy.Bonds.Select(b => (b.Name, b.Percent)));
-        // 100 less 22.32 in industries, 4 unclassified and 4 in bonds: the money-market fund and cash not reported.
+        // 100 less 22.32 in industries, 4 unclassified and 4 in bonds: the funds and cash not reported.
         Assert.Equal(69.68m, spy.CashAndOther);
     }
 

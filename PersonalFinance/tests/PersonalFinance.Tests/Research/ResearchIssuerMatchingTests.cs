@@ -28,6 +28,10 @@ public class ResearchIssuerMatchingTests
     [InlineData("JB Hunt Transport Services Inc", "HUNT J B TRANSPORT SERVICES INC")]
     [InlineData("CRH PLC", "CRH PUBLIC LTD CO")]
     [InlineData("NXP Semiconductors NV", "NXP Semiconductors N.V.")]
+    [InlineData("Berkshire Hathaway Inc Del", "BERKSHIRE HATHAWAY INC")]
+    [InlineData("Quanta Svcs Inc", "QUANTA SERVICES, INC.")]
+    [InlineData("PNC Financial Services Grp Inc", "PNC FINANCIAL SERVICES GROUP, INC.")]
+    [InlineData("Bank New York Mellon Corp", "Bank of New York Mellon Corp")]
     public void Find_MatchesTheSameCompanyUnderSecsSpelling(string holding, string secName)
     {
         Assert.Equal(42, Index((42, secName)).Find(holding, "US"));

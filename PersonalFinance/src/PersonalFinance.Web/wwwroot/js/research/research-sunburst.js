@@ -18,8 +18,9 @@
  * The chart draws one of two sources. The market (above) is the default; js/research/research-sectors-basket.js can
  * switch it to the Fund Basket through setSource('basket', provider), where the provider gives the basket's tree, its
  * takeaway cards, table and wording. In the basket every figure is a share of the basket (never of a group), the
- * year does not change the chart, and stocks SEC does not classify are hatched grey (data.hatched), never in an office
- * colour. window.ResearchSunburst holds the chart once it is drawn.
+ * year does not change the chart (the provider's period() hears it, for its lean section), and stocks SEC does not
+ * classify are hatched grey (data.hatched), never in an office colour. window.ResearchSunburst holds the chart once it
+ * is drawn.
  */
 (function () {
     'use strict';
@@ -96,7 +97,7 @@
         industry: () => 'SIC industry',
         company: (node) => (node.data.ticker ? `Ticker ${node.data.ticker}` : 'No ticker'),
         other: (node) => node.data.note || `Smaller filers in ${node.parent ? node.parent.data.name : 'this industry'}`,
-        unclassified: () => 'Foreign companies that file no reports with the SEC',
+        unclassified: () => 'Companies with no SEC industry, mostly foreign ones that file no reports with the SEC',
         country: () => 'Issuer country, not classified by the SEC',
         issuer: () => 'Company not classified by the SEC',
         bonds: () => 'Bonds and other debt',
@@ -1307,7 +1308,8 @@
                     subtitle.textContent = described.subtitle;
                 }
                 const tech = view.technology ? ` Technology (incl. chip makers): ${techText}` : '';
-                return `${described.summary}${tech}`;
+                const lean = basket.period ? basket.period(periodIndex) : '';
+                return `${described.summary}${tech}${lean ? ` ${lean}` : ''}`;
             }
 
             const largest = focus.leaves()
@@ -1412,7 +1414,8 @@
          * change is animated unless the user asks for reduced motion.
          * @param {string} source - 'market' or 'basket'.
          * @param {Object} [provider] - The basket's provider: tree(), takeaways(root, focus), table(),
-         *     describe(root, focus, trail) and measure. Kept for later switches.
+         *     describe(root, focus, trail), measure, and optionally period(index), told each period shown, which returns
+         *     a sentence to announce. Kept for later switches.
          * @returns {void}
          */
         function setSource (source, provider) {

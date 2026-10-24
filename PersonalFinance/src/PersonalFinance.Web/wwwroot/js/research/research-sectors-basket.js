@@ -5,17 +5,32 @@
  * the same breadcrumb, keyboard paths and cards. Each fund's shares (from the fund industries snapshot, every holding
  * of its latest Form N-PORT report) are weighted by the fund's share of the basket. The hierarchy is SEC industry
  * office, SIC industry, then the ten largest companies of each industry and "Other"; then "Not classified by the SEC"
- * (foreign companies that file no reports with the SEC, hatched grey), issuer country and issuer; then Bonds by issuer
+ * (companies with no SEC industry, mostly foreign ones that file no reports with the SEC, hatched grey), issuer country
+ * and issuer; then Bonds by issuer
  * type; then Cash and other. Every figure is a share of the basket, counting stocks, bonds and cash.
  *
+ * Under the chart, "Lean vs the market" compares each SEC office's share of the SEC-classified part of the basket with
+ * its share of every SEC filer's Public float in the year the scrubber shows (the one place a share is not of the
+ * whole basket, and it says so), with the difference in points: blue and "+" where the basket leans more, orange and
+ * "−" where it leans less. It describes the basket; it is not a target. A row whose office the basket holds zooms the
+ * chart into it.
+ *
  * The switch opens on Your basket only when a basket is set at load, and the market view is left as it was. Reads the
- * `research-fund-industries-data` island and the basket from `window.ResearchBasket`.
+ * `research-sectors-data` island, the basket from `window.ResearchBasket`, and fetches the fund industries snapshot from
+ * the URL on the switch (`data-industries-url`) the first time the basket view is needed.
  */
 (function () {
     'use strict';
 
     const page = window.ResearchPage;
-    const DATA_ID = 'research-fund-industries-data';
+    const AS_OF_ID = 'research-sectors-holdings-as-of';
+    const SECTORS_DATA_ID = 'research-sectors-data';
+    const LEAN_TITLE_ID = 'research-lean-title';
+    const LEAN_NOTE_ID = 'research-lean-note';
+    const LEAN_ROWS_ID = 'research-lean-rows';
+    // A difference smaller than this (in points) reads as level, with no arrow or colour.
+    const LEVEL_POINTS = 0.05;
+    const INTERNATIONAL_OFFICE = 'International Corp Fin';
     const PANEL_ID = 'research-panel-sectors';
     const VIEWS_ID = 'research-sectors-views';
     const NOTE_ID = 'research-sectors-basket-note';
@@ -276,7 +291,7 @@
             ? {
                 label: UNCLASSIFIED,
                 value: formatShare(unclassified.value),
-                note: `of your basket. Foreign companies that file no reports with the SEC have no SEC industry. ${topCountriesText(unclassified)}`
+                note: `of your basket has no SEC industry: mostly foreign companies that file no reports with the SEC, and a few not matched to an SEC filer by name. ${topCountriesText(unclassified)}`
             }
             : null;
         const largestCompany = (node) => node.leaves().filter((d) => d.data.kind === 'company')
@@ -374,25 +389,177 @@
         return {
             aria: `Sunburst of your basket by SEC industry office and SIC industry. ${summary}`,
             subtitle: `Your basket by SEC industry office, SIC industry and company, from each fund's holdings as of ${asOf} ` +
-                'or earlier. Every percent is of your basket. Foreign companies the SEC does not classify are grouped by country.',
+                'or earlier. Every percent is of your basket. Companies with no SEC industry are grouped by country.',
             summary
         };
     }
 
     /**
-     * Wire the switch and the basket view to the drawn sunburst.
+     * A difference in points for display, always signed: "+3.2 pts", "−1.0 pts", or "0.0 pts" when level.
+     * @param {number} points - The difference in percentage points.
+     * @returns {string} The difference.
+     */
+    function formatPoints (points) {
+        if (Math.abs(points) < LEVEL_POINTS) {
+            return '0.0 pts';
+        }
+        return `${points > 0 ? '+' : '−'}${Math.abs(points).toFixed(1)} pts`;
+    }
+
+    /**
+     * Each SEC office's share of every filer's Public float in one year of the Sectors snapshot: its ranked filers plus
+     * its industries' "Other" slices, over the year's total.
+     * @param {Object} sectors - The Sectors snapshot.
+     * @param {Object} period - One entry of sectors.values.
+     * @returns {Map<string, number>} The share in percent by office name.
+     */
+    function marketShares (sectors, period) {
+        const byOffice = new Map();
+        const add = (industryIndex, value) => {
+            const office = sectors.offices[sectors.industries[industryIndex].office];
+            byOffice.set(office, (byOffice.get(office) || 0) + value);
+        };
+        period.ranked.forEach((row) => add(sectors.companies[row.company].industry, row.publicFloat));
+        (period.other || []).forEach((row) => add(row.industry, row.publicFloat));
+        const total = Array.from(byOffice.values()).reduce((sum, v) => sum + v, 0) || 1;
+        return new Map(Array.from(byOffice.entries()).map(([office, value]) => [office, value / total * 100]));
+    }
+
+    /**
+     * The lean rows: each office the basket or the market has, in SEC office order (offices only one side numbers
+     * last), with the basket's share of its SEC-classified part, the market's share, and the difference.
      * @param {Object} data - The fund industries snapshot.
+     * @param {Object} totals - The basket's totals.
+     * @param {Map<string, number>} market - The market's shares by office.
+     * @param {string[]} officeOrder - The Sectors snapshot's offices, in SEC office order.
+     * @returns {{rows: Object[], classified: number}} The rows, and the SEC-classified share of the basket.
+     */
+    function leanRows (data, totals, market, officeOrder) {
+        const basket = new Map();
+        totals.industries.forEach((group, index) => {
+            const office = data.offices[data.industries[index].office];
+            basket.set(office, (basket.get(office) || 0) + group.value);
+        });
+        const classified = Array.from(basket.values()).reduce((sum, v) => sum + v, 0);
+        const order = (office) => {
+            const position = officeOrder.indexOf(office);
+            return position >= 0 ? position : officeOrder.length + data.offices.indexOf(office);
+        };
+        const offices = Array.from(new Set([...basket.keys(), ...market.keys()])).sort((a, b) => order(a) - order(b));
+        const rows = offices.map((office) => {
+            const own = classified > 0 ? (basket.get(office) || 0) / classified * 100 : 0;
+            const theirs = market.get(office) || 0;
+            return { office, basket: own, market: theirs, difference: own - theirs, officeIndex: data.offices.indexOf(office) };
+        });
+        return { rows, classified };
+    }
+
+    /**
+     * Draw the lean section for one year and return a sentence for the live region.
+     * @param {Object} elements - The section's title, note and list elements.
+     * @param {{rows: Object[], classified: number}} lean - The rows and the SEC-classified share of the basket.
+     * @param {string} year - The year the market shares are for.
+     * @param {function(string): void} onPick - Called with an office's node key to zoom the chart into it.
+     * @returns {string} The largest leans, e.g. "Lean vs the market in 2025: Technology +12.0 pts, Finance −8.1 pts."
+     */
+    function renderLean (elements, lean, year, onPick) {
+        const { title, note, list } = elements;
+        title.textContent = `Lean vs the market, ${year}`;
+        if (lean.classified <= 0) {
+            note.textContent = 'Your basket holds no stocks the SEC classifies, so there is nothing to compare.';
+            list.replaceChildren();
+            return '';
+        }
+        const foreign = lean.rows.some((r) => r.office === INTERNATIONAL_OFFICE && r.basket > 0)
+            ? ` Foreign companies under ${INTERNATIONAL_OFFICE} report no Public float, so the market has none there.`
+            : '';
+        note.textContent = `Compares the SEC-classified part of your basket (${formatShare(lean.classified)} of it) with ` +
+            `every SEC filer's Public float in ${year}, office by office. It describes your basket; it is not a target.${foreign}`;
+        const widest = Math.max(...lean.rows.map((r) => Math.abs(r.difference)), LEVEL_POINTS);
+        list.replaceChildren(...lean.rows.map((row) => {
+            const item = document.createElement('li');
+            item.className = 'research-lean__item';
+            const zoomable = row.basket > 0 && row.officeIndex >= 0;
+            const line = document.createElement(zoomable ? 'button' : 'div');
+            line.className = 'research-lean__row';
+            const direction = Math.abs(row.difference) < LEVEL_POINTS ? 'level' : (row.difference > 0 ? 'more' : 'less');
+            const words = { more: 'more than the market', less: 'less than the market', level: 'level with the market' }[direction];
+            const label = `${row.office}: ${formatShare(row.basket)} of the SEC-classified part of your basket, ` +
+                `${formatShare(row.market)} of the market's Public float in ${year}, ${formatPoints(row.difference)} ${words}.`;
+            if (zoomable) {
+                line.type = 'button';
+                line.setAttribute('aria-label', `${label} Zoom the chart into ${row.office}.`);
+                line.addEventListener('click', () => onPick(`bo${row.officeIndex}`));
+            } else {
+                // Not a button, but still reachable by keyboard so its figures can be read.
+                line.tabIndex = 0;
+                line.setAttribute('role', 'group');
+                line.setAttribute('aria-label', label);
+            }
+            const name = document.createElement('span');
+            name.className = 'research-lean__office';
+            name.textContent = row.office;
+            const own = document.createElement('span');
+            own.className = 'research-lean__value';
+            own.textContent = formatShare(row.basket);
+            const theirs = document.createElement('span');
+            theirs.className = 'research-lean__value';
+            theirs.textContent = formatShare(row.market);
+            const difference = document.createElement('span');
+            difference.className = `research-lean__difference research-lean__difference--${direction}`;
+            const arrow = document.createElement('span');
+            arrow.setAttribute('aria-hidden', 'true');
+            arrow.textContent = { more: '▲ ', less: '▼ ', level: '' }[direction];
+            const text = document.createElement('span');
+            text.append(arrow, formatPoints(row.difference));
+            // One axis for every row, inside the Difference column: zero in the middle, more right, less left.
+            const bar = document.createElement('span');
+            bar.className = 'research-lean__bar';
+            bar.setAttribute('aria-hidden', 'true');
+            const fill = document.createElement('span');
+            fill.className = `research-lean__fill research-lean__fill--${direction}`;
+            fill.style.width = `${Math.abs(row.difference) / widest * 50}%`;
+            bar.append(fill);
+            difference.append(text, bar);
+            line.append(name, own, theirs, difference);
+            item.append(line);
+            return item;
+        }));
+        const sorted = lean.rows.slice().sort((a, b) => b.difference - a.difference);
+        const most = sorted[0];
+        const least = sorted[sorted.length - 1];
+        const parts = [most, least].filter((r, i, all) => r && Math.abs(r.difference) >= LEVEL_POINTS && all.indexOf(r) === i)
+            .map((r) => `${r.office} ${formatPoints(r.difference)}`);
+        return parts.length ? `Lean vs the market in ${year}: ${parts.join(', ')}.` : `Your basket is level with the market in ${year}.`;
+    }
+
+    /**
+     * Wire the switch and the basket view to the drawn sunburst. The fund industries snapshot is not in the page: it is
+     * fetched the first time the basket view is needed (a basket set at load, or the "Your basket" button), so a visit
+     * that never opens it never downloads it.
+     * @param {string} url - Where to fetch the fund industries snapshot (the Web app's JSON action).
+     * @param {Object} sectors - The Sectors snapshot, for the market's shares in the lean section.
      * @param {Object} chart - The sunburst (window.ResearchSunburst).
      * @returns {void}
      */
-    function createView (data, chart) {
+    function createView (url, sectors, chart) {
         const panel = document.getElementById(PANEL_ID);
         const views = document.getElementById(VIEWS_ID);
         const note = document.getElementById(NOTE_ID);
         const title = document.getElementById(TITLE_ID);
+        const asOfElement = document.getElementById(AS_OF_ID);
+        const leanElements = {
+            title: document.getElementById(LEAN_TITLE_ID),
+            note: document.getElementById(LEAN_NOTE_ID),
+            list: document.getElementById(LEAN_ROWS_ID)
+        };
         const buttons = Array.from(views.querySelectorAll('[data-sectors-view]'));
+        const basketButton = buttons.find((b) => b.dataset.sectorsView === 'basket');
         let mode = 'market';
-        let totals = basketTotals(data, []);
+        // The snapshot once fetched, and the fetch while it runs (so it is made once).
+        let data = null;
+        let loading = null;
+        let totals = { count: 0, missing: [] };
 
         const currentBasket = () => (window.ResearchBasket ? window.ResearchBasket.get() : []);
         const hierarchy = () => window.d3.hierarchy(buildTree(data, totals)).sum((d) => (d.children ? 0 : d.value || 0));
@@ -401,21 +568,86 @@
             tree: () => buildTree(data, totals),
             takeaways,
             table: () => table(hierarchy()),
-            describe: (root, focus, trail) => describe(data, root, focus, trail)
+            describe: (root, focus, trail) => describe(data, root, focus, trail),
+            // The scrubber's year reaches the basket here: the chart stays, the lean section follows.
+            period: (index) => {
+                const period = sectors.values[Math.max(0, Math.min(sectors.values.length - 1, index))];
+                if (!leanElements.list) {
+                    return '';
+                }
+                const lean = leanRows(data, totals, marketShares(sectors, period), sectors.offices);
+                return renderLean(leanElements, lean, period.period, (key) => chart.zoomTo(key));
+            }
         };
 
         /**
-         * Recompute the basket's totals, enable the switch's basket button and say which funds are left out.
+         * Show a note under the card's subtitle, or hide it when empty.
+         * @param {string} text - The note.
+         * @returns {void}
+         */
+        function showNote (text) {
+            note.textContent = text;
+            note.hidden = text === '';
+        }
+
+        /**
+         * Fetch the fund industries snapshot once. Resolves to whether it is there to draw; a failure says so in the
+         * note and leaves the market view.
+         * @returns {Promise<boolean>} True when the snapshot is loaded.
+         */
+        function ensureLoaded () {
+            if (data) {
+                return Promise.resolve(true);
+            }
+            if (!loading) {
+                loading = fetchSnapshot();
+            }
+            return loading;
+        }
+
+        /**
+         * Fetch the fund industries snapshot and keep it; a failure says so in the note.
+         * @returns {Promise<boolean>} True when the snapshot is loaded.
+         */
+        async function fetchSnapshot () {
+            basketButton.setAttribute('aria-busy', 'true');
+            let snapshot = null;
+            try {
+                const response = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+                snapshot = response.ok ? await response.json() : null;
+            } catch (error) {
+                snapshot = null;
+            }
+            basketButton.removeAttribute('aria-busy');
+            loading = null;
+            if (!snapshot || !Array.isArray(snapshot.funds) || snapshot.funds.length === 0) {
+                showNote('Your basket\'s holdings could not be loaded. Please try again later.');
+                return false;
+            }
+            data = snapshot;
+            if (asOfElement) {
+                asOfElement.textContent = `Fund holdings as of ${holdingsDates(data)}`;
+            }
+            readBasket();
+            return true;
+        }
+
+        /**
+         * Recompute the basket's totals (once the snapshot is here), enable the switch's basket button and say which
+         * funds are left out. Before the snapshot is fetched, the button is enabled whenever a basket is set.
          * @returns {void}
          */
         function readBasket () {
             const basket = currentBasket();
+            if (!data) {
+                basketButton.disabled = basket.length === 0;
+                return;
+            }
             totals = basketTotals(data, basket);
-            buttons.find((b) => b.dataset.sectorsView === 'basket').disabled = totals.count === 0;
-            note.textContent = totals.missing.length && totals.count > 0
+            basketButton.disabled = totals.count === 0;
+            showNote(totals.missing.length && totals.count > 0
                 ? `${totals.missing.join(', ')} ${totals.missing.length === 1 ? 'has' : 'have'} no holdings report yet, so the others' shares are scaled up to cover ${totals.missing.length === 1 ? 'it' : 'them'}.`
-                : '';
-            note.hidden = note.textContent === '';
+                : '');
         }
 
         /**
@@ -424,7 +656,7 @@
          * @returns {void}
          */
         function setMode (next) {
-            mode = next === 'basket' && totals.count > 0 ? 'basket' : 'market';
+            mode = next === 'basket' && data && totals.count > 0 ? 'basket' : 'market';
             buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sectorsView === mode)));
             panel.querySelectorAll('[data-sectors-view-part]').forEach((part) => {
                 part.hidden = part.dataset.sectorsViewPart !== mode;
@@ -438,15 +670,34 @@
             }
         }
 
+        /**
+         * Open the basket view, fetching the snapshot first if need be.
+         * @param {boolean} announce - Whether to tell screen readers.
+         * @returns {Promise<void>}
+         */
+        async function openBasket (announce) {
+            if (!await ensureLoaded()) {
+                return;
+            }
+            setMode('basket');
+            if (announce && page.announce) {
+                page.announce(mode === 'basket'
+                    ? 'Showing your basket by SEC industry. Every percent is of your basket.'
+                    : 'None of your basket\'s funds has a holdings report yet.');
+            }
+        }
+
         buttons.forEach((button) => button.addEventListener('click', () => {
             if (button.disabled || button.dataset.sectorsView === mode) {
                 return;
             }
-            setMode(button.dataset.sectorsView);
+            if (button.dataset.sectorsView === 'basket') {
+                openBasket(true);
+                return;
+            }
+            setMode('market');
             if (page.announce) {
-                page.announce(mode === 'basket'
-                    ? 'Showing your basket by SEC industry. Every percent is of your basket.'
-                    : 'Showing the largest SEC filers by Public float.');
+                page.announce('Showing the largest SEC filers by Public float.');
             }
         }));
         document.addEventListener('research:basketchange', () => {
@@ -462,23 +713,37 @@
         });
 
         readBasket();
-        setMode(currentBasket().length > 0 && totals.count > 0 ? 'basket' : 'market');
+        if (currentBasket().length > 0) {
+            openBasket(false);
+        }
     }
 
     /**
-     * Wire the view when its data, the sunburst and the page helpers are present.
+     * The fund holdings' report dates for display: one date, or the earliest to the latest.
+     * @param {Object} data - The fund industries snapshot.
+     * @returns {string} E.g. "30 June 2026" or "31 May 2026 to 31 August 2026".
+     */
+    function holdingsDates (data) {
+        const format = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        const earliest = data.funds.map((f) => f.reportDate).sort()[0];
+        return earliest === data.asOf ? format(data.asOf) : `${format(earliest)} to ${format(data.asOf)}`;
+    }
+
+    /**
+     * Wire the view when the switch, the sunburst, the Sectors data and the page helpers are present.
      * @returns {void}
      */
     function init () {
         const chart = window.ResearchSunburst;
-        if (!page || !chart || !document.getElementById(VIEWS_ID) || typeof window.d3 === 'undefined') {
+        const views = document.getElementById(VIEWS_ID);
+        if (!page || !chart || !views || !views.dataset.industriesUrl || typeof window.d3 === 'undefined') {
             return;
         }
-        const data = page.readData(DATA_ID, 'Research fund industries data');
-        if (!data || !Array.isArray(data.funds) || data.funds.length === 0) {
+        const sectors = page.readData(SECTORS_DATA_ID, 'Research Sectors data');
+        if (!sectors || !Array.isArray(sectors.values)) {
             return;
         }
-        createView(data, chart);
+        createView(views.dataset.industriesUrl, sectors, chart);
     }
 
     if (document.readyState === 'loading') {

@@ -6,24 +6,29 @@ namespace PersonalFinance.ApiService.Features.Research.Domain;
 /// A company name reduced to what matches it between a Form N-PORT holding and SEC's company list: upper case,
 /// <c>&amp;</c> as AND, the state-of-incorporation suffix (<c>/DE/</c>, <c>/ MA</c>) dropped, punctuation dropped,
 /// runs of single letters joined (<c>D R HORTON</c> is <c>DR HORTON</c>), and spellings of one legal form made one
-/// (<c>COMPANY</c> is <c>CO</c>, <c>PUBLIC LTD CO</c> is <c>PLC</c>). <see cref="Base"/> is the name without its
+/// (<c>COMPANY</c> is <c>CO</c>, <c>PUBLIC LTD CO</c> is <c>PLC</c>), with funds' abbreviations spelled out (<c>SVCS</c>,
+/// <c>GRP</c>, <c>FINL</c>). <see cref="Base"/> is the name without its
 /// trailing legal-form words, which are kept in <see cref="Forms"/>, so <c>Sanofi SA</c> and <c>Sanofi</c> share a base.
 /// </summary>
 /// <param name="Exact">Every word, joined, e.g. <c>WELLSFARGOANDCO</c>.</param>
 /// <param name="Base">The words before the legal form, without a leading THE, joined, e.g. <c>WELLSFARGOAND</c>.</param>
 /// <param name="Forms">The legal-form words the name ends in, e.g. <c>CO</c>; empty when it ends in none.</param>
-/// <param name="Words">The words of <see cref="Base"/> in alphabetical order and joined by spaces, for SEC's
-/// surname-first names (<c>SCHWAB CHARLES CORP</c> is <c>Charles Schwab Corp</c>).</param>
+/// <param name="Words">The words of <see cref="Base"/> but OF, AND and THE, in alphabetical order and joined by spaces,
+/// for SEC's surname-first names (<c>SCHWAB CHARLES CORP</c> is <c>Charles Schwab Corp</c>) and funds' shortened ones
+/// (<c>Bank New York Mellon Corp</c>).</param>
 internal sealed record IssuerName(string Exact, string Base, IReadOnlySet<string> Forms, string Words)
 {
-    // Legal-form words a name can end in. NEW and DE (a re-formed company, Delaware) end a name but name no form.
+    // Legal-form words a name can end in. NEW, DE and DEL (a re-formed company, Delaware) end a name but name no form.
     private static readonly HashSet<string> FormWords = new(StringComparer.Ordinal)
     {
         "INC", "CORP", "CO", "LTD", "PLC", "AG", "SA", "NV", "SE", "LLC", "LP", "SPA", "AB", "ASA", "OYJ", "KGAA", "SAB",
         "CV", "BV", "BHD", "TBK", "PCL", "AS",
     };
 
-    private static readonly HashSet<string> NotForms = new(StringComparer.Ordinal) { "NEW", "DE", "THE" };
+    private static readonly HashSet<string> NotForms = new(StringComparer.Ordinal) { "NEW", "DE", "DEL", "THE" };
+
+    // Left out of Words, so a name that drops them still matches.
+    private static readonly HashSet<string> StopWords = new(StringComparer.Ordinal) { "OF", "AND", "THE" };
 
     private static readonly Dictionary<string, string> Synonyms = new(StringComparer.Ordinal)
     {
@@ -32,6 +37,13 @@ internal sealed record IssuerName(string Exact, string Base, IReadOnlySet<string
         ["INCORPORATED"] = "INC",
         ["LIMITED"] = "LTD",
         ["COS"] = "COMPANIES",
+        ["SVCS"] = "SERVICES",
+        ["SVC"] = "SERVICE",
+        ["GRP"] = "GROUP",
+        ["FINL"] = "FINANCIAL",
+        ["INTL"] = "INTERNATIONAL",
+        ["HLDGS"] = "HOLDINGS",
+        ["MGMT"] = "MANAGEMENT",
     };
 
     /// <summary>The name of <paramref name="name"/> for matching.</summary>
@@ -54,7 +66,7 @@ internal sealed record IssuerName(string Exact, string Base, IReadOnlySet<string
 
         List<string> baseWords = words.GetRange(start, end - start);
         return new IssuerName(exact, string.Concat(baseWords), forms,
-            string.Join(' ', baseWords.Order(StringComparer.Ordinal)));
+            string.Join(' ', baseWords.Where(w => !StopWords.Contains(w)).Order(StringComparer.Ordinal)));
     }
 
     /// <summary>The name's words after the clean-up described on <see cref="IssuerName"/>.</summary>

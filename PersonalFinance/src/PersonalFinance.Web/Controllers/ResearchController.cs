@@ -53,11 +53,20 @@ public sealed class ResearchController : Controller
         Task<MacroSnapshotDto?> macro = ReadAsync(_researchApi.GetMacroAsync, "macro", cancellationToken);
         Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, "fund facts", cancellationToken);
         Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, "fund exposure", cancellationToken);
-        Task<FundIndustriesSnapshotDto?> industries = ReadAsync(_researchApi.GetFundIndustriesAsync, "fund industries", cancellationToken);
-        await Task.WhenAll(sectors, funds, world, overlap, returns, macro, facts, exposure, industries);
+        await Task.WhenAll(sectors, funds, world, overlap, returns, macro, facts, exposure);
         return View(new ResearchViewModel(await sectors, await funds, await world, tab, ticker, await overlap,
-            await returns, await macro, await facts, await exposure, await industries));
+            await returns, await macro, await facts, await exposure));
     }
+
+    /// <summary>
+    /// The fund industries snapshot, as JSON, from ApiService: the Sectors tab's basket view fetches it the first time
+    /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
+    /// loaded) keeps its status code with a safe message.
+    /// </summary>
+    [HttpGet]
+    [JsonApiErrors]
+    public async Task<IActionResult> FundIndustries(CancellationToken cancellationToken = default) =>
+        Json(await _researchApi.GetFundIndustriesAsync(cancellationToken));
 
     /// <summary>
     /// Suggestions for the Companies tab's search box, as JSON, from ApiService. A rejected query is 400; an ApiService

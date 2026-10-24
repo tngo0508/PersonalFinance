@@ -11,6 +11,9 @@ namespace PersonalFinance.ApiService.Features.Research.Domain;
 /// companies, while its share sums them all;</item>
 /// <item>any other stock is "not classified by the SEC" and goes to its issuer's country, keeping the
 /// <see cref="IssuersPerCountry"/> largest issuers;</item>
+/// <item>shares of a fund are not a company's stock, so they count as cash and other: a holding filed with a fund issuer
+/// type, or a stock matched to no SEC filer whose name has the word FUND or ETF (VNQ files its 14.5% holding of
+/// Vanguard Real Estate II Index Fund as a corporate stock);</item>
 /// <item>debt goes to its issuer type;</item>
 /// <item>the rest of the fund is cash and other.</item>
 /// </list>
@@ -26,6 +29,8 @@ internal static class FundIndustriesBuilder
     private static readonly HashSet<string> StockCategories = new(StringComparer.Ordinal) { "EC", "EP" };
 
     private static readonly HashSet<string> DebtCategories = new(StringComparer.Ordinal) { "DBT", "LON" };
+
+    private static readonly HashSet<string> FundIssuers = new(StringComparer.Ordinal) { "RF", "PF" };
 
     private static readonly Dictionary<string, string> IssuerTypes = new(StringComparer.Ordinal)
     {
@@ -102,7 +107,8 @@ internal static class FundIndustriesBuilder
         var totals = new FundTotals(latest);
         foreach (NportHolding holding in latest.Report.Holdings.Where(h => !h.IsCashCollateral))
         {
-            if (StockCategories.Contains(holding.AssetCategory))
+            if (StockCategories.Contains(holding.AssetCategory)
+                && !(holding.IssuerCategory is { } issuerType && FundIssuers.Contains(issuerType)))
             {
                 if (cikOf(holding) is { } cik && filers.TryGetValue(cik, out SecFiler? filer) && filer.SicCode is not null)
                 {
@@ -114,7 +120,7 @@ internal static class FundIndustriesBuilder
 
                     byCompany[cik] = byCompany.GetValueOrDefault(cik) + holding.Percent;
                 }
-                else
+                else if (!IsFundByName(holding.Name))
                 {
                     if (!totals.Unclassified.TryGetValue(holding.Country ?? string.Empty,
                             out Dictionary<string, (string Name, decimal Percent)>? byIssuer))
@@ -138,6 +144,11 @@ internal static class FundIndustriesBuilder
 
         return totals;
     }
+
+    /// <summary>Whether a holding's name says it is a fund: the word FUND or ETF in it.</summary>
+    private static bool IsFundByName(string name) =>
+        name.Split([' ', ',', '.', '-', '(', ')'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(w => w.Equals("FUND", StringComparison.OrdinalIgnoreCase) || w.Equals("ETF", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The companies a fund lists: each industry's largest with a positive share, largest first.</summary>
     private static List<(long Cik, IndustryKey Industry, decimal Percent)> ListedCompanies(FundTotals totals) =>
