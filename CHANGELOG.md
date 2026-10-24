@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.4.2] - 2026-10-24
+
+### Fixed
+
+- **Web wakes the API when it starts**: a Web replica that starts from zero now pings the API at once, so both containers start in parallel.
+  - Before, only the Login page woke the API. A visitor who was already signed in, or one who signed in quickly with Google, reached the Dashboard while the API was still waking, waited 30 seconds, and saw an empty Dashboard.
+  - The ping is anonymous, throttled to once every two minutes, and never delays Web startup.
+
 ## [5.4.1] - 2026-10-24
 
 ### Changed
