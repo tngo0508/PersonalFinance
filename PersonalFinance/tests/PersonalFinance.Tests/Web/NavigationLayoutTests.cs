@@ -87,6 +87,25 @@ public class NavigationLayoutTests
     }
 
     [Fact]
+    public void SidebarHoldingResearch_OpensFromAMenuToggleOnPhones()
+    {
+        // Research is not in the five-item bottom nav: on phones it is reached through the off-canvas sidebar, which
+        // the top bar's menu button opens below the md breakpoint (css/sidebar.css slides it in on .mobile-open).
+        string layout = ReadView("Shared", "_Layout.cshtml");
+        string topbar = Between(layout, "<header class=\"topbar\"", "</header>");
+
+        Match toggle = Regex.Match(topbar, "<button id=\"mobileMenuToggle\"[^>]*>");
+        Assert.True(toggle.Success, "The top bar should hold the mobile menu toggle.");
+        Assert.Contains("d-md-none", toggle.Value);
+        Assert.Contains("aria-controls=\"sidebar\"", toggle.Value);
+        Assert.Contains("asp-controller=\"Research\"", Between(layout, "<aside id=\"sidebar\"", "</aside>"));
+        string sidebarScript = File.ReadAllText(Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web",
+            "wwwroot", "js", "core", "sidebar.js"));
+        Assert.Contains("getElementById('mobileMenuToggle')", sidebarScript);
+        Assert.Contains("classList.toggle('mobile-open')", sidebarScript);
+    }
+
+    [Fact]
     public void NetWorthPage_LinksToResearch_AndTheDashboardDoesNot()
     {
         Assert.Contains("asp-controller=\"Research\" asp-action=\"Index\"", ReadView("Networth", "_NetWorthContent.cshtml"));
