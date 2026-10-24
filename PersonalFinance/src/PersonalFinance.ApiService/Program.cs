@@ -71,7 +71,7 @@ try
         .AddSavingsGoalsFeature()
         .AddCommunityFeature()
         .AddWatchlistFeature()
-        .AddResearchFeature(builder.Configuration)
+        .AddResearchFeature(builder.Configuration, builder.Environment)
         .AddAiAssistantFeature(builder.Configuration)
         .AddFeedbackFeature()
         .AddAdminFeature()

@@ -17,8 +17,11 @@
  * `[data-research-table]`. The page opens each tab on its latest period. Under prefers-reduced-motion every change
  * applies at once.
  *
- * It also holds the helpers every chart shares (prefersReducedMotion, formatMoney, readData, createTooltip), so it
- * must load before the chart scripts.
+ * It also holds the helpers every chart shares (prefersReducedMotion, formatMoney, readData, createTooltip, announce),
+ * so it must load before the chart scripts.
+ *
+ * The selected tab is kept in the address as `?tab=<tabId>` (replacing the history entry, so Back does not step
+ * through tabs), and each selection fires a `research:tabchange` event on the document with `detail.tabId`.
  */
 (function () {
     'use strict';
@@ -266,12 +269,31 @@
     }
 
     /**
+     * Keep the selected tab in the address, replacing the current history entry. A ticker belongs to the Companies
+     * tab only, so it is dropped on any other tab.
+     * @param {string} tabId - The selected tab's id.
+     * @returns {void}
+     */
+    function rememberTab (tabId) {
+        if (!window.history || typeof window.history.replaceState !== 'function') {
+            return;
+        }
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tabId);
+        if (tabId !== 'companies') {
+            url.searchParams.delete('ticker');
+        }
+        window.history.replaceState(window.history.state, '', url);
+    }
+
+    /**
      * Select a tab: show its panel, hide the others, and stop any play.
      * @param {HTMLElement} button - The tab button to select.
      * @param {boolean} focus - Whether to move focus to it.
+     * @param {boolean} [byUser] - True when the user chose it: the address and listeners follow.
      * @returns {void}
      */
-    function selectTab (button, focus) {
+    function selectTab (button, focus, byUser) {
         const list = button.closest('[role="tablist"]');
         if (!list) {
             return;
@@ -289,6 +311,23 @@
         if (focus) {
             button.focus();
         }
+        const tabId = button.dataset.researchTab;
+        if (byUser && tabId) {
+            rememberTab(tabId);
+            document.dispatchEvent(new CustomEvent('research:tabchange', { detail: { tabId } }));
+        }
+    }
+
+    /**
+     * Select a tab by its id, as if the user chose it.
+     * @param {string} tabId - The tab's id, e.g. 'etfs'.
+     * @returns {void}
+     */
+    function selectTabById (tabId) {
+        const button = document.querySelector(`.research [role="tab"][data-research-tab="${tabId}"]`);
+        if (button && button.getAttribute('aria-selected') !== 'true') {
+            selectTab(button, false, true);
+        }
     }
 
     /**
@@ -301,7 +340,7 @@
         list.addEventListener('click', (event) => {
             const button = event.target.closest('[role="tab"]');
             if (button) {
-                selectTab(button, false);
+                selectTab(button, false, true);
             }
         });
         list.addEventListener('keydown', (event) => {
@@ -318,7 +357,7 @@
             };
             if (event.key in moves) {
                 event.preventDefault();
-                selectTab(all[moves[event.key]], true);
+                selectTab(all[moves[event.key]], true, true);
             }
         });
         const selected = buttons().find((b) => b.getAttribute('aria-selected') === 'true') || buttons()[0];
@@ -409,10 +448,12 @@
         registerTab,
         positionOf,
         refreshTable,
+        selectTabById,
         prefersReducedMotion,
         formatMoney,
         readData,
-        createTooltip
+        createTooltip,
+        announce
     };
 
     /**

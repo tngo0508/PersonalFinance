@@ -13,6 +13,7 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/research-etfs.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/research-companies.css" asp-append-version="true"/>
 }
 
 @* Research page, Control-deck layout: header, tab bar, then a chart card beside a side panel. The side panel stacks
@@ -27,17 +28,19 @@
     </header>
 
     <div class="research-tabs" role="tablist" aria-label="Research datasets">
-        <button type="button" class="research-tabs__tab" id="research-tab-sectors" role="tab"
-                aria-selected="true" aria-controls="research-panel-sectors" tabindex="0">Sectors</button>
-        <button type="button" class="research-tabs__tab" id="research-tab-etfs" role="tab"
-                aria-selected="false" aria-controls="research-panel-etfs" tabindex="-1">ETFs</button>
-        <button type="button" class="research-tabs__tab" id="research-tab-world" role="tab"
-                aria-selected="false" aria-controls="research-panel-world" tabindex="-1">World</button>
+        @foreach ((string id, string label) in new[] { (ResearchViewModel.SectorsTab, "Sectors"), (ResearchViewModel.EtfsTab, "ETFs"), (ResearchViewModel.WorldTab, "World"), (ResearchViewModel.CompaniesTab, "Companies") })
+        {
+            bool selected = Model.IsSelected(id);
+            <button type="button" class="research-tabs__tab" id="research-tab-@id" role="tab" data-research-tab="@id"
+                    aria-selected="@(selected ? "true" : "false")" aria-controls="research-panel-@id"
+                    tabindex="@(selected ? "0" : "-1")">@label</button>
+        }
     </div>
 
     @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
        the tabs, the scrubber, the live region and the table view. *@
-    <section class="research-deck" id="research-panel-sectors" role="tabpanel" aria-labelledby="research-tab-sectors">
+    <section class="research-deck" id="research-panel-sectors" role="tabpanel" aria-labelledby="research-tab-sectors"
+             hidden="@(!Model.IsSelected(ResearchViewModel.SectorsTab))">
         @if (showSectors)
         {
             <div class="research-scrubber" data-research-scrubber>
@@ -126,6 +129,7 @@
 
     <partial name="_EtfsTab" model="Model"/>
     <partial name="_WorldTab" model="Model"/>
+    <partial name="_CompaniesTab" model="Model"/>
 
     @* Summarises each change of period for screen readers. *@
     <p class="visually-hidden" id="research-live" aria-live="polite"></p>
@@ -140,10 +144,9 @@
 @section Scripts {
     @* The tab shell runs whatever loaded, so the tabs work even when a tab shows its Unavailable State. *@
     <script src="~/js/research/research-page.js" asp-append-version="true"></script>
-    @if (showSectors || showEtfs || showWorld)
-    {
-        <script src="~/lib/d3/d3.min.js"></script>
-    }
+    @* D3 always loads: the Companies tab draws its charts whenever a profile loads. *@
+    <script src="~/lib/d3/d3.min.js"></script>
+    <script src="~/js/research/research-companies.js" asp-append-version="true"></script>
     @if (showSectors)
     {
         <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>

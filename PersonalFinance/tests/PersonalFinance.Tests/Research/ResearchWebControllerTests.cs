@@ -83,7 +83,7 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
-    public async Task Index_ReadsTheSectorsSnapshotOnce_AndOffersNoOtherAction_SoTheSunburstNeedsNoFurtherRoundTrip()
+    public async Task Index_ReadsTheSectorsSnapshotOnce_AndOnlyTheCompaniesTabFetchesMore_SoTheSunburstNeedsNoFurtherRoundTrip()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
@@ -94,9 +94,10 @@ public class ResearchWebControllerTests
         Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetEtfsAsync), nameof(IResearchApi.GetWorldAsync)],
             proxy.Calls);
         Assert.Same(Snapshot, model.Sectors.Snapshot);
-        Assert.Equal([nameof(ResearchController.Index)],
+        // The only other actions are the Companies tab's search and lookup, which no snapshot tab uses.
+        Assert.Equal([nameof(ResearchController.Company), nameof(ResearchController.Index), nameof(ResearchController.Suggest)],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                .Select(m => m.Name));
+                .Select(m => m.Name).Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class ResearchWebControllerTests
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Throws(nameof(IResearchApi.GetSectorsAsync), new OperationCanceledException(cts.Token));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cancellationToken: cts.Token));
     }
 
     private static readonly WorldSnapshotDto World = new()
@@ -200,6 +201,6 @@ public class ResearchWebControllerTests
         proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
         proxy.Throws(nameof(IResearchApi.GetWorldAsync), new OperationCanceledException(cts.Token));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cancellationToken: cts.Token));
     }
 }

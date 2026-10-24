@@ -241,6 +241,12 @@ The market value of a company's shares held by outside investors, as the company
 Research page uses it to size companies because no displayable price data is available.
 _Avoid_: market cap (that includes insider holdings and needs live prices), valuation
 
+### Company Profile
+The identity, reported annual financial statements and recent SEC filings of one SEC-registered company, as the
+Companies tab of Research shows them, for information only. Figures are read as the company reported them under US
+GAAP in US dollars; nothing is converted, priced or scored.
+_Avoid_: stock page, ticker lookup, quote
+
 ### Spreadsheet Analysis
 Transaction and budget data analysis from Google Sheets. Provides dashboard views and sync operations.
 

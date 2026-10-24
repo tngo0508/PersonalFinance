@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
+using PersonalFinance.ApiService.Infrastructure;
 
 namespace PersonalFinance.ApiService.Features.Research;
 
@@ -15,8 +17,17 @@ internal static class ResearchFeature
     // A World Bank indicator page holds every country for 50 years, a megabyte or two.
     private static readonly TimeSpan WorldBankTimeout = TimeSpan.FromSeconds(60);
 
-    /// <summary>The Research datasets, their stored snapshots and the SEC EDGAR and World Bank clients that build them.</summary>
-    public static IServiceCollection AddResearchFeature(this IServiceCollection services, IConfiguration configuration)
+    // A company's facts document can run to several megabytes; a lookup waits for it.
+    private static readonly TimeSpan SecCompanyTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// The Research datasets, their stored snapshots and the SEC EDGAR and World Bank clients that build them, and the
+    /// Companies tab's Company Profiles. With <paramref name="environment"/> in E2E fixture mode
+    /// (<see cref="ResearchFixtureSeeder.IsEnabled"/>), Company Profiles come from <see cref="FixtureSecCompanyClient"/>
+    /// instead of SEC.
+    /// </summary>
+    public static IServiceCollection AddResearchFeature(this IServiceCollection services, IConfiguration configuration,
+        IHostEnvironment? environment = null)
     {
         var secSettings = new SecEdgarSettings
         {
@@ -48,6 +59,23 @@ internal static class ResearchFeature
         services.AddScoped<IResearchDatasetRefresher, EtfsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, WorldRefresher>();
         services.AddScoped<IResearchService, ResearchService>();
+
+        // Companies tab: the ticker list and built profiles are cached in memory, shared by every request.
+        services.TryAddSingleton(TimeProvider.System);
+        if (environment is not null && ResearchFixtureSeeder.IsEnabled(environment, configuration))
+        {
+            services.AddSingleton<ISecCompanyClient, FixtureSecCompanyClient>();
+        }
+        else
+        {
+            services.AddHttpClient<ISecCompanyClient, SecEdgarClient>(client => client.Timeout = SecCompanyTimeout);
+        }
+
+        services.AddSingleton<CompanyTickerIndexCache>();
+        services.AddSingleton<CompanyProfileCache>();
+        services.AddKeyedSingleton<IRateLimiterService>(CompanyLookupRateLimit.Key, (_, _) =>
+            new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window));
+        services.AddScoped<ICompanyProfileService, CompanyProfileService>();
         return services;
     }
 }

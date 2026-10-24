@@ -11,7 +11,8 @@
 @* The ETFs tab: a collapsible tree of what six ETFs hold (ETF, then N-PORT asset category, then holdings), one
    quarter at a time. Drawn by js/research/research-etfs.js from the data island below; the scrubber, live region and
    table view are wired by js/research/research-page.js. Hidden until its tab is chosen. *@
-<section class="research-deck research-deck--stacked" id="research-panel-etfs" role="tabpanel" aria-labelledby="research-tab-etfs" hidden>
+<section class="research-deck research-deck--stacked" id="research-panel-etfs" role="tabpanel" aria-labelledby="research-tab-etfs"
+         hidden="@(!Model.IsSelected(ResearchViewModel.EtfsTab))">
     @if (showEtfs)
     {
         <div class="research-scrubber" data-research-scrubber>
