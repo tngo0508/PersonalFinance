@@ -39,9 +39,16 @@ public class CompanyProfileFixtureTests
 
     private static async Task<CompanyLookupResultDto> LookUpFixture(string ticker)
     {
-        await using ServiceProvider provider = Provider(Environments.Development, seedResearch: true);
+        // The fixture dates Example Corp's recent filings back from today; on this day its latest is 4 August 2026.
+        await using ServiceProvider provider = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton<TimeProvider>(new FixedTimeProvider(new DateTimeOffset(2026, 10, 24, 12, 0, 0, TimeSpan.Zero)))
+            .AddResearchFeature(new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { [ResearchFixtureSeeder.Setting] = "true" })
+                .Build(), new Environment(Environments.Development))
+            .BuildServiceProvider();
         using IServiceScope scope = provider.CreateScope();
-        CompanyLookupOutcome outcome = await scope.ServiceProvider.GetRequiredService<ICompanyProfileService>()
+        CompanyLookupOutcome<CompanyLookupResultDto> outcome = await scope.ServiceProvider.GetRequiredService<ICompanyProfileService>()
             .LookUpAsync("account-1", ticker);
         return Assert.IsType<CompanyLookupResultDto>(outcome.Result);
     }
@@ -98,19 +105,19 @@ public class CompanyProfileFixtureTests
         public override DateTimeOffset GetUtcNow() => now;
     }
 
-    private static async Task<CompanyPressReleasesResultDto> PressReleasesOfFixture(string ticker)
+    private static async Task<CompanyPressReleasesResultDto> PressReleasesOfFixture(string ticker,
+        DateTimeOffset? now = null)
     {
         IConfiguration configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { [ResearchFixtureSeeder.Setting] = "true" })
             .Build();
-        // The fixture's 8-Ks are dated May to August 2026; read them as of 24 October 2026.
         await using ServiceProvider provider = new ServiceCollection()
             .AddLogging()
-            .AddSingleton<TimeProvider>(new FixedTimeProvider(new DateTimeOffset(2026, 10, 24, 12, 0, 0, TimeSpan.Zero)))
+            .AddSingleton<TimeProvider>(new FixedTimeProvider(now ?? DateTimeOffset.UtcNow))
             .AddResearchFeature(configuration, new Environment(Environments.Development))
             .BuildServiceProvider();
         using IServiceScope scope = provider.CreateScope();
-        CompanyPressReleasesOutcome outcome = await scope.ServiceProvider.GetRequiredService<ICompanyProfileService>()
+        CompanyLookupOutcome<CompanyPressReleasesResultDto> outcome = await scope.ServiceProvider.GetRequiredService<ICompanyProfileService>()
             .GetPressReleasesAsync("account-1", ticker);
         return Assert.IsType<CompanyPressReleasesResultDto>(outcome.Result);
     }
@@ -130,6 +137,22 @@ public class CompanyProfileFixtureTests
         Assert.Equal([true, true, false], result.Releases.Select(r => r.HeadlineRead));
         Assert.All(result.Releases,
             r => Assert.StartsWith("https://www.sec.gov/Archives/edgar/data/9000001/", r.Url, StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(2026, 10, 24)]
+    [InlineData(2027, 6, 1)]
+    [InlineData(2031, 2, 28)]
+    public async Task Fixture_ExampleCorp_KeepsItsThreePressReleases_WhateverTheDate(int year, int month, int day)
+    {
+        // The E2E walkthrough runs on whatever day CI does, so the fixture's 8-Ks stay within the last six months.
+        var today = new DateOnly(year, month, day);
+
+        CompanyPressReleasesResultDto result = await PressReleasesOfFixture("EXMP",
+            new DateTimeOffset(today, new TimeOnly(12, 0), TimeSpan.Zero));
+
+        Assert.Equal(3, result.Releases.Count);
+        Assert.All(result.Releases, r => Assert.InRange(r.FiledOn, today.AddMonths(-6), today));
     }
 
     [Fact]

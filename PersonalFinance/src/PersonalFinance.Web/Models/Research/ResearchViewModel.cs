@@ -46,12 +46,6 @@ public sealed class ResearchViewModel
     /// <summary>The ticker the Companies tab opens on, as SEC lists it, or null for the empty search.</summary>
     public string? CompanyTicker { get; }
 
-    /// <summary>
-    /// True when a Company Profile shows its press releases (<c>Research:PressReleases:Enabled</c>); when false the
-    /// page leaves the section out.
-    /// </summary>
-    public bool PressReleasesEnabled { get; init; } = true;
-
     /// <summary>True when the page opens on <paramref name="tab"/>.</summary>
     public bool IsSelected(string tab) => SelectedTab == tab;
 

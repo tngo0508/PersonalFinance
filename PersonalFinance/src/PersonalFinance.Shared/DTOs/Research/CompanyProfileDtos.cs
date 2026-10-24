@@ -46,6 +46,12 @@ public sealed class CompanyLookupResultDto
 
     /// <summary>The Company Profile when <see cref="Kind"/> is <see cref="CompanyLookupKinds.Profile"/>.</summary>
     public CompanyProfileDto? Profile { get; set; }
+
+    /// <summary>
+    /// True when the profile's press releases can be read; false for a fund, an unlisted ticker, or when ApiService
+    /// has press releases switched off, in which case the page leaves the section out.
+    /// </summary>
+    public bool PressReleasesAvailable { get; set; }
 }
 
 /// <summary>

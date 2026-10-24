@@ -20,6 +20,8 @@
     const MINUS = '−';
     const NOT_REPORTED = 'Not reported';
     const NOT_SHOWN = 'Not shown';
+    /** What separates an 8-K's events in words, as ApiService joins them in a fallback headline. */
+    const EVENT_SEPARATOR = ' · ';
 
     /** The four charts, drawn left to right, top to bottom. */
     const CHARTS = [
@@ -262,7 +264,7 @@
         }
         item.append(heading);
         if (filing.events && filing.events.length > 0) {
-            item.append(element('p', 'research-companies__events', filing.events.join(' · ')));
+            item.append(element('p', 'research-companies__events', filing.events.join(EVENT_SEPARATOR)));
         }
         const link = element('a', 'research-companies__filing-link', 'View on EDGAR');
         link.href = filing.url;
@@ -295,7 +297,7 @@
         filed.append('Filed ', time);
         item.append(filed);
         if (release.events && release.events.length > 0) {
-            item.append(element('p', 'research-companies__events', release.events.join(' · ')));
+            item.append(element('p', 'research-companies__events', release.events.join(EVENT_SEPARATOR)));
         }
         return item;
     }
@@ -332,7 +334,7 @@
             unavailable: panel.querySelector('[data-research-releases-unavailable]'),
             retry: panel.querySelector('[data-research-releases-retry]')
         };
-        const releasesOn = Boolean(releasesUrl) && Object.values(releases).every(Boolean);
+        const hasReleasesSection = Boolean(releasesUrl) && Object.values(releases).every(Boolean);
         const field = (name) => panel.querySelector(`[data-field="${name}"]`);
         const tooltip = page.createTooltip(document.getElementById('research-company-tooltip'),
             (line, title, point, format) => [
@@ -346,6 +348,8 @@
         let suggestRequest = null;
         let lookupRequest = null;
         let releasesRequest = null;
+        // The ticker whose press releases were announced since its lookup, so a Retry does not announce them again.
+        let releasesAnnouncedFor = null;
         let currentTicker = null;
 
         // ----- Suggestions (WAI-ARIA combobox with a listbox popup) -----
@@ -577,11 +581,13 @@
         }
 
         /**
-         * Leave the press releases section off the profile: the section is switched off.
+         * Leave the press releases section off the profile: ApiService has them switched off.
          * @returns {void}
          */
         function hideReleases () {
-            releases.section.hidden = true;
+            if (releases.section) {
+                releases.section.hidden = true;
+            }
         }
 
         /**
@@ -598,13 +604,14 @@
 
         /**
          * Fetch and show a company's press releases. A failure shows the section's Unavailable State with a Retry,
-         * never an error page; a 404 means the section is switched off, so it is hidden.
+         * never an error page; a 404 means ApiService switched them off since the lookup, so the section is hidden.
+         * The live region announces the count once per lookup, not again after a Retry.
          * @param {string} ticker - The ticker of the profile shown.
          * @param {string} name - The company's name, for the announcement.
          * @returns {Promise<void>} Resolves when shown.
          */
         async function loadReleases (ticker, name) {
-            if (!releasesOn) {
+            if (!hasReleasesSection) {
                 return;
             }
             abortReleases();
@@ -634,7 +641,10 @@
                 const items = Array.isArray(result.releases) ? result.releases : [];
                 releases.list.replaceChildren(...items.map(buildRelease));
                 showReleasesState(items.length > 0 ? 'list' : 'empty');
-                page.announce(`${items.length} press ${items.length === 1 ? 'release' : 'releases'} loaded for ${name}.`);
+                if (releasesAnnouncedFor !== ticker) {
+                    releasesAnnouncedFor = ticker;
+                    page.announce(`${items.length} press ${items.length === 1 ? 'release' : 'releases'} loaded for ${name}.`);
+                }
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     showReleasesState('unavailable');
@@ -697,6 +707,7 @@
                 lookupRequest.abort();
             }
             abortReleases();
+            releasesAnnouncedFor = null;
             lookupRequest = new AbortController();
             if (options.push) {
                 rememberTicker(normalized);
@@ -729,7 +740,11 @@
                     renderProfile(result.profile);
                     page.announce(`${result.profile.name} profile loaded${result.profile.dataAsOf
                         ? `, data as of ${formatDate(result.profile.dataAsOf)}` : ''}.`);
-                    loadReleases(normalized, result.profile.name);
+                    if (result.pressReleasesAvailable) {
+                        loadReleases(normalized, result.profile.name);
+                    } else {
+                        hideReleases();
+                    }
                     return;
                 }
                 profileHost.hidden = true;

@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
 using PersonalFinance.Shared.DTOs.Research;
@@ -24,21 +23,19 @@ internal static class PressReleaseBuilder
     public const int MaxReleases = 10;
 
     /// <summary>How many months back filings are read.</summary>
-    public const int MonthsBack = 12;
+    private const int MonthsBack = 12;
 
     /// <summary>The shortest line taken as a headline.</summary>
-    public const int MinHeadlineLength = 20;
+    private const int MinHeadlineLength = 20;
 
     /// <summary>The longest line taken as a headline.</summary>
-    public const int MaxHeadlineLength = 160;
+    private const int MaxHeadlineLength = 160;
 
     /// <summary>What separates the event words of a fallback headline.</summary>
-    public const string EventSeparator = " · ";
+    private const string EventSeparator = " · ";
 
     /// <summary>The forms whose exhibits are press releases.</summary>
-    public static readonly IReadOnlySet<string> Forms = new HashSet<string>(StringComparer.Ordinal) { "8-K", "8-K/A" };
-
-    private const string EdgarUrl = "https://www.sec.gov/";
+    private static readonly HashSet<string> Forms = new HashSet<string>(StringComparer.Ordinal) { "8-K", "8-K/A" };
 
     private static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
 
@@ -50,9 +47,11 @@ internal static class PressReleaseBuilder
     private static readonly Regex ScriptsAndStyles = new(@"<(script|style)\b.*?(?:</\1\s*>|$)",
         RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, MatchTimeout);
 
-    // Tags that start a new line where a browser would; any other tag is dropped and its text runs on.
+    // Tags that start a new line where a browser would, and the fields of the SGML document header that some exhibits
+    // on sec.gov start with (<DOCUMENT><TYPE>EX-99.1<SEQUENCE>2<FILENAME>...<TEXT>), one value per line; any other tag
+    // is dropped and its text runs on.
     private static readonly Regex BlockTags = new(
-        @"</?(?:p|div|br|hr|tr|td|th|li|ul|ol|dt|dd|h[1-6]|title|table|caption|center|section|article|header|footer|blockquote|pre|body|head|html)\b[^>]*>",
+        @"</?(?:p|div|br|hr|tr|td|th|li|ul|ol|dt|dd|h[1-6]|title|table|caption|center|section|article|header|footer|blockquote|pre|body|head|html|document|type|sequence|filename|description|text)\b[^>]*>",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, MatchTimeout);
 
     // A tag, or a tag cut off by the end of the document's head.
@@ -88,7 +87,7 @@ internal static class PressReleaseBuilder
     /// One release: exhibit <paramref name="fileName"/> of <paramref name="filing"/>, with its headline read from
     /// <paramref name="head"/> (the start of the document, or null when it was not read).
     /// </summary>
-    public static CompanyPressReleaseDto Release(long cik, SecFilingEntry filing, string fileName, string? head)
+    public static CompanyPressReleaseDto BuildRelease(long cik, SecFilingEntry filing, string fileName, string? head)
     {
         List<string> events = filing.Items.Where(i => !string.IsNullOrWhiteSpace(i)).Select(EightKItems.Describe)
             .ToList();
@@ -98,7 +97,7 @@ internal static class PressReleaseBuilder
             Headline = headline ?? (events.Count > 0 ? string.Join(EventSeparator, events) : filing.Form),
             FiledOn = filing.FiledOn,
             Events = events,
-            Url = DocumentUrl(cik, filing.AccessionNumber, fileName),
+            Url = EdgarArchive.FileUrl(cik, filing.AccessionNumber, fileName),
             HeadlineRead = headline is not null,
         };
     }
@@ -109,7 +108,7 @@ internal static class PressReleaseBuilder
     /// <c>EX-99.x</c>, <c>Exhibit 99.x</c> or <paramref name="fileName"/> (ignoring case, punctuation and spacing).
     /// Null when there is none.
     /// </summary>
-    public static string? HeadlineOf(string head, string fileName)
+    private static string? HeadlineOf(string head, string fileName)
     {
         string fileKey = Key(fileName);
         return TextLines(head).FirstOrDefault(line =>
@@ -118,11 +117,15 @@ internal static class PressReleaseBuilder
             && Key(line) != fileKey);
     }
 
-    /// <summary>The document's text, one collapsed, non-empty line per block.</summary>
+    /// <summary>
+    /// The document's text, one collapsed, non-empty line per block. The document's own line breaks are whitespace,
+    /// as a browser treats them, so a headline wrapped across source lines stays one line; only block tags break it.
+    /// </summary>
     private static IEnumerable<string> TextLines(string head)
     {
         string text = Comments.Replace(head, string.Empty);
         text = ScriptsAndStyles.Replace(text, string.Empty);
+        text = Whitespace.Replace(text, " ");
         text = BlockTags.Replace(text, "\n");
         text = Tags.Replace(text, string.Empty);
         return text.Split('\n')
@@ -133,9 +136,4 @@ internal static class PressReleaseBuilder
     /// <summary>Letters and digits only, in lower case: <c>Exhibit 99.1</c> is <c>exhibit991</c>.</summary>
     private static string Key(string text) =>
         string.Concat(text.Where(char.IsLetterOrDigit)).ToLowerInvariant();
-
-    /// <summary>A document of a filing on sec.gov.</summary>
-    private static string DocumentUrl(long cik, string accessionNumber, string fileName) =>
-        string.Create(CultureInfo.InvariantCulture,
-            $"{EdgarUrl}Archives/edgar/data/{cik}/{accessionNumber.Replace("-", string.Empty, StringComparison.Ordinal)}/{Uri.EscapeDataString(fileName)}");
 }

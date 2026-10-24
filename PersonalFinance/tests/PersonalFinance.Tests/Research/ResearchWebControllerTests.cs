@@ -5,7 +5,6 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Research;
@@ -45,7 +44,7 @@ public class ResearchWebControllerTests
     };
 
     private static ResearchController CreateController(IResearchApi api) =>
-        new(api, new ConfigurationBuilder().Build(), NullLogger<ResearchController>.Instance)
+        new(api, NullLogger<ResearchController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

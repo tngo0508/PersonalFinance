@@ -78,23 +78,15 @@ public class CompaniesController : ControllerBase
             return BadRequest(new { errors = new[] { InvalidTicker } });
         }
 
-        CompanyLookupOutcome outcome = await _companies.LookUpAsync(User.GetUserId(), normalized, cancellationToken);
-        if (outcome.RateLimited)
-        {
-            return StatusCode(StatusCodes.Status429TooManyRequests, new { error = TooManyLookups });
-        }
-
-        return outcome.Result is { } result
-            ? Ok(result)
-            : StatusCode(StatusCodes.Status503ServiceUnavailable, new ResearchUnavailableDto { Reason = ProfileUnavailable });
+        return Answer(await _companies.LookUpAsync(User.GetUserId(), normalized, cancellationToken));
     }
 
     /// <summary>
     /// Gets a company's press releases by ticker: the announcements it attached to its 8-K filings in the last 12
     /// months, newest first, at most 10, or a fund or a ticker SEC does not list, each as 200. Answers 400 for a ticker
     /// that is not 1 to 10 letters, digits, dots or dashes, 404 when press releases are switched off
-    /// (<c>Research:PressReleases:Enabled</c>), 429 when the Account has made too many lookups in the last minute, and
-    /// 503 when SEC EDGAR cannot be reached and no list of the ticker is kept.
+    /// (<see cref="ResearchSettings.PressReleasesEnabledKey"/>), 429 when the Account has made too many lookups in the
+    /// last minute, and 503 when SEC EDGAR cannot be reached and no list of the ticker is kept.
     /// </summary>
     [HttpGet("{ticker}/releases")]
     [ProducesResponseType(typeof(CompanyPressReleasesResultDto), StatusCodes.Status200OK)]
@@ -105,18 +97,25 @@ public class CompaniesController : ControllerBase
     [ProducesResponseType(typeof(ResearchUnavailableDto), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Releases(string ticker, CancellationToken cancellationToken = default)
     {
-        if (!_companies.PressReleasesEnabled)
-        {
-            return NotFound();
-        }
-
         if (!CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized))
         {
             return BadRequest(new { errors = new[] { InvalidTicker } });
         }
 
-        CompanyPressReleasesOutcome outcome =
-            await _companies.GetPressReleasesAsync(User.GetUserId(), normalized, cancellationToken);
+        return Answer(await _companies.GetPressReleasesAsync(User.GetUserId(), normalized, cancellationToken));
+    }
+
+    /// <summary>
+    /// The response to a request by ticker: 200 with the answer, 404 when switched off, 429 when the Account has made
+    /// too many lookups, and 503 when SEC EDGAR cannot be reached and nothing is kept.
+    /// </summary>
+    private IActionResult Answer<TResult>(CompanyLookupOutcome<TResult> outcome) where TResult : class
+    {
+        if (outcome.SwitchedOff)
+        {
+            return NotFound();
+        }
+
         if (outcome.RateLimited)
         {
             return StatusCode(StatusCodes.Status429TooManyRequests, new { error = TooManyLookups });

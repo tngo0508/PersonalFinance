@@ -9,7 +9,7 @@
          data-research-companies
          data-suggest-url="@Url.Action("Suggest", "Research")"
          data-company-url="@Url.Action("Company", "Research")"
-         data-releases-url="@(Model.PressReleasesEnabled ? Url.Action("Releases", "Research") : null)"
+         data-releases-url="@Url.Action("Releases", "Research")"
          data-initial-ticker="@Model.CompanyTicker">
     <div class="research-card">
         <h2 class="research-card__title">Look up a company</h2>
@@ -67,31 +67,30 @@
             <div class="research-table-wrap research-companies__table" data-research-company-table tabindex="0"
                  role="region" aria-label="Annual figures"></div>
 
-            @if (Model.PressReleasesEnabled)
-            {
-                @* Filled after the profile, from this controller's Releases action: a slow or failed read never delays
-                   the profile. Loading, the list, the empty line and the Unavailable State are each toggled with hidden. *@
-                <section class="research-companies__releases" data-research-company-releases
-                         aria-labelledby="research-company-releases-title">
-                    <h3 class="research-companies__section" id="research-company-releases-title">Press releases</h3>
-                    <p class="research-companies__hint">Announcements the company attached to its SEC filings.</p>
-                    <p class="research-companies__releases-loading" data-research-releases-loading hidden>
-                        Loading press releases…
-                    </p>
-                    <ol class="research-companies__release-list" data-research-releases-list hidden></ol>
-                    <p class="research-companies__releases-empty" data-research-releases-empty hidden>
-                        No press releases attached to SEC filings in the last 12 months.
-                    </p>
-                    <section class="unavailable-state research-companies__releases-unavailable"
-                             data-research-releases-unavailable hidden>
-                        <div class="unavailable-state__body">
-                            <h4 class="unavailable-state__title">Press releases are unavailable right now</h4>
-                            <p class="unavailable-state__text">The rest of the profile is unaffected. Please try again.</p>
-                        </div>
-                        <button type="button" class="btn btn-primary btn-sm" data-research-releases-retry>Retry</button>
-                    </section>
+            @* Filled after the profile, from this controller's Releases action: a slow or failed read never delays the
+               profile. Hidden unless the lookup says the profile's press releases are available (ApiService's
+               Research:PressReleases:Enabled). Loading, the list, the empty line and the Unavailable State are each
+               toggled with hidden. *@
+            <section class="research-companies__releases" data-research-company-releases
+                     aria-labelledby="research-company-releases-title" hidden>
+                <h3 class="research-companies__section" id="research-company-releases-title">Press releases</h3>
+                <p class="research-companies__hint">Announcements the company attached to its SEC filings.</p>
+                <p class="research-companies__releases-loading" data-research-releases-loading hidden>
+                    Loading press releases…
+                </p>
+                <ol class="research-companies__release-list" data-research-releases-list hidden></ol>
+                <p class="research-companies__releases-empty" data-research-releases-empty hidden>
+                    No press releases attached to SEC filings in the last 12 months.
+                </p>
+                <section class="unavailable-state research-companies__releases-unavailable"
+                         data-research-releases-unavailable hidden>
+                    <div class="unavailable-state__body">
+                        <h4 class="unavailable-state__title">Press releases are unavailable right now</h4>
+                        <p class="unavailable-state__text">The rest of the profile is unaffected. Please try again.</p>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" data-research-releases-retry>Retry</button>
                 </section>
-            }
+            </section>
 
             <h3 class="research-companies__section">Recent filings</h3>
             <ol class="research-companies__filings" data-research-company-filings></ol>

@@ -15,7 +15,8 @@ namespace PersonalFinance.Tests.Research;
 /// samples in <c>CompanySamples/</c>. Sample Widgets Inc (SWI) has, within the 12 months before 24 October 2026, the
 /// 8-Ks of 20 October 2026, 1 August 2026 and 26 to 28 November 2025 and the 8-K/A of 30 September 2026. Each filing
 /// attaches EX-99.1 and EX-99.2, except the 8-K of 28 November 2025, which attaches no exhibit 99. Exhibit 99.1 of the
-/// 1 August 2026 8-K has nothing readable in its first 64 KB.
+/// 1 August 2026 8-K has nothing readable in its first 64 KB, and exhibit 99.1 of the 8-K/A starts with EDGAR's SGML
+/// document header, as some exhibits on sec.gov do.
 /// </summary>
 public class CompanyPressReleasesServiceTests
 {
@@ -23,7 +24,11 @@ public class CompanyPressReleasesServiceTests
     private const string Archives = "https://www.sec.gov/Archives/edgar/data/1234567/";
     private const string NoExhibitAccession = "0001234567-25-000001";
     private const string UnreadableAccession = "0001234567-26-000037";
+    private const string SgmlHeaderAccession = "0001234567-26-000039";
     private static readonly DateTimeOffset Now = new(2026, 10, 24, 12, 0, 0, TimeSpan.Zero);
+
+    /// <summary>A filing's folder on EDGAR: its accession number without dashes.</summary>
+    private static string Folder(string accession) => accession.Replace("-", string.Empty, StringComparison.Ordinal);
 
     private sealed class StubSec : HttpMessageHandler
     {
@@ -105,12 +110,12 @@ public class CompanyPressReleasesServiceTests
                     : "index-headers-two-exhibits.html";
             }
 
-            bool unreadable = parts[0] == UnreadableAccession.Replace("-", string.Empty, StringComparison.Ordinal);
+            string filing = parts[0];
             return name switch
             {
-                "swi-20261020xex99d1.htm" => unreadable
-                    ? "exhibit-nothing-readable.htm"
-                    : "exhibit-headline-after-boilerplate.htm",
+                "swi-20261020xex99d1.htm" when filing == Folder(UnreadableAccession) => "exhibit-nothing-readable.htm",
+                "swi-20261020xex99d1.htm" when filing == Folder(SgmlHeaderAccession) => "exhibit-sgml-header.htm",
+                "swi-20261020xex99d1.htm" => "exhibit-headline-after-boilerplate.htm",
                 "swi-20261020xex99d2.htm" => "exhibit-title-then-headline.htm",
                 _ => null,
             };
@@ -146,7 +151,7 @@ public class CompanyPressReleasesServiceTests
     }
 
     private static CompanyProfileService CreateService(StubSec sec, TimeProvider? timeProvider = null,
-        IRateLimiterService? rateLimiter = null)
+        IRateLimiterService? rateLimiter = null, ResearchSettings? research = null)
     {
         timeProvider ??= new MovableTimeProvider(Now);
         var settings = new SecEdgarSettings
@@ -155,11 +160,11 @@ public class CompanyPressReleasesServiceTests
         return new CompanyProfileService(client,
             new CompanyTickerIndexCache(new ResearchSettings(), timeProvider,
                 NullLogger<CompanyTickerIndexCache>.Instance),
-            new CompanyProfileCache(timeProvider),
-            new CompanyPressReleaseCache(timeProvider),
+            new KeptWhileUnreachableCache<CompanyProfileDto>(timeProvider),
+            new KeptWhileUnreachableCache<List<CompanyPressReleaseDto>>(timeProvider),
             rateLimiter ??
             new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window),
-            new ResearchSettings(),
+            research ?? new ResearchSettings(),
             timeProvider,
             NullLogger<CompanyProfileService>.Instance);
     }
@@ -167,7 +172,7 @@ public class CompanyPressReleasesServiceTests
     private static async Task<List<CompanyPressReleaseDto>> ReleasesOf(CompanyProfileService service,
         string ticker = "SWI")
     {
-        CompanyPressReleasesOutcome outcome = await service.GetPressReleasesAsync(UserId, ticker);
+        CompanyLookupOutcome<CompanyPressReleasesResultDto> outcome = await service.GetPressReleasesAsync(UserId, ticker);
         Assert.NotNull(outcome.Result);
         Assert.Equal(CompanyLookupKinds.Profile, outcome.Result.Kind);
         Assert.Equal(ticker, outcome.Result.Ticker);
@@ -220,11 +225,35 @@ public class CompanyPressReleasesServiceTests
     {
         List<CompanyPressReleaseDto> releases = await ReleasesOf(CreateService(new StubSec()));
 
-        // The sample's earlier lines are "Exhibit 99.1", "Exhibit 99.1 . . . ." , its file name, a style rule and a
-        // script, each skipped; the headline is split across two font runs.
+        // The sample's earlier lines are a title of "EX-99.1", "Exhibit 99.1", "Exhibit 99.1 . . . .", a style rule
+        // and a script, each skipped; the headline is split across two font runs.
         Assert.Equal("Sample Widgets Reports Record Fiscal 2026 Results", releases[0].Headline);
-        // A title of "EX-99.1" and a bold "EX-99.1" are skipped for the paragraph after them.
+        // A title of the file name, "Exhibit 99.2" and a bold "EX-99.2" are skipped for the paragraph after them.
         Assert.Equal("Sample Widgets Names Jane Doe Chief Financial Officer", releases[5].Headline);
+    }
+
+    [Fact]
+    public async Task Headline_WrappedAcrossSourceLines_IsReadWhole()
+    {
+        List<CompanyPressReleaseDto> releases = await ReleasesOf(CreateService(new StubSec()));
+
+        // Both samples wrap their headline paragraph onto a second line of the document's source, which a browser
+        // shows as one line. "Sample Widgets Names Jane Doe" alone is long enough to pass for a headline.
+        Assert.Equal("Sample Widgets Reports Record Fiscal 2026 Results", releases[0].Headline);
+        Assert.Equal("Sample Widgets Names Jane Doe Chief Financial Officer", releases[1].Headline);
+    }
+
+    [Fact]
+    public async Task Headline_SkipsTheSgmlDocumentHeader()
+    {
+        List<CompanyPressReleaseDto> releases = await ReleasesOf(CreateService(new StubSec()));
+
+        // The header's TYPE, SEQUENCE, FILENAME and DESCRIPTION are each a line of their own, never run together
+        // into one long enough to pass for a headline (as "EX-99.1 2 msft-ex99_1.htm EX-99.1" did for Microsoft).
+        CompanyPressReleaseDto acquisition = releases[2];
+        Assert.Equal(new DateOnly(2026, 9, 30), acquisition.FiledOn);
+        Assert.Equal("Sample Widgets Completes the Acquisition of Example Gadgets", acquisition.Headline);
+        Assert.True(acquisition.HeadlineRead);
     }
 
     [Fact]
@@ -289,7 +318,7 @@ public class CompanyPressReleasesServiceTests
 
         await ReleasesOf(service);
         int afterFirst = sec.CompanyRequests;
-        time.Now = Now + CompanyPressReleaseCache.FreshFor;
+        time.Now = Now + KeptWhileUnreachableCache<List<CompanyPressReleaseDto>>.FreshFor;
         await ReleasesOf(service);
 
         Assert.Equal(2 * afterFirst, sec.CompanyRequests);
@@ -317,7 +346,7 @@ public class CompanyPressReleasesServiceTests
     {
         var sec = new StubSec { CompanyDocumentsFail = companyFails, ArchivesFail = archivesFail };
 
-        CompanyPressReleasesOutcome outcome = await CreateService(sec).GetPressReleasesAsync(UserId, "SWI");
+        CompanyLookupOutcome<CompanyPressReleasesResultDto> outcome = await CreateService(sec).GetPressReleasesAsync(UserId, "SWI");
 
         Assert.True(outcome.Unavailable);
         Assert.False(outcome.RateLimited);
@@ -331,7 +360,7 @@ public class CompanyPressReleasesServiceTests
 
         Assert.False((await service.LookUpAsync(UserId, "SWI")).RateLimited);
         Assert.False((await service.GetPressReleasesAsync(UserId, "SWI")).RateLimited);
-        CompanyPressReleasesOutcome refused = await service.GetPressReleasesAsync(UserId, "SWI");
+        CompanyLookupOutcome<CompanyPressReleasesResultDto> refused = await service.GetPressReleasesAsync(UserId, "SWI");
 
         Assert.True(refused.RateLimited);
         Assert.Null(refused.Result);
@@ -344,10 +373,27 @@ public class CompanyPressReleasesServiceTests
     {
         var sec = new StubSec();
 
-        CompanyPressReleasesOutcome outcome = await CreateService(sec).GetPressReleasesAsync(UserId, ticker);
+        CompanyLookupOutcome<CompanyPressReleasesResultDto> outcome = await CreateService(sec).GetPressReleasesAsync(UserId, ticker);
 
         Assert.Equal(kind, outcome.Result?.Kind);
         Assert.Empty(outcome.Result!.Releases);
         Assert.Equal(0, sec.CompanyRequests);
+    }
+
+    [Fact]
+    public async Task Releases_SwitchedOff_AreDisabled_WithoutReadingSecOrCountingALookup()
+    {
+        var sec = new StubSec();
+        CompanyProfileService service = CreateService(sec,
+            rateLimiter: new RateLimiterService(1, TimeSpan.FromMinutes(1)),
+            research: new ResearchSettings { PressReleasesEnabled = false });
+
+        CompanyLookupOutcome<CompanyPressReleasesResultDto> outcome = await service.GetPressReleasesAsync(UserId, "SWI");
+
+        Assert.True(outcome.SwitchedOff);
+        Assert.Null(outcome.Result);
+        Assert.False(outcome.Unavailable);
+        Assert.Empty(sec.Requests);
+        Assert.False((await service.LookUpAsync(UserId, "SWI")).RateLimited);
     }
 }

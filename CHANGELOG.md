@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The section loads after the profile, so reading releases never slows it; a failed read shows "Press releases are unavailable right now" with a Retry, and a company with none says so.
   - These are the company's own announcements only, never third-party coverage.
   - Lists are cached for a day and served from the cache while SEC is unreachable; each request counts toward the 30 lookups a minute an Account may make.
-  - `Research:PressReleases:Enabled` (on by default) switches the section off without a code change, in both the ApiService and the Web app.
+  - `Research:PressReleases:Enabled` on the ApiService (on by default) switches the section off without a code change; the Web app has no switch of its own and leaves the section out when a lookup says the releases are unavailable.
 
 ## [5.1.0] - 2026-10-24
 

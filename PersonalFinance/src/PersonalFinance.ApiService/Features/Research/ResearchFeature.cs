@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.DTOs.Research;
 
 namespace PersonalFinance.ApiService.Features.Research;
 
@@ -49,7 +50,7 @@ internal static class ResearchFeature
             EtfsFirstQuarter = configuration.GetValue($"{ResearchSettings.Section}:EtfsFirstQuarter",
                 new DateOnly(2019, 10, 1)),
             WorldFirstYear = configuration.GetValue($"{ResearchSettings.Section}:WorldFirstYear", 1975),
-            PressReleasesEnabled = configuration.GetValue($"{ResearchSettings.Section}:PressReleases:Enabled", true),
+            PressReleasesEnabled = configuration.GetValue(ResearchSettings.PressReleasesEnabledKey, true),
         });
         services.AddSingleton<SecRequestGate>();
         services.AddHttpClient<ISecEdgarClient, SecEdgarClient>(client => client.Timeout = SecTimeout);
@@ -73,8 +74,8 @@ internal static class ResearchFeature
         }
 
         services.AddSingleton<CompanyTickerIndexCache>();
-        services.AddSingleton<CompanyProfileCache>();
-        services.AddSingleton<CompanyPressReleaseCache>();
+        services.AddSingleton<KeptWhileUnreachableCache<CompanyProfileDto>>();
+        services.AddSingleton<KeptWhileUnreachableCache<List<CompanyPressReleaseDto>>>();
         services.AddKeyedSingleton<IRateLimiterService>(CompanyLookupRateLimit.Key, (_, _) =>
             new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window));
         services.AddScoped<ICompanyProfileService, CompanyProfileService>();

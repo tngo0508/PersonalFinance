@@ -57,10 +57,13 @@ internal sealed class ResearchSettings
     /// </summary>
     public int WorldFirstYear { get; init; } = 1975;
 
+    /// <summary>The configuration key of <see cref="PressReleasesEnabled"/>.</summary>
+    public const string PressReleasesEnabledKey = $"{Section}:PressReleases:Enabled";
+
     /// <summary>
-    /// True when Company Profiles show their press releases (<c>Research:PressReleases:Enabled</c>, on by default).
-    /// Switching it off answers 404 for the releases endpoint without a code change; the Web app reads the same key
-    /// to leave the section off the page.
+    /// True when Company Profiles show their press releases (<see cref="PressReleasesEnabledKey"/>, on by default).
+    /// Switching it off, without a code change, answers 404 for the releases endpoint and marks every profile's press
+    /// releases unavailable, so the page leaves the section off; this is the only switch, the Web app has none.
     /// </summary>
     public bool PressReleasesEnabled { get; init; } = true;
 }

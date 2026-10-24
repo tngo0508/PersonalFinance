@@ -16,7 +16,7 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
 {
     private const string BaseUrl = "https://data.sec.gov/";
 
-    // The fund ticker list, EDGAR's filing lists and the filing archives are served from www.sec.gov.
+    // The fund ticker list and EDGAR's filing lists are served from www.sec.gov (filing archives: EdgarArchive).
     private const string WwwUrl = "https://www.sec.gov/";
 
     // The most filings EDGAR's company browse feed lists on one page.
@@ -262,7 +262,7 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
         CancellationToken cancellationToken)
     {
         using HttpResponseMessage response = await SendAsync(
-            ArchiveUrl(cik, accessionNumber, $"{accessionNumber}-index-headers.html"), cancellationToken);
+            EdgarArchive.FileUrl(cik, accessionNumber, $"{accessionNumber}-index-headers.html"), cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return [];
@@ -278,7 +278,7 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
         CancellationToken cancellationToken)
     {
         using HttpResponseMessage response =
-            await SendAsync(ArchiveUrl(cik, accessionNumber, fileName), cancellationToken);
+            await SendAsync(EdgarArchive.FileUrl(cik, accessionNumber, fileName), cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
@@ -320,11 +320,6 @@ internal sealed class SecEdgarClient : ISecEdgarClient, ISecCompanyClient
 
         return Encoding.Latin1.GetString(head, 0, length);
     }
-
-    /// <summary>A file of a filing: <c>Archives/edgar/data/{cik}/{accession without dashes}/{file}</c>.</summary>
-    private static string ArchiveUrl(long cik, string accessionNumber, string fileName) =>
-        string.Create(CultureInfo.InvariantCulture,
-            $"{WwwUrl}Archives/edgar/data/{cik}/{accessionNumber.Replace("-", string.Empty, StringComparison.Ordinal)}/{Uri.EscapeDataString(fileName)}");
 
     /// <summary>
     /// The concepts of <see cref="CompanyProfileConcepts"/> from a <c>companyfacts</c> document:

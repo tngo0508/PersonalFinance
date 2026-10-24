@@ -18,8 +18,8 @@ namespace PersonalFinance.Tests.Research;
 /// </summary>
 public class ResearchCompaniesWebControllerTests
 {
-    private static ResearchController CreateController(IResearchApi api, IConfiguration? configuration = null) =>
-        new(api, configuration ?? new ConfigurationBuilder().Build(), NullLogger<ResearchController>.Instance)
+    private static ResearchController CreateController(IResearchApi api) =>
+        new(api, NullLogger<ResearchController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -157,20 +157,13 @@ public class ResearchCompaniesWebControllerTests
         Assert.Empty(proxy.Calls);
     }
 
-    [Theory]
-    [InlineData(null, true)]
-    [InlineData("true", true)]
-    [InlineData("false", false)]
-    public async Task Index_CarriesThePressReleasesFlag(string? setting, bool expected)
+    [Fact]
+    public void Controller_ReadsNoConfiguration_ApiServiceAloneSwitchesPressReleasesOff()
     {
-        (IResearchApi api, _) = ApiProxy.Create<IResearchApi>();
-        IConfiguration configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Research:PressReleases:Enabled"] = setting })
-            .Build();
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api, configuration).Index("companies", "MSFT"));
-
-        Assert.Equal(expected, model.PressReleasesEnabled);
+        // The lookup's PressReleasesAvailable tells the page whether to show the section, so an operator switches
+        // press releases off in one place, ApiService's Research:PressReleases:Enabled.
+        Assert.All(typeof(ResearchController).GetConstructors(),
+            c => Assert.DoesNotContain(c.GetParameters(), p => p.ParameterType == typeof(IConfiguration)));
     }
 
     [Theory]

@@ -93,8 +93,8 @@ public class CompanyProfileServiceTests
         return new CompanyProfileService(client,
             new CompanyTickerIndexCache(research ?? new ResearchSettings(), timeProvider,
                 NullLogger<CompanyTickerIndexCache>.Instance),
-            new CompanyProfileCache(timeProvider),
-            new CompanyPressReleaseCache(timeProvider),
+            new KeptWhileUnreachableCache<CompanyProfileDto>(timeProvider),
+            new KeptWhileUnreachableCache<List<CompanyPressReleaseDto>>(timeProvider),
             rateLimiter ??
             new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window),
             research ?? new ResearchSettings(),
@@ -104,7 +104,7 @@ public class CompanyProfileServiceTests
 
     private static async Task<CompanyProfileDto> ProfileOf(CompanyProfileService service, string ticker = "SWI")
     {
-        CompanyLookupOutcome outcome = await service.LookUpAsync(UserId, ticker);
+        CompanyLookupOutcome<CompanyLookupResultDto> outcome = await service.LookUpAsync(UserId, ticker);
         Assert.NotNull(outcome.Result);
         Assert.Equal(CompanyLookupKinds.Profile, outcome.Result.Kind);
         return Assert.IsType<CompanyProfileDto>(outcome.Result.Profile);
@@ -277,20 +277,39 @@ public class CompanyProfileServiceTests
         var sec = new StubSec();
         var research = new ResearchSettings { Etfs = [new ResearchEtf("SPY", "SPDR S&P 500 ETF Trust", 884394)] };
 
-        CompanyLookupOutcome outcome = await CreateService(sec, research: research).LookUpAsync(UserId, ticker);
+        CompanyLookupOutcome<CompanyLookupResultDto> outcome = await CreateService(sec, research: research).LookUpAsync(UserId, ticker);
 
         Assert.Equal(CompanyLookupKinds.Fund, outcome.Result?.Kind);
         Assert.Null(outcome.Result?.Profile);
+        Assert.False(outcome.Result?.PressReleasesAvailable);
         Assert.Equal(0, sec.CompanyDocumentRequests);
     }
 
     [Fact]
     public async Task LookUp_OfAnUnlistedTicker_IsNotFound()
     {
-        CompanyLookupOutcome outcome = await CreateService(new StubSec()).LookUpAsync(UserId, "ZZZZ");
+        CompanyLookupOutcome<CompanyLookupResultDto> outcome = await CreateService(new StubSec()).LookUpAsync(UserId, "ZZZZ");
 
         Assert.Equal(CompanyLookupKinds.NotFound, outcome.Result?.Kind);
         Assert.Equal("ZZZZ", outcome.Result?.Ticker);
+        Assert.False(outcome.Result?.PressReleasesAvailable);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task LookUp_OfAProfile_SaysWhetherItsPressReleasesAreAvailable(bool enabled)
+    {
+        // ApiService's switch is the only one: the page reads it from the lookup, before asking for the releases.
+        var research = new ResearchSettings { PressReleasesEnabled = enabled };
+        CompanyProfileService service = CreateService(new StubSec(), research: research);
+
+        CompanyLookupOutcome<CompanyLookupResultDto> first = await service.LookUpAsync(UserId, "SWI");
+        CompanyLookupOutcome<CompanyLookupResultDto> cached = await service.LookUpAsync(UserId, "SWI");
+
+        Assert.Equal(CompanyLookupKinds.Profile, first.Result?.Kind);
+        Assert.Equal(enabled, first.Result?.PressReleasesAvailable);
+        Assert.Equal(enabled, cached.Result?.PressReleasesAvailable);
     }
 
     [Fact]
@@ -313,7 +332,7 @@ public class CompanyProfileServiceTests
         CompanyProfileService service = CreateService(sec, time);
 
         await ProfileOf(service);
-        time.Now = Now + CompanyProfileCache.FreshFor;
+        time.Now = Now + KeptWhileUnreachableCache<CompanyProfileDto>.FreshFor;
         await ProfileOf(service);
 
         Assert.Equal(4, sec.CompanyDocumentRequests);
@@ -339,7 +358,7 @@ public class CompanyProfileServiceTests
     {
         var sec = new StubSec { CompanyDocumentsFail = true };
 
-        CompanyLookupOutcome outcome = await CreateService(sec).LookUpAsync(UserId, "SWI");
+        CompanyLookupOutcome<CompanyLookupResultDto> outcome = await CreateService(sec).LookUpAsync(UserId, "SWI");
 
         Assert.True(outcome.Unavailable);
         Assert.False(outcome.RateLimited);
@@ -351,7 +370,7 @@ public class CompanyProfileServiceTests
         // Facts whose taxonomy is a number, not an object: the lookup must not escape as a 500.
         var sec = new StubSec { CompanyFactsBody = """{ "facts": { "us-gaap": 5, "dei": [1, 2] } }""" };
 
-        CompanyLookupOutcome outcome = await CreateService(sec).LookUpAsync(UserId, "SWI");
+        CompanyLookupOutcome<CompanyLookupResultDto> outcome = await CreateService(sec).LookUpAsync(UserId, "SWI");
 
         Assert.Equal(CompanyLookupKinds.Profile, outcome.Result?.Kind);
         Assert.Empty(outcome.Result!.Profile!.FiscalYears);
@@ -364,14 +383,14 @@ public class CompanyProfileServiceTests
         var service = new CompanyProfileService(new ThrowingFactsClient(),
             new CompanyTickerIndexCache(new ResearchSettings(), timeProvider,
                 NullLogger<CompanyTickerIndexCache>.Instance),
-            new CompanyProfileCache(timeProvider),
-            new CompanyPressReleaseCache(timeProvider),
+            new KeptWhileUnreachableCache<CompanyProfileDto>(timeProvider),
+            new KeptWhileUnreachableCache<List<CompanyPressReleaseDto>>(timeProvider),
             new RateLimiterService(CompanyLookupRateLimit.MaxLookupsPerWindow, CompanyLookupRateLimit.Window),
             new ResearchSettings(),
             timeProvider,
             NullLogger<CompanyProfileService>.Instance);
 
-        CompanyLookupOutcome outcome = await service.LookUpAsync(UserId, "SWI");
+        CompanyLookupOutcome<CompanyLookupResultDto> outcome = await service.LookUpAsync(UserId, "SWI");
 
         Assert.True(outcome.Unavailable);
     }
@@ -406,7 +425,7 @@ public class CompanyProfileServiceTests
     [Fact]
     public async Task LookUp_WhenTheTickerListCannotBeRead_IsUnavailable()
     {
-        CompanyLookupOutcome outcome =
+        CompanyLookupOutcome<CompanyLookupResultDto> outcome =
             await CreateService(new StubSec { TickerListsFail = true }).LookUpAsync(UserId, "SWI");
 
         Assert.True(outcome.Unavailable);
@@ -424,8 +443,8 @@ public class CompanyProfileServiceTests
             Assert.False((await service.LookUpAsync(UserId, "SWI")).RateLimited);
         }
 
-        CompanyLookupOutcome refused = await service.LookUpAsync(UserId, "SWI");
-        CompanyLookupOutcome otherAccount = await service.LookUpAsync("account-2", "SWI");
+        CompanyLookupOutcome<CompanyLookupResultDto> refused = await service.LookUpAsync(UserId, "SWI");
+        CompanyLookupOutcome<CompanyLookupResultDto> otherAccount = await service.LookUpAsync("account-2", "SWI");
 
         Assert.True(refused.RateLimited);
         Assert.Null(refused.Result);

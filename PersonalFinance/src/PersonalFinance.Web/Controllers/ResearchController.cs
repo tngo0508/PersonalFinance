@@ -19,27 +19,17 @@ public sealed class ResearchController : Controller
     /// <summary>The 400 message of a company search or lookup whose input was rejected.</summary>
     public const string InvalidCompanyInput = "Enter a ticker or company name.";
 
-    /// <summary>
-    /// The setting that shows a Company Profile's press releases (on by default); ApiService reads the same key and
-    /// answers 404 for them when it is off.
-    /// </summary>
-    public const string PressReleasesEnabledSetting = "Research:PressReleases:Enabled";
-
     private readonly IResearchApi _researchApi;
-    private readonly bool _pressReleasesEnabled;
     private readonly ILogger<ResearchController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResearchController"/> class.
     /// </summary>
     /// <param name="researchApi">ApiService client for the Research datasets.</param>
-    /// <param name="configuration">The app's configuration, for <see cref="PressReleasesEnabledSetting"/>.</param>
     /// <param name="logger">Logger for this controller.</param>
-    public ResearchController(IResearchApi researchApi, IConfiguration configuration,
-        ILogger<ResearchController> logger)
+    public ResearchController(IResearchApi researchApi, ILogger<ResearchController> logger)
     {
         _researchApi = researchApi;
-        _pressReleasesEnabled = configuration.GetValue(PressReleasesEnabledSetting, true);
         _logger = logger;
     }
 
@@ -55,10 +45,7 @@ public sealed class ResearchController : Controller
         SectorsSnapshotDto? sectors = await ReadAsync(_researchApi.GetSectorsAsync, "Sectors", cancellationToken);
         EtfsSnapshotDto? etfs = await ReadAsync(_researchApi.GetEtfsAsync, "ETFs", cancellationToken);
         WorldSnapshotDto? world = await ReadAsync(_researchApi.GetWorldAsync, "World", cancellationToken);
-        return View(new ResearchViewModel(sectors, etfs, world, tab, ticker)
-        {
-            PressReleasesEnabled = _pressReleasesEnabled,
-        });
+        return View(new ResearchViewModel(sectors, etfs, world, tab, ticker));
     }
 
     /// <summary>
