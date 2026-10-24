@@ -115,13 +115,17 @@ public class ResearchSectorsGroupingTests
             new Filer(1, "BANK OF THE OZARKS", 30m),
             new Filer(2, "Mixed Case Inc.", 20m),
             new Filer(3, "NO SUBMISSION CO", 10m),
+            new Filer(4, "UNIVERSAL DISPLAY CORP \\PA\\", 5m),
+            new Filer(5, "APPLE INC /CA/", 4m),
         ];
         handler.Submissions[1] = new Submission("BANK OF THE OZARKS", "6022", "STATE COMMERCIAL BANKS", "02 Finance", ["OZRK", "OZRKP"]);
         handler.Submissions[2] = new Submission("Mixed Case Inc.", "6022", "STATE COMMERCIAL BANKS", "02 Finance");
 
         SectorsSnapshotDto snapshot = await RefreshAndReadAsync(CreateService(db, handler));
 
-        Assert.Equal([("Bank of the Ozarks", "OZRK"), ("Mixed Case Inc.", null), ("No Submission Co", null)],
+        // SEC's state-of-incorporation suffix (/CA/, \PA\) is left off.
+        Assert.Equal([("Bank of the Ozarks", "OZRK"), ("Mixed Case Inc.", null), ("No Submission Co", null),
+                ("Universal Display Corp", null), ("Apple Inc", null)],
             snapshot.Companies.Select(c => (c.Name, c.Ticker)));
     }
 

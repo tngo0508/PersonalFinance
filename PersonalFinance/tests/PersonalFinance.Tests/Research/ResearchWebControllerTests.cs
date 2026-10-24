@@ -85,6 +85,22 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
+    public async Task Index_ReadsTheSectorsSnapshotOnce_AndOffersNoOtherAction_SoTheSunburstNeedsNoFurtherRoundTrip()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
+
+        // The view embeds the whole snapshot as JSON for the sunburst, so the page makes no API call of its own.
+        Assert.Equal([nameof(IResearchApi.GetSectorsAsync)], proxy.Calls);
+        Assert.Same(Snapshot, model.Sectors);
+        Assert.Equal([nameof(ResearchController.Index)],
+            typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Select(m => m.Name));
+    }
+
+    [Fact]
     public async Task Index_WhenTheSectorsDataHasNeverLoaded_MarksTheTabUnavailable()
     {
         string body = JsonSerializer.Serialize(new ResearchUnavailableDto { Reason = "The Sectors data has not loaded yet." },

@@ -60,6 +60,28 @@ internal sealed class SectorsClassifier
     }
 
     /// <summary>
+    /// A company name for display: SEC's name without its state-of-incorporation suffix (<c>APPLE INC /CA/</c>,
+    /// <c>UNIVERSAL DISPLAY CORP \PA\</c>), title-cased by <see cref="TitleCase"/>.
+    /// </summary>
+    public static string CompanyName(string name)
+    {
+        string trimmed = name.Trim();
+        int end = trimmed.Length - 1;
+        if (end >= 3 && trimmed[end] is '/' or '\\')
+        {
+            int start = trimmed.LastIndexOfAny(['/', '\\'], end - 1);
+            int length = end - start - 1;
+            if (start > 0 && trimmed[start - 1] == ' ' && length is >= 2 and <= 3
+                && trimmed.AsSpan(start + 1, length).ToString().All(char.IsLetter))
+            {
+                trimmed = trimmed[..(start - 1)].TrimEnd();
+            }
+        }
+
+        return TitleCase(trimmed);
+    }
+
+    /// <summary>
     /// A name for display: title-cased when SEC has it all in capitals (<c>BANK OF THE OZARKS</c> becomes
     /// <c>Bank of the Ozarks</c>), otherwise as SEC has it.
     /// </summary>

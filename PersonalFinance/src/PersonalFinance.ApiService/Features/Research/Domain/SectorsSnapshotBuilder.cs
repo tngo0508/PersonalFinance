@@ -103,7 +103,7 @@ internal static class SectorsSnapshotBuilder
                 return new SectorsCompanyDto
                 {
                     Cik = g.Key,
-                    Name = SectorsClassifier.TitleCase(name),
+                    Name = SectorsClassifier.CompanyName(name),
                     Ticker = filer?.Ticker,
                     Industry = IndustryOf(g.Key),
                 };
