@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Warm during Pacific hours**: production keeps one Web and one API replica running from 08:00 to 22:00 Pacific, so daytime visitors no longer wait for a cold start.
   - Before, both apps scaled to zero after a few idle minutes. Waking each one took about 25 seconds, and the Web's call to a still-waking API often hit the 30-second timeout, leaving the Dashboard empty or in the Unavailable State.
   - The window follows daylight saving through a new `businessHoursTimeZone` deployment parameter. Outside it, both apps still scale to zero.
+  - ADR 0011 records why this window was chosen over warm replicas around the clock; ADR 0005 has a matching amendment.
 
 ## [5.4.0] - 2026-10-24
 

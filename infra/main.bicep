@@ -113,7 +113,7 @@ param secUserAgent string = ''
 // ACA Job (daily Purge):                 ~$0/month     (seconds a day, within the Consumption free grant)
 // ACA Job (daily Research refresh):      ~$0/month     (minutes a day, within the Consumption free grant)
 // ---------------------------------------------------------------------------
-// Total estimated cost:                  ~$10/month
+// Total estimated cost:                  ~$10-20/month (warm window rationale: docs/adr/0011)
 // =============================================================================
 // NOTE: To stay within budget, enable scheduled scaling when deploying:
 //   azd deploy --param enableScheduledScaling=true
