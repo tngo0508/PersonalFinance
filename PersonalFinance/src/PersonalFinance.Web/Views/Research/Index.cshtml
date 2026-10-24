@@ -1,0 +1,94 @@
+@model ResearchViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+
+@{
+    ViewData["Title"] = "Research";
+    SectorsPeriodDto? latest = Model.SectorsLatestPeriod;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
+}
+
+@* Research page, Control-deck layout: header, tab bar, then a chart card beside a side panel. The side panel stacks
+   under the chart at narrow widths. Public market data only: no prices, no recommendations, nothing about the user. *@
+<div class="research">
+    <header class="research-header">
+        <div>
+            <h1 class="research-header__title">Research</h1>
+            <p class="research-header__subtitle">Explore public market data from official sources.</p>
+        </div>
+        <p class="research-header__pill">For information only. Not investment advice.</p>
+    </header>
+
+    <div class="research-tabs" role="tablist" aria-label="Research datasets">
+        <button type="button" class="research-tabs__tab" id="research-tab-sectors" role="tab"
+                aria-selected="true" aria-controls="research-panel-sectors">Sectors</button>
+    </div>
+
+    <section class="research-deck" id="research-panel-sectors" role="tabpanel" aria-labelledby="research-tab-sectors">
+        <div class="research-card">
+            <h2 class="research-card__title">Largest SEC filers by Public float</h2>
+            @if (Model.SectorsUnavailable || latest is null)
+            {
+                <partial name="_UnavailableState" model="Model.SectorsUnavailableState"/>
+            }
+            else
+            {
+                <p class="research-card__subtitle">
+                    The @Model.SectorsTableRows.Count largest of @(Model.SectorsTableRows.Count + latest.RestCount) filers in @latest.Period, by Public float.
+                </p>
+                <div class="research-table-wrap">
+                    <table class="table research-table">
+                        <caption class="visually-hidden">Largest SEC filers by Public float in @latest.Period</caption>
+                        <thead>
+                        <tr>
+                            <th scope="col" class="research-table__rank">Rank</th>
+                            <th scope="col">Company</th>
+                            <th scope="col" class="research-table__value">Public float</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (SectorsTableRow row in Model.SectorsTableRows)
+                        {
+                            <tr>
+                                <td class="research-table__rank">@row.Rank</td>
+                                <td>@row.Name</td>
+                                <td class="research-table__value">@PublicFloatDisplay.Format(row.PublicFloat)</td>
+                            </tr>
+                        }
+                        </tbody>
+                        @if (latest.RestCount > 0)
+                        {
+                            <tfoot>
+                            <tr>
+                                <td></td>
+                                <th scope="row">All other filers (@latest.RestCount.ToString("N0", CultureInfo.GetCultureInfo("en-US")))</th>
+                                <td class="research-table__value">@PublicFloatDisplay.Format(latest.RestTotal)</td>
+                            </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            }
+            <p class="research-card__source">Source: SEC EDGAR</p>
+        </div>
+
+        <aside class="research-panel" aria-label="About the Sectors data">
+            <h2 class="research-panel__title">About this data</h2>
+            <p>
+                Public float is the market value of a company's shares held by investors other than its insiders, as
+                the company reports it once a year to the SEC. It leaves out insiders' shares, so it is smaller than
+                the company's total value.
+            </p>
+            <p>
+                Only companies that file with the SEC are included, so many small and foreign companies are missing.
+            </p>
+            <h2 class="research-panel__title">Data as of</h2>
+            <p class="research-panel__as-of">
+                @(Model.SectorsAsOf is { } asOf ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
+            </p>
+        </aside>
+    </section>
+</div>

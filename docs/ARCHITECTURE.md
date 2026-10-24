@@ -161,6 +161,7 @@ A Web controller is named after its route, so its name can differ from its Featu
 | LandingPage | `Home` |
 | Legal | `Legal` |
 | NetWorth | `Networth` |
+| Research | `Research` |
 | SavingsGoals | `SavingsGoals` |
 | Search | `Search` (JSON only) |
 | Watchlist | `Watchlist` (JSON only), `News` |

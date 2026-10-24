@@ -63,6 +63,20 @@ public class NavigationLayoutTests
     }
 
     [Fact]
+    public void LayoutView_DoesNotLinkResearchYet()
+    {
+        // The Research page is reachable at /Research but stays out of the sidebar and bottom nav until its
+        // visualisations land (spec #217); the navigation ticket replaces this check with the entries.
+        string layoutPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Shared",
+            "_Layout.cshtml");
+
+        string content = File.ReadAllText(layoutPath);
+
+        Assert.DoesNotContain("asp-controller=\"Research\"", content);
+        Assert.DoesNotContain("/Research", content);
+    }
+
+    [Fact]
     public void LayoutView_ContainsThreeNavigationTiers()
     {
         string layoutPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Shared",

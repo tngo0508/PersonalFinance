@@ -31,9 +31,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     private sealed class FakeResearchService(SectorsSnapshotDto? sectors) : IResearchService
     {
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(sectors is null
-                ? ResearchSnapshotResult<SectorsSnapshotDto>.NotLoaded()
-                : ResearchSnapshotResult<SectorsSnapshotDto>.Loaded(sectors));
+            Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(sectors));
 
         public Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("The endpoint never refreshes.");

@@ -40,9 +40,7 @@ internal sealed class ResearchService : IResearchService
         SectorsSnapshotDto? snapshot = payload is null
             ? null
             : JsonSerializer.Deserialize<SectorsSnapshotDto>(payload, JsonSerializerOptions.Web);
-        return snapshot is null
-            ? ResearchSnapshotResult<SectorsSnapshotDto>.NotLoaded()
-            : ResearchSnapshotResult<SectorsSnapshotDto>.Loaded(snapshot);
+        return new ResearchSnapshotResult<SectorsSnapshotDto>(snapshot);
     }
 
     /// <inheritdoc />

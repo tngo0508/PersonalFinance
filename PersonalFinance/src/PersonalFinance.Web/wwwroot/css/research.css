@@ -1,0 +1,140 @@
+/* ==========================================================================
+   Research page (research-*): Control-deck layout. Header with the
+   information-only pill, tab bar, then a chart card beside a side panel that
+   stacks under the chart at narrow widths.
+   ========================================================================== */
+
+.research {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-m);
+}
+
+.research-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--app-spacing-m);
+}
+
+.research-header__title {
+    margin: 0;
+    font-size: var(--app-font-size-xxl);
+    font-weight: var(--app-font-weight-bold);
+}
+
+.research-header__subtitle {
+    margin: var(--app-spacing-xs) 0 0;
+    color: var(--app-text-muted);
+}
+
+.research-header__pill {
+    margin: 0;
+    padding: var(--app-spacing-xs) var(--app-spacing-m);
+    border: 1px solid var(--app-accent-warning);
+    border-radius: 999px;
+    background: var(--app-accent-warning-soft);
+    color: var(--app-text);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+}
+
+.research-tabs {
+    display: flex;
+    gap: var(--app-spacing-s);
+    border-bottom: 1px solid var(--app-border);
+}
+
+.research-tabs__tab {
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--app-text-muted);
+    font-weight: var(--app-font-weight-medium);
+}
+
+.research-tabs__tab[aria-selected="true"] {
+    border-bottom-color: var(--app-brand);
+    color: var(--app-brand);
+}
+
+.research-deck {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    gap: var(--app-spacing-m);
+    align-items: start;
+}
+
+.research-card,
+.research-panel {
+    min-width: 0;
+    padding: var(--app-spacing-l);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-l);
+    background: var(--app-bg);
+}
+
+.research-card__title,
+.research-panel__title {
+    margin: 0 0 var(--app-spacing-s);
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-panel__title + p {
+    margin-top: 0;
+}
+
+.research-panel p {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-panel__title:not(:first-child) {
+    margin-top: var(--app-spacing-l);
+}
+
+.research-card__subtitle {
+    margin: 0 0 var(--app-spacing-m);
+    color: var(--app-text-muted);
+}
+
+.research-card__source {
+    margin: var(--app-spacing-m) 0 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-table-wrap {
+    max-height: 36rem;
+    overflow: auto;
+}
+
+.research-table {
+    margin: 0;
+}
+
+.research-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--app-bg);
+}
+
+.research-table__rank {
+    width: 4rem;
+    color: var(--app-text-muted);
+}
+
+.research-table__value {
+    font-family: var(--app-font-mono);
+    text-align: right;
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .research-deck {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

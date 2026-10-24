@@ -6,7 +6,8 @@ namespace PersonalFinance.ApiService.Features.Research;
 /// <typeparam name="TSnapshot">The dataset's Shared DTO.</typeparam>
 public sealed class ResearchSnapshotResult<TSnapshot> where TSnapshot : class
 {
-    private ResearchSnapshotResult(TSnapshot? snapshot)
+    /// <summary>A loaded snapshot, or "never loaded" when <paramref name="snapshot"/> is null.</summary>
+    public ResearchSnapshotResult(TSnapshot? snapshot)
     {
         Snapshot = snapshot;
     }
@@ -16,10 +17,4 @@ public sealed class ResearchSnapshotResult<TSnapshot> where TSnapshot : class
 
     /// <summary>True when no refresh has built the dataset yet.</summary>
     public bool NeverLoaded => Snapshot is null;
-
-    /// <summary>A loaded snapshot.</summary>
-    public static ResearchSnapshotResult<TSnapshot> Loaded(TSnapshot snapshot) => new(snapshot);
-
-    /// <summary>The dataset has never loaded.</summary>
-    public static ResearchSnapshotResult<TSnapshot> NotLoaded() => new(null);
 }

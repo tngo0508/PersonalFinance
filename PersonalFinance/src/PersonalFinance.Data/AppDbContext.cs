@@ -640,7 +640,14 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.HasIndex(e => new { e.Status, e.PurgeAfter });
         });
 
-        // Configure ResearchSnapshot entity — not user-owned, one row per dataset, read by its key
+        ConfigureResearchSnapshot(builder);
+    }
+
+    /// <summary>
+    /// ResearchSnapshot: not user-owned, one row per dataset, read by its key.
+    /// </summary>
+    private static void ConfigureResearchSnapshot(ModelBuilder builder)
+    {
         builder.Entity<ResearchSnapshot>(entity =>
         {
             entity.HasKey(e => e.Id);
