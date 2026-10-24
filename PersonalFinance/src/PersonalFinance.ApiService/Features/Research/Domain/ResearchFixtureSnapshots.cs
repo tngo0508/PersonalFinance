@@ -4,7 +4,7 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// Small, made-up Sectors, funds, fund overlap, fund returns, fund facts, macro and World snapshots for the E2E walkthrough (stored by
+/// Small, made-up Sectors, funds, fund overlap, fund exposure, fund returns, fund facts, macro and World snapshots for the E2E walkthrough (stored by
 /// <see cref="ResearchFixtureSeeder"/>): six companies over three years, SPY and QQQ over three quarters and six
 /// countries over three years. The figures are rounded illustrations in the shape of the real snapshots, not source
 /// data, and are never stored outside Development.
@@ -127,6 +127,40 @@ internal static class ResearchFixtureSnapshots
         }
 
         return FundReturnsBuilder.Build(funds, records, bills)!;
+    }
+
+    /// <summary>
+    /// The fund exposure fixture: SPY and QQQ mostly in US issuers and US dollars, with a little in Ireland, the
+    /// Netherlands and elsewhere; Hong Kong, Bermuda and Singapore (under 0.05%) are places the map draws as dots.
+    /// </summary>
+    public static FundExposureSnapshotDto FundExposure()
+    {
+        FundExposureDto Fund(string ticker, string accession, (string Code, decimal Percent)[] countries,
+            (string Code, decimal Percent)[] currencies) => new()
+        {
+            Ticker = ticker,
+            ReportDate = new DateOnly(2026, 6, 30),
+            Accession = accession,
+            Countries = countries.Select(c => new CountryShareDto
+            {
+                Code = c.Code, MapId = IsoCountryCodes.NumericOfAlpha2(c.Code), Region = CountryRegions.Of(c.Code), Percent = c.Percent,
+            }).ToList(),
+            Currencies = currencies.Select(c => new CurrencyShareDto { Code = c.Code, Percent = c.Percent }).ToList(),
+            UnallocatedCountry = 100m - countries.Sum(c => c.Percent),
+            UnallocatedCurrency = 100m - currencies.Sum(c => c.Percent),
+        };
+
+        return new FundExposureSnapshotDto
+        {
+            AsOf = new DateOnly(2026, 6, 30),
+            Funds =
+            [
+                Fund("SPY", "0000000000-26-000001", [("US", 97.33m), ("IE", 2.0m), ("CH", 0.3m), ("BM", 0.15m), ("NL", 0.1m), ("SG", 0.03m)],
+                    [("USD", 99.91m)]),
+                Fund("QQQ", "0000000000-26-000002", [("US", 94.6m), ("IE", 2.0m), ("NL", 1.6m), ("GB", 0.8m), ("CA", 0.7m), ("HK", 0.2m)],
+                    [("USD", 99.7m), ("HKD", 0.2m)]),
+            ],
+        };
     }
 
     /// <summary>

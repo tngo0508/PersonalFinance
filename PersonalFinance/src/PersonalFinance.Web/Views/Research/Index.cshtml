@@ -209,4 +209,13 @@
         <script src="~/lib/topojson-client/dist/topojson-client.min.js"></script>
         <script src="~/js/research/research-world.js" asp-append-version="true"></script>
     }
+    @if (Model.FundExposure is not null && showFunds)
+    {
+        @* topojson also loads here when the market data is missing, so the basket map can still draw. *@
+        @if (!showWorld)
+        {
+            <script src="~/lib/topojson-client/dist/topojson-client.min.js"></script>
+        }
+        <script src="~/js/research/research-world-basket.js" asp-append-version="true"></script>
+    }
 }

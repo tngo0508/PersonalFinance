@@ -173,6 +173,21 @@ public class ResearchFundsWebControllerTests
     }
 
     [Fact]
+    public async Task Index_HoldsTheFundExposure_ForTheWorldTab()
+    {
+        var exposure = new FundExposureSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
+        proxy.Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+        proxy.Returns(nameof(IResearchApi.GetFundExposureAsync), exposure);
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index(tab: "world"));
+
+        Assert.Same(exposure, model.FundExposure);
+        Assert.Equal(ResearchViewModel.WorldTab, model.SelectedTab);
+    }
+
+    [Fact]
     public async Task Index_WhenTheSectorsDataHasNeverLoaded_StillHoldsTheFunds()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();

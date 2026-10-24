@@ -87,7 +87,6 @@ internal static class NportDocumentParser
     private static NportHolding ReadHolding(XElement element)
     {
         string? Child(string name) => element.Elements().FirstOrDefault(e => e.Name.LocalName == name)?.Value.Trim();
-        XElement? Descendant(string name) => element.Descendants().FirstOrDefault(e => e.Name.LocalName == name);
 
         string? name = Child("name");
         if (string.IsNullOrEmpty(name) || name == "N/A")
@@ -102,18 +101,41 @@ internal static class NportDocumentParser
                 ?.Attribute("assetCat")?.Value.Trim();
         }
 
-        string? isin = Descendant("isin")?.Attribute("value")?.Value.Trim();
-        string? key = IsIdentifier(isin, 12) ? isin!.ToUpperInvariant() : null;
-        if (key is null)
-        {
-            string? cusip = Child("cusip");
-            key = IsIdentifier(cusip, 9) ? cusip!.ToUpperInvariant() : null;
-        }
-        bool collateral = string.Equals(Descendant("isCashCollateral")?.Value.Trim(), "Y", StringComparison.OrdinalIgnoreCase);
-
+        // Item C.5.a, the country where the issuer is organized.
         return new NportHolding(string.IsNullOrEmpty(name) ? "Unnamed holding" : name,
-            string.IsNullOrEmpty(category) ? OtherCategory : category, ParseDecimal(Child("pctVal")), key, collateral);
+            string.IsNullOrEmpty(category) ? OtherCategory : category, ParseDecimal(Child("pctVal")), SecurityKeyOf(element),
+            IsCashCollateral(element), CodeOrNull(Child("invCountry")), CurrencyOf(element));
     }
+
+    /// <summary>A holding's security key: its ISIN, else its CUSIP, else null (in memory only, ADR 0010).</summary>
+    private static string? SecurityKeyOf(XElement element)
+    {
+        string? isin = element.Descendants().FirstOrDefault(e => e.Name.LocalName == "isin")?.Attribute("value")?.Value.Trim();
+        if (IsIdentifier(isin, 12))
+        {
+            return isin!.ToUpperInvariant();
+        }
+
+        string? cusip = element.Elements().FirstOrDefault(e => e.Name.LocalName == "cusip")?.Value.Trim();
+        return IsIdentifier(cusip, 9) ? cusip!.ToUpperInvariant() : null;
+    }
+
+    /// <summary>
+    /// Whether a holding is securities-lending cash collateral: flagged as an element, or as the attribute of
+    /// <c>cashCollateralCondition</c> (as IWM files it).
+    /// </summary>
+    private static bool IsCashCollateral(XElement element)
+    {
+        XElement? flag = element.Descendants().FirstOrDefault(e => e.Name.LocalName == "isCashCollateral");
+        XElement? condition = element.Descendants().FirstOrDefault(e => e.Name.LocalName == "cashCollateralCondition");
+        return string.Equals(flag?.Value.Trim(), "Y", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(condition?.Attribute("isCashCollateral")?.Value.Trim(), "Y", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Item C.2.b, the currency a holding is priced in: USD as <c>curCd</c>, any other in <c>currencyConditional/@curCd</c>.</summary>
+    private static string? CurrencyOf(XElement element) =>
+        CodeOrNull(element.Elements().FirstOrDefault(e => e.Name.LocalName == "curCd")?.Value
+            ?? element.Elements().FirstOrDefault(e => e.Name.LocalName == "currencyConditional")?.Attribute("curCd")?.Value);
 
     /// <summary>
     /// Whether a CUSIP or ISIN as reported is a real identifier of its length: not missing, not <c>N/A</c>, and not a
@@ -181,6 +203,12 @@ internal static class NportDocumentParser
     /// <summary>A monthly return as reported, in percent; null when it is missing or not a number (e.g. N/A).</summary>
     private static decimal? ParseReturn(string? value) =>
         decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal parsed) ? parsed : null;
+
+    /// <summary>A country or currency code as reported, upper case; null when it is missing or N/A.</summary>
+    private static string? CodeOrNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) || string.Equals(value.Trim(), "N/A", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : value.Trim().ToUpperInvariant();
 
     private static string? BlankToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

@@ -16,11 +16,19 @@ namespace PersonalFinance.ApiService.Features.Research.Domain;
 /// (ADR 0010: Research never stores or shows security identifiers).
 /// </param>
 /// <param name="IsCashCollateral">
-/// True for cash collateral the fund received for securities it lent (<c>securityLending/isCashCollateral</c>):
-/// not an investment choice, so it is left out of the overlap between funds.
+/// True for cash collateral the fund received for securities it lent (<c>securityLending/isCashCollateral</c>, or the
+/// <c>isCashCollateral</c> attribute of <c>cashCollateralCondition</c>): not an investment choice, so it is left out of
+/// the overlap between funds and of their exposure.
+/// </param>
+/// <param name="Country">
+/// The ISO alpha-2 code of the country where the issuer is organized, as the fund reports it (<c>invCountry</c>, Item
+/// C.5.a), or null when it gives N/A; not where the business earns its revenue.
+/// </param>
+/// <param name="Currency">
+/// The ISO 4217 code of the currency the investment is priced in (<c>curCd</c>, Item C.2.b), or null; ADRs are USD.
 /// </param>
 internal sealed record NportHolding(string Name, string AssetCategory, decimal Percent, string? SecurityKey = null,
-    bool IsCashCollateral = false)
+    bool IsCashCollateral = false, string? Country = null, string? Currency = null)
 {
     /// <summary>Hides <see cref="SecurityKey"/>, so a holding written to a log never shows the identifier.</summary>
     public override string ToString() =>

@@ -19,7 +19,7 @@ publishers.
    | Data | Source |
    |---|---|
    | Company Public Float, sectors | SEC EDGAR (XBRL frames, company submissions) |
-   | Fund holdings, net assets, monthly total returns | SEC EDGAR, Form N-PORT (Item B.5 for returns) |
+   | Fund holdings, net assets, monthly total returns, issuer country and currency | SEC EDGAR, Form N-PORT (Item B.5 for returns, C.5.a and C.2.b for country and currency) |
    | Fund expense ratios | SEC EDGAR, shareholder report (N-CSR/N-CSRS) XBRL, `oef:ExpenseRatioPct` |
    | Consumer prices (CPI-U) | U.S. Bureau of Labor Statistics flat file |
    | Federal funds rate, 3-month Treasury bill | Federal Reserve Board, H.15 data bundle |
