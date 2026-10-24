@@ -5,6 +5,13 @@
 ARG DOTNET_VERSION=10.0
 ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0-noble
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra
+# Node for the Release build's JS/CSS minification. Pinned LTS; Debian bookworm glibc runs on the noble SDK image.
+ARG NODE_IMAGE=node:22.21.1-bookworm-slim
+
+# ---------------------------------------------------------
+# Stage 0: Node toolchain (copied into the SDK build stage only, never into the runtime image)
+# ---------------------------------------------------------
+FROM ${NODE_IMAGE} AS node
 
 # ---------------------------------------------------------
 # Stage 1: Base Runtime Image (Distroless / Chiseled Non-Root)
@@ -26,6 +33,16 @@ USER $APP_UID
 FROM ${SDK_IMAGE} AS build
 ARG BUILD_CONFIGURATION=Release
 ARG RUNTIME_IDENTIFIER=linux-x64
+
+# Node + npm from the official Node image, so the Release publish can minify the Web assets.
+# The final chiseled runtime stage copies only /app/publish, so it stays Node-free.
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && node --version \
+    && npm --version
+
 WORKDIR /src
 
 # Copy the shared MSBuild files: Directory.Build.props (TargetFramework, Nullable, analyzers) and

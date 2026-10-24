@@ -82,6 +82,12 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
 
+      # The Release build of the Web project minifies its JS and CSS with Node (spec #286).
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Restore NuGet packages
         run: dotnet restore PersonalFinance.sln
 
