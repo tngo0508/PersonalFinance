@@ -11,7 +11,7 @@ public sealed class WorldSnapshotDto
     /// <summary>The date the World Bank last updated the market-cap series ("Data as of" on the page).</summary>
     public DateOnly AsOf { get; set; }
 
-    /// <summary>The years with any market cap, oldest first, e.g. <c>1990</c> to <c>2025</c>; <see cref="Values"/> follows this order.</summary>
+    /// <summary>The years with any market cap, oldest first, e.g. <c>1975</c> to <c>2025</c>; <see cref="Values"/> follows this order.</summary>
     public List<string> Periods { get; set; } = [];
 
     /// <summary>Every country with a market cap in any year, in ISO numeric order.</summary>

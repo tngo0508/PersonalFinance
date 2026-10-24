@@ -31,6 +31,14 @@ internal sealed class ResearchSettings
     public IReadOnlyList<FilerYear> PublicFloatExclusions { get; init; } = [];
 
     /// <summary>
+    /// The filer years whose Public Float the Sectors snapshot keeps although it is more than
+    /// <see cref="PublicFloatCleaner.MaxTimesNearestOtherYear"/> times the filer's nearest other year
+    /// (<c>Research:PublicFloatKeeps</c>, a list of <c>{ "Cik": ..., "Year": ... }</c>): real companies that grew
+    /// that fast, such as a spin-off in its first full year. The other cleaning rules still apply to them.
+    /// </summary>
+    public IReadOnlyList<FilerYear> PublicFloatKeeps { get; init; } = [];
+
+    /// <summary>
     /// The ETFs of the ETFs dataset (<c>Research:Etfs</c>, a list of <c>{ "Ticker", "Name", "Cik" }</c>), in the
     /// order the page lists them. With none configured the dataset is not built.
     /// </summary>
@@ -43,8 +51,9 @@ internal sealed class ResearchSettings
     public DateOnly EtfsFirstQuarter { get; init; } = new(2019, 10, 1);
 
     /// <summary>
-    /// The first year of the World dataset (<c>Research:WorldFirstYear</c>). The World Bank's market-cap series starts
-    /// in 1975, but before 1990 only a few dozen countries report.
+    /// The first year the World dataset asks the World Bank for (<c>Research:WorldFirstYear</c>): 1975, where its
+    /// market-cap series starts. Before 1990 only a few dozen countries report; the snapshot's periods begin at the
+    /// first year any country has a value.
     /// </summary>
-    public int WorldFirstYear { get; init; } = 1990;
+    public int WorldFirstYear { get; init; } = 1975;
 }

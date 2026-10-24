@@ -26,12 +26,16 @@ public class ResearchServiceTests
         new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options);
 
     private static ResearchService CreateService(AppDbContext db, StubSecHandler handler, int firstYear = 2024,
-        IReadOnlyList<FilerYear>? exclusions = null, ILogger<ResearchService>? logger = null)
+        IReadOnlyList<FilerYear>? exclusions = null, ILogger<ResearchService>? logger = null,
+        IReadOnlyList<FilerYear>? keeps = null)
     {
         var settings = new SecEdgarSettings { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
         var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
-        var research = new ResearchSettings { SectorsFirstYear = firstYear, PublicFloatExclusions = exclusions ?? [] };
+        var research = new ResearchSettings
+        {
+            SectorsFirstYear = firstYear, PublicFloatExclusions = exclusions ?? [], PublicFloatKeeps = keeps ?? [],
+        };
         // The World Bank is down here: these tests are about the Sectors dataset, which is built on its own.
         var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
@@ -295,6 +299,40 @@ public class ResearchServiceTests
     }
 
     [Fact]
+    public async Task RefreshAsync_KeepsAFilerYearOnTheKeepList_ThatGrewOver30Times()
+    {
+        await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
+        StubSecHandler handler = HandlerWithNvidia();
+        // A real company that grew 40x in a year (e.g. a spin-off's first full year): only the keep list saves it.
+        AddFloat(handler, 2024, new Filer(10, "SPUN OFF CO", "2024-06-30", 1_000_000_000m));
+        AddFloat(handler, 2025, new Filer(10, "SPUN OFF CO", "2025-06-30", 40_000_000_000m));
+        // The same growth, not on the list: dropped.
+        AddFloat(handler, 2024, new Filer(12, "NOT LISTED CO", "2024-06-30", 1_000_000_000m));
+        AddFloat(handler, 2025, new Filer(12, "NOT LISTED CO", "2025-06-30", 40_000_000_000m));
+
+        SectorsSnapshotDto snapshot = await RefreshAndReadAsync(db, handler, keeps: [new FilerYear(10, 2025)]);
+
+        AssertNvidiaKept(snapshot);
+        Assert.Equal([1_000_000_000m, 40_000_000_000m], ValuesOf(snapshot, 10));
+        Assert.Equal([1_000_000_000m], ValuesOf(snapshot, 12));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_StillDropsAFilerYearOnTheKeepList_ThatIsOver200TimesItsTotalAssets()
+    {
+        await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
+        StubSecHandler handler = HandlerWithNvidia();
+        AddFloat(handler, 2024, new Filer(11, "KEPT BUT INFLATED CO", "2024-06-30", 1_000_000_000m));
+        AddFloat(handler, 2025, new Filer(11, "KEPT BUT INFLATED CO", "2025-06-30", 40_000_000_000m));
+        AddAssets(handler, 2025, new Filer(11, "KEPT BUT INFLATED CO", "2025-06-30", 100_000_000m)); // 400x
+
+        SectorsSnapshotDto snapshot = await RefreshAndReadAsync(db, handler, keeps: [new FilerYear(11, 2025)]);
+
+        AssertNvidiaKept(snapshot);
+        Assert.Equal([1_000_000_000m], ValuesOf(snapshot, 11));
+    }
+
+    [Fact]
     public async Task RefreshAsync_LogsEachDroppedValueByFilerAndYearOnly()
     {
         await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
@@ -364,9 +402,10 @@ public class ResearchServiceTests
 
     /// <summary>Refreshes 2023 to 2025 and reads the stored snapshot back.</summary>
     private static async Task<SectorsSnapshotDto> RefreshAndReadAsync(AppDbContext db, StubSecHandler handler,
-        IReadOnlyList<FilerYear>? exclusions = null, ILogger<ResearchService>? logger = null)
+        IReadOnlyList<FilerYear>? exclusions = null, ILogger<ResearchService>? logger = null,
+        IReadOnlyList<FilerYear>? keeps = null)
     {
-        ResearchService service = CreateService(db, handler, firstYear: 2023, exclusions, logger);
+        ResearchService service = CreateService(db, handler, firstYear: 2023, exclusions, logger, keeps);
         ResearchRefreshSummary summary = await service.RefreshAsync();
         Assert.Contains("sectors", summary.Built);
         return (await service.GetSectorsAsync()).Snapshot!;

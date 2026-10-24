@@ -181,7 +181,8 @@ internal sealed class ResearchService : IResearchService
         }
 
         PublicFloatCleaning cleaning =
-            PublicFloatCleaner.Clean(factsByYear, totalAssets, _settings.PublicFloatExclusions);
+            PublicFloatCleaner.Clean(factsByYear, totalAssets, _settings.PublicFloatExclusions,
+                _settings.PublicFloatKeeps);
         // One line a year: a refresh drops a hundred or more values a year, mostly from small filers.
         foreach (IGrouping<int, FilerYear> year in cleaning.Dropped.GroupBy(d => d.Year))
         {

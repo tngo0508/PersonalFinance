@@ -69,6 +69,36 @@ public class ResearchFeatureTests
     }
 
     [Fact]
+    public void ShippedKeepList_HoldsTheRealCompaniesThe30TimesRuleWouldDrop()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.ApiService"), "appsettings.json"))
+            .Build();
+
+        // Corteva, Woodward and QXO, by CIK from SEC's company_tickers.json.
+        Assert.Equal([new FilerYear(1755672, 2025), new FilerYear(108312, 2025), new FilerYear(1236275, 2025)],
+            SettingsFrom(configuration).PublicFloatKeeps);
+    }
+
+    [Fact]
+    public void AddResearchFeature_WithNoKeepsConfigured_KeepsNothing()
+    {
+        Assert.Empty(SettingsFrom(new ConfigurationBuilder().Build()).PublicFloatKeeps);
+    }
+
+    [Fact]
+    public void WorldFirstYear_Is1975_ShippedAndByDefault()
+    {
+        IConfiguration shipped = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.ApiService"), "appsettings.json"))
+            .Build();
+
+        Assert.Equal(1975, SettingsFrom(shipped).WorldFirstYear);
+        Assert.Equal(1975, SettingsFrom(new ConfigurationBuilder().Build()).WorldFirstYear);
+        Assert.Equal(1975, new ResearchSettings().WorldFirstYear);
+    }
+
+    [Fact]
     public void ShippedEtfList_HoldsTheSixEtfs_WithTheTrustCikOnlyForTheSingleFundTrusts()
     {
         IConfiguration configuration = new ConfigurationBuilder()
