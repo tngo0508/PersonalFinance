@@ -6,13 +6,13 @@
     ViewData["Title"] = "Research";
     SectorsPeriodDto? latest = Model.Sectors.LatestPeriod;
     bool showSectors = !Model.Sectors.Unavailable && latest is not null;
-    bool showEtfs = !Model.Etfs.Unavailable;
+    bool showFunds = !Model.Funds.Unavailable;
     bool showWorld = !Model.World.Unavailable;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
-    <link rel="stylesheet" href="~/css/research-etfs.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/research-funds.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/research-companies.css" asp-append-version="true"/>
 }
 
@@ -28,7 +28,7 @@
     </header>
 
     <div class="research-tabs" role="tablist" aria-label="Research datasets">
-        @foreach ((string id, string label) in new[] { (ResearchViewModel.SectorsTab, "Sectors"), (ResearchViewModel.EtfsTab, "ETFs"), (ResearchViewModel.WorldTab, "World"), (ResearchViewModel.CompaniesTab, "Companies") })
+        @foreach ((string id, string label) in new[] { (ResearchViewModel.SectorsTab, "Sectors"), (ResearchViewModel.FundsTab, "Funds"), (ResearchViewModel.WorldTab, "World"), (ResearchViewModel.CompaniesTab, "Companies") })
         {
             bool selected = Model.IsSelected(id);
             <button type="button" class="research-tabs__tab" id="research-tab-@id" role="tab" data-research-tab="@id"
@@ -137,7 +137,7 @@
         </aside>
     </section>
 
-    <partial name="_EtfsTab" model="Model"/>
+    <partial name="_FundsTab" model="Model"/>
     <partial name="_WorldTab" model="Model"/>
     <partial name="_CompaniesTab" model="Model"/>
 
@@ -161,9 +161,9 @@
     {
         <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>
     }
-    @if (showEtfs)
+    @if (showFunds)
     {
-        <script src="~/js/research/research-etfs.js" asp-append-version="true"></script>
+        <script src="~/js/research/research-funds.js" asp-append-version="true"></script>
     }
     @if (showWorld)
     {

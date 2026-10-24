@@ -15,14 +15,17 @@ internal static class ResearchDatasets
     /// </summary>
     public const string SecFilers = "sec-filers";
 
-    /// <summary>The ETFs snapshot.</summary>
-    public const string Etfs = "etfs";
+    /// <summary>
+    /// The funds snapshot. The key keeps its first name, "etfs", so the snapshot already stored stays in use.
+    /// </summary>
+    public const string Funds = "etfs";
 
     /// <summary>
-    /// The N-PORT filings read for the ETFs snapshot, kept so each refresh fetches only the filings it has not read
+    /// The N-PORT filings read for the funds snapshot, kept so each refresh fetches only the filings it has not read
     /// before. Not served to the page.
     /// </summary>
-    public const string EtfFilings = "etf-filings";
+    /// <remarks>The key keeps its first name, so the filings already read are not fetched again.</remarks>
+    public const string FundFilings = "etf-filings";
 
     /// <summary>The World snapshot.</summary>
     public const string World = "world";

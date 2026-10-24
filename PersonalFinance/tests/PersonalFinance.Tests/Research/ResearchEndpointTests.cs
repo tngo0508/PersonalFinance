@@ -12,14 +12,14 @@ using PersonalFinance.Tests.Security;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The ApiService <c>GET /api/Research/sectors</c>, <c>/etfs</c> and <c>/world</c> endpoints: signed-in only; each
+/// The ApiService <c>GET /api/Research/sectors</c>, <c>/funds</c> and <c>/world</c> endpoints: signed-in only; each
 /// returns its stored snapshot, or 503 with a reason when the dataset has never loaded.
 /// </summary>
 [Collection("ApiServiceHost")]
 public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTests.ApiServiceHost>
 {
     private const string SectorsUrl = "/api/Research/sectors";
-    private const string EtfsUrl = "/api/Research/etfs";
+    private const string FundsUrl = "/api/Research/funds";
     private const string WorldUrl = "/api/Research/world";
     private const string InternalKey = "http-test-shared-secret";
 
@@ -31,13 +31,13 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     }
 
     private sealed class FakeResearchService(SectorsSnapshotDto? sectors, WorldSnapshotDto? world = null,
-        EtfsSnapshotDto? etfs = null) : IResearchService
+        FundsSnapshotDto? funds = null) : IResearchService
     {
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(sectors));
 
-        public Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ResearchSnapshotResult<EtfsSnapshotDto>(etfs));
+        public Task<ResearchSnapshotResult<FundsSnapshotDto>> GetFundsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundsSnapshotDto>(funds));
 
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(world));
@@ -74,28 +74,28 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     }
 
     [Fact]
-    public async Task GetEtfs_WhenLoaded_ReturnsTheSnapshot()
+    public async Task GetFunds_WhenLoaded_ReturnsTheSnapshot()
     {
-        var snapshot = new EtfsSnapshotDto { AsOf = new DateOnly(2026, 6, 30), Periods = ["2026 Q2"] };
+        var snapshot = new FundsSnapshotDto { AsOf = new DateOnly(2026, 6, 30), Periods = ["2026 Q2"] };
 
-        IActionResult result = await new ResearchController(new FakeResearchService(null, etfs: snapshot)).GetEtfs();
+        IActionResult result = await new ResearchController(new FakeResearchService(null, funds: snapshot)).GetFunds();
 
         Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
     }
 
     [Fact]
-    public async Task GetEtfs_WhenNeverLoaded_Returns503WithAReason()
+    public async Task GetFunds_WhenNeverLoaded_Returns503WithAReason()
     {
-        IActionResult result = await new ResearchController(new FakeResearchService(new SectorsSnapshotDto())).GetEtfs();
+        IActionResult result = await new ResearchController(new FakeResearchService(new SectorsSnapshotDto())).GetFunds();
 
         ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.EtfsNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
+        Assert.Equal(ResearchController.FundsNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
     }
 
     [Theory]
     [InlineData(SectorsUrl)]
-    [InlineData(EtfsUrl)]
+    [InlineData(FundsUrl)]
     public async Task Get_OverHttp_WithoutTheSharedSecret_IsRejected(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -109,7 +109,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 
     [Theory]
     [InlineData(SectorsUrl)]
-    [InlineData(EtfsUrl)]
+    [InlineData(FundsUrl)]
     public async Task Get_OverHttp_SignedIn_OnAnEmptyDatabase_Returns503WithAReason(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

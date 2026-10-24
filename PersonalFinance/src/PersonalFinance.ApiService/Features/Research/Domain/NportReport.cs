@@ -1,7 +1,7 @@
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// The parts of a Form N-PORT report the ETF snapshot reads: whose report it is, the date its holdings are as of,
+/// The parts of a Form N-PORT report the funds snapshot reads: whose report it is, the date its holdings are as of,
 /// and every holding.
 /// </summary>
 /// <param name="SeriesId">The series the report is for, or null for a fund filed without one (e.g. SPY's trust).</param>

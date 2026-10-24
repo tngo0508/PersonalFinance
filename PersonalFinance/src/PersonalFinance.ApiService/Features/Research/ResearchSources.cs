@@ -9,7 +9,7 @@ public enum ResearchSources
     /// <summary>No source.</summary>
     None = 0,
 
-    /// <summary>SEC EDGAR: the Sectors and ETFs datasets.</summary>
+    /// <summary>SEC EDGAR: the Sectors and funds datasets.</summary>
     SecEdgar = 1,
 
     /// <summary>The World Bank: the World dataset.</summary>

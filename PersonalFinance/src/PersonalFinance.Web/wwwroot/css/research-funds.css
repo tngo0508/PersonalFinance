@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Research page, ETFs tab (research-etfs-*): the collapsible holdings tree.
+   Research page, Funds tab (research-funds-*): the collapsible holdings tree.
    One hue: identity is carried by position and label, not colour. A filled
    brand dot has closed children, an open node is a ring on the surface, a
    holding is a soft brand dot and "Other" is grey. The tree keeps its own
@@ -12,7 +12,7 @@
     grid-template-columns: minmax(0, 1fr);
 }
 
-.research-etfs-tree {
+.research-funds-tree {
     max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
@@ -20,49 +20,49 @@
     -webkit-overflow-scrolling: touch;
 }
 
-.research-etfs__svg {
+.research-funds__svg {
     display: block;
     font-family: var(--app-font-family);
     font-size: 12px;
 }
 
-.research-etfs__links path {
+.research-funds__links path {
     fill: none;
     stroke: var(--app-border);
     stroke-width: 1.5px;
 }
 
-.research-etfs__node {
+.research-funds__node {
     cursor: pointer;
     outline: none;
 }
 
-.research-etfs__dot {
+.research-funds__dot {
     fill: var(--app-surface);
     stroke: var(--app-brand);
     stroke-width: 2px;
 }
 
-.research-etfs__node.is-collapsed .research-etfs__dot {
+.research-funds__node.is-collapsed .research-funds__dot {
     fill: var(--app-brand);
 }
 
-.research-etfs__node[data-kind="holding"] .research-etfs__dot {
+.research-funds__node[data-kind="holding"] .research-funds__dot {
     fill: var(--app-brand-soft);
 }
 
-.research-etfs__node[data-kind="other"] .research-etfs__dot {
+.research-funds__node[data-kind="other"] .research-funds__dot {
     fill: var(--app-surface-secondary);
     stroke: var(--app-text-muted);
 }
 
-.research-etfs__node.is-missing .research-etfs__dot {
+.research-funds__node.is-missing .research-funds__dot {
     fill: var(--app-surface);
     stroke: var(--app-text-muted);
     stroke-dasharray: 3 2;
 }
 
-.research-etfs__label {
+.research-funds__label {
     fill: var(--app-text);
     paint-order: stroke;
     stroke: var(--app-bg);
@@ -71,21 +71,21 @@
     user-select: none;
 }
 
-.research-etfs__node[data-kind="root"] .research-etfs__label,
-.research-etfs__node[data-kind="fund"] .research-etfs__label {
+.research-funds__node[data-kind="root"] .research-funds__label,
+.research-funds__node[data-kind="fund"] .research-funds__label {
     font-weight: var(--app-font-weight-semibold);
 }
 
-.research-etfs__node.is-missing .research-etfs__label,
-.research-etfs__node[data-kind="other"] .research-etfs__label {
+.research-funds__node.is-missing .research-funds__label,
+.research-funds__node[data-kind="other"] .research-funds__label {
     fill: var(--app-text-muted);
 }
 
-.research-etfs__node:focus-visible .research-etfs__dot {
+.research-funds__node:focus-visible .research-funds__dot {
     stroke: var(--app-text);
     stroke-width: 3px;
 }
 
-.research-etfs__node:focus-visible .research-etfs__label {
+.research-funds__node:focus-visible .research-funds__label {
     text-decoration: underline;
 }

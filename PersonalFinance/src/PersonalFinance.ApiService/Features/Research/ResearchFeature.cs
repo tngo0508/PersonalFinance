@@ -45,8 +45,8 @@ internal static class ResearchFeature
             PublicFloatKeeps = configuration
                 .GetSection($"{ResearchSettings.Section}:PublicFloatKeeps")
                 .Get<List<FilerYear>>() ?? [],
-            Etfs = configuration.GetSection($"{ResearchSettings.Section}:Etfs").Get<List<ResearchEtf>>() ?? [],
-            EtfsFirstQuarter = configuration.GetValue($"{ResearchSettings.Section}:EtfsFirstQuarter",
+            Funds = configuration.GetSection($"{ResearchSettings.Section}:Funds").Get<List<TrackedFund>>() ?? [],
+            FundsFirstQuarter = configuration.GetValue($"{ResearchSettings.Section}:FundsFirstQuarter",
                 new DateOnly(2019, 10, 1)),
             WorldFirstYear = configuration.GetValue($"{ResearchSettings.Section}:WorldFirstYear", 1975),
         });
@@ -56,7 +56,7 @@ internal static class ResearchFeature
         services.AddScoped<ResearchSnapshotStore>();
         // Refreshed in this order, each on its own.
         services.AddScoped<IResearchDatasetRefresher, SectorsRefresher>();
-        services.AddScoped<IResearchDatasetRefresher, EtfsRefresher>();
+        services.AddScoped<IResearchDatasetRefresher, FundsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, WorldRefresher>();
         services.AddScoped<IResearchService, ResearchService>();
 

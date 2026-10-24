@@ -4,7 +4,7 @@ namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
 /// <see cref="IResearchService"/> over the stored snapshots (<see cref="ResearchSnapshotStore"/>) and one
-/// <see cref="IResearchDatasetRefresher"/> per source pipeline: SEC Sectors, N-PORT ETFs and the World Bank.
+/// <see cref="IResearchDatasetRefresher"/> per source pipeline: SEC Sectors, N-PORT funds and the World Bank.
 /// </summary>
 internal sealed class ResearchService : IResearchService
 {
@@ -25,8 +25,8 @@ internal sealed class ResearchService : IResearchService
         GetAsync<SectorsSnapshotDto>(ResearchDatasets.Sectors, cancellationToken);
 
     /// <inheritdoc />
-    public Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default) =>
-        GetAsync<EtfsSnapshotDto>(ResearchDatasets.Etfs, cancellationToken);
+    public Task<ResearchSnapshotResult<FundsSnapshotDto>> GetFundsAsync(CancellationToken cancellationToken = default) =>
+        GetAsync<FundsSnapshotDto>(ResearchDatasets.Funds, cancellationToken);
 
     /// <inheritdoc />
     public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>

@@ -44,12 +44,12 @@ internal static class ResearchFixtureSeeder
         CancellationToken cancellationToken = default)
     {
         SectorsSnapshotDto sectors = ResearchFixtureSnapshots.Sectors();
-        EtfsSnapshotDto etfs = ResearchFixtureSnapshots.Etfs();
+        FundsSnapshotDto funds = ResearchFixtureSnapshots.Funds();
         WorldSnapshotDto world = ResearchFixtureSnapshots.World();
         (string Dataset, List<string> Periods, DateOnly AsOf, object Snapshot)[] fixtures =
         [
             (ResearchDatasets.Sectors, sectors.Periods, sectors.AsOf, sectors),
-            (ResearchDatasets.Etfs, etfs.Periods, etfs.AsOf, etfs),
+            (ResearchDatasets.Funds, funds.Periods, funds.AsOf, funds),
             (ResearchDatasets.World, world.Periods, world.AsOf, world),
         ];
 

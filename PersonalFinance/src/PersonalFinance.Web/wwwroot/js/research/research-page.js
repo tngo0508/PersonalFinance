@@ -320,7 +320,7 @@
 
     /**
      * Select a tab by its id, as if the user chose it.
-     * @param {string} tabId - The tab's id, e.g. 'etfs'.
+     * @param {string} tabId - The tab's id, e.g. 'funds'.
      * @returns {void}
      */
     function selectTabById (tabId) {

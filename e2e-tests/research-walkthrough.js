@@ -1,6 +1,6 @@
 /**
  * Research first-session walkthrough (spec #217, Testing Decisions): the 11 steps a new Account takes through the
- * Sectors, ETFs and World tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
+ * Sectors, Funds and World tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
  * Test 9c.
  *
  * Needs the ApiService started in Development with E2E_SEED_RESEARCH=true, which stores small fixture snapshots
@@ -44,7 +44,7 @@ async function registerFreshAccount(page, base) {
 /**
  * The period labels a tab's data island holds, oldest first.
  * @param {import('playwright').Page} page - A page showing /Research.
- * @param {string} tabId - sectors, etfs or world.
+ * @param {string} tabId - sectors, funds or world.
  * @returns {Promise<string[]>} The period labels, or [] when the island is missing.
  */
 async function periodsOf(page, tabId) {
@@ -57,7 +57,7 @@ async function periodsOf(page, tabId) {
 /**
  * The text of a tab's scrubber period label.
  * @param {import('playwright').Page} page - A page showing /Research.
- * @param {string} tabId - sectors, etfs or world.
+ * @param {string} tabId - sectors, funds or world.
  * @returns {Promise<string>} The label, trimmed.
  */
 async function periodLabel(page, tabId) {
@@ -312,21 +312,21 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 7: ETFs opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters.
+        // Step 7: Funds opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters.
         await step('Research 7', fail, async () => {
-            await page.click('#research-tab-etfs');
-            await page.waitForSelector('#research-etfs-tree [role="tree"]', {timeout: TIMEOUT});
-            const spy = page.locator('#research-etfs-tree [role="treeitem"][aria-label^="SPY "]');
-            const qqq = page.locator('#research-etfs-tree [role="treeitem"][aria-label^="QQQ "]');
+            await page.click('#research-tab-funds');
+            await page.waitForSelector('#research-funds-tree [role="tree"]', {timeout: TIMEOUT});
+            const spy = page.locator('#research-funds-tree [role="treeitem"][aria-label^="SPY "]');
+            const qqq = page.locator('#research-funds-tree [role="treeitem"][aria-label^="QQQ "]');
             const spyOpen = await spy.getAttribute('aria-expanded');
             const qqqBefore = await qqq.getAttribute('aria-expanded');
             await qqq.focus();
             await page.keyboard.press('Enter');
             await page.waitForFunction(() => {
-                const node = document.querySelector('#research-etfs-tree [role="treeitem"][aria-label^="QQQ "]');
+                const node = document.querySelector('#research-funds-tree [role="treeitem"][aria-label^="QQQ "]');
                 return node && node.getAttribute('aria-expanded') === 'true';
             }, null, {timeout: 5000});
-            const quarter = await periodLabel(page, 'etfs');
+            const quarter = await periodLabel(page, 'funds');
             if (spyOpen === 'true' && qqqBefore === 'false' && /^\d{4} Q[1-4]$/.test(quarter)) {
                 pass(`Research 7: SPY starts open, QQQ opens with Enter, the scrubber shows ${quarter}`);
             } else {
@@ -355,7 +355,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // Step 9: "Show as table" lists rows on each tab.
         await step('Research 9', fail, async () => {
             const counts = {};
-            for (const tabId of ['sectors', 'etfs', 'world']) {
+            for (const tabId of ['sectors', 'funds', 'world']) {
                 await page.click(`#research-tab-${tabId}`);
                 await page.locator(`#research-panel-${tabId} [data-research-table-toggle]`).click();
                 counts[tabId] = await page.locator(`#research-panel-${tabId} [data-research-table] tbody tr`).count();
@@ -405,7 +405,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 await mobile.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await mobile.waitForSelector('#research-sunburst svg', {timeout: TIMEOUT});
                 const wide = [];
-                for (const tabId of ['sectors', 'etfs', 'world']) {
+                for (const tabId of ['sectors', 'funds', 'world']) {
                     await mobile.tap(`#research-tab-${tabId}`);
                     await mobile.waitForTimeout(300);
                     if (await scrollsSideways(mobile)) {
@@ -546,7 +546,7 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
         }
     });
 
-    // Company 6: a fund ticker says so and links to the ETFs tab.
+    // Company 6: a fund ticker says so and links to the Funds tab.
     await step('Company 6', fail, async () => {
         const input = page.locator('#research-company-input');
         await input.fill('EXFD');
@@ -554,12 +554,12 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
         const message = page.locator(`${panel} [data-research-company-message]`);
         await message.waitFor({state: 'visible', timeout: TIMEOUT});
         const text = await message.textContent();
-        await message.locator('a', {hasText: 'ETFs tab'}).click();
-        const etfsSelected = await page.locator('#research-tab-etfs').getAttribute('aria-selected');
-        if (/is a fund/.test(text) && etfsSelected === 'true') {
-            pass('Company 6: a fund ticker says it is a fund and its link opens the ETFs tab');
+        await message.locator('a', {hasText: 'Funds tab'}).click();
+        const fundsSelected = await page.locator('#research-tab-funds').getAttribute('aria-selected');
+        if (/is a fund/.test(text) && fundsSelected === 'true') {
+            pass('Company 6: a fund ticker says it is a fund and its link opens the Funds tab');
         } else {
-            fail(`Company 6: message "${text}", ETFs selected "${etfsSelected}"`);
+            fail(`Company 6: message "${text}", Funds selected "${fundsSelected}"`);
         }
     });
 

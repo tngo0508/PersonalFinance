@@ -6,7 +6,7 @@ namespace PersonalFinance.ApiService.Features.Research;
 /// <summary>
 /// The Companies tab's <see cref="CompanyTickerIndex"/>, shared by every request (a singleton). It is read from SEC at
 /// most once per <see cref="FreshFor"/>; when a re-read fails, the previous index keeps being served, so suggestions
-/// survive an SEC outage. The tickers of the ETFs tab are counted as funds, as SEC's fund list leaves some out.
+/// survive an SEC outage. The Tracked Funds' tickers are counted as funds, as SEC's fund list leaves some out.
 /// </summary>
 internal sealed class CompanyTickerIndexCache : IDisposable
 {
@@ -49,7 +49,7 @@ internal sealed class CompanyTickerIndexCache : IDisposable
 
             IReadOnlyList<SecCompanyListing> listings = await client.GetCompanyTickersAsync(cancellationToken);
             IReadOnlyList<string> funds = await client.GetFundTickersAsync(cancellationToken);
-            _index = new CompanyTickerIndex(listings, funds.Concat(_settings.Etfs.Select(e => e.Ticker)));
+            _index = new CompanyTickerIndex(listings, funds.Concat(_settings.Funds.Select(e => e.Ticker)));
             _readAt = _timeProvider.GetUtcNow();
             return _index;
         }

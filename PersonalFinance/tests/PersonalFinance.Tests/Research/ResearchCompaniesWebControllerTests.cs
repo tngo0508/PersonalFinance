@@ -38,7 +38,9 @@ public class ResearchCompaniesWebControllerTests
     }
 
     [Theory]
-    [InlineData("etfs", ResearchViewModel.EtfsTab)]
+    [InlineData("funds", ResearchViewModel.FundsTab)]
+    [InlineData("etfs", ResearchViewModel.FundsTab)] // The Funds tab's first id: old links still open it.
+    [InlineData(" ETFS ", ResearchViewModel.FundsTab)]
     [InlineData("WORLD", ResearchViewModel.WorldTab)]
     [InlineData("companies", ResearchViewModel.CompaniesTab)]
     [InlineData("unknown", ResearchViewModel.SectorsTab)]

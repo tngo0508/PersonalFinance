@@ -47,7 +47,7 @@ public class ResearchRefreshIsolationTests
 
         ResearchRefreshSummary summary = await service.RefreshAsync(ResearchSources.WorldBank);
 
-        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Etfs], summary.Skipped);
+        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Funds], summary.Skipped);
         Assert.Equal([ResearchDatasets.World], summary.Built);
         Assert.Empty(summary.Failed);
         Assert.Equal(0, sec.Calls);
@@ -60,7 +60,7 @@ public class ResearchRefreshIsolationTests
             {
                 SectorsFirstYear = 2025,
                 WorldFirstYear = 2025,
-                Etfs = [new ResearchEtf("SPY", "SPDR S&P 500 ETF Trust", 884394)],
+                Funds = [new TrackedFund("SPY", "SPDR S&P 500 ETF Trust", 884394)],
             },
             new FixedTimeProvider(Now));
 

@@ -3,7 +3,7 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// Small, made-up Sectors, ETFs and World snapshots for the E2E walkthrough (stored by
+/// Small, made-up Sectors, funds and World snapshots for the E2E walkthrough (stored by
 /// <see cref="ResearchFixtureSeeder"/>): six companies over three years, SPY and QQQ over three quarters and six
 /// countries over three years. The figures are rounded illustrations in the shape of the real snapshots, not source
 /// data, and are never stored outside Development.
@@ -44,21 +44,21 @@ internal static class ResearchFixtureSnapshots
         ],
     };
 
-    /// <summary>The ETFs fixture: SPY and QQQ for three quarters, SPY with common equity and cash vehicles.</summary>
-    public static EtfsSnapshotDto Etfs() => new()
+    /// <summary>The funds fixture: SPY and QQQ for three quarters, SPY with common equity and cash vehicles.</summary>
+    public static FundsSnapshotDto Funds() => new()
     {
         AsOf = new DateOnly(2026, 6, 30),
         Periods = ["2025 Q4", "2026 Q1", "2026 Q2"],
         Funds =
         [
-            new() { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust" },
-            new() { Ticker = "QQQ", Name = "Invesco QQQ Trust" },
+            new() { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust", Role = "US broad" },
+            new() { Ticker = "QQQ", Name = "Invesco QQQ Trust", Role = "Growth, sector and thematic" },
         ],
         Values =
         [
-            EtfsQuarter("2025 Q4", new DateOnly(2025, 12, 31), 0m),
-            EtfsQuarter("2026 Q1", new DateOnly(2026, 3, 31), 0.3m),
-            EtfsQuarter("2026 Q2", new DateOnly(2026, 6, 30), 0.6m),
+            FundsQuarter("2025 Q4", new DateOnly(2025, 12, 31), 0m),
+            FundsQuarter("2026 Q1", new DateOnly(2026, 3, 31), 0.3m),
+            FundsQuarter("2026 Q2", new DateOnly(2026, 6, 30), 0.6m),
         ],
     };
 
@@ -106,8 +106,8 @@ internal static class ResearchFixtureSnapshots
         };
     }
 
-    /// <summary>One ETFs quarter; <paramref name="drift"/> moves the weights a little so quarters differ.</summary>
-    private static EtfsPeriodDto EtfsQuarter(string period, DateOnly reportDate, decimal drift) => new()
+    /// <summary>One funds quarter; <paramref name="drift"/> moves the weights a little so quarters differ.</summary>
+    private static FundsPeriodDto FundsQuarter(string period, DateOnly reportDate, decimal drift) => new()
     {
         Period = period,
         Funds =
@@ -141,13 +141,13 @@ internal static class ResearchFixtureSnapshots
     };
 
     /// <summary>A category whose weight is its listed holdings plus <paramref name="otherPercent"/>.</summary>
-    private static EtfCategoryDto Category(string code, string name, int holdingCount, decimal otherPercent,
+    private static FundCategoryDto Category(string code, string name, int holdingCount, decimal otherPercent,
         (string Name, decimal Percent)[] top) => new()
     {
         Code = code,
         Name = name,
         HoldingCount = holdingCount,
-        Top = top.Select(t => new EtfHoldingDto { Name = t.Name, Percent = t.Percent }).ToList(),
+        Top = top.Select(t => new FundHoldingDto { Name = t.Name, Percent = t.Percent }).ToList(),
         OtherCount = holdingCount - top.Length,
         OtherPercent = otherPercent,
         Percent = top.Sum(t => t.Percent) + otherPercent,

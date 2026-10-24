@@ -43,9 +43,9 @@ public sealed class ResearchController : Controller
         CancellationToken cancellationToken = default)
     {
         SectorsSnapshotDto? sectors = await ReadAsync(_researchApi.GetSectorsAsync, "Sectors", cancellationToken);
-        EtfsSnapshotDto? etfs = await ReadAsync(_researchApi.GetEtfsAsync, "ETFs", cancellationToken);
+        FundsSnapshotDto? funds = await ReadAsync(_researchApi.GetFundsAsync, "funds", cancellationToken);
         WorldSnapshotDto? world = await ReadAsync(_researchApi.GetWorldAsync, "World", cancellationToken);
-        return View(new ResearchViewModel(sectors, etfs, world, tab, ticker));
+        return View(new ResearchViewModel(sectors, funds, world, tab, ticker));
     }
 
     /// <summary>

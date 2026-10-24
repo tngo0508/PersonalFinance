@@ -12,7 +12,7 @@ internal interface IResearchDatasetRefresher
     /// <summary>The source the dataset is built from.</summary>
     ResearchSources Source { get; }
 
-    /// <summary>False when configuration gives the dataset nothing to build (e.g. no ETFs listed), so it is skipped.</summary>
+    /// <summary>False when configuration gives the dataset nothing to build (e.g. no funds listed), so it is skipped.</summary>
     bool IsConfigured { get; }
 
     /// <summary>
