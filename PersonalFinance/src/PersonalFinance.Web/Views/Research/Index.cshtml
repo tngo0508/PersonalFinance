@@ -74,10 +74,18 @@
                     The @latest!.Ranked.Count largest of @((latest.Ranked.Count + latest.RestCount).ToString("N0", CultureInfo.GetCultureInfo("en-US"))) filers in @latest.Period,
                     by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.
                 </p>
-                @* Where the chart is zoomed: each group above the focus is a button back to it. Drawn by research-sunburst.js. *@
-                <nav class="research-breadcrumb" id="research-sectors-breadcrumb" aria-label="Sectors drill-down"></nav>
-                @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made. *@
+                <div class="research-chartbar">
+                    @* Where the chart is zoomed: each group above the focus is a button back to it. Drawn by research-sunburst.js. *@
+                    <nav class="research-breadcrumb" id="research-sectors-breadcrumb" aria-label="Sectors drill-down"></nav>
+                    <div class="research-view-toggle" role="group" aria-label="Chart type">
+                        <button type="button" class="research-view-toggle__button" data-research-view="sunburst" aria-pressed="true">Sunburst</button>
+                        <button type="button" class="research-view-toggle__button" data-research-view="treemap" aria-pressed="false">Treemap</button>
+                    </div>
+                </div>
+                @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made.
+                   The treemap draws the same focus as the sunburst; one of the two shows at a time. *@
                 <div class="research-sunburst" id="research-sunburst"></div>
+                <div class="research-treemap" id="research-treemap" hidden></div>
                 <div class="research-tooltip" id="research-tooltip" aria-hidden="true" hidden></div>
                 @* The focused group's parts, largest first: the second keyboard path through the chart. Groups are
                    buttons that zoom in; hovering or focusing a row lights its slice. Drawn by research-sunburst.js. *@

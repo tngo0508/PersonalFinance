@@ -9,7 +9,9 @@
  * centre zooms out one level, and the breadcrumb above the chart jumps to any level on the way back. The side panel's
  * takeaway cards describe the focused group. Two keyboard paths reach every level: the arcs (one tab stop; arrow keys
  * move between siblings, Enter zooms in, Escape zooms out and returns focus to the group left), and the ranked list
- * under the chart (the focused group's parts as buttons; hovering or focusing a row lights its slice). The
+ * under the chart (the focused group's parts as buttons; hovering or focusing a row lights its slice). A Sunburst |
+ * Treemap toggle swaps in a treemap of the same focus (tiles in office colours, siblings of one office stepped in
+ * lightness; Enter zooms in, Escape zooms out). The
  * "Technology (incl. chip makers)" toggle dims every slice outside the
  * industries the server flags as Technology. The zoom and the highlight survive a change of year.
  */
@@ -46,6 +48,16 @@
     const RANKED_ROWS = 15;
     const RANKED_ID = 'research-sectors-ranked';
     const RANKED_TITLE_ID = 'research-sectors-ranked-title';
+    const TREEMAP_ID = 'research-treemap';
+    const VIEW_TOGGLE_SELECTOR = '[data-research-view]';
+    // The treemap's height as a share of its width, within limits.
+    const TREEMAP_RATIO = 0.62;
+    const TREEMAP_MIN_HEIGHT = 260;
+    const TREEMAP_MAX_HEIGHT = 520;
+    // How long switching between the sunburst and the treemap fades (none under reduced motion).
+    const SWITCH_MS = 220;
+    // Sibling tiles of one office step their lightness by this much (HSL lightness, 0 to 1) so they stay apart.
+    const TILE_LIGHTNESS_STEP = 0.12;
 
     // SEC industry offices in SEC office-number order; each takes the categorical slot of the same number.
     const OFFICE_SLOTS = [
@@ -507,6 +519,40 @@
     }
 
     /**
+     * A tile's fill: its office colour, with siblings that share one office stepped in lightness (alternately
+     * lighter and darker, growing with the index) so neighbouring industries or companies stay distinguishable.
+     * @param {string} base - The office colour.
+     * @param {number} index - The tile's index among its siblings.
+     * @param {boolean} step - Whether to step (false when the siblings already differ by office).
+     * @returns {string} The fill colour.
+     */
+    function tileColour (base, index, step) {
+        if (!step || index === 0) {
+            return base;
+        }
+        const colour = d3.hsl(base);
+        const amount = Math.ceil(index / 2) * TILE_LIGHTNESS_STEP * (index % 2 === 1 ? 1 : -1);
+        colour.l = Math.max(0.18, Math.min(0.82, colour.l + amount));
+        return colour.formatHex();
+    }
+
+    /**
+     * The label ink that reads on a fill: dark text on a light fill, light text on a dark one (by relative
+     * luminance).
+     * @param {string} fill - The fill colour.
+     * @returns {string} A CSS colour.
+     */
+    function inkFor (fill) {
+        const rgb = d3.rgb(fill);
+        const channel = (c) => {
+            const v = c / 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        };
+        const luminance = 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+        return luminance > 0.35 ? 'var(--research-label-dark)' : 'var(--research-label-light)';
+    }
+
+    /**
      * The d3 hierarchy of one period, summed by Public float, sorted, and with the Technology flag marked.
      * @param {Object} data - The Sectors snapshot.
      * @param {Object} period - One entry of data.values.
@@ -567,7 +613,8 @@
      * @param {Object} tooltip - The tooltip controller.
      * @returns {{periods: string[], transitionMs: number, update: function(number, Object): string,
      *     table: function(number): Object, resize: function(): void, zoomTo: function(string): void,
-     *     zoomOut: function(): void, setTechnology: function(boolean): void}} The chart.
+     *     zoomOut: function(): void, setTechnology: function(boolean): void, setMode: function(string): void}} The
+     *     chart.
      */
     function createSunburst (host, data, tooltip) {
         const subtitle = document.getElementById(SUBTITLE_ID);
@@ -579,7 +626,13 @@
         const live = document.getElementById(LIVE_ID);
         const rankedList = document.getElementById(RANKED_ID);
         const rankedTitle = document.getElementById(RANKED_TITLE_ID);
-        const view = { focusKey: ROOT_KEY, technology: false };
+        const treemapHost = document.getElementById(TREEMAP_ID);
+        const viewToggles = Array.from(document.querySelectorAll(VIEW_TOGGLE_SELECTOR));
+        // mode: which chart shows, 'sunburst' or 'treemap'; both draw the same focus.
+        const view = { focusKey: ROOT_KEY, technology: false, mode: 'sunburst' };
+        let treemapSvg = null;
+        let treemapWidth = 0;
+        let treemapHeight = 0;
         // Keyboard state: the arc that holds the one tab stop (by node key), and where focus goes after the zoom a
         // key press asked for ({ arc: key }, { firstArc: true } or { list: true }), or null.
         let activeKey = null;
@@ -773,6 +826,169 @@
         }
 
         /**
+         * Size the treemap to its host's width and draw its empty layer.
+         * @returns {void}
+         */
+        function layoutTreemap () {
+            if (!treemapHost) {
+                return;
+            }
+            treemapWidth = Math.max(MIN_SIZE, treemapHost.clientWidth || host.clientWidth || MAX_SIZE);
+            treemapHeight = Math.round(Math.max(TREEMAP_MIN_HEIGHT,
+                Math.min(TREEMAP_MAX_HEIGHT, treemapWidth * TREEMAP_RATIO)));
+            d3.select(treemapHost).selectAll('svg').remove();
+            treemapSvg = d3.select(treemapHost).append('svg')
+                .attr('viewBox', [0, 0, treemapWidth, treemapHeight].join(' '))
+                .attr('role', 'group');
+        }
+
+        /**
+         * A treemap tile's label, shortened to its width.
+         * @param {Object} node - The tile's d3 hierarchy node.
+         * @param {number} width - The tile's width in px.
+         * @returns {string} The label, or empty when the tile is too small.
+         */
+        function tileLabel (node, width) {
+            const text = node.data.kind === 'company' && node.data.ticker ? node.data.ticker : node.data.name;
+            return width > 48 ? shorten(text, Math.floor((width - 12) / 6.5)) : '';
+        }
+
+        /**
+         * Draw the focus's parts as treemap tiles, in the same office colours (stepped in lightness when the parts
+         * share one office). Tiles are keyed, so a zoom or a change of year moves them when animated. The layout runs
+         * on a copy of the focus, because the sunburst's partition owns the nodes' own geometry; each tile carries
+         * the original node, so the tooltip, the zoom and the keyboard work on the real hierarchy.
+         * @param {boolean} animate - Whether to tween from what is drawn now.
+         * @returns {void}
+         */
+        function drawTreemap (animate) {
+            if (!treemapSvg || view.mode !== 'treemap') {
+                return;
+            }
+            const parts = new Map((focus.children || []).map((d) => [d.data.key, d]));
+            const isOther = (d) => (d.data.kind === 'other' ? 1 : 0);
+            const copy = d3.hierarchy(focus.data, (d) => d.children)
+                .sum((d) => (d.children ? 0 : d.value || 0))
+                .sort((a, b) => isOther(a) - isOther(b) || b.value - a.value);
+            d3.treemap().size([treemapWidth, treemapHeight]).paddingInner(2).round(true)(copy);
+            const step = focus.depth > 0;
+            const tiles = (copy.children || []).filter((d) => d.value > 0 && parts.has(d.data.key)).map((d, index) => ({
+                key: d.data.key,
+                node: parts.get(d.data.key),
+                x: d.x0,
+                y: d.y0,
+                w: Math.max(0, d.x1 - d.x0),
+                h: Math.max(0, d.y1 - d.y0),
+                fill: tileColour(officeColour(host, d.data.office), index, step)
+            }));
+            const duration = animate ? TRANSITION_MS : 0;
+
+            const joined = treemapSvg.selectAll('g.research-treemap__tile').data(tiles, (t) => t.key);
+            joined.exit().remove();
+            const entering = joined.enter().append('g')
+                .attr('class', 'research-treemap__tile')
+                .attr('transform', (t) => `translate(${t.x},${t.y})`)
+                .attr('tabindex', 0)
+                .on('click', (event, t) => {
+                    if (t.node.children) {
+                        zoomTo(t.key);
+                    }
+                })
+                .on('pointermove', (event, t) => tooltip.show(event, t.node))
+                .on('pointerdown', (event, t) => tooltip.show(event, t.node))
+                .on('pointerleave', (event) => {
+                    if (event.pointerType === 'mouse') {
+                        tooltip.hide();
+                    }
+                })
+                .on('focus', (event, t) => {
+                    const box = event.currentTarget.getBoundingClientRect();
+                    tooltip.show({ clientX: box.right, clientY: box.top }, t.node);
+                })
+                .on('blur', () => tooltip.hide())
+                .on('keydown', (event, t) => {
+                    if ((event.key === 'Enter' || event.key === ' ') && t.node.children) {
+                        event.preventDefault();
+                        pendingFocus = { tiles: true };
+                        zoomTo(t.key);
+                    } else if (event.key === 'Escape' && focus.parent) {
+                        event.preventDefault();
+                        pendingFocus = { tile: focus.data.key };
+                        zoomOut();
+                    }
+                });
+            entering.append('rect').attr('class', 'research-treemap__rect');
+            entering.append('text').attr('class', 'research-treemap__name').attr('x', 6).attr('y', 15);
+            entering.append('text').attr('class', 'research-treemap__value').attr('x', 6).attr('y', 30);
+
+            const all = entering.merge(joined)
+                .attr('role', (t) => (t.node.children ? 'button' : 'img'))
+                .attr('aria-label', (t) => {
+                    const share = `${percentOf(t.node.value, focus.value)} of ${focus.data.name}`;
+                    const hint = t.node.children ? '. Press Enter to zoom in, Escape to zoom out.' : '.';
+                    return `${t.node.data.name}: ${formatMoney(t.node.value)} Public float, ${share}${hint}`;
+                })
+                .classed('research-treemap__tile--zoomable', (t) => Boolean(t.node.children));
+            // Animated: tween from where the tiles are; otherwise apply at once (also under reduced motion).
+            const move = (selection) => (animate
+                ? selection.transition().duration(duration).ease(d3.easeCubicInOut)
+                : selection);
+            move(all).attr('transform', (t) => `translate(${t.x},${t.y})`);
+            move(all.select('rect'))
+                .attr('width', (t) => t.w)
+                .attr('height', (t) => t.h)
+                .attr('fill', (t) => t.fill)
+                .attr('fill-opacity', (t) => (t.node.data.kind === 'other' ? OTHER_OPACITY : (isLit(t.node) ? 1 : DIMMED_OPACITY)));
+            all.select('.research-treemap__name')
+                .attr('fill', (t) => inkFor(t.fill))
+                .text((t) => (t.h > 18 ? tileLabel(t.node, t.w) : ''));
+            all.select('.research-treemap__value')
+                .attr('fill', (t) => inkFor(t.fill))
+                .text((t) => (t.h > 36 && t.w > 64
+                    ? `${formatMoney(t.node.value)} · ${percentOf(t.node.value, focus.value)}`
+                    : ''));
+            treemapSvg.attr('aria-label', `Treemap of ${focus.data.name}: ${tiles.length} parts, ` +
+                `${formatMoney(focus.value || 0)} Public float in total.`);
+        }
+
+        /**
+         * Show the sunburst or the treemap. Both draw the same focus, so the breadcrumb, the cards and the ranked list
+         * stay as they are. The chart that appears fades and scales in briefly, unless the user asks for reduced
+         * motion.
+         * @param {string} mode - 'sunburst' or 'treemap'.
+         * @returns {void}
+         */
+        function setMode (mode) {
+            if (!treemapHost || (mode !== 'sunburst' && mode !== 'treemap') || mode === view.mode) {
+                return;
+            }
+            view.mode = mode;
+            tooltip.hide();
+            viewToggles.forEach((button) => {
+                button.setAttribute('aria-pressed', String(button.dataset.researchView === mode));
+            });
+            const showing = mode === 'treemap' ? treemapHost : host;
+            const leaving = mode === 'treemap' ? host : treemapHost;
+            leaving.hidden = true;
+            showing.hidden = false;
+            if (mode === 'treemap') {
+                layoutTreemap();
+            } else {
+                layout();
+            }
+            update(periodIndex, { animate: false });
+            if (!prefersReducedMotion() && typeof showing.animate === 'function') {
+                showing.animate([
+                    { opacity: 0, transform: 'scale(0.97)' },
+                    { opacity: 1, transform: 'none' }
+                ], { duration: SWITCH_MS, easing: 'ease-out' });
+            }
+            if (live) {
+                live.textContent = mode === 'treemap' ? 'Showing the treemap.' : 'Showing the sunburst.';
+            }
+        }
+
+        /**
          * The drawn arc element of a node key, or null.
          * @param {string} key - The node key.
          * @returns {SVGPathElement|null} The arc.
@@ -871,7 +1087,15 @@
             if (!request) {
                 return;
             }
-            if (request.list) {
+            if (request.tiles || request.tile) {
+                const tiles = treemapSvg ? treemapSvg.selectAll('g.research-treemap__tile').nodes() : [];
+                const target = request.tile
+                    ? tiles.find((element) => d3.select(element).datum().key === request.tile)
+                    : tiles[0];
+                if (target) {
+                    target.focus();
+                }
+            } else if (request.list) {
                 const first = rankedList ? rankedList.querySelector('button') : null;
                 if (first) {
                     first.focus();
@@ -893,6 +1117,10 @@
         function setHighlight (key) {
             arcLayer.selectAll('path').classed('research-sunburst__arc--faded', (d) =>
                 Boolean(key) && Boolean(d) && !d.ancestors().some((a) => a.data.key === key));
+            if (treemapSvg) {
+                treemapSvg.selectAll('g.research-treemap__tile')
+                    .classed('research-treemap__tile--faded', (t) => Boolean(key) && t.key !== key);
+            }
         }
 
         /**
@@ -969,6 +1197,7 @@
                 : null;
             drawArcs(nodes, transition);
             drawLabels(nodes, transition);
+            drawTreemap(Boolean(transition));
             renderLegend(legend, root, (key) => zoomTo(view.focusKey === key ? ROOT_KEY : key));
             const { trail, techText } = describeView(root, previous, period.period);
             setHighlight(null);
@@ -1075,15 +1304,23 @@
          */
         function resize () {
             layout();
+            if (view.mode === 'treemap') {
+                layoutTreemap();
+            }
             update(periodIndex, { animate: false });
         }
 
         if (techToggle) {
             techToggle.addEventListener('click', () => setTechnology(!view.technology));
         }
+        viewToggles.forEach((button) => {
+            button.addEventListener('click', () => setMode(button.dataset.researchView));
+        });
 
         layout();
-        return { periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize, zoomTo, zoomOut, setTechnology };
+        return {
+            periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize, zoomTo, zoomOut, setTechnology, setMode
+        };
     }
 
     /**
@@ -1100,11 +1337,14 @@
         const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
         const chart = createSunburst(host, data, tooltip);
         page.registerTab(TAB_ID, chart);
-        let width = host.clientWidth;
+        const treemapHost = document.getElementById(TREEMAP_ID);
+        // The card holds both charts; watching it (not the chart host) ignores the host hiding when the treemap shows.
+        const card = host.parentElement || host;
+        let width = card.clientWidth;
 
-        // A tap outside the chart, or a scroll, puts the tooltip away.
+        // A tap outside the charts, or a scroll, puts the tooltip away.
         document.addEventListener('pointerdown', (event) => {
-            if (!host.contains(event.target)) {
+            if (!host.contains(event.target) && !(treemapHost && treemapHost.contains(event.target))) {
                 tooltip.hide();
             }
         });
@@ -1112,13 +1352,13 @@
 
         if (typeof ResizeObserver !== 'undefined') {
             const observer = new ResizeObserver(() => {
-                if (host.clientWidth !== width) {
-                    width = host.clientWidth;
+                if (card.clientWidth !== width) {
+                    width = card.clientWidth;
                     tooltip.hide();
                     chart.resize();
                 }
             });
-            observer.observe(host);
+            observer.observe(card);
         }
     }
 
