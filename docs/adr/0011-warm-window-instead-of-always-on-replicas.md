@@ -33,8 +33,9 @@ at 1% DTU.
 - **Warm only the ApiService:** rejected. It fixes the empty Dashboard, but the Web's own 25-second cold start still
   greets the first visitor.
 - **Code-only fix (the Web wakes the ApiService when it starts, or a longer Web-to-ApiService timeout):** not chosen
-  here. It works around the clock at no cost, but the visitor still waits for both cold starts; it can be added on top
-  of the window.
+  instead of the window. It works around the clock at no cost, but the visitor still waits for a cold start. It was
+  added on top of the window in 5.4.2: a starting Web replica now pings the ApiService, so overnight the two wake in
+  parallel.
 
 ## Consequences
 
