@@ -386,3 +386,281 @@
 .research-correlation__table .research-overlap__cell {
     width: 3.75rem;
 }
+
+/* --------------------------------------------------------------------------
+   Performance: growth of 100. One y-axis, recessive grid, a dotted baseline
+   at 100, 2px fund lines in each fund's fixed colour and a heavier dark
+   basket line, with end labels and a legend so colour is never the only cue.
+   -------------------------------------------------------------------------- */
+
+.research-performance__figure {
+    margin: 0;
+}
+
+.research-performance__chart {
+    width: 100%;
+    min-height: 20rem;
+}
+
+.research-performance__svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.research-performance__grid line {
+    stroke: #e1e0d9;
+    stroke-width: 1;
+}
+
+.research-performance__grid text,
+.research-performance__axis text {
+    fill: var(--app-text-muted);
+    font-size: 11px;
+}
+
+.research-performance__axis path,
+.research-performance__axis line {
+    stroke: #c3c2b7;
+}
+
+.research-performance__baseline {
+    stroke: #8a8983;
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+}
+
+.research-performance__line {
+    fill: none;
+    stroke: var(--research-fund-colour, var(--research-office-neutral));
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.research-performance__line--basket {
+    stroke: var(--app-text);
+    stroke-width: 3.5;
+}
+
+.research-performance__end {
+    fill: var(--app-text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.research-performance__end--basket {
+    fill: var(--app-text);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-performance__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-xs) var(--app-spacing-m);
+    margin: var(--app-spacing-s) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--app-font-size-small);
+}
+
+.research-performance__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.research-performance__swatch--basket {
+    display: inline-block;
+    width: 1rem;
+    height: 0.25rem;
+    border-radius: 2px;
+    background: var(--app-text);
+}
+
+.research-performance__table th[scope="row"] {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+/* Performance panels: the federal funds rate, the difference from a chosen
+   fund (blue ahead, orange behind: never red and green), one crosshair
+   across every panel, and the brush strip that chooses the period. */
+
+.research-performance__chart:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 4px;
+    border-radius: var(--app-radius-s, 4px);
+}
+
+.research-performance__panel-title {
+    fill: var(--app-text-muted);
+    font-size: 11px;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-performance__rate {
+    fill: none;
+    stroke: var(--app-text-muted);
+    stroke-width: 2;
+}
+
+.research-performance__difference {
+    opacity: 0.85;
+}
+
+.research-performance__zero {
+    stroke: #8a8983;
+    stroke-width: 1;
+}
+
+.research-performance__empty {
+    fill: var(--app-text-muted);
+    font-size: 12px;
+}
+
+.research-performance__overlay {
+    fill: transparent;
+    cursor: crosshair;
+}
+
+.research-performance__crosshair[hidden] {
+    display: none;
+}
+
+.research-performance__crosshair line {
+    stroke: var(--app-text);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    pointer-events: none;
+}
+
+.research-performance__dot {
+    fill: var(--research-fund-colour, var(--app-text));
+    stroke: var(--app-bg, #ffffff);
+    stroke-width: 2;
+    pointer-events: none;
+}
+
+.research-performance__dot--basket {
+    fill: var(--app-text);
+}
+
+.research-performance__dot--rate {
+    fill: var(--app-text-muted);
+}
+
+.research-performance__dot--difference {
+    fill: var(--app-text);
+}
+
+.research-performance__compare {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-xs) var(--app-spacing-s);
+    font-size: var(--app-font-size-small);
+}
+
+.research-performance__select {
+    min-height: 2.75rem;
+    max-width: 100%;
+    padding: 0 var(--app-spacing-s);
+    border: 1px solid var(--app-border-hover);
+    border-radius: var(--app-radius-s, 4px);
+    background: var(--app-bg);
+    color: var(--app-text);
+    font: inherit;
+}
+
+.research-performance__range {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    margin-top: var(--app-spacing-m);
+}
+
+.research-performance__brush {
+    flex: 1 1 18rem;
+    min-width: 0;
+}
+
+.research-performance__brush-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.research-performance__brush-line {
+    fill: none;
+    stroke: var(--app-text-muted);
+    stroke-width: 1.5;
+}
+
+.research-performance__brush-area .selection {
+    fill: var(--app-brand-soft);
+    fill-opacity: 0.6;
+    stroke: var(--app-brand);
+}
+
+/* Performance annotations: muted bands for the Fed's hiking cycles and for
+   recessions, each with a text label (never colour alone), and a marker for
+   the basket's worst fall from a high. */
+
+.research-performance__band--hike {
+    fill: #e4ecf7;
+}
+
+.research-performance__band--recession {
+    fill: #ecebe8;
+}
+
+.research-performance__band-label {
+    fill: var(--app-text-muted);
+    font-size: 10px;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-performance__band-swatch {
+    display: inline-block;
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 1px solid rgba(11, 11, 11, 0.12);
+    border-radius: 2px;
+}
+
+.research-performance__band-swatch--hike {
+    background: #e4ecf7;
+}
+
+.research-performance__band-swatch--recession {
+    background: #ecebe8;
+}
+
+.research-performance__worst line {
+    stroke: var(--app-text);
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
+}
+
+.research-performance__worst circle {
+    fill: var(--app-bg, #ffffff);
+    stroke: var(--app-text);
+    stroke-width: 1.5;
+}
+
+.research-performance__worst-label {
+    fill: var(--app-text);
+    font-size: 11px;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-performance__worst-swatch {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.625rem;
+    border: 1.5px solid var(--app-text);
+    border-radius: 50%;
+    background: var(--app-bg, #ffffff);
+}

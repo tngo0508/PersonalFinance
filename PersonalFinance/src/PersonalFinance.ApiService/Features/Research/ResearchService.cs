@@ -10,13 +10,15 @@ internal sealed class ResearchService : IResearchService
 {
     private readonly ResearchSnapshotStore _store;
     private readonly IReadOnlyList<IResearchDatasetRefresher> _refreshers;
+    private readonly ResearchSettings _settings;
     private readonly ILogger<ResearchService> _logger;
 
     public ResearchService(ResearchSnapshotStore store, IEnumerable<IResearchDatasetRefresher> refreshers,
-        ILogger<ResearchService> logger)
+        ResearchSettings settings, ILogger<ResearchService> logger)
     {
         _store = store;
         _refreshers = refreshers.ToList();
+        _settings = settings;
         _logger = logger;
     }
 
@@ -37,6 +39,34 @@ internal sealed class ResearchService : IResearchService
     public Task<ResearchSnapshotResult<FundReturnsSnapshotDto>> GetFundReturnsAsync(
         CancellationToken cancellationToken = default) =>
         GetAsync<FundReturnsSnapshotDto>(ResearchDatasets.FundReturns, cancellationToken);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The recessions come from configuration as the snapshot is read, not from the refresh, so a new entry shows at
+    /// once. An entry whose months cannot be read is left out.
+    /// </remarks>
+    public async Task<ResearchSnapshotResult<MacroSnapshotDto>> GetMacroAsync(CancellationToken cancellationToken = default)
+    {
+        ResearchSnapshotResult<MacroSnapshotDto> result = await GetAsync<MacroSnapshotDto>(ResearchDatasets.Macro, cancellationToken);
+        if (result.Snapshot is { } snapshot)
+        {
+            snapshot.Recessions = _settings.Recessions
+                .Select(r => (r.Label, Start: ParseMonth(r.Start), End: ParseMonth(r.End)))
+                .Where(r => r.Start is not null && r.End is not null && r.Start <= r.End && !string.IsNullOrWhiteSpace(r.Label))
+                .OrderBy(r => r.Start)
+                .Select(r => new MacroPeriodDto { Start = r.Start!.Value, End = r.End!.Value, Label = r.Label.Trim() })
+                .ToList();
+        }
+
+        return result;
+    }
+
+    /// <summary>A <c>yyyy-MM</c> month as its first day, or null.</summary>
+    private static DateOnly? ParseMonth(string value) =>
+        DateOnly.TryParseExact($"{value.Trim()}-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out DateOnly month)
+            ? month
+            : null;
 
     /// <inheritdoc />
     public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>

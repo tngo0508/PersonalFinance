@@ -8,6 +8,7 @@
     bool showSectors = !Model.Sectors.Unavailable && latest is not null;
     bool showFunds = !Model.Funds.Unavailable;
     bool showWorld = !Model.World.Unavailable;
+    bool showReturns = showFunds && Model.FundReturns is not null;
 }
 
 @section Styles {
@@ -28,7 +29,7 @@
     </header>
 
     <div class="research-tabs" role="tablist" aria-label="Research datasets">
-        @foreach ((string id, string label) in new[] { (ResearchViewModel.SectorsTab, "Sectors"), (ResearchViewModel.FundsTab, "Funds"), (ResearchViewModel.WorldTab, "World"), (ResearchViewModel.CompaniesTab, "Companies") })
+        @foreach ((string id, string label) in new[] { (ResearchViewModel.SectorsTab, "Sectors"), (ResearchViewModel.FundsTab, "Funds"), (ResearchViewModel.PerformanceTab, "Performance"), (ResearchViewModel.WorldTab, "World"), (ResearchViewModel.CompaniesTab, "Companies") })
         {
             bool selected = Model.IsSelected(id);
             <button type="button" class="research-tabs__tab" id="research-tab-@id" role="tab" data-research-tab="@id"
@@ -159,6 +160,7 @@
     </section>
 
     <partial name="_FundsTab" model="Model"/>
+    <partial name="_PerformanceTab" model="Model"/>
     <partial name="_WorldTab" model="Model"/>
     <partial name="_CompaniesTab" model="Model"/>
 
@@ -170,6 +172,13 @@
 {
     @* The Sectors snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-sunburst.js. *@
     <script type="application/json" id="research-sectors-data">@Json.Serialize(Model.Sectors.Snapshot)</script>
+}
+
+@if (showReturns)
+{
+    @* The fund returns snapshot (monthly returns with every per-window figure precomputed), read by
+       research-correlation.js and research-performance.js. *@
+    <script type="application/json" id="research-fund-returns-data">@Json.Serialize(Model.FundReturns)</script>
 }
 
 @section Scripts {
@@ -188,6 +197,10 @@
         <script src="~/js/research/research-funds.js" asp-append-version="true"></script>
         <script src="~/js/research/research-overlap.js" asp-append-version="true"></script>
         <script src="~/js/research/research-correlation.js" asp-append-version="true"></script>
+    }
+    @if (showReturns)
+    {
+        <script src="~/js/research/research-performance.js" asp-append-version="true"></script>
     }
     @if (showWorld)
     {

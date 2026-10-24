@@ -586,6 +586,12 @@ public class ResearchFundsServiceTests
         public Task<IReadOnlyList<(DateOnly Month, decimal Rate)>> GetTreasuryBillRatesAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<(DateOnly Month, decimal Rate)>>(Enumerable.Range(0, 24)
                 .Select(i => (new DateOnly(2025, 1, 1).AddMonths(i), 4.0m)).ToList());
+
+        public async Task<FedMonthlyRates> GetMonthlyRatesAsync(CancellationToken cancellationToken)
+        {
+            IReadOnlyList<(DateOnly Month, decimal Rate)> bills = await GetTreasuryBillRatesAsync(cancellationToken);
+            return new FedMonthlyRates(bills, bills);
+        }
     }
 
     private static ResearchService CreateReturnsService(AppDbContext db, StubNportHandler handler, IFedRatesClient? fed,

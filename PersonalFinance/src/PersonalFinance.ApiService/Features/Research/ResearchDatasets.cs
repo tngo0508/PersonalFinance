@@ -44,6 +44,9 @@ internal static class ResearchDatasets
     /// </summary>
     public const string FundReturnFilings = "fund-return-filings";
 
+    /// <summary>The macro snapshot: monthly CPI-U, effective federal funds rate and 3-month Treasury bill rate.</summary>
+    public const string Macro = "macro";
+
     /// <summary>The World snapshot.</summary>
     public const string World = "world";
 }

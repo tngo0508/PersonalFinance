@@ -176,10 +176,4 @@
            research-overlap.js. *@
         <script type="application/json" id="research-fund-overlap-data">@Json.Serialize(overlap)</script>
     }
-    if (returns is not null)
-    {
-        @* The fund returns snapshot (monthly returns with every per-window figure precomputed), read by
-           research-correlation.js. *@
-        <script type="application/json" id="research-fund-returns-data">@Json.Serialize(returns)</script>
-    }
 }

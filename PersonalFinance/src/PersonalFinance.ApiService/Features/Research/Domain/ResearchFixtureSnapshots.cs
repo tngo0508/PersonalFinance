@@ -4,7 +4,7 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// Small, made-up Sectors, funds, fund overlap, fund returns and World snapshots for the E2E walkthrough (stored by
+/// Small, made-up Sectors, funds, fund overlap, fund returns, macro and World snapshots for the E2E walkthrough (stored by
 /// <see cref="ResearchFixtureSeeder"/>): six companies over three years, SPY and QQQ over three quarters and six
 /// countries over three years. The figures are rounded illustrations in the shape of the real snapshots, not source
 /// data, and are never stored outside Development.
@@ -126,6 +126,32 @@ internal static class ResearchFixtureSnapshots
         }
 
         return FundReturnsBuilder.Build(funds, records, bills)!;
+    }
+
+    /// <summary>
+    /// The macro fixture: July 2020 to June 2026, consumer prices rising 0.25% a month from 258, and a federal funds
+    /// rate near zero until February 2022 that then rises to 5.3% by August 2023, holds a year and eases to 4% (the
+    /// Treasury bill a tenth below it). Made up, in the shape of the real series.
+    /// </summary>
+    public static MacroSnapshotDto Macro()
+    {
+        var first = new DateOnly(2020, 7, 1);
+        var prices = new List<(DateOnly Month, decimal Index)>();
+        var fedFunds = new List<(DateOnly Month, decimal Rate)>();
+        var bills = new List<(DateOnly Month, decimal Rate)>();
+        for (int i = 0; i < 72; i++)
+        {
+            DateOnly month = first.AddMonths(i);
+            prices.Add((month, Math.Round(258m * (decimal)Math.Pow(1.0025, i), 3)));
+            decimal rate = month < new DateOnly(2022, 3, 1) ? 0.08m
+                : month < new DateOnly(2023, 9, 1) ? Math.Min(5.33m, 0.33m + 0.28m * ((month.Year - 2022) * 12 + month.Month - 3))
+                : month < new DateOnly(2024, 9, 1) ? 5.33m
+                : Math.Max(4.0m, 5.33m - 0.12m * ((month.Year - 2024) * 12 + month.Month - 8));
+            fedFunds.Add((month, rate));
+            bills.Add((month, Math.Max(0.02m, rate - 0.1m)));
+        }
+
+        return MacroRefresher.Build(first, prices, fedFunds, bills, "H.15");
     }
 
     /// <summary>The World fixture: six countries for 2022 to 2024, one of them without a GDP figure in 2022.</summary>

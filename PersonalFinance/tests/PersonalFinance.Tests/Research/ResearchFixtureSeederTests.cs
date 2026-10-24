@@ -52,6 +52,7 @@ public class ResearchFixtureSeederTests
         WorldSnapshotDto? world = await GetAsync<WorldSnapshotDto>(client, "world");
         FundOverlapSnapshotDto? overlap = await GetAsync<FundOverlapSnapshotDto>(client, "funds/overlap");
         FundReturnsSnapshotDto? returns = await GetAsync<FundReturnsSnapshotDto>(client, "funds/returns");
+        MacroSnapshotDto? macro = await GetAsync<MacroSnapshotDto>(client, "macro");
 
         // What the walkthrough needs: several years to scrub, a Technology highlight, SPY and QQQ by quarter, and a
         // % of GDP figure for the World switch.
@@ -77,6 +78,11 @@ public class ResearchFixtureSeederTests
         Assert.All(returns.Funds, f => Assert.Equal(60, f.Returns.Count));
         Assert.All(returns.Windows, w => Assert.Single(w.Correlations));
         Assert.All(returns.Windows, w => Assert.All(w.Funds, f => Assert.NotNull(f.Sharpe)));
+
+        Assert.NotNull(macro);
+        // CPI for the month before the returns' first month, the base of an inflation-adjusted line, and every month.
+        Assert.True(macro.Months[0].Month < returns.Funds[0].FirstMonth);
+        Assert.All(macro.Months, m => Assert.NotNull(m.ConsumerPrices));
 
         Assert.NotNull(world);
         Assert.True(world.Periods.Count >= 2);
@@ -112,8 +118,8 @@ public class ResearchFixtureSeederTests
         await ResearchFixtureSeeder.SeedAsync(db, TimeProvider.System);
 
         List<ResearchSnapshot> rows = await db.ResearchSnapshots.AsNoTracking().OrderBy(s => s.Dataset).ToListAsync();
-        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundOverlap, ResearchDatasets.FundReturns, ResearchDatasets.Sectors,
-                ResearchDatasets.World],
+        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundOverlap, ResearchDatasets.FundReturns, ResearchDatasets.Macro,
+                ResearchDatasets.Sectors, ResearchDatasets.World],
             rows.Select(r => r.Dataset));
         Assert.Equal("{}", rows.Single(r => r.Dataset == ResearchDatasets.World).Payload);
     }

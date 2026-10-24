@@ -19,24 +19,30 @@ public sealed class ResearchViewModel
     /// <summary>The Funds tab's first id, from when it was the ETFs tab: an old <c>?tab=etfs</c> link still opens it.</summary>
     public const string LegacyFundsTab = "etfs";
 
+    /// <summary>The Performance tab's id.</summary>
+    public const string PerformanceTab = "performance";
+
     /// <summary>The World tab's id.</summary>
     public const string WorldTab = "world";
 
     /// <summary>The Companies tab's id.</summary>
     public const string CompaniesTab = "companies";
 
-    private static readonly string[] Tabs = [SectorsTab, FundsTab, WorldTab, CompaniesTab];
+    private static readonly string[] Tabs = [SectorsTab, FundsTab, PerformanceTab, WorldTab, CompaniesTab];
 
     /// <summary>
     /// The page over each dataset; a null dataset makes its tab unavailable. It opens on <paramref name="tab"/> when
     /// that names a tab (the Funds tab's first id, <see cref="LegacyFundsTab"/>, included), and on the Companies tab
     /// looks up <paramref name="ticker"/> when it is a valid ticker. A null <paramref name="fundOverlap"/> or
-    /// <paramref name="fundReturns"/> leaves only that view of the Funds tab unavailable.
+    /// <paramref name="fundReturns"/> leaves only that view of the Funds tab unavailable; a null
+    /// <paramref name="fundReturns"/> also makes the Performance tab unavailable, and a null <paramref name="macro"/>
+    /// leaves the Performance tab without its inflation adjustment.
     /// </summary>
     public ResearchViewModel(SectorsSnapshotDto? sectors, FundsSnapshotDto? funds, WorldSnapshotDto? world,
         string? tab = null, string? ticker = null, FundOverlapSnapshotDto? fundOverlap = null,
-        FundReturnsSnapshotDto? fundReturns = null)
+        FundReturnsSnapshotDto? fundReturns = null, MacroSnapshotDto? macro = null)
     {
+        Macro = macro;
         FundOverlap = fundOverlap;
         FundReturns = fundReturns;
         Sectors = new(sectors, "We couldn't load the Sectors data");
@@ -93,6 +99,21 @@ public sealed class ResearchViewModel
         Heading = "We couldn't load the fund returns data",
         RetryController = "Research",
         RetryRouteValues = new Dictionary<string, string> { ["tab"] = FundsTab },
+    };
+
+    /// <summary>
+    /// Monthly CPI-U and interest rates, which the Performance tab uses to adjust returns for inflation; null when it
+    /// has never loaded.
+    /// </summary>
+    public MacroSnapshotDto? Macro { get; }
+
+    /// <summary>The Performance tab's Unavailable State, shown when <see cref="FundReturns"/> is null.</summary>
+    public UnavailableStateViewModel PerformanceUnavailableState { get; } = new()
+    {
+        PageTitle = "Research",
+        Heading = "We couldn't load the fund returns data",
+        RetryController = "Research",
+        RetryRouteValues = new Dictionary<string, string> { ["tab"] = PerformanceTab },
     };
 
     /// <summary>The World tab, which opens on the latest year.</summary>

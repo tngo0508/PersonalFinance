@@ -477,6 +477,140 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 7f: the Performance tab grows 100 in the basket and each fund; the basket line, the table and the switch to
+        // inflation-adjusted values match figures computed here from the fixture's monthly returns and CPI.
+        await step('Research 7f', fail, async () => {
+            await page.goto(`${base}/Research?tab=performance&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const expected = await page.evaluate(() => {
+                const returns = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
+                const macro = JSON.parse(document.getElementById('research-macro-data').textContent);
+                const spy = returns.funds.find((f) => f.ticker === 'SPY');
+                const qqq = returns.funds.find((f) => f.ticker === 'QQQ');
+                // The fixture's funds share their months, so the basket's month i is 60% SPY plus 40% QQQ.
+                const basket = spy.returns.map((r, i) => 0.6 * r + 0.4 * qqq.returns[i]);
+                const grow = (rs) => rs.reduce((g, r) => g * (1 + r / 100), 1);
+                const cpi = new Map(macro.months.map((m) => [m.month.slice(0, 7), m.consumerPrices]));
+                const first = spy.firstMonth.slice(0, 7);
+                const last = spy.lastMonth.slice(0, 7);
+                const [y, m] = first.split('-').map(Number);
+                const baseMonth = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+                const inflation = cpi.get(last) / cpi.get(baseMonth);
+                const fmt = (v) => {
+                    const r = Math.round(v * 10) / 10;
+                    return r < 0 ? `−${Math.abs(r).toFixed(1)}%` : `+${r.toFixed(1)}%`;
+                };
+                const g = grow(basket);
+                return {
+                    basketEnd: Math.round(g * 100),
+                    basketRealEnd: Math.round(g / inflation * 100),
+                    basketTotal: fmt((g - 1) * 100),
+                    basketAnnualized: fmt((Math.pow(g, 12 / basket.length) - 1) * 100),
+                    basketAfterInflation: fmt((g / inflation - 1) * 100),
+                    spyTotal: fmt((grow(spy.returns) - 1) * 100),
+                    spyEnd: Math.round(grow(spy.returns) * 100)
+                };
+            });
+            const cells = async (line) => (await page.locator(`#research-performance-table tr[data-line="${line}"] td`).allTextContents()).map((t) => t.trim());
+            const shown = await page.locator('#research-performance-view').isVisible();
+            const basketLabel = (await page.locator('.research-performance__end--basket').textContent()).trim();
+            const basketRow = await cells('Your basket');
+            const spyRow = await cells('SPY');
+            const lines = await page.locator('#research-performance-chart path.research-performance__line').count();
+            const credit = (await page.locator('#research-performance .research-card__source').textContent()).trim();
+            await page.click('[data-performance-view="real"]');
+            const realLabel = (await page.locator('.research-performance__end--basket').textContent()).trim();
+            const realPressed = await page.locator('[data-performance-view="real"]').getAttribute('aria-pressed');
+            const ok = shown && lines === 3 && basketLabel === `Basket ${expected.basketEnd}` &&
+                basketRow[0] === expected.basketAnnualized && basketRow[1] === expected.basketTotal &&
+                basketRow[3] === expected.basketAfterInflation && spyRow[1] === expected.spyTotal &&
+                realLabel === `Basket ${expected.basketRealEnd}` && realPressed === 'true' &&
+                credit.includes('Bureau of Labor Statistics') && credit.includes('SEC EDGAR');
+            if (ok) {
+                pass(`Research 7f: 100 in the basket grows to ${expected.basketEnd} (${expected.basketTotal}, ${expected.basketAnnualized} a year), ${expected.basketRealEnd} after inflation; SPY ${expected.spyTotal}; sources credited`);
+            } else {
+                fail(`Research 7f: shown ${shown}, lines ${lines}, label "${basketLabel}"/${expected.basketEnd}, basket row ${JSON.stringify(basketRow)} vs ` +
+                    `${JSON.stringify(expected)}, SPY row ${JSON.stringify(spyRow)}, real "${realLabel}" pressed ${realPressed}, credit "${credit}"`);
+            }
+        });
+
+        // Step 7g: with SPY in the basket, the chart compares it with QQQ; the crosshair moves by keyboard and stays on one
+        // x across the three panels; the 1Y preset sets the brush, and the table follows it.
+        await step('Research 7g', fail, async () => {
+            await page.goto(`${base}/Research?tab=performance&basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const tip = async () => (await page.locator('#research-performance-tooltip span').allTextContents()).map((t) => t.trim());
+            const aligned = () => page.evaluate(() => {
+                const group = document.querySelector('.research-performance__crosshair');
+                const x = group.querySelector('line').getAttribute('x1');
+                return Array.from(group.querySelectorAll('circle')).every((c) => c.getAttribute('cx') === x);
+            });
+            const compare = await page.locator('#research-performance-compare').inputValue();
+            const areas = await page.locator('path.research-performance__difference').count();
+            await page.focus('#research-performance-chart');
+            const atEnd = await tip();
+            await page.keyboard.press('ArrowLeft');
+            const left = await tip();
+            const leftAligned = await aligned();
+            await page.keyboard.press('Home');
+            const home = await tip();
+            const readout = (await page.locator('#research-performance-readout').textContent()).trim();
+            await page.click('[data-performance-range="12"]');
+            const pressed = await page.locator('[data-performance-range="12"]').getAttribute('aria-pressed');
+            const caption = (await page.locator('#research-performance-table caption').textContent()).trim();
+            const spyTotal = (await page.locator('#research-performance-table tr[data-line="SPY"] td').nth(1).textContent()).trim();
+            const brushWidth = Number(await page.locator('#research-performance-brush .selection').getAttribute('width'));
+            const stripWidth = Number((await page.locator('#research-performance-brush svg').getAttribute('viewBox')).split(' ')[2]);
+            const expected = await page.evaluate(() => {
+                const returns = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
+                const spy = returns.funds.find((f) => f.ticker === 'SPY').returns.slice(-12);
+                const total = (spy.reduce((g, r) => g * (1 + r / 100), 1) - 1) * 100;
+                const r = Math.round(total * 10) / 10;
+                return r < 0 ? `−${Math.abs(r).toFixed(1)}%` : `+${r.toFixed(1)}%`;
+            });
+            await page.click('[data-performance-range="max"]');
+            const maxCaption = (await page.locator('#research-performance-table caption').textContent()).trim();
+            const ok = compare === 'QQQ' && areas === 2 && atEnd[0] === 'June 2026' && left[0] === 'May 2026' && leftAligned &&
+                home[0] === 'June 2021' && left.some((r) => r.startsWith('Basket minus QQQ:')) &&
+                left.some((r) => /^Federal funds rate: [0-9.]+%$/.test(r)) && readout.startsWith('June 2021') &&
+                pressed === 'true' && caption === 'Returns from July 2025 to June 2026' && spyTotal === expected &&
+                brushWidth > 0 && brushWidth < stripWidth / 3 && maxCaption === 'Returns from July 2021 to June 2026';
+            if (ok) {
+                pass(`Research 7g: SPY against QQQ; ← and Home move one crosshair across the three panels (${left.length} tooltip rows); 1Y sets the brush and the table (SPY ${spyTotal}); Max restores it`);
+            } else {
+                fail(`Research 7g: compare ${compare}, areas ${areas}, end ${JSON.stringify(atEnd)}, left ${JSON.stringify(left)} aligned ${leftAligned}, ` +
+                    `home ${home[0]}, readout "${readout.slice(0, 40)}", pressed ${pressed}, caption "${caption}", SPY ${spyTotal}/${expected}, ` +
+                    `brush ${brushWidth}/${stripWidth}, max "${maxCaption}"`);
+            }
+        });
+
+        // Step 7h: the chart shades the derived hiking cycle with a label, marks the basket's worst fall with the figure
+        // the callout gives, and receives the configured recessions; a 1-year period leaves the earlier band out.
+        await step('Research 7h', fail, async () => {
+            await page.goto(`${base}/Research?tab=performance&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const macro = await page.evaluate(() => JSON.parse(document.getElementById('research-macro-data').textContent));
+            const monthName = (iso) => new Date(`${iso.slice(0, 7)}-15T00:00:00Z`).toLocaleString('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'});
+            const cycle = macro.hikingCycles[0];
+            const bands = await page.locator('rect.research-performance__band--hike').count();
+            const bandLabels = (await page.locator('.research-performance__band-label').allTextContents()).map((t) => t.trim());
+            const legendText = (await page.locator('#research-performance-legend').textContent()).replace(/\s+/g, ' ');
+            const aria = await page.locator('#research-performance-chart').getAttribute('aria-label');
+            const worstLabel = (await page.locator('.research-performance__worst-label').textContent()).trim();
+            const worstCallout = (await page.locator('#research-performance-callouts li').nth(1).locator('.research-overlap__callout-value').textContent()).trim();
+            await page.click('[data-performance-range="12"]');
+            const yearBands = await page.locator('rect.research-performance__band').count();
+            await page.click('[data-performance-range="max"]');
+            const ok = macro.hikingCycles.length === 1 && bands === 1 && bandLabels.includes('Fed rate rises') &&
+                legendText.includes('Fed rate rises (shaded)') && legendText.includes("Basket's worst fall from a high") &&
+                aria.includes(`Fed rate rises from ${monthName(cycle.start)} to ${monthName(cycle.end)}`) &&
+                worstLabel === `Worst fall ${worstCallout}` && yearBands === 0 &&
+                macro.recessions.some((r) => r.label === '2020 recession' && r.start.startsWith('2020-02'));
+            if (ok) {
+                pass(`Research 7h: "Fed rate rises" shaded ${monthName(cycle.start)} to ${monthName(cycle.end)} with a label and legend; "${worstLabel}" marked; the configured 2020 recession arrives; 1Y leaves the band out`);
+            } else {
+                fail(`Research 7h: cycles ${JSON.stringify(macro.hikingCycles)}, bands ${bands}, labels ${JSON.stringify(bandLabels)}, legend "${legendText}", ` +
+                    `aria "${aria}", worst "${worstLabel}"/${worstCallout}, 1Y bands ${yearBands}, recessions ${JSON.stringify(macro.recessions)}`);
+            }
+        });
+
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');
@@ -549,7 +683,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 await mobile.goto(`${base}/Research?basket=SPY:70,QQQ:50`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await mobile.waitForSelector('#research-sunburst svg', {timeout: TIMEOUT});
                 const wide = [];
-                for (const tabId of ['sectors', 'funds', 'world']) {
+                for (const tabId of ['sectors', 'funds', 'performance', 'world']) {
                     await mobile.tap(`#research-tab-${tabId}`);
                     await mobile.waitForTimeout(300);
                     if (await scrollsSideways(mobile)) {

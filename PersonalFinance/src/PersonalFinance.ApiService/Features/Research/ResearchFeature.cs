@@ -21,6 +21,9 @@ internal static class ResearchFeature
     // The Fed's H.15 bundle is a 4 MB zip.
     private static readonly TimeSpan FedTimeout = TimeSpan.FromSeconds(60);
 
+    // The BLS CPI file is a few MB of text; a year of Treasury bill rates under one.
+    private static readonly TimeSpan UsAgencyTimeout = TimeSpan.FromSeconds(60);
+
     // A company's facts document can run to several megabytes; a lookup waits for it.
     private static readonly TimeSpan SecCompanyTimeout = TimeSpan.FromSeconds(30);
 
@@ -53,18 +56,21 @@ internal static class ResearchFeature
             FundsFirstQuarter = configuration.GetValue($"{ResearchSettings.Section}:FundsFirstQuarter",
                 new DateOnly(2019, 10, 1)),
             WorldFirstYear = configuration.GetValue($"{ResearchSettings.Section}:WorldFirstYear", 1975),
+            Recessions = configuration.GetSection($"{ResearchSettings.Section}:Recessions").Get<List<RecessionPeriod>>() ?? [],
             PressReleasesEnabled = configuration.GetValue(ResearchSettings.PressReleasesEnabledKey, true),
         });
         services.AddSingleton<SecRequestGate>();
         services.AddHttpClient<ISecEdgarClient, SecEdgarClient>(client => client.Timeout = SecTimeout);
         services.AddHttpClient<IWorldBankClient, WorldBankClient>(client => client.Timeout = WorldBankTimeout);
         services.AddHttpClient<IFedRatesClient, FedRatesClient>(client => client.Timeout = FedTimeout);
+        services.AddHttpClient<IUsAgencyClient, UsAgencyClient>(client => client.Timeout = UsAgencyTimeout);
         services.AddScoped<ResearchSnapshotStore>();
         // Refreshed in this order, each on its own.
         services.AddScoped<IResearchDatasetRefresher, SectorsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundOverlapRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundReturnsRefresher>();
+        services.AddScoped<IResearchDatasetRefresher, MacroRefresher>();
         services.AddScoped<IResearchDatasetRefresher, WorldRefresher>();
         services.AddScoped<IResearchService, ResearchService>();
 

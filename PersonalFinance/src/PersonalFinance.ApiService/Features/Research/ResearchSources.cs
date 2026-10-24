@@ -15,6 +15,12 @@ public enum ResearchSources
     /// <summary>The World Bank: the World dataset.</summary>
     WorldBank = 2,
 
+    /// <summary>
+    /// US government agencies (the Bureau of Labor Statistics, the Fed Board and the Treasury): the macro dataset. Its
+    /// requests carry the same contact as SEC's.
+    /// </summary>
+    UsAgencies = 4,
+
     /// <summary>Every source.</summary>
-    All = SecEdgar | WorldBank,
+    All = SecEdgar | WorldBank | UsAgencies,
 }

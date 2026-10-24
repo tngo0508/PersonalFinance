@@ -31,6 +31,12 @@ public interface IResearchService
     Task<ResearchSnapshotResult<FundReturnsSnapshotDto>> GetFundReturnsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the macro snapshot (monthly CPI-U from BLS, and the effective federal funds rate and 3-month Treasury bill
+    /// rate from the Fed's H.15 release), or "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<MacroSnapshotDto>> GetMacroAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot (each country's market cap and market cap as % of GDP per year, from the World Bank),
     /// or "never loaded".
     /// </summary>

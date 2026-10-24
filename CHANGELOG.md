@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.5.0] - 2026-10-24
+
+### Added
+
+- **Performance tab on Research**: how 100 put into your Fund Basket and into each of its funds would have grown since mid-2019, from each fund's monthly total returns, for information only (#262).
+  - "Your basket" is the heavier dark line, rebalanced to its weights every month; each fund keeps its colour, with end labels and a legend.
+  - A "Nominal | Adjusted for inflation" switch divides every line by how much CPI-U rose; there is no CPI line and no second axis.
+  - Callouts give the basket's total and annualized return, its worst fall from a high and the month it bottomed, and inflation over the period; a table gives the annualized return, total return, worst fall and return after inflation of the basket and each fund.
+- **Rate and difference panels**: under the growth chart, the effective federal funds rate and your basket minus a chosen Tracked Fund (VT by default), blue where the basket is ahead and orange where it is behind (#263).
+  - One crosshair spans all three panels, moved by pointer or by the arrow keys, Home and End, with a tooltip of every series and the month's rate.
+  - A strip under the chart, with 1Y, 3Y, 5Y and Max presets, chooses the period; every line starts at 100 again, and the callouts and table follow.
+- **Performance annotations**: muted, labelled bands shade the Fed's hiking cycles and recessions, and a marker shows the basket's worst fall from a high (#264).
+  - Hiking cycles are derived from month-on-month rises in the federal funds rate (March 2022 to August 2023 for the last one).
+  - Recessions come from configuration (`Research:Recessions`, shipping the 2020 recession), so one can be added without a code change.
+- **Macro dataset**: monthly CPI-U from the Bureau of Labor Statistics and the effective federal funds rate and 3-month Treasury bill from the Fed Board's H.15 release, at `api/Research/macro`, refreshed daily with the other Research datasets (#262).
+  - When the Fed's release cannot be read, the Treasury bill rate comes from the Treasury's daily bill rates instead; FRED is not used, because its terms forbid caching.
+  - Days H.15 marks as having no data are left out, and a month BLS did not publish (October 2025) is filled in between its neighbours on the chart.
+
 ## [5.4.2] - 2026-10-24
 
 ### Fixed

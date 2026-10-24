@@ -1,0 +1,123 @@
+@model ResearchViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+
+@{
+    FundReturnsSnapshotDto? returns = Model.FundReturns;
+    MacroSnapshotDto? macro = Model.Macro;
+    // The basket is picked from the funds data, so without it there is nothing to show.
+    bool showPerformance = returns is not null && !Model.Funds.Unavailable;
+    CultureInfo us = CultureInfo.GetCultureInfo("en-US");
+}
+
+@* The Performance tab: how 100 put into the Fund Basket and each of its funds grew, month by month, from the funds'
+   monthly total returns, optionally adjusted for inflation by CPI-U. Drawn by js/research/research-performance.js from
+   the fund returns and macro data islands; the browser only weights the basket (rebalanced monthly) and compounds. *@
+<section class="research-deck" id="research-panel-performance" data-research-basket role="tabpanel"
+         aria-labelledby="research-tab-performance" hidden="@(!Model.IsSelected(ResearchViewModel.PerformanceTab))">
+    <div class="research-card research-performance" id="research-performance">
+        <h2 class="research-card__title">Growth of 100</h2>
+        @if (!showPerformance)
+        {
+            <partial name="_UnavailableState" model="Model.PerformanceUnavailableState"/>
+        }
+        else
+        {
+            <p class="research-card__subtitle">
+                How 100 put into your basket and into each of its funds would have grown, from each fund's monthly
+                total return on its net asset value, with distributions reinvested. The basket is rebalanced to its
+                weights every month.
+            </p>
+            <div class="research-correlation__controls">
+                <div class="research-view-toggle" role="group" aria-label="Values">
+                    <button type="button" class="research-view-toggle__button" data-performance-view="nominal" aria-pressed="true">Nominal</button>
+                    <button type="button" class="research-view-toggle__button" data-performance-view="real" aria-pressed="false"
+                            disabled="@(macro is null)">Adjusted for inflation</button>
+                </div>
+            </div>
+            @if (macro is null)
+            {
+                <p class="research-overlap__note">The inflation data has not loaded yet, so only nominal values are shown.</p>
+            }
+            <p class="research-overlap__prompt" id="research-performance-prompt">
+                Add funds to your Fund Basket to see how they grew.
+            </p>
+            <div class="research-overlap__view" id="research-performance-view" hidden>
+                <ul class="research-overlap__callouts" id="research-performance-callouts" aria-label="Your basket over the period"></ul>
+                <div class="research-performance__compare">
+                    <label for="research-performance-compare">Compare your basket with</label>
+                    <select class="research-performance__select" id="research-performance-compare"></select>
+                </div>
+                <figure class="research-performance__figure">
+                    @* Three panels on one time axis: growth of 100, the federal funds rate, and the basket minus the
+                       chosen fund. One crosshair spans them; with the chart focused, the arrow keys move it. *@
+                    <div class="research-performance__chart" id="research-performance-chart" tabindex="0" role="group"
+                         aria-describedby="research-performance-keys"></div>
+                    <p class="visually-hidden" id="research-performance-keys">
+                        Use the left and right arrow keys to move through the months, Home and End for the first and last.
+                    </p>
+                    <p class="visually-hidden" id="research-performance-readout" aria-live="polite"></p>
+                    <ul class="research-performance__legend" id="research-performance-legend" aria-label="Lines"></ul>
+                    <div class="research-performance__range">
+                        <div class="research-view-toggle" role="group" aria-label="Period">
+                            <button type="button" class="research-view-toggle__button" data-performance-range="12" aria-pressed="false">1Y</button>
+                            <button type="button" class="research-view-toggle__button" data-performance-range="36" aria-pressed="false">3Y</button>
+                            <button type="button" class="research-view-toggle__button" data-performance-range="60" aria-pressed="false">5Y</button>
+                            <button type="button" class="research-view-toggle__button" data-performance-range="max" aria-pressed="true">Max</button>
+                        </div>
+                        <div class="research-performance__brush" id="research-performance-brush"
+                             aria-label="Drag across the strip to choose the period; the buttons set it too"></div>
+                    </div>
+                </figure>
+                <div class="research-tooltip" id="research-performance-tooltip" aria-hidden="true" hidden></div>
+                <div class="research-overlap__table" id="research-performance-table"></div>
+            </div>
+        }
+        <p class="research-card__source">
+            Sources: SEC EDGAR (Form N-PORT monthly total returns). Inflation: U.S. Bureau of Labor Statistics, CPI-U.
+            Interest rates: Board of Governors of the Federal Reserve System, H.15 Selected Interest Rates.
+        </p>
+    </div>
+
+    <aside class="research-panel" aria-label="About the performance data">
+        <h2 class="research-panel__title">How to read it</h2>
+        <p>
+            Every line starts at 100 at the end of the month before the first month all your funds have a return. A
+            line at 150 means 100 grew to 150. "Your basket" is the heavier dark line.
+        </p>
+        <p>
+            Adjusted for inflation divides each line by how much consumer prices rose since the start, so it shows
+            growth in buying power. A month the Bureau of Labor Statistics did not publish (October 2025, during the
+            government shutdown) is filled in between the months either side.
+        </p>
+        <p>
+            The lower panels share the chart's months: the effective federal funds rate, and your basket minus the fund
+            you compare it with, in points of the growth of 100 (blue where the basket is ahead, orange where it is
+            behind). Drag across the strip under the chart, or use the period buttons, to zoom; every line then starts
+            at 100 again and the figures cover that period.
+        </p>
+        <h2 class="research-panel__title">About this data</h2>
+        <p>
+            Funds report a total return for each month on Form N-PORT. These are returns on the fund's net asset value
+            at month ends, not market prices, and they are published some weeks after the quarter they cover.
+        </p>
+        <p>
+            The figures describe the past only; they say nothing about what will happen.
+        </p>
+        <h2 class="research-panel__title">Data as of</h2>
+        <p class="research-panel__as-of">
+            @(returns is null ? "Not loaded yet" : $"Returns to {returns.AsOf.ToString("MMMM yyyy", us)}")
+            @if (macro is not null)
+            {
+                <br/>
+                @($"Inflation to {macro.Months.LastOrDefault(m => m.ConsumerPrices is not null)?.Month.ToString("MMMM yyyy", us)}")
+            }
+        </p>
+    </aside>
+</section>
+
+@if (showPerformance && macro is not null)
+{
+    @* The macro snapshot (monthly CPI-U and interest rates), read by research-performance.js. *@
+    <script type="application/json" id="research-macro-data">@Json.Serialize(macro)</script>
+}

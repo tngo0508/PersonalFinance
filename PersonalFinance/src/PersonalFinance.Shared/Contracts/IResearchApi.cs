@@ -37,6 +37,13 @@ public interface IResearchApi
     Task<FundReturnsSnapshotDto> GetFundReturnsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the macro snapshot. A dataset that has never loaded answers 503 with a
+    /// <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
+    /// </summary>
+    [Get("/api/Research/macro")]
+    Task<MacroSnapshotDto> GetMacroAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot. A dataset that has never loaded answers 503 with a
     /// <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
     /// </summary>
