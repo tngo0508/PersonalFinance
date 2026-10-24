@@ -59,6 +59,9 @@ internal sealed class ResearchSettings
     /// </summary>
     public int WorldFirstYear { get; init; } = 1975;
 
+    /// <summary>The recessions the Performance chart shades (<c>Research:Recessions</c>).</summary>
+    public IReadOnlyList<RecessionPeriod> Recessions { get; init; } = [];
+
     /// <summary>The configuration key of <see cref="PressReleasesEnabled"/>.</summary>
     public const string PressReleasesEnabledKey = $"{Section}:PressReleases:Enabled";
 

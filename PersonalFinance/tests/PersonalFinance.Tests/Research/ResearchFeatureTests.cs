@@ -127,6 +127,25 @@ public class ResearchFeatureTests
     }
 
     [Fact]
+    public void AddResearchFeature_ReadsTheRecessionsFromConfiguration_AndShipsThe2020Recession()
+    {
+        IConfiguration configured = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Research:Recessions:0:Start"] = "2001-03",
+                ["Research:Recessions:0:End"] = "2001-11",
+                ["Research:Recessions:0:Label"] = "2001 recession",
+            })
+            .Build();
+        IConfiguration shipped = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.ApiService"), "appsettings.json"))
+            .Build();
+
+        Assert.Equal(["2001 recession"], SettingsFrom(configured).Recessions.Select(r => r.Label));
+        Assert.Contains(SettingsFrom(shipped).Recessions, r => r is { Start: "2020-02", End: "2020-04" });
+    }
+
+    [Fact]
     public void AddResearchFeature_WithNoFundsConfigured_BuildsNoFunds()
     {
         Assert.Empty(SettingsFrom(new ConfigurationBuilder().Build()).Funds);

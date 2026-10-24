@@ -603,3 +603,64 @@
     fill-opacity: 0.6;
     stroke: var(--app-brand);
 }
+
+/* Performance annotations: muted bands for the Fed's hiking cycles and for
+   recessions, each with a text label (never colour alone), and a marker for
+   the basket's worst fall from a high. */
+
+.research-performance__band--hike {
+    fill: #e4ecf7;
+}
+
+.research-performance__band--recession {
+    fill: #ecebe8;
+}
+
+.research-performance__band-label {
+    fill: var(--app-text-muted);
+    font-size: 10px;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-performance__band-swatch {
+    display: inline-block;
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 1px solid rgba(11, 11, 11, 0.12);
+    border-radius: 2px;
+}
+
+.research-performance__band-swatch--hike {
+    background: #e4ecf7;
+}
+
+.research-performance__band-swatch--recession {
+    background: #ecebe8;
+}
+
+.research-performance__worst line {
+    stroke: var(--app-text);
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
+}
+
+.research-performance__worst circle {
+    fill: var(--app-bg, #ffffff);
+    stroke: var(--app-text);
+    stroke-width: 1.5;
+}
+
+.research-performance__worst-label {
+    fill: var(--app-text);
+    font-size: 11px;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-performance__worst-swatch {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.625rem;
+    border: 1.5px solid var(--app-text);
+    border-radius: 50%;
+    background: var(--app-bg, #ffffff);
+}

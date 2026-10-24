@@ -18,6 +18,29 @@ public sealed class MacroSnapshotDto
     /// be read and the Treasury's daily bill rates were averaged instead.
     /// </summary>
     public string TreasuryBillSource { get; set; } = "H.15";
+
+    /// <summary>
+    /// The Fed's hiking cycles, derived from month-on-month rises in the effective federal funds rate, oldest first.
+    /// </summary>
+    public List<MacroPeriodDto> HikingCycles { get; set; } = [];
+
+    /// <summary>The recessions the chart shades, from configuration, oldest first.</summary>
+    public List<MacroPeriodDto> Recessions { get; set; } = [];
+}
+
+/// <summary>
+/// A span of months the Performance chart shades, with its label.
+/// </summary>
+public sealed class MacroPeriodDto
+{
+    /// <summary>The first day of the first month.</summary>
+    public DateOnly Start { get; set; }
+
+    /// <summary>The first day of the last month (inclusive).</summary>
+    public DateOnly End { get; set; }
+
+    /// <summary>The band's label, e.g. "Fed rate rises" or "2020 recession".</summary>
+    public string Label { get; set; } = string.Empty;
 }
 
 /// <summary>

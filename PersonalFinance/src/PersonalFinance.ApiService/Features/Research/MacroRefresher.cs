@@ -112,8 +112,14 @@ internal sealed class MacroRefresher : IResearchDatasetRefresher
             AsOf = last.AddMonths(1).AddDays(-1),
             Months = months,
             TreasuryBillSource = billSource,
+            HikingCycles = RateCycles.Hikes(fedFunds.Where(r => r.Month >= first).ToList())
+                .Select(c => new MacroPeriodDto { Start = c.Start, End = c.End, Label = HikingCycleLabel })
+                .ToList(),
         };
     }
+
+    /// <summary>The label of a hiking cycle's band.</summary>
+    internal const string HikingCycleLabel = "Fed rate rises";
 
     private static string MonthLabel(DateOnly month) => month.ToString("yyyy-MM", CultureInfo.InvariantCulture);
 

@@ -11,7 +11,9 @@
  * One crosshair spans the three panels; it follows the pointer, or the arrow keys (Home and End too) when the chart
  * has focus, and its tooltip lists every series for the month and the rate. A brush strip under the chart, with 1Y, 3Y,
  * 5Y and Max presets, chooses the period: every line starts at 100 again at the period's start, and the callouts and
- * table cover it. The browser only weights and compounds the monthly returns of the snapshots.
+ * table cover it. Muted bands, each labelled, shade the Fed's hiking cycles (derived in the refresh from rises in the
+ * federal funds rate) and the configured recessions, and a marker shows the basket's worst fall from a high. The
+ * browser only weights and compounds the monthly returns of the snapshots.
  *
  * Reads the fund returns (`research-fund-returns-data`), macro (`research-macro-data`) and funds (`research-funds-data`,
  * for names) data islands, and the basket from `window.ResearchBasket`, redrawing on `research:basketchange`.
@@ -173,25 +175,34 @@
      * @param {number[]} returns - The monthly returns in percent, oldest first.
      * @param {number[]|null} deflators - CPI at each month divided by CPI at the base month, or null for nominal.
      * @param {string} start - The first month.
-     * @returns {{values: number[], total: number, annualized: number, worstFall: number, bottom: string|null}} The
-     *     line (100 at the base, then one value per month) and its total and annualized return, worst fall from a
-     *     high and the month that fall bottomed, all in percent.
+     * @returns {{values: number[], total: number, annualized: number, worstFall: number, bottom: string|null,
+     *     peakIndex: number, bottomIndex: number}} The line (100 at the base, then one value per month), its total and
+     *     annualized return, worst fall from a high and the month that fall bottomed (percent), and the points of that
+     *     high and that bottom.
      */
     function growth (returns, deflators, start) {
         const values = [100];
         let level = 1;
         let peak = 1;
+        let peakAt = 0;
         let worstFall = 0;
         let bottom = null;
+        let peakIndex = 0;
+        let bottomIndex = 0;
         returns.forEach((r, i) => {
             level *= 1 + r / 100;
             const shown = deflators ? level / deflators[i] : level;
             values.push(shown * 100);
-            peak = Math.max(peak, shown);
+            if (shown > peak) {
+                peak = shown;
+                peakAt = i + 1;
+            }
             const fall = shown / peak - 1;
             if (fall < worstFall) {
                 worstFall = fall;
                 bottom = addMonths(start, i);
+                peakIndex = peakAt;
+                bottomIndex = i + 1;
             }
         });
         const end = values[values.length - 1] / 100;
@@ -200,7 +211,9 @@
             total: (end - 1) * 100,
             annualized: (Math.pow(end, 12 / returns.length) - 1) * 100,
             worstFall: worstFall * 100,
-            bottom
+            bottom,
+            peakIndex,
+            bottomIndex
         };
     }
 
@@ -256,7 +269,11 @@
         const rates = new Map((macro ? macro.months : [])
             .filter((m) => m.fedFunds !== null && m.fedFunds !== undefined)
             .map((m) => [monthKey(m.month), m.fedFunds]));
-        return { months, fundReturns, basketReturns, cpi, canDeflate, rates, returnsOf, series };
+        const periods = [
+            ...((macro && macro.hikingCycles) || []).map((p) => ({ ...p, kind: 'hike' })),
+            ...((macro && macro.recessions) || []).map((p) => ({ ...p, kind: 'recession' }))
+        ].map((p) => ({ start: monthKey(p.start), end: monthKey(p.end), label: p.label, kind: p.kind }));
+        return { months, fundReturns, basketReturns, cpi, canDeflate, rates, returnsOf, series, periods };
     }
 
     /**
@@ -304,7 +321,11 @@
             }
         }
         const rates = [base, ...months].map((m) => (full.rates.has(m) ? full.rates.get(m) : null));
-        return { start, end, base, months, lines, inflation, comparison, rates, real: Boolean(shownDeflators) };
+        // A band covers its months, from the end of the month before its first to the end of its last, cut to the period.
+        const bands = full.periods
+            .filter((p) => p.end >= start && p.start <= end)
+            .map((p) => ({ ...p, from: p.start < start ? base : addMonths(p.start, -1), to: p.end > end ? end : p.end }));
+        return { start, end, base, months, lines, inflation, comparison, rates, bands, real: Boolean(shownDeflators) };
     }
 
     /**
@@ -397,6 +418,7 @@
             }
             const rate = current.rates[index];
             rows.push(rate === null ? 'Federal funds rate: not available' : `Federal funds rate: ${rate.toFixed(2)}%`);
+            current.bands.filter((b) => month >= b.start && month <= b.end).forEach((b) => rows.push(`Shaded: ${b.label}`));
             return rows;
         }
 
@@ -475,6 +497,18 @@
             const title = (text, top) => svg.append('text').attr('class', 'research-performance__panel-title')
                 .attr('x', MARGIN.left).attr('y', top - 8).text(text);
 
+            // Shaded periods, under every panel, each labelled at the top of the main panel.
+            const bands = svg.append('g').attr('class', 'research-performance__bands');
+            current.bands.forEach((b) => {
+                const x0 = x(monthEnd(b.from));
+                const x1 = x(monthEnd(b.to));
+                bands.append('rect').attr('class', `research-performance__band research-performance__band--${b.kind}`)
+                    .attr('data-band', b.label).attr('x', x0).attr('width', Math.max(1, x1 - x0))
+                    .attr('y', MAIN.top).attr('height', DIFF.top + DIFF.height - MAIN.top);
+                bands.append('text').attr('class', 'research-performance__band-label')
+                    .attr('x', x0 + 4).attr('y', MAIN.top + 11).text(b.label);
+            });
+
             // Main panel: growth of 100.
             grid(svg, y, 5, (t) => String(t), width);
             svg.append('line').attr('class', 'research-performance__baseline')
@@ -492,6 +526,24 @@
                 .attr('class', (d) => (d.line.isBasket ? 'research-performance__end research-performance__end--basket' : 'research-performance__end'))
                 .attr('x', width - MARGIN.right + 6).attr('y', (d) => d.labelY).attr('dy', '0.32em')
                 .text((d) => `${d.line.isBasket ? 'Basket' : d.line.label} ${Math.round(d.line.values[d.line.values.length - 1])}`);
+
+            // The basket's worst fall from a high: its high and its bottom, joined, with the fall written by the bottom.
+            const basket = current.lines.find((l) => l.isBasket);
+            if (basket.bottom) {
+                const marker = svg.append('g').attr('class', 'research-performance__worst');
+                const px = at(basket.peakIndex);
+                const py = y(basket.values[basket.peakIndex]);
+                const bx = at(basket.bottomIndex);
+                const by = y(basket.values[basket.bottomIndex]);
+                marker.append('line').attr('x1', px).attr('y1', py).attr('x2', bx).attr('y2', by);
+                marker.append('circle').attr('cx', px).attr('cy', py).attr('r', 3.5);
+                marker.append('circle').attr('cx', bx).attr('cy', by).attr('r', 3.5);
+                const below = Math.min(by + 16, MAIN.top + MAIN.height - 4);
+                marker.append('text').attr('class', 'research-performance__worst-label')
+                    .attr('x', Math.min(bx, width - MARGIN.right - 4)).attr('y', below)
+                    .attr('text-anchor', bx > width - MARGIN.right - 90 ? 'end' : 'middle')
+                    .text(`Worst fall ${formatPercent(basket.worstFall)}`);
+            }
 
             // Rate panel: the effective federal funds rate.
             title('Effective federal funds rate, %', RATE.top);
@@ -553,9 +605,14 @@
                 .on('pointerleave', () => showCrosshair(null, false));
 
             const words = current.lines.map((l) => `${l.label} ${Math.round(l.values[l.values.length - 1])}`).join(', ');
+            const shaded = current.bands.map((b) => `${b.label} from ${formatMonth(b.start)} to ${formatMonth(b.end)}`).join('; ');
+            const worst = basket.bottom
+                ? ` The basket's worst fall from a high was ${formatPercent(basket.worstFall)}, bottoming in ${formatMonth(basket.bottom)}.`
+                : '';
             chartHost.setAttribute('aria-label', `Growth of 100${current.real ? ', adjusted for inflation,' : ''} from `
                 + `${formatMonth(current.start)} to ${formatMonth(current.end)}: ${words}. Below it, the federal funds rate`
-                + `${current.comparison ? ` and your basket minus ${current.comparison.label}` : ''}.`);
+                + `${current.comparison ? ` and your basket minus ${current.comparison.label}` : ''}.`
+                + `${shaded ? ` Shaded: ${shaded}.` : ''}${worst}`);
             if (crosshair !== null && crosshair <= current.months.length) {
                 showCrosshair(crosshair, false);
             }
@@ -642,6 +699,21 @@
                 item.append(swatch, l.label);
                 return item;
             }));
+            const kinds = new Map(current.bands.map((b) => [b.label, b.kind]));
+            kinds.forEach((kind, label) => {
+                const item = element('li', 'research-performance__legend-item');
+                const swatch = element('span', `research-performance__band-swatch research-performance__band-swatch--${kind}`);
+                swatch.setAttribute('aria-hidden', 'true');
+                item.append(swatch, `${label} (shaded)`);
+                legend.append(item);
+            });
+            if (current.lines.find((l) => l.isBasket).bottom) {
+                const item = element('li', 'research-performance__legend-item');
+                const swatch = element('span', 'research-performance__worst-swatch');
+                swatch.setAttribute('aria-hidden', 'true');
+                item.append(swatch, "Basket's worst fall from a high");
+                legend.append(item);
+            }
         }
 
         /**

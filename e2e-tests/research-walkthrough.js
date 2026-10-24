@@ -582,6 +582,35 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 7h: the chart shades the derived hiking cycle with a label, marks the basket's worst fall with the figure
+        // the callout gives, and receives the configured recessions; a 1-year period leaves the earlier band out.
+        await step('Research 7h', fail, async () => {
+            await page.goto(`${base}/Research?tab=performance&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const macro = await page.evaluate(() => JSON.parse(document.getElementById('research-macro-data').textContent));
+            const monthName = (iso) => new Date(`${iso.slice(0, 7)}-15T00:00:00Z`).toLocaleString('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'});
+            const cycle = macro.hikingCycles[0];
+            const bands = await page.locator('rect.research-performance__band--hike').count();
+            const bandLabels = (await page.locator('.research-performance__band-label').allTextContents()).map((t) => t.trim());
+            const legendText = (await page.locator('#research-performance-legend').textContent()).replace(/\s+/g, ' ');
+            const aria = await page.locator('#research-performance-chart').getAttribute('aria-label');
+            const worstLabel = (await page.locator('.research-performance__worst-label').textContent()).trim();
+            const worstCallout = (await page.locator('#research-performance-callouts li').nth(1).locator('.research-overlap__callout-value').textContent()).trim();
+            await page.click('[data-performance-range="12"]');
+            const yearBands = await page.locator('rect.research-performance__band').count();
+            await page.click('[data-performance-range="max"]');
+            const ok = macro.hikingCycles.length === 1 && bands === 1 && bandLabels.includes('Fed rate rises') &&
+                legendText.includes('Fed rate rises (shaded)') && legendText.includes("Basket's worst fall from a high") &&
+                aria.includes(`Fed rate rises from ${monthName(cycle.start)} to ${monthName(cycle.end)}`) &&
+                worstLabel === `Worst fall ${worstCallout}` && yearBands === 0 &&
+                macro.recessions.some((r) => r.label === '2020 recession' && r.start.startsWith('2020-02'));
+            if (ok) {
+                pass(`Research 7h: "Fed rate rises" shaded ${monthName(cycle.start)} to ${monthName(cycle.end)} with a label and legend; "${worstLabel}" marked; the configured 2020 recession arrives; 1Y leaves the band out`);
+            } else {
+                fail(`Research 7h: cycles ${JSON.stringify(macro.hikingCycles)}, bands ${bands}, labels ${JSON.stringify(bandLabels)}, legend "${legendText}", ` +
+                    `aria "${aria}", worst "${worstLabel}"/${worstCallout}, 1Y bands ${yearBands}, recessions ${JSON.stringify(macro.recessions)}`);
+            }
+        });
+
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');

@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
+using PersonalFinance.ApiService.Features.Research.Domain;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Tests.TestSupport;
@@ -27,14 +28,18 @@ public class ResearchMacroServiceTests
         new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options);
 
     /// <summary>The service with no funds configured, over the recorded sources; SEC and the World Bank answer 503.</summary>
-    private static ResearchService CreateService(AppDbContext db, RecordedSources sources)
+    private static ResearchService CreateService(AppDbContext db, RecordedSources sources,
+        IReadOnlyList<RecessionPeriod>? recessions = null)
     {
         var secSettings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
         var secClient = new SecEdgarClient(new HttpClient(sources), secSettings, new SecRequestGate(secSettings, timeProvider));
         var worldClient = new WorldBankClient(new HttpClient(sources));
         // The funds' first quarter puts the dataset's first month at January 2025.
-        var research = new ResearchSettings { SectorsFirstYear = 2025, FundsFirstQuarter = new DateOnly(2026, 1, 1) };
+        var research = new ResearchSettings
+        {
+            SectorsFirstYear = 2025, FundsFirstQuarter = new DateOnly(2026, 1, 1), Recessions = recessions ?? [],
+        };
         return ResearchServiceFactory.Create(db, secClient, worldClient, research, timeProvider,
             fedClient: new FedRatesClient(new HttpClient(sources), secSettings),
             usAgencyClient: new UsAgencyClient(new HttpClient(sources), secSettings));
@@ -140,6 +145,73 @@ public class ResearchMacroServiceTests
 
         Assert.Contains(ResearchDatasets.Macro, summary.Failed);
         Assert.Null((await service.GetMacroAsync()).Snapshot);
+    }
+
+    [Fact]
+    public async Task HikingCycles_OnTheRecordedH15FedFundsRate_FindThe2022CycleFromMarch2022ToAugust2023()
+    {
+        await using FileStream file = File.OpenRead(Path.Combine(Samples, "h15-fedfunds-2021-2024-excerpt.xml"));
+        IReadOnlyList<(DateOnly Month, decimal Rate)> fedFunds = await FedRatesClient.ReadSeriesAsync(file,
+            FedRatesClient.FedFundsSeries, CancellationToken.None);
+
+        IReadOnlyList<(DateOnly Start, DateOnly End)> cycles = RateCycles.Hikes(fedFunds);
+
+        // The Fed's first hike was on 16 March 2022 and its last on 26 July 2023; as monthly averages the rate rises
+        // from March 2022 to August 2023, pausing in June and July 2023 (rises of 0.02 and 0.04). The 2024 cuts end it.
+        Assert.Equal(48, fedFunds.Count);
+        Assert.Equal([(new DateOnly(2022, 3, 1), new DateOnly(2023, 8, 1))], cycles);
+    }
+
+    [Fact]
+    public void HikingCycles_LeaveOutSmallRuns_SplitAfterALongPause_AndEndAtAFall()
+    {
+        static List<(DateOnly Month, decimal Rate)> Rates(params decimal[] values) =>
+            values.Select((v, i) => (new DateOnly(2020, 1, 1).AddMonths(i), v)).ToList();
+
+        // One 0.25 rise only: too small to be a cycle.
+        Assert.Empty(RateCycles.Hikes(Rates(1m, 1.25m, 1.25m, 1.25m)));
+        // Two runs of 0.75 three flat months apart: two cycles, each ending at its last rise.
+        Assert.Equal(
+            [(new DateOnly(2020, 2, 1), new DateOnly(2020, 4, 1)), (new DateOnly(2020, 8, 1), new DateOnly(2020, 10, 1))],
+            RateCycles.Hikes(Rates(1m, 1.25m, 1.5m, 1.75m, 1.75m, 1.75m, 1.75m, 2m, 2.25m, 2.5m)));
+        // A cut right after the rises ends the cycle at once.
+        Assert.Equal([(new DateOnly(2020, 2, 1), new DateOnly(2020, 3, 1))],
+            RateCycles.Hikes(Rates(1m, 1.5m, 2m, 1.75m, 2m)));
+    }
+
+    [Fact]
+    public async Task GetMacroAsync_AddsTheConfiguredRecessions_AsTheyAreConfiguredNow_LeavingOutUnreadableEntries()
+    {
+        await using AppDbContext db = CreateContext($"Macro_{Guid.NewGuid():N}");
+        var sources = new RecordedSources();
+        await CreateService(db, sources).RefreshAsync();
+
+        // Configured after the refresh: the next read shows them, with no refresh and no code change.
+        ResearchService later = CreateService(db, sources,
+        [
+            new RecessionPeriod { Start = "2020-02", End = "2020-04", Label = "2020 recession" },
+            new RecessionPeriod { Start = "2008-01", End = "2009-06", Label = "2008 recession" },
+            new RecessionPeriod { Start = "not a month", End = "2001-11", Label = "Broken" },
+        ]);
+        MacroSnapshotDto snapshot = (await later.GetMacroAsync()).Snapshot!;
+
+        Assert.Equal(["2008 recession", "2020 recession"], snapshot.Recessions.Select(r => r.Label));
+        Assert.Equal((new DateOnly(2020, 2, 1), new DateOnly(2020, 4, 1)), (snapshot.Recessions[1].Start, snapshot.Recessions[1].End));
+    }
+
+    [Fact]
+    public void Build_LabelsEachDerivedHikingCycle()
+    {
+        var rates = new List<(DateOnly Month, decimal Rate)>
+        {
+            (new DateOnly(2022, 2, 1), 0.08m), (new DateOnly(2022, 3, 1), 0.33m), (new DateOnly(2022, 4, 1), 0.77m),
+        };
+
+        MacroSnapshotDto snapshot = MacroRefresher.Build(new DateOnly(2022, 1, 1), [(new DateOnly(2022, 1, 1), 280m)],
+            rates, rates, "H.15");
+
+        MacroPeriodDto cycle = Assert.Single(snapshot.HikingCycles);
+        Assert.Equal(("Fed rate rises", new DateOnly(2022, 3, 1), new DateOnly(2022, 4, 1)), (cycle.Label, cycle.Start, cycle.End));
     }
 
     /// <summary>

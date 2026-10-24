@@ -56,6 +56,7 @@ internal static class ResearchFeature
             FundsFirstQuarter = configuration.GetValue($"{ResearchSettings.Section}:FundsFirstQuarter",
                 new DateOnly(2019, 10, 1)),
             WorldFirstYear = configuration.GetValue($"{ResearchSettings.Section}:WorldFirstYear", 1975),
+            Recessions = configuration.GetSection($"{ResearchSettings.Section}:Recessions").Get<List<RecessionPeriod>>() ?? [],
             PressReleasesEnabled = configuration.GetValue(ResearchSettings.PressReleasesEnabledKey, true),
         });
         services.AddSingleton<SecRequestGate>();
