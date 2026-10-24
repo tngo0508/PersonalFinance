@@ -32,12 +32,12 @@
                 <div class="research-view-toggle" role="group" aria-label="Values">
                     <button type="button" class="research-view-toggle__button" data-performance-view="nominal" aria-pressed="true">Nominal</button>
                     <button type="button" class="research-view-toggle__button" data-performance-view="real" aria-pressed="false"
-                            disabled="@(macro is null)">Adjusted for inflation</button>
+                            disabled="@(macro is null)" aria-describedby="@(macro is null ? "research-performance-real-note" : null)">Adjusted for inflation</button>
                 </div>
             </div>
             @if (macro is null)
             {
-                <p class="research-overlap__note">The inflation data has not loaded yet, so only nominal values are shown.</p>
+                <p class="research-overlap__note" id="research-performance-real-note">The inflation data has not loaded yet, so only nominal values are shown.</p>
             }
             <p class="research-overlap__prompt" id="research-performance-prompt">
                 Add funds to your Fund Basket to see how they grew.
