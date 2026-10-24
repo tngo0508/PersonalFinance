@@ -28,6 +28,9 @@ internal static class ResearchFeature
             PublicFloatExclusions = configuration
                 .GetSection($"{ResearchSettings.Section}:PublicFloatExclusions")
                 .Get<List<FilerYear>>() ?? [],
+            Etfs = configuration.GetSection($"{ResearchSettings.Section}:Etfs").Get<List<ResearchEtf>>() ?? [],
+            EtfsFirstQuarter = configuration.GetValue($"{ResearchSettings.Section}:EtfsFirstQuarter",
+                new DateOnly(2019, 10, 1)),
         });
         services.AddSingleton<SecRequestGate>();
         services.AddHttpClient<ISecEdgarClient, SecEdgarClient>(client => client.Timeout = SecTimeout);

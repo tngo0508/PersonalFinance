@@ -29,4 +29,16 @@ internal sealed class ResearchSettings
     /// (<c>Research:PublicFloatExclusions</c>, a list of <c>{ "Cik": ..., "Year": ... }</c>).
     /// </summary>
     public IReadOnlyList<FilerYear> PublicFloatExclusions { get; init; } = [];
+
+    /// <summary>
+    /// The ETFs of the ETFs dataset (<c>Research:Etfs</c>, a list of <c>{ "Ticker", "Name", "Cik" }</c>), in the
+    /// order the page lists them. With none configured the dataset is not built.
+    /// </summary>
+    public IReadOnlyList<ResearchEtf> Etfs { get; init; } = [];
+
+    /// <summary>
+    /// The first day of the first quarter of the ETFs dataset (<c>Research:EtfsFirstQuarter</c>): 1 October 2019,
+    /// the first quarter of public Form N-PORT reports.
+    /// </summary>
+    public DateOnly EtfsFirstQuarter { get; init; } = new(2019, 10, 1);
 }

@@ -14,6 +14,11 @@ public interface IResearchService
     Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the ETFs snapshot (what a few well-known ETFs held each quarter, from Form N-PORT), or "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Rebuilds every dataset from its source, each on its own. A dataset's snapshot is replaced only when its build
     /// succeeds; a failed build is logged and leaves the previous snapshot in place.
     /// </summary>

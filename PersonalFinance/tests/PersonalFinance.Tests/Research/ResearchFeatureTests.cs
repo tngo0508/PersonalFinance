@@ -67,4 +67,27 @@ public class ResearchFeatureTests
         Assert.Equal(exclusions.Count, exclusions.Distinct().Count());
         Assert.All(exclusions, e => Assert.InRange(e.Year, 2011, 2100));
     }
+
+    [Fact]
+    public void ShippedEtfList_HoldsTheSixEtfs_WithTheTrustCikOnlyForTheSingleFundTrusts()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.ApiService"), "appsettings.json"))
+            .Build();
+
+        ResearchSettings settings = SettingsFrom(configuration);
+
+        // SPY's trust is not in SEC's fund ticker list and QQQ's filed without a series until 2026, so both are
+        // listed by trust CIK; the others are found through the ticker list.
+        Assert.Equal(["SPY", "QQQ", "VTI", "VT", "IWM", "AIQ"], settings.Etfs.Select(e => e.Ticker));
+        Assert.Equal([884394L, 1067839L, null, null, null, null], settings.Etfs.Select(e => e.Cik));
+        Assert.All(settings.Etfs, e => Assert.False(string.IsNullOrWhiteSpace(e.Name)));
+        Assert.Equal(new DateOnly(2019, 10, 1), settings.EtfsFirstQuarter);
+    }
+
+    [Fact]
+    public void AddResearchFeature_WithNoEtfsConfigured_BuildsNoEtfs()
+    {
+        Assert.Empty(SettingsFrom(new ConfigurationBuilder().Build()).Etfs);
+    }
 }

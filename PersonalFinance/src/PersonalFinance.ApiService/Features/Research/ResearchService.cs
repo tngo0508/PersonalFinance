@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json;
+using System.Xml;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
@@ -21,6 +23,15 @@ internal sealed class ResearchService : IResearchService
     /// filers it has not read before (and the latest year's largest). Not served to the page.
     /// </summary>
     public const string FilersDataset = "sec-filers";
+
+    /// <summary>The dataset key of the ETFs snapshot.</summary>
+    public const string EtfsDataset = "etfs";
+
+    /// <summary>
+    /// The dataset key of the N-PORT filings read for the ETFs snapshot, kept so each refresh fetches only the
+    /// filings it has not read before. Not served to the page.
+    /// </summary>
+    public const string EtfFilingsDataset = "etf-filings";
 
     private readonly AppDbContext _db;
     private readonly ISecEdgarClient _secClient;
@@ -50,23 +61,47 @@ internal sealed class ResearchService : IResearchService
     }
 
     /// <inheritdoc />
+    public async Task<ResearchSnapshotResult<EtfsSnapshotDto>> GetEtfsAsync(CancellationToken cancellationToken = default)
+    {
+        string? payload = await SnapshotPayloadQuery(_db, EtfsDataset).FirstOrDefaultAsync(cancellationToken);
+        EtfsSnapshotDto? snapshot = payload is null
+            ? null
+            : JsonSerializer.Deserialize<EtfsSnapshotDto>(payload, JsonSerializerOptions.Web);
+        return new ResearchSnapshotResult<EtfsSnapshotDto>(snapshot);
+    }
+
+    /// <inheritdoc />
     public async Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default)
     {
         var summary = new ResearchRefreshSummary();
+        await RefreshDatasetAsync(SectorsDataset, RefreshSectorsAsync, summary, cancellationToken);
+        if (_settings.Etfs.Count > 0)
+        {
+            await RefreshDatasetAsync(EtfsDataset, RefreshEtfsAsync, summary, cancellationToken);
+        }
+
+        return summary;
+    }
+
+    /// <summary>
+    /// Rebuilds one dataset, recording in the summary whether it was built or failed. A failure is logged and leaves
+    /// the previous snapshot in place; cancellation stops the whole refresh.
+    /// </summary>
+    private async Task RefreshDatasetAsync(string dataset, Func<CancellationToken, Task> build,
+        ResearchRefreshSummary summary, CancellationToken cancellationToken)
+    {
         try
         {
-            await RefreshSectorsAsync(cancellationToken);
-            summary.Built.Add(SectorsDataset);
+            await build(cancellationToken);
+            summary.Built.Add(dataset);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             // The source is down or answered something unreadable: keep the previous snapshot.
             _logger.LogError(ex, "Could not rebuild the Research {Dataset} snapshot; the previous one is kept",
-                SectorsDataset);
-            summary.Failed.Add(SectorsDataset);
+                dataset);
+            summary.Failed.Add(dataset);
         }
-
-        return summary;
     }
 
     /// <summary>
@@ -174,6 +209,102 @@ internal sealed class ResearchService : IResearchService
         }
 
         return filers;
+    }
+
+    /// <summary>
+    /// Reads the N-PORT filings of each configured ETF that no earlier refresh has read, then builds the ETFs
+    /// snapshot from every filing read so far and stores both. One fund's filing list or filing failing is logged and
+    /// skipped (a filing not read is tried again next time), so it does not hold back the other funds.
+    /// </summary>
+    private async Task RefreshEtfsAsync(CancellationToken cancellationToken)
+    {
+        string? payload = await SnapshotPayloadQuery(_db, EtfFilingsDataset).FirstOrDefaultAsync(cancellationToken);
+        Dictionary<string, EtfFilingRecord> records = (payload is null
+                ? []
+                : JsonSerializer.Deserialize<List<EtfFilingRecord>>(payload, JsonSerializerOptions.Web) ?? [])
+            .ToDictionary(r => r.AccessionNumber, StringComparer.Ordinal);
+
+        IReadOnlyList<SecFundSeries> series = _settings.Etfs.Any(e => e.Cik is null)
+            ? await _secClient.GetFundSeriesAsync(cancellationToken)
+            : [];
+        foreach (ResearchEtf etf in _settings.Etfs)
+        {
+            await ReadNewFilingsAsync(etf, series, records, cancellationToken);
+        }
+
+        EtfsSnapshotDto snapshot = EtfsSnapshotBuilder.Build(_settings.Etfs, records.Values, _settings.EtfsFirstQuarter)
+            ?? throw new InvalidOperationException("SEC returned no N-PORT report for any ETF.");
+        string firstPeriod = snapshot.Periods[0].Replace(" ", string.Empty, StringComparison.Ordinal);
+        string lastPeriod = snapshot.Periods[^1].Replace(" ", string.Empty, StringComparison.Ordinal);
+        await StoreAsync(EtfFilingsDataset, firstPeriod, lastPeriod, snapshot.AsOf,
+            JsonSerializer.Serialize(records.Values.OrderBy(r => r.AccessionNumber, StringComparer.Ordinal),
+                JsonSerializerOptions.Web), cancellationToken);
+        await StoreAsync(EtfsDataset, firstPeriod, lastPeriod, snapshot.AsOf,
+            JsonSerializer.Serialize(snapshot, JsonSerializerOptions.Web), cancellationToken);
+    }
+
+    /// <summary>
+    /// Lists one ETF's N-PORT filings, under its trust's CIK when one is configured or else under the series SEC's
+    /// fund ticker list gives for its ticker, and reads each filing not read before into <paramref name="records"/>.
+    /// </summary>
+    private async Task ReadNewFilingsAsync(ResearchEtf etf, IReadOnlyList<SecFundSeries> series,
+        Dictionary<string, EtfFilingRecord> records, CancellationToken cancellationToken)
+    {
+        string? seriesId = etf.Cik is null
+            ? series.FirstOrDefault(s => string.Equals(s.Ticker, etf.Ticker, StringComparison.OrdinalIgnoreCase))?.SeriesId
+            : null;
+        string? filer = etf.Cik?.ToString(CultureInfo.InvariantCulture) ?? seriesId;
+        if (filer is null)
+        {
+            _logger.LogWarning("ETF {Ticker} is not in SEC's fund ticker list; its filings are not read", etf.Ticker);
+            return;
+        }
+
+        IReadOnlyList<NportFilingRef> filings;
+        try
+        {
+            filings = await _secClient.GetNportFilingsAsync(filer, _settings.EtfsFirstQuarter, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or XmlException)
+        {
+            _logger.LogWarning(ex, "Could not list the N-PORT filings of ETF {Ticker}; its earlier ones are kept", etf.Ticker);
+            return;
+        }
+
+        foreach (NportFilingRef filing in filings.Where(f => !records.ContainsKey(f.AccessionNumber)))
+        {
+            EtfFilingRecord? record = await ReadFilingAsync(etf, seriesId, filing, cancellationToken);
+            if (record is not null)
+            {
+                records[record.AccessionNumber] = record;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads one N-PORT filing. A filing EDGAR does not have, or another series' report, is remembered with no
+    /// holdings; a filing that fails to download or parse is logged and returns null, so it is tried again next time.
+    /// </summary>
+    private async Task<EtfFilingRecord?> ReadFilingAsync(ResearchEtf etf, string? seriesId, NportFilingRef filing,
+        CancellationToken cancellationToken)
+    {
+        NportReport? report;
+        try
+        {
+            report = await _secClient.GetNportReportAsync(filing, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or XmlException or FormatException)
+        {
+            _logger.LogWarning(ex, "Could not read N-PORT filing {Accession} of ETF {Ticker}", filing.AccessionNumber,
+                etf.Ticker);
+            return null;
+        }
+
+        bool ours = report is not null
+            && (seriesId is null || report.SeriesId is null
+                || string.Equals(report.SeriesId, seriesId, StringComparison.OrdinalIgnoreCase));
+        return new EtfFilingRecord(filing.AccessionNumber, etf.Ticker, filing.FiledOn,
+            ours ? EtfsSnapshotBuilder.Summarize(etf.Ticker, report!) : null);
     }
 
     /// <summary>

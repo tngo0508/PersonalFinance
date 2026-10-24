@@ -23,4 +23,24 @@ internal interface ISecEdgarClient
     /// industry office. Null when SEC has no submissions for the filer (404); any other failure throws.
     /// </summary>
     Task<SecFiler?> GetFilerAsync(long cik, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads SEC's fund ticker list (<c>www.sec.gov/files/company_tickers_mf.json</c>): every mutual fund and ETF share
+    /// class with its series and trust. Any failure throws.
+    /// </summary>
+    Task<IReadOnlyList<SecFundSeries>> GetFundSeriesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lists the Form N-PORT filings (<c>NPORT-P</c> and amendments) EDGAR holds under a filer: a trust's CIK, or a
+    /// series id such as <c>S000002848</c>. Newest first, back to <paramref name="filedFrom"/>. A filer EDGAR does not
+    /// know (404) has none; any other failure throws.
+    /// </summary>
+    Task<IReadOnlyList<NportFilingRef>> GetNportFilingsAsync(string filer, DateOnly filedFrom,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads one N-PORT filing's primary document. Null when EDGAR does not have it (404); any other failure throws,
+    /// as does a document that cannot be parsed.
+    /// </summary>
+    Task<NportReport?> GetNportReportAsync(NportFilingRef filing, CancellationToken cancellationToken);
 }

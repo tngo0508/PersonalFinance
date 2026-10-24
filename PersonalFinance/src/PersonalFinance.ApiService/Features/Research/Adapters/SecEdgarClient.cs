@@ -13,6 +13,12 @@ internal sealed class SecEdgarClient : ISecEdgarClient
 {
     private const string BaseUrl = "https://data.sec.gov/";
 
+    // The fund ticker list, EDGAR's filing lists and the filing archives are served from www.sec.gov.
+    private const string WwwUrl = "https://www.sec.gov/";
+
+    // The most filings EDGAR's company browse feed lists on one page.
+    private const int FilingListPageSize = 100;
+
     private readonly HttpClient _httpClient;
     private readonly SecEdgarSettings _settings;
     private readonly SecRequestGate _gate;
@@ -106,6 +112,83 @@ internal sealed class SecEdgarClient : ISecEdgarClient
             : new SecFiler(cik, submissions.Name ?? string.Empty, BlankToNull(submissions.Tickers?.FirstOrDefault()),
                 BlankToNull(submissions.Sic), BlankToNull(submissions.SicDescription),
                 BlankToNull(submissions.OwnerOrg));
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SecFundSeries>> GetFundSeriesAsync(CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await SendAsync($"{WwwUrl}files/company_tickers_mf.json", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using JsonDocument list = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
+
+        // { "fields": ["cik", "seriesId", "classId", "symbol"], "data": [[2110, "S000009184", "C000024954", "LACAX"], ...] }
+        var series = new List<SecFundSeries>();
+        foreach (JsonElement row in list.RootElement.GetProperty("data").EnumerateArray())
+        {
+            if (row.GetArrayLength() >= 4
+                && row[0].TryGetInt64(out long cik)
+                && row[1].GetString() is { Length: > 0 } seriesId
+                && row[3].GetString() is { Length: > 0 } ticker)
+            {
+                series.Add(new SecFundSeries(cik, seriesId, ticker));
+            }
+        }
+
+        return series;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<NportFilingRef>> GetNportFilingsAsync(string filer, DateOnly filedFrom,
+        CancellationToken cancellationToken)
+    {
+        var filings = new List<NportFilingRef>();
+        for (int start = 0; ; start += FilingListPageSize)
+        {
+            // EDGAR's type filter is a prefix match, so NPORT-P also lists the NPORT-P/A amendments.
+            string url = string.Create(CultureInfo.InvariantCulture,
+                $"{WwwUrl}cgi-bin/browse-edgar?action=getcompany&CIK={Uri.EscapeDataString(filer)}&type=NPORT-P&dateb=&owner=include&start={start}&count={FilingListPageSize}&output=atom");
+            using HttpResponseMessage response = await SendAsync(url, cancellationToken);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return filings;
+            }
+
+            response.EnsureSuccessStatusCode();
+            await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+            List<NportFilingRef> page = await EdgarFilingListParser.ParseAsync(body, cancellationToken);
+            filings.AddRange(page.Where(f => f.FiledOn >= filedFrom));
+            if (page.Count < FilingListPageSize || page.Exists(f => f.FiledOn < filedFrom))
+            {
+                return filings;
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<NportReport?> GetNportReportAsync(NportFilingRef filing, CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await SendAsync(filing.DocumentUrl, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return await NportDocumentParser.ParseAsync(body, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends one GET to SEC once the shared gate allows it, with the configured User-Agent, returning as soon as the
+    /// headers arrive so large documents are read as a stream.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendAsync(string url, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.TryAddWithoutValidation("User-Agent", _settings.UserAgent);
+        return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
     }
 
     private static string? BlankToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
