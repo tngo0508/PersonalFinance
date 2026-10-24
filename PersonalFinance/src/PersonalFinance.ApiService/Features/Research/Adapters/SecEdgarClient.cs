@@ -28,8 +28,30 @@ internal sealed class SecEdgarClient : ISecEdgarClient
     public async Task<IReadOnlyList<PublicFloatFact>> GetPublicFloatFrameAsync(int year, int quarter,
         CancellationToken cancellationToken)
     {
+        List<(FrameRow Row, DateOnly End, decimal Value)> rows =
+            await GetFrameAsync("dei/EntityPublicFloat", year, quarter, cancellationToken);
+        return rows.Select(r => new PublicFloatFact(r.Row.Cik, r.Row.EntityName ?? string.Empty, r.End, r.Value))
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<TotalAssetsFact>> GetTotalAssetsFrameAsync(int year, int quarter,
+        CancellationToken cancellationToken)
+    {
+        List<(FrameRow Row, DateOnly End, decimal Value)> rows =
+            await GetFrameAsync("us-gaap/Assets", year, quarter, cancellationToken);
+        return rows.Select(r => new TotalAssetsFact(r.Row.Cik, r.End, r.Value)).ToList();
+    }
+
+    /// <summary>
+    /// Reads one US$ instant frame (<c>CY{year}Q{quarter}I</c>) of a concept, keeping the rows with a value and a
+    /// readable date. A frame SEC does not have (404) is empty.
+    /// </summary>
+    private async Task<List<(FrameRow Row, DateOnly End, decimal Value)>> GetFrameAsync(string concept, int year,
+        int quarter, CancellationToken cancellationToken)
+    {
         string url = string.Create(CultureInfo.InvariantCulture,
-            $"{BaseUrl}api/xbrl/frames/dei/EntityPublicFloat/USD/CY{year}Q{quarter}I.json");
+            $"{BaseUrl}api/xbrl/frames/{concept}/USD/CY{year}Q{quarter}I.json");
 
         await _gate.WaitAsync(cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -46,18 +68,18 @@ internal sealed class SecEdgarClient : ISecEdgarClient
         FrameResponse? frame = await JsonSerializer.DeserializeAsync<FrameResponse>(body, JsonSerializerOptions.Web,
             cancellationToken);
 
-        var facts = new List<PublicFloatFact>();
+        var rows = new List<(FrameRow Row, DateOnly End, decimal Value)>();
         foreach (FrameRow row in frame?.Data ?? [])
         {
             if (row.Val is { } value
                 && DateOnly.TryParseExact(row.End, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None,
                     out DateOnly end))
             {
-                facts.Add(new PublicFloatFact(row.Cik, row.EntityName ?? string.Empty, end, value));
+                rows.Add((row, end, value));
             }
         }
 
-        return facts;
+        return rows;
     }
 
     /// <inheritdoc />
