@@ -11,4 +11,10 @@ internal interface ISecEdgarClient
     /// failure throws, so a refresh never builds from partial data.
     /// </summary>
     Task<IReadOnlyList<PublicFloatFact>> GetPublicFloatFrameAsync(int year, int quarter, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads one filer's submissions (<c>submissions/CIK{cik}.json</c>) for its name, ticker, SIC code and SEC
+    /// industry office. Null when SEC has no submissions for the filer (404); any other failure throws.
+    /// </summary>
+    Task<SecFiler?> GetFilerAsync(long cik, CancellationToken cancellationToken);
 }

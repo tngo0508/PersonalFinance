@@ -60,6 +60,43 @@ internal sealed class SecEdgarClient : ISecEdgarClient
         return facts;
     }
 
+    /// <inheritdoc />
+    public async Task<SecFiler?> GetFilerAsync(long cik, CancellationToken cancellationToken)
+    {
+        string url = string.Create(CultureInfo.InvariantCulture, $"{BaseUrl}submissions/CIK{cik:0000000000}.json");
+
+        await _gate.WaitAsync(cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.TryAddWithoutValidation("User-Agent", _settings.UserAgent);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request,
+            HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        SubmissionsResponse? submissions = await JsonSerializer.DeserializeAsync<SubmissionsResponse>(body,
+            JsonSerializerOptions.Web, cancellationToken);
+        return submissions is null
+            ? null
+            : new SecFiler(cik, submissions.Name ?? string.Empty, BlankToNull(submissions.Tickers?.FirstOrDefault()),
+                BlankToNull(submissions.Sic), BlankToNull(submissions.SicDescription),
+                BlankToNull(submissions.OwnerOrg));
+    }
+
+    private static string? BlankToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private sealed class SubmissionsResponse
+    {
+        public string? Name { get; set; }
+        public string? Sic { get; set; }
+        public string? SicDescription { get; set; }
+        public string? OwnerOrg { get; set; }
+        public List<string>? Tickers { get; set; }
+    }
+
     private sealed class FrameResponse
     {
         public List<FrameRow>? Data { get; set; }
