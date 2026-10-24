@@ -49,6 +49,82 @@ public class InternalApiClientRegistrationTests
         Assert.Equal("shared-secret", request.Headers.GetValues("X-Internal-Key").Single());
     }
 
+    [Fact]
+    public async Task ResearchClient_DoesNotRetryAServiceUnavailableAnswer()
+    {
+        // A Research dataset that has never loaded answers 503 until the next refresh: retrying it only delays the page.
+        using ServiceProvider provider = BuildResilientProvider(_ => HttpStatusCode.ServiceUnavailable, out List<HttpRequestMessage> sent);
+
+        ApiException failure = await Assert.ThrowsAsync<ApiException>(() => provider.GetRequiredService<IResearchApi>().GetSectorsAsync());
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, failure.StatusCode);
+        Assert.Single(sent);
+    }
+
+    [Fact]
+    public async Task ResearchClient_StillRetriesOtherTransientFaults()
+    {
+        using ServiceProvider provider = BuildResilientProvider(
+            call => call == 1 ? HttpStatusCode.InternalServerError : HttpStatusCode.OK, out List<HttpRequestMessage> sent);
+
+        await provider.GetRequiredService<IResearchApi>().GetSectorsAsync();
+
+        Assert.Equal(2, sent.Count);
+    }
+
+    [Fact]
+    public async Task OtherClients_StillRetryAServiceUnavailableAnswer()
+    {
+        using ServiceProvider provider = BuildResilientProvider(
+            call => call == 1 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK, out List<HttpRequestMessage> sent);
+
+        await provider.GetRequiredService<IGoogleDriveApi>().GetUserConnectionsAsync();
+
+        Assert.Equal(2, sent.Count);
+    }
+
+    /// <summary>
+    /// The clients with the standard resilience handler on every HttpClient, as <c>AddServiceDefaults()</c> adds it,
+    /// over a handler answering each call with <paramref name="statusOf"/> its 1-based number.
+    /// </summary>
+    private static ServiceProvider BuildResilientProvider(Func<int, HttpStatusCode> statusOf,
+        out List<HttpRequestMessage> sentRequests)
+    {
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ApiSettings:BaseUrl"] = "http://apiservice.test" })
+            .Build();
+        var requests = new List<HttpRequestMessage>();
+        sentRequests = requests;
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.ConfigureHttpClientDefaults(http => http.AddStandardResilienceHandler());
+        services.AddInternalApiClients(configuration);
+        services.ConfigureAll<HttpClientFactoryOptions>(options =>
+            options.HttpMessageHandlerBuilderActions.Add(builder =>
+                builder.PrimaryHandler = new DelegatingTestHandler((request, _) =>
+                {
+                    lock (requests)
+                    {
+                        requests.Add(request);
+                        HttpStatusCode status = statusOf(requests.Count);
+                        return Task.FromResult(new HttpResponseMessage(status)
+                        {
+                            RequestMessage = request,
+                            // A Research snapshot is an object; the Google Drive connections are a list.
+                            Content = new StringContent(
+                                status == HttpStatusCode.OK && !request.RequestUri!.AbsolutePath.Contains("Research", StringComparison.Ordinal)
+                                    ? "[]"
+                                    : "{}",
+                                Encoding.UTF8, "application/json")
+                        });
+                    }
+                })));
+
+        return services.BuildServiceProvider();
+    }
+
     private static ServiceProvider BuildProvider(out List<HttpRequestMessage> sentRequests)
     {
         IConfigurationRoot configuration = new ConfigurationBuilder()

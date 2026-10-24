@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ETFs tab is now the Funds tab**: it follows 20 Tracked Funds (ETFs and mutual funds), each with a role, up from 6 ETFs; an old `?tab=etfs` link still opens it (#258).
   - The funds refresh saves the filings read after each fund, so a first run over the new funds that stops at the job's time limit carries on from there next time.
 
+### Fixed
+
+- **Research page no longer stalls on data that hasn't loaded**: a dataset no refresh has built yet answered 503, which the Web app retried three times with growing delays, so the page took about 36 seconds and logged a warning with a stack trace per attempt.
+  - The Research client no longer retries a 503 or counts it towards the circuit breaker; other transient faults still retry.
+  - The page reads its five datasets side by side, and a dataset that has not loaded yet is logged as one information line.
+
 ## [5.3.0] - 2026-10-24
 
 ### Added

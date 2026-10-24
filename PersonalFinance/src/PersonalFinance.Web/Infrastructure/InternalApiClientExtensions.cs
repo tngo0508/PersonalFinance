@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.Extensions.Http.Resilience;
 using PersonalFinance.Shared.Contracts;
 using Refit;
 
@@ -42,7 +44,9 @@ public static class InternalApiClientExtensions
         services.AddInternalApiClient<ISpreadsheetAnalysisApi>(apiBaseUrl);
         services.AddInternalApiClient<IWatchlistApi>(apiBaseUrl);
         services.AddInternalApiClient<INewsApi>(apiBaseUrl);
-        services.AddInternalApiClient<IResearchApi>(apiBaseUrl);
+        // A Research dataset that has never loaded answers 503 until the next refresh, so retrying it only delays the
+        // page (and its Unavailable State) by several seconds per dataset.
+        services.AddInternalApiClient<IResearchApi>(apiBaseUrl, retryServiceUnavailable: false);
 
         // Anonymous liveness ping from the Login page, so ApiService is awake by the time the Dashboard loads.
         services.AddHttpClient(ApiServiceWarmer.HttpClientName, client => client.BaseAddress = apiBaseUrl);
@@ -51,16 +55,39 @@ public static class InternalApiClientExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers one Refit contract. With <paramref name="retryServiceUnavailable"/> false, the client keeps the
+    /// standard resilience pipeline but neither retries a 503 nor counts it towards the circuit breaker: for that
+    /// contract a 503 is an answer ("not available yet"), not a passing fault.
+    /// </summary>
     private static void AddInternalApiClient<TContract>(this IServiceCollection services, Uri apiBaseUrl,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null, bool retryServiceUnavailable = true)
         where TContract : class
     {
-        services.AddRefitClient<TContract>()
+        IHttpClientBuilder builder = services.AddRefitClient<TContract>()
             .ConfigureHttpClient(client =>
             {
                 client.BaseAddress = apiBaseUrl;
                 client.Timeout = timeout ?? DefaultTimeout;
             })
             .AddHttpMessageHandler<UserIdForwardingHandler>();
+        if (!retryServiceUnavailable)
+        {
+            // Replaces the standard handler AddServiceDefaults() adds to every client. The API is marked for
+            // evaluation; a test pins that this client still makes a single call on a 503.
+#pragma warning disable EXTEXP0001
+            builder.RemoveAllResilienceHandlers();
+#pragma warning restore EXTEXP0001
+            builder.AddStandardResilienceHandler(options =>
+            {
+                options.Retry.ShouldHandle = args => ValueTask.FromResult(IsTransientExceptUnavailable(args.Outcome));
+                options.CircuitBreaker.ShouldHandle = args => ValueTask.FromResult(IsTransientExceptUnavailable(args.Outcome));
+            });
+        }
     }
+
+    /// <summary>The standard transient faults, less a 503 response.</summary>
+    private static bool IsTransientExceptUnavailable(Polly.Outcome<HttpResponseMessage> outcome) =>
+        HttpClientResiliencePredicates.IsTransient(outcome)
+        && outcome.Result?.StatusCode != HttpStatusCode.ServiceUnavailable;
 }

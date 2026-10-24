@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
@@ -5,6 +6,7 @@ using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.Research;
+using ApiException = Refit.ApiException;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -42,12 +44,15 @@ public sealed class ResearchController : Controller
     public async Task<IActionResult> Index([FromQuery] string? tab = null, [FromQuery] string? ticker = null,
         CancellationToken cancellationToken = default)
     {
-        SectorsSnapshotDto? sectors = await ReadAsync(_researchApi.GetSectorsAsync, "Sectors", cancellationToken);
-        FundsSnapshotDto? funds = await ReadAsync(_researchApi.GetFundsAsync, "funds", cancellationToken);
-        WorldSnapshotDto? world = await ReadAsync(_researchApi.GetWorldAsync, "World", cancellationToken);
-        FundOverlapSnapshotDto? overlap = await ReadAsync(_researchApi.GetFundOverlapAsync, "fund overlap", cancellationToken);
-        FundReturnsSnapshotDto? returns = await ReadAsync(_researchApi.GetFundReturnsAsync, "fund returns", cancellationToken);
-        return View(new ResearchViewModel(sectors, funds, world, tab, ticker, overlap, returns));
+        // The datasets are read side by side, so the page waits for the slowest one rather than for all in turn.
+        Task<SectorsSnapshotDto?> sectors = ReadAsync(_researchApi.GetSectorsAsync, "Sectors", cancellationToken);
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, "funds", cancellationToken);
+        Task<WorldSnapshotDto?> world = ReadAsync(_researchApi.GetWorldAsync, "World", cancellationToken);
+        Task<FundOverlapSnapshotDto?> overlap = ReadAsync(_researchApi.GetFundOverlapAsync, "fund overlap", cancellationToken);
+        Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, "fund returns", cancellationToken);
+        await Task.WhenAll(sectors, funds, world, overlap, returns);
+        return View(new ResearchViewModel(await sectors, await funds, await world, tab, ticker, await overlap,
+            await returns));
     }
 
     /// <summary>
@@ -95,6 +100,15 @@ public sealed class ResearchController : Controller
         try
         {
             return await read(cancellationToken);
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.ServiceUnavailable)
+        {
+            // The dataset has never loaded (no refresh has built it yet): expected, so one line and no stack trace.
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("The Research {Dataset} data has not loaded yet", dataset);
+            }
+            return null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
