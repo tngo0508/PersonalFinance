@@ -73,6 +73,19 @@ public sealed class ResearchController : Controller
             : BadRequest(new { error = InvalidCompanyInput });
 
     /// <summary>
+    /// The press releases of <paramref name="ticker"/>, as JSON, from ApiService. A rejected ticker is 400; an
+    /// ApiService failure (404 switched off, 429 too many lookups, 503 SEC EDGAR unreachable) keeps its status code
+    /// with a safe message.
+    /// </summary>
+    [HttpGet]
+    [JsonApiErrors]
+    public async Task<IActionResult> Releases([FromQuery] string? ticker,
+        CancellationToken cancellationToken = default) =>
+        CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized)
+            ? Json(await _researchApi.GetCompanyPressReleasesAsync(normalized, cancellationToken))
+            : BadRequest(new { error = InvalidCompanyInput });
+
+    /// <summary>
     /// Reads one dataset; null when it has never loaded (503) or ApiService cannot be reached, so only that tab shows
     /// the Unavailable State.
     /// </summary>

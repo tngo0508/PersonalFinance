@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [5.2.0] - 2026-10-24
+## [5.3.0] - 2026-10-24
 
 ### Added
 
@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Sectors breadcrumb**: a clickable breadcrumb above the chart replaces the "Zoom out" button and the focus label; every group above the focus jumps back to it (#255).
 - **Sectors tooltip**: a slice's tooltip now also gives its share of all filers and its rank among its neighbours (#255).
+
+## [5.2.0] - 2026-10-24
+
+### Added
+
+- **Press releases on the Company Profile**: the Companies tab lists the announcements a company attached to its SEC 8-K filings as exhibit 99 in the last 12 months, newest first, up to 10, each with its headline, filing date and a link to the release on sec.gov (#271).
+  - The headline is read from the start of the release; when none can be read, the entry shows the 8-K's events in plain words instead, so nothing is left out.
+  - The section loads after the profile, so reading releases never slows it; a failed read shows "Press releases are unavailable right now" with a Retry, and a company with none says so.
+  - These are the company's own announcements only, never third-party coverage.
+  - Lists are cached for a day and served from the cache while SEC is unreachable; each request counts toward the 30 lookups a minute an Account may make.
+  - `Research:PressReleases:Enabled` on the ApiService (on by default) switches the section off without a code change; the Web app has no switch of its own and leaves the section out when a lookup says the releases are unavailable.
 
 ## [5.1.0] - 2026-10-24
 

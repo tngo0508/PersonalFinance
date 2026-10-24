@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Research;
@@ -126,9 +127,51 @@ public class ResearchCompaniesWebControllerTests
         Assert.Empty(proxy.Calls);
     }
 
+    [Fact]
+    public async Task Releases_ReturnsApiServicesPressReleases_AsJson()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        var releases = new CompanyPressReleasesResultDto
+        {
+            Kind = CompanyLookupKinds.Profile,
+            Ticker = "BRK-B",
+            Releases = [new CompanyPressReleaseDto { Headline = "Berkshire Hathaway Annual Meeting Results" }],
+        };
+        proxy.Returns(nameof(IResearchApi.GetCompanyPressReleasesAsync), releases);
+
+        IActionResult result = await CreateController(api).Releases("brk.b");
+
+        Assert.Same(releases, Assert.IsType<JsonResult>(result).Value);
+        Assert.Equal([nameof(IResearchApi.GetCompanyPressReleasesAsync)], proxy.Calls);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("AB/C")]
+    [InlineData("TOOLONGTICKER")]
+    public async Task Releases_ARejectedTicker_Is400_WithoutCallingApiService(string? ticker)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+
+        IActionResult result = await CreateController(api).Releases(ticker);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(proxy.Calls);
+    }
+
+    [Fact]
+    public void Controller_ReadsNoConfiguration_ApiServiceAloneSwitchesPressReleasesOff()
+    {
+        // The lookup's PressReleasesAvailable tells the page whether to show the section, so an operator switches
+        // press releases off in one place, ApiService's Research:PressReleases:Enabled.
+        Assert.All(typeof(ResearchController).GetConstructors(),
+            c => Assert.DoesNotContain(c.GetParameters(), p => p.ParameterType == typeof(IConfiguration)));
+    }
+
     [Theory]
     [InlineData(nameof(ResearchController.Suggest))]
     [InlineData(nameof(ResearchController.Company))]
+    [InlineData(nameof(ResearchController.Releases))]
     public void CompanyActions_MapApiServiceFailuresToJsonErrors(string action)
     {
         // JsonApiErrorsFilter keeps ApiService's status code (429, 503) with a safe message, and never the detail.

@@ -1,6 +1,7 @@
 /**
  * Research Companies tab: look up a company registered with the SEC by ticker or name and show its Company Profile
- * (identity, annual figures as four D3 bar charts and a table, recent filings), for information only.
+ * (identity, annual figures as four D3 bar charts and a table, press releases, recent filings), for information only.
+ * The press releases load from `data-releases-url` after the profile shows, so a slow or failed read never delays it.
  *
  * The search box is a WAI-ARIA combobox: suggestions come from the panel's `data-suggest-url` as the user types, and
  * choosing one (or pressing Enter) fetches the profile from `data-company-url`. The ticker is kept in the address
@@ -19,6 +20,8 @@
     const MINUS = '−';
     const NOT_REPORTED = 'Not reported';
     const NOT_SHOWN = 'Not shown';
+    /** What separates an 8-K's events in words, as ApiService joins them in a fallback headline. */
+    const EVENT_SEPARATOR = ' · ';
 
     /** The four charts, drawn left to right, top to bottom. */
     const CHARTS = [
@@ -261,7 +264,7 @@
         }
         item.append(heading);
         if (filing.events && filing.events.length > 0) {
-            item.append(element('p', 'research-companies__events', filing.events.join(' · ')));
+            item.append(element('p', 'research-companies__events', filing.events.join(EVENT_SEPARATOR)));
         }
         const link = element('a', 'research-companies__filing-link', 'View on EDGAR');
         link.href = filing.url;
@@ -269,6 +272,33 @@
         link.rel = 'noopener noreferrer';
         link.append(element('span', 'visually-hidden', ` (${filing.form} filed ${formatDate(filing.filedOn)}, opens in a new tab)`));
         item.append(link);
+        return item;
+    }
+
+    /**
+     * Build one press release's list item: its headline as a link to the release on sec.gov, the filing date in
+     * words and the 8-K's events. A headline that fell back to the events shows in the same place, unmarked.
+     * @param {Object} release - The press release.
+     * @returns {HTMLLIElement} The list item.
+     */
+    function buildRelease (release) {
+        const item = element('li', 'research-companies__release');
+        const heading = element('p', 'research-companies__release-head');
+        const link = element('a', 'research-companies__release-link', release.headline);
+        link.href = release.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.append(element('span', 'visually-hidden', ' (press release on sec.gov, opens in a new tab)'));
+        heading.append(link);
+        item.append(heading);
+        const filed = element('p', 'research-companies__release-date');
+        const time = element('time', '', formatDate(release.filedOn));
+        time.dateTime = release.filedOn;
+        filed.append('Filed ', time);
+        item.append(filed);
+        if (release.events && release.events.length > 0) {
+            item.append(element('p', 'research-companies__events', release.events.join(EVENT_SEPARATOR)));
+        }
         return item;
     }
 
@@ -295,6 +325,16 @@
 
         const suggestUrl = panel.dataset.suggestUrl;
         const companyUrl = panel.dataset.companyUrl;
+        const releasesUrl = panel.dataset.releasesUrl;
+        const releases = {
+            section: panel.querySelector('[data-research-company-releases]'),
+            loading: panel.querySelector('[data-research-releases-loading]'),
+            list: panel.querySelector('[data-research-releases-list]'),
+            empty: panel.querySelector('[data-research-releases-empty]'),
+            unavailable: panel.querySelector('[data-research-releases-unavailable]'),
+            retry: panel.querySelector('[data-research-releases-retry]')
+        };
+        const hasReleasesSection = Boolean(releasesUrl) && Object.values(releases).every(Boolean);
         const field = (name) => panel.querySelector(`[data-field="${name}"]`);
         const tooltip = page.createTooltip(document.getElementById('research-company-tooltip'),
             (line, title, point, format) => [
@@ -307,6 +347,9 @@
         let suggestTimer = null;
         let suggestRequest = null;
         let lookupRequest = null;
+        let releasesRequest = null;
+        // The ticker whose press releases were announced since its lookup, so a Retry does not announce them again.
+        let releasesAnnouncedFor = null;
         let currentTicker = null;
 
         // ----- Suggestions (WAI-ARIA combobox with a listbox popup) -----
@@ -524,6 +567,95 @@
             profileHost.hidden = false;
         }
 
+        // ----- Press releases, loaded after the profile -----
+
+        /**
+         * Cancel a press releases request still on its way, so an older company's list never lands on a newer one.
+         * @returns {void}
+         */
+        function abortReleases () {
+            if (releasesRequest) {
+                releasesRequest.abort();
+                releasesRequest = null;
+            }
+        }
+
+        /**
+         * Leave the press releases section off the profile: ApiService has them switched off.
+         * @returns {void}
+         */
+        function hideReleases () {
+            if (releases.section) {
+                releases.section.hidden = true;
+            }
+        }
+
+        /**
+         * Show one state of the press releases section and hide the others.
+         * @param {'loading'|'list'|'empty'|'unavailable'} state - The state to show.
+         * @returns {void}
+         */
+        function showReleasesState (state) {
+            releases.loading.hidden = state !== 'loading';
+            releases.list.hidden = state !== 'list';
+            releases.empty.hidden = state !== 'empty';
+            releases.unavailable.hidden = state !== 'unavailable';
+        }
+
+        /**
+         * Fetch and show a company's press releases. A failure shows the section's Unavailable State with a Retry,
+         * never an error page; a 404 means ApiService switched them off since the lookup, so the section is hidden.
+         * The live region announces the count once per lookup, not again after a Retry.
+         * @param {string} ticker - The ticker of the profile shown.
+         * @param {string} name - The company's name, for the announcement.
+         * @returns {Promise<void>} Resolves when shown.
+         */
+        async function loadReleases (ticker, name) {
+            if (!hasReleasesSection) {
+                return;
+            }
+            abortReleases();
+            const request = new AbortController();
+            releasesRequest = request;
+            releases.section.hidden = false;
+            releases.list.replaceChildren();
+            showReleasesState('loading');
+            releases.retry.onclick = () => loadReleases(ticker, name);
+            try {
+                const response = await fetch(`${releasesUrl}?ticker=${encodeURIComponent(ticker)}`, {
+                    headers: { Accept: 'application/json' },
+                    signal: request.signal
+                });
+                if (response.status === 404) {
+                    hideReleases();
+                    return;
+                }
+                if (!response.ok) {
+                    showReleasesState('unavailable');
+                    return;
+                }
+                const result = await response.json();
+                if (request.signal.aborted) {
+                    return;
+                }
+                const items = Array.isArray(result.releases) ? result.releases : [];
+                releases.list.replaceChildren(...items.map(buildRelease));
+                showReleasesState(items.length > 0 ? 'list' : 'empty');
+                if (releasesAnnouncedFor !== ticker) {
+                    releasesAnnouncedFor = ticker;
+                    page.announce(`${items.length} press ${items.length === 1 ? 'release' : 'releases'} loaded for ${name}.`);
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    showReleasesState('unavailable');
+                }
+            } finally {
+                if (releasesRequest === request) {
+                    releasesRequest = null;
+                }
+            }
+        }
+
         /**
          * Show the empty search: no profile, no message.
          * @returns {void}
@@ -532,6 +664,7 @@
             if (lookupRequest) {
                 lookupRequest.abort();
             }
+            abortReleases();
             currentTicker = null;
             profileHost.hidden = true;
             message.hidden = true;
@@ -573,6 +706,8 @@
             if (lookupRequest) {
                 lookupRequest.abort();
             }
+            abortReleases();
+            releasesAnnouncedFor = null;
             lookupRequest = new AbortController();
             if (options.push) {
                 rememberTicker(normalized);
@@ -605,6 +740,11 @@
                     renderProfile(result.profile);
                     page.announce(`${result.profile.name} profile loaded${result.profile.dataAsOf
                         ? `, data as of ${formatDate(result.profile.dataAsOf)}` : ''}.`);
+                    if (result.pressReleasesAvailable) {
+                        loadReleases(normalized, result.profile.name);
+                    } else {
+                        hideReleases();
+                    }
                     return;
                 }
                 profileHost.hidden = true;
