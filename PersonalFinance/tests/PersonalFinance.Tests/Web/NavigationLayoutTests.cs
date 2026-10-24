@@ -80,7 +80,7 @@ public class NavigationLayoutTests
     {
         string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");
 
-        Assert.Equal(5, Regex.Matches(bottomNav, "class=\"bottom-nav-item").Count);
+        Assert.Equal(5, Regex.Count(bottomNav, "class=\"bottom-nav-item"));
         string tools = bottomNav[..bottomNav.IndexOf("<span>Tools</span>", StringComparison.Ordinal)];
         tools = tools[tools.LastIndexOf("<a ", StringComparison.Ordinal)..];
         Assert.Contains("currentController == \"Research\"", tools);
