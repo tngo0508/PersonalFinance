@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.7.0] - 2026-10-24
+
+### Added
+
+- **Your basket on the World tab**: a "World market | Your basket" switch opens on your Fund Basket's exposure by issuer country when a basket is set, and leaves the market map as it was otherwise (#267).
+  - A map of the basket's share by country, weighted by your funds' shares, zooms and pans; places the map cannot draw (Hong Kong, Singapore, Bermuda and others) are dots that keep their size under zoom.
+  - The colour scale tops out at the largest country outside the US, which always takes the darkest step; shares under 0.05% read "<0.1%".
+  - Callouts give the share outside the US, the share not priced in US dollars and the largest region.
+- **Meters and bars**: two home-bias meters (US vs rest of world, US dollar vs other currencies) that screen readers read out, region bars that light their countries on the map, and the currencies the holdings are priced in (#268).
+  - The subtitle states that countries are where each issuer is organized as each fund reports it, that ADRs count as US dollars, and that this is not where companies earn their revenue.
+- **Fund exposure dataset**: each Tracked Fund's share of net assets by issuer country and currency, over every holding of its latest N-PORT report, at `api/Research/funds/exposure` (#267).
+  - Securities-lending collateral is left out and the rest is unallocated; the dataset is rebuilt only when a fund files a newer report.
+  - The country-code table gains its two-letter codes (`i18n-iso-countries@7.11.0`), and a table groups countries into five regions.
+
+### Fixed
+
+- **Securities-lending collateral in the attribute form**: collateral flagged as `cashCollateralCondition/@isCashCollateral` (as IWM reports its 17%) is now left out of the fund overlap, as the element form already was.
+
 ## [5.6.0] - 2026-10-24
 
 ### Added
