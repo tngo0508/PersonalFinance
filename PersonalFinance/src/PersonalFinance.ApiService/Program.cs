@@ -143,6 +143,9 @@ try
         return await ResearchRefreshJob.RunAsync(app);
     }
 
+    // E2E only: Development with E2E_SEED_RESEARCH=true stores small Research fixture snapshots; never in Production.
+    await ResearchFixtureSeeder.SeedIfEnabledAsync(app);
+
     await app.MigrateAndRunAsync(args);
     return StartupExit.Success;
 }
