@@ -6,7 +6,7 @@ namespace PersonalFinance.Shared.DTOs.Research;
 /// country is listed once in <see cref="Countries"/> and referred to by its index. A value the World Bank does not have
 /// is absent, never zero.
 /// </summary>
-public sealed class WorldSnapshotDto
+public sealed class WorldSnapshotDto : IResearchSnapshotDto<WorldPeriodDto>
 {
     /// <summary>The date the World Bank last updated the market-cap series ("Data as of" on the page).</summary>
     public DateOnly AsOf { get; set; }

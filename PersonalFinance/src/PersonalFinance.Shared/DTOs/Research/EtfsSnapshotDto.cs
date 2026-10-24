@@ -5,7 +5,7 @@ namespace PersonalFinance.Shared.DTOs.Research;
 /// Form N-PORT reports. Each fund's holdings are grouped by N-PORT asset category, with the 25 largest holdings of
 /// each category listed and the rest summed into "Other". Percentages are of the fund's net assets (7.5 is 7.5%).
 /// </summary>
-public sealed class EtfsSnapshotDto
+public sealed class EtfsSnapshotDto : IResearchSnapshotDto<EtfsPeriodDto>
 {
     /// <summary>The latest report date of any fund ("Data as of" on the page).</summary>
     public DateOnly AsOf { get; set; }

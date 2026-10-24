@@ -34,59 +34,26 @@ public sealed class ResearchController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
-        SectorsSnapshotDto? sectors = await GetSectorsAsync(cancellationToken);
-        EtfsSnapshotDto? etfs = await GetEtfsAsync(cancellationToken);
-        WorldSnapshotDto? world = await GetWorldAsync(cancellationToken);
-        return View(new ResearchViewModel { Sectors = sectors, Etfs = etfs, World = world });
+        SectorsSnapshotDto? sectors = await ReadAsync(_researchApi.GetSectorsAsync, "Sectors", cancellationToken);
+        EtfsSnapshotDto? etfs = await ReadAsync(_researchApi.GetEtfsAsync, "ETFs", cancellationToken);
+        WorldSnapshotDto? world = await ReadAsync(_researchApi.GetWorldAsync, "World", cancellationToken);
+        return View(new ResearchViewModel(sectors, etfs, world));
     }
 
     /// <summary>
-    /// Reads the Sectors dataset; null when it has never loaded or ApiService cannot be reached, so only that tab
-    /// shows the Unavailable State.
-    /// </summary>
-    private async Task<SectorsSnapshotDto?> GetSectorsAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _researchApi.GetSectorsAsync(cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning(ex, "Could not load the Research Sectors data");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Reads the ETFs dataset; null when it has never loaded or ApiService cannot be reached, so only that tab shows
+    /// Reads one dataset; null when it has never loaded (503) or ApiService cannot be reached, so only that tab shows
     /// the Unavailable State.
     /// </summary>
-    private async Task<EtfsSnapshotDto?> GetEtfsAsync(CancellationToken cancellationToken)
+    private async Task<TSnapshot?> ReadAsync<TSnapshot>(Func<CancellationToken, Task<TSnapshot>> read, string dataset,
+        CancellationToken cancellationToken) where TSnapshot : class
     {
         try
         {
-            return await _researchApi.GetEtfsAsync(cancellationToken);
+            return await read(cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Could not load the Research ETFs data");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Reads the World dataset; null when it has never loaded or ApiService cannot be reached, so only the World tab
-    /// shows the Unavailable State.
-    /// </summary>
-    private async Task<WorldSnapshotDto?> GetWorldAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _researchApi.GetWorldAsync(cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning(ex, "Could not load the Research World data");
+            _logger.LogWarning(ex, "Could not load the Research {Dataset} data", dataset);
             return null;
         }
     }

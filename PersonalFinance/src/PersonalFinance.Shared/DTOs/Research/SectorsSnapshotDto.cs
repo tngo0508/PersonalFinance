@@ -6,7 +6,7 @@ namespace PersonalFinance.Shared.DTOs.Research;
 /// each office, industry and company is listed once and referred to by its index in <see cref="Offices"/>,
 /// <see cref="Industries"/> or <see cref="Companies"/>.
 /// </summary>
-public sealed class SectorsSnapshotDto
+public sealed class SectorsSnapshotDto : IResearchSnapshotDto<SectorsPeriodDto>
 {
     /// <summary>The date the source data is as of ("Data as of" on the page).</summary>
     public DateOnly AsOf { get; set; }

@@ -38,17 +38,8 @@ public class ResearchController : ControllerBase
     [ProducesResponseType(typeof(SectorsSnapshotDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResearchUnavailableDto), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetSectors(CancellationToken cancellationToken = default)
-    {
-        ResearchSnapshotResult<SectorsSnapshotDto> result = await _researchService.GetSectorsAsync(cancellationToken);
-        if (result.Snapshot is null)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable,
-                new ResearchUnavailableDto { Reason = SectorsNeverLoaded });
-        }
-
-        return Ok(result.Snapshot);
-    }
+    public async Task<IActionResult> GetSectors(CancellationToken cancellationToken = default) =>
+        SnapshotOrUnavailable(await _researchService.GetSectorsAsync(cancellationToken), SectorsNeverLoaded);
 
     /// <summary>
     /// Gets the ETFs snapshot: what a few well-known ETFs held each quarter, from their Form N-PORT reports. Answers
@@ -58,17 +49,8 @@ public class ResearchController : ControllerBase
     [ProducesResponseType(typeof(EtfsSnapshotDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResearchUnavailableDto), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetEtfs(CancellationToken cancellationToken = default)
-    {
-        ResearchSnapshotResult<EtfsSnapshotDto> result = await _researchService.GetEtfsAsync(cancellationToken);
-        if (result.Snapshot is null)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable,
-                new ResearchUnavailableDto { Reason = EtfsNeverLoaded });
-        }
-
-        return Ok(result.Snapshot);
-    }
+    public async Task<IActionResult> GetEtfs(CancellationToken cancellationToken = default) =>
+        SnapshotOrUnavailable(await _researchService.GetEtfsAsync(cancellationToken), EtfsNeverLoaded);
 
     /// <summary>
     /// Gets the World snapshot: each country's stock-market capitalisation and market cap as % of GDP per year, from
@@ -78,15 +60,13 @@ public class ResearchController : ControllerBase
     [ProducesResponseType(typeof(WorldSnapshotDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ResearchUnavailableDto), StatusCodes.Status503ServiceUnavailable)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetWorld(CancellationToken cancellationToken = default)
-    {
-        ResearchSnapshotResult<WorldSnapshotDto> result = await _researchService.GetWorldAsync(cancellationToken);
-        if (result.Snapshot is null)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable,
-                new ResearchUnavailableDto { Reason = WorldNeverLoaded });
-        }
+    public async Task<IActionResult> GetWorld(CancellationToken cancellationToken = default) =>
+        SnapshotOrUnavailable(await _researchService.GetWorldAsync(cancellationToken), WorldNeverLoaded);
 
-        return Ok(result.Snapshot);
-    }
+    /// <summary>200 with the snapshot, or 503 with <paramref name="reason"/> when the dataset has never loaded.</summary>
+    private IActionResult SnapshotOrUnavailable<TSnapshot>(ResearchSnapshotResult<TSnapshot> result, string reason)
+        where TSnapshot : class =>
+        result.Snapshot is null
+            ? StatusCode(StatusCodes.Status503ServiceUnavailable, new ResearchUnavailableDto { Reason = reason })
+            : Ok(result.Snapshot);
 }

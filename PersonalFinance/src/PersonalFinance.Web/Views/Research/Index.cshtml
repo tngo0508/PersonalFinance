@@ -4,10 +4,10 @@
 
 @{
     ViewData["Title"] = "Research";
-    SectorsPeriodDto? latest = Model.SectorsLatestPeriod;
-    bool showSectors = !Model.SectorsUnavailable && latest is not null;
-    bool showEtfs = !Model.EtfsUnavailable;
-    bool showWorld = !Model.WorldUnavailable;
+    SectorsPeriodDto? latest = Model.Sectors.LatestPeriod;
+    bool showSectors = !Model.Sectors.Unavailable && latest is not null;
+    bool showEtfs = !Model.Etfs.Unavailable;
+    bool showWorld = !Model.World.Unavailable;
 }
 
 @section Styles {
@@ -49,11 +49,11 @@
                 <div class="research-scrubber__track">
                     <label class="visually-hidden" for="research-sectors-year">Year</label>
                     <input type="range" class="research-scrubber__range" id="research-sectors-year" data-research-range
-                           min="0" max="@(Model.Sectors!.Periods.Count - 1)" step="1" value="@(Model.Sectors.Periods.Count - 1)"
+                           min="0" max="@(Model.Sectors.Snapshot!.Periods.Count - 1)" step="1" value="@(Model.Sectors.Snapshot.Periods.Count - 1)"
                            aria-valuetext="@latest!.Period"/>
                     <div class="research-scrubber__ends" aria-hidden="true">
-                        <span>@Model.Sectors.Periods[0]</span>
-                        <span>@Model.Sectors.Periods[^1]</span>
+                        <span>@Model.Sectors.Snapshot.Periods[0]</span>
+                        <span>@Model.Sectors.Snapshot.Periods[^1]</span>
                     </div>
                 </div>
                 <p class="research-scrubber__period" data-research-period aria-hidden="true">@latest.Period</p>
@@ -63,7 +63,7 @@
             <h2 class="research-card__title">Largest SEC filers by Public float</h2>
             @if (!showSectors)
             {
-                <partial name="_UnavailableState" model="Model.SectorsUnavailableState"/>
+                <partial name="_UnavailableState" model="Model.Sectors.UnavailableState"/>
             }
             else
             {
@@ -119,7 +119,7 @@
             </p>
             <h2 class="research-panel__title">Data as of</h2>
             <p class="research-panel__as-of">
-                @(Model.SectorsAsOf is { } asOf ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
+                @(Model.Sectors.AsOf is { } asOf ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
             </p>
         </aside>
     </section>
@@ -134,7 +134,7 @@
 @if (showSectors)
 {
     @* The Sectors snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-sunburst.js. *@
-    <script type="application/json" id="research-sectors-data">@Json.Serialize(Model.Sectors)</script>
+    <script type="application/json" id="research-sectors-data">@Json.Serialize(Model.Sectors.Snapshot)</script>
 }
 
 @section Scripts {

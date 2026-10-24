@@ -159,10 +159,10 @@ public class UnavailableStateTests
         ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.NotEqual(UnavailableStateExtensions.UnavailableViewName, view.ViewName);
         ResearchViewModel model = Assert.IsType<ResearchViewModel>(view.Model);
-        Assert.True(model.SectorsUnavailable);
-        Assert.Equal("Research", model.SectorsUnavailableState.RetryController);
-        Assert.False(string.IsNullOrWhiteSpace(model.SectorsUnavailableState.Heading));
-        Assert.DoesNotContain(ExceptionText, model.SectorsUnavailableState.Heading);
+        Assert.True(model.Sectors.Unavailable);
+        Assert.Equal("Research", model.Sectors.UnavailableState.RetryController);
+        Assert.False(string.IsNullOrWhiteSpace(model.Sectors.UnavailableState.Heading));
+        Assert.DoesNotContain(ExceptionText, model.Sectors.UnavailableState.Heading);
     }
 
     [Fact]

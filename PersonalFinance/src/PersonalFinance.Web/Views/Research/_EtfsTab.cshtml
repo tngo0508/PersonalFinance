@@ -3,8 +3,8 @@
 @using PersonalFinance.Shared.DTOs.Research
 
 @{
-    EtfsPeriodDto? latest = Model.EtfsLatestPeriod;
-    bool showEtfs = !Model.EtfsUnavailable && latest is not null;
+    EtfsPeriodDto? latest = Model.Etfs.LatestPeriod;
+    bool showEtfs = !Model.Etfs.Unavailable && latest is not null;
     CultureInfo us = CultureInfo.GetCultureInfo("en-US");
 }
 
@@ -23,11 +23,11 @@
             <div class="research-scrubber__track">
                 <label class="visually-hidden" for="research-etfs-quarter">Quarter</label>
                 <input type="range" class="research-scrubber__range" id="research-etfs-quarter" data-research-range
-                       min="0" max="@(Model.Etfs!.Periods.Count - 1)" step="1" value="@(Model.Etfs.Periods.Count - 1)"
+                       min="0" max="@(Model.Etfs.Snapshot!.Periods.Count - 1)" step="1" value="@(Model.Etfs.Snapshot.Periods.Count - 1)"
                        aria-valuetext="@latest!.Period"/>
                 <div class="research-scrubber__ends" aria-hidden="true">
-                    <span>@Model.Etfs.Periods[0]</span>
-                    <span>@Model.Etfs.Periods[^1]</span>
+                    <span>@Model.Etfs.Snapshot.Periods[0]</span>
+                    <span>@Model.Etfs.Snapshot.Periods[^1]</span>
                 </div>
             </div>
             <p class="research-scrubber__period" data-research-period aria-hidden="true">@latest.Period</p>
@@ -37,7 +37,7 @@
         <h2 class="research-card__title">What six ETFs hold</h2>
         @if (!showEtfs)
         {
-            <partial name="_UnavailableState" model="Model.EtfsUnavailableState"/>
+            <partial name="_UnavailableState" model="Model.Etfs.UnavailableState"/>
         }
         else
         {
@@ -77,7 +77,7 @@
         </p>
         <h2 class="research-panel__title">Data as of</h2>
         <p class="research-panel__as-of">
-            @(Model.EtfsAsOf is { } asOf ? asOf.ToString("d MMMM yyyy", us) : "Not loaded yet")
+            @(Model.Etfs.AsOf is { } asOf ? asOf.ToString("d MMMM yyyy", us) : "Not loaded yet")
         </p>
     </aside>
 </section>
@@ -85,5 +85,5 @@
 @if (showEtfs)
 {
     @* The ETFs snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-etfs.js. *@
-    <script type="application/json" id="research-etfs-data">@Json.Serialize(Model.Etfs)</script>
+    <script type="application/json" id="research-etfs-data">@Json.Serialize(Model.Etfs.Snapshot)</script>
 }

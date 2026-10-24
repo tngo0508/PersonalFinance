@@ -76,10 +76,10 @@ public class ResearchWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.False(model.SectorsUnavailable);
-        Assert.Same(Snapshot, model.Sectors);
-        Assert.Equal(new DateOnly(2025, 12, 31), model.SectorsAsOf);
-        Assert.Equal("2025", model.SectorsLatestPeriod!.Period);
+        Assert.False(model.Sectors.Unavailable);
+        Assert.Same(Snapshot, model.Sectors.Snapshot);
+        Assert.Equal(new DateOnly(2025, 12, 31), model.Sectors.AsOf);
+        Assert.Equal("2025", model.Sectors.LatestPeriod!.Period);
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class ResearchWebControllerTests
         // The view embeds the whole snapshot as JSON for the sunburst, so the page makes no API call of its own.
         Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetEtfsAsync), nameof(IResearchApi.GetWorldAsync)],
             proxy.Calls);
-        Assert.Same(Snapshot, model.Sectors);
+        Assert.Same(Snapshot, model.Sectors.Snapshot);
         Assert.Equal([nameof(ResearchController.Index)],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Select(m => m.Name));
@@ -109,11 +109,11 @@ public class ResearchWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.True(model.SectorsUnavailable);
-        Assert.Null(model.Sectors);
-        Assert.Null(model.SectorsAsOf);
-        Assert.Equal("Research", model.SectorsUnavailableState.RetryController);
-        Assert.False(string.IsNullOrWhiteSpace(model.SectorsUnavailableState.Heading));
+        Assert.True(model.Sectors.Unavailable);
+        Assert.Null(model.Sectors.Snapshot);
+        Assert.Null(model.Sectors.AsOf);
+        Assert.Equal("Research", model.Sectors.UnavailableState.RetryController);
+        Assert.False(string.IsNullOrWhiteSpace(model.Sectors.UnavailableState.Heading));
     }
 
     [Fact]
@@ -123,8 +123,8 @@ public class ResearchWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.True(model.SectorsUnavailable);
-        Assert.DoesNotContain("unreachable", model.SectorsUnavailableState.Heading, StringComparison.OrdinalIgnoreCase);
+        Assert.True(model.Sectors.Unavailable);
+        Assert.DoesNotContain("unreachable", model.Sectors.UnavailableState.Heading, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -155,9 +155,9 @@ public class ResearchWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.False(model.WorldUnavailable);
-        Assert.Same(World, model.World);
-        Assert.Equal(new DateOnly(2026, 10, 8), model.WorldAsOf);
+        Assert.False(model.World.Unavailable);
+        Assert.Same(World, model.World.Snapshot);
+        Assert.Equal(new DateOnly(2026, 10, 8), model.World.AsOf);
     }
 
     [Fact]
@@ -171,11 +171,11 @@ public class ResearchWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.True(model.WorldUnavailable);
-        Assert.Null(model.WorldAsOf);
-        Assert.Equal("Research", model.WorldUnavailableState.RetryController);
-        Assert.False(string.IsNullOrWhiteSpace(model.WorldUnavailableState.Heading));
-        Assert.False(model.SectorsUnavailable);
+        Assert.True(model.World.Unavailable);
+        Assert.Null(model.World.AsOf);
+        Assert.Equal("Research", model.World.UnavailableState.RetryController);
+        Assert.False(string.IsNullOrWhiteSpace(model.World.UnavailableState.Heading));
+        Assert.False(model.Sectors.Unavailable);
     }
 
     [Fact]
@@ -187,8 +187,8 @@ public class ResearchWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.True(model.SectorsUnavailable);
-        Assert.False(model.WorldUnavailable);
+        Assert.True(model.Sectors.Unavailable);
+        Assert.False(model.World.Unavailable);
     }
 
     [Fact]

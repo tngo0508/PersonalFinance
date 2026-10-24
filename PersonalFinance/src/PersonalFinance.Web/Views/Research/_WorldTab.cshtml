@@ -3,7 +3,7 @@
 @using PersonalFinance.Shared.DTOs.Research
 
 @{
-    WorldSnapshotDto? world = Model.WorldUnavailable ? null : Model.World;
+    WorldSnapshotDto? world = Model.World.Unavailable ? null : Model.World.Snapshot;
 }
 
 @* The World tab panel: stock-market capitalisation by country (World Bank WDI), drawn by js/research/research-world.js as a
@@ -34,7 +34,7 @@
         <h2 class="research-card__title">Stock-market value by country</h2>
         @if (world is null)
         {
-            <partial name="_UnavailableState" model="Model.WorldUnavailableState"/>
+            <partial name="_UnavailableState" model="Model.World.UnavailableState"/>
         }
         else
         {
@@ -78,7 +78,7 @@
         </p>
         <h2 class="research-panel__title">Data as of</h2>
         <p class="research-panel__as-of">
-            @(Model.WorldAsOf is { } asOf && world is not null ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
+            @(Model.World.AsOf is { } asOf && world is not null ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
         </p>
     </aside>
 </section>

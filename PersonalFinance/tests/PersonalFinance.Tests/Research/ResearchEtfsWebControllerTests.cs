@@ -67,10 +67,10 @@ public class ResearchEtfsWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.False(model.EtfsUnavailable);
-        Assert.Same(Etfs, model.Etfs);
-        Assert.Equal(new DateOnly(2026, 6, 30), model.EtfsAsOf);
-        Assert.Equal("2026 Q2", model.EtfsLatestPeriod!.Period);
+        Assert.False(model.Etfs.Unavailable);
+        Assert.Same(Etfs, model.Etfs.Snapshot);
+        Assert.Equal(new DateOnly(2026, 6, 30), model.Etfs.AsOf);
+        Assert.Equal("2026 Q2", model.Etfs.LatestPeriod!.Period);
     }
 
     [Fact]
@@ -82,11 +82,11 @@ public class ResearchEtfsWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.True(model.EtfsUnavailable);
-        Assert.Null(model.EtfsAsOf);
-        Assert.Equal("Research", model.EtfsUnavailableState.RetryController);
-        Assert.False(model.SectorsUnavailable);
-        Assert.Same(Sectors, model.Sectors);
+        Assert.True(model.Etfs.Unavailable);
+        Assert.Null(model.Etfs.AsOf);
+        Assert.Equal("Research", model.Etfs.UnavailableState.RetryController);
+        Assert.False(model.Sectors.Unavailable);
+        Assert.Same(Sectors, model.Sectors.Snapshot);
     }
 
     [Fact]
@@ -98,8 +98,8 @@ public class ResearchEtfsWebControllerTests
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        Assert.True(model.SectorsUnavailable);
-        Assert.False(model.EtfsUnavailable);
+        Assert.True(model.Sectors.Unavailable);
+        Assert.False(model.Etfs.Unavailable);
     }
 
     [Fact]
