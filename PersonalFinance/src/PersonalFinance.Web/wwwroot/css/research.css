@@ -348,22 +348,100 @@
     cursor: pointer;
 }
 
-.research-sunburst__toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--app-spacing-s) var(--app-spacing-m);
+/* The Sectors breadcrumb: each group above the focus is a button back to it;
+   the focus itself is the current location with its Public float. */
+
+.research-breadcrumb {
     margin-bottom: var(--app-spacing-s);
 }
 
-.research-sunburst__toolbar .research-chip[aria-disabled="true"] {
-    opacity: 0.55;
-    cursor: default;
+.research-breadcrumb__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--app-font-size-small);
 }
 
-.research-sunburst__focus {
+.research-breadcrumb__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-xs);
     min-width: 0;
-    margin: 0;
+}
+
+.research-breadcrumb__item + .research-breadcrumb__item::before {
+    content: "\203A";
+    color: var(--app-text-muted);
+}
+
+.research-breadcrumb__link {
+    min-height: 2.75rem;
+    padding: 0 var(--app-spacing-xs);
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--app-brand);
+    font: inherit;
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+}
+
+.research-breadcrumb__link:hover {
+    background: var(--app-surface-secondary);
+}
+
+.research-breadcrumb__link:focus-visible,
+.research-breadcrumb__current:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-breadcrumb__current {
+    padding: 0 var(--app-spacing-xs);
+    color: var(--app-text);
+    font-weight: var(--app-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+/* The Sectors takeaway cards in the side panel: a label, the figure, and a note. */
+
+.research-takeaways {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-s);
+    margin: 0 0 var(--app-spacing-s);
+    padding: 0;
+    list-style: none;
+}
+
+.research-takeaway {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    background: var(--app-bg);
+}
+
+.research-takeaway__label {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-takeaway__value {
+    color: var(--app-text);
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+.research-takeaway__note {
     color: var(--app-text-muted);
     font-size: var(--app-font-size-small);
     overflow-wrap: anywhere;

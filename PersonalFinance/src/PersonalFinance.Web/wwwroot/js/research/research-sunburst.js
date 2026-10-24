@@ -6,8 +6,9 @@
  * no request of its own. Hover or tap a slice for its figures; the centre shows the total. The page's scrubber
  * (js/research/research-page.js) moves it between years through update(), and its table view reads table().
  * Click an office or industry (or press an office's legend button) to zoom in, so three rings show below it; the
- * centre and the Zoom out control zoom out. The "Technology (incl. chip makers)" toggle dims every slice outside the
- * industries the server flags as Technology. Both survive a change of year.
+ * centre zooms out one level, and the breadcrumb above the chart jumps to any level on the way back. The side panel's
+ * takeaway cards describe the focused group. The "Technology (incl. chip makers)" toggle dims every slice outside the
+ * industries the server flags as Technology. The zoom and the highlight survive a change of year.
  */
 (function () {
     'use strict';
@@ -24,8 +25,8 @@
     const LEGEND_ID = 'research-sectors-legend';
     const TOOLTIP_ID = 'research-tooltip';
     const SUBTITLE_ID = 'research-sectors-subtitle';
-    const ZOOM_OUT_ID = 'research-zoom-out';
-    const FOCUS_LABEL_ID = 'research-sunburst-focus';
+    const BREADCRUMB_ID = 'research-sectors-breadcrumb';
+    const TAKEAWAYS_ID = 'research-sectors-takeaways';
     const TECH_TOGGLE_ID = 'research-tech-toggle';
     const TECH_SHARE_ID = 'research-tech-share';
     const LIVE_ID = 'research-live';
@@ -36,6 +37,8 @@
     const MAX_SIZE = 640;
     const MIN_SIZE = 240;
     const RINGS = 3;
+    // The "Top 10 companies" takeaway shows only when the focus has more companies than this.
+    const TOP_COMPANIES = 10;
 
     // SEC industry offices in SEC office-number order; each takes the categorical slot of the same number.
     const OFFICE_SLOTS = [
@@ -155,12 +158,40 @@
     }
 
     /**
-     * Create the tooltip controller for the Research tooltip element.
+     * A share as a percentage with one decimal, e.g. "12.3%".
+     * @param {number} part - The part.
+     * @param {number} whole - The whole.
+     * @returns {string} The percentage, or "0.0%" when the whole is empty.
+     */
+    function percentOf (part, whole) {
+        return `${(whole > 0 ? part / whole * 100 : 0).toFixed(1)}%`;
+    }
+
+    /**
+     * A node's rank by Public float among its siblings, leaving out "Other" slices (they sum many filers).
+     * @param {Object} node - A d3 hierarchy node.
+     * @returns {{rank: number, of: number}|null} The rank (1 is largest) and how many siblings are ranked, or null
+     *     for an "Other" slice or a node without a parent.
+     */
+    function rankAmongSiblings (node) {
+        if (!node.parent || node.data.kind === 'other') {
+            return null;
+        }
+        const ranked = node.parent.children
+            .filter((d) => d.data.kind !== 'other')
+            .sort((a, b) => b.value - a.value);
+        return { rank: ranked.indexOf(node) + 1, of: ranked.length };
+    }
+
+    /**
+     * Create the tooltip controller for the Research tooltip element: a slice's name, kind and Public float, its share
+     * of its parent group (below the top ring) and of all filers, and its rank among its siblings.
      * @param {HTMLElement|null} tooltip - The tooltip element.
      * @returns {{show: function(PointerEvent, Object): void, hide: function(): void}} The controller.
      */
     function createTooltip (tooltip) {
         return page.createTooltip(tooltip, (line, node) => {
+            const root = node.ancestors().pop();
             const valueLine = document.createElement('span');
             valueLine.append(line(formatMoney(node.value), 'research-tooltip__value'), ' Public float');
             const parts = [
@@ -168,9 +199,14 @@
                 line(KIND_LABELS[node.data.kind](node), 'research-tooltip__muted'),
                 valueLine
             ];
-            if (node.parent && node.parent.value > 0) {
-                const share = (node.value / node.parent.value * 100).toFixed(1);
-                parts.push(line(`${share}% of ${node.parent.data.name}`, 'research-tooltip__muted'));
+            if (node.parent && node.parent !== root) {
+                parts.push(line(`${percentOf(node.value, node.parent.value)} of ${node.parent.data.name}`,
+                    'research-tooltip__muted'));
+            }
+            parts.push(line(`${percentOf(node.value, root.value)} of all filers`, 'research-tooltip__muted'));
+            const rank = rankAmongSiblings(node);
+            if (rank) {
+                parts.push(line(`#${rank.rank} of ${rank.of} in ${node.parent.data.name}`, 'research-tooltip__muted'));
             }
             return parts;
         });
@@ -272,6 +308,142 @@
     }
 
     /**
+     * Draw the breadcrumb above the chart: every group from all filers down to the focus, each a button that zooms to
+     * it, and the focus itself (with its Public float) as the current location. When the breadcrumb held keyboard
+     * focus, focus moves to the new current location, so it is not lost when the pressed button is redrawn.
+     * @param {HTMLElement|null} nav - The breadcrumb nav element.
+     * @param {Object} focus - The focused d3 hierarchy node.
+     * @param {function(string): void} onPick - Called with a group's node key when its button is pressed.
+     * @returns {void}
+     */
+    function renderBreadcrumb (nav, focus, onPick) {
+        if (!nav) {
+            return;
+        }
+        const hadFocus = nav.contains(document.activeElement);
+        const list = document.createElement('ol');
+        list.className = 'research-breadcrumb__list';
+        const trail = focus.ancestors().reverse();
+        trail.forEach((node, index) => {
+            const item = document.createElement('li');
+            item.className = 'research-breadcrumb__item';
+            if (index === trail.length - 1) {
+                const current = document.createElement('span');
+                current.className = 'research-breadcrumb__current';
+                current.setAttribute('aria-current', 'location');
+                current.tabIndex = -1;
+                current.textContent = `${node.data.name} · ${formatMoney(node.value || 0)}`;
+                item.append(current);
+            } else {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'research-breadcrumb__link';
+                button.dataset.key = node.data.key;
+                button.textContent = node.data.name;
+                button.addEventListener('click', () => onPick(node.data.key));
+                item.append(button);
+            }
+            list.append(item);
+        });
+        nav.replaceChildren(list);
+        if (hadFocus) {
+            nav.querySelector('.research-breadcrumb__current').focus();
+        }
+    }
+
+    /**
+     * The takeaway cards for the focused group. A card that would say nothing is left out: the largest part needs
+     * named parts, the top-10 share needs more than ten companies, the Technology share is left out when the group is
+     * all or none Technology, and the change needs the same group in the year before.
+     * @param {Object} root - The d3 hierarchy root of the period shown.
+     * @param {Object} focus - The focused d3 hierarchy node.
+     * @param {Object|null} previous - The d3 hierarchy root of the year before, or null for the first year.
+     * @param {string} periodLabel - The period shown.
+     * @returns {{label: string, value: string, note: string}[]} The cards, in display order.
+     */
+    function takeaways (root, focus, previous, periodLabel) {
+        const cards = [{
+            label: 'Total',
+            value: formatMoney(focus.value || 0),
+            note: focus.depth > 0
+                ? `${focus.data.name}, ${periodLabel}: ${percentOf(focus.value, root.value)} of all filers`
+                : `All filers, ${periodLabel}`
+        }];
+
+        const parts = (focus.children || []).filter((d) => d.data.kind !== 'other').sort((a, b) => b.value - a.value);
+        if (parts.length > 0) {
+            cards.push({ label: 'Largest part', value: percentOf(parts[0].value, focus.value), note: parts[0].data.name });
+        }
+
+        const companies = focus.leaves().filter((d) => d.data.kind === 'company').sort((a, b) => b.value - a.value);
+        if (companies.length > TOP_COMPANIES) {
+            const top = d3.sum(companies.slice(0, TOP_COMPANIES), (d) => d.value);
+            cards.push({
+                label: `Top ${TOP_COMPANIES} companies`,
+                value: percentOf(top, focus.value),
+                note: `of the ${companies.length} companies shown`
+            });
+        }
+
+        const lit = d3.sum(focus.leaves().filter((d) => d.technology), (d) => d.value);
+        if (lit > 0 && lit < focus.value) {
+            cards.push({ label: 'Technology (incl. chip makers)', value: percentOf(lit, focus.value), note: formatMoney(lit) });
+        }
+
+        const before = previous ? previous.descendants().find((d) => d.data.key === focus.data.key) : null;
+        if (before && before.value > 0) {
+            const change = (focus.value / before.value - 1) * 100;
+            cards.push({
+                label: 'Change on the year before',
+                value: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
+                note: `Same group, Public float (${formatMoney(before.value)} before)`
+            });
+        }
+        return cards;
+    }
+
+    /**
+     * Draw the takeaway cards into the side panel as a list, one card per item.
+     * @param {HTMLElement|null} host - The takeaways list element.
+     * @param {{label: string, value: string, note: string}[]} cards - The cards.
+     * @returns {void}
+     */
+    function renderTakeaways (host, cards) {
+        if (!host) {
+            return;
+        }
+        host.replaceChildren(...cards.map((card) => {
+            const item = document.createElement('li');
+            item.className = 'research-takeaway';
+            const label = document.createElement('span');
+            label.className = 'research-takeaway__label';
+            label.textContent = card.label;
+            const value = document.createElement('span');
+            value.className = 'research-takeaway__value';
+            value.textContent = card.value;
+            const note = document.createElement('span');
+            note.className = 'research-takeaway__note';
+            note.textContent = card.note;
+            item.append(label, value, note);
+            return item;
+        }));
+    }
+
+    /**
+     * The d3 hierarchy of one period, summed by Public float, sorted, and with the Technology flag marked.
+     * @param {Object} data - The Sectors snapshot.
+     * @param {Object} period - One entry of data.values.
+     * @returns {Object} The d3 hierarchy root.
+     */
+    function rootOf (data, period) {
+        const root = d3.hierarchy(buildTree(data, period))
+            .sum((d) => (d.children ? 0 : d.value || 0))
+            .sort(compareNodes);
+        markTechnology(root);
+        return root;
+    }
+
+    /**
      * The text of an arc's label, shortened to fit the ring.
      * @param {Object} node - A d3 hierarchy node.
      * @param {number} unit - The ring thickness in px.
@@ -323,8 +495,8 @@
     function createSunburst (host, data, tooltip) {
         const subtitle = document.getElementById(SUBTITLE_ID);
         const legend = document.getElementById(LEGEND_ID);
-        const zoomOutButton = document.getElementById(ZOOM_OUT_ID);
-        const focusLabel = document.getElementById(FOCUS_LABEL_ID);
+        const breadcrumb = document.getElementById(BREADCRUMB_ID);
+        const takeawaysList = document.getElementById(TAKEAWAYS_ID);
         const techToggle = document.getElementById(TECH_TOGGLE_ID);
         const techShare = document.getElementById(TECH_SHARE_ID);
         const live = document.getElementById(LIVE_ID);
@@ -510,25 +682,23 @@
         }
 
         /**
-         * Show the focus in the centre and above the chart, and the state of the Zoom out control, the legend
+         * Show the focus in the centre, in the breadcrumb and in the takeaway cards, and the state of the legend
          * buttons, the Technology toggle and its share.
+         * @param {Object} root - The d3 hierarchy root of the period shown.
+         * @param {Object|null} previous - The d3 hierarchy root of the year before, or null for the first year.
          * @param {string} periodLabel - The period shown.
          * @returns {{trail: string, techText: string}} Where the chart is (e.g. "All filers › Technology") and the
          *     Technology share of the focus.
          */
-        function describeView (periodLabel) {
+        function describeView (root, previous, periodLabel) {
             const zoomed = focus.depth > 0;
             const trail = focus.ancestors().reverse().map((d) => d.data.name).join(' › ');
             centreTitle.text(zoomed ? shorten(focus.data.name, Math.floor(unit / 3)) : periodLabel);
             centreValue.text(formatMoney(focus.value || 0));
             centreHint.text(zoomed ? 'Zoom out' : 'Public float');
             centre.classed('research-sunburst__centre--zoomed', zoomed);
-            if (focusLabel) {
-                focusLabel.textContent = `${trail}: ${formatMoney(focus.value || 0)}`;
-            }
-            if (zoomOutButton) {
-                zoomOutButton.setAttribute('aria-disabled', String(!zoomed));
-            }
+            renderBreadcrumb(breadcrumb, focus, zoomTo);
+            renderTakeaways(takeawaysList, takeaways(root, focus, previous, periodLabel));
             if (legend) {
                 const office = focus.ancestors().find((d) => d.depth === 1);
                 legend.querySelectorAll('.research-legend__button').forEach((button) => {
@@ -557,11 +727,9 @@
         function update (index, options) {
             periodIndex = Math.max(0, Math.min(data.values.length - 1, index));
             const period = data.values[periodIndex];
-            const root = d3.hierarchy(buildTree(data, period))
-                .sum((d) => (d.children ? 0 : d.value || 0))
-                .sort(compareNodes);
+            const root = rootOf(data, period);
             d3.partition().size([2 * Math.PI, RINGS + 1])(root);
-            markTechnology(root);
+            const previous = periodIndex > 0 ? rootOf(data, data.values[periodIndex - 1]) : null;
 
             // Keep the focus by its key; a group the period does not have (or has no Public float in) falls back
             // to every filer.
@@ -578,7 +746,7 @@
             drawArcs(nodes, transition);
             drawLabels(nodes, transition);
             renderLegend(legend, root, (key) => zoomTo(view.focusKey === key ? ROOT_KEY : key));
-            const { trail, techText } = describeView(period.period);
+            const { trail, techText } = describeView(root, previous, period.period);
 
             const largest = focus.leaves()
                 .filter((d) => d.data.kind === 'company')
@@ -681,9 +849,6 @@
             update(periodIndex, { animate: false });
         }
 
-        if (zoomOutButton) {
-            zoomOutButton.addEventListener('click', zoomOut);
-        }
         if (techToggle) {
             techToggle.addEventListener('click', () => setTechnology(!view.technology));
         }

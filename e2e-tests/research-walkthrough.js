@@ -187,19 +187,52 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 6: zoom into an office from the legend, then out.
+        // Step 6: zoom into an office from the legend; the breadcrumb shows it and its "All filers" link returns.
         await step('Research 6', fail, async () => {
             const office = page.locator('#research-sectors-legend button').first();
-            const zoomOut = page.locator('#research-zoom-out');
+            const officeName = (await office.textContent()).trim();
+            const current = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
             await office.click();
             const zoomedIn = await office.getAttribute('aria-pressed') === 'true' &&
-                await zoomOut.getAttribute('aria-disabled') === 'false';
-            await zoomOut.click();
-            const zoomedOut = await zoomOut.getAttribute('aria-disabled') === 'true';
+                (await current.textContent()).startsWith(officeName);
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
+            const zoomedOut = (await current.textContent()).startsWith('All filers') &&
+                await office.getAttribute('aria-pressed') === 'false' &&
+                await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link').count() === 0;
             if (zoomedIn && zoomedOut) {
-                pass('Research 6: a legend button zooms into its office and "Zoom out" returns');
+                pass(`Research 6: a legend button zooms into ${officeName}; the breadcrumb's "All filers" link returns`);
             } else {
                 fail(`Research 6: zoomed in ${zoomedIn}, zoomed out ${zoomedOut}`);
+            }
+        });
+
+        // Step 6a: the takeaway cards follow the zoom, and the tooltip gives the share of all filers and a rank.
+        await step('Research 6a', fail, async () => {
+            const cards = page.locator('#research-sectors-takeaways .research-takeaway');
+            const labels = await cards.locator('.research-takeaway__label').allTextContents();
+            const totalNote = page.locator('#research-sectors-takeaways .research-takeaway').first()
+                .locator('.research-takeaway__note');
+            const atRoot = labels[0] === 'Total' && labels.includes('Largest part') &&
+                (await totalNote.textContent()).startsWith('All filers');
+            await page.locator('#research-sectors-legend button').first().click();
+            const zoomedNote = (await totalNote.textContent()).includes('of all filers');
+            // The chart hides its tooltip on scroll, and the legend click may have scrolled: bring the chart into view
+            // and let any scroll event fire first. A ring segment's bounding-box centre often lies off the arc, so the
+            // pointer event goes to the arc itself.
+            await page.locator('#research-sunburst').scrollIntoViewIfNeeded();
+            await page.evaluate(() => new Promise((resolve) => {
+                requestAnimationFrame(() => requestAnimationFrame(resolve));
+            }));
+            await page.locator('#research-sunburst path.research-sunburst__arc:not([pointer-events="none"])').first()
+                .dispatchEvent('pointermove', {clientX: 200, clientY: 200, pointerType: 'mouse', bubbles: true});
+            const tooltip = page.locator('#research-tooltip');
+            await tooltip.waitFor({state: 'visible', timeout: TIMEOUT});
+            const tip = await tooltip.textContent();
+            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
+            if (atRoot && zoomedNote && /of all filers/.test(tip) && /#\d+ of \d+ in /.test(tip)) {
+                pass(`Research 6a: cards (${labels.join(', ')}) follow the zoom; the tooltip shows the share of all and a rank`);
+            } else {
+                fail(`Research 6a: cards ${JSON.stringify(labels)}, zoomed note ${zoomedNote}, tooltip "${tip}"`);
             }
         });
 

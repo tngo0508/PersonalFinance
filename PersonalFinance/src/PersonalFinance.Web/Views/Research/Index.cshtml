@@ -74,12 +74,8 @@
                     The @latest!.Ranked.Count largest of @((latest.Ranked.Count + latest.RestCount).ToString("N0", CultureInfo.GetCultureInfo("en-US"))) filers in @latest.Period,
                     by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.
                 </p>
-                <div class="research-sunburst__toolbar">
-                    <button type="button" class="research-chip" id="research-zoom-out" aria-disabled="true">
-                        Zoom out
-                    </button>
-                    <p class="research-sunburst__focus" id="research-sunburst-focus"></p>
-                </div>
+                @* Where the chart is zoomed: each group above the focus is a button back to it. Drawn by research-sunburst.js. *@
+                <nav class="research-breadcrumb" id="research-sectors-breadcrumb" aria-label="Sectors drill-down"></nav>
                 @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made. *@
                 <div class="research-sunburst" id="research-sunburst"></div>
                 <div class="research-tooltip" id="research-tooltip" aria-hidden="true" hidden></div>
@@ -95,6 +91,8 @@
         <aside class="research-panel" aria-label="About the Sectors data">
             @if (showSectors)
             {
+                <h2 class="research-panel__title" id="research-sectors-takeaways-title">Key takeaways</h2>
+                <ul class="research-takeaways" id="research-sectors-takeaways" aria-labelledby="research-sectors-takeaways-title"></ul>
                 <h2 class="research-panel__title">View options</h2>
                 <button type="button" class="research-chip" id="research-tech-toggle" aria-pressed="false"
                         aria-describedby="research-tech-note">
