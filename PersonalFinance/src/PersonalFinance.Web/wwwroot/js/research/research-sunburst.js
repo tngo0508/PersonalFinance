@@ -5,6 +5,9 @@
  * filers). Reads the Sectors snapshot from the JSON data island rendered by Views/Research/Index.cshtml, so it makes
  * no request of its own. Hover or tap a slice for its figures; the centre shows the total. The page's scrubber
  * (js/research/research-page.js) moves it between years through update(), and its table view reads table().
+ * Click an office or industry (or press an office's legend button) to zoom in, so three rings show below it; the
+ * centre and the Zoom out control zoom out. The "Technology (incl. chip makers)" toggle dims every slice outside the
+ * industries the server flags as Technology. Both survive a change of year.
  */
 (function () {
     'use strict';
@@ -14,6 +17,12 @@
     const LEGEND_ID = 'research-sectors-legend';
     const TOOLTIP_ID = 'research-tooltip';
     const SUBTITLE_ID = 'research-sectors-subtitle';
+    const ZOOM_OUT_ID = 'research-zoom-out';
+    const FOCUS_LABEL_ID = 'research-sunburst-focus';
+    const TECH_TOGGLE_ID = 'research-tech-toggle';
+    const TECH_SHARE_ID = 'research-tech-share';
+    const LIVE_ID = 'research-live';
+    const ROOT_KEY = 'root';
     const TAB_ID = 'sectors';
     const TRANSITION_MS = 750;
     const TABLE_ROWS = 25;
@@ -35,6 +44,8 @@
     const DARK_LABEL_OFFICES = ['Manufacturing'];
     const RING_OPACITY = [1, 1, 0.88, 0.76];
     const OTHER_OPACITY = 0.45;
+    // Dimmed by the Technology highlight: the fill keeps its office colour, only fainter.
+    const DIMMED_OPACITY = 0.15;
     const KIND_LABELS = {
         office: () => 'SEC industry office',
         industry: () => 'SIC industry',
@@ -111,7 +122,12 @@
             const office = offices.get(industry.office);
             if (!office.children.has(industryIndex)) {
                 office.children.set(industryIndex, {
-                    key: `i${industryIndex}`, name: industry.name, office: officeName, kind: 'industry', children: []
+                    key: `i${industryIndex}`,
+                    name: industry.name,
+                    office: officeName,
+                    kind: 'industry',
+                    technology: industry.technology === true,
+                    children: []
                 });
             }
             return office.children.get(industryIndex);
@@ -126,6 +142,7 @@
                 ticker: company.ticker,
                 office: node.office,
                 kind: 'company',
+                technology: node.technology,
                 value: row.publicFloat
             });
         });
@@ -137,6 +154,7 @@
                 name: `Other (${filers})`,
                 office: node.office,
                 kind: 'other',
+                technology: node.technology,
                 value: row.publicFloat
             });
         });
@@ -148,7 +166,7 @@
                 const office = offices.get(index);
                 return { ...office, children: Array.from(office.children.values()) };
             });
-        return { key: 'root', name: 'All filers', kind: 'root', children };
+        return { key: ROOT_KEY, name: 'All filers', kind: 'root', children };
     }
 
     /**
@@ -211,27 +229,107 @@
     }
 
     /**
-     * Draw the office legend into the side panel.
-     * @param {HTMLElement|null} legend - The legend list element.
+     * Whether the user asks for reduced motion, so a zoom applies at once.
+     * @returns {boolean} True under prefers-reduced-motion.
+     */
+    function prefersReducedMotion () {
+        return typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    /**
+     * Mark each node lit by the Technology highlight: a company or "Other" slice by its industry's server-side flag,
+     * an industry by its flag, and an office only when everything in it is lit.
      * @param {Object} root - The d3 hierarchy root.
      * @returns {void}
      */
-    function renderLegend (legend, root) {
+    function markTechnology (root) {
+        root.eachAfter((node) => {
+            node.technology = node.children
+                ? node.children.every((child) => child.technology)
+                : node.data.technology === true;
+        });
+    }
+
+    /**
+     * A node's geometry relative to the focused node: the focus fills the full circle and sits at the centre, so the
+     * three rings below it are the ones drawn.
+     * @param {Object} node - A d3 hierarchy node.
+     * @param {Object} focus - The focused d3 hierarchy node.
+     * @returns {{x0: number, x1: number, y0: number, y1: number}} The geometry in radians and rings.
+     */
+    function targetOf (node, focus) {
+        const span = focus.x1 - focus.x0;
+        const angle = (x) => Math.max(0, Math.min(1, (x - focus.x0) / span)) * 2 * Math.PI;
+        return {
+            x0: angle(node.x0),
+            x1: angle(node.x1),
+            y0: Math.max(0, node.y0 - focus.depth),
+            y1: Math.max(0, node.y1 - focus.depth)
+        };
+    }
+
+    /**
+     * Whether an arc with this geometry is in one of the three visible rings.
+     * @param {{x0: number, x1: number, y0: number, y1: number}} shape - The arc geometry.
+     * @returns {boolean} True when the arc is drawn.
+     */
+    function isVisible (shape) {
+        return shape.y0 >= 1 && shape.y1 <= RINGS + 1 && shape.x1 > shape.x0;
+    }
+
+    /**
+     * Shorten a name to a number of characters.
+     * @param {string} text - The name.
+     * @param {number} max - The most characters to keep.
+     * @returns {string} The name, ending in an ellipsis when cut.
+     */
+    function shorten (text, max) {
+        return text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text;
+    }
+
+    /**
+     * Draw the office legend into the side panel: one button per office, which zooms to that office. The buttons
+     * are kept while the period has the same offices, so keyboard focus stays on the one pressed; when they are
+     * redrawn, focus moves to the new button of the same office.
+     * @param {HTMLElement|null} legend - The legend list element.
+     * @param {Object} root - The d3 hierarchy root.
+     * @param {function(string): void} onPick - Called with the office's node key when its button is pressed.
+     * @returns {void}
+     */
+    function renderLegend (legend, root, onPick) {
         if (!legend) {
             return;
         }
+        const keys = (root.children || []).map((office) => office.data.key).join(',');
+        if (legend.dataset.keys === keys) {
+            return;
+        }
+        legend.dataset.keys = keys;
+        const focused = legend.contains(document.activeElement) ? document.activeElement.dataset.key : null;
         legend.replaceChildren(...(root.children || []).map((office) => {
             const item = document.createElement('li');
             item.className = 'research-legend__item';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'research-legend__button';
+            button.dataset.key = office.data.key;
+            button.setAttribute('aria-pressed', 'false');
             const swatch = document.createElement('span');
             swatch.className = 'research-legend__swatch';
             swatch.setAttribute('aria-hidden', 'true');
             swatch.style.background = officeColour(legend, office.data.office);
             const name = document.createElement('span');
             name.textContent = office.data.name;
-            item.append(swatch, name);
+            button.append(swatch, name);
+            button.addEventListener('click', () => onPick(office.data.key));
+            item.append(button);
             return item;
         }));
+        const refocus = focused ? legend.querySelector(`[data-key="${focused}"]`) : null;
+        if (refocus) {
+            refocus.focus();
+        }
     }
 
     /**
@@ -242,8 +340,7 @@
      */
     function labelText (node, unit) {
         const text = node.data.kind === 'company' && node.data.ticker ? node.data.ticker : node.data.name;
-        const max = Math.floor((unit - 6) / 6);
-        return text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text;
+        return shorten(text, Math.floor((unit - 6) / 6));
     }
 
     /**
@@ -256,15 +353,6 @@
         const angle = (node.x0 + node.x1) / 2 * 180 / Math.PI;
         const radius = (node.y0 + node.y1) / 2 * unit;
         return `rotate(${angle - 90}) translate(${radius},0) rotate(${angle < 180 ? 0 : 180})`;
-    }
-
-    /**
-     * An arc's geometry: its angles and rings, as d3.partition lays them out.
-     * @param {Object} node - A d3 hierarchy node, or a geometry.
-     * @returns {{x0: number, x1: number, y0: number, y1: number}} The geometry.
-     */
-    function geometry (node) {
-        return { x0: node.x0, x1: node.x1, y0: node.y0, y1: node.y1 };
     }
 
     /**
@@ -282,22 +370,46 @@
      * labels are keyed by office, industry and company, so an arc tweens from where it is drawn now; an arc that
      * enters grows from zero width and one that leaves shrinks to zero width. Each element keeps the geometry it is
      * drawn at in `__arc`, so an update that interrupts a running transition carries on from there.
+     *
+     * The view (the zoom focus and the Technology highlight) is kept here, outside any one period, and every update()
+     * draws in it: a scrubber step or a redraw at a new width keeps where the user has zoomed and what is lit. A zoom
+     * or a highlight change is an update() of the current period.
      * @param {HTMLElement} host - The chart host.
      * @param {Object} data - The Sectors snapshot.
      * @param {Object} tooltip - The tooltip controller.
      * @returns {{periods: string[], transitionMs: number, update: function(number, Object): string,
-     *     table: function(number): Object, resize: function(): void}} The chart.
+     *     table: function(number): Object, resize: function(): void, zoomTo: function(string): void,
+     *     zoomOut: function(): void, setTechnology: function(boolean): void}} The chart.
      */
     function createSunburst (host, data, tooltip) {
         const subtitle = document.getElementById(SUBTITLE_ID);
+        const legend = document.getElementById(LEGEND_ID);
+        const zoomOutButton = document.getElementById(ZOOM_OUT_ID);
+        const focusLabel = document.getElementById(FOCUS_LABEL_ID);
+        const techToggle = document.getElementById(TECH_TOGGLE_ID);
+        const techShare = document.getElementById(TECH_SHARE_ID);
+        const live = document.getElementById(LIVE_ID);
+        const view = { focusKey: ROOT_KEY, technology: false };
         let periodIndex = data.values.length - 1;
+        let focus = null;
         let unit = 0;
         let arc = null;
         let svg = null;
         let arcLayer = null;
         let labelLayer = null;
-        let centreYear = null;
+        let centre = null;
+        let centreTitle = null;
         let centreValue = null;
+        let centreHint = null;
+
+        const isLit = (node) => !view.technology || node.technology;
+        const opacityOf = (node) => {
+            if (!isVisible(node.target)) {
+                return 0;
+            }
+            const base = node.data.kind === 'other' ? OTHER_OPACITY : RING_OPACITY[node.depth - focus.depth];
+            return isLit(node) ? base : DIMMED_OPACITY;
+        };
 
         /**
          * Size the chart to the host's width and draw its empty layers.
@@ -321,11 +433,16 @@
             arcLayer = svg.append('g');
             labelLayer = svg.append('g').attr('text-anchor', 'middle');
 
-            // The centre: the year, the total and what it measures, scaled to fit the inner circle.
+            // The centre: the year (or the focused group's name), its total and a hint, scaled to fit the inner
+            // circle. A click on it zooms out.
             const valueSize = Math.min(18, unit / 4);
             const titleSize = Math.min(12, unit / 6);
-            const centre = svg.append('g').attr('text-anchor', 'middle');
-            centreYear = centre.append('text')
+            centre = svg.append('g')
+                .attr('class', 'research-sunburst__centre')
+                .attr('text-anchor', 'middle')
+                .on('click', zoomOut);
+            centre.append('circle').attr('r', Math.max(0, unit - 1)).attr('fill', 'transparent');
+            centreTitle = centre.append('text')
                 .attr('class', 'research-sunburst__centre-title')
                 .style('font-size', `${titleSize}px`)
                 .attr('y', -valueSize * 0.9);
@@ -333,16 +450,15 @@
                 .attr('class', 'research-sunburst__centre-value')
                 .style('font-size', `${valueSize}px`)
                 .attr('dy', '0.35em');
-            centre.append('text')
+            centreHint = centre.append('text')
                 .attr('class', 'research-sunburst__centre-title')
                 .style('font-size', `${titleSize}px`)
-                .attr('y', valueSize * 0.9 + titleSize * 0.8)
-                .text('Public float');
+                .attr('y', valueSize * 0.9 + titleSize * 0.8);
         }
 
         /**
-         * Draw the arcs of the period, tweening from what is drawn now when animated.
-         * @param {Object[]} nodes - The period's visible nodes.
+         * Draw the arcs of the period in the view, tweening from what is drawn now when animated.
+         * @param {Object[]} nodes - The period's nodes, each with its `target` geometry.
          * @param {Object|null} transition - The shared d3 transition, or null to apply at once.
          * @returns {void}
          */
@@ -362,11 +478,17 @@
 
             const entering = paths.enter().append('path')
                 .attr('class', 'research-sunburst__arc')
+                .attr('data-key', (d) => d.data.key)
                 .each(function (d) {
-                    this.__arc = collapsed(geometry(d));
+                    this.__arc = collapsed(d.target);
                 })
                 .attr('d', function () {
                     return arc(this.__arc);
+                })
+                .on('click', (event, d) => {
+                    if (d.children) {
+                        zoomTo(d.data.key);
+                    }
                 })
                 .on('pointermove', (event, d) => tooltip.show(event, d))
                 .on('pointerdown', (event, d) => tooltip.show(event, d))
@@ -376,34 +498,37 @@
                     }
                 });
 
+            // The fill follows the office and never changes with the view; the highlight only changes the opacity.
             const all = entering.merge(paths)
-                .attr('pointer-events', null)
-                .attr('fill', (d) => officeColour(host, d.data.office))
-                .attr('fill-opacity', (d) => (d.data.kind === 'other' ? OTHER_OPACITY : RING_OPACITY[d.depth]));
+                .attr('pointer-events', (d) => (isVisible(d.target) ? null : 'none'))
+                .classed('research-sunburst__arc--zoomable', (d) => Boolean(d.children) && isVisible(d.target))
+                .attr('fill', (d) => officeColour(host, d.data.office));
             if (transition) {
                 all.transition(transition)
+                    .attr('fill-opacity', opacityOf)
                     .attrTween('d', function (d) {
-                        const move = d3.interpolate(this.__arc, geometry(d));
+                        const move = d3.interpolate(this.__arc, d.target);
                         return (t) => arc(this.__arc = move(t));
                     });
             } else {
                 all.each(function (d) {
-                    this.__arc = geometry(d);
+                    this.__arc = d.target;
                 }).attr('d', function () {
                     return arc(this.__arc);
-                });
+                }).attr('fill-opacity', opacityOf);
             }
         }
 
         /**
-         * Draw the labels of the period: only where the arc is tall enough for a line of text at its middle radius.
-         * @param {Object[]} nodes - The period's visible nodes.
+         * Draw the labels of the period: only on lit arcs in the visible rings that are tall enough for a line of
+         * text at their middle radius.
+         * @param {Object[]} nodes - The period's nodes, each with its `target` geometry.
          * @param {Object|null} transition - The shared d3 transition, or null to apply at once.
          * @returns {void}
          */
         function drawLabels (nodes, transition) {
-            const labelled = nodes.filter((d) => d.data.kind !== 'other' &&
-                (d.x1 - d.x0) * (d.y0 + d.y1) / 2 * unit > 13);
+            const labelled = nodes.filter((d) => d.data.kind !== 'other' && isVisible(d.target) && isLit(d) &&
+                (d.target.x1 - d.target.x0) * (d.target.y0 + d.target.y1) / 2 * unit > 13);
             const labels = labelLayer.selectAll('text').data(labelled, (d) => d.data.key);
             if (transition) {
                 labels.exit().transition(transition).attr('fill-opacity', 0).remove();
@@ -415,7 +540,9 @@
                 .attr('class', 'research-sunburst__label')
                 .attr('dy', '0.35em')
                 .each(function (d) {
-                    this.__arc = geometry(d);
+                    // Enter where the arc is drawn now, so a label rides in with its arc when zooming.
+                    const drawn = arcLayer.select(`path[data-key="${d.data.key}"]`).node();
+                    this.__arc = drawn && drawn.__arc ? drawn.__arc : d.target;
                 })
                 .attr('transform', function () {
                     return labelTransform(this.__arc, unit);
@@ -431,12 +558,12 @@
                 all.transition(transition)
                     .attr('fill-opacity', 1)
                     .attrTween('transform', function (d) {
-                        const move = d3.interpolate(this.__arc, geometry(d));
+                        const move = d3.interpolate(this.__arc, d.target);
                         return (t) => labelTransform(this.__arc = move(t), unit);
                     });
             } else {
                 all.each(function (d) {
-                    this.__arc = geometry(d);
+                    this.__arc = d.target;
                 }).attr('transform', function () {
                     return labelTransform(this.__arc, unit);
                 }).attr('fill-opacity', 1);
@@ -444,7 +571,46 @@
         }
 
         /**
-         * Show one period.
+         * Show the focus in the centre and above the chart, and the state of the Zoom out control, the legend
+         * buttons, the Technology toggle and its share.
+         * @param {string} periodLabel - The period shown.
+         * @returns {{trail: string, techText: string}} Where the chart is (e.g. "All filers › Technology") and the
+         *     Technology share of the focus.
+         */
+        function describeView (periodLabel) {
+            const zoomed = focus.depth > 0;
+            const trail = focus.ancestors().reverse().map((d) => d.data.name).join(' › ');
+            centreTitle.text(zoomed ? shorten(focus.data.name, Math.floor(unit / 3)) : periodLabel);
+            centreValue.text(formatMoney(focus.value || 0));
+            centreHint.text(zoomed ? 'Zoom out' : 'Public float');
+            centre.classed('research-sunburst__centre--zoomed', zoomed);
+            if (focusLabel) {
+                focusLabel.textContent = `${trail}: ${formatMoney(focus.value || 0)}`;
+            }
+            if (zoomOutButton) {
+                zoomOutButton.setAttribute('aria-disabled', String(!zoomed));
+            }
+            if (legend) {
+                const office = focus.ancestors().find((d) => d.depth === 1);
+                legend.querySelectorAll('.research-legend__button').forEach((button) => {
+                    button.setAttribute('aria-pressed', String(Boolean(office) && button.dataset.key === office.data.key));
+                });
+            }
+            if (techToggle) {
+                techToggle.setAttribute('aria-pressed', String(view.technology));
+            }
+            const lit = d3.sum(focus.leaves().filter((d) => d.technology), (d) => d.value);
+            const share = focus.value > 0 ? (lit / focus.value * 100).toFixed(1) : '0.0';
+            const techText = `${formatMoney(lit)}, ${share}% of ${focus.data.name} in ${periodLabel}.`;
+            if (techShare) {
+                techShare.textContent = techText;
+                techShare.hidden = !view.technology;
+            }
+            return { trail, techText };
+        }
+
+        /**
+         * Show one period, in the current view (zoom focus and Technology highlight).
          * @param {number} index - The period's index in data.values.
          * @param {{animate: boolean}} [options] - Whether to tween from what is drawn now.
          * @returns {string} A one-sentence summary of the period, for the live region.
@@ -456,30 +622,84 @@
                 .sum((d) => (d.children ? 0 : d.value || 0))
                 .sort(compareNodes);
             d3.partition().size([2 * Math.PI, RINGS + 1])(root);
+            markTechnology(root);
+
+            // Keep the focus by its key; a group the period does not have (or has no Public float in) falls back
+            // to every filer.
+            focus = root.descendants().find((d) => d.data.key === view.focusKey && d.x1 > d.x0) || root;
+            view.focusKey = focus.data.key;
             const nodes = root.descendants().slice(1).filter((d) => d.x1 > d.x0);
+            nodes.forEach((d) => { d.target = targetOf(d, focus); });
 
             // A change without animation stops any transition still running, so nothing moves afterwards.
             svg.selectAll('*').interrupt();
-            const transition = options && options.animate ? svg.transition().duration(TRANSITION_MS) : null;
+            const transition = options && options.animate
+                ? svg.transition().duration(TRANSITION_MS).ease(d3.easeCubicInOut)
+                : null;
             drawArcs(nodes, transition);
             drawLabels(nodes, transition);
+            renderLegend(legend, root, (key) => zoomTo(view.focusKey === key ? ROOT_KEY : key));
+            const { trail, techText } = describeView(period.period);
 
-            const largest = root.leaves()
+            const largest = focus.leaves()
                 .filter((d) => d.data.kind === 'company')
                 .sort((a, b) => b.value - a.value)[0];
             const largestText = largest ? ` Largest company: ${largest.data.name}, ${formatMoney(largest.value)}.` : '';
             const offices = (root.children || []).length;
             const total = `${formatMoney(root.value || 0)} in total across ${offices} SEC industry offices.`;
-            svg.attr('aria-label', `Sunburst of SEC filers by Public float in ${period.period}: ${total}${largestText}`);
-            centreYear.text(period.period);
-            centreValue.text(formatMoney(root.value || 0));
+            const where = focus.depth > 0 ? ` Showing ${trail}: ${formatMoney(focus.value || 0)}.` : '';
+            svg.attr('aria-label',
+                `Sunburst of SEC filers by Public float in ${period.period}: ${total}${where}${largestText}`);
             if (subtitle) {
                 const filers = (period.ranked.length + (period.restCount || 0)).toLocaleString('en-US');
                 subtitle.textContent = `The ${period.ranked.length} largest of ${filers} filers in ${period.period}, ` +
                     'by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.';
             }
-            renderLegend(document.getElementById(LEGEND_ID), root);
-            return `${period.period}: ${total}${largestText}`;
+            const tech = view.technology ? ` Technology (incl. chip makers): ${techText}` : '';
+            return `${period.period}: ${total}${where}${largestText}${tech}`;
+        }
+
+        /**
+         * Redraw the current period in a changed view, animated unless the user asks for reduced motion, and
+         * announce it in the page's live region.
+         * @returns {void}
+         */
+        function applyView () {
+            tooltip.hide();
+            const summary = update(periodIndex, { animate: !prefersReducedMotion() });
+            if (live) {
+                live.textContent = summary;
+            }
+        }
+
+        /**
+         * Zoom to a group, by its node key (ROOT_KEY for every filer).
+         * @param {string} key - The node key.
+         * @returns {void}
+         */
+        function zoomTo (key) {
+            view.focusKey = key;
+            applyView();
+        }
+
+        /**
+         * Zoom out one level, to the focused group's parent.
+         * @returns {void}
+         */
+        function zoomOut () {
+            if (focus && focus.parent) {
+                zoomTo(focus.parent.data.key);
+            }
+        }
+
+        /**
+         * Turn the Technology highlight on or off. Fills keep their office colour; only the opacity changes.
+         * @param {boolean} on - Whether to light only the Technology industries.
+         * @returns {void}
+         */
+        function setTechnology (on) {
+            view.technology = on;
+            applyView();
         }
 
         /**
@@ -522,8 +742,15 @@
             update(periodIndex, { animate: false });
         }
 
+        if (zoomOutButton) {
+            zoomOutButton.addEventListener('click', zoomOut);
+        }
+        if (techToggle) {
+            techToggle.addEventListener('click', () => setTechnology(!view.technology));
+        }
+
         layout();
-        return { periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize };
+        return { periods: data.periods, transitionMs: TRANSITION_MS, update, table, resize, zoomTo, zoomOut, setTechnology };
     }
 
     /**
