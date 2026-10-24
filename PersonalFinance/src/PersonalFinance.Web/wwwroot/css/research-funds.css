@@ -779,3 +779,39 @@
 .research-risk__bar-value {
     position: relative;
 }
+
+/* Risk vs return: role chips, dashed lines through the basket with neutral
+   corner labels, and leader lines for labels moved aside. */
+
+.research-risk__roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-xs);
+    margin-bottom: var(--app-spacing-s);
+}
+
+.research-risk__roles[hidden] {
+    display: none;
+}
+
+.research-risk__role[aria-pressed="true"] {
+    border-color: var(--app-brand);
+    background: var(--app-brand-soft);
+    color: var(--app-brand-pressed);
+}
+
+.research-risk__quadrants line {
+    stroke: #8a8983;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+.research-risk__quadrant {
+    fill: var(--app-text-muted);
+    font-size: 10px;
+}
+
+.research-risk__leader {
+    stroke: #8a8983;
+    stroke-width: 1;
+}

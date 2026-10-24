@@ -10,7 +10,9 @@
  * monthly returns times √12) and a Sharpe ratio against the average 3-month Treasury bill (from the macro snapshot).
  *
  * Every point is focusable and opens a card with its return, volatility, Sharpe ratio, expense ratio and net assets;
- * "Show as table" lists the funds and the basket sorted by Sharpe ratio, with inline bars. Reads the
+ * "Show as table" lists the funds and the basket sorted by Sharpe ratio, with inline bars. Role chips narrow the funds
+ * shown, keeping the basket and every fund's colour; dashed lines cross at the basket, with descriptive corner labels
+ * (never a "better" zone); a label that would overlap another moves aside on a short leader line. Reads the
  * `research-fund-returns-data`, `research-fund-facts-data`, `research-macro-data` and `research-funds-data` islands,
  * and the basket from `window.ResearchBasket`, redrawing on `research:basketchange`.
  */
@@ -29,6 +31,14 @@
     const TABLE_ID = 'research-risk-table';
     const TABLE_TOGGLE_ID = 'research-risk-table-toggle';
     const TOOLTIP_ID = 'research-risk-card';
+    const ROLES_ID = 'research-risk-roles';
+    const LABEL_HEIGHT = 13;
+    const QUADRANTS = [
+        { x: 'left', y: 'top', text: 'Higher return, smaller swings than your basket' },
+        { x: 'right', y: 'top', text: 'Higher return, bigger swings than your basket' },
+        { x: 'left', y: 'bottom', text: 'Lower return, smaller swings than your basket' },
+        { x: 'right', y: 'bottom', text: 'Lower return, bigger swings than your basket' }
+    ];
     const BASKET_LABEL = 'Your basket';
     const DEFAULT_YEARS = 3;
     const HEIGHT = 420;
@@ -156,14 +166,65 @@
     }
 
     /**
+     * Whether two boxes overlap.
+     * @param {{x: number, y: number, w: number, h: number}} a - One box.
+     * @param {{x: number, y: number, w: number, h: number}} b - The other.
+     * @returns {boolean} True when they overlap.
+     */
+    function overlaps (a, b) {
+        return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    }
+
+    /**
+     * Place each label at the first spot around its mark that overlaps no placed label and no mark, nearest first,
+     * keeping inside the plot; a label placed away from its mark gets a leader line.
+     * @param {{cx: number, cy: number, r: number, w: number}[]} labels - Each mark's centre, radius and label width.
+     * @param {{x: number, y: number, w: number, h: number}} plot - The plot area.
+     * @returns {{x: number, y: number, leader: boolean}[]} Each label's top-left corner and whether it needs a leader.
+     */
+    function placeLabels (labels, plot) {
+        const marks = labels.map((l) => ({ x: l.cx - l.r, y: l.cy - l.r, w: l.r * 2, h: l.r * 2 }));
+        const placed = [];
+        return labels.map((label, index) => {
+            const h = LABEL_HEIGHT;
+            const near = [
+                [label.r + 4, -h / 2], [-label.r - 4 - label.w, -h / 2], [-label.w / 2, -label.r - 4 - h], [-label.w / 2, label.r + 4]
+            ];
+            const far = [];
+            for (let step = 1; step <= 6; step++) {
+                const d = label.r + 10 + step * 12;
+                far.push([d, -h / 2 - step * 10], [d, -h / 2 + step * 10], [-d - label.w, -h / 2 - step * 10],
+                    [-d - label.w, -h / 2 + step * 10], [-label.w / 2, -d - h], [-label.w / 2, d]);
+            }
+            const candidates = [...near.map((c) => [...c, false]), ...far.map((c) => [...c, true])];
+            const fits = (box) => box.x >= plot.x && box.x + box.w <= plot.x + plot.w && box.y >= plot.y && box.y + box.h <= plot.y + plot.h
+                && !placed.some((p) => overlaps(p, box)) && !marks.some((m, i) => i !== index && overlaps(m, box));
+            let chosen = null;
+            for (const [dx, dy, leader] of candidates) {
+                const box = { x: label.cx + dx, y: label.cy + dy, w: label.w, h, leader };
+                if (fits(box)) {
+                    chosen = box;
+                    break;
+                }
+            }
+            if (!chosen) {
+                chosen = { x: label.cx + near[0][0], y: label.cy + near[0][1], w: label.w, h, leader: false };
+            }
+            placed.push(chosen);
+            return chosen;
+        });
+    }
+
+    /**
      * Wire the Risk vs return view.
      * @param {Object} data - The fund returns snapshot.
      * @param {Object|null} facts - The fund facts snapshot.
      * @param {Object|null} macro - The macro snapshot.
      * @param {Map<string, string>} names - Each Tracked Fund's name by ticker.
+     * @param {Map<string, string>} roles - Each Tracked Fund's role by ticker.
      * @returns {void}
      */
-    function createView (data, facts, macro, names) {
+    function createView (data, facts, macro, names, roles) {
         const card = document.getElementById(CARD_ID);
         const chartHost = document.getElementById(CHART_ID);
         const legend = document.getElementById(LEGEND_ID);
@@ -171,12 +232,16 @@
         const tableHost = document.getElementById(TABLE_ID);
         const tableToggle = document.getElementById(TABLE_TOGGLE_ID);
         const yearButtons = Array.from(card.querySelectorAll('[data-risk-years]'));
+        const rolesHost = document.getElementById(ROLES_ID);
+        const roleNames = [...new Set(data.funds.map((f) => roles.get(f.ticker)).filter(Boolean))];
+        const activeRoles = new Set();
         const factsOf = new Map((facts ? facts.funds : []).map((f) => [f.ticker, f]));
         const slotOf = (ticker) => (window.ResearchBasket && window.ResearchBasket.slotOf ? window.ResearchBasket.slotOf(ticker) : 0);
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, point) => cardRows(point)
             .map((row, i) => line(row, i === 0 ? 'research-tooltip__name' : 'research-tooltip__muted')));
         let years = DEFAULT_YEARS;
         let points = [];
+        let allPoints = [];
         let lastWidth = 0;
 
         /**
@@ -219,7 +284,35 @@
             note.textContent = basket.length === 0
                 ? 'Add funds to your Fund Basket to see where it sits.'
                 : basketFigures ? '' : `A fund in your basket has less than ${years} ${years === 1 ? 'year' : 'years'} of returns, so the basket is not shown.`;
-            return basketFigures ? [...funds, basketFigures] : funds;
+            allPoints = basketFigures ? [...funds, basketFigures] : funds;
+            const shown = funds.filter((f) => activeRoles.size === 0 || activeRoles.has(roles.get(f.ticker)));
+            return basketFigures ? [...shown, basketFigures] : shown;
+        }
+
+        /**
+         * Draw the role chips: one per role, pressed when it is among those shown.
+         * @returns {void}
+         */
+        function drawRoles () {
+            rolesHost.hidden = roleNames.length < 2;
+            rolesHost.replaceChildren(...roleNames.map((role) => {
+                const chip = element('button', 'research-chip research-risk__role', role);
+                chip.type = 'button';
+                chip.setAttribute('aria-pressed', String(activeRoles.has(role)));
+                chip.addEventListener('click', () => {
+                    if (activeRoles.has(role)) {
+                        activeRoles.delete(role);
+                    } else {
+                        activeRoles.add(role);
+                    }
+                    drawRoles();
+                    draw();
+                    if (page.announce) {
+                        page.announce(activeRoles.size === 0 ? 'Showing every fund.' : `Showing ${[...activeRoles].join(', ')}.`);
+                    }
+                });
+                return chip;
+            }));
         }
 
         /**
@@ -240,12 +333,13 @@
         function drawChart () {
             const width = Math.max(280, chartHost.clientWidth || 640);
             lastWidth = width;
-            const xMax = d3.max(points, (p) => p.volatility) || 1;
-            const yValues = points.map((p) => p.annualizedReturn);
+            // The axes cover every fund, shown or not, so filtering never moves a point.
+            const xMax = d3.max(allPoints, (p) => p.volatility) || 1;
+            const yValues = allPoints.map((p) => p.annualizedReturn);
             const x = d3.scaleLinear().domain([0, xMax * 1.08]).nice().range([MARGIN.left, width - MARGIN.right]);
             const y = d3.scaleLinear().domain([Math.min(0, d3.min(yValues)), Math.max(0, d3.max(yValues))]).nice()
                 .range([HEIGHT - MARGIN.bottom, MARGIN.top]);
-            const assets = points.filter((p) => !p.isBasket && p.netAssets).map((p) => p.netAssets);
+            const assets = allPoints.filter((p) => !p.isBasket && p.netAssets).map((p) => p.netAssets);
             const radius = assets.length
                 ? d3.scaleSqrt().domain([0, d3.max(assets)]).range([0, RADIUS[1]])
                 : null;
@@ -272,6 +366,23 @@
             svg.append('text').attr('class', 'research-performance__panel-title').attr('x', MARGIN.left)
                 .attr('y', MARGIN.top - 8).text('↑ Annualized return, % a year');
 
+            const basketPoint = points.find((p) => p.isBasket);
+            if (basketPoint) {
+                // Dashed lines through the basket, and each corner described against it.
+                const bx = x(basketPoint.volatility);
+                const by = y(basketPoint.annualizedReturn);
+                const quadrants = svg.append('g').attr('class', 'research-risk__quadrants');
+                quadrants.append('line').attr('x1', bx).attr('x2', bx).attr('y1', MARGIN.top).attr('y2', HEIGHT - MARGIN.bottom);
+                quadrants.append('line').attr('x1', MARGIN.left).attr('x2', width - MARGIN.right).attr('y1', by).attr('y2', by);
+                QUADRANTS.forEach((q) => {
+                    quadrants.append('text').attr('class', 'research-risk__quadrant')
+                        .attr('x', q.x === 'left' ? MARGIN.left + 6 : width - MARGIN.right - 6)
+                        .attr('y', q.y === 'top' ? MARGIN.top + 12 : HEIGHT - MARGIN.bottom - 8)
+                        .attr('text-anchor', q.x === 'left' ? 'start' : 'end')
+                        .text(q.text);
+                });
+            }
+
             const funds = points.filter((p) => !p.isBasket).sort((a, b) => radiusOf(b) - radiusOf(a));
             const marks = svg.append('g');
             funds.forEach((p) => {
@@ -280,7 +391,6 @@
                     .attr('transform', `translate(${x(p.volatility)},${y(p.annualizedReturn)})`)
                     .attr('aria-label', cardRows(p).join('. '));
                 g.append('circle').attr('class', 'research-risk__bubble').attr('data-fund-slot', String(p.slot)).attr('r', radiusOf(p));
-                g.append('text').attr('class', 'research-risk__label').attr('x', radiusOf(p) + 4).attr('dy', '0.32em').text(p.ticker);
             });
             const basket = points.find((p) => p.isBasket);
             if (basket) {
@@ -290,9 +400,32 @@
                     .attr('aria-label', cardRows(basket).join('. '));
                 g.append('path').attr('class', 'research-risk__diamond')
                     .attr('d', `M0,${-DIAMOND}L${DIAMOND},0L0,${DIAMOND}L${-DIAMOND},0Z`);
-                g.append('text').attr('class', 'research-risk__label research-risk__label--basket').attr('x', DIAMOND + 4)
-                    .attr('dy', '0.32em').text(BASKET_LABEL);
             }
+
+            // Labels: measured, then placed clear of each other and of the marks, with leaders where they moved away.
+            const labelled = [...funds.map((p) => ({ point: p, r: radiusOf(p), text: p.ticker })),
+                ...(basket ? [{ point: basket, r: DIAMOND, text: BASKET_LABEL }] : [])];
+            const labelLayer = svg.append('g').attr('class', 'research-risk__labels');
+            const texts = labelled.map((l) => labelLayer.append('text')
+                .attr('class', l.point.isBasket ? 'research-risk__label research-risk__label--basket' : 'research-risk__label')
+                .attr('data-label', l.text).text(l.text));
+            const spots = placeLabels(labelled.map((l, i) => ({
+                cx: x(l.point.volatility),
+                cy: y(l.point.annualizedReturn),
+                r: l.r,
+                w: texts[i].node().getComputedTextLength() || l.text.length * 6.5
+            })), { x: MARGIN.left, y: MARGIN.top, w: width - MARGIN.left - MARGIN.right, h: HEIGHT - MARGIN.top - MARGIN.bottom });
+            spots.forEach((spot, i) => {
+                texts[i].attr('x', spot.x).attr('y', spot.y + LABEL_HEIGHT - 3);
+                if (spot.leader) {
+                    const cx = x(labelled[i].point.volatility);
+                    const cy = y(labelled[i].point.annualizedReturn);
+                    const tx = Math.max(spot.x, Math.min(cx, spot.x + spot.w));
+                    const ty = Math.max(spot.y, Math.min(cy, spot.y + spot.h));
+                    labelLayer.insert('line', 'text').attr('class', 'research-risk__leader')
+                        .attr('x1', cx).attr('y1', cy).attr('x2', tx).attr('y2', ty);
+                }
+            });
             marks.selectAll('.research-risk__point').each(function () {
                 const node = this;
                 const ticker = node.getAttribute('data-ticker');
@@ -303,7 +436,8 @@
                 node.addEventListener('blur', tooltip.hide);
             });
             chartHost.setAttribute('aria-label', `Risk vs return over ${years} ${years === 1 ? 'year' : 'years'}: `
-                + `${funds.length} funds${basket ? ' and your basket' : ''}. Tab to a point for its figures.`);
+                + `${funds.length} funds${activeRoles.size ? ` (${[...activeRoles].join(', ')})` : ''}`
+                + `${basket ? ' and your basket, with lines through it' : ''}. Tab to a point for its figures.`);
         }
 
         /**
@@ -384,6 +518,7 @@
             }
         }
 
+        drawRoles();
         yearButtons.forEach((button) => button.addEventListener('click', () => {
             years = Number(button.dataset.riskYears);
             draw();
@@ -427,8 +562,11 @@
             return;
         }
         const funds = page.readData(FUNDS_ID, 'Research funds data');
-        const names = new Map((funds && Array.isArray(funds.funds) ? funds.funds : []).map((f) => [f.ticker, f.name]));
-        createView(data, page.readData(FACTS_ID, 'Research fund facts data'), page.readData(MACRO_ID, 'Research macro data'), names);
+        const tracked = funds && Array.isArray(funds.funds) ? funds.funds : [];
+        const names = new Map(tracked.map((f) => [f.ticker, f.name]));
+        const roles = new Map(tracked.filter((f) => f.role).map((f) => [f.ticker, f.role]));
+        createView(data, page.readData(FACTS_ID, 'Research fund facts data'), page.readData(MACRO_ID, 'Research macro data'),
+            names, roles);
     }
 
     if (document.readyState === 'loading') {

@@ -35,6 +35,9 @@
                 <button type="button" class="research-chip" id="research-risk-table-toggle" aria-pressed="false"
                         aria-controls="research-risk-table">Show as table</button>
             </div>
+            @* Role filters: each shows or hides the funds of one role; with none chosen every fund shows. The basket
+               always stays, and a fund keeps its colour whatever is shown. *@
+            <div class="research-risk__roles" id="research-risk-roles" role="group" aria-label="Show funds by role"></div>
             @if (facts is null)
             {
                 <p class="research-overlap__note">The fund facts have not loaded yet, so every bubble has the same size.</p>
@@ -59,6 +62,10 @@
         <p>
             Higher up means a higher annualized return over the window; further right means bigger swings from month
             to month. No part of the chart is better than another: it shows how the funds behaved, not what to choose.
+        </p>
+        <p>
+            The dashed lines cross at your basket, so each corner reads against it: higher or lower return, smaller or
+            bigger swings than your basket over the window.
         </p>
         <p>
             The Sharpe ratio is the return above the 3-month Treasury bill rate for each point of volatility. It is

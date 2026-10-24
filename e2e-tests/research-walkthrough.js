@@ -664,6 +664,42 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Step 7j: with SPY alone in the basket the diamond sits on SPY's bubble, and the labels still don't overlap (one
+        // moves aside on a leader line); role chips hide funds without repainting the rest; the corners are described
+        // against the basket, and nothing on the tab gives advice.
+        await step('Research 7j', fail, async () => {
+            await page.goto(`${base}/Research?tab=risk&basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const labelBoxes = () => page.evaluate(() => Array.from(document.querySelectorAll('#research-risk-chart .research-risk__label'))
+                .map((t) => { const b = t.getBBox(); return { label: t.textContent, x: b.x, y: b.y, w: b.width, h: b.height }; }));
+            const boxes = await labelBoxes();
+            const overlapping = boxes.some((a, i) => boxes.some((b, j) => j > i &&
+                a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h));
+            const leaders = await page.locator('#research-risk-chart .research-risk__leader').count();
+            await page.goto(`${base}/Research?tab=risk&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const quadrants = (await page.locator('.research-risk__quadrant').allTextContents()).map((t) => t.trim());
+            const fill = () => page.evaluate(() => getComputedStyle(document.querySelector('#research-risk-chart [data-ticker="SPY"] circle')).fill);
+            const spyBefore = await fill();
+            const chips = (await page.locator('#research-risk-roles button').allTextContents()).map((t) => t.trim());
+            await page.locator('#research-risk-roles button', {hasText: 'US broad'}).click();
+            const shownAfter = await page.locator('#research-risk-chart .research-risk__point').evaluateAll((g) => g.map((n) => n.getAttribute('data-ticker')));
+            const spyAfter = await fill();
+            const pressed = await page.locator('#research-risk-roles button', {hasText: 'US broad'}).getAttribute('aria-pressed');
+            await page.locator('#research-risk-roles button', {hasText: 'US broad'}).click();
+            const restored = await page.locator('#research-risk-chart .research-risk__point').count();
+            const words = (await page.locator('#research-panel-risk').innerText()).toLowerCase();
+            const advice = ['efficient', ' best', ' buy', 'should', 'recommend'].filter((w) => words.includes(w));
+            const ok = boxes.length === 3 && !overlapping && leaders >= 1 &&
+                quadrants.length === 4 && quadrants.includes('Higher return, smaller swings than your basket') &&
+                chips.join('|') === 'US broad|Growth, sector and thematic' && pressed === 'true' &&
+                shownAfter.join(',') === 'SPY,Your basket' && spyBefore === spyAfter && restored === 3 && advice.length === 0;
+            if (ok) {
+                pass(`Research 7j: SPY and the basket on one spot keep apart labels (${leaders} leader); "US broad" leaves SPY and the basket in the same colour; four corners described against the basket; no advice wording`);
+            } else {
+                fail(`Research 7j: boxes ${JSON.stringify(boxes)} overlapping ${overlapping}, leaders ${leaders}, quadrants ${JSON.stringify(quadrants)}, chips ${JSON.stringify(chips)}, ` +
+                    `pressed ${pressed}, shown ${shownAfter}, fill ${spyBefore}/${spyAfter}, restored ${restored}, advice ${JSON.stringify(advice)}`);
+            }
+        });
+
         // Step 8: World, switched to % of GDP, changes its legend.
         await step('Research 8', fail, async () => {
             await page.click('#research-tab-world');
