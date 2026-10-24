@@ -17,4 +17,10 @@ internal interface ISecEdgarClient
     /// cleaning of Public Float checks values against. Fails as <see cref="GetPublicFloatFrameAsync"/> does.
     /// </summary>
     Task<IReadOnlyList<TotalAssetsFact>> GetTotalAssetsFrameAsync(int year, int quarter, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads one filer's submissions (<c>submissions/CIK{cik}.json</c>) for its name, ticker, SIC code and SEC
+    /// industry office. Null when SEC has no submissions for the filer (404); any other failure throws.
+    /// </summary>
+    Task<SecFiler?> GetFilerAsync(long cik, CancellationToken cancellationToken);
 }

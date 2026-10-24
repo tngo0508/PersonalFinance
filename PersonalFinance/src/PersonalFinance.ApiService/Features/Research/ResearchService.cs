@@ -16,6 +16,12 @@ internal sealed class ResearchService : IResearchService
     /// <summary>The dataset key of the Sectors snapshot.</summary>
     public const string SectorsDataset = "sectors";
 
+    /// <summary>
+    /// The dataset key of the SEC submissions read for the Sectors snapshot, kept so each refresh reads only the
+    /// filers it has not read before (and the latest year's largest). Not served to the page.
+    /// </summary>
+    public const string FilersDataset = "sec-filers";
+
     private readonly AppDbContext _db;
     private readonly ISecEdgarClient _secClient;
     private readonly ResearchSettings _settings;
@@ -84,8 +90,17 @@ internal sealed class ResearchService : IResearchService
 
         IReadOnlyDictionary<int, IReadOnlyList<PublicFloatFact>> cleaned =
             await CleanPublicFloatAsync(factsByYear, lastYear, cancellationToken);
-        SectorsSnapshotDto snapshot = SectorsSnapshotBuilder.Build(cleaned)
+        List<SectorsRankedYear> ranked = SectorsSnapshotBuilder.Rank(cleaned);
+        if (ranked.Count == 0)
+        {
+            throw new InvalidOperationException("SEC returned no Public Float for any year.");
+        }
+
+        Dictionary<long, SecFiler> filers = await ReadFilersAsync(ranked, cancellationToken);
+        SectorsSnapshotDto snapshot = SectorsSnapshotBuilder.Build(ranked, filers)
             ?? throw new InvalidOperationException("SEC returned no Public Float for any year.");
+        await StoreAsync(FilersDataset, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
+            JsonSerializer.Serialize(filers.Values.OrderBy(f => f.Cik), JsonSerializerOptions.Web), cancellationToken);
         await StoreAsync(SectorsDataset, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
             JsonSerializer.Serialize(snapshot, JsonSerializerOptions.Web), cancellationToken);
     }
@@ -121,6 +136,44 @@ internal sealed class ResearchService : IResearchService
         }
 
         return cleaning.Kept;
+    }
+
+    /// <summary>
+    /// The SEC submissions of the filers in the snapshot, from the stored list of filers read before plus new reads:
+    /// the latest year's ranked filers are read again on every refresh, so their names, tickers and offices stay
+    /// current; ranked filers of earlier years are read once; filers outside the largest are read once, largest
+    /// first, up to <see cref="ResearchSettings.SubmissionsPerRefresh"/>. A filer SEC has no submissions for is
+    /// remembered with no fields, so it is not asked for again.
+    /// </summary>
+    private async Task<Dictionary<long, SecFiler>> ReadFilersAsync(List<SectorsRankedYear> ranked,
+        CancellationToken cancellationToken)
+    {
+        string? payload = await SnapshotPayloadQuery(_db, FilersDataset).FirstOrDefaultAsync(cancellationToken);
+        Dictionary<long, SecFiler> filers = (payload is null
+                ? []
+                : JsonSerializer.Deserialize<List<SecFiler>>(payload, JsonSerializerOptions.Web) ?? [])
+            .ToDictionary(f => f.Cik);
+
+        HashSet<long> rankedCiks = ranked.SelectMany(y => y.Ranked).Select(f => f.Cik).ToHashSet();
+        IEnumerable<long> latestRanked = ranked[^1].Ranked.Select(f => f.Cik).Order();
+        IEnumerable<long> newRanked = rankedCiks.Where(cik => !filers.ContainsKey(cik)).Order();
+        IEnumerable<long> newOthers = ranked
+            .SelectMany(y => y.Others)
+            .Where(f => !rankedCiks.Contains(f.Cik) && !filers.ContainsKey(f.Cik))
+            .GroupBy(f => f.Cik)
+            .Select(g => (Cik: g.Key, Largest: g.Max(f => f.Value)))
+            .OrderByDescending(f => f.Largest)
+            .ThenBy(f => f.Cik)
+            .Take(Math.Max(0, _settings.SubmissionsPerRefresh))
+            .Select(f => f.Cik);
+
+        foreach (long cik in latestRanked.Concat(newRanked).Concat(newOthers).Distinct().ToList())
+        {
+            filers[cik] = await _secClient.GetFilerAsync(cik, cancellationToken)
+                ?? new SecFiler(cik, string.Empty, null, null, null, null);
+        }
+
+        return filers;
     }
 
     /// <summary>

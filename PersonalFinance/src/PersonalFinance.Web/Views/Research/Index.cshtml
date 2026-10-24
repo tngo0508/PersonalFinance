@@ -5,6 +5,7 @@
 @{
     ViewData["Title"] = "Research";
     SectorsPeriodDto? latest = Model.SectorsLatestPeriod;
+    bool showSectors = !Model.SectorsUnavailable && latest is not null;
 }
 
 @section Styles {
@@ -30,52 +31,29 @@
     <section class="research-deck" id="research-panel-sectors" role="tabpanel" aria-labelledby="research-tab-sectors">
         <div class="research-card">
             <h2 class="research-card__title">Largest SEC filers by Public float</h2>
-            @if (Model.SectorsUnavailable || latest is null)
+            @if (!showSectors)
             {
                 <partial name="_UnavailableState" model="Model.SectorsUnavailableState"/>
             }
             else
             {
                 <p class="research-card__subtitle">
-                    The @Model.SectorsTableRows.Count largest of @(Model.SectorsTableRows.Count + latest.RestCount) filers in @latest.Period, by Public float.
+                    The @latest!.Ranked.Count largest of @((latest.Ranked.Count + latest.RestCount).ToString("N0", CultureInfo.GetCultureInfo("en-US"))) filers in @latest.Period,
+                    by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.
                 </p>
-                <div class="research-table-wrap">
-                    <table class="table research-table">
-                        <caption class="visually-hidden">Largest SEC filers by Public float in @latest.Period</caption>
-                        <thead>
-                        <tr>
-                            <th scope="col" class="research-table__rank">Rank</th>
-                            <th scope="col">Company</th>
-                            <th scope="col" class="research-table__value">Public float</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (SectorsTableRow row in Model.SectorsTableRows)
-                        {
-                            <tr>
-                                <td class="research-table__rank">@row.Rank</td>
-                                <td>@row.Name</td>
-                                <td class="research-table__value">@PublicFloatDisplay.Format(row.PublicFloat)</td>
-                            </tr>
-                        }
-                        </tbody>
-                        @if (latest.RestCount > 0)
-                        {
-                            <tfoot>
-                            <tr>
-                                <td></td>
-                                <th scope="row">All other filers (@latest.RestCount.ToString("N0", CultureInfo.GetCultureInfo("en-US")))</th>
-                                <td class="research-table__value">@PublicFloatDisplay.Format(latest.RestTotal)</td>
-                            </tr>
-                            </tfoot>
-                        }
-                    </table>
-                </div>
+                @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made. *@
+                <div class="research-sunburst" id="research-sunburst"></div>
+                <div class="research-tooltip" id="research-tooltip" aria-hidden="true" hidden></div>
             }
             <p class="research-card__source">Source: SEC EDGAR</p>
         </div>
 
         <aside class="research-panel" aria-label="About the Sectors data">
+            @if (showSectors)
+            {
+                <h2 class="research-panel__title">SEC industry offices</h2>
+                <ul class="research-legend" id="research-sectors-legend"></ul>
+            }
             <h2 class="research-panel__title">About this data</h2>
             <p>
                 Public float is the market value of a company's shares held by investors other than its insiders, as
@@ -84,6 +62,7 @@
             </p>
             <p>
                 Only companies that file with the SEC are included, so many small and foreign companies are missing.
+                Each company is grouped by the SEC office that reviews its filings and by its SIC industry code.
             </p>
             <h2 class="research-panel__title">Data as of</h2>
             <p class="research-panel__as-of">
@@ -92,3 +71,17 @@
         </aside>
     </section>
 </div>
+
+@if (showSectors)
+{
+    @* The Sectors snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-sunburst.js. *@
+    <script type="application/json" id="research-sectors-data">@Json.Serialize(Model.Sectors)</script>
+}
+
+@section Scripts {
+    @if (showSectors)
+    {
+        <script src="~/lib/d3/d3.min.js"></script>
+        <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>
+    }
+}

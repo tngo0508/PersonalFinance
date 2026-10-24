@@ -107,34 +107,131 @@
     font-size: var(--app-font-size-small);
 }
 
-.research-table-wrap {
-    max-height: 36rem;
-    overflow: auto;
+/* --------------------------------------------------------------------------
+   Sectors sunburst. The eight SEC industry offices take the dataviz reference
+   categorical palette in SEC office-number order (validated on the white card
+   with the dataviz palette validator: adjacent-pair CVD and normal-vision
+   checks pass). Crypto Assets, Unassigned and any other office are neutral
+   grey. Three slots sit below 3:1 on white, so every arc keeps a 1px surface
+   gap, the legend names each office and the tooltip carries the figures.
+   The app has no dark mode, so there are no dark steps yet.
+   -------------------------------------------------------------------------- */
+
+.research {
+    --research-office-1: #2a78d6; /* Energy & Transportation */
+    --research-office-2: #eb6834; /* Finance */
+    --research-office-3: #1baf7a; /* Life Sciences */
+    --research-office-4: #eda100; /* Manufacturing: dark text on this fill */
+    --research-office-5: #e87ba4; /* Real Estate & Construction */
+    --research-office-6: #008300; /* Technology */
+    --research-office-7: #6250d6; /* Trade & Services */
+    --research-office-8: #e34948; /* Industrial Applications and Services */
+    --research-office-neutral: #9ca3af; /* Crypto Assets, Unassigned */
+    --research-label-light: #ffffff;
+    --research-label-dark: #0b0b0b;
 }
 
-.research-table {
-    margin: 0;
+.research-sunburst {
+    width: 100%;
+    max-width: 40rem;
+    margin: 0 auto;
 }
 
-.research-table thead th {
-    position: sticky;
-    top: 0;
+.research-sunburst svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    font-family: var(--app-font-family);
+    touch-action: manipulation;
+}
+
+.research-sunburst__arc {
+    stroke: var(--app-bg);
+    stroke-width: 1px;
+}
+
+.research-sunburst__label {
+    font-size: 10px;
+    pointer-events: none;
+    user-select: none;
+}
+
+.research-sunburst__centre-title {
+    fill: var(--app-text-muted);
+    font-size: 12px;
+}
+
+.research-sunburst__centre-value {
+    fill: var(--app-text);
+    font-family: var(--app-font-mono);
+    font-size: 18px;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-tooltip {
+    position: fixed;
+    z-index: 1080;
+    max-width: 16rem;
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
     background: var(--app-bg);
+    box-shadow: var(--app-shadow-16);
+    color: var(--app-text);
+    font-size: var(--app-font-size-small);
+    pointer-events: none;
 }
 
-.research-table__rank {
-    width: 4rem;
+.research-tooltip[hidden] {
+    display: none;
+}
+
+.research-tooltip__name {
+    display: block;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-tooltip__muted {
+    display: block;
     color: var(--app-text-muted);
 }
 
-.research-table__value {
+.research-tooltip__value {
     font-family: var(--app-font-mono);
-    text-align: right;
-    white-space: nowrap;
+}
+
+.research-legend {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--app-font-size-small);
+}
+
+.research-legend__item {
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.research-legend__swatch {
+    flex: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: var(--app-radius-s);
 }
 
 @media (max-width: 900px) {
     .research-deck {
         grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .research-card,
+    .research-panel {
+        padding: var(--app-spacing-m);
     }
 }

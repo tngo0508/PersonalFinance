@@ -72,7 +72,7 @@ public class ResearchServiceTests
         Assert.Equal(["2025"], snapshot.Periods);
         SectorsPeriodDto year = Assert.Single(snapshot.Values);
         Assert.Equal(
-            [("MICROSOFT CORP", 950_000_000_000m), ("APPLE INC", 900_000_000_000m), ("TWO FRAMES CO", 20_000_000m)],
+            [("Microsoft Corp", 950_000_000_000m), ("Apple Inc", 900_000_000_000m), ("Two Frames Co", 20_000_000m)],
             year.Ranked.Select(r => (snapshot.Companies[r.Company].Name, r.PublicFloat)));
         Assert.Equal(0m, year.RestTotal);
         Assert.Equal(0, year.RestCount);
@@ -115,7 +115,7 @@ public class ResearchServiceTests
 
         Assert.Equal(["2023", "2025"], snapshot.Periods);
         Assert.Equal(["2023", "2025"], snapshot.Values.Select(v => v.Period));
-        Assert.Equal("ALPHA RENAMED", Assert.Single(snapshot.Companies).Name);
+        Assert.Equal("Alpha Renamed", Assert.Single(snapshot.Companies).Name);
         Assert.Equal(new DateOnly(2025, 6, 30), snapshot.AsOf);
     }
 
@@ -135,7 +135,7 @@ public class ResearchServiceTests
         await service.RefreshAsync();
         SectorsSnapshotDto snapshot = (await service.GetSectorsAsync()).Snapshot!;
 
-        Assert.Equal(["TEN", "TWENTY", "THIRTY"],
+        Assert.Equal(["Ten", "Twenty", "Thirty"],
             snapshot.Values[0].Ranked.Select(r => snapshot.Companies[r.Company].Name));
         Assert.Equal([10L, 20L, 30L], snapshot.Companies.Select(c => c.Cik));
     }

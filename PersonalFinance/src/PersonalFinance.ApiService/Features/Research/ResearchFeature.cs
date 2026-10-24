@@ -24,6 +24,7 @@ internal static class ResearchFeature
         services.AddSingleton(new ResearchSettings
         {
             SectorsFirstYear = configuration.GetValue($"{ResearchSettings.Section}:SectorsFirstYear", 2011),
+            SubmissionsPerRefresh = configuration.GetValue($"{ResearchSettings.Section}:SubmissionsPerRefresh", 2_500),
             PublicFloatExclusions = configuration
                 .GetSection($"{ResearchSettings.Section}:PublicFloatExclusions")
                 .Get<List<FilerYear>>() ?? [],

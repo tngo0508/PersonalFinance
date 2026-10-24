@@ -17,6 +17,14 @@ internal sealed class ResearchSettings
     public int SectorsFirstYear { get; init; } = 2011;
 
     /// <summary>
+    /// How many filers outside the largest 500 one refresh reads the SEC submissions of
+    /// (<c>Research:SubmissionsPerRefresh</c>), largest first. Each one read is remembered, so the first refreshes
+    /// build up the list over a few days while staying inside the job's time limit; until a filer is read, its share
+    /// of "Other" counts as Unassigned.
+    /// </summary>
+    public int SubmissionsPerRefresh { get; init; } = 2_500;
+
+    /// <summary>
     /// The filer years whose Public Float the Sectors snapshot leaves out by hand
     /// (<c>Research:PublicFloatExclusions</c>, a list of <c>{ "Cik": ..., "Year": ... }</c>).
     /// </summary>
