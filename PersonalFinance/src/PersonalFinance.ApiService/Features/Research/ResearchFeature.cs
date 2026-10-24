@@ -12,7 +12,10 @@ internal static class ResearchFeature
     // A Public Float frame is a few megabytes; the refresh job reads dozens of them one after another.
     private static readonly TimeSpan SecTimeout = TimeSpan.FromSeconds(60);
 
-    /// <summary>The Research datasets, their stored snapshots and the SEC EDGAR client that builds them.</summary>
+    // A World Bank indicator page holds every country for 35 years, about a megabyte.
+    private static readonly TimeSpan WorldBankTimeout = TimeSpan.FromSeconds(60);
+
+    /// <summary>The Research datasets, their stored snapshots and the SEC EDGAR and World Bank clients that build them.</summary>
     public static IServiceCollection AddResearchFeature(this IServiceCollection services, IConfiguration configuration)
     {
         var secSettings = new SecEdgarSettings
@@ -28,9 +31,11 @@ internal static class ResearchFeature
             PublicFloatExclusions = configuration
                 .GetSection($"{ResearchSettings.Section}:PublicFloatExclusions")
                 .Get<List<FilerYear>>() ?? [],
+            WorldFirstYear = configuration.GetValue($"{ResearchSettings.Section}:WorldFirstYear", 1990),
         });
         services.AddSingleton<SecRequestGate>();
         services.AddHttpClient<ISecEdgarClient, SecEdgarClient>(client => client.Timeout = SecTimeout);
+        services.AddHttpClient<IWorldBankClient, WorldBankClient>(client => client.Timeout = WorldBankTimeout);
         services.AddScoped<IResearchService, ResearchService>();
         return services;
     }

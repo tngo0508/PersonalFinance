@@ -29,4 +29,10 @@ internal sealed class ResearchSettings
     /// (<c>Research:PublicFloatExclusions</c>, a list of <c>{ "Cik": ..., "Year": ... }</c>).
     /// </summary>
     public IReadOnlyList<FilerYear> PublicFloatExclusions { get; init; } = [];
+
+    /// <summary>
+    /// The first year of the World dataset (<c>Research:WorldFirstYear</c>). The World Bank's market-cap series starts
+    /// in 1975, but before 1990 only a few dozen countries report.
+    /// </summary>
+    public int WorldFirstYear { get; init; } = 1990;
 }

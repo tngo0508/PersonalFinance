@@ -9,7 +9,8 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
-/// <see cref="IResearchService"/> over the stored <see cref="ResearchSnapshot"/> rows and the SEC EDGAR client.
+/// <see cref="IResearchService"/> over the stored <see cref="ResearchSnapshot"/> rows, the SEC EDGAR client and the
+/// World Bank client.
 /// </summary>
 internal sealed class ResearchService : IResearchService
 {
@@ -22,17 +23,28 @@ internal sealed class ResearchService : IResearchService
     /// </summary>
     public const string FilersDataset = "sec-filers";
 
+    /// <summary>The dataset key of the World snapshot.</summary>
+    public const string WorldDataset = "world";
+
+    /// <summary>The World Bank WDI indicator of market capitalisation of listed domestic companies (current US$).</summary>
+    public const string MarketCapIndicator = "CM.MKT.LCAP.CD";
+
+    /// <summary>The World Bank WDI indicator of GDP (current US$).</summary>
+    public const string GdpIndicator = "NY.GDP.MKTP.CD";
+
     private readonly AppDbContext _db;
     private readonly ISecEdgarClient _secClient;
+    private readonly IWorldBankClient _worldBankClient;
     private readonly ResearchSettings _settings;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ResearchService> _logger;
 
-    public ResearchService(AppDbContext db, ISecEdgarClient secClient, ResearchSettings settings,
-        TimeProvider timeProvider, ILogger<ResearchService> logger)
+    public ResearchService(AppDbContext db, ISecEdgarClient secClient, IWorldBankClient worldBankClient,
+        ResearchSettings settings, TimeProvider timeProvider, ILogger<ResearchService> logger)
     {
         _db = db;
         _secClient = secClient;
+        _worldBankClient = worldBankClient;
         _settings = settings;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -50,23 +62,64 @@ internal sealed class ResearchService : IResearchService
     }
 
     /// <inheritdoc />
+    public async Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(
+        CancellationToken cancellationToken = default)
+    {
+        string? payload = await SnapshotPayloadQuery(_db, WorldDataset).FirstOrDefaultAsync(cancellationToken);
+        WorldSnapshotDto? snapshot = payload is null
+            ? null
+            : JsonSerializer.Deserialize<WorldSnapshotDto>(payload, JsonSerializerOptions.Web);
+        return new ResearchSnapshotResult<WorldSnapshotDto>(snapshot);
+    }
+
+    /// <inheritdoc />
     public async Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default)
     {
         var summary = new ResearchRefreshSummary();
+        await RefreshDatasetAsync(SectorsDataset, RefreshSectorsAsync, summary, cancellationToken);
+        await RefreshDatasetAsync(WorldDataset, RefreshWorldAsync, summary, cancellationToken);
+        return summary;
+    }
+
+    /// <summary>
+    /// Rebuilds one dataset, recording in the summary whether it was built or failed. A failure other than the
+    /// refresh being cancelled is logged and leaves the previous snapshot in place.
+    /// </summary>
+    private async Task RefreshDatasetAsync(string dataset, Func<CancellationToken, Task> refresh,
+        ResearchRefreshSummary summary, CancellationToken cancellationToken)
+    {
         try
         {
-            await RefreshSectorsAsync(cancellationToken);
-            summary.Built.Add(SectorsDataset);
+            await refresh(cancellationToken);
+            summary.Built.Add(dataset);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             // The source is down or answered something unreadable: keep the previous snapshot.
             _logger.LogError(ex, "Could not rebuild the Research {Dataset} snapshot; the previous one is kept",
-                SectorsDataset);
-            summary.Failed.Add(SectorsDataset);
+                dataset);
+            summary.Failed.Add(dataset);
         }
+    }
 
-        return summary;
+    /// <summary>
+    /// Reads the World Bank's country list and its market-cap and GDP indicators from
+    /// <see cref="ResearchSettings.WorldFirstYear"/> to last year, builds the World snapshot and stores it.
+    /// </summary>
+    private async Task RefreshWorldAsync(CancellationToken cancellationToken)
+    {
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        int lastYear = now.Year - 1;
+        IReadOnlyList<WorldBankCountry> countries = await _worldBankClient.GetCountriesAsync(cancellationToken);
+        WorldBankIndicator marketCap = await _worldBankClient.GetIndicatorAsync(MarketCapIndicator,
+            _settings.WorldFirstYear, lastYear, cancellationToken);
+        WorldBankIndicator gdp = await _worldBankClient.GetIndicatorAsync(GdpIndicator,
+            _settings.WorldFirstYear, lastYear, cancellationToken);
+
+        WorldSnapshotDto snapshot = WorldSnapshotBuilder.Build(countries, marketCap, gdp, DateOnly.FromDateTime(now.UtcDateTime))
+            ?? throw new InvalidOperationException("The World Bank returned no market cap for any country.");
+        await StoreAsync(WorldDataset, snapshot.Periods[0], snapshot.Periods[^1], snapshot.AsOf,
+            JsonSerializer.Serialize(snapshot, JsonSerializerOptions.Web), cancellationToken);
     }
 
     /// <summary>

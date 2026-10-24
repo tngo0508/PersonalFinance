@@ -91,7 +91,7 @@ public class ResearchWebControllerTests
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
         // The view embeds the whole snapshot as JSON for the sunburst, so the page makes no API call of its own.
-        Assert.Equal([nameof(IResearchApi.GetSectorsAsync)], proxy.Calls);
+        Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetWorldAsync)], proxy.Calls);
         Assert.Same(Snapshot, model.Sectors);
         Assert.Equal([nameof(ResearchController.Index)],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
@@ -133,6 +133,71 @@ public class ResearchWebControllerTests
         await cts.CancelAsync();
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Throws(nameof(IResearchApi.GetSectorsAsync), new OperationCanceledException(cts.Token));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cts.Token));
+    }
+
+    private static readonly WorldSnapshotDto World = new()
+    {
+        AsOf = new DateOnly(2026, 10, 8),
+        Periods = ["2024"],
+        Countries = [new WorldCountryDto { Id = "840", Iso3 = "USA", Name = "United States" }],
+        Values = [new WorldPeriodDto { Period = "2024", Countries = [new WorldCountryValueDto { Country = 0, MarketCap = 5e13m, PercentOfGdp = 172.4m }] }],
+    };
+
+    [Fact]
+    public async Task Index_HoldsTheWorldSnapshot()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
+        proxy.Returns(nameof(IResearchApi.GetWorldAsync), World);
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
+
+        Assert.False(model.WorldUnavailable);
+        Assert.Same(World, model.World);
+        Assert.Equal(new DateOnly(2026, 10, 8), model.WorldAsOf);
+    }
+
+    [Fact]
+    public async Task Index_WhenTheWorldDataHasNeverLoaded_MarksOnlyTheWorldTabUnavailable()
+    {
+        string body = JsonSerializer.Serialize(new ResearchUnavailableDto { Reason = "The World data has not loaded yet." },
+            JsonSerializerOptions.Web);
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
+        proxy.Throws(nameof(IResearchApi.GetWorldAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, body));
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
+
+        Assert.True(model.WorldUnavailable);
+        Assert.Null(model.WorldAsOf);
+        Assert.Equal("Research", model.WorldUnavailableState.RetryController);
+        Assert.False(string.IsNullOrWhiteSpace(model.WorldUnavailableState.Heading));
+        Assert.False(model.SectorsUnavailable);
+    }
+
+    [Fact]
+    public async Task Index_WhenOnlyTheSectorsDataFails_KeepsTheWorldTab()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Throws(nameof(IResearchApi.GetSectorsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"));
+        proxy.Returns(nameof(IResearchApi.GetWorldAsync), World);
+
+        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
+
+        Assert.True(model.SectorsUnavailable);
+        Assert.False(model.WorldUnavailable);
+    }
+
+    [Fact]
+    public async Task Index_WhenTheWorldRequestIsCancelled_DoesNotSwallowTheCancellation()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
+        proxy.Throws(nameof(IResearchApi.GetWorldAsync), new OperationCanceledException(cts.Token));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cts.Token));
     }

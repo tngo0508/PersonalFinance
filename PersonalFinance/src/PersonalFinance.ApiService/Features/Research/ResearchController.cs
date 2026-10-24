@@ -17,6 +17,9 @@ public class ResearchController : ControllerBase
     /// <summary>The 503 reason of a Sectors dataset that has never loaded.</summary>
     public const string SectorsNeverLoaded = "The Sectors data has not loaded yet.";
 
+    /// <summary>The 503 reason of a World dataset that has never loaded.</summary>
+    public const string WorldNeverLoaded = "The World data has not loaded yet.";
+
     private readonly IResearchService _researchService;
 
     public ResearchController(IResearchService researchService)
@@ -39,6 +42,26 @@ public class ResearchController : ControllerBase
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable,
                 new ResearchUnavailableDto { Reason = SectorsNeverLoaded });
+        }
+
+        return Ok(result.Snapshot);
+    }
+
+    /// <summary>
+    /// Gets the World snapshot: each country's stock-market capitalisation and market cap as % of GDP per year, from
+    /// the World Bank. Answers 503 with the reason when the dataset has never loaded.
+    /// </summary>
+    [HttpGet("world")]
+    [ProducesResponseType(typeof(WorldSnapshotDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResearchUnavailableDto), StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetWorld(CancellationToken cancellationToken = default)
+    {
+        ResearchSnapshotResult<WorldSnapshotDto> result = await _researchService.GetWorldAsync(cancellationToken);
+        if (result.Snapshot is null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new ResearchUnavailableDto { Reason = WorldNeverLoaded });
         }
 
         return Ok(result.Snapshot);

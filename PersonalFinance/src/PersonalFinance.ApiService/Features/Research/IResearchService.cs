@@ -14,6 +14,12 @@ public interface IResearchService
     Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the World snapshot (each country's market cap and market cap as % of GDP per year, from the World Bank),
+    /// or "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Rebuilds every dataset from its source, each on its own. A dataset's snapshot is replaced only when its build
     /// succeeds; a failed build is logged and leaves the previous snapshot in place.
     /// </summary>

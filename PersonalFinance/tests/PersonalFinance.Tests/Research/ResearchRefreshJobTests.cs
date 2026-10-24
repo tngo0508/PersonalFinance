@@ -19,6 +19,9 @@ public class ResearchRefreshJobTests
         public Task<ResearchSnapshotResult<SectorsSnapshotDto>> GetSectorsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<SectorsSnapshotDto>(null));
 
+        public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(null));
+
         public Task<ResearchRefreshSummary> RefreshAsync(CancellationToken cancellationToken = default)
         {
             Refreshes++;
