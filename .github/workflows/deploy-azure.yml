@@ -181,6 +181,8 @@ jobs:
           ASPNETCORE_ENVIRONMENT: Development
           DATABASE_PROVIDER: InMemory
           ConnectionStrings__DefaultConnection: InMemory:E2ETestApi
+          # Stores small Research fixture snapshots (Development only), so the walkthrough needs no SEC/World Bank.
+          E2E_SEED_RESEARCH: "true"
         run: |
           echo "Starting ApiService on port ${{ steps.ports.outputs.api_port }} (logs -> .api.log)"
           dotnet run --project PersonalFinance/src/PersonalFinance.ApiService \
