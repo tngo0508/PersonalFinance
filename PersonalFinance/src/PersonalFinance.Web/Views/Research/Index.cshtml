@@ -1,6 +1,7 @@
 @model ResearchViewModel
 @using System.Globalization
 @using PersonalFinance.Shared.DTOs.Research
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 
 @{
     ViewData["Title"] = "Research";
@@ -8,11 +9,17 @@
     bool showSectors = !Model.Sectors.Unavailable && latest is not null;
     bool showEtfs = !Model.Etfs.Unavailable;
     bool showWorld = !Model.World.Unavailable;
+    // PROTOTYPE (wayfinder #240): Development only, and only with ?variant= on the URL. Never merge.
+    bool riskPrototype = Env.EnvironmentName == "Development" && Context.Request.Query.ContainsKey("variant");
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/css/research-etfs.css" asp-append-version="true"/>
+    @if (riskPrototype)
+    {
+        <link rel="stylesheet" href="~/prototype/risk-return/risk-prototype.css"/>
+    }
 }
 
 @* Research page, Control-deck layout: header, tab bar, then a chart card beside a side panel. The side panel stacks
@@ -33,6 +40,11 @@
                 aria-selected="false" aria-controls="research-panel-etfs" tabindex="-1">ETFs</button>
         <button type="button" class="research-tabs__tab" id="research-tab-world" role="tab"
                 aria-selected="false" aria-controls="research-panel-world" tabindex="-1">World</button>
+        @if (riskPrototype)
+        {
+            <button type="button" class="research-tabs__tab" id="research-tab-risk" role="tab"
+                    aria-selected="false" aria-controls="research-panel-risk" tabindex="-1">Risk vs return</button>
+        }
     </div>
 
     @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
@@ -126,6 +138,10 @@
 
     <partial name="_EtfsTab" model="Model"/>
     <partial name="_WorldTab" model="Model"/>
+    @if (riskPrototype)
+    {
+        <section class="research-deck research-deck--stacked" id="research-panel-risk" role="tabpanel" aria-labelledby="research-tab-risk" hidden></section>
+    }
 
     @* Summarises each change of period for screen readers. *@
     <p class="visually-hidden" id="research-live" aria-live="polite"></p>
@@ -147,6 +163,10 @@
     @if (showSectors)
     {
         <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>
+    }
+    @if (riskPrototype)
+    {
+        <script src="~/js/research/research-risk-prototype.js"></script>
     }
     @if (showEtfs)
     {
