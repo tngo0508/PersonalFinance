@@ -1,7 +1,8 @@
 /**
  * Fail-fast check before running the E2E suites locally.
  *
- * Verifies, in order, that the SQL Server port is open and that the Web and API apps answer.
+ * Verifies, in order, that the SQL Server port is open and that the Web and API apps answer. With
+ * DATABASE_PROVIDER=InMemory (both apps started on the InMemory provider, as CI does) the SQL Server check is skipped.
  * Run it with `npm run e2e:preflight`. It is not wired into `test:e2e`, so CI is unaffected.
  *
  * Environment variables (defaults match docs/DEVELOPMENT.md):
@@ -9,6 +10,7 @@
  *   E2E_DB_PORT  SQL Server port (default 1433)
  *   WEB_URL      Web app base URL (default http://localhost:5000)
  *   API_URL      ApiService base URL (default https://localhost:7100)
+ *   DATABASE_PROVIDER  InMemory to skip the SQL Server check
  */
 const net = require('net');
 const http = require('http');
@@ -18,6 +20,7 @@ const dbHost = process.env.E2E_DB_HOST || 'localhost';
 const dbPort = Number(process.env.E2E_DB_PORT || 1433);
 const webUrl = process.env.WEB_URL || 'http://localhost:5000';
 const apiUrl = process.env.API_URL || 'https://localhost:7100';
+const inMemory = (process.env.DATABASE_PROVIDER || '').toLowerCase() === 'inmemory';
 
 /**
  * Check that a TCP port accepts connections.
@@ -62,7 +65,7 @@ function checkHttp(url) {
 
 (async () => {
     const checks = [
-        {
+        inMemory ? null : {
             name: `SQL Server at ${dbHost}:${dbPort}`,
             run: () => checkPort(dbHost, dbPort),
             hint: 'Start Docker Desktop and the SQL container, or point E2E_DB_HOST/E2E_DB_PORT at your SQL Server.'
@@ -77,8 +80,11 @@ function checkHttp(url) {
             run: () => checkHttp(apiUrl),
             hint: 'Start PersonalFinance.ApiService; it needs the database to be reachable at startup.'
         }
-    ];
+    ].filter(Boolean);
 
+    if (inMemory) {
+        console.log('  - SQL Server check skipped (DATABASE_PROVIDER=InMemory)');
+    }
     for (const check of checks) {
         if (await check.run()) {
             console.log(`  ✓ ${check.name}`);

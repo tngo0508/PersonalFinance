@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.ApiService.Features.BudgetTracker;
@@ -50,7 +51,8 @@ public class NavigationLayoutTests
             typeof(InvestmentCalculatorController),
             typeof(NewsController),
             typeof(CommunityController),
-            typeof(GoogleDriveController)
+            typeof(GoogleDriveController),
+            typeof(ResearchController)
         };
 
         foreach (Type? type in controllerTypes)
@@ -60,6 +62,61 @@ public class NavigationLayoutTests
                 .Where(m => m.Name == "Index").ToList();
             Assert.NotEmpty(indexMethods);
         }
+    }
+
+    [Fact]
+    public void Sidebar_LinksToResearch_InTheResourcesGroup()
+    {
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        string resources = Between(sidebar, "Resources</div>", "<div class=\"sidebar-group\">");
+
+        Assert.Contains("asp-controller=\"Research\" asp-action=\"Index\"", resources);
+        Assert.Contains("currentController == \"Research\" ? \"active\"", resources);
+        Assert.Contains("<span class=\"sidebar-link-text\">Research</span>", resources);
+    }
+
+    [Fact]
+    public void BottomNav_KeepsFiveItems_AndLightsToolsOnResearch()
+    {
+        string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");
+
+        Assert.Equal(5, Regex.Count(bottomNav, "class=\"bottom-nav-item"));
+        string tools = bottomNav[..bottomNav.IndexOf("<span>Tools</span>", StringComparison.Ordinal)];
+        tools = tools[tools.LastIndexOf("<a ", StringComparison.Ordinal)..];
+        Assert.Contains("currentController == \"Research\"", tools);
+    }
+
+    [Fact]
+    public void SidebarHoldingResearch_OpensFromAMenuToggleOnPhones()
+    {
+        // Research is not in the five-item bottom nav: on phones it is reached through the off-canvas sidebar, which
+        // the top bar's menu button opens below the md breakpoint (css/sidebar.css slides it in on .mobile-open).
+        string layout = ReadView("Shared", "_Layout.cshtml");
+        string topbar = Between(layout, "<header class=\"topbar\"", "</header>");
+
+        Match toggle = Regex.Match(topbar, "<button id=\"mobileMenuToggle\"[^>]*>");
+        Assert.True(toggle.Success, "The top bar should hold the mobile menu toggle.");
+        Assert.Contains("d-md-none", toggle.Value);
+        Assert.Contains("aria-controls=\"sidebar\"", toggle.Value);
+        Assert.Contains("asp-controller=\"Research\"", Between(layout, "<aside id=\"sidebar\"", "</aside>"));
+        string sidebarScript = File.ReadAllText(Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web",
+            "wwwroot", "js", "core", "sidebar.js"));
+        Assert.Contains("getElementById('mobileMenuToggle')", sidebarScript);
+        Assert.Contains("classList.toggle('mobile-open')", sidebarScript);
+    }
+
+    [Fact]
+    public void NetWorthPage_LinksToResearch_AndTheDashboardDoesNot()
+    {
+        Assert.Contains("asp-controller=\"Research\" asp-action=\"Index\"", ReadView("Networth", "_NetWorthContent.cshtml"));
+        Assert.DoesNotContain("asp-controller=\"Research\"", ReadView("Dashboard", "Index.cshtml"));
+    }
+
+    private static string Between(string content, string start, string end)
+    {
+        int from = content.IndexOf(start, StringComparison.Ordinal);
+        Assert.True(from >= 0, $"{start} not found.");
+        return content[from..content.IndexOf(end, from, StringComparison.Ordinal)];
     }
 
     [Fact]
@@ -87,6 +144,7 @@ public class NavigationLayoutTests
         Assert.Contains("asp-controller=\"News\"", content);
         Assert.Contains("asp-controller=\"Community\"", content);
         Assert.Contains("asp-controller=\"GoogleDrive\"", content);
+        Assert.Contains("asp-controller=\"Research\"", content);
 
         // Verify mobile bottom navigation bar exists with 5 items
         Assert.Contains("bottom-nav", content);

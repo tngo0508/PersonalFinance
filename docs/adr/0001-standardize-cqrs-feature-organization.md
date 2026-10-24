@@ -1,7 +1,7 @@
 # 0001 – Standardize ApiService on Direct Service Injection and Permissive Open-Source Licensing
 
 **Date:** 2026-10-16  
-**Status:** Accepted (§3 superseded by [ADR 0007](0007-feature-folders-with-interface-only-dependencies.md))
+**Status:** Accepted (§3 superseded by [ADR 0007](0007-feature-folders-with-interface-only-dependencies.md); amended by [ADR 0009](0009-adopt-d3-for-bespoke-interactive-visualisations.md) (ISC admitted))
 
 ## Context
 

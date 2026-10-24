@@ -10,6 +10,7 @@ using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Models.Research;
 using BudgetController = PersonalFinance.Web.Controllers.BudgetController;
 
 namespace PersonalFinance.Tests.Web;
@@ -144,6 +145,24 @@ public class UnavailableStateTests
         IActionResult result = await controller.Index();
 
         AssertUnavailable(result, "Community");
+    }
+
+    [Fact]
+    public async Task ResearchIndex_WhenApiFails_RendersThePage_WithTheUnavailableStateOnTheSectorsTabOnly()
+    {
+        (IResearchApi? api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
+        ResearchController controller = WithContext(new ResearchController(api, NullLogger<ResearchController>.Instance));
+
+        IActionResult result = await controller.Index();
+
+        // The page itself renders, so tabs whose data loaded keep working; the failed tab carries its own state.
+        ViewResult view = Assert.IsType<ViewResult>(result);
+        Assert.NotEqual(UnavailableStateExtensions.UnavailableViewName, view.ViewName);
+        ResearchViewModel model = Assert.IsType<ResearchViewModel>(view.Model);
+        Assert.True(model.Sectors.Unavailable);
+        Assert.Equal("Research", model.Sectors.UnavailableState.RetryController);
+        Assert.False(string.IsNullOrWhiteSpace(model.Sectors.UnavailableState.Heading));
+        Assert.DoesNotContain(ExceptionText, model.Sectors.UnavailableState.Heading);
     }
 
     [Fact]

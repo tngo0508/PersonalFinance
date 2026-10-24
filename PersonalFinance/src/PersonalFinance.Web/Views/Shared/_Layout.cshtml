@@ -108,6 +108,11 @@
                     <span class="sidebar-link-icon"><i data-lucide="calculator"></i></span>
                     <span class="sidebar-link-text">Investment Calculator</span>
                 </a>
+                <a class="sidebar-link @(currentController == "Research" ? "active" : "")"
+                   asp-area="" asp-controller="Research" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="globe"></i></span>
+                    <span class="sidebar-link-text">Research</span>
+                </a>
                 <a class="sidebar-link @(currentController == "News" ? "active" : "")"
                    asp-area="" asp-controller="News" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="newspaper"></i></span>
@@ -252,7 +257,7 @@
             <i data-lucide="dollar-sign"></i>
             <span>Finances</span>
         </a>
-        <a class="bottom-nav-item @(currentController == "InvestmentCalculator" || currentController == "News" || currentController == "GoogleDrive" ? "active" : "")"
+        <a class="bottom-nav-item @(currentController == "InvestmentCalculator" || currentController == "Research" || currentController == "News" || currentController == "GoogleDrive" ? "active" : "")"
            asp-area="" asp-controller="InvestmentCalculator" asp-action="Index">
             <i data-lucide="calculator"></i>
             <span>Tools</span>

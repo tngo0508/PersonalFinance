@@ -41,7 +41,8 @@ public class BicepInfrastructureTests
             Path.Combine(modulesDir, "sql-database.bicep"),
             Path.Combine(modulesDir, "api-service.bicep"),
             Path.Combine(modulesDir, "web-service.bicep"),
-            Path.Combine(modulesDir, "purge-job.bicep")
+            Path.Combine(modulesDir, "purge-job.bicep"),
+            Path.Combine(modulesDir, "research-refresh-job.bicep")
         };
 
         foreach (string? file in expectedFiles)
@@ -65,6 +66,7 @@ public class BicepInfrastructureTests
         Assert.Contains("module apiService 'modules/api-service.bicep'", mainBicep);
         Assert.Contains("module webService 'modules/web-service.bicep'", mainBicep);
         Assert.Contains("module purgeJob 'modules/purge-job.bicep'", mainBicep);
+        Assert.Contains("module researchRefreshJob 'modules/research-refresh-job.bicep'", mainBicep);
 
         Assert.Contains("output webUrl string", mainBicep);
         Assert.Contains("output webFqdn string", mainBicep);
@@ -95,6 +97,35 @@ public class BicepInfrastructureTests
         Assert.Contains("'--purge-only'", jobBicep);
         Assert.Contains("containerImage: apiImage", mainBicep);
         Assert.Contains("param purgeJobCron string = '0 15 * * *'", mainBicep);
+
+        // The connection string only ever travels as a secret
+        Assert.Matches(@"@secure\(\)\s+param dbConnectionString string", jobBicep);
+        Assert.Contains("secretRef: 'db-connection-string'", jobBicep);
+        Assert.Contains("name: 'ConnectionStrings__DefaultConnection'", jobBicep);
+    }
+
+    [Fact]
+    public void ResearchRefreshJobBicep_RunsTheApiImageDaily_WithRefreshResearch_TheSecContact_AndTheConnectionStringAsASecret()
+    {
+        string root = FindProjectRoot();
+        string jobBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "research-refresh-job.bicep"));
+        string mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
+
+        // A scheduled job, because the API scales to zero and cannot be relied on to refresh every day
+        Assert.Contains("resource researchRefreshJob 'Microsoft.App/jobs@", jobBicep);
+        Assert.Contains("triggerType: 'Schedule'", jobBicep);
+        Assert.Contains("cronExpression: cronExpression", jobBicep);
+        Assert.Contains("parallelism: 1", jobBicep);
+        Assert.Contains("workloadProfileName: 'Consumption'", jobBicep);
+
+        // Same image as the API, in refresh mode, off-peak
+        Assert.Contains("'--refresh-research'", jobBicep);
+        Assert.Contains("param researchRefreshJobCron string = '0 10 * * *'", mainBicep);
+        Assert.Contains("cronExpression: researchRefreshJobCron", mainBicep);
+
+        // SEC's required contact comes from deployment configuration, never from code
+        Assert.Contains("name: 'Research__Sec__UserAgent'", jobBicep);
+        Assert.Contains("secUserAgent: secUserAgent", mainBicep);
 
         // The connection string only ever travels as a secret
         Assert.Matches(@"@secure\(\)\s+param dbConnectionString string", jobBicep);

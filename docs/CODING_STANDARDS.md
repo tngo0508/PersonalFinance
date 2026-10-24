@@ -50,6 +50,9 @@ This project strictly allows only **permissive open-source dependencies** with l
 - **MIT**
 - **BSD** (2-Clause / 3-Clause)
 - **Apache 2.0**
+- **ISC**
+
+The list governs direct dependencies: every NuGet, npm and libman entry, and anything shipped to the browser or deployed. Transitive dependencies of dev-only tooling are not audited one by one, but a copyleft licence anywhere in the tree still blocks the dependency that brings it in. See `docs/adr/0009-adopt-d3-for-bespoke-interactive-visualisations.md`.
 
 ### Prohibited Packages & Licenses
 - **No Commercial / Paid Licenses**: Dependencies requiring paid commercial licenses, dual licensing, or subscription tiers are strictly prohibited.
@@ -59,7 +62,7 @@ This project strictly allows only **permissive open-source dependencies** with l
 - **No GPL / AGPL / Copyleft** dependencies that impose licensing viral requirements on the solution.
 
 ### Rules for Package Management
-1. **Check License Before Adding**: Always verify the license of any NuGet package before adding it to any project in the solution.
+1. **Check License Before Adding**: Always verify the license of any NuGet, npm or libman package before adding it to any project in the solution.
 2. **Remove Paid Packages**: If an existing dependency changes its license to require payment or restrictive terms, it must be removed and replaced with a permissive open-source alternative or built-in .NET capability.
 
 ## Backend/Frontend Code Separation
@@ -290,7 +293,7 @@ An ApiService Feature folder has a fixed anatomy:
 - Avoid service locator patterns and unnecessary direct use of `IServiceProvider`.
 - Ensure new services, validators, and integrations are registered correctly using the project's existing registration approach.
 - Avoid circular dependencies and duplicated registrations.
-- Strictly adhere to the License Policy — only MIT, BSD, or Apache 2.0 packages allowed. Check licenses before introducing any package.
+- Strictly adhere to the License Policy — only MIT, BSD, Apache 2.0, or ISC packages allowed. Check licenses before introducing any package.
 
 ### 5. MVC Controllers and HTTP Endpoints
 

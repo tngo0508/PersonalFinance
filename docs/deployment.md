@@ -288,6 +288,7 @@ flowchart LR
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `google-client-id` / `google-client-secret` | `Authentication__Google__ClientId` / `__ClientSecret` | Web |
 | `BREVO_API_KEY` | `brevo-api-key` | `Brevo__ApiKey` | Web |
 | `vars.BREVO_SENDER_EMAIL` / `vars.BREVO_SENDER_NAME` | *(plain env)* | `Brevo__SenderEmail` / `Brevo__SenderName` | Web |
+| `vars.SEC_USER_AGENT` | *(plain env)* | `Research__Sec__UserAgent` | Research refresh job |
 | *(computed by Bicep)* | *(plain env)* | `ApiSettings__BaseUrl=https://<api FQDN>`, `services__apiservice__http__0` | Web → API |
 | `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID` | — | — | Pipeline login only (OIDC) |
 
@@ -309,6 +310,7 @@ stateDiagram-v2
 - **Scale rule**: HTTP, 100 concurrent requests per replica, `minReplicas: 0`, `maxReplicas: 1`. With zero replicas the app costs nothing, but the first request waits for a cold start; the smoke test retries `/health` up to 30 times for this reason.
 - **Migrations at startup**: both `Program.cs` files call `MigrateAndSeedDatabaseAsync()`, so a deploy that adds a migration applies it when the new revision starts. `--migrate-only` / `MIGRATE_ONLY=true` runs migrations and exits, for use as a one-off job; it exits non-zero when startup or a migration fails.
 - **Daily Purge job**: `infra/modules/purge-job.bicep` deploys a Container Apps Job that runs the API image with `--purge-only` (or `PURGE_ONLY=true`) every day at `purgeJobCron` (default `0 15 * * *`, UTC). It applies pending migrations, permanently erases Accounts whose 30-day Grace Period has ended (ADR 0005), and exits non-zero if any Account failed; those are retried the next day. It runs as a job because the API scales to zero. To run it now: `az containerapp job start --name <purge job> --resource-group <rg>`; executions and logs: `az containerapp job execution list --name <purge job> --resource-group <rg>`.
+- **Daily Research refresh job**: `infra/modules/research-refresh-job.bicep` deploys a Container Apps Job named `research-<environment>-<location suffix>` that runs the API image with `--refresh-research` (or `REFRESH_RESEARCH=true`) every day at `researchRefreshJobCron` (default `0 10 * * *`, UTC). It applies pending migrations, rebuilds the Research snapshots from SEC and the World Bank, and exits. It exits non-zero if any dataset failed (that one keeps its previous snapshot) or if `vars.SEC_USER_AGENT` is unset, in which case only World is rebuilt. Until its first run the Research page shows the Unavailable State, so after the first deploy start it once instead of waiting for 10:00 UTC: `az containerapp job start --name <research job> --resource-group <rg>` (or **Run now** on the job in the Azure Portal); executions: `az containerapp job execution list --name <research job> --resource-group <rg>`.
 - **Logs**: container stdout (Serilog console output) goes to the Log Analytics workspace (`ContainerAppConsoleLogs_CL`). See Section 8.6 for live tailing.
 
 ### 1.8 Environments at a Glance
@@ -597,6 +599,7 @@ Navigate to **Settings** &rarr; **Secrets and variables** &rarr; **Actions** &ra
 | `BREVO_SENDER_EMAIL` | `tngo0508@gmail.com` | Verified sender email address for transactional emails (from Step 3). |
 | `BREVO_SENDER_NAME` | `PersonalFinance` | Display name for transactional email sender. |
 | `CUSTOM_DOMAIN_NAME` | *(empty)* | Optional custom domain name (e.g., `finance.mydomain.com`). Leave empty for auto-generated Azure Container Apps domain. |
+| `SEC_USER_AGENT` | `PersonalFinance research tngo0508@gmail.com` | Contact the daily Research refresh job sends to SEC (fair-access rule). Without it the Research Sectors and ETFs tabs get no data. |
 
 > **Note**: If you do not create these variables, the workflow will use the default values shown above.
 

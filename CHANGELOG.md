@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.0.0] - 2026-10-23
+
+### Added
+
+- **Research page**: a new signed-in page, in the sidebar and linked from Net Worth, shows how the market is made up and how it changed over time, from public SEC and World Bank data, for information only (#217).
+  - **Sectors:** a sunburst of the 500 largest SEC filers by Public Float, grouped by SEC industry office and SIC industry, with smaller filers summed into "Other". Click or use the legend to zoom, and turn on "Technology (incl. chip makers)" to see the tech share.
+  - **ETFs:** a tree of what SPY, QQQ, VTI, VT, IWM and AIQ hold, by asset category and top 25 holdings, quarter by quarter from late 2019.
+  - **World:** a map of stock-market capitalisation by country since 1975, or as a share of GDP.
+  - A time scrubber with play/pause moves each tab through its history. Every tab has a table view, keyboard controls, a screen-reader summary, a reduced-motion mode and a phone layout.
+  - Each tab names its source and shows when its data is from. If a source has never loaded, only that tab shows the Unavailable State.
+- **Daily market-data refresh**: a scheduled job fetches the SEC and World Bank data once a day and keeps the last good snapshot when a source fails (#219).
+  - SEC Public Float figures are cleaned before display: values far above a filer's total assets or its other years, and a reviewed list of misreported filings, are left out (#221).
+- **ADR 0009**: D3 is admitted for bespoke, interactive visualisations; Chart.js stays the default for standard charts (#218).
+
+### Changed
+
+- **Licence policy**: ISC-licensed dependencies are now allowed, alongside MIT, BSD and Apache 2.0 (#218).
+
+### Database
+
+- **New ResearchSnapshot table**: holds the market-data snapshots behind the Research page. It stores no user data. This schema migration makes this a major release.
+
 ## [4.4.0] - 2026-10-23
 
 ### Added

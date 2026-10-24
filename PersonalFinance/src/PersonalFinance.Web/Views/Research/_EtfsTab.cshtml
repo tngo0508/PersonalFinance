@@ -1,0 +1,89 @@
+@model ResearchViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+
+@{
+    EtfsPeriodDto? latest = Model.Etfs.LatestPeriod;
+    bool showEtfs = !Model.Etfs.Unavailable && latest is not null;
+    CultureInfo us = CultureInfo.GetCultureInfo("en-US");
+}
+
+@* The ETFs tab: a collapsible tree of what six ETFs hold (ETF, then N-PORT asset category, then holdings), one
+   quarter at a time. Drawn by js/research/research-etfs.js from the data island below; the scrubber, live region and
+   table view are wired by js/research/research-page.js. Hidden until its tab is chosen. *@
+<section class="research-deck research-deck--stacked" id="research-panel-etfs" role="tabpanel" aria-labelledby="research-tab-etfs" hidden>
+    @if (showEtfs)
+    {
+        <div class="research-scrubber" data-research-scrubber>
+            <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
+                    aria-label="Play through the quarters">
+                <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
+                <svg class="research-scrubber__icon research-scrubber__icon--pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+            </button>
+            <div class="research-scrubber__track">
+                <label class="visually-hidden" for="research-etfs-quarter">Quarter</label>
+                <input type="range" class="research-scrubber__range" id="research-etfs-quarter" data-research-range
+                       min="0" max="@(Model.Etfs.Snapshot!.Periods.Count - 1)" step="1" value="@(Model.Etfs.Snapshot.Periods.Count - 1)"
+                       aria-valuetext="@latest!.Period"/>
+                <div class="research-scrubber__ends" aria-hidden="true">
+                    <span>@Model.Etfs.Snapshot.Periods[0]</span>
+                    <span>@Model.Etfs.Snapshot.Periods[^1]</span>
+                </div>
+            </div>
+            <p class="research-scrubber__period" data-research-period aria-hidden="true">@latest.Period</p>
+        </div>
+    }
+    <div class="research-card">
+        <h2 class="research-card__title">What six ETFs hold</h2>
+        @if (!showEtfs)
+        {
+            <partial name="_UnavailableState" model="Model.Etfs.UnavailableState"/>
+        }
+        else
+        {
+            <p class="research-card__subtitle" id="research-etfs-subtitle">
+                Holdings reported for @latest!.Period, by asset category. Choose an ETF or a category to open or close
+                it; each category lists its 25 largest holdings.
+            </p>
+            <div class="research-etfs-tree" id="research-etfs-tree"></div>
+            <div class="research-tooltip" id="research-etfs-tooltip" aria-hidden="true" hidden></div>
+            <div class="research-card__actions">
+                <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
+                        aria-controls="research-etfs-table">Show as table</button>
+            </div>
+            <div class="research-table-host" id="research-etfs-table" data-research-table hidden></div>
+        }
+        <p class="research-card__source">Source: SEC EDGAR (Form N-PORT)</p>
+    </div>
+
+    <aside class="research-panel" aria-label="About the ETFs data">
+        @if (showEtfs)
+        {
+            <h2 class="research-panel__title">How to read the tree</h2>
+            <p>
+                Each circle's size follows its share of the fund's net assets. A filled circle has more inside it;
+                use Enter or Space on a focused item to open or close it, and the arrow keys to move between items.
+            </p>
+        }
+        <h2 class="research-panel__title">About this data</h2>
+        <p>
+            Funds report their holdings to the SEC on Form N-PORT. The reports for the last month of each fiscal
+            quarter are public, so the holdings are quarterly snapshots, not daily, and are published some weeks after
+            the date they are as of.
+        </p>
+        <p>
+            Shares are of each fund's net assets. VTI and VT are share classes of larger Vanguard funds, so their
+            figures are for the whole fund. Derivatives can show a small negative share.
+        </p>
+        <h2 class="research-panel__title">Data as of</h2>
+        <p class="research-panel__as-of">
+            @(Model.Etfs.AsOf is { } asOf ? asOf.ToString("d MMMM yyyy", us) : "Not loaded yet")
+        </p>
+    </aside>
+</section>
+
+@if (showEtfs)
+{
+    @* The ETFs snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-etfs.js. *@
+    <script type="application/json" id="research-etfs-data">@Json.Serialize(Model.Etfs.Snapshot)</script>
+}

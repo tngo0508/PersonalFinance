@@ -181,6 +181,8 @@ jobs:
           ASPNETCORE_ENVIRONMENT: Development
           DATABASE_PROVIDER: InMemory
           ConnectionStrings__DefaultConnection: InMemory:E2ETestApi
+          # Stores small Research fixture snapshots (Development only), so the walkthrough needs no SEC/World Bank.
+          E2E_SEED_RESEARCH: "true"
         run: |
           echo "Starting ApiService on port ${{ steps.ports.outputs.api_port }} (logs -> .api.log)"
           dotnet run --project PersonalFinance/src/PersonalFinance.ApiService \
@@ -640,6 +642,7 @@ jobs:
             openAiApiKey=${{ secrets.OPENAI_API_KEY }}
             rbacAdminEmail=${{ vars.RBAC_ADMIN_EMAIL || 'tngo0508@gmail.com' }}
             internalApiKey=${{ secrets.INTERNAL_API_KEY }}
+            secUserAgent=${{ vars.SEC_USER_AGENT || '' }}
             deploySqlDatabase=${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}
             sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
             customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}

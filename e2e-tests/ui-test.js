@@ -1,4 +1,5 @@
 const {chromium} = require('playwright');
+const {runResearchWalkthrough} = require('./research-walkthrough');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -788,6 +789,16 @@ const {chromium} = require('playwright');
             }
         } catch (error) {
             fail(`Register + Login flow failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9c: Research first-session walkthrough (spec #217): a fresh Account on seeded snapshots
+        // =========================================================
+        console.log('\n--- Test 9c: Research First-Session Walkthrough ---');
+        try {
+            await runResearchWalkthrough({browser, base, pass, fail, consoleErrors, pageErrors});
+        } catch (error) {
+            fail(`Research walkthrough failed: ${error.message}`);
         }
 
         // =========================================================

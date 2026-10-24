@@ -57,7 +57,7 @@ All paths are under `PersonalFinance/src/` unless noted.
 
 ## License policy
 
-Only MIT, BSD (2/3-clause) and Apache 2.0 dependencies. Check the license before adding any NuGet/npm package. **MediatR and AutoMapper are banned** (use direct DI and manual mapping). No GPL/AGPL/copyleft, no paid or dual-licensed packages.
+Only MIT, BSD (2/3-clause), Apache 2.0 and ISC dependencies ([ADR 0009](docs/adr/0009-adopt-d3-for-bespoke-interactive-visualisations.md)). Check the license before adding any NuGet/npm/libman package. **MediatR and AutoMapper are banned** (use direct DI and manual mapping). No GPL/AGPL/copyleft, no paid or dual-licensed packages.
 
 ## Security and validation
 

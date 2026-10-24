@@ -99,7 +99,7 @@ The step-by-step feature checklist is in [`docs/ARCHITECTURE.md`](docs/ARCHITECT
 
 ## Non-negotiables
 
-- Only MIT, BSD or Apache 2.0 dependencies. MediatR and AutoMapper are banned ([ADR 0001](docs/adr/0001-standardize-cqrs-feature-organization.md)).
+- Only MIT, BSD, Apache 2.0 or ISC dependencies. MediatR and AutoMapper are banned ([ADR 0001](docs/adr/0001-standardize-cqrs-feature-organization.md), [ADR 0009](docs/adr/0009-adopt-d3-for-bespoke-interactive-visualisations.md)).
 - Money is `decimal`, never `float` or `double`.
 - User-owned Entities are soft-deleted, never hard-deleted.
 - Never `[Required]` on a `bool`; add an explicit `ModelState` error instead.

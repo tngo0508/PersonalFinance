@@ -1210,6 +1210,47 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("PersonalFinance.Data.Entities.ResearchSnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("BuiltAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Dataset")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("FirstPeriod")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("LastPeriod")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly>("SourceAsOf")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Dataset")
+                        .IsUnique();
+
+                    b.ToTable("ResearchSnapshots");
+                });
+
             modelBuilder.Entity("PersonalFinance.Data.Entities.SavedArticle", b =>
                 {
                     b.Property<int>("Id")

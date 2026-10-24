@@ -82,16 +82,16 @@
       ]
     },
     {
-      "library": "@fluentui/web-components@3.0.0",
       "provider": "jsdelivr",
+      "library": "@fluentui/web-components@3.0.0",
       "destination": "wwwroot/lib/@fluentui/web-components",
       "files": [
         "dist/web-components.min.js"
       ]
     },
     {
-      "library": "@fluentui/tokens@1.0.0-alpha.23",
       "provider": "jsdelivr",
+      "library": "@fluentui/tokens@1.0.0-alpha.23",
       "destination": "wwwroot/lib/@fluentui/tokens",
       "files": [
         "lib/themes/web/lightTheme.js"
@@ -105,11 +105,34 @@
       ]
     },
     {
-      "library": "chartjs-chart-sankey@0.19.1",
       "provider": "jsdelivr",
+      "library": "chartjs-chart-sankey@0.19.1",
       "destination": "wwwroot/lib/chartjs-chart-sankey",
       "files": [
         "dist/chartjs-chart-sankey.min.js"
+      ]
+    },
+    {
+      "library": "d3@7.9.0",
+      "destination": "wwwroot/lib/d3",
+      "files": [
+        "d3.min.js"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "topojson-client@3.1.0",
+      "destination": "wwwroot/lib/topojson-client",
+      "files": [
+        "dist/topojson-client.min.js"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "world-atlas@2.0.2",
+      "destination": "wwwroot/lib/world-atlas",
+      "files": [
+        "countries-110m.json"
       ]
     }
   ]
