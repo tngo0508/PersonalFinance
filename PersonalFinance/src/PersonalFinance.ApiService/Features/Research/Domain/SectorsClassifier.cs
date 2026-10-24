@@ -17,6 +17,9 @@ internal sealed class SectorsClassifier
     /// <summary>The industry of a filer SEC has no SIC code for.</summary>
     public const string UnclassifiedIndustry = "Unclassified";
 
+    /// <summary>The name of SEC's Technology office (<c>06 Technology</c>).</summary>
+    private const string TechnologyOffice = "Technology";
+
     private static readonly HashSet<string> SmallWords = new(StringComparer.Ordinal) { "of", "and", "the", "for" };
 
     private static readonly SectorsOffice Unassigned = new(int.MaxValue, UnassignedOffice);
@@ -58,6 +61,16 @@ internal sealed class SectorsClassifier
             : TitleCase(filer.SicDescription ?? filer.SicCode);
         return new SectorsPlacement(office, filer.SicCode, industry);
     }
+
+    /// <summary>
+    /// Whether filers of this office and SIC code are lit by the "Technology (incl. chip makers)" highlight: the SEC
+    /// Technology office, plus SIC 3570-3579 (computer and office equipment) and 3670-3679 (electronic components and
+    /// semiconductors), because SEC files chip makers such as NVIDIA and Broadcom under Manufacturing.
+    /// </summary>
+    public static bool IsTechnology(string office, string? sicCode) =>
+        office == TechnologyOffice
+        || (int.TryParse(sicCode, NumberStyles.None, CultureInfo.InvariantCulture, out int sic)
+            && sic is (>= 3570 and <= 3579) or (>= 3670 and <= 3679));
 
     /// <summary>
     /// A company name for display: SEC's name without its state-of-incorporation suffix (<c>APPLE INC /CA/</c>,

@@ -64,6 +64,12 @@
                     The @latest!.Ranked.Count largest of @((latest.Ranked.Count + latest.RestCount).ToString("N0", CultureInfo.GetCultureInfo("en-US"))) filers in @latest.Period,
                     by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.
                 </p>
+                <div class="research-sunburst__toolbar">
+                    <button type="button" class="research-chip" id="research-zoom-out" aria-disabled="true">
+                        Zoom out
+                    </button>
+                    <p class="research-sunburst__focus" id="research-sunburst-focus"></p>
+                </div>
                 @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made. *@
                 <div class="research-sunburst" id="research-sunburst"></div>
                 <div class="research-tooltip" id="research-tooltip" aria-hidden="true" hidden></div>
@@ -79,18 +85,30 @@
         <aside class="research-panel" aria-label="About the Sectors data">
             @if (showSectors)
             {
+                <h2 class="research-panel__title">View options</h2>
+                <button type="button" class="research-chip" id="research-tech-toggle" aria-pressed="false"
+                        aria-describedby="research-tech-note">
+                    Technology (incl. chip makers)
+                </button>
+                <p class="research-panel__note" id="research-tech-note">
+                    Lights SEC's Technology office plus computer hardware and semiconductor makers (SIC 3570–3579 and
+                    3670–3679), which SEC reviews under Manufacturing.
+                </p>
+                <p class="research-panel__tech-share" id="research-tech-share" hidden></p>
                 <h2 class="research-panel__title">SEC industry offices</h2>
+                <p class="research-panel__note">Choose an office to zoom into it.</p>
                 <ul class="research-legend" id="research-sectors-legend"></ul>
             }
             <h2 class="research-panel__title">About this data</h2>
             <p>
                 Public float is the market value of a company's shares held by investors other than its insiders, as
-                the company reports it once a year to the SEC. It leaves out insiders' shares, so it is smaller than
-                the company's total value.
+                the company reports it once a year to the SEC. It leaves out insiders' holdings, so it is smaller than
+                the company's total value, and it changes only once a year.
             </p>
             <p>
-                Only companies that file with the SEC are included, so many small and foreign companies are missing.
-                Each company is grouped by the SEC office that reviews its filings and by its SIC industry code.
+                Only US SEC filers are included, so small companies and some foreign companies (those filing annual
+                reports on Form 20-F) are missing. Each company is grouped by the SEC office that reviews its filings
+                and by its SIC industry code.
             </p>
             <h2 class="research-panel__title">Data as of</h2>
             <p class="research-panel__as-of">

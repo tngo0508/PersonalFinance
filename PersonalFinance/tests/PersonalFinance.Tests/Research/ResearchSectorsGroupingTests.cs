@@ -109,6 +109,34 @@ public class ResearchSectorsGroupingTests
     }
 
     [Fact]
+    public async Task RefreshAsync_FlagsTechnology_ForTheTechnologyOffice_AndSic3570To3579And3670To3679_Only()
+    {
+        await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
+        var handler = new StubSecHandler();
+        (string Sic, string OwnerOrg)[] industries =
+        [
+            ("7372", "06 Technology"), // the Technology office, whatever its SIC code
+            ("3570", "04 Manufacturing"), ("3579", "04 Manufacturing"), // computer and office equipment
+            ("3670", "04 Manufacturing"), ("3679", "04 Manufacturing"), // electronic components (NVIDIA files 3674)
+            ("3569", "04 Manufacturing"), ("3580", "04 Manufacturing"), // just outside 3570-3579
+            ("3669", "04 Manufacturing"), ("3680", "04 Manufacturing"), // just outside 3670-3679
+            ("6022", "02 Finance"),
+        ];
+        handler.Frames["CY2025Q2I"] = industries.Select((_, i) => new Filer(i + 1, $"FILER {i + 1}", (i + 1) * 10m)).ToList();
+        for (int i = 0; i < industries.Length; i++)
+        {
+            handler.Submissions[i + 1] = new Submission($"FILER {i + 1}", industries[i].Sic, $"SIC {industries[i].Sic}",
+                industries[i].OwnerOrg);
+        }
+
+        SectorsSnapshotDto snapshot = await RefreshAndReadAsync(CreateService(db, handler));
+
+        Assert.Equal(["3570", "3579", "3670", "3679", "7372"],
+            snapshot.Industries.Where(i => i.Technology).Select(i => i.SicCode).Order(StringComparer.Ordinal));
+        Assert.Equal(5, snapshot.Industries.Count(i => !i.Technology));
+    }
+
+    [Fact]
     public async Task RefreshAsync_TitleCasesNames_AndTakesTheTickerFromTheSubmissions()
     {
         await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
