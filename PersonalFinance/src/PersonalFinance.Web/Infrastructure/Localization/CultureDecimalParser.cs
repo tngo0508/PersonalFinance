@@ -4,7 +4,7 @@ namespace PersonalFinance.Web.Infrastructure.Localization;
 
 /// <summary>
 /// Reads a typed amount in a culture, strictly (spec §2.2, §5): an optional leading minus, digits with group separators
-/// only between groups of three, and at most one decimal separator followed by digits. <c>1.234,56</c> is 1234.56 in
+/// only between groups of three, and at most one decimal separator followed by digits (or by nothing: <c>1.234,</c>). <c>1.234,56</c> is 1234.56 in
 /// vi-VN; <c>1234.56</c> and <c>1.5</c> are rejected there, where a lenient parse reads 123456 and 15. No currency
 /// symbol, exponent, parentheses or trailing sign. The same rules are <c>PFI18n.parseNumber</c> in <c>core/i18n.js</c>.
 /// </summary>
@@ -41,14 +41,20 @@ internal static class CultureDecimalParser
             return false; // malformed grouping
         }
 
-        if (fraction is not null && (fraction.Length == 0 || !fraction.All(char.IsAsciiDigit)))
+        if (fraction is not null && !fraction.All(char.IsAsciiDigit))
         {
             return false;
         }
 
-        if (integerDigits.Length == 0 && fraction is null)
+        // A decimal separator with no digits yet ("1.234," while typing) is the integer; a lone separator is nothing.
+        if (integerDigits.Length == 0 && string.IsNullOrEmpty(fraction))
         {
             return false;
+        }
+
+        if (fraction is { Length: 0 })
+        {
+            fraction = null;
         }
 
         string invariant = (negative ? "-" : string.Empty)

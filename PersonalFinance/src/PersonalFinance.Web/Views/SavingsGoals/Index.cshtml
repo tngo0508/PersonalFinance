@@ -126,8 +126,8 @@
                            translation puts it. *@
                         <div class="savings-goal-amounts">
                             @L.NamedHtml("SavingsGoals.Card.Progress", "savings-goal-separator",
-                                ("current", new HtmlString($"<span class=\"savings-goal-current\">${goal.CurrentAmount:N0}</span>")),
-                                ("target", new HtmlString($"<span class=\"savings-goal-target\">${goal.TargetAmount:N0}</span>")))
+                                ("current", new HtmlString($"<span class=\"savings-goal-current\">{MoneyFormatter.FormatWhole(goal.CurrentAmount, SupportedCurrencies.Default.Code)}</span>")),
+                                ("target", new HtmlString($"<span class=\"savings-goal-target\">{MoneyFormatter.FormatWhole(goal.TargetAmount, SupportedCurrencies.Default.Code)}</span>")))
                         </div>
 
                         <!-- Progress Bar with Percentage Overlay -->
@@ -155,7 +155,7 @@
                             else
                             {
                                 <span class="savings-goal-remaining">
-                                    @L.Named("SavingsGoals.Card.Remaining", ("amount", "$" + remaining.ToString("N0")))
+                                    @L.Named("SavingsGoals.Card.Remaining", ("amount", MoneyFormatter.FormatWhole(remaining, SupportedCurrencies.Default.Code)))
                                 </span>
                             }
                             @if (goal.TargetDate.HasValue)

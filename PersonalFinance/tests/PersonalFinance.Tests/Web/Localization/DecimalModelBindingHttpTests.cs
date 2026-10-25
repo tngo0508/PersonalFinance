@@ -64,6 +64,7 @@ public sealed class DecimalModelBindingHttpTests : IAsyncLifetime
     [InlineData("-1,234.56", "-1234.56")]
     [InlineData(".5", "0.5")]
     [InlineData(" 1,234.50 ", "1234.50")]
+    [InlineData("1,234.", "1234")] // a decimal point typed with no digits yet
     [InlineData("1234.565", "1234.565")]
     [InlineData("12345678901234567.89", "12345678901234567.89")]
     public async Task EnUs_BindsEnglishNumbers(string posted, string expected)
@@ -78,6 +79,7 @@ public sealed class DecimalModelBindingHttpTests : IAsyncLifetime
     [InlineData("1.234.567", "1234567")]
     [InlineData("-1.234,56", "-1234.56")]
     [InlineData(",5", "0.5")]
+    [InlineData("1.234,", "1234")]
     [InlineData("1.234,565", "1234.565")]
     [InlineData("12.345.678.901.234.567,89", "12345678901234567.89")]
     public async Task ViVn_BindsVietnameseNumbers(string posted, string expected)
@@ -111,7 +113,7 @@ public sealed class DecimalModelBindingHttpTests : IAsyncLifetime
     [InlineData("1e3")]
     [InlineData("$1,234.56")]
     [InlineData("(1,234.56)")]
-    [InlineData("1,234.")]
+    [InlineData(".")]
     [InlineData("1,,234")]
     [InlineData(",234")]
     [InlineData("--1")]

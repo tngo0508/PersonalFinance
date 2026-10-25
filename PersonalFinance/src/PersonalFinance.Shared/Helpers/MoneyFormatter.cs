@@ -27,6 +27,19 @@ public static class MoneyFormatter
     public static string FormatWhole(decimal amount, string currencyCode, CultureInfo? culture = null) =>
         Format(amount, Currency(currencyCode), wholeUnits: true, culture ?? CultureInfo.CurrentCulture);
 
+    /// <summary>
+    /// The amount alone, without the symbol, grouped and with the currency's minor units (<c>1.234,50</c> in vi-VN): the
+    /// value of a money input, which the culture-aware model binder reads back.
+    /// </summary>
+    /// <exception cref="ArgumentException">The currency is not in <see cref="SupportedCurrencies"/>.</exception>
+    public static string FormatAmount(decimal amount, string currencyCode, CultureInfo? culture = null)
+    {
+        int decimals = Currency(currencyCode).MinorUnits;
+        decimal rounded = Math.Round(amount, decimals, MidpointRounding.AwayFromZero);
+        return (rounded == 0m ? 0m : rounded).ToString("N" + decimals.ToString(CultureInfo.InvariantCulture),
+            culture ?? CultureInfo.CurrentCulture);
+    }
+
     private static SupportedCurrency Currency(string currencyCode) =>
         SupportedCurrencies.Find(currencyCode)
         ?? throw new ArgumentException($"'{currencyCode}' is not a supported currency.", nameof(currencyCode));

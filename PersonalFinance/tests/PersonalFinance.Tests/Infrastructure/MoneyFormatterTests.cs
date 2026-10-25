@@ -103,6 +103,18 @@ public class MoneyFormatterTests
     }
 
     [Theory]
+    [InlineData("en-US", "USD", 1234.5, "1,234.50")]
+    [InlineData("vi-VN", "USD", 1234.5, "1.234,50")]
+    [InlineData("vi-VN", "VND", 1234567.5, "1.234.568")]
+    [InlineData("en-US", "USD", 0, "0.00")]
+    [InlineData("en-US", "USD", -12.345, "-12.35")]
+    public void FormatAmount_IsTheNumberWithoutTheSymbol_AsAMoneyInputShowsIt(string culture, string currency,
+        decimal amount, string expected)
+    {
+        Assert.Equal(expected, MoneyFormatter.FormatAmount(amount, currency, CultureInfo.GetCultureInfo(culture)));
+    }
+
+    [Theory]
     [InlineData("EUR")]
     [InlineData("usd")]
     [InlineData("")]
