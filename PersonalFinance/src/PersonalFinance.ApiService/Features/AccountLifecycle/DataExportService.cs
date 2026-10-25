@@ -175,6 +175,31 @@ internal sealed class DataExportService : IDataExportService
             })
             .ToListAsync(cancellationToken);
 
+        export.PriorityWalks = await _db.PriorityWalks.AsNoTracking()
+            .Where(w => w.UserId == userId)
+            .OrderBy(w => w.CreatedAt).ThenBy(w => w.Id)
+            .Select(w => new DataExportPriorityWalkDto
+            {
+                MonthlyAmount = w.MonthlyAmount,
+                Purpose = w.Purpose,
+                DebtApr = w.DebtApr,
+                DebtBalance = w.DebtBalance,
+                EmergencyFundMonths = w.EmergencyFundMonths,
+                MonthlyExpenses = w.MonthlyExpenses,
+                HasFullEmployerMatch = w.HasFullEmployerMatch,
+                EmployerMatchPercent = w.EmployerMatchPercent,
+                HorizonYears = w.HorizonYears,
+                AgeBand = w.AgeBand,
+                AtContributionLimit = w.AtContributionLimit,
+                TreeVersion = w.TreeVersion,
+                LimitsTaxYear = w.LimitsTaxYear,
+                Path = w.Path,
+                LeafId = w.LeafId,
+                PurposeNote = w.PurposeNote,
+                CreatedAtUtc = w.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
         export.Community = await CommunityAsync(userId, cancellationToken);
 
         export.Feedback = (await _db.Feedback.AsNoTracking()

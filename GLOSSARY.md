@@ -242,6 +242,27 @@ _Avoid_: State, resolution
 ### Google Drive Integration
 Connection to Google Drive for spreadsheet synchronization. Manages OAuth connections, folder exploration, and file caching.
 
+### Money Priorities
+The signed-in page where a user with extra money each month answers a few questions and is shown which priority to put
+it toward first.
+
+### Priority Tree
+The fixed, authored set of questions and outcomes that Money Priorities walks through, the same for every Account.
+_Avoid_: decision tree (the chart type), plan
+
+### Priority Walk
+One saved pass through the Priority Tree: an Account's answers, the path they lead to and the priority at its end.
+_Avoid_: session, result, assessment
+
+### Purpose
+What the user says they want their money to do, in their own words, entered on Money Priorities. Optional.
+_Avoid_: goal (that is a Savings Goal), intent
+
+### Purpose Note
+The short AI-written text under a Walk's result that explains how the suggested priority serves the user's Purpose. It
+never changes the suggestion.
+_Avoid_: AI note, advice, recommendation
+
 ### Savings Goals
 Target savings goals tracking with progress monitoring.
 
