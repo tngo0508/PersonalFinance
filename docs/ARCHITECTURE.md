@@ -2,7 +2,8 @@
 
 How the Personal Finance App is put together, how a request flows through it, and where to put new code.
 Terms (Service, DTO, Entity, Account, Policy, ...) are defined in [`GLOSSARY.md`](../GLOSSARY.md). The reasons behind the
-big decisions are in [`docs/adr/`](adr/).
+big decisions are in [`docs/adr/`](adr/). Diagrams of the data model, each Feature's shape and the cross-cutting
+flows (identity, account lifecycle, budget data source, Research, Unavailable State) are in [`DIAGRAMS.md`](DIAGRAMS.md).
 
 ## Projects
 
@@ -72,6 +73,8 @@ sequenceDiagram
     WC-->>B: View model / JSON
 ```
 
+The same flow with the authentication handler and both error paths is diagram 5 in [`DIAGRAMS.md`](DIAGRAMS.md).
+
 Responsibilities per step:
 
 | Step | Owns | Never does |
@@ -97,6 +100,8 @@ There is no mediator: ApiService controllers inject Service interfaces directly
    (`PersonalFinance.Shared/Helpers/ClaimsPrincipalExtensions.cs`). Admin endpoints use
    `[Authorize(Policy = AppPolicies.RequireAdmin)]`, never Role names ([ADR 0004](adr/0004-rbac-roles-from-database-and-policy-checks.md)).
 
+The Web and ApiService principals side by side, with the Policy checks, are diagram 6 in [`DIAGRAMS.md`](DIAGRAMS.md).
+
 Rules for new code:
 
 - Never read the `X-User-Id` header in a controller, and never accept a user id from the query string or request body.
@@ -114,6 +119,7 @@ Rules for new code:
 - Reads use `AsNoTracking()`, async methods and deterministic ordering.
 - Budget data has two sources (Google Sheet and Budget Tracker), always read through `IBudgetDataProvider`
   ([ADR 0002](adr/0002-budget-tracker-separate-from-spreadsheet-data.md)).
+- Every Entity, with columns, keys and delete behaviour, is drawn in diagram 4 of [`DIAGRAMS.md`](DIAGRAMS.md).
 
 ## Adding a feature: checklist
 
@@ -197,5 +203,7 @@ A Web controller is named after its route, so its name can differ from its Featu
 9. Bump `AppVersion` and add its `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md` (see
    [`CONTRIBUTING.md`](../CONTRIBUTING.md)). The merge becomes a GitHub Release of its own
    ([ADR 0006](adr/0006-one-release-per-merged-pr.md)).
+ 10. **Diagrams**: a new Entity, Feature, Infrastructure abstraction or scheduled job gets its diagram or [Feature map](DIAGRAMS.md#3-feature-map)
+    row in [`DIAGRAMS.md`](DIAGRAMS.md) updated.
 
 Coding rules for each of these steps are in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).

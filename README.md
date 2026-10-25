@@ -7,6 +7,7 @@
 A modular, multi-tier personal finance management application built on **.NET 10** with a **layered architecture** and **.NET Aspire**. Connect Google Drive folders, analyze budget spreadsheets, and plan for financial independence — all from a responsive, self-hosted web interface.
 
 > **New contributor?** Start with [CONTRIBUTING.md](CONTRIBUTING.md), then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).  
+> **Diagrams**: data model, Feature anatomy, identity, account lifecycle, Research and the other cross-cutting flows — see [docs/DIAGRAMS.md](docs/DIAGRAMS.md).  
 > **Developer Guide**: Local setup, secrets management, EF Core migrations, OAuth configuration, and troubleshooting — see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).  
 > **Deployment Guide**: Azure Container Apps, Docker, CI/CD pipelines, and Infrastructure as Code — see [docs/deployment.md](docs/deployment.md).  
 > **Changelog**: Version history and release notes — see [CHANGELOG.md](CHANGELOG.md).

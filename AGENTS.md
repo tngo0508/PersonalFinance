@@ -13,6 +13,7 @@ Short, always-loaded rules for AI agents. The full detail lives in [`docs/CODING
 
 - [`GLOSSARY.md`](GLOSSARY.md) — canonical terms (Service, DTO, Entity) and domain concepts.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — request flow, identity flow, and the add-a-feature checklist.
+- [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) — diagrams: data model, each Feature's shape, identity, lifecycle, budget source, Research, Unavailable State. Update it when you add an Entity, a Feature, an Infrastructure abstraction or a job.
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records.
 - `PersonalFinance/tests/PersonalFinance.Tests/` — xUnit tests using `UseInMemoryDatabase`. Add tests here, following existing patterns (e.g. `DashboardServiceTests.cs`). InMemory runs queries Azure SQL can't: see step 8 of the add-a-feature checklist in `docs/ARCHITECTURE.md`.
 

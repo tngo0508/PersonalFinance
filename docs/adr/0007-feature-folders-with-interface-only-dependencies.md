@@ -91,3 +91,4 @@ with an enforced complexity ceiling.
 - ADR 0001 – Direct service injection and the license policy (§3 superseded by this ADR).
 - ADR 0002 – Budget Tracker data read through a source-selected provider.
 - ADR 0006 – One Release per merged PR.
+- [`docs/DIAGRAMS.md`](../DIAGRAMS.md#2-anatomy-of-a-feature) — the canonical Feature drawn as a class diagram, and the per-Feature map.

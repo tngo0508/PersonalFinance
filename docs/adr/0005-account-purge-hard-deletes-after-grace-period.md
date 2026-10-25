@@ -74,3 +74,4 @@ deletion alone. The original #65 asked for soft deletion only.
 
 - [0004 – RBAC: ApiService Reads Roles from the Database, Code Checks Policies](0004-rbac-roles-from-database-and-policy-checks.md)
 - [0011 – Production Stays Warm 08:00–22:00 Pacific, Scales to Zero Overnight](0011-warm-window-instead-of-always-on-replicas.md)
+- [`docs/DIAGRAMS.md`](../DIAGRAMS.md#7-account-lifecycle) — state and sequence diagrams of the Deletion Request, cancel and Purge.
