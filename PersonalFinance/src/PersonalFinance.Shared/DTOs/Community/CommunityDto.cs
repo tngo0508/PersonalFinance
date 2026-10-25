@@ -87,6 +87,8 @@ public sealed class CommunityPollDto
 /// </summary>
 public sealed class CommunityStatDto
 {
+    /// <summary>Stable identifier the Web page translates the title and description by, e.g. <c>ActivePolls</c>.</summary>
+    public string Key { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.3.0] - 2026-10-25
+
+### Added
+
+- **Community page in Vietnamese**: the Community page's own wording (headings, stats, buttons, the story form, toasts and error messages) follows the chosen language (slice L3 of the localization spec, #358).
+  - Polls, stories, comments and author names are user content and stay as written; they are never translated.
+  - Poll and story category labels are translated; the stored category value does not change.
+  - Vote counts use plural forms, and "5m ago"-style times are translated.
+
 ## [7.2.0] - 2026-10-25
 
 ### Added
