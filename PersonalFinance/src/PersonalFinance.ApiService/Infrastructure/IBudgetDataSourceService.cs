@@ -28,4 +28,16 @@ public interface IBudgetDataSourceService
     /// Gets the currently active budget data source for the user.
     /// </summary>
     Task<BudgetDataSource> GetActiveSourceAsync(string userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Counts the user's months and transactions in each Data Source, Google Sheet first.
+    /// </summary>
+    Task<List<BudgetDataSourceSummaryDto>> GetDataSummariesAsync(string userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// After a Data Source Removal: soft-deletes the stored preference if it points at the removed source, so the
+    /// read-time default picks the source again (ADR 0002), and raises <see cref="PreferenceChanged"/> either way.
+    /// </summary>
+    Task ForgetRemovedSourceAsync(string userId, BudgetDataSource removedSource, DateTime deletedAt,
+        CancellationToken ct = default);
 }

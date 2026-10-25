@@ -26,6 +26,16 @@
             </div>
             <div class="analysis-page-header__controls">
                 <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
+                @if (Model.RemovableSources.Any())
+                {
+                    <div class="analysis-source-removal mt-1 small">
+                        @foreach (BudgetDataSource source in Model.RemovableSources)
+                        {
+                            <a asp-action="RemoveSource" asp-route-source="@source"
+                               class="link-danger me-3">Remove @RemoveSourceViewModel.SourceDisplayName(source) data…</a>
+                        }
+                    </div>
+                }
             </div>
         </div>
     </header>

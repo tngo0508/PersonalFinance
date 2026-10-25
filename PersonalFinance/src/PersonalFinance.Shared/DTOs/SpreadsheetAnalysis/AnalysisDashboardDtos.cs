@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
@@ -10,6 +11,10 @@ public class AnalysisDashboardDto
     public List<int> AvailableYears { get; set; } = new();
     public List<int> AvailableMonths { get; set; } = new();
     public BudgetDataSource ActiveSource { get; set; } = BudgetDataSource.GoogleSheet;
+
+    /// <summary>How much data each Data Source holds, Google Sheet first; Analysis offers removal for those with data.</summary>
+    public List<BudgetDataSourceSummaryDto> SourceSummaries { get; set; } = new();
+
     public SummaryStatisticsDto? Summary { get; set; }
     public SpendingVelocityDto? Velocity { get; set; }
     public TrendDataDto? Trends { get; set; }

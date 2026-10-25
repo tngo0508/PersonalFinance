@@ -1,4 +1,5 @@
 @using PersonalFinance.Shared.DTOs.GoogleDrive
+@using PersonalFinance.Shared.Enums
 @using PersonalFinance.Shared.Helpers
 @using PersonalFinance.Web.TagHelpers
 @model GoogleDriveViewModel
@@ -1165,6 +1166,10 @@
                     <p class="mb-0">
                         This disconnects the folder and clears its @currentConn.CachedFilesCount saved items from this app.
                         Nothing is deleted from your Google Drive, and you can reconnect it anytime.
+                    </p>
+                    <p class="small text-muted mt-2 mb-0">
+                        Budget data you already synced stays in Analysis. To delete it, use
+                        <a asp-controller="Analysis" asp-action="RemoveSource" asp-route-source="@BudgetDataSource.GoogleSheet">Remove Google Sheet data</a>.
                     </p>
                 </div>
                 <div class="modal-footer border-top">

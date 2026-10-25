@@ -887,4 +887,20 @@ public class FakeBudgetTrackerApi : IBudgetTrackerApi
             ? Task.FromException<BudgetDataSourceDto>(Failure)
             : Task.FromResult(new BudgetDataSourceDto { Source = request.Source, IsDefault = false });
     }
+
+    public List<BudgetDataSourceSummaryDto> DataSourceSummaries { get; set; } = new();
+    public int RemoveDataCalls { get; private set; }
+
+    public Task<List<BudgetDataSourceSummaryDto>> GetDataSourceSummariesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(DataSourceSummaries);
+    }
+
+    public Task<BudgetDataSourceSummaryDto> RemoveDataAsync(CancellationToken cancellationToken = default)
+    {
+        RemoveDataCalls++;
+        return Task.FromResult(DataSourceSummaries.FirstOrDefault(s => s.Source == BudgetDataSource.BudgetTracker)
+                               ?? new BudgetDataSourceSummaryDto { Source = BudgetDataSource.BudgetTracker });
+    }
 }

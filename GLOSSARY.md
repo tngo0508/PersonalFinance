@@ -207,6 +207,14 @@ follows the kind of its category.
 The choice between the synced Google Sheet data and Budget Tracker data that Analysis and the Dashboard budget views
 display. The source applies to a whole view and is never mixed within one month.
 
+### Data Source Removal
+
+The user deleting all of one Data Source's data: for the Google Sheet, every synced month; for the Budget Tracker, every
+category, plan and transaction, returning it to its first-use state. It does not disconnect Google Drive, and
+disconnecting Google Drive does not remove synced data. Afterwards the Data Source falls back to the source that still
+has data.
+_Avoid_: disconnect, reset, unlink (those mean other things)
+
 ### Global Search
 The search in the top bar for signed-in users. It finds the user's own records by text: transactions and Budget
 Categories from their current Data Source, and their Savings Goals. Selecting a result opens the page that holds it.

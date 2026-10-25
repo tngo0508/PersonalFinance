@@ -20,6 +20,7 @@ public class BudgetTrackerController : ControllerBase
 {
     private readonly IMonthlyBudgetService _budgetService;
     private readonly IBudgetDataSourceService _dataSourceService;
+    private readonly IBudgetTrackerRemovalService _removalService;
     private readonly IValidator<InitializeMonthRequest> _initializeMonthValidator;
     private readonly IValidator<SaveCategoryRequest> _saveCategoryValidator;
     private readonly IValidator<SaveTransactionRequest> _saveTransactionValidator;
@@ -35,10 +36,12 @@ public class BudgetTrackerController : ControllerBase
         IValidator<SetActualOverrideRequest> setActualOverrideValidator,
         IValidator<SaveCategoryRequest> saveCategoryValidator,
         IValidator<SaveTransactionRequest> saveTransactionValidator,
-        IValidator<SetBudgetDataSourceRequest> setDataSourceValidator)
+        IValidator<SetBudgetDataSourceRequest> setDataSourceValidator,
+        IBudgetTrackerRemovalService removalService)
     {
         _budgetService = budgetService;
         _dataSourceService = dataSourceService;
+        _removalService = removalService;
         _initializeMonthValidator = initializeMonthValidator;
         _setPlannedValidator = setPlannedValidator;
         _setActualOverrideValidator = setActualOverrideValidator;
@@ -364,5 +367,29 @@ public class BudgetTrackerController : ControllerBase
         string userId = User.GetUserId();
         BudgetDataSourceDto preference = await _dataSourceService.SetDataSourcePreferenceAsync(userId, request, ct);
         return Ok(preference);
+    }
+
+    /// <summary>
+    /// Gets how many months and transactions each Data Source holds for the user, Google Sheet first.
+    /// </summary>
+    [HttpGet("data-source/summaries")]
+    [ProducesResponseType(typeof(List<BudgetDataSourceSummaryDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDataSourceSummaries(CancellationToken ct = default)
+    {
+        string userId = User.GetUserId();
+        List<BudgetDataSourceSummaryDto> summaries = await _dataSourceService.GetDataSummariesAsync(userId, ct);
+        return Ok(summaries);
+    }
+
+    /// <summary>
+    /// Removes (soft-deletes) all of the user's Budget Tracker data: the Data Source Removal of ADR 0002.
+    /// </summary>
+    [HttpDelete("data")]
+    [ProducesResponseType(typeof(BudgetDataSourceSummaryDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RemoveData(CancellationToken ct = default)
+    {
+        string userId = User.GetUserId();
+        BudgetDataSourceSummaryDto removed = await _removalService.RemoveAsync(userId, ct);
+        return Ok(removed);
     }
 }

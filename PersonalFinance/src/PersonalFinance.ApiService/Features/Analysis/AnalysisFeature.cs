@@ -8,10 +8,11 @@ namespace PersonalFinance.ApiService.Features.Analysis;
 /// </summary>
 internal static class AnalysisFeature
 {
-    /// <summary>Spreadsheet Analysis: the analysis dashboard and the Google Sheet sync.</summary>
+    /// <summary>Spreadsheet Analysis: the analysis dashboard, the Google Sheet sync and its removal.</summary>
     public static IServiceCollection AddAnalysisFeature(this IServiceCollection services)
     {
         services.AddScoped<ISpreadsheetAnalysisService, SpreadsheetAnalysisService>();
+        services.AddScoped<IGoogleSheetRemovalService, GoogleSheetRemovalService>();
         return services;
     }
 }

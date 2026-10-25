@@ -56,6 +56,21 @@ find their transactions. It now resolves the user's Data Source with the same ru
 that source's transactions. It does not read through the provider, because it needs the source decision but not month
 data.
 
+### 4. Data Source Removal
+
+_Amended 2026-10-24:_ A user can remove one Data Source's data from Analysis. Removing the Google Sheet soft-deletes
+all of the user's synced snapshots and transaction records. Removing the Budget Tracker soft-deletes all of its
+categories, plans, lines and transactions, so default categories are seeded again on next use. The rows stay
+soft-deleted until the account Purge; there is no restore.
+
+Removal and the Google Drive connection are independent on purpose. Removing the Google Sheet leaves the Drive
+connection in place, so the user can sync again. Removing a Drive connection leaves its synced data in place, so a user
+can drop the connection and keep their history. Both confirmations say so.
+
+If the stored preference points at the removed source, removal soft-deletes the preference, so the read-time default
+rule picks the source again. This is the one case where a stored preference changes without the user switching. A
+preference that points at the other source is kept. The provider's cached source is dropped either way.
+
 ## Consequences
 
 **Positive:**

@@ -9,10 +9,11 @@ namespace PersonalFinance.ApiService.Features.BudgetTracker;
 /// </summary>
 internal static class BudgetTrackerFeature
 {
-    /// <summary>The in-app monthly budget: plans, transactions and Actual Overrides.</summary>
+    /// <summary>The in-app monthly budget: plans, transactions and Actual Overrides, and their removal.</summary>
     public static IServiceCollection AddBudgetTrackerFeature(this IServiceCollection services)
     {
         services.AddScoped<IMonthlyBudgetService, MonthlyBudgetService>();
+        services.AddScoped<IBudgetTrackerRemovalService, BudgetTrackerRemovalService>();
         return services;
     }
 }
