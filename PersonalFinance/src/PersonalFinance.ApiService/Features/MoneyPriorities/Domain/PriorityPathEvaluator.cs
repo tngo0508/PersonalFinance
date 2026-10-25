@@ -80,5 +80,5 @@ internal static class PriorityPathEvaluator
 
     private static T Required<T>(T? answer, string name)
         where T : struct =>
-        answer ?? throw new ArgumentException($"The path asks for {name}, but it has no answer.", "answers");
+        answer ?? throw new ArgumentException($"The path asks for {name}, but it has no answer.");
 }
