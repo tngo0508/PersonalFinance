@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [6.2.1] - 2026-10-25
+
+### Fixed
+
+- **Custom domain HTTPS on deploy**: the deploy and rollback workflows now pass the `CUSTOM_DOMAIN_CERTIFICATE_ID` repository variable to the Bicep, so a deploy keeps the custom domain's managed certificate bound instead of rebinding the domain with HTTPS off.
+
+### Changed
+
+- **Custom domain runbook**: `docs/CUSTOM_DOMAIN.md` now sets up a subdomain such as `www` with CNAME records and CNAME validation, keeps the apex as an alternative, and covers switching hostnames and PowerShell quoting.
+  - A production setup log lists every command used for `www.personalfinancex.com`, ready to run in PowerShell.
+
+---
+
 ## [6.2.0] - 2026-10-25
 
 ### Added
