@@ -57,6 +57,8 @@ WORKDIR "/src/PersonalFinance/src/PersonalFinance.ApiService"
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 ARG RUNTIME_IDENTIFIER=linux-x64
+# CI passes AppVersion.Current; 1.0.0 is the SDK default a build without it already gets
+ARG APP_VERSION=1.0.0
 # publish compiles the project itself, so there is no separate `dotnet build` step (saves a full compile per image)
 # ReadyToRun (R2R) pre-compiles IL to native code, reducing cold-start JIT by ~30-50%
 # NOTE: Trimming is DISABLED because EF Core uses reflection-heavy patterns (Include, ThenInclude,
@@ -69,7 +71,8 @@ RUN dotnet publish "PersonalFinance.ApiService.csproj" \
     /p:UseAppHost=false \
     /p:PublishReadyToRun=true \
     /p:PublishReadyToRunComposite=true \
-    /p:IlcOptimization=speed
+    /p:IlcOptimization=speed \
+    /p:Version=$APP_VERSION
 
 # ---------------------------------------------------------
 # Stage 4: Production Final Runtime

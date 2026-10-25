@@ -1,0 +1,234 @@
+name: Roll Back to a Release
+
+# Redeploys the container images a release tag was built from (ghcr.io/<owner>/personalfinance-{api,web}:<short-sha>),
+# with the same deploy and smoke-test steps as deploy-azure.yml (.github/actions/). Only the images roll back: the
+# Bicep template, secrets and settings come from main, and no git tag or GitHub Release is created, moved or deleted.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to redeploy (e.g. v5.9.0)'
+        required: true
+        type: string
+      environment:
+        description: 'Azure Environment Name prefix (e.g. pf-prod)'
+        required: false
+        default: 'pf-prod'
+        type: string
+      deploy_sql:
+        description: 'Provision Azure SQL Database Serverless Free Tier ($0.00)'
+        required: false
+        default: true
+        type: boolean
+      allow_schema_drift:
+        description: 'Roll back even though the database migrations changed since this tag (the schema is not rolled back)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+# The same group as a deploy-azure.yml run on main, so a rollback and a merge deployment never overlap
+concurrency:
+  group: Build, Test, and Deploy to Azure Container Apps-refs/heads/main
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE_NAME: personalfinance-api
+  WEB_IMAGE_NAME: personalfinance-web
+  AZURE_RESOURCE_GROUP: rg-personalfinance-prod
+  AZURE_LOCATION: westus2
+  AZURE_SQL_LOCATION: westus2
+
+jobs:
+  # ============================================================================
+  # 1. RESOLVE THE TAG TO ITS IMAGES AND CHECK THAT ROLLING BACK IS SAFE
+  # ============================================================================
+  resolve-tag:
+    name: Resolve ${{ inputs.tag }} to its images
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      api_image_tag: ${{ steps.images.outputs.api_image_tag }}
+      web_image_tag: ${{ steps.images.outputs.web_image_tag }}
+    steps:
+      # The Azure OIDC federated credential trusts the main branch only
+      - name: Require the main branch
+        if: ${{ github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::Run this workflow from main (it ran from ${GITHUB_REF}). Azure OIDC only trusts main."
+          exit 1
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve the tag's commit and image tags
+        id: images
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' is not a release tag of the form vMAJOR.MINOR.PATCH."
+            exit 1
+          fi
+
+          if ! COMMIT=$(git rev-parse -q --verify "refs/tags/${TAG}^{commit}"); then
+            echo "::error::Tag $TAG does not exist."
+            exit 1
+          fi
+
+          # Same naming as deploy-azure.yml's "Determine Image Names and Tags"
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          SHORT_SHA=$(echo "$COMMIT" | cut -c1-7)
+          echo "api_image_tag=ghcr.io/${OWNER_LC}/${{ env.API_IMAGE_NAME }}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "web_image_tag=ghcr.io/${OWNER_LC}/${{ env.WEB_IMAGE_NAME }}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Tag $TAG is commit ${COMMIT}; images are tagged :${SHORT_SHA}."
+
+      # Migrations only move forward: an older image may not work against a newer schema
+      - name: Check for database migrations since the tag
+        env:
+          TAG: ${{ inputs.tag }}
+          ALLOW_SCHEMA_DRIFT: ${{ inputs.allow_schema_drift }}
+        run: |
+          MIGRATIONS=PersonalFinance/src/PersonalFinance.Data/Migrations/AzureSql
+          if git diff --quiet "$TAG" HEAD -- "$MIGRATIONS"; then
+            echo "No migrations changed since $TAG."
+            exit 0
+          fi
+
+          echo "Migrations changed since $TAG:"
+          git diff --name-status "$TAG" HEAD -- "$MIGRATIONS"
+          if [[ "$ALLOW_SCHEMA_DRIFT" != "true" ]]; then
+            echo "::error::The database schema changed since $TAG and is not rolled back. Re-run with allow_schema_drift only if $TAG works against the current schema."
+            exit 1
+          fi
+          echo "::warning::Rolling back across schema changes (allow_schema_drift): the database keeps the current schema."
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check that both images exist
+        env:
+          API_IMAGE_TAG: ${{ steps.images.outputs.api_image_tag }}
+          WEB_IMAGE_TAG: ${{ steps.images.outputs.web_image_tag }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          for IMAGE_TAG in "$API_IMAGE_TAG" "$WEB_IMAGE_TAG"; do
+            if ! docker manifest inspect "$IMAGE_TAG" > /dev/null; then
+              echo "::error::Image $IMAGE_TAG is not in GHCR, so $TAG cannot be redeployed."
+              exit 1
+            fi
+            echo "  -> $IMAGE_TAG found"
+          done
+
+  # ============================================================================
+  # 2. DEPLOY THE TAG'S IMAGES (same steps as deploy-azure.yml)
+  # ============================================================================
+  deploy-azure:
+    name: Deploy to Azure Container Apps
+    needs: resolve-tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      web_url: ${{ steps.deploy-bicep.outputs.webUrl }}
+      web_fqdn: ${{ steps.deploy-bicep.outputs.webFqdn }}
+      api_fqdn: ${{ steps.deploy-bicep.outputs.apiFqdn }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy Azure Infrastructure & Container Apps (Bicep)
+        id: deploy-bicep
+        uses: ./.github/actions/deploy-azure
+        with:
+          environment: ${{ inputs.environment }}
+          deploy_sql: ${{ inputs.deploy_sql }}
+          api_image: ${{ needs.resolve-tag.outputs.api_image_tag }}
+          web_image: ${{ needs.resolve-tag.outputs.web_image_tag }}
+          resource_group: ${{ env.AZURE_RESOURCE_GROUP }}
+          location: ${{ env.AZURE_LOCATION }}
+          sql_location: ${{ env.AZURE_SQL_LOCATION }}
+          azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          brevo_api_key: ${{ secrets.BREVO_API_KEY }}
+          brevo_sender_email: ${{ vars.BREVO_SENDER_EMAIL || 'tngo0508@gmail.com' }}
+          brevo_sender_name: ${{ vars.BREVO_SENDER_NAME || 'PersonalFinance' }}
+          google_drive_api_key: ${{ secrets.GOOGLE_DRIVE_API_KEY }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          rbac_admin_email: ${{ vars.RBAC_ADMIN_EMAIL || 'tngo0508@gmail.com' }}
+          internal_api_key: ${{ secrets.INTERNAL_API_KEY }}
+          sec_user_agent: ${{ vars.SEC_USER_AGENT || '' }}
+          sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
+          custom_connection_string: ${{ secrets.CUSTOM_CONNECTION_STRING }}
+          custom_domain_name: ${{ vars.CUSTOM_DOMAIN_NAME || '' }}
+
+  # ============================================================================
+  # 3. END-TO-END POST-DEPLOYMENT SMOKE TESTS (same checks as deploy-azure.yml)
+  # ============================================================================
+  smoke-test:
+    name: End-to-End Smoke Tests
+    needs: deploy-azure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run HTTP Smoke Tests against Deployed Endpoints
+        uses: ./.github/actions/smoke-test
+        with:
+          web_url: ${{ needs.deploy-azure.outputs.web_url }}
+          web_fqdn: ${{ needs.deploy-azure.outputs.web_fqdn }}
+          api_fqdn: ${{ needs.deploy-azure.outputs.api_fqdn }}
+
+  # ============================================================================
+  # 4. POINT `latest` AT THE ROLLED-BACK IMAGES (latest = what is live)
+  # ============================================================================
+  promote-latest:
+    name: Promote Images to latest
+    needs: [resolve-tag, smoke-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag rolled-back images as latest
+        env:
+          API_IMAGE_TAG: ${{ needs.resolve-tag.outputs.api_image_tag }}
+          WEB_IMAGE_TAG: ${{ needs.resolve-tag.outputs.web_image_tag }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          # Re-points the manifest; no layers are pulled or pushed
+          for IMAGE_TAG in "$API_IMAGE_TAG" "$WEB_IMAGE_TAG"; do
+            docker buildx imagetools create --tag "${IMAGE_TAG%:*}:latest" "$IMAGE_TAG"
+            echo "  -> ${IMAGE_TAG%:*}:latest now points to ${IMAGE_TAG##*:}"
+          done
+
+          echo "Rolled back to [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG) (images :${API_IMAGE_TAG##*:}). The next merge to main deploys main again." >> "$GITHUB_STEP_SUMMARY"

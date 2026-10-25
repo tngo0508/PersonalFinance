@@ -740,6 +740,25 @@ The workflow automatically tests the following endpoints on the deployed web app
 - Ensure the deployed web application URL is added to the OAuth 2.0 Web Client's **Authorized JavaScript origins** and **Authorized redirect URIs** in Google Cloud Console.
 - Check the application logs for OAuth-related errors.
 
+#### 5.7 Roll Back to a Previous Release
+
+`rollback.yml` (**Roll Back to a Release**) redeploys the images a release tag was built from, `:<short-sha>` of the
+tag's commit, with the same deploy and smoke-test steps as a merge (`.github/actions/deploy-azure` and
+`.github/actions/smoke-test`). Only the app rolls back: the Bicep template, secrets and settings come from `main`, and
+the database keeps its current schema.
+
+1. In GitHub, open **Actions** &rarr; **Roll Back to a Release** &rarr; **Run workflow**, and keep the branch on `main`
+   (Azure OIDC only trusts `main`).
+2. Enter **`tag`**, e.g. `v5.9.0` (see the Releases page). Keep `environment` and `deploy_sql` as they are for a normal
+   deploy.
+3. Leave **`allow_schema_drift`** off. The run fails before deploying when `Migrations/AzureSql` changed since the tag;
+   turn it on only if that version is known to work against the newer schema.
+
+The run also fails before deploying when the tag is malformed or missing, or either image is no longer in GHCR. After
+the smoke tests pass it points `latest` at the rolled-back images. It creates, moves or deletes no tags or Releases, and
+it shares the `main` deploy's concurrency group, so it waits for a running deployment. The next merge to `main` deploys
+`main` again: revert or fix the change there before merging anything else.
+
 ---
 
 ## 4. Deployment Method 2: Local PowerShell / Azure CLI (`infra/deploy.ps1`)

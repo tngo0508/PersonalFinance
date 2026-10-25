@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.11.0] - 2026-10-24
+
+### Added
+
+- **Rollback workflow**: a manually run "Roll Back to a Release" workflow redeploys the container images of a chosen release tag with the same deploy and smoke-test steps as a merge to `main`.
+  - It fails before deploying when the tag is missing or malformed, an image is gone from GHCR, or database migrations changed since the tag (unless `allow_schema_drift` is set).
+  - It shares the `main` deploy's concurrency group, points `latest` at the rolled-back images, and leaves tags and Releases untouched.
+
+### Changed
+
+- **Deploy and smoke-test steps are shared actions**: the deploy job's steps and the smoke-test script moved unchanged into `.github/actions/deploy-azure` and `.github/actions/smoke-test`, used by both the deployment and the rollback.
+- **Assemblies carry the release version**: the container builds pass `AppVersion.Current` to `dotnet publish` with `-p:Version`, so the deployed DLLs report the release version, not 1.0.0.
+
 ## [5.10.0] - 2026-10-24
 
 ### Changed
