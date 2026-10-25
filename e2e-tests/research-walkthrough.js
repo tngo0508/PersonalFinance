@@ -1085,7 +1085,13 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 // With a basket set, Sectors opens on Your basket, which has no years: the slider is the market's.
                 await mobile.tap('[data-sectors-view="market"]');
                 const box = await mobile.locator('#research-sectors-year').boundingBox();
-                await mobile.touchscreen.tap(box.x + 2, box.y + box.height / 2);
+                const tapAt = {x: box.x + 2, y: box.y + box.height / 2};
+                // What the touch lands on, so a failure says why the slider did not move.
+                const target = await mobile.evaluate(({x, y}) => {
+                    const hit = document.elementFromPoint(x, y);
+                    return hit ? `${hit.tagName.toLowerCase()}${hit.id ? `#${hit.id}` : ''}` : 'nothing';
+                }, tapAt);
+                await mobile.touchscreen.tap(tapAt.x, tapAt.y);
                 const label = await periodLabel(mobile, 'sectors');
                 if (wide.length === 0) {
                     pass('Research 11: no horizontal page scroll at 390 px on any tab');
@@ -1095,7 +1101,9 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 if (label === earliest) {
                     pass(`Research 11: a touch on the slider moves Sectors to ${earliest}`);
                 } else {
-                    fail(`Research 11: after a touch at the start of the slider the label is "${label}"`);
+                    const viewportHeight = await mobile.evaluate(() => window.innerHeight);
+                    fail(`Research 11: after a touch at the start of the slider the label is "${label}" ` +
+                        `(touch at ${Math.round(tapAt.x)},${Math.round(tapAt.y)} of a ${viewportHeight} px viewport hit ${target})`);
                 }
             } finally {
                 await phone.close();
