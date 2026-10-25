@@ -199,6 +199,12 @@ const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough'
                 fail(`Default route redirected unexpectedly to: ${url.href}`);
             }
 
+            if (title === 'PersonalFinance — Plan for enough') {
+                pass('Landing page tab shows the brand and tagline');
+            } else {
+                fail(`Landing page title unexpected: "${title}"`);
+            }
+
             const headingCount = await page.locator('h1#lp-hero-title').count().catch(() => 0);
             if (headingCount === 1) {
                 pass('Landing Page hero heading is present');
@@ -570,13 +576,16 @@ const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough'
                 console.log('  [Info] Version not found in footer');
             }
 
-            // Check for favicon
-            const favicon = page.locator('link[rel="icon"]');
-            const favCount = await favicon.count().catch(() => 0);
-            if (favCount > 0) {
-                pass('Favicon link is present');
+            // Check the favicon set: SVG for modern browsers, .ico and PNG fallbacks, apple-touch-icon
+            const iconHrefs = await page.locator('link[rel="icon"], link[rel="apple-touch-icon"]')
+                .evaluateAll(links => links.map(link => link.getAttribute('href')))
+                .catch(() => []);
+            const expectedIcons = ['favicon.ico', 'favicon.svg', 'favicon-32x32.png', 'apple-touch-icon.png'];
+            const missingIcons = expectedIcons.filter(name => !iconHrefs.some(href => href && href.includes(name)));
+            if (missingIcons.length === 0) {
+                pass('Favicon links are present (ico, svg, png, apple-touch-icon)');
             } else {
-                console.log('  [Info] Favicon not found');
+                fail(`Favicon links missing: ${missingIcons.join(', ')}`);
             }
 
             // Check viewport meta tag (responsive)

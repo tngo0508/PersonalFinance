@@ -11,6 +11,9 @@
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var currentController = ViewContext.RouteData.Values["controller"] as string;
     var pageTitle = ViewData["Title"] as string;
+    // A view sets DocumentTitle to replace the whole tab title (the landing page's tagline); otherwise "<Page> · PersonalFinance".
+    var documentTitle = ViewData["DocumentTitle"] as string
+                        ?? (string.IsNullOrEmpty(pageTitle) ? AppVersion.ApplicationName : $"{pageTitle} · {AppVersion.ApplicationName}");
     var tokens = Antiforgery.GetAndStoreTokens(Context);
 }
 <html lang="en">
@@ -19,8 +22,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="theme-color" content="#ffffff"/>
     <meta name="__RequestVerificationToken" content="@tokens.RequestToken" />
-    <title>@(string.IsNullOrEmpty(pageTitle) ? AppVersion.ApplicationName : $"{pageTitle} · {AppVersion.ApplicationName}")</title>
-    <link rel="icon" href="~/favicon.ico"/>
+    <title>@documentTitle</title>
+    <link rel="icon" href="~/favicon.ico" sizes="32x32"/>
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml"/>
+    <link rel="icon" href="~/favicon-32x32.png" type="image/png" sizes="32x32"/>
+    <link rel="apple-touch-icon" href="~/apple-touch-icon.png"/>
     <!-- Third-party resources (Google Fonts, Lucide) are loaded after cookie consent -->
     <script>
         (function () {
