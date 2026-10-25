@@ -23,4 +23,7 @@ public class MoneyPrioritiesViewModel
 
     /// <summary>The AI disclaimer shown under a Purpose Note, including a saved one the page shows without a request.</summary>
     public string PurposeNoteDisclaimer { get; set; } = AiAssistantMessages.Disclaimer;
+
+    /// <summary>The message the page shows when the Purpose Note request fails before the server can answer.</summary>
+    public string PurposeNoteUnavailable { get; set; } = AiAssistantMessages.PurposeNoteUnavailable;
 }

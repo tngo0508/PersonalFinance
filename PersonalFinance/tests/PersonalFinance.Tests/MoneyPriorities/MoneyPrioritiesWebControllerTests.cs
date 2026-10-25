@@ -95,6 +95,21 @@ public class MoneyPrioritiesWebControllerTests
     }
 
     [Fact]
+    public async Task Index_CarriesTheServersUnavailableMessage_ForThePageToShowWhenTheNoteRequestFails()
+    {
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
+            new PriorityTreeDiagramDto { TreeVersion = 1, WholeTreeDiagram = TreeText });
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await controller.Index();
+
+        MoneyPrioritiesViewModel model = Assert.IsType<MoneyPrioritiesViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal("The note about your purpose is not available right now.", model.PurposeNoteUnavailable);
+    }
+
+    [Fact]
     public async Task Index_WithNoEarlierResults_LeavesTheFormEmpty_WithoutLoadingAWalk()
     {
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();

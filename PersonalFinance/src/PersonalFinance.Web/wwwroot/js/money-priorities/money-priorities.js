@@ -15,7 +15,6 @@
     const GENERIC_ERROR = 'Something went wrong. Please try again.';
     const NETWORK_ERROR = 'The service is temporarily unavailable. Please try again.';
     const NOTE_WRITING = 'Writing your Purpose Note…';
-    const NOTE_UNAVAILABLE = 'The note about your purpose is not available right now.';
 
     /** The request fields, in form order, with the input that holds each one. */
     const NUMBER_FIELDS = ['MonthlyAmount', 'DebtApr', 'DebtBalance', 'EmergencyFundMonths', 'MonthlyExpenses',
@@ -46,6 +45,8 @@
     let thresholds = {};
     /** The AI disclaimer shown under a Purpose Note (the server's reply carries its own; a saved note uses this one). */
     let noteDisclaimer = '';
+    /** The server's message for a Purpose Note request that fails before the server answers (network or non-OK). */
+    let noteUnavailable = '';
     /** Counts the results shown, so a late Purpose Note reply for a Walk no longer on screen is ignored. */
     let shownResult = 0;
 
@@ -511,13 +512,13 @@
         }
         const reply = outcome.ok && outcome.body ? outcome.body : null;
         if (!reply) {
-            renderPurposeNote('Unavailable', NOTE_UNAVAILABLE);
+            renderPurposeNote('Unavailable', noteUnavailable);
         } else if (reply.state === 'Written' && reply.note) {
             renderPurposeNote('Written', reply.note, reply.disclaimer || noteDisclaimer);
         } else if (reply.state !== 'Written' && reply.message) {
             renderPurposeNote(reply.state, reply.message);
         } else {
-            renderPurposeNote('Unavailable', NOTE_UNAVAILABLE);
+            renderPurposeNote('Unavailable', noteUnavailable);
         }
     }
 
@@ -719,6 +720,7 @@
         wholeTreeDiagram = data.wholeTreeDiagram || '';
         thresholds = data.thresholds || {};
         noteDisclaimer = data.purposeNoteDisclaimer || '';
+        noteUnavailable = data.purposeNoteUnavailable || '';
 
         form.addEventListener('input', applyFieldRules);
         form.addEventListener('change', applyFieldRules);
