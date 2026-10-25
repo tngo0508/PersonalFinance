@@ -257,7 +257,10 @@ public class LanguagePreferenceTests
         MessageKey = "Notifications.SavingsMilestone.Message",
         Arguments = new Dictionary<string, string>
         {
-            ["percent"] = "50", ["goalName"] = "Vacation", ["current"] = "$600.00", ["target"] = "$1,000.00"
+            ["percent"] = "50",
+            ["goalName"] = "Vacation",
+            ["current"] = "$600.00",
+            ["target"] = "$1,000.00"
         }
     };
 

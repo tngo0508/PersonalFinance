@@ -87,6 +87,19 @@ test('keys referenced in Razor, C# or JS but absent from en.json are reported', 
         ['A.Ctrl', 'A.Field', 'A.Gone', 'A.Js', 'A.Many.other', 'A.Named', 'A.Required']);
 });
 
+test('Notification keys written by ApiService and keys passed to localizer helpers count as references', () => {
+    const dir = folder({ 'en.json': { 'Notes.A.Title': 't', 'Notes.A.Message': 'm', 'Email.Intro': 'i' }, 'vi.json': {} });
+    const sources = [
+        'TitleKey = "Notes.A.Title", MessageKey = "Notes.A.Message", TitleKey = "Notes.Gone.Title"',
+        'Html(localizer, "Email.Intro", ("appName", Strong(name)))'
+    ];
+
+    const report = buildReport({ dir, sources });
+
+    assert.deepStrictEqual(report.referencedMissing, ['Notes.Gone.Title']);
+    assert.deepStrictEqual(report.unused, []);
+});
+
 test('English keys nothing references are reported, keys under a used prefix are not', () => {
     const dir = folder({
         'en.json': { 'A.Used': 'x', 'A.Unused': 'y', 'Errors.Code1': 'z', 'Page.Js.Hi': 'h', 'A.Count.one': 'o', 'A.Count.other': 'p' },

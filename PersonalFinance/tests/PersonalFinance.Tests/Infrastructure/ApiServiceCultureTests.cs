@@ -155,7 +155,10 @@ public sealed class ApiServiceCultureTests : IDisposable
         Assert.Equal("Notifications.SavingsMilestone.Message", notification.MessageKey);
         Assert.Equal(new Dictionary<string, string>
         {
-            ["percent"] = "50", ["goalName"] = "Vacation", ["current"] = "$600.00", ["target"] = "$1,000.00"
+            ["percent"] = "50",
+            ["goalName"] = "Vacation",
+            ["current"] = "$600.00",
+            ["target"] = "$1,000.00"
         }, notification.Arguments);
     }
 
