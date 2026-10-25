@@ -1084,6 +1084,13 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 await mobile.tap('#research-tab-sectors');
                 // With a basket set, Sectors opens on Your basket, which has no years: the slider is the market's.
                 await mobile.tap('[data-sectors-view="market"]');
+                // The cookie banner is fixed to the bottom of the screen and, depending on how its text wraps, can
+                // cover the slider; answer it first, as someone on a phone would.
+                const essentialOnly = mobile.locator('#cookieAcceptEssential');
+                if (await essentialOnly.isVisible()) {
+                    await essentialOnly.tap();
+                    await mobile.locator('#cookieBanner').waitFor({state: 'hidden', timeout: TIMEOUT});
+                }
                 const box = await mobile.locator('#research-sectors-year').boundingBox();
                 const tapAt = {x: box.x + 2, y: box.y + box.height / 2};
                 // What the touch lands on, so a failure says why the slider did not move.
