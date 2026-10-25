@@ -29,7 +29,7 @@ public class MoneyPrioritiesEndpointTests
     private static MoneyPrioritiesApiController CreateController(AppDbContext db, string userId = UserId)
     {
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], "TestAuthType");
-        return new MoneyPrioritiesApiController(new MoneyPrioritiesService(db, TimeProvider.System),
+        return new MoneyPrioritiesApiController(MoneyPrioritiesTestServices.Service(db),
             new SubmitPriorityWalkRequestValidator())
         {
             ControllerContext = new ControllerContext

@@ -4,6 +4,11 @@
  * Earlier results (View and Delete), and narrows the window to see the path view of the Priority Tree. Run from
  * ui-test.js as Test 9d.
  *
+ * The Purpose Note (slice #328): a Walk without a Purpose shows the invitation to add one. A Walk with a Purpose shows
+ * either a written note with the AI disclaimer (an OpenAI key is configured) or the server's "not available right now"
+ * message (no key, as in CI). CI configures no key; a local run uses one only if the developer's user secrets hold
+ * `OpenAI:ApiKey` and the ApiService was not started with `OpenAI__ApiKey=` (see docs/DEVELOPMENT.md).
+ *
  * The ApiService computes every figure and the "Your path" sentences; these checks read them as the page shows them.
  * Runs on the InMemory database like the rest of the suite: a fresh Account starts with no Earlier results, and each
  * submit varies its answers, because an identical resubmit returns the existing Walk.
@@ -14,6 +19,8 @@ const TIMEOUT = 15000;
 const DEBT_LEAF = 'Pay down the high-interest debt first';
 const FUND_LEAF = 'Build the emergency fund to 3 months';
 const IRA_LEAF = 'Max the IRA, then the 401(k)';
+
+const NOTE_INVITE = 'Add a purpose in your own words to get a short note on how this priority serves it.';
 
 /**
  * Register a fresh Account and make sure it is signed in.
@@ -119,6 +126,34 @@ async function resultProblem(page, amount, leaf, expectedPath) {
 }
 
 /**
+ * Wait for the Purpose Note area to settle in one of the given states, then read it.
+ * @param {import('playwright').Page} page - A page showing a result.
+ * @param {string|string[]} states - The expected state or states (NoPurpose, Written, Unavailable, ...).
+ * @returns {Promise<{state: string|null, text: string}>} The state shown and the area's text.
+ */
+async function purposeNote(page, states) {
+    const selector = [].concat(states).map((state) => `#mpNote[data-state="${state}"]`).join(', ');
+    try {
+        await page.locator(selector).first().waitFor({state: 'visible', timeout: TIMEOUT});
+    } catch {
+        // Report what the area shows instead.
+    }
+    const shownState = await page.locator('#mpNote').getAttribute('data-state');
+    const text = ((await page.locator('#mpNoteBody').textContent()) || '').replace(/\s+/g, ' ').trim();
+    return {state: shownState, text};
+}
+
+/**
+ * The page's data island, which carries the server's Purpose Note disclaimer and unavailable message.
+ * @param {import('playwright').Page} page - A page showing /MoneyPriorities.
+ * @returns {Promise<{purposeNoteDisclaimer?: string, purposeNoteUnavailable?: string}>} The parsed island.
+ */
+async function pageData(page) {
+    const json = await page.locator('#mpPageData').textContent();
+    return JSON.parse(json || '{}');
+}
+
+/**
  * The Earlier results rows' priorities, top to bottom.
  * @param {import('playwright').Page} page - A page showing /MoneyPriorities.
  * @returns {Promise<string[]>} The leaf labels.
@@ -185,11 +220,14 @@ async function runMoneyPrioritiesWalkthrough({browser, base, pass, fail, console
             const figures = ((await page.locator('#mpFigures').textContent()) || '').replace(/\s+/g, ' ').trim();
             const hasFigures = figures.includes('12 months') && figures.includes('$574');
             const diagramShown = await page.locator('#mp-diagram svg').first().isVisible();
-            if (!problem && hasFigures && diagramShown) {
-                pass('Money Priorities 2: debt leaf headline and "Your path"; paid off in 12 months, $574 interest');
+            const note = await purposeNote(page, 'NoPurpose');
+            const invited = note.state === 'NoPurpose' && note.text === NOTE_INVITE;
+            if (!problem && hasFigures && diagramShown && invited) {
+                pass('Money Priorities 2: debt leaf headline and "Your path"; paid off in 12 months, $574 interest; ' +
+                    'no Purpose, so the Purpose Note invites one');
             } else {
                 fail(`Money Priorities 2: ${problem || 'headline and path ok'}; figures "${figures}"; ` +
-                    `Priority Tree shown ${diagramShown}`);
+                    `Priority Tree shown ${diagramShown}; Purpose Note ${note.state} "${note.text}"`);
             }
         });
 
@@ -197,17 +235,31 @@ async function runMoneyPrioritiesWalkthrough({browser, base, pass, fail, console
         await step('Money Priorities 3', fail, async () => {
             await answer(page, {fields: {mpMonthlyAmount: '400', mpDebtApr: '5', mpEmergencyFundMonths: '1'}});
             await page.locator('#mpMonthlyExpensesField').waitFor({state: 'visible', timeout: TIMEOUT});
-            await answer(page, {fields: {mpMonthlyExpenses: '3000'}});
+            await answer(page, {fields: {mpMonthlyExpenses: '3000', mpPurpose: 'Feel safe if my job changes'}});
             await submitFor(page, FUND_LEAF);
             const problem = await resultProblem(page, '$400.00', FUND_LEAF, [
                 'Debt with APR of 7% or more? No.',
                 'Emergency fund covers 3 months of expenses? No.',
                 `Suggested priority: ${FUND_LEAF}.`
             ]);
-            if (!problem) {
-                pass('Money Priorities 3: emergency-fund leaf headline and "Your path"');
+            // With an OpenAI key the note is written under the AI disclaimer; without one (CI) the server says it
+            // is not available right now. Either is a correct outcome; the texts come from the server's data island.
+            const note = await purposeNote(page, ['Written', 'Unavailable']);
+            const data = await pageData(page);
+            const disclaimer = data.purposeNoteDisclaimer || '';
+            const unavailableMessage = data.purposeNoteUnavailable || '';
+            const noteText = ((await page.locator('#mpNoteBody .mp-purpose-note__text').allTextContents())
+                .join(' ')).trim();
+            const written = note.state === 'Written' && noteText.length > 0 && disclaimer.length > 0 &&
+                note.text.includes(disclaimer.replace(/\s+/g, ' ').trim());
+            const unavailable = note.state === 'Unavailable' && unavailableMessage.length > 0 &&
+                note.text === unavailableMessage;
+            if (!problem && (written || unavailable)) {
+                pass('Money Priorities 3: emergency-fund leaf headline and "Your path"; with a Purpose, the Purpose ' +
+                    `Note is ${written ? 'written with the AI disclaimer' : 'not available right now'}`);
             } else {
-                fail(`Money Priorities 3: ${problem}`);
+                fail(`Money Priorities 3: ${problem || 'headline and path ok'}; Purpose Note ${note.state} "${
+                    note.text}"`);
             }
         });
 

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Enums;
@@ -64,7 +65,7 @@ public class MoneyPrioritiesWebControllerTests
         await using AppDbContext db = new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"MoneyPrioritiesThresholds_{Guid.NewGuid():N}")
             .Options);
-        var service = new MoneyPrioritiesService(db, TimeProvider.System);
+        MoneyPrioritiesService service = MoneyPrioritiesTestServices.Service(db);
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync), service.GetTree());
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
@@ -76,6 +77,36 @@ public class MoneyPrioritiesWebControllerTests
         Assert.Equal(7m, model.Thresholds.HighInterestAprPercent);
         Assert.Equal(3m, model.Thresholds.EmergencyFundTargetMonths);
         Assert.Equal(10, model.Thresholds.LongHorizonYears);
+    }
+
+    [Fact]
+    public async Task Index_CarriesTheAiDisclaimer_ForASavedPurposeNoteShownWithoutARequest()
+    {
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
+            new PriorityTreeDiagramDto { TreeVersion = 1, WholeTreeDiagram = TreeText });
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await controller.Index();
+
+        MoneyPrioritiesViewModel model = Assert.IsType<MoneyPrioritiesViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(AiAssistantMessages.Disclaimer, model.PurposeNoteDisclaimer);
+    }
+
+    [Fact]
+    public async Task Index_CarriesTheServersUnavailableMessage_ForThePageToShowWhenTheNoteRequestFails()
+    {
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
+            new PriorityTreeDiagramDto { TreeVersion = 1, WholeTreeDiagram = TreeText });
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await controller.Index();
+
+        MoneyPrioritiesViewModel model = Assert.IsType<MoneyPrioritiesViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal("The note about your purpose is not available right now.", model.PurposeNoteUnavailable);
     }
 
     [Fact]
@@ -243,11 +274,62 @@ public class MoneyPrioritiesWebControllerTests
         Assert.Same(walks, Assert.IsType<JsonResult>(result).Value);
     }
 
+    [Theory]
+    [InlineData(PurposeNoteState.Written)]
+    [InlineData(PurposeNoteState.NoPurpose)]
+    [InlineData(PurposeNoteState.Unavailable)]
+    [InlineData(PurposeNoteState.QuotaReached)]
+    [InlineData(PurposeNoteState.Refused)]
+    public async Task Note_PassesEachStateOnAsJson(PurposeNoteState state)
+    {
+        var note = new PriorityWalkPurposeNoteDto
+        {
+            WalkId = 7, State = state, Note = state == PurposeNoteState.Written ? "It keeps your trip safe." : null,
+            Message = state == PurposeNoteState.Written ? null : "A message for the page.", Disclaimer = "Not advice."
+        };
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Returns(nameof(IMoneyPrioritiesApi.WritePurposeNoteAsync), note);
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await controller.Note(7);
+
+        JsonResult json = Assert.IsType<JsonResult>(result);
+        Assert.Same(note, json.Value);
+        Assert.Equal([nameof(IMoneyPrioritiesApi.WritePurposeNoteAsync)], proxy.Calls);
+    }
+
+    [Fact]
+    public async Task Note_ForAWalkTheAccountDoesNotHave_Answers404()
+    {
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Throws(nameof(IMoneyPrioritiesApi.WritePurposeNoteAsync), await ApiExceptionAsync(HttpStatusCode.NotFound, ""));
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Note(99));
+
+        Assert.Equal(StatusCodes.Status404NotFound, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task Note_WhenTheApiIsDown_LetsJsonApiErrorsAnswer502()
+    {
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Note(7));
+
+        Assert.Equal(StatusCodes.Status502BadGateway, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
     [Fact]
     public void Controller_RequiresSignIn_AndStateChangingActionsCheckAntiforgery()
     {
         Assert.NotNull(typeof(MoneyPrioritiesController).GetCustomAttribute<AuthorizeAttribute>());
-        foreach (string action in new[] { nameof(MoneyPrioritiesController.Submit), nameof(MoneyPrioritiesController.Delete) })
+        foreach (string action in new[]
+                 {
+                     nameof(MoneyPrioritiesController.Submit), nameof(MoneyPrioritiesController.Delete),
+                     nameof(MoneyPrioritiesController.Note)
+                 })
         {
             MethodInfo method = typeof(MoneyPrioritiesController).GetMethod(action)!;
             Assert.NotNull(method.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
@@ -257,7 +339,8 @@ public class MoneyPrioritiesWebControllerTests
         foreach (string action in new[]
                  {
                      nameof(MoneyPrioritiesController.Submit), nameof(MoneyPrioritiesController.Walk),
-                     nameof(MoneyPrioritiesController.Delete), nameof(MoneyPrioritiesController.Recent)
+                     nameof(MoneyPrioritiesController.Delete), nameof(MoneyPrioritiesController.Recent),
+                     nameof(MoneyPrioritiesController.Note)
                  })
         {
             Assert.NotNull(typeof(MoneyPrioritiesController).GetMethod(action)!

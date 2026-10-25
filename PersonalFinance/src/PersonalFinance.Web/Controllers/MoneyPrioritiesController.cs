@@ -12,7 +12,7 @@ namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for Money Priorities. Renders the page, then answers its background calls (submit, view, delete,
-/// Earlier results) through the <see cref="IMoneyPrioritiesApi"/> Refit client. The ApiService computes the path and
+/// Earlier results, the Purpose Note) through the <see cref="IMoneyPrioritiesApi"/> Refit client. The ApiService computes the path and
 /// every figure; this controller only passes them on.
 /// </summary>
 [Authorize]
@@ -121,6 +121,20 @@ public class MoneyPrioritiesController : Controller
     {
         PriorityWalkResultDto walk = await _moneyPrioritiesApi.GetWalkAsync(id, cancellationToken);
         return Json(walk);
+    }
+
+    /// <summary>
+    /// Writes (or reuses) a Priority Walk's Purpose Note. The page asks for it after the result shows; every outcome
+    /// (written, no Purpose, not available, quota spent, refused) is a 200 whose state says which. 404 when the Account
+    /// has no Walk with that id.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [JsonApiErrors]
+    public async Task<IActionResult> Note(int id, CancellationToken cancellationToken = default)
+    {
+        PriorityWalkPurposeNoteDto note = await _moneyPrioritiesApi.WritePurposeNoteAsync(id, cancellationToken);
+        return Json(note);
     }
 
     /// <summary>Removes one earlier Priority Walk (soft delete in the ApiService).</summary>

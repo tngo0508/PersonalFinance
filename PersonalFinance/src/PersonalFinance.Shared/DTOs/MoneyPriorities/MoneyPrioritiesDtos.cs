@@ -123,6 +123,9 @@ public class PriorityWalkResultDto
 
     /// <summary>The estimate disclaimer shown under every result.</summary>
     public string Disclaimer { get; set; } = string.Empty;
+
+    /// <summary>The Purpose Note saved onto the Walk, or null when none has been written yet.</summary>
+    public string? PurposeNote { get; set; }
 }
 
 /// <summary>
@@ -283,4 +286,23 @@ public class MoneyPrioritiesValidationErrorsDto
 {
     public List<string> Errors { get; set; } = [];
     public Dictionary<string, List<string>> FieldErrors { get; set; } = [];
+}
+
+/// <summary>
+/// A Priority Walk's Purpose Note, or why it has none (<see cref="State"/>). The note is plain text, shown as text and
+/// never as HTML, with <see cref="Disclaimer"/> under it.
+/// </summary>
+public class PriorityWalkPurposeNoteDto
+{
+    public int WalkId { get; set; }
+    public PurposeNoteState State { get; set; }
+
+    /// <summary>The note; set only when <see cref="State"/> is <see cref="PurposeNoteState.Written"/>.</summary>
+    public string? Note { get; set; }
+
+    /// <summary>What to show instead of a note (the invitation, "not available right now", the quota message, the refusal).</summary>
+    public string? Message { get; set; }
+
+    /// <summary>The AI disclaimer shown under the note.</summary>
+    public string Disclaimer { get; set; } = string.Empty;
 }

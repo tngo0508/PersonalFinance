@@ -828,10 +828,12 @@ same settings the CI e2e job uses:
 - `ApiSettings__BaseUrl=http://localhost:5100` on the Web app. Without the AppHost, nothing resolves the default `https+http://apiservice` address.
 - `--urls http://localhost:<port>` on both apps. Otherwise the ApiService redirects HTTP to HTTPS, and Web-to-API calls fail if the ASP.NET Core dev certificate is not trusted.
 - `ASPNETCORE_ENVIRONMENT=Development` set as an environment variable, not only `--environment`, so the Identity UI static files (jQuery validation) are served.
+- `OpenAI__ApiKey=` (empty) on the ApiService if your user secrets hold `OpenAI:ApiKey`. The environment variable overrides the secret, so no OpenAI client is registered and the run spends none of your quota; CI configures no key either. On Windows an empty value removes the variable instead of overriding the secret (in PowerShell and in Git Bash alike), so set a single space there: `$env:OpenAI__ApiKey = ' '`; a blank key counts as no key. With a key, the Money Priorities walkthrough accepts a written Purpose Note as well as the "not available right now" message.
 
 ```bash
 # zsh; in PowerShell set each variable with $env:NAME = '...' first
-export ASPNETCORE_ENVIRONMENT=Development E2E_SEED_RESEARCH=true
+# OpenAI__ApiKey= keeps a user-secret OpenAI key out of the run (on Windows: $env:OpenAI__ApiKey = ' ')
+export ASPNETCORE_ENVIRONMENT=Development E2E_SEED_RESEARCH=true OpenAI__ApiKey=
 dotnet run --project PersonalFinance/src/PersonalFinance.ApiService --no-launch-profile --urls http://localhost:5100
 # second terminal
 export ASPNETCORE_ENVIRONMENT=Development E2E_DISABLE_EMAIL_CONFIRMATION=true ApiSettings__BaseUrl=http://localhost:5100

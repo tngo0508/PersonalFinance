@@ -73,6 +73,21 @@ public class MoneyPrioritiesController : ControllerBase
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken = default) =>
         await _service.DeleteAsync(User.GetUserId(), id, cancellationToken) ? NoContent() : NotFound();
 
+    /// <summary>
+    /// Writes (or reuses) the Purpose Note of one of the Account's Priority Walks and saves it onto the Walk; 404 when
+    /// it has none with that id. Every other outcome (no Purpose, not available, quota spent, refused) is a 200 whose
+    /// state says which; the Walk is always kept.
+    /// </summary>
+    [HttpPost("walks/{id:int}/note")]
+    [ProducesResponseType(typeof(PriorityWalkPurposeNoteDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Note(int id, CancellationToken cancellationToken = default)
+    {
+        PriorityWalkPurposeNoteDto? note = await _service.WritePurposeNoteAsync(User.GetUserId(), id, cancellationToken);
+        return note is null ? NotFound() : Ok(note);
+    }
+
     /// <summary>The whole Priority Tree with nothing highlighted, shown before a submit.</summary>
     [HttpGet("tree")]
     [ProducesResponseType(typeof(PriorityTreeDiagramDto), StatusCodes.Status200OK)]
