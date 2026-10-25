@@ -52,7 +52,8 @@ public class NavigationLayoutTests
             typeof(NewsController),
             typeof(CommunityController),
             typeof(GoogleDriveController),
-            typeof(ResearchController)
+            typeof(ResearchController),
+            typeof(MoneyPrioritiesController)
         };
 
         foreach (Type? type in controllerTypes)
@@ -73,6 +74,33 @@ public class NavigationLayoutTests
         Assert.Contains("asp-controller=\"Research\" asp-action=\"Index\"", resources);
         Assert.Contains("currentController == \"Research\" ? \"active\"", resources);
         Assert.Contains("<span class=\"sidebar-link-text\">Research</span>", resources);
+    }
+
+    [Fact]
+    public void Sidebar_LinksToMoneyPriorities_InMyFinances_AfterSavingsGoals()
+    {
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        string myFinances = Between(sidebar, "My Finances</div>", "<div class=\"sidebar-group\">");
+
+        int savingsGoals = myFinances.IndexOf("asp-controller=\"SavingsGoals\"", StringComparison.Ordinal);
+        int moneyPriorities = myFinances.IndexOf("asp-controller=\"MoneyPriorities\" asp-action=\"Index\"",
+            StringComparison.Ordinal);
+        int analysis = myFinances.IndexOf("asp-controller=\"Analysis\"", StringComparison.Ordinal);
+        Assert.True(savingsGoals >= 0 && moneyPriorities > savingsGoals && analysis > moneyPriorities,
+            "Money Priorities should sit in My Finances between Savings Goals and Analysis.");
+        Assert.Contains("currentController == \"MoneyPriorities\" ? \"active\"", myFinances);
+        Assert.Contains("<i data-lucide=\"signpost\"></i>", myFinances);
+        Assert.Contains("<span class=\"sidebar-link-text\">Money Priorities</span>", myFinances);
+    }
+
+    [Fact]
+    public void BottomNav_LightsFinancesOnMoneyPriorities()
+    {
+        string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");
+
+        string finances = bottomNav[..bottomNav.IndexOf("<span>Finances</span>", StringComparison.Ordinal)];
+        finances = finances[finances.LastIndexOf("<a ", StringComparison.Ordinal)..];
+        Assert.Contains("currentController == \"MoneyPriorities\"", finances);
     }
 
     [Fact]

@@ -1,0 +1,176 @@
+@model PersonalFinance.Web.Models.MoneyPriorities.MoneyPrioritiesViewModel
+@{
+    ViewData["Title"] = "Money Priorities";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/money-priorities.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/money-priorities-diagram.css" asp-append-version="true"/>
+}
+
+<div class="mp-page">
+    <header class="mp-header mb-4">
+        <h1 class="mp-title">Money Priorities</h1>
+        <p class="mp-intro">Have extra money each month? Answer a few questions to see which priority to put it toward first.</p>
+    </header>
+
+    <noscript>
+        <div class="alert alert-warning">Money Priorities needs JavaScript. Turn it on to answer the questions.</div>
+    </noscript>
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <section class="card mp-card" aria-labelledby="mpFormHeading">
+                <div class="mp-card__body">
+                    <h2 class="mp-card__title" id="mpFormHeading">Your answers</h2>
+                    <form id="mpForm" novalidate>
+                        @Html.AntiForgeryToken()
+                        <div class="alert alert-danger mp-form-error" id="mpFormError" role="alert" hidden></div>
+
+                        <div class="mp-field">
+                            <label for="mpMonthlyAmount" class="form-label">Extra money each month ($)</label>
+                            <input type="number" class="form-control" id="mpMonthlyAmount" name="MonthlyAmount"
+                                   min="0.01" max="1000000" step="0.01" inputmode="decimal" required
+                                   aria-describedby="mpErrMonthlyAmount"/>
+                            <div class="mp-field-error" id="mpErrMonthlyAmount" data-mp-error="MonthlyAmount" hidden></div>
+                        </div>
+
+                        <div class="mp-field">
+                            <label for="mpPurpose" class="form-label">Purpose <span class="mp-optional">(optional)</span></label>
+                            <textarea class="form-control" id="mpPurpose" name="Purpose" rows="2" maxlength="300"
+                                      aria-describedby="mpPurposeHint mpErrPurpose"></textarea>
+                            <div class="form-text" id="mpPurposeHint">What you want this money to do, in your own words. Up to 300 characters.</div>
+                            <div class="mp-field-error" id="mpErrPurpose" data-mp-error="Purpose" hidden></div>
+                        </div>
+
+                        <div class="mp-field">
+                            <label for="mpDebtApr" class="form-label">Your highest debt interest rate (APR %)</label>
+                            <input type="number" class="form-control" id="mpDebtApr" name="DebtApr"
+                                   min="0" max="100" step="0.01" inputmode="decimal"
+                                   aria-describedby="mpDebtAprHint mpErrDebtApr"/>
+                            <div class="form-text" id="mpDebtAprHint">Enter 0 if you have no debt.</div>
+                            <div class="mp-field-error" id="mpErrDebtApr" data-mp-error="DebtApr" hidden></div>
+                        </div>
+
+                        <div class="mp-field mp-follow-up" id="mpDebtBalanceField" data-mp-follow-up="DebtBalance" hidden>
+                            <label for="mpDebtBalance" class="form-label">Balance of that debt ($)</label>
+                            <input type="number" class="form-control" id="mpDebtBalance" name="DebtBalance"
+                                   min="0.01" step="0.01" inputmode="decimal" aria-describedby="mpErrDebtBalance"/>
+                            <div class="mp-field-error" id="mpErrDebtBalance" data-mp-error="DebtBalance" hidden></div>
+                        </div>
+
+                        <div class="mp-field">
+                            <label for="mpEmergencyFundMonths" class="form-label">Months of expenses your emergency fund covers</label>
+                            <input type="number" class="form-control" id="mpEmergencyFundMonths" name="EmergencyFundMonths"
+                                   min="0" max="120" step="0.1" inputmode="decimal"
+                                   aria-describedby="mpErrEmergencyFundMonths"/>
+                            <div class="mp-field-error" id="mpErrEmergencyFundMonths" data-mp-error="EmergencyFundMonths" hidden></div>
+                        </div>
+
+                        <div class="mp-field mp-follow-up" id="mpMonthlyExpensesField" data-mp-follow-up="MonthlyExpenses" hidden>
+                            <label for="mpMonthlyExpenses" class="form-label">Your monthly expenses ($)</label>
+                            <input type="number" class="form-control" id="mpMonthlyExpenses" name="MonthlyExpenses"
+                                   min="0.01" step="0.01" inputmode="decimal" aria-describedby="mpErrMonthlyExpenses"/>
+                            <div class="mp-field-error" id="mpErrMonthlyExpenses" data-mp-error="MonthlyExpenses" hidden></div>
+                        </div>
+
+                        <fieldset class="mp-field" aria-describedby="mpErrHasFullEmployerMatch">
+                            <legend class="form-label">Do you get your employer's full retirement match?</legend>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="HasFullEmployerMatch" id="mpMatchYes" value="true"/>
+                                <label class="form-check-label" for="mpMatchYes">Yes</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="HasFullEmployerMatch" id="mpMatchNo" value="false"/>
+                                <label class="form-check-label" for="mpMatchNo">No</label>
+                            </div>
+                            <div class="mp-field-error" id="mpErrHasFullEmployerMatch" data-mp-error="HasFullEmployerMatch" hidden></div>
+                        </fieldset>
+
+                        <div class="mp-field mp-follow-up" id="mpEmployerMatchPercentField" data-mp-follow-up="EmployerMatchPercent" hidden>
+                            <label for="mpEmployerMatchPercent" class="form-label">Your employer's match (% of your pay)</label>
+                            <input type="number" class="form-control" id="mpEmployerMatchPercent" name="EmployerMatchPercent"
+                                   min="0" max="100" step="0.01" inputmode="decimal"
+                                   aria-describedby="mpErrEmployerMatchPercent"/>
+                            <div class="mp-field-error" id="mpErrEmployerMatchPercent" data-mp-error="EmployerMatchPercent" hidden></div>
+                        </div>
+
+                        <div class="mp-field">
+                            <label for="mpHorizonYears" class="form-label">Years until you need this money</label>
+                            <input type="number" class="form-control" id="mpHorizonYears" name="HorizonYears"
+                                   min="1" max="50" step="1" inputmode="numeric" aria-describedby="mpErrHorizonYears"/>
+                            <div class="mp-field-error" id="mpErrHorizonYears" data-mp-error="HorizonYears" hidden></div>
+                        </div>
+
+                        <div class="mp-field mp-follow-up" id="mpAgeBandField" data-mp-follow-up="AgeBand" hidden>
+                            <label for="mpAgeBand" class="form-label">Your age this year</label>
+                            <select class="form-select" id="mpAgeBand" name="AgeBand" aria-describedby="mpErrAgeBand">
+                                <option value="">Choose your age range</option>
+                                <option value="1">Under 50</option>
+                                <option value="2">50 to 59, or 64 and over</option>
+                                <option value="3">60 to 63</option>
+                            </select>
+                            <div class="mp-field-error" id="mpErrAgeBand" data-mp-error="AgeBand" hidden></div>
+                        </div>
+
+                        <fieldset class="mp-field mp-follow-up" id="mpAtContributionLimitField" data-mp-follow-up="AtContributionLimit"
+                                  aria-describedby="mpErrAtContributionLimit" hidden>
+                            <legend class="form-label">Do you already put in the IRS yearly limit for your age?</legend>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="AtContributionLimit" id="mpLimitYes" value="true"/>
+                                <label class="form-check-label" for="mpLimitYes">Yes</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="AtContributionLimit" id="mpLimitNo" value="false"/>
+                                <label class="form-check-label" for="mpLimitNo">No</label>
+                            </div>
+                            <div class="mp-field-error" id="mpErrAtContributionLimit" data-mp-error="AtContributionLimit" hidden></div>
+                        </fieldset>
+
+                        <button type="submit" class="btn btn-primary w-100" id="mpSubmit">Show my priority</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-8">
+            <section class="card mp-card mp-result" aria-labelledby="mpResultHeading">
+                <div class="mp-card__body">
+                    <h2 class="mp-card__title" id="mpResultHeading">Your priority</h2>
+                    <p class="mp-empty" id="mpEmpty">Answer the questions to see where your extra money should go first</p>
+                    <div id="mpResult" hidden>
+                        <p class="mp-headline" id="mpHeadline" tabindex="-1"></p>
+                        <div class="mp-figures" id="mpFigures"></div>
+                        <h3 class="mp-subtitle" id="mpPathHeading">Your path</h3>
+                        <ol class="mp-path" id="mpPath" aria-labelledby="mpPathHeading" aria-live="polite"></ol>
+                        <div class="mp-assumptions" id="mpAssumptions"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="card mp-card mt-3" aria-labelledby="mpTreeHeading">
+        <div class="mp-card__body">
+            <h2 class="mp-card__title" id="mpTreeHeading">Priority Tree</h2>
+            <div id="mp-diagram" class="mp-diagram" aria-label="Priority Tree"></div>
+        </div>
+    </section>
+
+    <section class="card mp-card mt-3" aria-labelledby="mpEarlierHeading">
+        <div class="mp-card__body">
+            <h2 class="mp-card__title" id="mpEarlierHeading" tabindex="-1">Earlier results</h2>
+            <p class="mp-empty" id="mpEarlierEmpty" hidden>Your earlier results will appear here</p>
+            <div class="alert alert-danger" id="mpEarlierError" role="alert" hidden></div>
+            <ul class="mp-earlier" id="mpEarlier"></ul>
+        </div>
+    </section>
+</div>
+
+<script type="application/json" id="mpPageData">@Json.Serialize(Model)</script>
+
+@section Scripts {
+    <script src="~/lib/mermaid/dist/mermaid.min.js"></script>
+    <script src="~/js/money-priorities/diagram.js" asp-append-version="true"></script>
+    <script src="~/js/money-priorities/money-priorities.js" asp-append-version="true"></script>
+}
