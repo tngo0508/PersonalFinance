@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [7.1.0] - 2026-10-25
+## [7.3.0] - 2026-10-25
 
 ### Added
 
@@ -15,6 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Polls, stories, comments and author names are user content and stay as written; they are never translated.
   - Poll and story category labels are translated; the stored category value does not change.
   - Vote counts use plural forms, and "5m ago"-style times are translated.
+
+## [7.2.0] - 2026-10-25
+
+### Added
+
+- **Landing Page and About in Vietnamese**: the Landing Page and the About page are shown in the visitor's language, from the language cookie or the browser's `Accept-Language` (slice L3 of the localization spec, #356).
+  - The sample plan keeps its US dollar figures until amounts are formatted per language.
+- **English-only notice on the Legal Pages**: Privacy, Terms, Disclaimer, Cookies and Contact keep their English text, now under a translated title and the notice "Legal text is provided in English" for visitors using another language.
+  - The English text is tagged `lang="en"`, so screen readers read it as English.
+
+## [7.1.0] - 2026-10-25
+
+### Added
+
+- **AI Assistant replies in your language**: the assistant answers in the Language saved on the Account, English when none is saved (#354).
 
 ## [7.0.0] - 2026-10-25
 

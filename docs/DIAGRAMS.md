@@ -199,7 +199,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 |---|---|---|---|---|---|---|---|
 | AccountLifecycle | `AccountDeletionController` (`api/account-deletion`), `DataExportController` (`api/data-export`) | `IAccountDeletionService`, `IAccountPurgeService`, `IDataExportService` | `DeletionRequest` (every user-owned Entity on purge and export) | `IAccountDeletionApi`, `IDataExportApi` | none: Identity Razor Pages under `Areas/Identity/Pages/Account/` | none | `AccountPurgeJob` runs the image with `--purge-only`; see [7](#7-account-lifecycle) |
 | Admin | `AdminController` (`api/Admin`, RequireAdmin) | `IAdminService` | none (Identity tables) | `IAdminApi` | `Admin` (also injects `IFeedbackApi`) | none | `UserManager`/`RoleManager`, `AdminRoleLock`; no Validators |
-| AiAssistant | `AiAssistantController` (`api/AiAssistant`) | `IAiAssistantService`, `IAiQuotaService`, `IAiScopeFilter` | `AiUsageRecord` (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`) | `IAiAssistantApi` | `AiAssistant` (JSON only) | `core/ai-chat-widget.js`, `news/news-summary.js` | OpenAI through `IChatClient`; see [12](#12-ai-assistant) |
+| AiAssistant | `AiAssistantController` (`api/AiAssistant`) | `IAiAssistantService`, `IAiQuotaService`, `IAiScopeFilter` | `AiUsageRecord` (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `UserPreference`) | `IAiAssistantApi` | `AiAssistant` (JSON only) | `core/ai-chat-widget.js`, `news/news-summary.js` | OpenAI through `IChatClient`; see [12](#12-ai-assistant) |
 | Analysis | `SpreadsheetAnalysisController` (`api/SpreadsheetAnalysis`) | `ISpreadsheetAnalysisService`, `IGoogleSheetRemovalService` | `SpreadsheetBudgetSnapshot`, `SpreadsheetTransactionRecord` | `ISpreadsheetAnalysisApi` | `Analysis` (also injects `IBudgetTrackerApi`) | `analysis/` | Depends on GoogleDrive's `ISpreadsheetReader`; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | BudgetPlanner | `BudgetController` (`api/Budget`) | `IBudgetService` | `UserBudgetAllocation` | `IBudgetPlannerApi` | `Budget` | `budget/` | Raises Notifications; reads `IBudgetDataProvider` |
 | BudgetTracker | `BudgetTrackerController` (`api/budget-tracker`) | `IMonthlyBudgetService`, `IBudgetTrackerRemovalService` | `BudgetCategory`, `BudgetTransaction`, `MonthlyBudgetPlan`, `MonthlyBudgetLine` | `IBudgetTrackerApi` | `BudgetTracker` | `budget-tracker/`, `core/data-source-toggle.js` | Six Validators; the controller also injects `IBudgetDataSourceService` |
@@ -988,7 +988,8 @@ sequenceDiagram
         else allowed
             AC->>S: SendChatMessageAsync(userId, request)
             S->>P: financial snapshot: NetWorthParameters, projection, allocations, savings goals
-            S->>O: GetResponseAsync(system prompt + snapshot + history, 4 tools, MaxOutputTokens 400)
+            S->>P: UserPreference.Language (English when unset)
+            S->>O: GetResponseAsync(system prompt with reply Language + snapshot + history, 4 tools, MaxOutputTokens 400)
             loop function calls, at most 3 iterations
                 O-->>S: get_budget_summary, get_recent_transactions, get_savings_goals, get_net_worth_details
                 S->>P: read
