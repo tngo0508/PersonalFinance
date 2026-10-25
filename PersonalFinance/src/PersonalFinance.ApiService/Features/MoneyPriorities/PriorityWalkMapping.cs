@@ -125,6 +125,7 @@ internal static class PriorityWalkMapping
         },
         FirstMonthInterest = debt.Payoff.FirstMonthInterest,
         MaximumMonths = DebtPayoff.MaxMonths,
+        MaximumYears = DebtPayoff.MaxMonths / 12,
         Months = debt.Payoff.Months,
         TotalInterest = debt.Payoff.TotalInterest,
         FinalPayment = debt.Payoff.FinalPayment
