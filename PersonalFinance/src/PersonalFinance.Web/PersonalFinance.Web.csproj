@@ -60,6 +60,16 @@
         <None Include="package.json;package-lock.json;tools\**" />
     </ItemGroup>
 
+    <!--
+      Release serves only wwwroot/dist (spec #286), so the unminified sources and the web root's lint tooling leave
+      @(Content). Removing them here, not with CopyToPublishDirectory="Never", keeps them out of the static web
+      assets manifest as well as the publish folder, so Production cannot serve them. minify.js reads the sources
+      from disk, and Debug builds still serve /js and /css. tools/check-publish.js guards this in CI.
+    -->
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
+        <Content Remove="wwwroot\js\**;wwwroot\css\**;wwwroot\package.json;wwwroot\package-lock.json;wwwroot\.eslintrc.js;wwwroot\.eslintignore" />
+    </ItemGroup>
+
     <Target Name="MinifyWebAssets" BeforeTargets="ResolveProjectStaticWebAssets" Condition="'$(Configuration)' == 'Release'">
         <Exec Command="npm ci" WorkingDirectory="$(MSBuildProjectDirectory)" Condition="!Exists('$(MSBuildProjectDirectory)\node_modules\esbuild')" />
         <Exec Command="npm run minify" WorkingDirectory="$(MSBuildProjectDirectory)" />

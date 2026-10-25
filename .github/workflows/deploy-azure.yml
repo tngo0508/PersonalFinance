@@ -103,6 +103,14 @@ jobs:
       - name: Execute test suite
         run: dotnet test PersonalFinance.sln --configuration Release --no-build --verbosity normal
 
+      # Production serves only the minified wwwroot/dist assets (spec #286). Publish the Web project and fail
+      # if dist or its .br/.gz siblings are missing, a .map is published, or unminified source or tooling remains.
+      - name: Check Web publish output
+        run: |
+          node --test PersonalFinance/src/PersonalFinance.Web/tools/check-publish.test.js
+          dotnet publish PersonalFinance/src/PersonalFinance.Web --configuration Release --no-restore -o "$RUNNER_TEMP/web-publish"
+          node PersonalFinance/src/PersonalFinance.Web/tools/check-publish.js "$RUNNER_TEMP/web-publish"
+
   # ============================================================================
   # 1b. JAVASCRIPT LINT — ESLint (runs in parallel)
   # ============================================================================
