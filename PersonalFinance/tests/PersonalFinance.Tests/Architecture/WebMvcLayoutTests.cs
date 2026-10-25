@@ -15,9 +15,12 @@ public class WebMvcLayoutTests
     private const string Project = "PersonalFinance.Web";
     private static readonly Assembly WebAssembly = typeof(InternalApiClientExtensions).Assembly;
 
-    /// <summary>Namespaces a Web type may live in besides <c>Models.&lt;Controller&gt;</c> and the Identity area.</summary>
+    /// <summary>
+    /// Namespaces a Web type may live in besides <c>Models.&lt;Controller&gt;</c> and the Identity area.
+    /// <c>Infrastructure.Localization</c> is the JSON localizer's host plumbing (ADR 0015).
+    /// </summary>
     private static readonly IReadOnlyList<string> FixedNamespaces =
-        ["Controllers", "Services", "TagHelpers", "Infrastructure"];
+        ["Controllers", "Services", "TagHelpers", "Infrastructure", "Infrastructure.Localization"];
 
     [Fact]
     public void EveryWebType_LivesInAnMvcFolder()
@@ -30,8 +33,8 @@ public class WebMvcLayoutTests
             .ToList();
 
         Assert.True(misplaced.Count == 0,
-            "Web types outside Controllers, Models.<Controller>, Services, TagHelpers, Infrastructure and the Identity " +
-            "area (ADR 0008):\n  " + string.Join("\n  ", misplaced));
+            "Web types outside Controllers, Models.<Controller>, Services, TagHelpers, Infrastructure(.Localization) and the " +
+            "Identity area (ADR 0008):\n  " + string.Join("\n  ", misplaced));
     }
 
     [Fact]

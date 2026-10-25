@@ -799,6 +799,22 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 - `GitHubActionsDeploymentWorkflowTests`: Validates CI/CD workflow configuration including job timeouts, concurrency settings, `paths-ignore`, per-image cache scopes, deploy gating, and `promote-latest` behavior.
 - `ReleaseAutomationTests`: `AppVersion.Current` matches its components and has a `CHANGELOG.md` section, and the `create-release` job and `release-check` workflow keep their gates.
 - `ModelValidationConventionTests`: Fails when `[Required]` is placed on a `bool` property (it is always satisfied, so it never rejects an unchecked box).
+- `Web/Localization/*`: the JSON localizer's fallback chain and log events, named placeholders and plurals, the `<js-strings>` island, model-binding and Identity messages (identical to the framework's in English), request localization over HTTP, the language switcher, and the committed `Resources/i18n` files.
+
+### Translations
+
+User-facing text lives in `PersonalFinance/src/PersonalFinance.Web/Resources/i18n/en.json`; `vi.json` is machine-drafted
+([ADR 0015](adr/0015-json-localization-with-custom-string-localizer.md)). After adding or changing English keys:
+
+```bash
+npm run i18n:translate
+```
+
+It reads `AZURE_TRANSLATOR_KEY`, `AZURE_TRANSLATOR_REGION` and `AZURE_TRANSLATOR_ENDPOINT` from the environment or the
+repository's `.env`, sends only missing or stale keys, and updates `vi.json` and `i18n.lock.json`. Commit the result
+on its own as `i18n: translate N keys (vi)`; a hand correction to `vi.json` stays until its English changes.
+`npm run i18n:translate -- --dry-run` lists what would be sent. `npm run i18n:report` prints what CI's `i18n-report`
+step writes to the job summary, and `npm run test:i18n` runs the Node tests of both scripts.
 
 ### Running the E2E tests locally
 

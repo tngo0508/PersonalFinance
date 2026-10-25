@@ -1,6 +1,7 @@
 const {chromium} = require('playwright');
 const {runResearchWalkthrough} = require('./research-walkthrough');
 const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough');
+const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -905,6 +906,16 @@ const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough'
             await runMoneyPrioritiesWalkthrough({browser, base, pass, fail, consoleErrors, pageErrors});
         } catch (error) {
             fail(`Money Priorities walkthrough failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9e: Language switch smoke (localization spec, slice L1a): Vietnamese Savings Goals and both switchers
+        // =========================================================
+        console.log('\n--- Test 9e: Language Switch Smoke ---');
+        try {
+            await runLanguageSwitchSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Language switch smoke failed: ${error.message}`);
         }
 
         // =========================================================

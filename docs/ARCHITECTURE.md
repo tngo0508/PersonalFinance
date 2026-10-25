@@ -190,6 +190,11 @@ A Web controller is named after its route, so its name can differ from its Featu
 7. **Web controller** in `PersonalFinance.Web/Controllers/`, its **view model** in `Models/<Controller>/` and its
    **Razor view** in `Views/<Controller>/`, with `Models/<Controller>` added to `Views/_ViewImports.cshtml`;
    JavaScript in `wwwroot/js/<feature>/`.
+   **User-facing text** is a key in `Web/Resources/i18n/en.json` (flat dotted PascalCase, `<Feature>.` prefix, named
+   `{placeholders}`, `Key.one` / `Key.other` plurals), shown with `@L["Key"]` or `L.Named(...)` in Razor, the
+   controller's injected `IStringLocalizer`, and `PFI18n.t('<Feature>.Js.Key')` in JS with
+   `<js-strings prefix="<Feature>.Js." />` on the page. Then run `npm run i18n:translate` and commit its output as its
+   own commit, `i18n: translate N keys (vi)` ([ADR 0015](adr/0015-json-localization-with-custom-string-localizer.md)).
    JavaScript only calls Web: a `fetch('/api/X...')` needs a Web controller routed at `api/X` with `[Authorize]` and
    `[JsonApiErrors]` (`Web/WebApiRouteTests` checks this), and state-changing calls send the
    `RequestVerificationToken` header from the layout's `__RequestVerificationToken` meta tag.
