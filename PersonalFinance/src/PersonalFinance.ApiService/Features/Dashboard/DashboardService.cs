@@ -312,7 +312,7 @@ internal sealed class DashboardService : IDashboardService
             Item = new RecentActivityDto
             {
                 Title = t.Description,
-                Description = $"{t.Category} - {t.Amount:C}",
+                Description = $"{t.Category} - {MoneyFormatter.Format(t.Amount, SupportedCurrencies.Default.Code)}",
                 Date = t.Date,
                 Type = t.Type
             }
@@ -326,7 +326,7 @@ internal sealed class DashboardService : IDashboardService
             Item = new RecentActivityDto
             {
                 Title = g.Summary.Name,
-                Description = $"Target: {g.Summary.TargetAmount:C} | Saved: {g.Summary.CurrentAmount:C}",
+                Description = $"Target: {MoneyFormatter.Format(g.Summary.TargetAmount, SupportedCurrencies.Default.Code)} | Saved: {MoneyFormatter.Format(g.Summary.CurrentAmount, SupportedCurrencies.Default.Code)}",
                 Date = g.CreatedAt,
                 Type = "SavingsGoal"
             }

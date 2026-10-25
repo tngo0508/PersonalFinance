@@ -77,7 +77,7 @@ public sealed class ApiServiceCultureTests : IDisposable
     }
 
     [Fact]
-    public async Task DashboardRecentActivity_InInvariantCulture_UsesInvariantCurrencySymbol()
+    public async Task DashboardRecentActivity_InInvariantCulture_StillShowsDollarAmounts()
     {
         StartInInvariantCulture();
         await using AppDbContext db = CreateContext();
@@ -86,7 +86,8 @@ public sealed class ApiServiceCultureTests : IDisposable
 
         string activity = await GetDashboardGoalActivityAsync(db);
 
-        Assert.Equal("Target: ¤2,500.50 | Saved: ¤1,234.56", activity);
+        // The symbol comes from the currency (MoneyFormatter), never from the culture, so "¤" cannot return.
+        Assert.Equal("Target: $2,500.50 | Saved: $1,234.56", activity);
     }
 
     [Fact]

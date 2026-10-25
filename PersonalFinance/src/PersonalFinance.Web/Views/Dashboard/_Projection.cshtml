@@ -9,18 +9,18 @@
     string? summarySentence = null;
     if (netWorth is not null && last is not null)
     {
-        summarySentence = $"Base scenario reaches {last.Base:C0} by age {last.Age}";
+        summarySentence = $"Base scenario reaches {MoneyFormatter.FormatWhole(last.Base, SupportedCurrencies.Default.Code)} by age {last.Age}";
         if (netWorth.FiTarget > 0m)
         {
             summarySentence += netWorth.FiReachedAge is not null
-                ? $"; FI target {netWorth.FiTarget:C0} reached at age {netWorth.FiReachedAge}."
-                : $"; FI target {netWorth.FiTarget:C0} not reached by age {last.Age}.";
+                ? $"; FI target {MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code)} reached at age {netWorth.FiReachedAge}."
+                : $"; FI target {MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code)} not reached by age {last.Age}.";
         }
         else
         {
             summarySentence += ".";
         }
-        summarySentence += $" Conservative scenario reaches {last.Conservative:C0}; Aggressive scenario reaches {last.Aggressive:C0}.";
+        summarySentence += $" Conservative scenario reaches {MoneyFormatter.FormatWhole(last.Conservative, SupportedCurrencies.Default.Code)}; Aggressive scenario reaches {MoneyFormatter.FormatWhole(last.Aggressive, SupportedCurrencies.Default.Code)}.";
     }
 }
 <section class="dash-card dash-projection" aria-labelledby="dash-projection-title">
@@ -49,11 +49,11 @@
         <dl class="dash-stats">
             <div class="dash-stats__item">
                 <dt>Base at @last.Age</dt>
-                <dd class="dash-money">@last.Base.ToString("C0")</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(last.Base, SupportedCurrencies.Default.Code)</dd>
             </div>
             <div class="dash-stats__item">
                 <dt>FI Target</dt>
-                <dd class="dash-money">@(netWorth.FiTarget > 0m ? netWorth.FiTarget.ToString("C0") : "—")</dd>
+                <dd class="dash-money">@(netWorth.FiTarget > 0m ? MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code) : "—")</dd>
             </div>
         </dl>
     }

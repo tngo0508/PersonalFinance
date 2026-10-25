@@ -20,7 +20,7 @@
                 <span class="dash-budget__period">@periodLabel</span>
                 <text>&middot;</text>
             }
-            <span class="dash-money">@budget.MonthlyIncome.ToString("C0")</span> monthly income
+            <span class="dash-money">@MoneyFormatter.FormatWhole(budget.MonthlyIncome, SupportedCurrencies.Default.Code)</span> monthly income
         </p>
 
         @if (budget.TotalAllocatedPercent > 0m)
@@ -36,7 +36,7 @@
                           aria-hidden="true"></span>
                     <span class="dash-budget__name">@allocation.Name</span>
                     <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(allocation.Percent)</span>
-                    <span class="dash-budget__amount dash-money">@allocation.Amount.ToString("C0")</span>
+                    <span class="dash-budget__amount dash-money">@MoneyFormatter.FormatWhole(allocation.Amount, SupportedCurrencies.Default.Code)</span>
                 </li>
             }
             @if (budget.UnallocatedPercent is { } unallocatedPercent)
@@ -45,7 +45,7 @@
                     <span class="dash-budget__swatch dash-budget__swatch--unallocated" aria-hidden="true"></span>
                     <span class="dash-budget__name">Unallocated</span>
                     <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(unallocatedPercent)</span>
-                    <span class="dash-budget__amount dash-money">@((budget.UnallocatedAmount ?? 0m).ToString("C0"))</span>
+                    <span class="dash-budget__amount dash-money">@MoneyFormatter.FormatWhole(budget.UnallocatedAmount ?? 0m, SupportedCurrencies.Default.Code)</span>
                 </li>
             }
         </ul>
