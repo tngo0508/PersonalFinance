@@ -9,7 +9,8 @@ namespace PersonalFinance.ApiService.Features.BudgetTracker;
 public interface IMonthlyBudgetService
 {
     /// <summary>
-    /// Seeds default expense and income categories for a user if they do not yet have any.
+    /// Seeds default expense and income categories for a user who has no live categories and no live plans or
+    /// transactions: a new user, or one whose Budget Tracker data was removed.
     /// </summary>
     Task EnsureDefaultCategoriesAsync(string userId, CancellationToken ct = default);
 

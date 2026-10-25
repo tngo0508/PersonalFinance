@@ -2,7 +2,9 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Web.Models.Analysis;
 using PersonalFinance.Web.Services;
 
@@ -16,11 +18,14 @@ namespace PersonalFinance.Web.Controllers;
 public class AnalysisController : Controller
 {
     private readonly ISpreadsheetAnalysisApi _api;
+    private readonly IBudgetTrackerApi _budgetTrackerApi;
     private readonly ILogger<AnalysisController> _logger;
 
-    public AnalysisController(ISpreadsheetAnalysisApi api, ILogger<AnalysisController> logger)
+    public AnalysisController(ISpreadsheetAnalysisApi api, IBudgetTrackerApi budgetTrackerApi,
+        ILogger<AnalysisController> logger)
     {
         _api = api;
+        _budgetTrackerApi = budgetTrackerApi;
         _logger = logger;
     }
 
@@ -124,6 +129,84 @@ public class AnalysisController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>
+    ///     Shows what removing a Data Source would delete, and asks the user to confirm.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> RemoveSource(
+        [FromQuery] BudgetDataSource source,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(source))
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        var model = new RemoveSourceViewModel { Source = source };
+        if (!await LoadCountsAsync(model, cancellationToken))
+        {
+            TempData["ErrorMessage"] = $"There is no {model.SourceName} data to remove.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(model);
+    }
+
+    /// <summary>
+    ///     Removes (soft-deletes) all of one Data Source's data once confirmed. The Budget Tracker also needs
+    ///     <see cref="RemoveSourceViewModel.ConfirmationWord"/> typed, since its entries exist nowhere else.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [ActionName(nameof(RemoveSource))]
+    public async Task<IActionResult> RemoveSourceConfirmed(
+        RemoveSourceViewModel input,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(input.Source))
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        var model = new RemoveSourceViewModel { Source = input.Source, Confirmation = input.Confirmation };
+        if (model.RequiresTypedConfirmation &&
+            !string.Equals(input.Confirmation?.Trim(), RemoveSourceViewModel.ConfirmationWord, StringComparison.Ordinal))
+        {
+            ModelState.AddModelError(nameof(RemoveSourceViewModel.Confirmation),
+                $"Type {RemoveSourceViewModel.ConfirmationWord} to confirm.");
+            if (!await LoadCountsAsync(model, cancellationToken))
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(model);
+        }
+
+        BudgetDataSourceSummaryDto removed = input.Source == BudgetDataSource.BudgetTracker
+            ? await _budgetTrackerApi.RemoveDataAsync(cancellationToken)
+            : await _api.RemoveSyncedDataAsync(cancellationToken);
+
+        TempData["StatusMessage"] =
+            $"Removed your {model.SourceName} data: {removed.MonthCount} month(s) and {removed.TransactionCount} transaction(s).";
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>Fills in the source's current counts; false when it holds no data.</summary>
+    private async Task<bool> LoadCountsAsync(RemoveSourceViewModel model, CancellationToken cancellationToken)
+    {
+        List<BudgetDataSourceSummaryDto> summaries =
+            await _budgetTrackerApi.GetDataSourceSummariesAsync(cancellationToken);
+        BudgetDataSourceSummaryDto? summary = summaries.FirstOrDefault(s => s.Source == model.Source);
+        if (summary is not { HasData: true })
+        {
+            return false;
+        }
+
+        model.MonthCount = summary.MonthCount;
+        model.TransactionCount = summary.TransactionCount;
+        return true;
+    }
+
     private static AnalysisDashboardViewModel MapToViewModel(AnalysisDashboardDto result)
     {
         var model = new AnalysisDashboardViewModel
@@ -133,7 +216,8 @@ public class AnalysisController : Controller
             SelectedMonth = result.Month,
             AvailableYears = result.AvailableYears,
             AvailableMonths = result.AvailableMonths,
-            ActiveSource = result.ActiveSource
+            ActiveSource = result.ActiveSource,
+            RemovableSources = result.SourceSummaries.Where(s => s.HasData).Select(s => s.Source).ToList()
         };
 
         if (result.Summary != null)

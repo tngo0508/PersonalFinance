@@ -95,4 +95,16 @@ public interface IBudgetTrackerApi
     [Put("/api/budget-tracker/data-source")]
     Task<BudgetDataSourceDto> SetDataSourceAsync([Body] SetBudgetDataSourceRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets how many months and transactions each Data Source holds, Google Sheet first.
+    /// </summary>
+    [Get("/api/budget-tracker/data-source/summaries")]
+    Task<List<BudgetDataSourceSummaryDto>> GetDataSourceSummariesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes (soft-deletes) all Budget Tracker data; the default categories return on next use.
+    /// </summary>
+    [Delete("/api/budget-tracker/data")]
+    Task<BudgetDataSourceSummaryDto> RemoveDataAsync(CancellationToken cancellationToken = default);
 }

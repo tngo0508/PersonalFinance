@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.12.0] - 2026-10-24
+
+### Added
+
+- **Remove a data source from Analysis**: the Analysis page offers "Remove Google Sheet data…" and "Remove Budget Tracker data…" for each source that holds data, with a confirmation page showing how many months and transactions will go.
+  - Removing the Google Sheet soft-deletes all synced months and transactions; the Google Drive connection stays, so the user can sync again.
+  - Removing the Budget Tracker soft-deletes its categories, plans and transactions, needs `REMOVE` typed to confirm, and the default categories return on next use.
+  - If the stored Data Source preference pointed at the removed source it is cleared, so Analysis, the Dashboard and search fall back to the source that still has data (ADR 0002, section 4).
+
+### Changed
+
+- **"Remove drive" explains what stays**: its confirmation now says that budget data already synced stays in Analysis, and links to removing it.
+- **Default Budget Tracker categories are seeded whenever none are in use**: a user with no live categories, plans or transactions gets the defaults again, instead of only a user who never had a category.
+
 ## [5.11.0] - 2026-10-24
 
 ### Added

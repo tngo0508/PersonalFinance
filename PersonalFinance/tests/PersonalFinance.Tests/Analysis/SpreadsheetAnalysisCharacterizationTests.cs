@@ -52,7 +52,9 @@ public class SpreadsheetAnalysisCharacterizationTests
         return new SpreadsheetAnalysisController(
             CreateService(db),
             new FakeSpreadsheetReader(),
-            NullLogger<SpreadsheetAnalysisController>.Instance)
+            NullLogger<SpreadsheetAnalysisController>.Instance,
+            new BudgetDataSourceService(db),
+            new GoogleSheetRemovalService(db, new BudgetDataSourceService(db), TimeProvider.System))
         {
             ControllerContext = new ControllerContext
             {

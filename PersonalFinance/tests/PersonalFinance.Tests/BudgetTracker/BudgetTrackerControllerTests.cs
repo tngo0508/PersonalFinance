@@ -37,7 +37,8 @@ public class BudgetTrackerControllerTests
             new SetActualOverrideRequestValidator(),
             new SaveCategoryRequestValidator(),
             new SaveTransactionRequestValidator(),
-            new SetBudgetDataSourceRequestValidator()
+            new SetBudgetDataSourceRequestValidator(),
+            new BudgetTrackerRemovalService(db, dataSourceService, TimeProvider.System)
         );
 
         var httpContext = new DefaultHttpContext();

@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using Refit;
 
@@ -24,6 +25,12 @@ public interface ISpreadsheetAnalysisApi
     Task<SyncSpreadsheetResponseDto> SyncSpreadsheetAsync(
         [Body] SyncSpreadsheetRequestDto request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Removes (soft-deletes) all synced Google Sheet data, keeping the Google Drive connection.
+    /// </summary>
+    [Delete("/api/SpreadsheetAnalysis/data")]
+    Task<BudgetDataSourceSummaryDto> RemoveSyncedDataAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Gets available years for the current user.

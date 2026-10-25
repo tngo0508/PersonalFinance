@@ -54,11 +54,13 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
             return;
         }
 
-        bool hasAnyCategories = await _dbContext.BudgetCategories
-            .IgnoreQueryFilters()
-            .AnyAsync(c => c.UserId == userId, ct);
+        // Archived categories still name the live months and transactions that used them, so they count while any
+        // live data remains. With none left (a new user, or after a Data Source Removal) the defaults are seeded.
+        bool hasCategoriesInUse = await _dbContext.BudgetCategories.AnyAsync(c => c.UserId == userId, ct)
+                                  || await _dbContext.MonthlyBudgetPlans.AnyAsync(p => p.UserId == userId, ct)
+                                  || await _dbContext.BudgetTransactions.AnyAsync(t => t.UserId == userId, ct);
 
-        if (hasAnyCategories)
+        if (hasCategoriesInUse)
         {
             return;
         }
@@ -104,7 +106,6 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
             }
 
             int countAfter = await _dbContext.BudgetCategories
-                .IgnoreQueryFilters()
                 .CountAsync(c => c.UserId == userId, ct);
 
             if (countAfter == 0)

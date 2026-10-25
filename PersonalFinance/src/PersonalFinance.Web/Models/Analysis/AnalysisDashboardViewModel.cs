@@ -1,5 +1,6 @@
 using System.Globalization;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
 
@@ -16,6 +17,9 @@ public class AnalysisDashboardViewModel
     public List<int> AvailableYears { get; set; } = new();
     public List<int> AvailableMonths { get; set; } = new();
     public BudgetDataSource ActiveSource { get; set; } = BudgetDataSource.GoogleSheet;
+
+    /// <summary>The Data Sources holding any data, which the page offers to remove (Data Source Removal).</summary>
+    public List<BudgetDataSource> RemovableSources { get; set; } = new();
 
     /// <summary>
     /// User-facing period label built from the selected year and month, e.g. "March 2026".

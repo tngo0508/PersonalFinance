@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
@@ -18,15 +19,21 @@ namespace PersonalFinance.ApiService.Features.Analysis;
 public class SpreadsheetAnalysisController : ControllerBase
 {
     private readonly ISpreadsheetAnalysisService _analysisService;
+    private readonly IBudgetDataSourceService _dataSourceService;
+    private readonly IGoogleSheetRemovalService _removalService;
     private readonly ILogger<SpreadsheetAnalysisController> _logger;
     private readonly ISpreadsheetReader _spreadsheetReader;
 
     public SpreadsheetAnalysisController(
         ISpreadsheetAnalysisService analysisService,
         ISpreadsheetReader spreadsheetReader,
-        ILogger<SpreadsheetAnalysisController> logger)
+        ILogger<SpreadsheetAnalysisController> logger,
+        IBudgetDataSourceService dataSourceService,
+        IGoogleSheetRemovalService removalService)
     {
         _analysisService = analysisService;
+        _dataSourceService = dataSourceService;
+        _removalService = removalService;
         _spreadsheetReader = spreadsheetReader;
         _logger = logger;
     }
@@ -43,6 +50,8 @@ public class SpreadsheetAnalysisController : ControllerBase
         string userId = User.GetUserId();
         List<int> availableYears = await _analysisService.GetAvailableYearsAsync(userId, cancellationToken);
         BudgetDataSource activeSource = await _analysisService.GetActiveSourceAsync(userId, cancellationToken);
+        List<BudgetDataSourceSummaryDto> sourceSummaries =
+            await _dataSourceService.GetDataSummariesAsync(userId, cancellationToken);
 
         if (availableYears.Count == 0)
         {
@@ -53,7 +62,8 @@ public class SpreadsheetAnalysisController : ControllerBase
                 Month = month,
                 AvailableYears = availableYears,
                 AvailableMonths = new List<int>(),
-                ActiveSource = activeSource
+                ActiveSource = activeSource,
+                SourceSummaries = sourceSummaries
             });
         }
 
@@ -74,6 +84,7 @@ public class SpreadsheetAnalysisController : ControllerBase
             AvailableYears = availableYears,
             AvailableMonths = availableMonths,
             ActiveSource = activeSource,
+            SourceSummaries = sourceSummaries,
             Summary = summary,
             Velocity = velocity,
             Trends = trends,
@@ -114,6 +125,19 @@ public class SpreadsheetAnalysisController : ControllerBase
             SnapshotsCreated = result.SnapshotsCreated,
             TransactionsCreated = result.TransactionsCreated
         });
+    }
+
+    /// <summary>
+    ///     Removes (soft-deletes) all of the user's synced Google Sheet data, keeping the Google Drive connection:
+    ///     the Data Source Removal of ADR 0002.
+    /// </summary>
+    [HttpDelete("data")]
+    [ProducesResponseType(typeof(BudgetDataSourceSummaryDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RemoveSyncedData(CancellationToken cancellationToken = default)
+    {
+        string userId = User.GetUserId();
+        BudgetDataSourceSummaryDto removed = await _removalService.RemoveAsync(userId, cancellationToken);
+        return Ok(removed);
     }
 
     /// <summary>
