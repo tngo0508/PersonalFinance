@@ -5,7 +5,9 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.Data;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Enums;
@@ -15,6 +17,7 @@ using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.MoneyPriorities;
 using Refit;
 using AuthorizeAttribute = Microsoft.AspNetCore.Authorization.AuthorizeAttribute;
+using MoneyPrioritiesService = PersonalFinance.ApiService.Features.MoneyPriorities.MoneyPrioritiesService;
 
 namespace PersonalFinance.Tests.MoneyPriorities;
 
@@ -53,6 +56,26 @@ public class MoneyPrioritiesWebControllerTests
         Assert.NotNull(model.LatestAnswers);
         Assert.Equal(22.99m, model.LatestAnswers.DebtApr);
         Assert.Equal(5000m, model.LatestAnswers.DebtBalance);
+    }
+
+    [Fact]
+    public async Task Index_CarriesTheTreeThresholdsFromTheApiService_ForTheFollowUpFields()
+    {
+        await using AppDbContext db = new(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"MoneyPrioritiesThresholds_{Guid.NewGuid():N}")
+            .Options);
+        MoneyPrioritiesService service = MoneyPrioritiesTestServices.Service(db);
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync), service.GetTree());
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await controller.Index();
+
+        MoneyPrioritiesViewModel model = Assert.IsType<MoneyPrioritiesViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(7m, model.Thresholds.HighInterestAprPercent);
+        Assert.Equal(3m, model.Thresholds.EmergencyFundTargetMonths);
+        Assert.Equal(10, model.Thresholds.LongHorizonYears);
     }
 
     [Fact]

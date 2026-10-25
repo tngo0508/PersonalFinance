@@ -195,6 +195,7 @@ public class MoneyPrioritiesServiceTests
         PriorityDebtFiguresDto debt = Assert.IsType<PriorityDebtFiguresDto>(result.Figures.Debt);
         Assert.Equal(PriorityDebtOutcome.LongerThanMaximum, debt.Outcome);
         Assert.Equal(600, debt.MaximumMonths);
+        Assert.Equal(50, debt.MaximumYears);
         Assert.Null(debt.Months);
         Assert.Null(debt.TotalInterest);
         Assert.Null(debt.FinalPayment);
