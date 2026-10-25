@@ -12,6 +12,9 @@ internal static class PriorityLeafCalculator
 {
     private const int MonthsPerYear = 12;
 
+    /// <summary>How a missing follow-up is reported: "The leaf needs DebtBalance, but it has no answer."</summary>
+    private const string LeafNeeds = "The leaf needs";
+
     /// <summary>L4: cash beside the Conservative scenario.</summary>
     private static readonly GrowthScenario[] CashScenarios = [GrowthScenario.Cash, GrowthScenario.Conservative];
 
@@ -48,7 +51,7 @@ internal static class PriorityLeafCalculator
 
     private static DebtPayoffFigures Debt(PriorityAnswers answers)
     {
-        decimal balance = Required(answers.DebtBalance, nameof(answers.DebtBalance));
+        decimal balance = PriorityAnswerGuard.Required(answers.DebtBalance, nameof(answers.DebtBalance), LeafNeeds);
         return new DebtPayoffFigures
         {
             Balance = balance,
@@ -60,8 +63,8 @@ internal static class PriorityLeafCalculator
 
     private static EmergencyFundFigures EmergencyFund(PriorityAnswers answers)
     {
-        decimal monthsCovered = Required(answers.EmergencyFundMonths, nameof(answers.EmergencyFundMonths));
-        decimal expenses = Required(answers.MonthlyExpenses, nameof(answers.MonthlyExpenses));
+        decimal monthsCovered = PriorityAnswerGuard.Required(answers.EmergencyFundMonths, nameof(answers.EmergencyFundMonths), LeafNeeds);
+        decimal expenses = PriorityAnswerGuard.Required(answers.MonthlyExpenses, nameof(answers.MonthlyExpenses), LeafNeeds);
         const decimal targetMonths = PriorityTreeThresholds.EmergencyFundTargetMonths;
         decimal gap = Math.Max(0m, targetMonths * expenses - monthsCovered * expenses);
         return new EmergencyFundFigures
@@ -77,7 +80,7 @@ internal static class PriorityLeafCalculator
 
     private static EmployerMatchFigures EmployerMatch(PriorityAnswers answers)
     {
-        decimal matchPercent = Required(answers.EmployerMatchPercent, nameof(answers.EmployerMatchPercent));
+        decimal matchPercent = PriorityAnswerGuard.Required(answers.EmployerMatchPercent, nameof(answers.EmployerMatchPercent), LeafNeeds);
         return new EmployerMatchFigures
         {
             MatchPercent = matchPercent,
@@ -89,7 +92,7 @@ internal static class PriorityLeafCalculator
     /// <summary>The yearly amount fills the IRA limit for the age range, then the 401(k) limit; the rest is taxable.</summary>
     private static RetirementSplitFigures RetirementSplit(PriorityAnswers answers, RetirementContributionLimits limits)
     {
-        RetirementAgeBand ageBand = Required(answers.AgeBand, nameof(answers.AgeBand));
+        RetirementAgeBand ageBand = PriorityAnswerGuard.Required(answers.AgeBand, nameof(answers.AgeBand), LeafNeeds);
         decimal yearly = MonthsPerYear * answers.MonthlyAmount;
         decimal iraLimit = limits.IraFor(ageBand);
         decimal planLimit = limits.EmployeeDeferralFor(ageBand);
@@ -111,7 +114,7 @@ internal static class PriorityLeafCalculator
     /// <summary>The monthly amount grown to the horizon under each of <paramref name="scenarios"/>.</summary>
     private static PriorityLeafFigures Growth(string leafId, PriorityAnswers answers, GrowthScenario[] scenarios)
     {
-        int horizonYears = Required(answers.HorizonYears, nameof(answers.HorizonYears));
+        int horizonYears = PriorityAnswerGuard.Required(answers.HorizonYears, nameof(answers.HorizonYears), LeafNeeds);
         int months = horizonYears * MonthsPerYear;
         return new PriorityLeafFigures
         {
@@ -127,8 +130,4 @@ internal static class PriorityLeafCalculator
                 .ToList()
         };
     }
-
-    private static T Required<T>(T? answer, string name)
-        where T : struct =>
-        answer ?? throw new ArgumentException($"The leaf needs {name}, but it has no answer.");
 }

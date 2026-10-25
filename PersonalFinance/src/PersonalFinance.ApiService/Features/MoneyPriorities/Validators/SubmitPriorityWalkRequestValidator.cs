@@ -77,25 +77,42 @@ internal sealed class SubmitPriorityWalkRequestValidator : AbstractValidator<Sub
             .When(AsksContributionLimit);
     }
 
-    // Each condition mirrors PriorityPathEvaluator: a question is asked when the answer before it leads there.
-    private static bool AsksDebtBalance(SubmitPriorityWalkRequest r) =>
-        r.DebtApr >= PriorityTreeThresholds.HighInterestAprPercent;
+    // Each condition asks the shared tree decisions (PriorityQuestions) which answers the path asks for, so the
+    // validator and PriorityPathEvaluator cannot disagree.
+    private static bool AsksDebtBalance(SubmitPriorityWalkRequest r) => Asked(r).DebtBalance;
 
-    private static bool AsksEmergencyFund(SubmitPriorityWalkRequest r) =>
-        r.DebtApr < PriorityTreeThresholds.HighInterestAprPercent;
+    private static bool AsksEmergencyFund(SubmitPriorityWalkRequest r) => Asked(r).EmergencyFundMonths;
 
-    private static bool AsksMonthlyExpenses(SubmitPriorityWalkRequest r) =>
-        AsksEmergencyFund(r) && r.EmergencyFundMonths < PriorityTreeThresholds.EmergencyFundTargetMonths;
+    private static bool AsksMonthlyExpenses(SubmitPriorityWalkRequest r) => Asked(r).MonthlyExpenses;
 
-    private static bool AsksEmployerMatch(SubmitPriorityWalkRequest r) =>
-        AsksEmergencyFund(r) && r.EmergencyFundMonths >= PriorityTreeThresholds.EmergencyFundTargetMonths;
+    private static bool AsksEmployerMatch(SubmitPriorityWalkRequest r) => Asked(r).HasFullEmployerMatch;
 
-    private static bool AsksEmployerMatchPercent(SubmitPriorityWalkRequest r) =>
-        AsksEmployerMatch(r) && r.HasFullEmployerMatch == false;
+    private static bool AsksEmployerMatchPercent(SubmitPriorityWalkRequest r) => Asked(r).EmployerMatchPercent;
 
-    private static bool AsksHorizon(SubmitPriorityWalkRequest r) =>
-        AsksEmployerMatch(r) && r.HasFullEmployerMatch == true;
+    private static bool AsksHorizon(SubmitPriorityWalkRequest r) => Asked(r).HorizonYears;
 
-    private static bool AsksContributionLimit(SubmitPriorityWalkRequest r) =>
-        AsksHorizon(r) && r.HorizonYears > PriorityTreeThresholds.LongHorizonYears;
+    private static bool AsksContributionLimit(SubmitPriorityWalkRequest r) => Asked(r).AtContributionLimit;
+
+    /// <summary>
+    /// The answers the path asks for, as far as the request's answers lead. Without a debt APR the path cannot leave
+    /// Q1, so nothing further is asked. The monthly amount never changes the path, so a missing one is read as 0.
+    /// </summary>
+    private static PriorityAskedAnswers Asked(SubmitPriorityWalkRequest r)
+    {
+        if (r.DebtApr is not { } debtApr)
+        {
+            return PriorityQuestions.Asked([PriorityNodeIds.Start, PriorityNodeIds.HighInterestDebt]);
+        }
+
+        var answers = new PriorityAnswers
+        {
+            MonthlyAmount = r.MonthlyAmount ?? 0m,
+            DebtApr = debtApr,
+            EmergencyFundMonths = r.EmergencyFundMonths,
+            HasFullEmployerMatch = r.HasFullEmployerMatch,
+            HorizonYears = r.HorizonYears,
+            AtContributionLimit = r.AtContributionLimit
+        };
+        return PriorityQuestions.Asked(PriorityQuestions.Walk(answers));
+    }
 }
