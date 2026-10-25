@@ -295,6 +295,13 @@ body:not(:has(#sidebar)) .topbar {
     white-space: nowrap;
 }
 
+/* Language switcher (Views/Shared/_LanguageSwitcher.cshtml): a form holding an EN | VI button group */
+.language-switcher {
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
 @media (max-width: 479.98px) {
     /* Keep the name for screen readers; the icon still links home */
     .topbar-brand .sidebar-brand-name {

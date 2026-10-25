@@ -6,11 +6,11 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Services;
 using Serilog;
 
@@ -51,7 +51,8 @@ try
             options.Password.RequiredLength = 8;
         })
         .AddRoles<IdentityRole>()
-        .AddEntityFrameworkStores<AppDbContext>();
+        .AddEntityFrameworkStores<AppDbContext>()
+        .AddErrorDescriber<LocalizedIdentityErrorDescriber>();
 
     builder.Services.ConfigureApplicationCookie(options =>
     {
@@ -115,18 +116,16 @@ try
         options.KnownProxies.Clear();
     });
 
-    // Lock request localization to en-US so a browser Accept-Language header cannot change currency or number formats.
-    builder.Services.Configure<RequestLocalizationOptions>(options =>
-    {
-        options.DefaultRequestCulture = new RequestCulture(AppCulture.DefaultCultureName);
-        options.SupportedCultures = [AppCulture.Default];
-        options.SupportedUICultures = [AppCulture.Default];
-    });
+    // Localization (ADR 0015): the JSON localizer, request localization (culture cookie, then Accept-Language, then
+    // English) and the encoder. Registered before AddViewLocalization, which would otherwise add the .resx factory.
+    builder.Services.AddAppLocalization(builder.Environment);
 
     // MVC and Razor Pages; antiforgery tokens are validated on every unsafe (POST/PUT/PATCH/DELETE) action by default.
     builder.Services.AddRazorPages();
     builder.Services.AddControllersWithViews(options =>
             options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
+        .AddViewLocalization()
+        .AddDataAnnotationsLocalization()
         .AddJsonOptions(opts =>
         {
             opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;

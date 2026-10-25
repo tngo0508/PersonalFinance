@@ -55,6 +55,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <!--
+          Translations (ADR 0015) are read from the content root at startup, so they are published. The lock file and
+          glossaries only feed tools/i18n-translate.js and stay out of the build output.
+        -->
+        <Content Update="Resources\i18n\*.json" CopyToPublishDirectory="PreserveNewest" />
+        <Content Remove="Resources\i18n\i18n.lock.json;Resources\i18n\glossary.*.json" />
+        <None Include="Resources\i18n\i18n.lock.json;Resources\i18n\glossary.*.json" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- The minify tooling's manifest is not app content: keep it out of the build and publish output -->
         <Content Remove="package.json;package-lock.json" />
         <None Include="package.json;package-lock.json;tools\**" />

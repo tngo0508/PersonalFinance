@@ -1,0 +1,164 @@
+/**
+ * Language switch smoke test (localization spec §5, slice L1a, #295): a signed-out visitor switches to Vietnamese
+ * with the top-bar EN | VI switcher, registers, and finds the Savings Goals page in Vietnamese, including the strings
+ * its JavaScript reads from the page's JSON island. The account-menu switcher then returns to English. A browser that
+ * asks for Vietnamese (Accept-Language) gets it without choosing. Run from ui-test.js as Test 9e.
+ *
+ * Expected texts are read from Resources/i18n/vi.json and en.json, so a re-translation does not break the test.
+ */
+
+const path = require('path');
+
+const TIMEOUT = 15000;
+const RESOURCES = path.join(__dirname, '..', 'PersonalFinance', 'src', 'PersonalFinance.Web', 'Resources', 'i18n');
+const vi = require(path.join(RESOURCES, 'vi.json'));
+const en = require(path.join(RESOURCES, 'en.json'));
+
+/**
+ * Register a fresh Account and make sure it is signed in.
+ * @param {import('playwright').Page} page - A page in a signed-out context.
+ * @param {string} base - The Web app's base URL.
+ * @returns {Promise<boolean>} True when the Account is signed in.
+ */
+async function registerFreshAccount(page, base) {
+    const email = `e2elanguage_${Date.now()}@example.com`;
+    const password = 'TestPass1!';
+    await page.goto(`${base}/Identity/Account/Register`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+    await page.fill('input[type="email"]', email);
+    const passwords = await page.locator('input[type="password"]').all();
+    for (const input of passwords.slice(0, 2)) {
+        await input.fill(password);
+    }
+    await page.check('input[type="checkbox"][name="Input.AcceptTerms"]');
+    await page.click('#registerSubmit');
+    await page.waitForLoadState('networkidle', {timeout: TIMEOUT});
+
+    if (!await page.locator('#sidebar').isVisible().catch(() => false)) {
+        await page.goto(`${base}/Identity/Account/Login`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.fill('input[type="email"]', email);
+        await page.fill('input[type="password"]', password);
+        await page.click('#login-submit');
+        await page.waitForLoadState('networkidle', {timeout: TIMEOUT});
+    }
+    return page.locator('#sidebar').isVisible().catch(() => false);
+}
+
+/**
+ * Check one condition and report it.
+ * @param {boolean} ok - The condition.
+ * @param {string} message - What was checked.
+ * @param {string} detail - Shown when it fails.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+function check(ok, message, detail, report) {
+    if (ok) {
+        report.pass(message);
+    } else {
+        report.fail(`${message}: ${detail}`);
+    }
+}
+
+/**
+ * Run the smoke test.
+ * @param {{browser: import('playwright').Browser, base: string, pass: Function, fail: Function}} options - The suite.
+ * @returns {Promise<void>}
+ */
+async function runLanguageSwitchSmoke({browser, base, pass, fail}) {
+    const report = {pass, fail};
+    const context = await browser.newContext({locale: 'en-US', extraHTTPHeaders: {'Accept-Language': 'en-US,en;q=0.9'}});
+    const page = await context.newPage();
+    try {
+        // 1. Signed out: the top-bar switcher changes the language and remembers it.
+        await page.goto(`${base}/Identity/Account/Login`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        let lang = await page.getAttribute('html', 'lang');
+        check(lang === 'en', 'Signed-out page starts in English', `html lang="${lang}"`, report);
+
+        const viButton = page.locator('.topbar-auth .language-switcher button[data-language="vi"]');
+        check(await viButton.isVisible().catch(() => false), 'Top-bar language switcher is visible', 'no VI button', report);
+        await Promise.all([page.waitForLoadState('networkidle'), viButton.click()]);
+        await page.waitForURL(/\/Identity\/Account\/Login/, {timeout: TIMEOUT});
+        lang = await page.getAttribute('html', 'lang');
+        const pressed = await page.getAttribute('.topbar-auth .language-switcher button[data-language="vi"]', 'aria-pressed');
+        check(lang === 'vi' && pressed === 'true', 'Switching to VI reloads the same page in Vietnamese',
+            `html lang="${lang}", aria-pressed="${pressed}"`, report);
+
+        // 2. Signed in: Savings Goals renders in Vietnamese from server and JS strings.
+        if (!await registerFreshAccount(page, base)) {
+            fail('Language smoke: could not register and sign in');
+            return;
+        }
+        await page.goto(`${base}/SavingsGoals`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const h1 = ((await page.locator('main h1').first().textContent().catch(() => '')) || '').trim();
+        check(h1 === vi['SavingsGoals.Title'], 'Savings Goals heading is Vietnamese', `h1 "${h1}"`, report);
+        const addGoal = page.locator('#addGoalBtn');
+        const addText = ((await addGoal.textContent().catch(() => '')) || '').trim();
+        check(addText === vi['SavingsGoals.AddGoal'], 'Add Goal button is Vietnamese', `"${addText}"`, report);
+        const title = await page.title();
+        check(title.startsWith(vi['SavingsGoals.Title']), 'Tab title is Vietnamese', `"${title}"`, report);
+
+        const island = await page.evaluate(() => {
+            const element = document.getElementById('i18n-strings');
+            return element ? JSON.parse(element.textContent) : null;
+        });
+        check(Boolean(island) && island['SavingsGoals.Js.ConfirmDelete'] === vi['SavingsGoals.Js.ConfirmDelete'],
+            'JS string island carries the Vietnamese strings', JSON.stringify(island), report);
+
+        // Create a goal so the card text and the delete confirmation show.
+        await addGoal.click();
+        await page.locator('#addGoalModal').waitFor({state: 'visible', timeout: TIMEOUT});
+        const goalName = `Quỹ ${Date.now()}`;
+        await page.fill('#goalName', goalName);
+        await page.fill('#goalTarget', '5000');
+        await page.fill('#goalCurrent', '1000');
+        await Promise.all([
+            page.waitForNavigation({waitUntil: 'networkidle', timeout: TIMEOUT}),
+            page.click('#addGoalModal button[type="submit"]')
+        ]);
+        const alert = ((await page.locator('.savings-alert.alert-success').textContent().catch(() => '')) || '').trim();
+        check(alert.includes(vi['SavingsGoals.Message.Created']), 'Create confirmation is Vietnamese', `"${alert}"`, report);
+        const remaining = ((await page.locator('.savings-goal-remaining').first().textContent().catch(() => '')) || '').trim();
+        const [remainingBefore] = vi['SavingsGoals.Card.Remaining'].split('{amount}');
+        check(remaining.startsWith(remainingBefore.trim()) && remaining.includes('$4,000'),
+            'Goal card uses the translated template with its amount', `"${remaining}"`, report);
+
+        let dialogMessage = null;
+        page.once('dialog', async (dialog) => {
+            dialogMessage = dialog.message();
+            await dialog.dismiss();
+        });
+        await page.locator('.savings-goal-delete-btn').first().click();
+        await page.waitForTimeout(300);
+        const expectedConfirm = vi['SavingsGoals.Js.ConfirmDelete'].replace('{name}', goalName);
+        check(dialogMessage === expectedConfirm, 'Delete confirmation comes from PFI18n in Vietnamese',
+            `"${dialogMessage}"`, report);
+
+        // 3. The account-menu switcher goes back to English.
+        await page.click('.app-user-toggle');
+        const enItem = page.locator('.app-user-menu .language-switcher button[data-language="en"]');
+        check(await enItem.isVisible().catch(() => false), 'Account menu has the language switcher', 'no English item', report);
+        await Promise.all([page.waitForNavigation({waitUntil: 'networkidle', timeout: TIMEOUT}), enItem.click()]);
+        const h1En = ((await page.locator('main h1').first().textContent().catch(() => '')) || '').trim();
+        lang = await page.getAttribute('html', 'lang');
+        check(lang === 'en' && h1En === en['SavingsGoals.Title'], 'Account-menu switch returns to English',
+            `html lang="${lang}", h1 "${h1En}"`, report);
+    } catch (error) {
+        fail(`Language smoke failed: ${error.message}`);
+    } finally {
+        await context.close();
+    }
+
+    // 4. A browser asking for Vietnamese gets it without choosing.
+    const viContext = await browser.newContext({locale: 'vi-VN', extraHTTPHeaders: {'Accept-Language': 'vi-VN,vi;q=0.9'}});
+    try {
+        const viPage = await viContext.newPage();
+        await viPage.goto(`${base}/`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const lang = await viPage.getAttribute('html', 'lang');
+        check(lang === 'vi', 'Accept-Language vi picks Vietnamese for a new visitor', `html lang="${lang}"`, report);
+    } catch (error) {
+        fail(`Language smoke (Accept-Language) failed: ${error.message}`);
+    } finally {
+        await viContext.close();
+    }
+}
+
+module.exports = {runLanguageSwitchSmoke};

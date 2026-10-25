@@ -130,6 +130,13 @@ jobs:
       - name: Lint JavaScript files
         run: npm run lint
 
+      # Translations (ADR 0015): reports missing, stale and unreferenced keys to the job summary without failing;
+      # fails only on malformed resource JSON or a translation whose placeholders differ from the English.
+      - name: i18n-report
+        run: |
+          npm run test:i18n
+          npm run i18n:report
+
   # ============================================================================
   # 1c. E2E BROWSER TESTS — Playwright UI + API endpoint tests (runs in parallel)
   # Starts both ApiService and Web locally with InMemory DB, runs browser-based

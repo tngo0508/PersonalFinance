@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Web.Infrastructure;
@@ -17,11 +18,14 @@ public class SavingsGoalsController : Controller
 {
     private readonly ISavingsGoalsApi _savingsGoalsApi;
     private readonly ILogger<SavingsGoalsController> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public SavingsGoalsController(ISavingsGoalsApi savingsGoalsApi, ILogger<SavingsGoalsController> logger)
+    public SavingsGoalsController(ISavingsGoalsApi savingsGoalsApi, ILogger<SavingsGoalsController> logger,
+        IStringLocalizer localizer)
     {
         _savingsGoalsApi = savingsGoalsApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -49,7 +53,7 @@ public class SavingsGoalsController : Controller
     {
         if (string.IsNullOrWhiteSpace(name) || targetAmount <= 0)
         {
-            ModelState.AddModelError("", "Please enter a goal name and a valid target amount.");
+            ModelState.AddModelError("", _localizer["SavingsGoals.Message.InvalidGoal"]);
             return await IndexWithGoalsAsync(cancellationToken);
         }
 
@@ -68,12 +72,12 @@ public class SavingsGoalsController : Controller
         try
         {
             await _savingsGoalsApi.CreateSavingsGoalAsync(request, cancellationToken);
-            TempData["Success"] = "Savings goal created!";
+            TempData["Success"] = _localizer["SavingsGoals.Message.Created"].Value;
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Creating a savings goal failed.");
-            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, "Failed to create goal. Please try again."));
+            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, _localizer["SavingsGoals.Message.CreateFailed"]));
             return await IndexWithGoalsAsync(cancellationToken);
         }
 
@@ -100,13 +104,13 @@ public class SavingsGoalsController : Controller
         try
         {
             await _savingsGoalsApi.UpdateSavingsGoalAsync(id, request, cancellationToken);
-            TempData["Success"] = "Goal updated!";
+            TempData["Success"] = _localizer["SavingsGoals.Message.Updated"].Value;
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             // ModelState does not survive the redirect, so the message travels in TempData.
             _logger.LogError(ex, "Updating savings goal {GoalId} failed.", id);
-            TempData["Error"] = ApiErrorMessages.ForUser(ex, "Failed to update goal. Please try again.");
+            TempData["Error"] = ApiErrorMessages.ForUser(ex, _localizer["SavingsGoals.Message.UpdateFailed"]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -124,12 +128,12 @@ public class SavingsGoalsController : Controller
         try
         {
             await _savingsGoalsApi.DeleteSavingsGoalAsync(id, cancellationToken);
-            TempData["Success"] = "Goal deleted.";
+            TempData["Success"] = _localizer["SavingsGoals.Message.Deleted"].Value;
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Deleting savings goal {GoalId} failed.", id);
-            TempData["Error"] = ApiErrorMessages.ForUser(ex, "Failed to delete goal. Please try again.");
+            TempData["Error"] = ApiErrorMessages.ForUser(ex, _localizer["SavingsGoals.Message.DeleteFailed"]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -147,7 +151,8 @@ public class SavingsGoalsController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Failed to load savings goals; rendering the Unavailable State instead.");
-            return this.UnavailableView("Savings Goals", "We couldn't load your savings goals", "SavingsGoals");
+            return this.UnavailableView(_localizer["SavingsGoals.Title"], _localizer["SavingsGoals.Message.Unavailable"],
+                "SavingsGoals");
         }
 
         return View(nameof(Index));

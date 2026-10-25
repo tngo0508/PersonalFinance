@@ -1,0 +1,52 @@
+@*
+    The language switcher (spec §2.3): a POST to LanguageController.Set with an antiforgery token (added by the form tag
+    helper), returning to this page. Model "menu" renders items for the account dropdown in _LoginPartial; anything
+    else renders the compact EN | VI group anonymous pages show in the top bar. Language names are shown in themselves.
+*@
+@model string
+@using System.Globalization
+@{
+    var current = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+}
+@if (Model == "menu")
+{
+    <li><h6 class="dropdown-header" id="languageMenuLabel">@L["Common.Language"]</h6></li>
+    <li>
+        <form asp-area="" asp-controller="Language" asp-action="Set" method="post" class="language-switcher"
+              aria-labelledby="languageMenuLabel">
+            <input type="hidden" name="returnUrl" value="@returnUrl"/>
+            @foreach (var language in AppLanguages.All)
+            {
+                var isCurrent = language.Code == current;
+                <button type="submit" name="language" value="@language.Code" lang="@language.Code"
+                        class="dropdown-item d-flex justify-content-between align-items-center @(isCurrent ? "active" : "")"
+                        aria-current="@(isCurrent ? "true" : "false")" data-language="@language.Code">
+                    @language.NativeName
+                    @if (isCurrent)
+                    {
+                        <span aria-hidden="true">✓</span>
+                    }
+                </button>
+            }
+        </form>
+    </li>
+}
+else
+{
+    <form asp-area="" asp-controller="Language" asp-action="Set" method="post" class="language-switcher">
+        <input type="hidden" name="returnUrl" value="@returnUrl"/>
+        <div class="btn-group btn-group-sm" role="group" aria-label="@L["Common.Language"]">
+            @foreach (var language in AppLanguages.All)
+            {
+                var isCurrent = language.Code == current;
+                <button type="submit" name="language" value="@language.Code" lang="@language.Code"
+                        class="btn btn-outline-secondary @(isCurrent ? "active" : "")"
+                        aria-pressed="@(isCurrent ? "true" : "false")" aria-label="@language.NativeName"
+                        title="@language.NativeName" data-language="@language.Code">
+                    @language.Code.ToUpperInvariant()
+                </button>
+            }
+        </div>
+    </form>
+}

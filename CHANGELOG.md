@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [6.3.0] - 2026-10-25
+
+### Added
+
+- **Vietnamese, starting with Savings Goals**: the app can now show its text in Vietnamese, and the Savings Goals page is the first page translated end to end (slice L1a of the localization spec, #295).
+  - Visitors get the language their browser asks for (`Accept-Language`) when it is English or Vietnamese, otherwise English.
+  - An EN | VI switcher in the top bar for signed-out pages, and a Language section in the account menu, remember the choice in a cookie for a year. The choice is not yet saved to the Account.
+  - Validation, model-binding and ASP.NET Core Identity error messages follow the language; untranslated text falls back to English.
+  - Numbers, dates and the currency symbol still use the US format.
+- **JSON localizer**: an in-house `IStringLocalizer` reads `Resources/i18n/<language>.json` once at startup and falls back to English per key, logging events 3401 and 3402 (ADR 0015).
+  - `@L["Key"]`, `L.Named`, `L.NamedHtml` and `L.Plural` in Razor; `<js-strings prefix="…">` and `core/i18n.js` (`PFI18n.t`, `PFI18n.plural`) for JavaScript.
+- **Translation tooling**: `npm run i18n:translate` drafts missing and stale keys with Azure AI Translator, and CI's new `i18n-report` step lists missing, stale and unreferenced keys.
+  - `i18n.lock.json` records which English each translation came from, so only changed keys are re-sent and hand corrections survive.
+  - CI fails only on malformed resource JSON or a translation whose placeholders differ from the English.
+
+### Changed
+
+- **Cookie Policy**: lists the language cookie among the essential cookies.
+
 ## [6.2.2] - 2026-10-25
 
 ### Changed

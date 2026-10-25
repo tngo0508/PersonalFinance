@@ -28,6 +28,7 @@ the [Feature map](#3-feature-map) (step 10 of the add-a-feature checklist in [`A
 | [13](#13-google-drive-and-spreadsheet-analysis) | Google Drive and Spreadsheet Analysis | class + sequence | The one cross-Feature dependency, and connect-then-import |
 | [14](#14-startup-and-pipelines) | Startup and pipelines | 2 flowcharts | ApiService run modes, Web middleware order |
 | [15](#15-scheduled-and-background-work) | Scheduled and background work | table | Everything that runs without a request |
+| [16](#16-localization) | Localization | 2 flowcharts | How a request gets its language, where strings come from, how translations are made |
 
 Diagrams that live elsewhere and are not repeated here:
 
@@ -1178,14 +1179,15 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    a["Serilog request logging"] --> b["/health, /alive"] --> c["ExceptionHandler + HSTS<br/>(outside Development)"] --> d["ForwardedHeaders"] --> e["HttpsRedirection"] --> f["RequestLocalization en-US"] --> g["Routing"] --> h["Authentication<br/>Identity cookie, Google"] --> i["Authorization<br/>AdminNotFound handler"] --> j["Static assets"] --> k["MVC default route<br/>+ Razor Pages"] --> l["MigrateAndRunAsync"]
+    a["Serilog request logging"] --> b["/health, /alive"] --> c["ExceptionHandler + HSTS<br/>(outside Development)"] --> d["ForwardedHeaders"] --> e["HttpsRedirection"] --> f["RequestLocalization<br/>cookie, Accept-Language, en<br/>(formatting en-US)"] --> g["Routing"] --> h["Authentication<br/>Identity cookie, Google"] --> i["Authorization<br/>AdminNotFound handler"] --> j["Static assets"] --> k["MVC default route<br/>+ Razor Pages"] --> l["MigrateAndRunAsync"]
 ```
 
 Drawn from `ApiService/Program.cs`, `Web/Program.cs`, `Data/DatabaseMigrationExtensions.cs` and
 `ServiceDefaults/Extensions.cs`. Web DI, in order: ServiceDefaults and Serilog, `AppDbContext` and data protection,
 Identity (cookie 14 days sliding, `ApiAwareCookieRedirects`, optional Google), the `RequireAdmin` Policy and the
-404 handler, `AddInternalApiClients`, Brevo email, `IUserConsentService`, `TimeProvider`, forwarded headers and
-localisation, Razor Pages and MVC with a global antiforgery filter.
+404 handler, `AddInternalApiClients`, Brevo email, `IUserConsentService`, `TimeProvider`, forwarded headers,
+`AddAppLocalization` ([16](#16-localization)), Razor Pages and MVC with a global antiforgery filter, view and
+DataAnnotations localization.
 
 ## 15. Scheduled and background work
 
@@ -1202,6 +1204,46 @@ listed here.
 | `ApiServiceWarmer` | `Web/Infrastructure/ApiServiceWarmer.cs`, called from the Login page | at most once per 2 minutes | Same ping, before the first authenticated request |
 | News auto-refresh | `Web/wwwroot/js/news/news.js` | every 5 minutes while the News page is open | Re-fetch `/News/Refresh`; the ApiService caches feeds for 5 minutes in `IMemoryCache` |
 | SEC request gate | `ApiService/Features/Research/Adapters/SecRequestGate.cs` | during a refresh or company lookup | Throttle SEC EDGAR calls to 5 per second |
+
+## 16. Localization
+
+The Web app speaks English and Vietnamese ([ADR 0015](adr/0015-json-localization-with-custom-string-localizer.md),
+[spec](specs/localization-and-multi-currency.md)). One flat JSON file per language holds every string; one in-house
+localizer serves Razor, DataAnnotations, model binding, Identity errors and the JS island. Formatting (numbers, dates)
+stays `en-US` until slice L2. ApiService is not localized.
+
+```mermaid
+flowchart TB
+    req["Request"] --> rl{"RequestLocalization<br/>(no query-string provider)"}
+    rl -- "1. .AspNetCore.Culture cookie" --> ui["CurrentUICulture en or vi<br/>CurrentCulture en-US"]
+    rl -- "2. Accept-Language" --> ui
+    rl -- "3. otherwise" --> ui
+    ui --> loc["IStringLocalizer (JsonStringLocalizer)<br/>uiCulture, parent, then en<br/>3401 LocalizationFallback, 3402 LocalizationNotFound"]
+    cat["JsonLocalizationCatalog (singleton)<br/>Resources/i18n/en.json, vi.json<br/>loaded once at startup"] --> loc
+    loc --> razor["Razor: @L[key], L.Named, L.NamedHtml, L.Plural<br/>(_ViewImports injects L)"]
+    loc --> da["DataAnnotations ErrorMessage and Display(Name) keys<br/>ModelBindingMessagesSetup (11 messages)"]
+    loc --> idn["LocalizedIdentityErrorDescriber<br/>Identity.Error.Code"]
+    loc --> js["js-strings tag helper<br/>script id i18n-strings, a JSON island"] --> pfi["core/i18n.js<br/>PFI18n.t, PFI18n.plural, html lang"]
+    sw["_LanguageSwitcher<br/>top bar (anonymous) and account menu"] -- "POST /Language/Set + antiforgery" --> lc["LanguageController<br/>LanguageCookie.Write, LocalRedirect"]
+    lc -. "cookie c=vi-VN, uic=vi" .-> rl
+```
+
+```mermaid
+flowchart LR
+    en["en.json<br/>(written by hand)"] --> tr["npm run i18n:translate<br/>missing or stale keys only<br/>notranslate placeholders, glossary.vi.json"]
+    lock["i18n.lock.json<br/>hash of the English per key"] <--> tr
+    tr -- "textType=html, 429 back-off" --> az["Azure AI Translator F0"]
+    az --> tr
+    tr -- "placeholders verified" --> vi["vi.json<br/>commit: i18n: translate N keys (vi)"]
+    vi --> ci["CI lint-js job: i18n-report<br/>missing, stale, unreferenced (reported)<br/>bad JSON, placeholder mismatch (fails)"]
+    en --> ci
+```
+
+Drawn from `Web/Infrastructure/Localization/`, `Web/TagHelpers/JsStringsTagHelper.cs`,
+`Web/Controllers/LanguageController.cs`, `Web/Views/Shared/_LanguageSwitcher.cshtml`, `Web/wwwroot/js/core/i18n.js`,
+`Web/tools/i18n-translate.js`, `Web/tools/i18n-report.js` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
+A string that is not shaped like a key (English still on attributes of pages not yet translated) is shown as written,
+without the 3402 warning.
 
 ## Keeping this page current
 

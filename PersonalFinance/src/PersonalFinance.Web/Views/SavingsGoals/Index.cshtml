@@ -1,6 +1,7 @@
+@using Microsoft.AspNetCore.Html
 @using PersonalFinance.Shared.DTOs.SavingsGoals
 @{
-    ViewData["Title"] = "Savings Goals";
+    ViewData["Title"] = L["SavingsGoals.Title"].Value;
     var goals = ViewData["Goals"] as List<SavingsGoalDto> ?? new List<SavingsGoalDto>();
 }
 
@@ -17,7 +18,7 @@
                 <path d="M20 6 9 17l-5-5"/>
             </svg>
             @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
         </div>
     }
 
@@ -25,7 +26,7 @@
     {
         <div class="alert alert-danger alert-dismissible fade show savings-alert" role="alert">
             @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
         </div>
     }
 
@@ -45,10 +46,9 @@
                                     d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.6 3.7 2 5"/><path
                                     d="M5 9a3 3 0 0 0 3 3 3 3 0 0 0 3-3"/><circle cx="12" cy="12" r="10"/></svg>
                     </span>
-                    Savings Goals
+                    @L["SavingsGoals.Title"]
                 </h1>
-                <p class="savings-subtitle">Track your progress toward financial milestones. Create goals and update
-                    them as you save.</p>
+                <p class="savings-subtitle">@L["SavingsGoals.Subtitle"]</p>
             </div>
             <button type="button" class="btn btn-primary savings-add-btn" id="addGoalBtn" data-bs-toggle="modal"
                     data-bs-target="#addGoalModal">
@@ -57,7 +57,7 @@
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
-                Add Goal
+                @L["SavingsGoals.AddGoal"]
             </button>
         </div>
     </div>
@@ -104,13 +104,13 @@
                                     }
                                 </div>
                             </div>
+                            @* js/savingsgoals/savings-goals.js asks for confirmation, naming the goal. *@
                             <form asp-action="Delete" asp-controller="SavingsGoals" method="post"
-                                  onsubmit="return confirm('Delete this savings goal?');"
-                                  class="savings-goal-delete-form">
+                                  class="savings-goal-delete-form" data-goal-name="@goal.Name">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@goal.Id"/>
-                                <button type="submit" class="savings-goal-delete-btn" title="Delete goal"
-                                        aria-label="Delete @goal.Name goal">
+                                <button type="submit" class="savings-goal-delete-btn" title="@L["SavingsGoals.Card.DeleteTitle"]"
+                                        aria-label="@L.Named("SavingsGoals.Card.DeleteAria", ("name", goal.Name))">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                          stroke-linejoin="round">
@@ -122,14 +122,12 @@
                         </div>
 
                         <!-- Amounts Display -->
+                        @* The template is split on its placeholders, so each amount keeps its own span wherever the
+                           translation puts it. *@
                         <div class="savings-goal-amounts">
-                            <span class="savings-goal-current">
-                                $@goal.CurrentAmount.ToString("N0")
-                            </span>
-                            <span class="savings-goal-separator">of</span>
-                            <span class="savings-goal-target">
-                                $@goal.TargetAmount.ToString("N0")
-                            </span>
+                            @L.NamedHtml("SavingsGoals.Card.Progress", "savings-goal-separator",
+                                ("current", new HtmlString($"<span class=\"savings-goal-current\">${goal.CurrentAmount:N0}</span>")),
+                                ("target", new HtmlString($"<span class=\"savings-goal-target\">${goal.TargetAmount:N0}</span>")))
                         </div>
 
                         <!-- Progress Bar with Percentage Overlay -->
@@ -137,7 +135,7 @@
                             <div class="savings-goal-progress-track">
                                 <div class="savings-goal-progress-fill @(isComplete ? "savings-goal-progress-fill--complete" : "")"
                                      style="width:@progress%" role="progressbar" aria-valuenow="@progress"
-                                     aria-valuemin="0" aria-valuemax="100" aria-label="@Math.Round(progress)% complete">
+                                     aria-valuemin="0" aria-valuemax="100" aria-label="@L.Named("SavingsGoals.Card.PercentComplete", ("percent", Math.Round(progress)))">
                                     <span class="savings-goal-progress-label">@Math.Round(progress)%</span>
                                 </div>
                             </div>
@@ -151,13 +149,13 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                          stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                                    Goal reached!
+                                    @L["SavingsGoals.Card.GoalReached"]
                                 </span>
                             }
                             else
                             {
                                 <span class="savings-goal-remaining">
-                                    $@remaining.ToString("N0") left to goal
+                                    @L.Named("SavingsGoals.Card.Remaining", ("amount", "$" + remaining.ToString("N0")))
                                 </span>
                             }
                             @if (goal.TargetDate.HasValue)
@@ -186,10 +184,11 @@
                                     <input type="number" name="currentAmount"
                                            class="form-control savings-goal-update-input"
                                            value="@goal.CurrentAmount" min="0" step="1"
-                                           placeholder="New amount" aria-label="Update current amount for @goal.Name"/>
+                                           placeholder="@L["SavingsGoals.Card.NewAmountPlaceholder"]"
+                                           aria-label="@L.Named("SavingsGoals.Card.UpdateAria", ("name", goal.Name))"/>
                                 </div>
                                 <button type="submit" class="btn savings-goal-update-btn">
-                                    Update
+                                    @L["SavingsGoals.Card.Update"]
                                 </button>
                             </div>
                         </form>
@@ -208,9 +207,8 @@
                     <circle cx="12" cy="12" r="10"/>
                 </svg>
             </div>
-            <h3 class="savings-empty__title">No savings goals yet</h3>
-            <p class="savings-empty__text">Create your first savings goal to start tracking your progress toward
-                financial milestones.</p>
+            <h3 class="savings-empty__title">@L["SavingsGoals.Empty.Title"]</h3>
+            <p class="savings-empty__text">@L["SavingsGoals.Empty.Text"]</p>
             <button type="button" class="btn btn-primary savings-empty__btn" data-bs-toggle="modal"
                     data-bs-target="#addGoalModal">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -218,7 +216,7 @@
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
-                Add Your First Goal
+                @L["SavingsGoals.Empty.AddFirst"]
             </button>
         </div>
     }
@@ -241,42 +239,42 @@
                                 <circle cx="12" cy="12" r="10"/>
                             </svg>
                         </div>
-                        <h5 class="modal-title" id="addGoalModalLabel">New Savings Goal</h5>
+                        <h5 class="modal-title" id="addGoalModalLabel">@L["SavingsGoals.Modal.Title"]</h5>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                 </div>
                 <div class="modal-body savings-modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="goalName" class="form-label">Goal Name *</label>
+                            <label for="goalName" class="form-label">@L["SavingsGoals.Modal.Name"]</label>
                             <input type="text" name="name" class="form-control" id="goalName"
-                                   placeholder="e.g., Emergency Fund" required/>
+                                   placeholder="@L["SavingsGoals.Modal.NamePlaceholder"]" required/>
                         </div>
                         <div class="col-md-6">
-                            <label for="goalTarget" class="form-label">Target Amount ($) *</label>
+                            <label for="goalTarget" class="form-label">@L.Named("SavingsGoals.Modal.TargetAmount", ("symbol", "$"))</label>
                             <input type="number" name="targetAmount" class="form-control" id="goalTarget"
                                    value="10000" min="1" step="any" required/>
                         </div>
                     </div>
                     <div class="row g-3 mt-1">
                         <div class="col-md-6">
-                            <label for="goalCurrent" class="form-label">Current Amount ($)</label>
+                            <label for="goalCurrent" class="form-label">@L.Named("SavingsGoals.Modal.CurrentAmount", ("symbol", "$"))</label>
                             <input type="number" name="currentAmount" class="form-control" id="goalCurrent"
                                    value="0" min="0" step="any"/>
                         </div>
                         <div class="col-md-6">
-                            <label for="goalTargetDate" class="form-label">Target Date</label>
+                            <label for="goalTargetDate" class="form-label">@L["SavingsGoals.Modal.TargetDate"]</label>
                             <input type="date" name="targetDate" class="form-control" id="goalTargetDate"/>
                         </div>
                     </div>
                     <div class="mt-3">
-                        <label for="goalDescription" class="form-label">Description (optional)</label>
+                        <label for="goalDescription" class="form-label">@L["SavingsGoals.Modal.Description"]</label>
                         <textarea name="description" class="form-control" id="goalDescription" rows="2"
-                                  placeholder="What's this goal for?"></textarea>
+                                  placeholder="@L["SavingsGoals.Modal.DescriptionPlaceholder"]"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer savings-modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
                     <button type="submit" class="btn btn-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -284,10 +282,15 @@
                             <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.6 3.7 2 5"/>
                             <circle cx="12" cy="12" r="10"/>
                         </svg>
-                        Create Goal
+                        @L["SavingsGoals.Modal.Create"]
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <js-strings prefix="SavingsGoals.Js." />
+    <script src="~/js/savingsgoals/savings-goals.js" asp-append-version="true"></script>
+}
