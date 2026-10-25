@@ -705,6 +705,28 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 
 ---
 
+### Development vs Release JavaScript and CSS
+
+The Web app's own scripts and stylesheets live under `wwwroot/js/` and `wwwroot/css/`. Views reference them there, as usual.
+
+- **Development** (`ASPNETCORE_ENVIRONMENT=Development`) serves those readable originals. A Debug build needs no Node.
+- **Release builds** (`dotnet build` or `dotnet publish` with `-c Release`, including the container build) run the `MinifyWebAssets` target in `PersonalFinance.Web.csproj`. It runs `npm ci` in `PersonalFinance/src/PersonalFinance.Web/` when `node_modules` is missing or older than that folder's `package.json` or `package-lock.json`, then `npm run minify`, which writes a minified copy of each file to `wwwroot/dist/` with the same relative path (`js/core/utils.js` becomes `dist/js/core/utils.js`). `MapStaticAssets` then serves them with Brotli/gzip. The build fails if minification fails, so **Release builds need Node 22** (the version the Dockerfile and CI use) on the PATH.
+- **Outside Development**, `AssetUrlTagHelper` rewrites `/js/...` and `/css/...` references to `/dist/...?v=<hash>`, but only when that `dist` file exists in the web root, so a Debug build run as Production (no `dist`) keeps `/js/...`. In Development it rewrites only when the original is missing too, as in a published Release build. It never touches `/lib/` or external URLs.
+- **Release builds leave out the originals.** `wwwroot/js/`, `wwwroot/css/` and the web root's `package*.json` and ESLint files are removed from the static web assets, so a Release publish neither contains nor serves them. A published Release build run in Development therefore uses `dist`; a local `dotnet run -c Release` in Development still finds the originals on disk but does not serve them, so use a Debug build there. CI publishes the Web project and runs `node PersonalFinance/src/PersonalFinance.Web/tools/check-publish.js <publish-dir>`, which fails if `dist` or its `.br`/`.gz` siblings are missing, a `.map` file is published outside the vendored `lib` folders, or unminified source or tooling remains. Its tests run with `node --test PersonalFinance/src/PersonalFinance.Web/tools/check-publish.test.js`.
+- **Vendored files are out of scope.** `wwwroot/lib/` and `wwwroot/Identity/lib/` hold third-party files, published as shipped with their `.map` files; `check-publish.js` exempts them on purpose (an agreed deviation from spec #286).
+
+The minify tooling has its own `package.json` next to the Web project file (esbuild only; separate from the repo-root one). To run it by hand:
+
+```bash
+cd PersonalFinance/src/PersonalFinance.Web
+npm ci
+npm run minify   # wipes and rewrites wwwroot/dist (git-ignored)
+```
+
+To check minified pages locally, run a Release build in a non-Development environment, for example `dotnet run -c Release --project PersonalFinance/src/PersonalFinance.Web --no-launch-profile -- --environment Production` (with the same connection and API settings as usual).
+
+---
+
 ## 5. Database & Entity Framework Core Workflows
 
 ### ASP.NET Core Identity Schema Documentation

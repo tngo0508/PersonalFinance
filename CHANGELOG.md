@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.10.0] - 2026-10-24
+
+### Changed
+
+- **Minified JavaScript and CSS in production**: outside Development, pages load minified copies of the app's own scripts and stylesheets from `/dist`, compressed with Brotli and gzip, while Development still serves the readable originals (#288).
+  - Over the wire (Brotli), the app's own JavaScript drops from 155 KB to 89 KB and its CSS from 52 KB to 40 KB.
+  - The Release build writes the copies with esbuild (one file each, no bundling, no source maps), so Release builds and the container build need Node 22 (#287); Debug builds need no Node.
+  - A page never points at a missing file: `/js` and `/css` references move to `/dist` only when the minified copy exists, and in Development only when the original is missing.
+- **Published output holds only what production serves**: a Release publish leaves out the unminified `wwwroot/js` and `wwwroot/css`, the web root's npm and ESLint files and `node_modules`, so production can no longer serve them (#289).
+  - Vendored third-party files under `wwwroot/lib` are published as shipped.
+  - The container build ignores any local `node_modules` and `wwwroot/dist`.
+- **Publish-output CI check**: CI publishes the Web project and fails when the minified files or their `.br`/`.gz` copies are missing, a source map is published outside the vendored folders, or unminified source or tooling remains (#289).
+
 ## [5.9.0] - 2026-10-24
 
 ### Added

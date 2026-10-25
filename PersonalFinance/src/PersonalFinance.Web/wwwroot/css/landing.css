@@ -175,7 +175,7 @@
         left: 50%;
         width: 100vw;
         transform: translateX(-50%);
-        background: var(--lp-surface) url("../images/landing/skyline-poster.webp") center / cover no-repeat;
+        background: var(--lp-surface) url("/images/landing/skyline-poster.webp") center / cover no-repeat;
     }
 
     /* Two classes, so MapLibre's later `.maplibregl-map { position: relative }` cannot collapse the map */

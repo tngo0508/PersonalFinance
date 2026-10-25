@@ -40,3 +40,8 @@ PersonalFinance.db-wal
 
 # Tooling and session metadata
 .junie/
+
+# Node dependencies and generated minified assets: the image build restores and regenerates them,
+# so a host node_modules (e.g. a Windows esbuild binary) or a stale wwwroot/dist never enters it
+**/node_modules
+**/wwwroot/dist
