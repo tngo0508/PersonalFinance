@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [6.2.0] - 2026-10-25
+
+### Added
+
+- **Purpose Note**: when you give a Purpose on the Money Priorities page, the AI Assistant explains in a short plain-text note under the result how the suggested priority serves it.
+  - The note loads after the result, so the result never waits for it, and shows the AI disclaimer.
+  - A Walk identical to an earlier one reuses that Walk's note instead of asking again.
+  - Distinct states cover no Purpose (an invitation to add one), not available right now, the AI quota reached, and a refused Purpose.
+  - Usage counts against the AI quota and is recorded as `money-priorities-note`.
+  - Only the Purpose, the answers, the path, the suggested priority and whole-dollar figures are sent to OpenAI.
+- **Privacy page OpenAI disclosure**: the Privacy page says what Money Priorities sends to OpenAI for a Purpose Note, and that nothing is sent without a Purpose.
+
+---
+
 ## [6.1.0] - 2026-10-25
 
 ### Added
