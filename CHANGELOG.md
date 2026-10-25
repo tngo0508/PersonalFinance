@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [6.0.0] - 2026-10-25
+
+### Added
+
+- **Money Priorities foundations**: the data, Priority Tree, math and API that the Money Priorities page will use; there is no user-visible page yet.
+- **Priority Walk table**: a new `PriorityWalks` table stores each Priority Walk's answers, Purpose, path and leaf, so this release changes the schema (hence the major version).
+  - Migration `20261025060333_AddPriorityWalk`. Walks are soft-deleted like other user-owned data; dollar figures are never stored, they are recomputed from the answers.
+- **Priority Walks in the Data Export**: the account data export has a Priority Walks section with each Walk's answers, path and Purpose Note.
+- **Priority Tree version 1 and path evaluation**: the authored tree of five questions and seven leaves, and a pure evaluator that walks it from a set of answers and clears every answer off the path.
+  - The submit validator and the evaluator share one source for which questions a path asks, and a test checks they agree for every leaf.
+- **IRS 2026 contribution limits**: a table of the 401(k) employee deferral and IRA limits by age range (including the age 50 and 60–63 catch-ups) and the Roth IRA phase-out ranges, looked up by tax year.
+- **Leaf math in decimal only**: debt payoff, emergency fund gap, employer match, the IRA-then-401(k) split and compound growth under the Cash, Conservative, Base and Aggressive scenarios, with no floating point anywhere.
+  - Golden-value tests pin each calculation to fixed expected figures, and a test fails if the Domain uses `double`, `float`, `Math.Pow` or `Math.Log`.
+- **Mermaid diagram texts generated in C#**: the whole tree, the tree with a Walk's path highlighted, the path view, and plain-language sentences that describe the path.
+- **Money Priorities API and Refit contract**: authenticated endpoints under `api/MoneyPriorities` to submit, list, view and delete Walks and to fetch the tree diagram, with the `IMoneyPrioritiesApi` Refit client for the Web app.
+  - A submit with the same answers, Purpose, tree version and limits year as the latest Walk returns that Walk instead of saving a duplicate.
+
+### Changed
+
+- **Glossary**: adds Money Priorities, Priority Tree, Priority Walk, Purpose and Purpose Note.
+
 ## [5.13.0] - 2026-10-24
 
 ### Changed
