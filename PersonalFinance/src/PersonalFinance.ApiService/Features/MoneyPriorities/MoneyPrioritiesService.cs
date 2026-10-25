@@ -114,7 +114,13 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
         return new PriorityTreeDiagramDto
         {
             TreeVersion = tree.Version,
-            WholeTreeDiagram = PriorityDiagramText.WholeTree(tree, PriorityDiagramPalette.Light)
+            WholeTreeDiagram = PriorityDiagramText.WholeTree(tree, PriorityDiagramPalette.Light),
+            Thresholds = new PriorityTreeThresholdsDto
+            {
+                HighInterestAprPercent = PriorityTreeThresholds.HighInterestAprPercent,
+                EmergencyFundTargetMonths = PriorityTreeThresholds.EmergencyFundTargetMonths,
+                LongHorizonYears = PriorityTreeThresholds.LongHorizonYears
+            }
         };
     }
 

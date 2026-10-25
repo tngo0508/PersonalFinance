@@ -169,6 +169,9 @@ public class PriorityDebtFiguresDto
     /// </summary>
     public int MaximumMonths { get; set; }
 
+    /// <summary><see cref="MaximumMonths"/> in whole years, for the page's sentence about a payoff that takes longer.</summary>
+    public int MaximumYears { get; set; }
+
     public int? Months { get; set; }
     public decimal? TotalInterest { get; set; }
 
@@ -251,6 +254,25 @@ public class PriorityTreeDiagramDto
 
     /// <summary>Mermaid text of the whole tree, unhighlighted (light palette).</summary>
     public string WholeTreeDiagram { get; set; } = string.Empty;
+
+    /// <summary>The thresholds the tree decides on, so the page shows the follow-up questions they call for.</summary>
+    public PriorityTreeThresholdsDto Thresholds { get; set; } = new();
+}
+
+/// <summary>
+/// The Priority Tree's thresholds, for showing and hiding the page's follow-up fields only: the ApiService alone
+/// decides the path.
+/// </summary>
+public class PriorityTreeThresholdsDto
+{
+    /// <summary>A debt APR at or above this percentage is high-interest (asks for the balance).</summary>
+    public decimal HighInterestAprPercent { get; set; }
+
+    /// <summary>An emergency fund under this many months of expenses is short (asks for the monthly expenses).</summary>
+    public decimal EmergencyFundTargetMonths { get; set; }
+
+    /// <summary>A horizon over this many years is long (asks for the age range and the contribution limit).</summary>
+    public int LongHorizonYears { get; set; }
 }
 
 /// <summary>

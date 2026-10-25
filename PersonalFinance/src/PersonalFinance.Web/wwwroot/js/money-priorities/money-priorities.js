@@ -37,6 +37,8 @@
     let submitButton = null;
     let diagramFrame = null;
     let wholeTreeDiagram = '';
+    /** The Priority Tree's thresholds, sent by the server: { highInterestAprPercent, emergencyFundTargetMonths, longHorizonYears }. */
+    let thresholds = {};
 
     /** A computed figure, in whole dollars ("$86,542"). */
     function formatComputed (value) {
@@ -121,17 +123,17 @@
 
     /**
      * Which follow-up fields the answers so far call for. These are show/hide rules for fields only: the ApiService
-     * alone decides the path and ignores answers off it.
+     * alone decides the path and ignores answers off it. The thresholds come from the server's Priority Tree.
      * @returns {Object<string, boolean>} Visibility by request field.
      */
     function followUpVisibility () {
         const apr = numberValue('DebtApr');
         const fundMonths = numberValue('EmergencyFundMonths');
         const horizon = numberValue('HorizonYears');
-        const longHorizon = horizon !== null && horizon > 10;
+        const longHorizon = horizon !== null && horizon > thresholds.longHorizonYears;
         return {
-            DebtBalance: apr !== null && apr >= 7,
-            MonthlyExpenses: fundMonths !== null && fundMonths < 3,
+            DebtBalance: apr !== null && apr >= thresholds.highInterestAprPercent,
+            MonthlyExpenses: fundMonths !== null && fundMonths < thresholds.emergencyFundTargetMonths,
             EmployerMatchPercent: booleanValue('HasFullEmployerMatch') === false,
             AgeBand: longHorizon,
             AtContributionLimit: longHorizon
@@ -303,7 +305,7 @@
                 'each month is the only way to clear it.'));
         } else {
             nodes.push(note(`At ${formatTyped(monthlyAmount)} a month, paying off this ${formatTyped(debt.balance)} ` +
-                `debt would take longer than ${countNumber.format(debt.maximumMonths / 12)} years, so no payoff ` +
+                `debt would take longer than ${countNumber.format(debt.maximumYears)} years, so no payoff ` +
                 'figures are shown. Paying more each month shortens it.'));
         }
         nodes.push(note(`Every dollar toward a ${formatRate(debt.aprPercent)} APR debt earns a guaranteed ${
@@ -631,6 +633,7 @@
         }
         const data = readPageData() || {};
         wholeTreeDiagram = data.wholeTreeDiagram || '';
+        thresholds = data.thresholds || {};
 
         form.addEventListener('input', applyFieldRules);
         form.addEventListener('change', applyFieldRules);

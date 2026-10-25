@@ -41,6 +41,7 @@ public class MoneyPrioritiesController : Controller
         {
             PriorityTreeDiagramDto tree = await _moneyPrioritiesApi.GetTreeAsync(cancellationToken);
             model.WholeTreeDiagram = tree.WholeTreeDiagram;
+            model.Thresholds = tree.Thresholds;
             model.RecentWalks = await _moneyPrioritiesApi.GetRecentWalksAsync(cancellationToken);
             if (model.RecentWalks.Count > 0)
             {
