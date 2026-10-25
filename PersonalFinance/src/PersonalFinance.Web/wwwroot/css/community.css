@@ -621,16 +621,16 @@
 }
 
 .community-story-like:hover {
-  color: #d13438;
+  color: var(--app-accent-negative);
   background: #f4e0e0;
 }
 
 .community-story-like.liked {
-  color: #d13438;
+  color: var(--app-accent-negative);
 }
 
 .community-story-like.liked svg {
-  fill: #d13438;
+  fill: var(--app-accent-negative);
 }
 
 .community-story-like-count {
@@ -791,16 +791,16 @@
 }
 
 .community-comment-like:hover {
-  color: #d13438;
+  color: var(--app-accent-negative);
   background: #f4e0e0;
 }
 
 .community-comment-like.liked {
-  color: #d13438;
+  color: var(--app-accent-negative);
 }
 
 .community-comment-like.liked svg {
-  fill: #d13438;
+  fill: var(--app-accent-negative);
 }
 
 .community-comment-like-count {

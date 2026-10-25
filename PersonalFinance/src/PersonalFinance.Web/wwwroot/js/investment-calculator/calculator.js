@@ -38,8 +38,8 @@
                 valId: 'calcMonthlyValue',
                 format: v => formatCurrency(v)
             },
-            { rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => v + '%' },
-            { rangeId: 'calcYearsRange', numId: 'calcYears', valId: 'calcYearsValue', format: v => v + ' years' }
+            { rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => `${v }%` },
+            { rangeId: 'calcYearsRange', numId: 'calcYears', valId: 'calcYearsValue', format: v => `${v } years` }
         ];
 
         inputs.forEach(({ rangeId, numId, valId, format }) => {
@@ -173,8 +173,8 @@
         const h = dims.h;
         canvas.width = w * dpr;
         canvas.height = h * dpr;
-        canvas.style.width = w + 'px';
-        canvas.style.height = h + 'px';
+        canvas.style.width = `${w }px`;
+        canvas.style.height = `${h }px`;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
         const padding = { top: 16, right: 24, bottom: 50, left: 68 };
@@ -215,12 +215,12 @@
         }
 
         // Background
-        ctx.fillStyle = '#fafbfc';
+        ctx.fillStyle = '#F8FAF9';
         roundRect(ctx, 0, 0, w, h, 8);
         ctx.fill();
 
         // Grid lines
-        ctx.strokeStyle = '#e8eaed';
+        ctx.strokeStyle = '#E1E7E4';
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         for (let i = 0; i <= gridLines; i++) {
@@ -231,7 +231,7 @@
             ctx.stroke();
 
             const val = niceMax - (niceMax / gridLines) * i;
-            ctx.fillStyle = '#6b7280';
+            ctx.fillStyle = '#5B6B78';
             ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
@@ -242,19 +242,19 @@
         // X-axis labels
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillStyle = '#6b7280';
+        ctx.fillStyle = '#5B6B78';
         ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
         const xStep = Math.max(1, Math.floor(years / 7));
         for (let y = 0; y <= years; y += xStep) {
             const x = toCanvasX(y);
             const tickY = padding.top + chartH;
             ctx.beginPath();
-            ctx.strokeStyle = '#d1d5db';
+            ctx.strokeStyle = '#D6DEDB';
             ctx.lineWidth = 1;
             ctx.moveTo(x, tickY);
             ctx.lineTo(x, tickY + 4);
             ctx.stroke();
-            ctx.fillText(y === 0 ? 'Now' : y + 'y', x, tickY + 8);
+            ctx.fillText(y === 0 ? 'Now' : `${y }y`, x, tickY + 8);
         }
 
         // Smooth curve helper
@@ -280,8 +280,8 @@
 
         // Interest earned area fill (between contributions and total value lines)
         const interestGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        interestGrad.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
-        interestGrad.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
+        interestGrad.addColorStop(0, 'rgba(138, 106, 30, 0.25)');
+        interestGrad.addColorStop(1, 'rgba(138, 106, 30, 0.02)');
         ctx.beginPath();
         ctx.moveTo(toCanvasX(0), toCanvasY(contribPoints[0].y));
         contribPoints.forEach(p => {
@@ -296,8 +296,8 @@
 
         // Contributions area fill
         const contribGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        contribGrad.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
-        contribGrad.addColorStop(1, 'rgba(99, 102, 241, 0.02)');
+        contribGrad.addColorStop(0, 'rgba(47, 102, 144, 0.15)');
+        contribGrad.addColorStop(1, 'rgba(47, 102, 144, 0.02)');
         ctx.beginPath();
         ctx.moveTo(toCanvasX(0), padding.top + chartH);
         contribPoints.forEach(p => {
@@ -310,14 +310,14 @@
 
         // Smooth lines
         drawSmoothCurve(contribPoints);
-        ctx.strokeStyle = '#6366f1';
+        ctx.strokeStyle = '#2F6690';
         ctx.lineWidth = 2.5;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         ctx.stroke();
 
         drawSmoothCurve(points);
-        ctx.strokeStyle = '#10b981';
+        ctx.strokeStyle = '#1D6A50';
         ctx.lineWidth = 3;
         ctx.stroke();
 
@@ -339,8 +339,8 @@
             ctx.stroke();
         }
 
-        drawDot(contribPoints, '#6366f1');
-        drawDot(points, '#10b981');
+        drawDot(contribPoints, '#2F6690');
+        drawDot(points, '#1D6A50');
 
         // Update HTML legend with final values
         updateLegend(points, contribPoints);
@@ -414,12 +414,12 @@
      */
     function formatAxisValue (val) {
         if (val >= 1000000) {
-            return '$' + (val / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            return `$${ (val / 1000000).toFixed(1).replace(/\.0$/, '') }M`;
         }
         if (val >= 1000) {
-            return '$' + (val / 1000).toFixed(0) + 'k';
+            return `$${ (val / 1000).toFixed(0) }k`;
         }
-        return '$' + val.toFixed(0);
+        return `$${ val.toFixed(0)}`;
     }
 
     /**
@@ -554,7 +554,7 @@
 
         // Vertical guide line
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(107, 114, 128, 0.3)';
+        ctx.strokeStyle = 'rgba(91, 107, 120, 0.3)';
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
         ctx.moveTo(cx, padding.top);
@@ -566,7 +566,7 @@
         const vy = toCanvasY(value);
         ctx.beginPath();
         ctx.arc(cx, vy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#10b981';
+        ctx.fillStyle = '#1D6A50';
         ctx.fill();
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
@@ -576,7 +576,7 @@
         const cy = toCanvasY(contribution);
         ctx.beginPath();
         ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#6366f1';
+        ctx.fillStyle = '#2F6690';
         ctx.fill();
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
@@ -584,9 +584,9 @@
 
         // Tooltip box
         const lines = [
-            year === 0 ? 'Start' : year + ' Years',
-            'Value: ' + formatCurrency(value),
-            'Contrib: ' + formatCurrency(contribution)
+            year === 0 ? 'Start' : `${year } Years`,
+            `Value: ${ formatCurrency(value)}`,
+            `Contrib: ${ formatCurrency(contribution)}`
         ];
 
         ctx.font = '600 12px Inter, system-ui, -apple-system, sans-serif';
@@ -610,7 +610,7 @@
         }
 
         // Shadow
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
+        ctx.shadowColor = 'rgba(20, 40, 59, 0.12)';
         ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 4;
 
@@ -625,20 +625,20 @@
         ctx.shadowOffsetY = 0;
 
         // Border
-        ctx.strokeStyle = '#e5e7eb';
+        ctx.strokeStyle = '#E1E7E4';
         ctx.lineWidth = 1;
         roundRect(ctx, boxX, boxY, boxW, boxH, 8);
         ctx.stroke();
 
         // Text
-        ctx.fillStyle = '#374151';
+        ctx.fillStyle = '#3D4F5F';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
 
         lines.forEach((line, i) => {
             const isTitle = i === 0;
             ctx.font = isTitle ? '700 12px Inter, system-ui, -apple-system, sans-serif' : '500 12px Inter, system-ui, -apple-system, sans-serif';
-            ctx.fillStyle = isTitle ? '#111827' : '#4b5563';
+            ctx.fillStyle = isTitle ? '#14283B' : '#3D4F5F';
             ctx.fillText(line, boxX + boxPad, boxY + boxPad + i * lineH);
         });
     }

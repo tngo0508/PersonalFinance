@@ -769,7 +769,7 @@
 }
 
 .research-risk__bar--volatility {
-    background: #9ca3af;
+    background: var(--app-text-faint);
 }
 
 .research-risk__bar--negative {

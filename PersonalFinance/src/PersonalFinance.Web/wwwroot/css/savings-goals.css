@@ -268,7 +268,7 @@
 
 .savings-goal-progress-track {
     height: 24px;
-    background: var(--app-surface-soft, #f3f4f6);
+    background: var(--app-surface-soft, var(--app-surface-secondary));
     border-radius: 12px;
     overflow: hidden;
     position: relative;
@@ -429,7 +429,7 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: var(--app-surface-soft, #f3f4f6);
+    background: var(--app-surface-soft, var(--app-surface-secondary));
     color: var(--app-text-disabled, #a0a0a0);
     margin-bottom: 1.25rem;
 }
@@ -481,7 +481,7 @@
 .savings-modal-header {
     border-bottom: 1px solid var(--app-border);
     padding: 1rem 1.25rem;
-    background: var(--app-surface-soft, #f9fafb);
+    background: var(--app-surface-soft, var(--app-surface));
 }
 
 .savings-modal-header__content {
@@ -514,7 +514,7 @@
 .savings-modal-footer {
     border-top: 1px solid var(--app-border);
     padding: 0.85rem 1.25rem;
-    background: var(--app-surface-soft, #f9fafb);
+    background: var(--app-surface-soft, var(--app-surface));
 }
 
 /* ==========================================================================

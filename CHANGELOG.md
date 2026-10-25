@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [5.13.0] - 2026-10-24
+
+### Changed
+
+- **One theme across the app**: every page now uses the Landing Page's Ledger theme (navy ink, ledger green, brass, IBM Plex Sans), replacing the indigo theme on the signed-in pages.
+  - `_Layout` loads `css/ledger.css` on every page, and `site.css` maps the `--app-*` tokens onto its `--lp-*` colours, so buttons, links, focus rings, badges and Bootstrap/Fluent components follow it.
+  - Hardcoded indigo, violet, Tailwind-grey and Fluent UI colours in the feature stylesheets and the AI chat widget now use the `--app-*` tokens.
+  - The sidebar is navy ink, like the Landing Page's dark band, with a light-green active link and focus ring.
+  - Projection charts on the Dashboard and Net Worth pages share one scenario palette: base in ledger green, conservative in slate, aggressive in steel blue, and the FI target in brass. The investment calculator and Budget category charts use the same family.
+
+### Fixed
+
+- **Net Worth validation message is shown as text**: the server's message is no longer inserted as HTML.
+
 ## [5.12.0] - 2026-10-24
 
 ### Added

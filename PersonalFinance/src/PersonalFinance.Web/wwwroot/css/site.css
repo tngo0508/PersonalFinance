@@ -1,33 +1,39 @@
 /* ==========================================================================
    App shell: brand tokens, header, main, footer (app-*)
-   "Indigo Ledger" design system — distinctive personal finance aesthetic
+   Ledger theme — navy ink, ledger green and brass, shared with the Landing Page
    ========================================================================== */
 
 :root {
-    /* Brand — Indigo. Not Microsoft blue, not terracotta, not acid green. */
-    --app-brand: #4F46E5;
-    --app-brand-hover: #4338CA;
-    --app-brand-pressed: #3730A3;
-    --app-brand-soft: #E0E7FF;
-    --app-brand-bg-hover: #C7D2FE;
+    /* Brand — Ledger green, from the Ledger theme (ledger.css) so every page matches the Landing Page */
+    --app-brand: var(--lp-ledger);
+    --app-brand-hover: var(--lp-ledger-deep);
+    --app-brand-pressed: #0E3A2C;
+    --app-brand-soft: var(--lp-ledger-wash);
+    --app-brand-bg: var(--lp-ledger-wash);
+    --app-brand-bg-hover: #CFE3D9;
 
-    /* Domain-specific accents — green for growth, red for loss */
-    --app-accent-positive: #059669;
-    --app-accent-positive-soft: #D1FAE5;
-    --app-accent-negative: #DC2626;
-    --app-accent-negative-soft: #FEE2E2;
-    --app-accent-warning: #D97706;
-    --app-accent-warning-soft: #FEF3C7;
+    /* Domain-specific accents — ledger green for growth, red for loss, brass for targets */
+    --app-accent-positive: var(--lp-ledger);
+    --app-accent-positive-soft: var(--lp-ledger-wash);
+    --app-accent-positive-bg: var(--lp-ledger-wash);
+    --app-accent-negative: #B42318;
+    --app-accent-negative-soft: #FDECEA;
+    --app-accent-warning: #9A6700;
+    --app-accent-warning-soft: #FBF3DD;
+    --app-accent-target: var(--lp-brass);
 
-    /* Neutral palette — paper white, not cream */
-    --app-bg: #FFFFFF;
-    --app-surface: #F9FAFB;
-    --app-surface-secondary: #F3F4F6;
-    --app-border: #E5E7EB;
-    --app-border-hover: #D1D5DB;
-    --app-text: #111827;
-    --app-text-muted: #6B7280;
-    --app-text-disabled: #D1D5DB;
+    /* Neutral palette — paper white with navy ink and green-grey rules */
+    --app-bg: var(--lp-paper);
+    --app-surface: #F8FAF9;
+    --app-surface-soft: #F8FAF9;
+    --app-surface-secondary: var(--lp-surface);
+    --app-border: #E1E7E4;
+    --app-border-hover: var(--lp-rule);
+    --app-text: var(--lp-ink);
+    --app-text-soft: var(--lp-ink-soft);
+    --app-text-muted: var(--lp-muted);
+    --app-text-faint: #8796A2;
+    --app-text-disabled: #C3CDD3;
     --app-header-height: 56px;
 
     /* Minimal shadows — rules over elevation */
@@ -37,11 +43,12 @@
     --app-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.1);
     --app-shadow-32: 0 16px 32px rgba(0, 0, 0, 0.12);
 
-    /* Typography — Inter for UI, IBM Plex Mono for financial data */
-    --app-font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    /* Typography — IBM Plex Sans for UI (the Ledger font), IBM Plex Mono for financial data */
+    --app-font-family: var(--lp-font);
     --app-font-mono: "IBM Plex Mono", "SF Mono", "Consolas", monospace;
     --app-font-size-base: 0.96rem;
     --app-font-size-small: 0.8rem;
+    --app-font-size-medium: 1rem;
     --app-font-size-large: 1.1rem;
     --app-font-size-xl: 1.35rem;
     --app-font-size-xxl: 1.92rem;
@@ -63,13 +70,13 @@
     --app-radius-m: 6px;
     --app-radius-l: 8px;
 
-    /* Bootstrap overrides — map Indigo Ledger tokens to Bootstrap variables */
+    /* Bootstrap overrides — map Ledger tokens to Bootstrap variables */
   --bs-primary: var(--app-brand);
-    --bs-primary-rgb: 79, 70, 229;
+    --bs-primary-rgb: 29, 106, 80;
   --bs-link-color: var(--app-brand);
-    --bs-link-color-rgb: 79, 70, 229;
+    --bs-link-color-rgb: 29, 106, 80;
   --bs-link-hover-color: var(--app-brand-hover);
-    --bs-link-hover-color-rgb: 67, 56, 202;
+    --bs-link-hover-color-rgb: 19, 74, 56;
   --bs-body-color: var(--app-text);
   --bs-border-color: var(--app-border);
   --bs-body-font-family: var(--app-font-family);
@@ -150,7 +157,7 @@ table .text-end,
   box-shadow: var(--app-shadow-8);
 }
 
-/* Buttons — clean, no shadows, indigo brand */
+/* Buttons — clean, no shadows, ledger brand */
 .btn-primary {
   --bs-btn-bg: var(--app-brand);
   --bs-btn-border-color: var(--app-brand);
@@ -412,13 +419,13 @@ table .text-end,
 }
 .alert-success {
   background: #dff6dd;
-  border-color: #107c10;
+  border-color: var(--app-accent-positive);
   color: #006300;
 }
 .alert-danger,
 .alert-error {
   background: #fde7e9;
-  border-color: #d13438;
+  border-color: var(--app-accent-negative);
   color: #a02020;
 }
 .alert-warning {
@@ -446,17 +453,17 @@ table .text-end,
   background: var(--app-text-muted) !important;
 }
 .badge.bg-success {
-  background: #107c10 !important;
+  background: var(--app-accent-positive) !important;
 }
 .badge.bg-danger {
-  background: #d13438 !important;
+  background: var(--app-accent-negative) !important;
 }
 .badge.bg-warning {
   background: #d89b26 !important;
   color: #000;
 }
 .badge.bg-info {
-  background: #0078d4 !important;
+  background: var(--app-brand) !important;
 }
 
 /* --- Dropdowns --- */
@@ -536,13 +543,13 @@ table .text-end,
   transition: width 0.3s ease;
 }
 .progress-bar.bg-success {
-  background: #107c10;
+  background: var(--app-accent-positive);
 }
 .progress-bar.bg-warning {
   background: #d89b26;
 }
 .progress-bar.bg-danger {
-  background: #d13438;
+  background: var(--app-accent-negative);
 }
 
 /* --- List groups --- */
@@ -938,27 +945,27 @@ hr {
 
 :root {
   /* Google Drive page — Fluent UI aligned palette */
-  --gdrive-primary: #0078d4;
-  --gdrive-primary-hover: #106ebe;
+  --gdrive-primary: var(--app-brand);
+  --gdrive-primary-hover: var(--app-brand-hover);
   --gdrive-primary-light: #deecf9;
-  --gdrive-primary-glow: rgba(0, 120, 212, 0.15);
+  --gdrive-primary-glow: rgba(29, 106, 80, 0.15);
   --gdrive-secondary: #5c2d91;
-  --gdrive-accent: #0078d4;
+  --gdrive-accent: var(--app-brand);
   --gdrive-surface: #ffffff;
-  --gdrive-surface-soft: #faf9f8;
-  --gdrive-bg: #f3f2f1;
-  --gdrive-border: #e1dfdd;
-  --gdrive-border-hover: #c8c6c4;
-  --gdrive-text-main: #201f1e;
-  --gdrive-text-muted: #605e5c;
-  --gdrive-text-faint: #8a8886;
+  --gdrive-surface-soft: var(--app-surface);
+  --gdrive-bg: var(--app-surface-secondary);
+  --gdrive-border: var(--app-border);
+  --gdrive-border-hover: var(--app-border-hover);
+  --gdrive-text-main: var(--app-text);
+  --gdrive-text-muted: var(--app-text-soft);
+  --gdrive-text-faint: var(--app-text-muted);
   --gdrive-folder-color: #d97706;
-  --gdrive-doc-color: #0078d4;
-  --gdrive-sheet-color: #107c10;
+  --gdrive-doc-color: var(--app-brand);
+  --gdrive-sheet-color: var(--app-accent-positive);
   --gdrive-slide-color: #d97706;
-  --gdrive-pdf-color: #d13438;
+  --gdrive-pdf-color: var(--app-accent-negative);
   --gdrive-image-color: #5c2d91;
-  --gdrive-archive-color: #605e5c;
+  --gdrive-archive-color: var(--app-text-soft);
   --gdrive-shadow-sm: var(--app-shadow-2);
   --gdrive-shadow-md: var(--app-shadow-4);
   --gdrive-shadow-lg: var(--app-shadow-8);
@@ -1178,7 +1185,7 @@ hr {
 }
 .gd-alert--danger {
   background: #fde7e9;
-  border: 1px solid #d13438;
+  border: 1px solid var(--app-accent-negative);
   color: #a02020;
 }
 .gd-alert__icon {
@@ -1652,8 +1659,8 @@ hr {
 .gdrive-badge-pdf { background-color: #fee2e2; color: #991b1b; }
 .gdrive-badge-image { background-color: #f3e8ff; color: #6b21a8; }
 .gdrive-badge-video { background-color: #e0f2fe; color: #075985; }
-.gdrive-badge-archive { background-color: #f1f5f9; color: #374151; }
-.gdrive-badge-generic { background-color: #f1f5f9; color: #374151; }
+.gdrive-badge-archive { background-color: #f1f5f9; color: var(--app-text-soft); }
+.gdrive-badge-generic { background-color: #f1f5f9; color: var(--app-text-soft); }
 
 /* --- Empty State --- */
 .gd-empty-state {
@@ -1778,14 +1785,14 @@ hr {
   font-size: 0.75rem;
   font-weight: var(--app-font-weight-semibold);
   flex-shrink: 0;
-  border: 1px solid #107c10;
+  border: 1px solid var(--app-accent-positive);
 }
 
 /* --- Sync Status Badges --- */
 .gd-meta-badge--fresh {
   color: #006300;
   background: #dff6dd;
-  border-color: #107c10;
+  border-color: var(--app-accent-positive);
 }
 .gd-meta-badge--stale {
   color: #8a5a00;
@@ -1933,23 +1940,23 @@ hr {
 .bgt-root {
   /* Budget modal — Fluent UI aligned palette */
   --bgt-surface: #ffffff;
-  --bgt-plane: #faf9f8;
-  --bgt-ink: #201f1e;
-  --bgt-ink-2: #605e5c;
-  --bgt-muted: #8a8886;
-  --bgt-grid: #e1dfdd;
-  --bgt-border: rgba(32, 31, 30, 0.10);
-  --bgt-hover: #f3f2f1;
-  --bgt-income: #0078d4;
+  --bgt-plane: var(--app-surface);
+  --bgt-ink: var(--app-text);
+  --bgt-ink-2: var(--app-text-soft);
+  --bgt-muted: var(--app-text-muted);
+  --bgt-grid: var(--app-border);
+  --bgt-border: rgba(20, 40, 59, 0.10);
+  --bgt-hover: var(--app-surface-secondary);
+  --bgt-income: var(--app-brand);
   --bgt-spend: #d83b01;
-  --bgt-negative: #d13438;
-  --bgt-meter-track: #f3f2f1;
-  --bgt-meter-ok: #605e5c;
-  --bgt-good: #107c10;
+  --bgt-negative: var(--app-accent-negative);
+  --bgt-meter-track: var(--app-surface-secondary);
+  --bgt-meter-ok: var(--app-text-soft);
+  --bgt-good: var(--app-accent-positive);
   --bgt-good-text: #006300;
   --bgt-warning: #d89b26;
   --bgt-warning-text: #8a5a00;
-  --bgt-critical: #d13438;
+  --bgt-critical: var(--app-accent-negative);
   --bgt-critical-text: #a02020;
 }
 
@@ -2252,7 +2259,7 @@ hr {
 button.bgt-rank-row:hover { background: var(--bgt-hover); }
 .bgt-rank-row.active {
   background: var(--app-brand-soft);
-  border-color: rgba(0, 120, 212, 0.35);
+  border-color: rgba(29, 106, 80, 0.35);
 }
 .bgt-rank-row:focus-visible { outline: 2px solid var(--bgt-income); outline-offset: 1px; }
 .bgt-rank-head {

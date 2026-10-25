@@ -390,7 +390,7 @@
     --dash-budget-debt-repayment: #EDA100;
     --dash-budget-entertainment: #9B4DCA;
     --dash-budget-miscellaneous: #1BAF7A;
-    --dash-budget-unallocated: #D1D5DB;
+    --dash-budget-unallocated: var(--app-border-hover);
 }
 
 .dash-budget__chart {

@@ -1,8 +1,8 @@
 /* ==========================================================================
    Ledger theme: navy ink, ledger green for growth, brass for the FI target.
-   Loaded by the Landing Page, the Identity pages (Sign in, Register, password
-   reset, ...) and Account settings; the rest of the signed-in app keeps its
-   --app-* theme.
+   Loaded on every page by _Layout. site.css maps the --app-* tokens onto
+   these, so feature pages share the Landing Page palette. The scoped rules
+   below add the Identity pages' (auth.css) and Account settings' form styles.
    ========================================================================== */
 
 :root {

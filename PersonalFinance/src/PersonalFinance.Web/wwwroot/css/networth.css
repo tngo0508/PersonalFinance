@@ -1,34 +1,35 @@
 /* ==========================================================================
    Net Worth Projection Page Styles (nw-*)
-   "Indigo Ledger" design system
+   Ledger theme (tokens: css/site.css, css/ledger.css)
    ========================================================================== */
 
 :root {
-    /* Net Worth page — Indigo brand palette */
-    --nw-primary: #4F46E5;
-    --nw-primary-hover: #4338CA;
-    --nw-primary-light: #E0E7FF;
-    --nw-primary-glow: rgba(79, 70, 229, 0.15);
-    --nw-secondary: #7C3AED;
-    --nw-accent: #4F46E5;
+    /* Net Worth page — Ledger palette. Scenarios match the Dashboard chart:
+       base ledger green, conservative slate, aggressive steel blue, FI target brass */
+    --nw-primary: var(--app-brand);
+    --nw-primary-hover: var(--app-brand-hover);
+    --nw-primary-light: var(--app-brand-soft);
+    --nw-primary-glow: rgba(29, 106, 80, 0.15);
+    --nw-secondary: #2F6690;
+    --nw-accent: var(--app-brand);
   --nw-surface: #ffffff;
-    --nw-surface-soft: #F9FAFB;
+    --nw-surface-soft: var(--app-surface);
     --nw-bg: #FFFFFF;
-    --nw-border: #E5E7EB;
-    --nw-border-hover: #D1D5DB;
-    --nw-text-main: #111827;
-    --nw-text-muted: #6B7280;
-    --nw-text-faint: #9CA3AF;
-    --nw-success: #059669;
-    --nw-success-light: #D1FAE5;
-    --nw-warning: #D97706;
-    --nw-warning-light: #FEF3C7;
-    --nw-danger: #DC2626;
-    --nw-conservative: #7C3AED;
-    --nw-conservative-light: #F5F3FF;
-    --nw-aggressive: #059669;
-    --nw-aggressive-light: #D1FAE5;
-    --nw-fi: #4F46E5;
+    --nw-border: var(--app-border);
+    --nw-border-hover: var(--app-border-hover);
+    --nw-text-main: var(--app-text);
+    --nw-text-muted: var(--app-text-muted);
+    --nw-text-faint: var(--app-text-faint);
+    --nw-success: var(--app-accent-positive);
+    --nw-success-light: var(--app-accent-positive-soft);
+    --nw-warning: var(--app-accent-warning);
+    --nw-warning-light: var(--app-accent-warning-soft);
+    --nw-danger: var(--app-accent-negative);
+    --nw-conservative: var(--app-text-muted);
+    --nw-conservative-light: var(--app-surface-secondary);
+    --nw-aggressive: #2F6690;
+    --nw-aggressive-light: #E4EEF5;
+    --nw-fi: var(--app-accent-target);
   --nw-shadow-sm: var(--app-shadow-2);
   --nw-shadow-md: var(--app-shadow-4);
   --nw-shadow-lg: var(--app-shadow-8);
@@ -329,7 +330,7 @@ a.nw-help-btn {
 
 .nw-input:focus {
   border-color: var(--nw-primary);
-  box-shadow: 0 0 0 4px rgba(0, 120, 212, 0.1), 0 1px 3px rgba(0, 120, 212, 0.1);
+  box-shadow: 0 0 0 4px rgba(29, 106, 80, 0.1), 0 1px 3px rgba(29, 106, 80, 0.1);
   background: var(--nw-surface);
   outline: none;
 }
@@ -339,7 +340,7 @@ a.nw-help-btn {
 }
 
 .nw-input-invalid {
-  border-color: #d13438 !important;
+  border-color: var(--app-accent-negative) !important;
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15) !important;
   animation: nw-input-shake 0.4s ease;
 }
@@ -472,7 +473,7 @@ a.nw-help-btn {
 
 .nw-btn-save:hover {
   /* hover effect removed */;
-  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3), var(--nw-shadow-md);
+  box-shadow: 0 4px 12px rgba(29, 106, 80, 0.3), var(--nw-shadow-md);
 }
 
 .nw-btn-save:active {
@@ -728,7 +729,7 @@ a.nw-help-btn {
 
 .nw-scenario-icon--base {
   background: var(--nw-primary);
-  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.25);
+  box-shadow: 0 2px 6px rgba(29, 106, 80, 0.25);
 }
 
 .nw-scenario-icon--conservative {
@@ -829,12 +830,12 @@ a.nw-help-btn {
 .nw-card--chart {
   position: relative;
   background: var(--nw-surface);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(29, 106, 80, 0.25);
   border-radius: var(--nw-radius-lg);
   overflow: hidden;
   box-shadow:
-    0 0 40px rgba(99, 102, 241, 0.08),
-    0 0 80px rgba(139, 92, 246, 0.05),
+    0 0 40px rgba(29, 106, 80, 0.08),
+    0 0 80px rgba(138, 106, 30, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -857,8 +858,8 @@ a.nw-help-btn {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse 600px 300px at 20% 10%, rgba(99, 102, 241, 0.06) 0%, transparent 70%),
-    radial-gradient(ellipse 400px 200px at 80% 90%, rgba(139, 92, 246, 0.04) 0%, transparent 70%);
+    radial-gradient(ellipse 600px 300px at 20% 10%, rgba(29, 106, 80, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 200px at 80% 90%, rgba(138, 106, 30, 0.04) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -879,7 +880,7 @@ a.nw-help-btn {
 }
 
 .nw-card--chart .nw-card__subtitle {
-  color: #605e5c;
+  color: var(--app-text-soft);
 }
 
 /* Chart card icons */
@@ -889,7 +890,7 @@ a.nw-help-btn {
 }
 
 .nw-card--chart .nw-card__icon--purple {
-  background: rgba(117, 106, 232, 0.08);
+  background: rgba(91, 107, 120, 0.08);
   color: var(--nw-secondary);
 }
 
@@ -916,7 +917,7 @@ a.nw-help-btn {
   flex-wrap: wrap;
   gap: 8px 20px;
   font-size: 0.8125rem;
-  color: #605e5c;
+  color: var(--app-text-soft);
   position: relative;
   z-index: 1;
 }
@@ -936,20 +937,20 @@ a.nw-help-btn {
 }
 
 .nw-dot-base {
-  background: #0078d4;
-  color: #0078d4;
+  background: var(--nw-primary);
+  color: var(--nw-primary);
 }
 .nw-dot-conservative {
-  background: #756ae8;
-  color: #756ae8;
+  background: var(--nw-conservative);
+  color: var(--nw-conservative);
 }
 .nw-dot-aggressive {
-  background: #107c10;
-  color: #107c10;
+  background: var(--nw-aggressive);
+  color: var(--nw-aggressive);
 }
 .nw-dot-fi {
-  background: #00b7c3;
-  color: #00b7c3;
+  background: var(--nw-fi);
+  color: var(--nw-fi);
 }
 
 /* ==========================================================================
@@ -958,7 +959,7 @@ a.nw-help-btn {
 
 .nw-card--info {
   background: var(--nw-surface);
-  border: 1px solid rgba(0, 120, 212, 0.15);
+  border: 1px solid rgba(29, 106, 80, 0.15);
   position: relative;
   overflow: hidden;
 }
@@ -970,7 +971,7 @@ a.nw-help-btn {
   right: 0;
   width: 200px;
   height: 200px;
-  background: radial-gradient(circle, rgba(0, 120, 212, 0.05) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(29, 106, 80, 0.05) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -992,7 +993,7 @@ a.nw-help-btn {
   border-radius: 11px;
   background: var(--nw-primary);
   color: #fff;
-  box-shadow: 0 2px 10px rgba(0, 120, 212, 0.3);
+  box-shadow: 0 2px 10px rgba(29, 106, 80, 0.3);
   flex-shrink: 0;
 }
 
@@ -1056,7 +1057,7 @@ a.nw-help-btn {
 .nw-tab-btn.active {
   background: var(--nw-primary);
   color: #fff;
-  box-shadow: 0 2px 10px rgba(0, 120, 212, 0.3);
+  box-shadow: 0 2px 10px rgba(29, 106, 80, 0.3);
 }
 
 .nw-tab-btn.active svg {
@@ -1195,7 +1196,7 @@ a.nw-help-btn {
   /* hover effect removed */;
   padding: 6px 10px;
   border-radius: 6px;
-  background: #1f2937;
+  background: var(--app-text);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 500;
@@ -1248,7 +1249,7 @@ a.nw-help-btn {
   border-radius: 11px;
   background: var(--nw-primary);
   color: #fff;
-  box-shadow: 0 2px 10px rgba(0, 120, 212, 0.3);
+  box-shadow: 0 2px 10px rgba(29, 106, 80, 0.3);
   flex-shrink: 0;
 }
 
@@ -1301,7 +1302,7 @@ a.nw-help-btn {
   gap: 10px;
   padding: 12px 14px;
   background: var(--nw-primary-light);
-  border: 1px solid rgba(0, 120, 212, 0.15);
+  border: 1px solid rgba(29, 106, 80, 0.15);
   border-radius: 10px;
 }
 
@@ -1351,19 +1352,19 @@ a.nw-help-btn {
   color: #fff;
   border: none;
   transition: 0.25s ease;
-  box-shadow: 0 2px 10px rgba(0, 120, 212, 0.25);
+  box-shadow: 0 2px 10px rgba(29, 106, 80, 0.25);
   cursor: pointer;
 }
 
 .nw-btn-close:hover {
   /* hover effect removed */;
-  box-shadow: 0 4px 14px rgba(0, 120, 212, 0.35);
+  box-shadow: 0 4px 14px rgba(29, 106, 80, 0.35);
   color: #fff;
 }
 
 .nw-btn-close:active {
   /* hover effect removed */;
-  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.2);
+  box-shadow: 0 2px 6px rgba(29, 106, 80, 0.2);
 }
 
 /* ==========================================================================
@@ -1484,7 +1485,7 @@ a.nw-help-btn {
 .nw-savings-indicator__bar {
   position: relative;
   height: 10px;
-  background: #e1dfdd;
+  background: var(--app-border);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1533,7 +1534,7 @@ a.nw-help-btn {
 
 .nw-slider-field__display:focus-within {
   border-color: var(--nw-primary);
-  box-shadow: 0 0 0 4px rgba(0, 120, 212, 0.1), 0 1px 3px rgba(0, 120, 212, 0.1);
+  box-shadow: 0 0 0 4px rgba(29, 106, 80, 0.1), 0 1px 3px rgba(29, 106, 80, 0.1);
 }
 
 .nw-slider-field__prefix,
@@ -1585,7 +1586,7 @@ a.nw-help-btn {
   width: 100%;
   height: 6px;
   border-radius: 999px;
-  background: #e1dfdd;
+  background: var(--app-border);
   outline: none;
   margin: 8px 0 0 0;
   cursor: pointer;
@@ -1601,13 +1602,13 @@ a.nw-help-btn {
   background: var(--nw-primary);
   cursor: pointer;
   border: 3px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.3), 0 0 0 2px var(--nw-primary-glow);
+  box-shadow: 0 2px 6px rgba(29, 106, 80, 0.3), 0 0 0 2px var(--nw-primary-glow);
   transition: 0.2s ease;
 }
 
 .nw-range::-webkit-slider-thumb:hover {
   transform: scale(1.15);
-  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.4), 0 0 0 4px var(--nw-primary-glow);
+  box-shadow: 0 2px 8px rgba(29, 106, 80, 0.4), 0 0 0 4px var(--nw-primary-glow);
 }
 
 .nw-range::-moz-range-thumb {
@@ -1617,11 +1618,11 @@ a.nw-help-btn {
   background: var(--nw-primary);
   cursor: pointer;
   border: 3px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.3), 0 0 0 2px var(--nw-primary-glow);
+  box-shadow: 0 2px 6px rgba(29, 106, 80, 0.3), 0 0 0 2px var(--nw-primary-glow);
 }
 
 .nw-range::-moz-range-thumb:hover {
-  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.4), 0 0 0 4px var(--nw-primary-glow);
+  box-shadow: 0 2px 8px rgba(29, 106, 80, 0.4), 0 0 0 4px var(--nw-primary-glow);
 }
 
 /* ROI range — color-coded track */

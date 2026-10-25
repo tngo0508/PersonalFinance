@@ -15,14 +15,14 @@
     ];
 
     // Display labels derived from the keys ("debtRepayment" -> "Debt Repayment"), matching BudgetPlannerCategories.
-    const categoryLabels = Object.fromEntries(categories.map(function (key) {
+    const categoryLabels = Object.fromEntries(categories.map((key) => {
         const spaced = key.replace(/([A-Z])/g, ' $1');
         return [key, spaced.charAt(0).toUpperCase() + spaced.slice(1)];
     }));
 
     const categoryColors = [
-        '#0078d4', '#00b7c3', '#71b307', '#d83b01', '#8764b8',
-        '#e4396c', '#107c10', '#498205', '#005a9e', '#605e5c'
+        '#1D6A50', '#2F6690', '#8A6A1E', '#B4532A', '#6B4C8A',
+        '#2A8C8C', '#14283B', '#9C3D5A', '#5E8C31', '#5B6B78'
     ];
 
     let chart = null;
@@ -36,7 +36,7 @@
         const initialData = window.budgetInitialData;
         if (initialData) {
             incomeCents = Math.round(parseFloat(initialData.monthlyIncome) * 100) || 0;
-            categories.forEach(function (cat) {
+            categories.forEach((cat) => {
                 amountCents[cat] = Math.round(parseFloat(initialData[cat]) * 100) || 0;
             });
         }
@@ -62,7 +62,7 @@
      */
     function setColorBoxes () {
         const colorBoxes = document.querySelectorAll('.budget-category-color-box');
-        colorBoxes.forEach(function (box) {
+        colorBoxes.forEach((box) => {
             const index = parseInt(box.getAttribute('data-color-index'), 10);
             if (index >= 0 && index < categoryColors.length) {
                 box.style.backgroundColor = categoryColors[index];
@@ -74,15 +74,15 @@
      * Sync all input values from current state.
      */
     function syncInputsFromData () {
-        categories.forEach(function (cat) {
+        categories.forEach((cat) => {
             const cents = amountCents[cat] || 0;
             const amount = cents / 100;
             const percent = toPercent(cents);
             const capitalized = capitalize(cat);
 
-            const slider = document.getElementById('slider-' + capitalized);
-            const percentInput = document.querySelector('.budget-percent-input[data-category="' + capitalized + '"]');
-            const amountInput = document.querySelector('.budget-amount-input[data-category="' + capitalized + '"]');
+            const slider = document.getElementById(`slider-${ capitalized}`);
+            const percentInput = document.querySelector(`.budget-percent-input[data-category="${ capitalized }"]`);
+            const amountInput = document.querySelector(`.budget-amount-input[data-category="${ capitalized }"]`);
 
             if (slider) {
                 slider.value = percent;
@@ -117,7 +117,7 @@
 
         // Sliders
         const sliders = document.querySelectorAll('.budget-slider');
-        sliders.forEach(function (slider) {
+        sliders.forEach((slider) => {
             slider.addEventListener('input', function () {
                 const cat = this.getAttribute('data-category');
                 const pct = parseFloat(this.value) || 0;
@@ -129,7 +129,7 @@
 
         // Percent inputs (unbound helper controls)
         const percentInputs = document.querySelectorAll('.budget-percent-input');
-        percentInputs.forEach(function (input) {
+        percentInputs.forEach((input) => {
             input.addEventListener('input', function () {
                 const cat = this.getAttribute('data-category');
                 let pct = parseFloat(this.value) || 0;
@@ -150,7 +150,7 @@
 
         // Dollar amount inputs (model-bound fields)
         const amountInputs = document.querySelectorAll('.budget-amount-input');
-        amountInputs.forEach(function (amountInput) {
+        amountInputs.forEach((amountInput) => {
             amountInput.addEventListener('input', function () {
                 const cat = this.getAttribute('data-category');
                 const cents = Math.round(parseFloat(this.value) * 100) || 0;
@@ -163,7 +163,7 @@
         // Sync JS state to form inputs before form submission, so the POST carries current values
         const form = document.getElementById('budgetForm');
         if (form) {
-            form.addEventListener('submit', function () {
+            form.addEventListener('submit', () => {
                 syncFormInputsFromData();
             });
         }
@@ -180,13 +180,13 @@
 
         // Sync slider
         const capitalized = capitalize(cat);
-        const slider = document.getElementById('slider-' + capitalized);
+        const slider = document.getElementById(`slider-${ capitalized}`);
         if (slider) {
             slider.value = pct;
         }
 
         // Sync percent input
-        const percentInput = document.querySelector('.budget-percent-input[data-category="' + capitalized + '"]');
+        const percentInput = document.querySelector(`.budget-percent-input[data-category="${ capitalized }"]`);
         if (percentInput && document.activeElement !== percentInput) {
             percentInput.value = pct > 0 ? pct.toFixed(2) : '';
         }
@@ -202,14 +202,14 @@
 
         // Sync slider
         const capitalized = capitalize(cat);
-        const slider = document.getElementById('slider-' + capitalized);
+        const slider = document.getElementById(`slider-${ capitalized}`);
         if (slider) {
             const pct = toPercent(cents);
             slider.value = pct;
         }
 
         // Sync percent input
-        const percentInput = document.querySelector('.budget-percent-input[data-category="' + capitalized + '"]');
+        const percentInput = document.querySelector(`.budget-percent-input[data-category="${ capitalized }"]`);
         if (percentInput && document.activeElement !== percentInput) {
             const pct = toPercent(cents);
             percentInput.value = pct > 0 ? pct.toFixed(2) : '';
@@ -239,7 +239,7 @@
         }
 
         // Sync each category amount input (the asp-for bound field)
-        categories.forEach(function (cat) {
+        categories.forEach((cat) => {
             const cents = amountCents[cat] || 0;
             const amount = cents / 100;
             const capitalized = capitalize(cat);
@@ -267,18 +267,18 @@
      * Update dollar amount displays for each category.
      */
     function updateAmounts () {
-        categories.forEach(function (cat) {
+        categories.forEach((cat) => {
             const cents = amountCents[cat] || 0;
             const amount = cents / 100;
             const capitalized = capitalize(cat);
 
-            const amountEl = document.querySelector('.budget-category__amount[data-amount-for="' + capitalized + '"] span');
+            const amountEl = document.querySelector(`.budget-category__amount[data-amount-for="${ capitalized }"] span`);
             if (amountEl) {
                 amountEl.textContent = formatCurrency(amount);
             }
 
             // Sync the editable amount input (only if not currently focused)
-            const amountInput = document.querySelector('.budget-amount-input[data-category="' + capitalized + '"]');
+            const amountInput = document.querySelector(`.budget-amount-input[data-category="${ capitalized }"]`);
             if (amountInput && document.activeElement !== amountInput) {
                 amountInput.value = amount > 0 ? amount.toFixed(2) : '';
             }
@@ -299,7 +299,7 @@
         const remainingLabelEl = document.querySelector('.budget-remaining__label');
 
         if (remainingEl) {
-            remainingEl.textContent = '$' + formatCurrency(Math.abs(remainingAmount)) + ' (' + Math.abs(remainingPct).toFixed(1) + '%)';
+            remainingEl.textContent = `$${ formatCurrency(Math.abs(remainingAmount)) } (${ Math.abs(remainingPct).toFixed(1) }%)`;
         }
 
         if (remainingContainer) {
@@ -334,10 +334,10 @@
         const incomeSpan = document.getElementById('budgetIncomeAmount');
 
         if (totalSpan) {
-            totalSpan.textContent = '$' + formatCurrency(totalAmount);
+            totalSpan.textContent = `$${ formatCurrency(totalAmount)}`;
         }
         if (incomeSpan) {
-            incomeSpan.textContent = '$' + formatCurrency(incomeAmount);
+            incomeSpan.textContent = `$${ formatCurrency(incomeAmount)}`;
         }
 
         if (badge) {
@@ -362,7 +362,7 @@
 
         // Find the max amount for scaling progress bars
         let maxCents = 0;
-        categories.forEach(function (cat) {
+        categories.forEach((cat) => {
             const cents = amountCents[cat] || 0;
             if (cents > maxCents) {
                 maxCents = cents;
@@ -372,9 +372,9 @@
         let totalCents = 0;
 
         // Clear existing items
-        list.innerHTML = '';
+        list.replaceChildren();
 
-        categories.forEach(function (cat, index) {
+        categories.forEach((cat, index) => {
             const cents = amountCents[cat] || 0;
             const amount = cents / 100;
             const percent = toPercent(cents);
@@ -402,7 +402,7 @@
 
             const bar = document.createElement('div');
             bar.className = 'budget-summary-item__bar';
-            bar.style.width = barWidth.toFixed(1) + '%';
+            bar.style.width = `${barWidth.toFixed(1) }%`;
             bar.style.background = color;
 
             barWrapper.appendChild(bar);
@@ -412,11 +412,11 @@
 
             const percentSpan = document.createElement('span');
             percentSpan.className = 'budget-summary-item__percent';
-            percentSpan.textContent = percent.toFixed(1) + '%';
+            percentSpan.textContent = `${percent.toFixed(1) }%`;
 
             const amountSpan = document.createElement('span');
             amountSpan.className = 'budget-summary-item__amount';
-            amountSpan.textContent = '$' + formatCurrency(amount);
+            amountSpan.textContent = `$${ formatCurrency(amount)}`;
 
             values.appendChild(percentSpan);
             values.appendChild(amountSpan);
@@ -437,10 +437,10 @@
         const totalAmountEl = document.getElementById('budgetSummaryTotalAmount');
 
         if (totalPercentEl) {
-            totalPercentEl.textContent = totalPercent.toFixed(1) + '%';
+            totalPercentEl.textContent = `${totalPercent.toFixed(1) }%`;
         }
         if (totalAmountEl) {
-            totalAmountEl.textContent = '$' + formatCurrency(totalAmount);
+            totalAmountEl.textContent = `$${ formatCurrency(totalAmount)}`;
         }
     }
 
@@ -482,7 +482,7 @@
                 return;
             }
 
-            const total = dataset.data.reduce(function (sum, val) {
+            const total = dataset.data.reduce((sum, val) => {
                 return sum + val;
             }, 0);
             if (total === 0) {
@@ -512,13 +512,13 @@
 
             ctx.save();
             const fontSize = Math.max(9, Math.round(11 * scale));
-            ctx.font = fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.font = `${fontSize }px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
             ctx.fillStyle = '#505050';
             ctx.textBaseline = 'middle';
 
             const placedLabels = [];
 
-            dataset.data.forEach(function (value, index) {
+            dataset.data.forEach((value, index) => {
                 if (value === 0) {
                     return;
                 }
@@ -576,7 +576,7 @@
                 ctx.fill();
 
                 // Draw label text — percentage only
-                const percent = ((value / total) * 100).toFixed(1) + '%';
+                const percent = `${((value / total) * 100).toFixed(1) }%`;
                 const displayText = percent;
 
                 // Determine text alignment based on angle
@@ -617,11 +617,11 @@
         chart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: categories.map(function (c) {
+                labels: categories.map((c) => {
                     return categoryLabels[c];
                 }),
                 datasets: [{
-                    data: categories.map(function (c) {
+                    data: categories.map((c) => {
                         return toPercent(amountCents[c] || 0);
                     }),
                     backgroundColor: categoryColors,
@@ -651,7 +651,7 @@
                                 const value = context.parsed || 0;
                                 const income = incomeCents / 100;
                                 const amount = (income * value) / 100;
-                                return label + ': ' + value.toFixed(1) + '% ($' + formatCurrency(amount) + ')';
+                                return `${label }: ${ value.toFixed(1) }% ($${ formatCurrency(amount) })`;
                             }
                         }
                     }
@@ -669,7 +669,7 @@
             return;
         }
 
-        chart.data.datasets[0].data = categories.map(function (c) {
+        chart.data.datasets[0].data = categories.map((c) => {
             return toPercent(amountCents[c] || 0);
         });
         chart.update('none');
@@ -681,7 +681,7 @@
      */
     function getTotalCents () {
         let total = 0;
-        categories.forEach(function (cat) {
+        categories.forEach((cat) => {
             total += amountCents[cat] || 0;
         });
         return total;

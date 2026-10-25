@@ -50,10 +50,10 @@
             backgroundColor: colors.tooltipBg,
             borderColor: colors.tooltipBorder,
             borderWidth: 1,
-            titleColor: '#201913',
-            bodyColor: '#605e5c',
-            titleFont: { size: 13, weight: '600', family: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif' },
-            bodyFont: { size: 12, family: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif' },
+            titleColor: '#14283B',
+            bodyColor: '#3D4F5F',
+            titleFont: { size: 13, weight: '600', family: '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif' },
+            bodyFont: { size: 12, family: '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif' },
             padding: 12,
             cornerRadius: 4,
             displayColors: true,
@@ -90,8 +90,8 @@
      */
     function buildLineDataset (name, roiPercent, years, colorHex, gradient, borderWidth) {
         return {
-            label: name + ' (' + roiPercent + '%)',
-            data: years.map(function (y) { return y.endingBalance; }),
+            label: `${name } (${ roiPercent }%)`,
+            data: years.map((y) => { return y.endingBalance; }),
             borderColor: colorHex,
             backgroundColor: gradient,
             fill: true,
@@ -119,7 +119,7 @@
         }
 
         const ctx = ctxEl.getContext('2d');
-        const labels = data.base.years.map(function (y) { return y.year; });
+        const labels = data.base.years.map((y) => { return y.year; });
         const fiTarget = data.fiTarget;
 
         // Build gradient fills
@@ -157,9 +157,9 @@
                     legend: { display: false },
                     tooltip: Object.assign({}, tooltipConfig(), {
                         callbacks: {
-                            title: function (items) { return '\u{1f4c5} ' + items[0].label; },
+                            title: function (items) { return `\u{1f4c5} ${ items[0].label}`; },
                             label: function (context) {
-                                return ' ' + context.dataset.label + ':  ' + NW.formatCurrency(context.parsed.y);
+                                return ` ${ context.dataset.label }:  ${ NW.formatCurrency(context.parsed.y)}`;
                             }
                         }
                     })
@@ -243,9 +243,9 @@
                     legend: { display: false },
                     tooltip: Object.assign({}, tooltipConfig(), {
                         callbacks: {
-                            title: function (items) { return '\u{1f4ca} ' + items[0].label + ' Scenario'; },
+                            title: function (items) { return `\u{1f4ca} ${ items[0].label } Scenario`; },
                             label: function (context) {
-                                return ' Final Net Worth:  ' + NW.formatCurrency(context.parsed.y);
+                                return ` Final Net Worth:  ${ NW.formatCurrency(context.parsed.y)}`;
                             }
                         }
                     })

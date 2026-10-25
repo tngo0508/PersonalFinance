@@ -81,7 +81,7 @@
     justify-content: space-between;
     padding: 0.85rem 1.25rem;
     border-bottom: 1px solid var(--app-border);
-    background: var(--app-surface-soft, #f9fafb);
+    background: var(--app-surface-soft, var(--app-surface));
 }
 
 .calculator-card__header-left {
@@ -108,12 +108,12 @@
 }
 
 .calculator-card__icon--orange {
-    background: #fef3c7;
-    color: #d97706;
+    background: var(--app-accent-warning-soft);
+    color: var(--app-accent-warning);
 }
 
 .calculator-card__icon--green {
-    background: var(--app-accent-positive-bg, #f0fdf4);
+    background: var(--app-accent-positive-bg);
     color: var(--app-accent-positive);
 }
 
@@ -224,12 +224,12 @@
 }
 
 .calculator-result-card__icon--blue {
-    background: #e0f2fe;
-    color: #0284c7;
+    background: #E4EEF5;
+    color: #2F6690;
 }
 
 .calculator-result-card__icon--green {
-    background: var(--app-accent-positive-bg, #f0fdf4);
+    background: var(--app-accent-positive-bg);
     color: var(--app-accent-positive);
 }
 
@@ -279,7 +279,7 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     padding: 1rem 1.25rem;
-    background: var(--app-surface-soft, #f9fafb);
+    background: var(--app-surface-soft, var(--app-surface));
     border-radius: var(--app-radius-m);
     border: 1px solid var(--app-border);
 }
@@ -299,15 +299,15 @@
 }
 
 .calculator-chart-legend__dot--value {
-    background: #10b981;
+    background: var(--app-brand);
 }
 
 .calculator-chart-legend__dot--contrib {
-    background: #6366f1;
+    background: #2F6690;
 }
 
 .calculator-chart-legend__dot--interest {
-    background: #f59e0b;
+    background: var(--app-accent-target);
 }
 
 .calculator-chart-legend__label {

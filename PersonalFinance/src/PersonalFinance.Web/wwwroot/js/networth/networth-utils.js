@@ -17,18 +17,18 @@
     // Canvas height for comparison bar chart gradient
     const COMPARISON_CHART_HEIGHT = 280;
 
-    // Color palette — Fluent UI light theme
+    // Color palette — Ledger theme (css/networth.css --nw-* scenario tokens)
     const colors = {
-        base: '#0078d4',
-        conservative: '#756ae8',
-        aggressive: '#107c10',
-        fi: '#00b7c3',
-        baseAlpha: 'rgba(0, 120, 212, 0.12)',
-        conservativeAlpha: 'rgba(117, 106, 232, 0.08)',
-        aggressiveAlpha: 'rgba(16, 124, 16, 0.12)',
-        gridColor: 'rgba(0, 0, 0, 0.06)',
-        gridColorStrong: 'rgba(0, 0, 0, 0.12)',
-        tickColor: '#605e5c',
+        base: '#1D6A50',
+        conservative: '#5B6B78',
+        aggressive: '#2F6690',
+        fi: '#8A6A1E',
+        baseAlpha: 'rgba(29, 106, 80, 0.12)',
+        conservativeAlpha: 'rgba(91, 107, 120, 0.08)',
+        aggressiveAlpha: 'rgba(47, 102, 144, 0.12)',
+        gridColor: 'rgba(20, 40, 59, 0.06)',
+        gridColorStrong: 'rgba(20, 40, 59, 0.12)',
+        tickColor: '#5B6B78',
         tooltipBg: 'rgba(255, 255, 255, 0.96)',
         tooltipBorder: 'rgba(0, 0, 0, 0.1)'
     };
@@ -82,7 +82,7 @@
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
         const b = parseInt(hex.slice(5, 7), 16);
-        return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+        return `rgba(${ r }, ${ g }, ${ b }, ${ alpha })`;
     }
 
     /**
@@ -104,7 +104,7 @@
      */
     function setInvalid (id, invalid) {
         const el = document.getElementById(id);
-        const rangeEl = document.getElementById(id + 'Range');
+        const rangeEl = document.getElementById(`${id }Range`);
         if (el) { el.classList.toggle('nw-input-invalid', invalid); }
         if (rangeEl) { rangeEl.classList.toggle('nw-input-invalid', invalid); }
     }
@@ -118,7 +118,7 @@
         let isValid = true;
 
         // Clear and validate in a single pass
-        VALIDATORS.forEach(function (v) {
+        VALIDATORS.forEach((v) => {
             const num = getSliderValue(v.id);
             const outOfRange = num < v.min || num > v.max;
             setInvalid(v.id, outOfRange);
@@ -150,7 +150,14 @@
         alert.id = 'nwValidationAlert';
         alert.className = 'alert alert-danger alert-dismissible fade show nw-alert mt-3';
         alert.role = 'alert';
-        alert.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+        alert.textContent = message;
+
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'btn-close';
+        closeButton.setAttribute('data-bs-dismiss', 'alert');
+        closeButton.setAttribute('aria-label', 'Close');
+        alert.appendChild(closeButton);
         container.appendChild(alert);
     }
 
