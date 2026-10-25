@@ -82,11 +82,11 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
 
-      # The Release build of the Web project minifies its JS and CSS with Node (spec #286).
+      # The Release build of the Web project minifies its JS and CSS with Node (spec #286), on the Dockerfile's Node 22.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Restore NuGet packages
         run: dotnet restore PersonalFinance.sln
@@ -156,15 +156,16 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
 
+      # Before the build: the Release build of the Web project minifies its JS and CSS with Node (spec #286).
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Restore and build solution
         run: |
           dotnet restore PersonalFinance.sln
           dotnet build PersonalFinance.sln --configuration Release --no-restore -p:EnforceWarningsAsErrors=true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4

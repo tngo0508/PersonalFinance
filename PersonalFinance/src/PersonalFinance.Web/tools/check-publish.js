@@ -10,7 +10,8 @@
  * Fails (exit code 1, one line per problem) when:
  * - wwwroot/dist has no minified .js or .css files,
  * - a dist file lacks its .br or .gz sibling,
- * - a .map file exists outside the vendored lib folders,
+ * - a .map file exists outside wwwroot/lib and wwwroot/Identity/lib. Those hold vendored third-party
+ *   files, which are published as shipped and are out of scope (an agreed deviation from spec #286),
  * - unminified source or tooling is published (wwwroot/js, wwwroot/css, the web root's
  *   package.json, package-lock.json and ESLint files, node_modules),
  * - the static web assets manifest still serves any of those.
@@ -18,27 +19,13 @@
 
 const fs = require('fs');
 const path = require('path');
+const { listFiles } = require('./list-files');
 
 const manifestName = 'PersonalFinance.Web.staticwebassets.endpoints.json';
+// Vendored third-party files are published as shipped, maps included: out of scope (agreed deviation, spec #286)
 const vendoredLibPrefixes = ['wwwroot/lib/', 'wwwroot/Identity/lib/'];
 const forbiddenWebRootEntries = ['js', 'css', 'package.json', 'package-lock.json', '.eslintrc.js', '.eslintignore'];
 const compressedExtensions = ['.br', '.gz'];
-
-/**
- * Lists every file under a folder.
- * @param {string} root The folder to walk.
- * @returns {string[]} Paths relative to the root with forward slashes, sorted.
- */
-function listFiles (root) {
-    if (!fs.existsSync(root)) {
-        return [];
-    }
-
-    return fs.readdirSync(root, { recursive: true, withFileTypes: true })
-        .filter(entry => entry.isFile())
-        .map(entry => path.relative(root, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'))
-        .sort();
-}
 
 /**
  * Removes a trailing .br or .gz from a web-root path.
@@ -51,13 +38,21 @@ function stripCompression (file) {
 }
 
 /**
- * Says whether a web-root-relative asset path is unminified source or tooling.
- * @param {string} assetPath The path, relative to wwwroot, with forward slashes.
- * @returns {boolean} True when Production must not serve it.
+ * Finds the unminified source or tooling entry a published file belongs to.
+ * @param {string} file The path, relative to the publish folder, with forward slashes.
+ * @returns {string|null} The entry Production must not publish or serve (wwwroot/js, a node_modules folder, ...),
+ *   or null when the file is allowed.
  */
-function isForbiddenAsset (assetPath) {
-    const parts = stripCompression(assetPath).split('/');
-    return forbiddenWebRootEntries.includes(parts[0]) || parts.includes('node_modules');
+function forbiddenEntry (file) {
+    const parts = stripCompression(file).split('/');
+    const nodeModules = parts.indexOf('node_modules');
+    if (nodeModules >= 0) {
+        return parts.slice(0, nodeModules + 1).join('/');
+    }
+
+    return parts[0] === 'wwwroot' && parts.length > 1 && forbiddenWebRootEntries.includes(parts[1])
+        ? `wwwroot/${parts[1]}`
+        : null;
 }
 
 /**
@@ -93,7 +88,7 @@ function checkManifest (publishDir) {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const served = new Set((manifest.Endpoints || [])
         .map(endpoint => endpoint.AssetFile)
-        .filter(assetFile => assetFile && isForbiddenAsset(assetFile))
+        .filter(assetFile => assetFile && forbiddenEntry(`wwwroot/${assetFile}`) !== null)
         .map(stripCompression));
     return [...served].sort().map(assetFile => `the static web assets manifest serves ${assetFile}`);
 }
@@ -109,20 +104,11 @@ function checkPublishOutput (publishDir) {
 
     for (const map of files.filter(file => path.extname(file) === '.map')) {
         if (!vendoredLibPrefixes.some(prefix => map.startsWith(prefix))) {
-            problems.push(`source map ${map} must not be published`);
+            problems.push(`source map ${map} must not be published (only the vendored wwwroot/lib and wwwroot/Identity/lib may ship maps)`);
         }
     }
 
-    const forbidden = new Set();
-    for (const file of files) {
-        const parts = file.split('/');
-        const nodeModules = parts.indexOf('node_modules');
-        if (nodeModules >= 0) {
-            forbidden.add(parts.slice(0, nodeModules + 1).join('/'));
-        } else if (parts[0] === 'wwwroot' && parts.length > 1 && forbiddenWebRootEntries.includes(stripCompression(parts[1]))) {
-            forbidden.add(`wwwroot/${stripCompression(parts[1])}`);
-        }
-    }
+    const forbidden = new Set(files.map(forbiddenEntry).filter(entry => entry !== null));
     for (const entry of [...forbidden].sort()) {
         problems.push(`unminified source or tooling must not be published: ${entry}`);
     }

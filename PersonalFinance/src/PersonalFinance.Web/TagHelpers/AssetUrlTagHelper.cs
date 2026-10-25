@@ -10,12 +10,15 @@ namespace PersonalFinance.Web.TagHelpers;
 /// Points <c>script[src]</c> and <c>link[href]</c> references to the app's own JavaScript and CSS (under
 /// <c>/js/</c> and <c>/css/</c>) at their minified copies under <c>/dist/</c>, versioned for cache busting.
 /// The Release build writes those copies (see the MinifyWebAssets target in the project file).
-/// In Development it changes nothing, so pages load the readable originals. <c>/lib/</c>, external URLs
-/// and everything else are never touched. Auto-applies through <c>_ViewImports</c>, so views need no edits.
+/// A page never points at a file the web root lacks: the URL is rewritten only when the minified copy exists,
+/// and in Development only when the original is missing too (a published Release build run as Development).
+/// So Development keeps the readable originals, and a Debug build run as Production, which has no dist,
+/// keeps them as well. <c>/lib/</c>, external URLs and everything else are never touched.
+/// Auto-applies through <c>_ViewImports</c>, so views need no edits.
 /// </summary>
 [HtmlTargetElement("script", Attributes = SrcAttributeName)]
 [HtmlTargetElement("link", Attributes = HrefAttributeName)]
-public class AssetUrlTagHelper : TagHelper
+public sealed class AssetUrlTagHelper : TagHelper
 {
     private const string SrcAttributeName = "src";
     private const string HrefAttributeName = "href";
@@ -28,7 +31,7 @@ public class AssetUrlTagHelper : TagHelper
     /// <summary>
     /// Creates the tag helper.
     /// </summary>
-    /// <param name="environment">Decides whether to rewrite: never in Development.</param>
+    /// <param name="environment">Its environment name and web root decide whether to rewrite.</param>
     /// <param name="fileVersionProvider">Versions the minified file's URL, as <c>asp-append-version</c> does.</param>
     public AssetUrlTagHelper(IWebHostEnvironment environment, IFileVersionProvider fileVersionProvider)
     {
@@ -52,11 +55,6 @@ public class AssetUrlTagHelper : TagHelper
     /// <inheritdoc />
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
-        if (_environment.IsDevelopment())
-        {
-            return;
-        }
-
         string attributeName = string.Equals(output.TagName, "script", StringComparison.OrdinalIgnoreCase)
             ? SrcAttributeName
             : HrefAttributeName;
@@ -82,7 +80,7 @@ public class AssetUrlTagHelper : TagHelper
 
     /// <summary>
     /// Maps an app asset URL (<c>/js/...</c> or <c>/css/...</c> under the path base) to its versioned
-    /// <c>/dist/...</c> copy, or returns null for any other URL.
+    /// <c>/dist/...</c> copy, or returns null for any other URL and whenever the original should be kept.
     /// </summary>
     private string? ToMinifiedUrl(string url)
     {
@@ -99,7 +97,22 @@ public class AssetUrlTagHelper : TagHelper
             return null;
         }
 
-        string minifiedPath = pathBase.Add(DistFolder + appRelativePath).Value!;
+        string distPath = DistFolder + appRelativePath;
+        if (!WebRootFileExists(distPath)
+            || (_environment.IsDevelopment() && WebRootFileExists(appRelativePath)))
+        {
+            return null;
+        }
+
+        string minifiedPath = pathBase.Add(distPath).Value!;
         return _fileVersionProvider.AddFileVersionToPath(pathBase, minifiedPath);
+    }
+
+    /// <summary>
+    /// Says whether a web-root-relative path (with its leading slash) names a file the app can serve.
+    /// </summary>
+    private bool WebRootFileExists(string path)
+    {
+        return _environment.WebRootFileProvider.GetFileInfo(path).Exists;
     }
 }

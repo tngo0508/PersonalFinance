@@ -79,10 +79,12 @@ test('a source map outside the vendored lib folders is reported', () => {
 for (const forbidden of [
     'wwwroot/js/site.js',
     'wwwroot/css/site.css',
+    'wwwroot/js/site.js.br',
     'wwwroot/package.json',
     'wwwroot/package-lock.json',
     'wwwroot/.eslintrc.js',
-    'node_modules/esbuild/index.js'
+    'node_modules/esbuild/index.js',
+    'wwwroot/lib/tool/node_modules/dep/index.js'
 ]) {
     test(`${forbidden} in the output is reported`, () => {
         const root = validPublish();

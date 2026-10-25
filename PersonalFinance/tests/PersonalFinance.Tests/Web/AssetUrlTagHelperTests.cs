@@ -15,7 +15,9 @@ namespace PersonalFinance.Tests.Web;
 
 /// <summary>
 /// Outside Development, pages reference the minified copies under /dist with a version for cache busting.
-/// In Development they keep the readable originals. Third-party and external URLs are never rewritten.
+/// In Development they keep the readable originals. A page never points at a file the web root lacks:
+/// without a dist copy the original stays, and a Development run without the original uses the dist copy.
+/// Third-party and external URLs are never rewritten.
 /// </summary>
 public class AssetUrlTagHelperTests
 {
@@ -27,6 +29,33 @@ public class AssetUrlTagHelperTests
     public void Development_LeavesAppAssetUrlsUntouched(string tagName, string attributeName, string url)
     {
         string rendered = Render("Development", tagName, attributeName, url);
+
+        Assert.Equal(url, rendered);
+    }
+
+    [Fact]
+    public void Development_UsesMinifiedCopyWhenTheOriginalIsMissing()
+    {
+        string rendered = Render("Development", "script", "src", "/js/core/utils.js?v=source-hash",
+            webRootFiles: ["dist/js/core/utils.js"]);
+
+        Assert.Equal("/dist/js/core/utils.js?v=" + DistVersion, rendered);
+    }
+
+    [Fact]
+    public void Development_KeepsTheOriginalWhenNeitherFileExists()
+    {
+        string rendered = Render("Development", "script", "src", "/js/core/utils.js?v=source-hash", webRootFiles: []);
+
+        Assert.Equal("/js/core/utils.js?v=source-hash", rendered);
+    }
+
+    [Theory]
+    [InlineData("script", "src", "/js/core/utils.js?v=source-hash")]
+    [InlineData("link", "href", "/css/site.css?v=source-hash")]
+    public void Production_KeepsTheOriginalWhenThereIsNoMinifiedCopy(string tagName, string attributeName, string url)
+    {
+        string rendered = Render("Production", tagName, attributeName, url, webRootFiles: ["js/core/utils.js", "css/site.css"]);
 
         Assert.Equal(url, rendered);
     }
@@ -77,9 +106,23 @@ public class AssetUrlTagHelperTests
         Assert.Equal(url, rendered);
     }
 
-    private static string Render(string environmentName, string tagName, string attributeName, string url, string pathBase = "")
+    /// <summary>
+    /// The web root of a Release build run locally: every original and its minified copy.
+    /// </summary>
+    private static readonly string[] SourceAndDistFiles =
+    [
+        "js/core/utils.js", "js/landing/skyline.js", "css/site.css",
+        "dist/js/core/utils.js", "dist/js/landing/skyline.js", "dist/css/site.css"
+    ];
+
+    private static string Render(string environmentName, string tagName, string attributeName, string url, string pathBase = "",
+        string[]? webRootFiles = null)
     {
-        var tagHelper = new AssetUrlTagHelper(new FakeWebHostEnvironment(environmentName), new FakeFileVersionProvider())
+        var environment = new FakeWebHostEnvironment(environmentName)
+        {
+            WebRootFileProvider = new InMemoryFileProvider(webRootFiles ?? SourceAndDistFiles)
+        };
+        var tagHelper = new AssetUrlTagHelper(environment, new FakeFileVersionProvider())
         {
             ViewContext = CreateViewContext(pathBase)
         };
@@ -106,6 +149,30 @@ public class AssetUrlTagHelperTests
     private sealed class FakeFileVersionProvider : IFileVersionProvider
     {
         public string AddFileVersionToPath(PathString requestPathBase, string path) => path + "?v=" + DistVersion;
+    }
+
+    /// <summary>Stands in for the web root: the given files exist, nothing else does.</summary>
+    private sealed class InMemoryFileProvider(IEnumerable<string> files) : IFileProvider
+    {
+        private readonly HashSet<string> _files = new(files, StringComparer.OrdinalIgnoreCase);
+
+        public IFileInfo GetFileInfo(string subpath) =>
+            _files.Contains(subpath.TrimStart('/')) ? new ExistingFileInfo(subpath) : new NotFoundFileInfo(subpath);
+
+        public IDirectoryContents GetDirectoryContents(string subpath) => NotFoundDirectoryContents.Singleton;
+
+        public Microsoft.Extensions.Primitives.IChangeToken Watch(string filter) => NullChangeToken.Singleton;
+    }
+
+    private sealed class ExistingFileInfo(string subpath) : IFileInfo
+    {
+        public bool Exists => true;
+        public long Length => 0;
+        public string? PhysicalPath => null;
+        public string Name => Path.GetFileName(subpath);
+        public DateTimeOffset LastModified => DateTimeOffset.UnixEpoch;
+        public bool IsDirectory => false;
+        public Stream CreateReadStream() => Stream.Null;
     }
 
     private sealed class FakeWebHostEnvironment(string environmentName) : IWebHostEnvironment

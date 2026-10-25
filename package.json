@@ -7,8 +7,8 @@
     "doc": "docs"
   },
   "scripts": {
-    "lint": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js PersonalFinance/src/PersonalFinance.Web/wwwroot/js/",
-    "lint:fix": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js --fix PersonalFinance/src/PersonalFinance.Web/wwwroot/js/",
+    "lint": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js PersonalFinance/src/PersonalFinance.Web/wwwroot/js/ PersonalFinance/src/PersonalFinance.Web/tools/",
+    "lint:fix": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js --fix PersonalFinance/src/PersonalFinance.Web/wwwroot/js/ PersonalFinance/src/PersonalFinance.Web/tools/",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v",

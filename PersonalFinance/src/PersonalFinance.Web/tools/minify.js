@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const esbuild = require('esbuild');
+const { listFiles } = require('./list-files');
 
 const webRoot = path.resolve(__dirname, '..', 'wwwroot');
 const distRoot = path.join(webRoot, 'dist');
@@ -30,14 +31,9 @@ const sources = [
  */
 function listSources (folder, extension) {
     const root = path.join(webRoot, folder);
-    if (!fs.existsSync(root)) {
-        return [];
-    }
-
-    return fs.readdirSync(root, { recursive: true, withFileTypes: true })
-        .filter(entry => entry.isFile() && path.extname(entry.name) === extension)
-        .map(entry => path.join(entry.parentPath, entry.name))
-        .sort();
+    return listFiles(root)
+        .filter(file => path.extname(file) === extension)
+        .map(file => path.join(root, file));
 }
 
 fs.rmSync(distRoot, { recursive: true, force: true });

@@ -70,8 +70,19 @@
         <Content Remove="wwwroot\js\**;wwwroot\css\**;wwwroot\package.json;wwwroot\package-lock.json;wwwroot\.eslintrc.js;wwwroot\.eslintignore" />
     </ItemGroup>
 
-    <Target Name="MinifyWebAssets" BeforeTargets="ResolveProjectStaticWebAssets" Condition="'$(Configuration)' == 'Release'">
-        <Exec Command="npm ci" WorkingDirectory="$(MSBuildProjectDirectory)" Condition="!Exists('$(MSBuildProjectDirectory)\node_modules\esbuild')" />
+    <!--
+      npm ci reruns whenever package.json or package-lock.json is newer than the install it made, so a lockfile
+      change reaches the build. npm writes node_modules\.package-lock.json on every install; the Touch marks the
+      install as up to date even if npm kept that file's old timestamp.
+    -->
+    <Target Name="RestoreWebAssetTools" Condition="'$(Configuration)' == 'Release'"
+            Inputs="$(MSBuildProjectDirectory)\package.json;$(MSBuildProjectDirectory)\package-lock.json"
+            Outputs="$(MSBuildProjectDirectory)\node_modules\.package-lock.json">
+        <Exec Command="npm ci" WorkingDirectory="$(MSBuildProjectDirectory)" />
+        <Touch Files="$(MSBuildProjectDirectory)\node_modules\.package-lock.json" />
+    </Target>
+
+    <Target Name="MinifyWebAssets" BeforeTargets="ResolveProjectStaticWebAssets" DependsOnTargets="RestoreWebAssetTools" Condition="'$(Configuration)' == 'Release'">
         <Exec Command="npm run minify" WorkingDirectory="$(MSBuildProjectDirectory)" />
 
         <ItemGroup>
