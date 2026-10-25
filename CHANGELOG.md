@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.1.0] - 2026-10-25
+
+### Added
+
+- **App shell in Vietnamese**: the navigation, top bar, footer, mobile bottom nav, account menu, cookie banner, data source toggle, Unavailable State and Send feedback page follow the chosen language (slice L3 of the localization spec, #357).
+  - The top-bar search, the notifications dropdown and the data source toggle's error message are translated too.
+  - The Send feedback form's labels, categories, confirmation and validation messages are translated; messages ApiService returns stay in English.
+
+### Changed
+
+- **Several JS string islands per page**: `<js-strings>` islands are marked with `data-i18n-strings` instead of an id, and `core/i18n.js` merges every island, so the layout's `Shell.Js.` strings sit beside a page's own.
+- **Notifications dropdown built with DOM nodes**: the dropdown no longer assigns `innerHTML`; its markup and behaviour are unchanged.
+
 ## [7.0.0] - 2026-10-25
 
 ### Added

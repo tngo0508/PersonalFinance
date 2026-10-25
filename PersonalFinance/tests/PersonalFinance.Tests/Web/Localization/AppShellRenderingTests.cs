@@ -188,8 +188,16 @@ public sealed partial class AppShellRenderingTests : IAsyncLifetime
     private static void AssertShows(string html, IEnumerable<string> texts) =>
         Assert.All(texts, text => Assert.Contains(text, html, StringComparison.Ordinal));
 
-    private static void AssertHides(string html, IEnumerable<string> texts) =>
-        Assert.All(texts, text => Assert.DoesNotContain(text, html, StringComparison.Ordinal));
+    // What a visitor can see or hear: markup and attributes, without HTML comments or script bodies (the JSON island's
+    // key names are English by design).
+    private static void AssertHides(string html, IEnumerable<string> texts)
+    {
+        string shown = NotShown().Replace(html, string.Empty);
+        Assert.All(texts, text => Assert.DoesNotContain(text, shown, StringComparison.Ordinal));
+    }
+
+    [GeneratedRegex("<!--.*?-->|<script[^>]*>.*?</script>", RegexOptions.Singleline)]
+    private static partial Regex NotShown();
 
     private static string Vietnamese(string key)
     {
