@@ -114,6 +114,24 @@ public class MoneyPrioritiesWebControllerTests
     }
 
     [Fact]
+    public async Task Submit_WhenThe400IsNotTheValidationShape_StillAnswers400WithAMessage()
+    {
+        const string problemDetails = """{"title":"One or more validation errors occurred.","errors":{"$.ageBand":["bad"]}}""";
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Throws(nameof(IMoneyPrioritiesApi.SubmitWalkAsync),
+            await ApiExceptionAsync(HttpStatusCode.BadRequest, problemDetails));
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await controller.Submit(new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 0m });
+
+        BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        MoneyPrioritiesValidationErrorsDto errors = Assert.IsType<MoneyPrioritiesValidationErrorsDto>(badRequest.Value);
+        Assert.Empty(errors.FieldErrors);
+        Assert.NotEmpty(errors.Errors);
+        Assert.DoesNotContain("ageBand", string.Join(" ", errors.Errors));
+    }
+
+    [Fact]
     public async Task Submit_WithNoBody_Returns400WithoutCallingTheApi()
     {
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();

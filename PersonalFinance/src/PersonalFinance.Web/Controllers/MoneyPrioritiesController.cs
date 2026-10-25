@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
@@ -82,15 +83,34 @@ public class MoneyPrioritiesController : Controller
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
         {
-            MoneyPrioritiesValidationErrorsDto errors = await ex.GetContentAsAsync<MoneyPrioritiesValidationErrorsDto>()
-                                                        ?? new MoneyPrioritiesValidationErrorsDto();
-            if (errors.Errors.Count == 0)
-            {
-                errors.Errors.Add("Check your answers, then try again.");
-            }
-
-            return BadRequest(errors);
+            return BadRequest(await ValidationErrorsAsync(ex));
         }
+    }
+
+    /// <summary>
+    /// The ApiService's field-keyed validation errors. Any other 400 body (say, a model-binding problem) becomes one
+    /// general message, never its raw text.
+    /// </summary>
+    private async Task<MoneyPrioritiesValidationErrorsDto> ValidationErrorsAsync(ApiException ex)
+    {
+        MoneyPrioritiesValidationErrorsDto? errors = null;
+        try
+        {
+            errors = await ex.GetContentAsAsync<MoneyPrioritiesValidationErrorsDto>();
+        }
+        catch (JsonException)
+        {
+            _logger.LogWarning("ApiService rejected a Money Priorities submit with a body that is not field errors.");
+        }
+
+        errors ??= new MoneyPrioritiesValidationErrorsDto();
+        if (errors.Errors.Count == 0)
+        {
+            errors.FieldErrors.Clear();
+            errors.Errors.Add("Check your answers, then try again.");
+        }
+
+        return errors;
     }
 
     /// <summary>Returns one earlier Priority Walk with its figures recomputed (404 when the Account has none).</summary>
