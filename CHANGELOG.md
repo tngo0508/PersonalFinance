@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [6.2.2] - 2026-10-25
+
+### Changed
+
+- **Browser tab title and icon**: the site now has a ledger-bars favicon in the brand green and brass, and the landing page tab reads "PersonalFinance — Plan for enough".
+  - Ships `favicon.svg` with `favicon.ico` (16, 32, 48 px), `favicon-32x32.png` and a 180 px `apple-touch-icon.png` fallback, all linked from `_Layout.cshtml`.
+  - Inner pages keep the "Page · PersonalFinance" format; a view can set `ViewData["DocumentTitle"]` to replace the whole title.
+
 ## [6.2.1] - 2026-10-25
 
 ### Fixed
