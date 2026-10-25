@@ -514,8 +514,8 @@ public class AiAssistantServiceTests
         await service.SendChatMessageAsync(UserId, Request("Budget?"));
 
         string system = fake.LastMessages.First(m => m.Role == ChatRole.System).Text;
-        Assert.Contains("Always reply in ", system);
-        Assert.DoesNotContain("Always reply in English", system);
+        string englishName = CultureInfo.GetCultureInfo(code).EnglishName;
+        Assert.Contains($"Always reply in {englishName}", system);
     }
 
     [Fact]

@@ -209,8 +209,8 @@ internal sealed class AiAssistantService : IAiAssistantService
 
     /// <summary>
     /// Builds a compact, cacheable system prompt with only the stable financial overview.
-    /// Detailed data is fetched on-demand through tool calls. The reply Language is the last line, so the rest of the
-    /// prompt stays an identical, cacheable prefix for every user.
+    /// Detailed data is fetched on-demand through tool calls. The reply Language is the last line, so everything
+    /// before it is the same for every user and stays a cacheable prefix.
     /// </summary>
     private static string BuildCompactSystemPrompt(string replyLanguage)
     {
