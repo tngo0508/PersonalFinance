@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Localization;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using System;
@@ -19,15 +20,18 @@ public class LoginWithRecoveryCodeModel : PageModel
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
     private readonly ILogger<LoginWithRecoveryCodeModel> _logger;
+    private readonly IStringLocalizer _localizer;
 
     public LoginWithRecoveryCodeModel(
         SignInManager<IdentityUser> signInManager,
         UserManager<IdentityUser> userManager,
-        ILogger<LoginWithRecoveryCodeModel> logger)
+        ILogger<LoginWithRecoveryCodeModel> logger,
+        IStringLocalizer localizer)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _logger = logger;
+        _localizer = localizer;
     }
 
     [BindProperty]
@@ -38,9 +42,9 @@ public class LoginWithRecoveryCodeModel : PageModel
     public class InputModel
     {
         [BindProperty]
-        [Required]
+        [Required(ErrorMessage = "Validation.Required")]
         [DataType(DataType.Text)]
-        [Display(Name = "Recovery Code")]
+        [Display(Name = "Identity.Field.RecoveryCode")]
         public string RecoveryCode { get; set; }
     }
 
@@ -90,7 +94,7 @@ public class LoginWithRecoveryCodeModel : PageModel
         else
         {
             _logger.LogWarning(LoggerEventIds.InvalidRecoveryCode, "Invalid recovery code entered.");
-            ModelState.AddModelError(string.Empty, "Invalid recovery code entered.");
+            ModelState.AddModelError(string.Empty, _localizer["Account.LoginWithRecoveryCode.InvalidCode"]);
             return Page();
         }
     }

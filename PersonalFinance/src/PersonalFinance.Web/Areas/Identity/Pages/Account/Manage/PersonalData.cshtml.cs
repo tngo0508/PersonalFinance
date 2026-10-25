@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.DataExport;
 using PersonalFinance.Web.Infrastructure;
@@ -24,11 +25,14 @@ public class PersonalDataModel : PageModel
 
     private readonly IDataExportApi _dataExportApi;
     private readonly ILogger<PersonalDataModel> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public PersonalDataModel(IDataExportApi dataExportApi, ILogger<PersonalDataModel> logger)
+    public PersonalDataModel(IDataExportApi dataExportApi, ILogger<PersonalDataModel> logger,
+        IStringLocalizer localizer)
     {
         _dataExportApi = dataExportApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -59,7 +63,7 @@ public class PersonalDataModel : PageModel
                                    && !HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Exporting personal data failed.");
-            ErrorMessage = ApiErrorMessages.ForUser(ex, "Your data could not be exported. Please try again later.");
+            ErrorMessage = ApiErrorMessages.ForUser(ex, _localizer["Account.PersonalData.ExportFailed"]);
             return Page();
         }
     }

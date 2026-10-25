@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Data;
 using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Infrastructure;
@@ -27,6 +28,7 @@ public class ExternalLoginModel : PageModel
     private readonly ILogger<ExternalLoginModel> _logger;
     private readonly IAccountEmailService _accountEmails;
     private readonly IUserPreferenceService _preferences;
+    private readonly IStringLocalizer _localizer;
 
     public ExternalLoginModel(
         SignInManager<IdentityUser> signInManager,
@@ -34,7 +36,8 @@ public class ExternalLoginModel : PageModel
         IUserStore<IdentityUser> userStore,
         ILogger<ExternalLoginModel> logger,
         IAccountEmailService accountEmails,
-        IUserPreferenceService preferences)
+        IUserPreferenceService preferences,
+        IStringLocalizer localizer)
     {
         _accountEmails = accountEmails;
         _preferences = preferences;
@@ -43,6 +46,7 @@ public class ExternalLoginModel : PageModel
         _userStore = userStore;
         _emailStore = GetEmailStore();
         _logger = logger;
+        _localizer = localizer;
     }
 
     [BindProperty]
@@ -79,14 +83,14 @@ public class ExternalLoginModel : PageModel
 
         if (remoteError != null)
         {
-            ErrorMessage = $"Error from external provider: {remoteError}";
+            ErrorMessage = _localizer.Named("Account.ExternalLogin.ProviderError", ("remoteError", remoteError));
             return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
         }
 
         ExternalLoginInfo? info = await _signInManager.GetExternalLoginInfoAsync();
         if (info == null)
         {
-            ErrorMessage = "Error loading external login information.";
+            ErrorMessage = _localizer["Account.ExternalLogin.LoadError"];
             return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
         }
 
@@ -150,7 +154,7 @@ public class ExternalLoginModel : PageModel
                 }
                 else
                 {
-                    ModelState.AddModelError(string.Empty, "An account with this email address already exists but has not been confirmed. Please confirm your email address first.");
+                    ModelState.AddModelError(string.Empty, _localizer["Account.ExternalLogin.UnconfirmedAccountExists"]);
                 }
 
                 Input.Email = email;
@@ -209,7 +213,7 @@ public class ExternalLoginModel : PageModel
         ExternalLoginInfo? info = await _signInManager.GetExternalLoginInfoAsync();
         if (info == null)
         {
-            ErrorMessage = "Error loading external login information during confirmation.";
+            ErrorMessage = _localizer["Account.ExternalLogin.LoadErrorConfirmation"];
             return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
         }
 
@@ -223,7 +227,7 @@ public class ExternalLoginModel : PageModel
             IdentityUser? existingUser = await _userManager.FindByEmailAsync(Input.Email);
             if (existingUser != null)
             {
-                ModelState.AddModelError(string.Empty, "An account with this email address already exists. Sign in with your password and link this provider from Manage > External logins.");
+                ModelState.AddModelError(string.Empty, _localizer["Account.ExternalLogin.AccountExists"]);
                 return Page();
             }
 

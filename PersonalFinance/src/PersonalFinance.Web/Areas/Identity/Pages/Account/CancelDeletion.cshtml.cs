@@ -2,7 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using PersonalFinance.Shared.Constants;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
 using PersonalFinance.Web.Infrastructure;
@@ -19,11 +19,14 @@ public class CancelDeletionModel : PageModel
 {
     private readonly IAccountDeletionApi _accountDeletionApi;
     private readonly ILogger<CancelDeletionModel> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public CancelDeletionModel(IAccountDeletionApi accountDeletionApi, ILogger<CancelDeletionModel> logger)
+    public CancelDeletionModel(IAccountDeletionApi accountDeletionApi, ILogger<CancelDeletionModel> logger,
+        IStringLocalizer localizer)
     {
         _accountDeletionApi = accountDeletionApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -39,7 +42,7 @@ public class CancelDeletionModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(Token))
         {
-            ErrorMessage = AccountDeletionMessages.InvalidCancelLink;
+            ErrorMessage = _localizer["Account.CancelDeletion.InvalidLink"];
         }
 
         return Page();
@@ -49,7 +52,7 @@ public class CancelDeletionModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(Token))
         {
-            ErrorMessage = AccountDeletionMessages.InvalidCancelLink;
+            ErrorMessage = _localizer["Account.CancelDeletion.InvalidLink"];
             return Page();
         }
 
@@ -61,13 +64,13 @@ public class CancelDeletionModel : PageModel
         }
         catch (Refit.ApiException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
         {
-            ErrorMessage = AccountDeletionMessages.InvalidCancelLink;
+            ErrorMessage = _localizer["Account.CancelDeletion.InvalidLink"];
         }
         catch (Exception ex) when ((ex is Refit.ApiException or HttpRequestException or TaskCanceledException)
                                    && !HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Cancelling a Deletion Request failed.");
-            ErrorMessage = ApiErrorMessages.ForUser(ex, "The deletion could not be cancelled. Please try again.");
+            ErrorMessage = ApiErrorMessages.ForUser(ex, _localizer["Account.CancelDeletion.Failed"]);
         }
 
         return Page();

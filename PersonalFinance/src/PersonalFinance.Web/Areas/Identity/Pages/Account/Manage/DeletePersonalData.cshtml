@@ -2,22 +2,21 @@
 @model DeletePersonalDataModel
 @{
     Layout = "_Layout"; // the account-settings shell in this folder, not Account/_ViewStart's sign-in layout
-    ViewData["Title"] = "Delete your account";
+    ViewData["Title"] = L["Account.DeleteAccount.Title"].Value;
+    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> downloadLink = @<a asp-page="./PersonalData">@L["Account.DeleteAccount.DownloadLink"]</a>;
     ViewData["ActivePage"] = ManageNavPages.PersonalData;
 }
 
 <h3>@ViewData["Title"]</h3>
 
-<p>When you confirm:</p>
+<p>@L["Account.DeleteAccount.WhenYouConfirm"]</p>
 <ul>
-    <li>Your data is hidden straight away and you are signed out. You cannot sign in again.</li>
-    <li>We email you a link that cancels the deletion and restores everything. It works for 30 days.</li>
-    <li>After 30 days your account and data are deleted permanently. Your Community stories and comments stay,
-        shown as written by "Deleted User".
-    </li>
+    <li>@L["Account.DeleteAccount.HiddenNow"]</li>
+    <li>@L["Account.DeleteAccount.CancelEmail"]</li>
+    <li>@L["Account.DeleteAccount.AfterThirtyDays"]</li>
 </ul>
 <p>
-    Want a copy first? <a asp-page="./PersonalData">Download your data</a> before you continue.
+    @L.NamedHtml("Account.DeleteAccount.CopyFirst", null, ("downloadLink", downloadLink(null)))
 </p>
 
 <form id="delete-user" method="post">
@@ -29,8 +28,8 @@
     {
         <div class="form-floating mb-3">
             <input asp-for="Input.Password" type="password" class="form-control" autocomplete="current-password"
-                   required placeholder="Your password"/>
-            <label asp-for="Input.Password" class="form-label">Your password</label>
+                   required placeholder="@L["Account.DeleteAccount.Password"]"/>
+            <label asp-for="Input.Password" class="form-label">@L["Account.DeleteAccount.Password"]</label>
         </div>
     }
     else
@@ -39,9 +38,9 @@
             <input asp-for="Input.Confirmation" class="form-control" autocomplete="off" required
                    placeholder="@DeletePersonalDataModel.ConfirmationWord"/>
             <label asp-for="Input.Confirmation" class="form-label">
-                Type @DeletePersonalDataModel.ConfirmationWord to confirm
+                @L.Named("Account.DeleteAccount.TypeToConfirm", ("word", DeletePersonalDataModel.ConfirmationWord))
             </label>
         </div>
     }
-    <button class="btn btn-danger" type="submit">Delete my account</button>
+    <button class="btn btn-danger" type="submit">@L["Account.DeleteAccount.Submit"]</button>
 </form>

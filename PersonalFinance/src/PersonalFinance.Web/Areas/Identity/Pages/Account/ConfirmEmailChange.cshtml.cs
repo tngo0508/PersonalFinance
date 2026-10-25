@@ -45,7 +45,7 @@ public class ConfirmEmailChangeModel : PageModel
         IdentityResult result = await _userManager.ChangeEmailAsync(user, email, code);
         if (!result.Succeeded)
         {
-            StatusMessage = "Error changing email.";
+            StatusMessage = "Account.ConfirmEmailChange.ErrorChangingEmail";
             return Page();
         }
 
@@ -54,12 +54,12 @@ public class ConfirmEmailChangeModel : PageModel
         IdentityResult setUserNameResult = await _userManager.SetUserNameAsync(user, email);
         if (!setUserNameResult.Succeeded)
         {
-            StatusMessage = "Error changing user name.";
+            StatusMessage = "Account.ConfirmEmailChange.ErrorChangingUserName";
             return Page();
         }
 
         await _signInManager.RefreshSignInAsync(user);
-        StatusMessage = "Thank you for confirming your email change.";
+        StatusMessage = "Account.ConfirmEmailChange.Confirmed";
         return Page();
     }
 }

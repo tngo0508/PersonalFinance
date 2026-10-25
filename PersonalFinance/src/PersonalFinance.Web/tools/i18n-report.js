@@ -37,6 +37,8 @@ const REFERENCE_PATTERNS = [
     new RegExp(`\\b(?:L|_localizer|localizer)\\[\\s*"(${KEY})"`, 'g'),
     new RegExp(`\\(\\s*(?:L|_localizer|localizer)\\s*,\\s*"(${KEY})"`, 'g'),
     new RegExp(`(?:TitleKey|MessageKey)\\s*=\\s*"(${KEY})"`, 'g'),
+    // The Identity pages' StatusMessage holds a key, which _StatusMessage translates.
+    new RegExp(`StatusMessage\\s*=\\s*"(${KEY})"`, 'g'),
     new RegExp(`\\.(?:Named|NamedHtml)\\(\\s*"(${KEY})"`, 'g'),
     new RegExp(`ErrorMessage\\s*=\\s*"(${KEY})"`, 'g'),
     new RegExp(`Display\\(\\s*Name\\s*=\\s*"(${KEY})"`, 'g'),

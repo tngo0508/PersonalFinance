@@ -135,7 +135,7 @@ public class DeletionPagesTests
     public async Task CancelLink_Opened_ChangesNothing()
     {
         var api = new FakeAccountDeletionApi();
-        var page = new CancelDeletionModel(api, NullLogger<CancelDeletionModel>.Instance)
+        var page = new CancelDeletionModel(api, NullLogger<CancelDeletionModel>.Instance, TestLocalization.Localizer)
         { Token = "cancel-token-123" };
 
         page.OnGet();
@@ -212,7 +212,7 @@ public class DeletionPagesTests
     }
 
     private static CancelDeletionModel CancelPage(IAccountDeletionApi api, string token) =>
-        new(api, NullLogger<CancelDeletionModel>.Instance)
+        new(api, NullLogger<CancelDeletionModel>.Instance, TestLocalization.Localizer)
         {
             Token = token,
             PageContext = new PageContext { HttpContext = new DefaultHttpContext() }
@@ -289,7 +289,7 @@ public class DeletionPagesTests
                 TestLocalization.Localizer, Options.Create(new BrevoOptions()));
             var page = new DeletePersonalDataModel(userManager,
                 signInManager, api, accountEmails,
-                NullLogger<DeletePersonalDataModel>.Instance)
+                NullLogger<DeletePersonalDataModel>.Instance, TestLocalization.Localizer)
             {
                 PageContext = new PageContext { HttpContext = httpContext },
                 Url = new FakeUrlHelper(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()))

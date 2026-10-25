@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Localization;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq;
@@ -22,6 +23,7 @@ public class EnableAuthenticatorModel : PageModel
     private readonly UserManager<IdentityUser> _userManager;
     private readonly ILogger<EnableAuthenticatorModel> _logger;
     private readonly UrlEncoder _urlEncoder;
+    private readonly IStringLocalizer _localizer;
 
     private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
     private static readonly CompositeFormat AuthenticatorUriCompositeFormat = CompositeFormat.Parse(AuthenticatorUriFormat);
@@ -29,11 +31,13 @@ public class EnableAuthenticatorModel : PageModel
     public EnableAuthenticatorModel(
         UserManager<IdentityUser> userManager,
         ILogger<EnableAuthenticatorModel> logger,
-        UrlEncoder urlEncoder)
+        UrlEncoder urlEncoder,
+        IStringLocalizer localizer)
     {
         _userManager = userManager;
         _logger = logger;
         _urlEncoder = urlEncoder;
+        _localizer = localizer;
     }
 
     public string SharedKey { get; set; }
@@ -51,10 +55,10 @@ public class EnableAuthenticatorModel : PageModel
 
     public class InputModel
     {
-        [Required]
-        [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Required(ErrorMessage = "Validation.Required")]
+        [StringLength(7, ErrorMessage = "Validation.StringLength.Range", MinimumLength = 6)]
         [DataType(DataType.Text)]
-        [Display(Name = "Verification Code")]
+        [Display(Name = "Identity.Field.VerificationCode")]
         public string Code { get; set; }
     }
 
@@ -93,7 +97,7 @@ public class EnableAuthenticatorModel : PageModel
 
         if (!is2faTokenValid)
         {
-            ModelState.AddModelError("Input.Code", "Verification code is invalid.");
+            ModelState.AddModelError("Input.Code", _localizer["Account.EnableAuthenticator.InvalidCode"]);
             await LoadSharedKeyAndQrCodeUriAsync(user);
             return Page();
         }
@@ -102,7 +106,7 @@ public class EnableAuthenticatorModel : PageModel
         string userId = await _userManager.GetUserIdAsync(user);
         _logger.LogInformation(LoggerEventIds.TwoFAEnabled, "User has enabled 2FA with an authenticator app.");
 
-        StatusMessage = "Your authenticator app has been verified.";
+        StatusMessage = "Account.EnableAuthenticator.Verified";
 
         if (await _userManager.CountRecoveryCodesAsync(user) == 0)
         {

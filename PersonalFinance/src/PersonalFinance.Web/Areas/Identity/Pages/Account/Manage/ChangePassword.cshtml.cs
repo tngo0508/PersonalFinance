@@ -37,20 +37,20 @@ public class ChangePasswordModel : PageModel
 
     public class InputModel
     {
-        [Required]
+        [Required(ErrorMessage = "Validation.Required")]
         [DataType(DataType.Password)]
-        [Display(Name = "Current password")]
+        [Display(Name = "Identity.Field.CurrentPassword")]
         public string OldPassword { get; set; }
 
-        [Required]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Required(ErrorMessage = "Validation.Required")]
+        [StringLength(100, ErrorMessage = "Validation.StringLength.Range", MinimumLength = 6)]
         [DataType(DataType.Password)]
-        [Display(Name = "New password")]
+        [Display(Name = "Identity.Field.NewPassword")]
         public string NewPassword { get; set; }
 
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm new password")]
-        [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
+        [Display(Name = "Identity.Field.ConfirmNewPassword")]
+        [Compare("NewPassword", ErrorMessage = "Identity.Validation.NewPasswordsDoNotMatch")]
         public string ConfirmPassword { get; set; }
     }
 
@@ -96,7 +96,7 @@ public class ChangePasswordModel : PageModel
 
         await _signInManager.RefreshSignInAsync(user);
         _logger.LogInformation(LoggerEventIds.PasswordChanged, "User changed their password successfully.");
-        StatusMessage = "Your password has been changed.";
+        StatusMessage = "Account.ChangePassword.Changed";
 
         return RedirectToPage();
     }

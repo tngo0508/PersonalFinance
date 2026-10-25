@@ -1,36 +1,36 @@
 @page
 @model ExternalLoginModel
 @{
-    ViewData["Title"] = "Register";
+    ViewData["Title"] = L["Account.ExternalLogin.Title"].Value;
+    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> provider = @<strong>@Model.ProviderDisplayName</strong>;
 }
 
 <div class="auth-page__header mb-5">
-    <h1 class="auth-page__title mb-2">Associate your account</h1>
-    <p id="external-login-title" class="auth-page__subtitle mb-0">Associate your @Model.ProviderDisplayName account.</p>
+    <h1 class="auth-page__title mb-2">@L["Account.ExternalLogin.Heading"]</h1>
+    <p id="external-login-title" class="auth-page__subtitle mb-0">@L.Named("Account.ExternalLogin.Subtitle", ("provider", Model.ProviderDisplayName))</p>
 </div>
 
 <div class="auth-page__form">
     <div class="alert alert-info small" role="alert">
-        You've successfully authenticated with <strong>@Model.ProviderDisplayName</strong>.
-        Please confirm your email address below to finish setting up your account.
+        @L.NamedHtml("Account.ExternalLogin.Authenticated", null, ("provider", provider(null)))
     </div>
 
     <form asp-page-handler="Confirmation" asp-route-returnUrl="@Model.ReturnUrl" method="post">
         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
         <div class="mb-4">
-            <label asp-for="Input.Email" class="form-label">Email</label>
+            <label asp-for="Input.Email" class="form-label">@L["Identity.Field.Email"]</label>
             <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true"
                    placeholder="name@example.com"/>
             <span asp-validation-for="Input.Email" class="invalid-feedback"></span>
         </div>
 
-        <button type="submit" class="w-100 btn btn-primary btn-lg">Register</button>
+        <button type="submit" class="w-100 btn btn-primary btn-lg">@L["Account.ExternalLogin.Submit"]</button>
     </form>
 
     <div class="text-center mt-4">
-        <span class="text-muted small">Need help?</span>
-        <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="small text-decoration-none ms-1">Back to sign in</a>
+        <span class="text-muted small">@L["Account.Common.NeedHelp"]</span>
+        <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="small text-decoration-none ms-1">@L["Account.Common.BackToSignIn"]</a>
     </div>
 </div>
 
