@@ -120,8 +120,8 @@ public sealed partial class AppShellRenderingTests : IAsyncLifetime
         string html = await GetAsync("/ShellPreview/Unavailable", signedIn: true, vietnamese: true);
 
         AssertHides(html, SignedInEnglish.Concat(UnavailableEnglish));
-        Assert.Contains(Vietnamese("Shell.Nav.Dashboard"), html);
-        Assert.Contains(Vietnamese("Shell.Account.SignOut"), html);
+        Assert.Contains(TestLocalization.Vietnamese("Shell.Nav.Dashboard"), html);
+        Assert.Contains(TestLocalization.Vietnamese("Shell.Account.SignOut"), html);
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public sealed partial class AppShellRenderingTests : IAsyncLifetime
 
         AssertShows(english, FeedbackEnglish);
         AssertHides(html, FeedbackEnglish);
-        Assert.Contains(Vietnamese("Feedback.Title"), html);
+        Assert.Contains(TestLocalization.Vietnamese("Feedback.Title"), html);
     }
 
     [Fact]
@@ -161,8 +161,8 @@ public sealed partial class AppShellRenderingTests : IAsyncLifetime
         string html = await GetAsync("/ShellPreview/Unavailable", signedIn: true, vietnamese: true);
 
         Dictionary<string, string> strings = Islands(html).SelectMany(island => island).ToDictionary();
-        Assert.Equal(Vietnamese("Shell.Js.Search.Unavailable"), strings["Shell.Js.Search.Unavailable"]);
-        Assert.Equal(Vietnamese("Shell.Js.Notifications.Empty"), strings["Shell.Js.Notifications.Empty"]);
+        Assert.Equal(TestLocalization.Vietnamese("Shell.Js.Search.Unavailable"), strings["Shell.Js.Search.Unavailable"]);
+        Assert.Equal(TestLocalization.Vietnamese("Shell.Js.Notifications.Empty"), strings["Shell.Js.Notifications.Empty"]);
         Assert.All(strings.Keys, key => Assert.StartsWith("Shell.Js.", key));
     }
 
@@ -198,12 +198,6 @@ public sealed partial class AppShellRenderingTests : IAsyncLifetime
 
     [GeneratedRegex("<!--.*?-->|<script[^>]*>.*?</script>", RegexOptions.Singleline)]
     private static partial Regex NotShown();
-
-    private static string Vietnamese(string key)
-    {
-        Assert.True(TestLocalization.Catalog.TryGet("vi", key, out string value), $"vi.json has no {key}.");
-        return value;
-    }
 
     private static IEnumerable<Dictionary<string, string>> Islands(string html) =>
         Island().Matches(html).Select(m => JsonSerializer.Deserialize<Dictionary<string, string>>(m.Groups[1].Value)!);

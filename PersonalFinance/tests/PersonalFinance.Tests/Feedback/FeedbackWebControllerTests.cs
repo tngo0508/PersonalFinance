@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using System.Security.Claims;
@@ -151,7 +152,7 @@ public class FeedbackWebControllerTests
 
         await controller.Send(ValidModel());
 
-        Assert.Equal(Vietnamese("Feedback.Message.Sent"), controller.TempData[FeedbackController.SentKey]);
+        Assert.Equal(TestLocalization.Vietnamese("Feedback.Message.Sent"), controller.TempData[FeedbackController.SentKey]);
     }
 
     [Fact]
@@ -164,7 +165,7 @@ public class FeedbackWebControllerTests
         await controller.Send(ValidModel());
 
         ModelError error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
-        Assert.Equal(Vietnamese("Feedback.Message.RateLimited"), error.ErrorMessage);
+        Assert.Equal(TestLocalization.Vietnamese("Feedback.Message.RateLimited"), error.ErrorMessage);
     }
 
     [Fact]
@@ -235,16 +236,10 @@ public class FeedbackWebControllerTests
     {
         Assert.True(TestLocalization.Catalog.TryGet("en", "Feedback.Validation.MessageTooLong", out string template));
 
-        string message = string.Format(System.Globalization.CultureInfo.GetCultureInfo("en-US"), template,
+        string message = string.Format(CultureInfo.GetCultureInfo("en-US"), template,
             nameof(FeedbackViewModel.Message), FeedbackLimits.MessageMaxLength);
 
         Assert.Equal("Message must be 2,000 characters or fewer.", message);
-    }
-
-    private static string Vietnamese(string key)
-    {
-        Assert.True(TestLocalization.Catalog.TryGet("vi", key, out string value), $"vi.json has no {key}.");
-        return value;
     }
 
     private static List<ValidationResult> Validate(object model)

@@ -106,10 +106,7 @@
          * @returns {Promise<*>} The parsed body.
          */
         async function getJson (url) {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Notification request failed: ${response.status}`);
-            }
+            const response = await send(url);
             return response.json();
         }
 
@@ -202,13 +199,24 @@
          * @returns {Promise<void>}
          */
         async function postNotificationAction (url) {
-            const response = await fetch(url, {
+            await send(url, {
                 method: 'POST',
                 headers: { 'RequestVerificationToken': window.PFUtils.getAntiForgeryToken() }
             });
+        }
+
+        /**
+         * Call a notification endpoint; a non-success status throws.
+         * @param {string} url - Endpoint to call.
+         * @param {RequestInit} [options] - Fetch options.
+         * @returns {Promise<Response>} The successful response.
+         */
+        async function send (url, options) {
+            const response = await fetch(url, options);
             if (!response.ok) {
-                throw new Error(`Notification request failed: ${ response.status}`);
+                throw new Error(`Notification request failed: ${response.status}`);
             }
+            return response;
         }
 
         /**
