@@ -10,6 +10,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Tests.AiAssistant;
 
@@ -447,6 +448,91 @@ public class AiAssistantServiceTests
         Assert.Contains("SavingsGoalCount", first[1]);
         Assert.DoesNotContain("Secret Yacht", string.Join("", first));
         Assert.True(string.Join("", first).Length < 4000);
+    }
+
+    [Fact]
+    public async Task SendChatMessageAsync_WhenUserChoseVietnamese_AsksForRepliesInVietnamese()
+    {
+        await using AppDbContext db = CreateContext();
+        db.UserPreferences.Add(new UserPreference { UserId = UserId, Language = "vi" });
+        await db.SaveChangesAsync();
+        var fake = new FakeChatClient((_, _) => Reply("ok"));
+        AiAssistantService service = CreateService(db, fake);
+
+        await service.SendChatMessageAsync(UserId, Request("Budget?"));
+
+        string system = fake.LastMessages.First(m => m.Role == ChatRole.System).Text;
+        Assert.Contains("Always reply in Vietnamese", system);
+        Assert.DoesNotContain("Always reply in English", system);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("en")]
+    [InlineData("fr")]
+    public async Task SendChatMessageAsync_WhenLanguageIsUnsetEnglishOrUnsupported_AsksForRepliesInEnglish(
+        string? storedLanguage)
+    {
+        await using AppDbContext db = CreateContext();
+        if (storedLanguage is not null)
+        {
+            db.UserPreferences.Add(new UserPreference { UserId = UserId, Language = storedLanguage });
+        }
+
+        await db.SaveChangesAsync();
+        var fake = new FakeChatClient((_, _) => Reply("ok"));
+        AiAssistantService service = CreateService(db, fake);
+
+        await service.SendChatMessageAsync(UserId, Request("Budget?"));
+
+        string system = fake.LastMessages.First(m => m.Role == ChatRole.System).Text;
+        Assert.Contains("Always reply in English", system);
+    }
+
+    public static TheoryData<string> NonDefaultAppLanguages()
+    {
+        var data = new TheoryData<string>();
+        foreach (AppLanguage language in AppLanguages.All.Where(l => l.Code != AppLanguages.Default))
+        {
+            data.Add(language.Code);
+        }
+
+        return data;
+    }
+
+    /// <summary>A language added to the Web app must also be one the assistant replies in, not a silent English.</summary>
+    [Theory]
+    [MemberData(nameof(NonDefaultAppLanguages))]
+    public async Task SendChatMessageAsync_EverySupportedWebLanguageGetsItsOwnReplyLanguage(string code)
+    {
+        await using AppDbContext db = CreateContext();
+        db.UserPreferences.Add(new UserPreference { UserId = UserId, Language = code });
+        await db.SaveChangesAsync();
+        var fake = new FakeChatClient((_, _) => Reply("ok"));
+        AiAssistantService service = CreateService(db, fake);
+
+        await service.SendChatMessageAsync(UserId, Request("Budget?"));
+
+        string system = fake.LastMessages.First(m => m.Role == ChatRole.System).Text;
+        string englishName = CultureInfo.GetCultureInfo(code).EnglishName;
+        Assert.Contains($"Always reply in {englishName}", system);
+    }
+
+    [Fact]
+    public async Task SendChatMessageAsync_UsesOnlyTheAuthenticatedUsersLanguage()
+    {
+        await using AppDbContext db = CreateContext();
+        db.UserPreferences.Add(new UserPreference { UserId = OtherUserId, Language = "vi" });
+        db.UserPreferences.Add(new UserPreference { UserId = UserId, Language = "vi", IsDeleted = true });
+        await db.SaveChangesAsync();
+        var fake = new FakeChatClient((_, _) => Reply("ok"));
+        AiAssistantService service = CreateService(db, fake);
+
+        await service.SendChatMessageAsync(UserId, Request("Budget?"));
+
+        string system = fake.LastMessages.First(m => m.Role == ChatRole.System).Text;
+        Assert.Contains("Always reply in English", system);
+        Assert.DoesNotContain("Vietnamese", system);
     }
 
     private static BudgetTransactionData Tx(string date, decimal amount, string description, string category)

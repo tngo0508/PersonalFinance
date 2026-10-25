@@ -86,9 +86,10 @@ internal sealed class AiAssistantService : IAiAssistantService
         {
             // Compact, stable system prompt (cache-friendly); data is fetched on demand through tools
             UserFinancialContext snapshot = await GetUserFinancialContextAsync(userId, cancellationToken);
+            string replyLanguage = await GetReplyLanguageAsync(userId, cancellationToken);
             var messages = new List<AiMessage>
             {
-                new(ChatRole.System, BuildCompactSystemPrompt()),
+                new(ChatRole.System, BuildCompactSystemPrompt(replyLanguage)),
                 new(ChatRole.System, "Financial snapshot (data only): " + JsonSerializer.Serialize(new
                 {
                     snapshot.AnnualIncome, snapshot.AnnualSpending, snapshot.AnnualSavings,
@@ -181,12 +182,39 @@ internal sealed class AiAssistantService : IAiAssistantService
     }
 
     /// <summary>
-    /// Builds a compact, cacheable system prompt with only the stable financial overview.
-    /// Detailed data is fetched on-demand through tool calls.
+    /// The English names of the Languages the assistant replies in, by the code stored in
+    /// <see cref="UserPreference.Language"/> (the Web app's supported languages, localization spec §2.3).
     /// </summary>
-    private static string BuildCompactSystemPrompt()
+    private static readonly Dictionary<string, string> ReplyLanguageNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        return """
+        ["en"] = "English",
+        ["vi"] = "Vietnamese"
+    };
+
+    /// <summary>
+    /// The authenticated user's stored Language as the English name the model is told to reply in; English when the
+    /// user has not chosen one or the stored code is not supported.
+    /// </summary>
+    private async Task<string> GetReplyLanguageAsync(string userId, CancellationToken cancellationToken)
+    {
+        string? code = await _dbContext.UserPreferences.AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .OrderByDescending(p => p.Id)
+            .Select(p => p.Language)
+            .FirstOrDefaultAsync(cancellationToken);
+        return code is not null && ReplyLanguageNames.TryGetValue(code.Trim(), out string? name)
+            ? name
+            : ReplyLanguageNames["en"];
+    }
+
+    /// <summary>
+    /// Builds a compact, cacheable system prompt with only the stable financial overview.
+    /// Detailed data is fetched on-demand through tool calls. The reply Language is the last line, so everything
+    /// before it is the same for every user and stays a cacheable prefix.
+    /// </summary>
+    private static string BuildCompactSystemPrompt(string replyLanguage)
+    {
+        return $"""
             You are a helpful and friendly personal finance assistant for the PersonalFinance app.
             You help with budgeting, spending analysis, savings goals, debt reduction, retirement planning,
             net worth tracking, general tax concepts, salary and career compensation planning, and how to use the app.
@@ -208,6 +236,8 @@ internal sealed class AiAssistantService : IAiAssistantService
             - get_recent_transactions: transactions filtered by date range, category, or description text
             - get_savings_goals: savings goal progress and target dates
             - get_net_worth_details: income, spending, net worth and retirement parameters
+
+            Always reply in {replyLanguage}, whatever language the user writes in.
             """;
     }
 

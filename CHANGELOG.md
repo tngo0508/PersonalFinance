@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [7.1.0] - 2026-10-25
+## [7.2.0] - 2026-10-25
 
 ### Added
 
@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The sample plan keeps its US dollar figures until amounts are formatted per language.
 - **English-only notice on the Legal Pages**: Privacy, Terms, Disclaimer, Cookies and Contact keep their English text, now under a translated title and the notice "Legal text is provided in English" for visitors using another language.
   - The English text is tagged `lang="en"`, so screen readers read it as English.
+
+## [7.1.0] - 2026-10-25
+
+### Added
+
+- **AI Assistant replies in your language**: the assistant answers in the Language saved on the Account, English when none is saved (#354).
 
 ## [7.0.0] - 2026-10-25
 
