@@ -278,3 +278,103 @@ When the app is on a subdomain, the bare `https://<domain>` does **not** load. R
 3. Delete the managed certificate: `az containerapp env certificate delete -n <env> -g <rg> --certificate <name>`
 4. Delete the DNS records you added in Step 3 if you no longer need them.
 5. Turn off auto-renew on the App Service Domain if you no longer want it.
+
+---
+
+## 6. Production setup log: `www.personalfinancex.com`
+
+The commands used to set up production, with the real names filled in. Every command is one line and runs in PowerShell as written. The verification ID and certificate ID are read from Azure inside the commands, so they are not copied here.
+
+| Value | Production |
+|---|---|
+| Resource group | `rg-personalfinance-prod` |
+| DNS zone | `personalfinancex.com` |
+| Environment | `cae-pf-prod-cdknljx37hrso` |
+| Web app | `web-pf-prod-cdknljx37hrso` |
+| Web app FQDN | `web-pf-prod-cdknljx37hrso.blueisland-19317010.westus2.azurecontainerapps.io` |
+| Hostname | `www.personalfinancex.com` |
+
+### Apex first attempt (superseded)
+
+Production was first pointed at the bare apex, then moved to `www`. These records and bindings are not needed for `www`. The next CI deploy removes the apex hostname from the app, because the Bicep keeps only `CUSTOM_DOMAIN_NAME`.
+
+```powershell
+az network dns record-set a add-record -g rg-personalfinance-prod -z personalfinancex.com -n "@" --ipv4-address 20.64.184.211
+az containerapp hostname add -n web-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --hostname personalfinancex.com
+az containerapp hostname bind -n web-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --hostname personalfinancex.com --environment cae-pf-prod-cdknljx37hrso --validation-method HTTP
+```
+
+The `@` must be quoted in PowerShell. Unquoted, it fails with `Unrecognized token in source text`.
+
+### 1. Look up names
+
+```powershell
+az containerapp list -g rg-personalfinance-prod --query "[].name" -o table
+az containerapp env list -g rg-personalfinance-prod --query "[].name" -o table
+az containerapp show -n web-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --query "properties.configuration.ingress.fqdn" -o tsv
+```
+
+### 2. DNS records
+
+```powershell
+$verifyId = az containerapp env show -n cae-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --query "properties.customDomainConfiguration.customDomainVerificationId" -o tsv
+az network dns record-set cname set-record -g rg-personalfinance-prod -z personalfinancex.com -n www --cname web-pf-prod-cdknljx37hrso.blueisland-19317010.westus2.azurecontainerapps.io
+az network dns record-set txt add-record -g rg-personalfinance-prod -z personalfinancex.com -n asuid.www --value $verifyId
+```
+
+Wait until both resolve:
+
+```powershell
+nslookup www.personalfinancex.com
+nslookup -type=TXT asuid.www.personalfinancex.com
+```
+
+### 3. Hostname and managed certificate
+
+```powershell
+az containerapp hostname add -n web-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --hostname www.personalfinancex.com
+az containerapp hostname bind -n web-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --hostname www.personalfinancex.com --environment cae-pf-prod-cdknljx37hrso --validation-method CNAME
+```
+
+Confirm `bindingType` is `SniEnabled`:
+
+```powershell
+az containerapp hostname list -n web-pf-prod-cdknljx37hrso -g rg-personalfinance-prod -o table
+```
+
+### 4. GitHub variables
+
+Set both before the next deploy runs. The certificate ID is the one whose subject is `www.personalfinancex.com`.
+
+```powershell
+$certId = az containerapp env certificate list -n cae-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --managed-certificates-only --query "[?properties.subjectName=='www.personalfinancex.com'].id | [0]" -o tsv
+gh variable set CUSTOM_DOMAIN_NAME --repo tngo0508/PersonalFinance --body "www.personalfinancex.com"
+gh variable set CUSTOM_DOMAIN_CERTIFICATE_ID --repo tngo0508/PersonalFinance --body $certId
+```
+
+### 5. Google sign-in
+
+In Google Cloud Console, add to the OAuth 2.0 Web client:
+
+- Authorized JavaScript origin: `https://www.personalfinancex.com`
+- Authorized redirect URI: `https://www.personalfinancex.com/signin-google`
+
+### 6. Verify after the next deploy
+
+```powershell
+az containerapp hostname list -n web-pf-prod-cdknljx37hrso -g rg-personalfinance-prod -o table
+curl.exe -sI https://www.personalfinancex.com/health
+```
+
+### Optional: clean up the apex
+
+Once the deploy has removed the apex hostname, delete its certificate and records if you no longer want them. Look up the certificate name first:
+
+```powershell
+az containerapp env certificate list -n cae-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --managed-certificates-only --query "[?properties.subjectName=='personalfinancex.com'].name" -o tsv
+az containerapp env certificate delete -n cae-pf-prod-cdknljx37hrso -g rg-personalfinance-prod --certificate <name>
+az network dns record-set a delete -g rg-personalfinance-prod -z personalfinancex.com -n "@" --yes
+az network dns record-set txt delete -g rg-personalfinance-prod -z personalfinancex.com -n asuid --yes
+```
+
+Keep the apex records instead if you plan to redirect `personalfinancex.com` to `www` later.
