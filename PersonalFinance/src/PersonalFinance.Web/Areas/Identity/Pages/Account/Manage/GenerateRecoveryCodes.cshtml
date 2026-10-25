@@ -2,7 +2,7 @@
 @model GenerateRecoveryCodesModel
 @{
     ViewData["Title"] = L["Account.GenerateRecoveryCodes.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> resetLink = @<a asp-page="./ResetAuthenticator">@L["Account.Common.ResetAuthenticatorKeysLink"]</a>;
+    Func<object?, HelperResult> resetLink = @<a asp-page="./ResetAuthenticator">@L["Account.Common.ResetAuthenticatorKeysLink"]</a>;
     ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
 }
 

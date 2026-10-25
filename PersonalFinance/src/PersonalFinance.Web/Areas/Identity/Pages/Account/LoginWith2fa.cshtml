@@ -2,7 +2,7 @@
 @model LoginWith2faModel
 @{
     ViewData["Title"] = L["Account.LoginWith2fa.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> recoveryLink = @<a id="recovery-code-login" asp-page="./LoginWithRecoveryCode" asp-route-returnUrl="@Model.ReturnUrl">@L["Account.LoginWith2fa.RecoveryLink"]</a>;
+    Func<object?, HelperResult> recoveryLink = @<a id="recovery-code-login" asp-page="./LoginWithRecoveryCode" asp-route-returnUrl="@Model.ReturnUrl">@L["Account.LoginWith2fa.RecoveryLink"]</a>;
 }
 
 <h1>@ViewData["Title"]</h1>

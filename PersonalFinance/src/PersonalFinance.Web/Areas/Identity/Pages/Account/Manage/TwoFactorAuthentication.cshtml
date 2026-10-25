@@ -3,7 +3,7 @@
 @model TwoFactorAuthenticationModel
 @{
     ViewData["Title"] = L["Account.TwoFactor.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> generateLink = @<a asp-page="./GenerateRecoveryCodes">@L["Account.TwoFactor.GenerateLink"]</a>;
+    Func<object?, HelperResult> generateLink = @<a asp-page="./GenerateRecoveryCodes">@L["Account.TwoFactor.GenerateLink"]</a>;
     ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
 }
 

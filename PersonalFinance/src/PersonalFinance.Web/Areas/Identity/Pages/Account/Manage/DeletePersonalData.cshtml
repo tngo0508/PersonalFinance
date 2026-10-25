@@ -3,7 +3,7 @@
 @{
     Layout = "_Layout"; // the account-settings shell in this folder, not Account/_ViewStart's sign-in layout
     ViewData["Title"] = L["Account.DeleteAccount.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> downloadLink = @<a asp-page="./PersonalData">@L["Account.DeleteAccount.DownloadLink"]</a>;
+    Func<object?, HelperResult> downloadLink = @<a asp-page="./PersonalData">@L["Account.DeleteAccount.DownloadLink"]</a>;
     ViewData["ActivePage"] = ManageNavPages.PersonalData;
 }
 

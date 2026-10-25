@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
 using PersonalFinance.Web.Infrastructure;
@@ -66,6 +67,9 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
         builder.Services.AddSingleton<IUserPreferenceService, InMemoryUserPreferenceService>();
         builder.Services.AddScoped<IAccountEmailService, AccountEmailService>();
         builder.Services.AddScoped<IUserConsentService, UserConsentService>();
+        // The pages only call ApiService when a form is posted, never on GET.
+        builder.Services.AddSingleton(NotCalled<IAccountDeletionApi>());
+        builder.Services.AddSingleton(NotCalled<IDataExportApi>());
         builder.Services.AddAppLocalization(builder.Environment);
         // The Web project's parts go first, as they do in the app (its entry assembly), so its scaffolded pages win
         // over the Identity UI library's copies.
@@ -151,6 +155,11 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
     [InlineData("/Identity/Account/Manage/TwoFactorAuthentication", true)]
     [InlineData("/Identity/Account/Manage/EnableAuthenticator", true)]
     [InlineData("/Identity/Account/Manage/ExternalLogins", true)]
+    [InlineData("/Identity/Account/Manage/ResetAuthenticator", true)]
+    [InlineData("/Identity/Account/Manage/PersonalData", true)]
+    [InlineData("/Identity/Account/Manage/DeletePersonalData", true)]
+    [InlineData("/Identity/Account/CancelDeletion?token=cancel-token", false)]
+    [InlineData("/Identity/Account/RegisterConfirmation?email=someone@example.com", false)]
     public async Task AnyIdentityPage_InVietnamese_RendersWithoutAMissingKey(string url, bool signedIn)
     {
         string html = await GetAsync(url, signedIn);
@@ -217,6 +226,15 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
             return Task.FromResult(AuthenticateResult.Success(
                 new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
         }
+    }
+
+    private static T NotCalled<T>() where T : class => DispatchProxy.Create<T, NotCalledProxy>();
+
+    /// <summary>An ApiService client the page must not call while rendering.</summary>
+    public class NotCalledProxy : DispatchProxy
+    {
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) =>
+            throw new InvalidOperationException($"{targetMethod?.Name} was called while rendering the page.");
     }
 
     private sealed class NoOpWarmer : IApiServiceWarmer

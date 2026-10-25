@@ -2,7 +2,7 @@
 @model CancelDeletionModel
 @{
     ViewData["Title"] = L["Account.CancelDeletion.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> contactLink = @<a asp-area="" asp-controller="Legal" asp-action="Contact">@L["Account.Common.ContactUsLink"]</a>;
+    Func<object?, HelperResult> contactLink = @<a asp-area="" asp-controller="Legal" asp-action="Contact">@L["Account.Common.ContactUsLink"]</a>;
 }
 
 <h1>@ViewData["Title"]</h1>

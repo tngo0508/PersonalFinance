@@ -3,8 +3,8 @@
 
 @{
     ViewData["Title"] = L["Account.Register.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> termsLink = @<a asp-area="" asp-controller="Legal" asp-action="Terms" target="_blank" rel="noopener">@L["Account.Register.TermsLink"]</a>;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> privacyLink = @<a asp-area="" asp-controller="Legal" asp-action="Privacy" target="_blank" rel="noopener">@L["Account.Register.PrivacyLink"]</a>;
+    Func<object?, HelperResult> termsLink = @<a asp-area="" asp-controller="Legal" asp-action="Terms" target="_blank" rel="noopener">@L["Account.Register.TermsLink"]</a>;
+    Func<object?, HelperResult> privacyLink = @<a asp-area="" asp-controller="Legal" asp-action="Privacy" target="_blank" rel="noopener">@L["Account.Register.PrivacyLink"]</a>;
 }
 
 <div class="auth-page__header mb-5">

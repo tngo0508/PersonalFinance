@@ -2,8 +2,8 @@
 @model RegisterConfirmationModel
 @{
     ViewData["Title"] = L["Account.RegisterConfirmation.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> docsLink = @<a href="https://aka.ms/aspaccountconf">@L["Account.RegisterConfirmation.DocsLink"]</a>;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> confirmLink = @<a id="confirm-link" href="@Model.EmailConfirmationUrl">@L["Account.RegisterConfirmation.ConfirmLink"]</a>;
+    Func<object?, HelperResult> docsLink = @<a href="https://aka.ms/aspaccountconf">@L["Account.RegisterConfirmation.DocsLink"]</a>;
+    Func<object?, HelperResult> confirmLink = @<a id="confirm-link" href="@Model.EmailConfirmationUrl">@L["Account.RegisterConfirmation.ConfirmLink"]</a>;
 }
 
 <h1>@ViewData["Title"]</h1>

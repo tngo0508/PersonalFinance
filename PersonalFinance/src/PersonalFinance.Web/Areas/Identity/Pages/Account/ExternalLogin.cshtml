@@ -2,7 +2,7 @@
 @model ExternalLoginModel
 @{
     ViewData["Title"] = L["Account.ExternalLogin.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> provider = @<strong>@Model.ProviderDisplayName</strong>;
+    Func<object?, HelperResult> provider = @<strong>@Model.ProviderDisplayName</strong>;
 }
 
 <div class="auth-page__header mb-5">

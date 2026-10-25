@@ -3,9 +3,9 @@
 @{
     ViewData["Title"] = L["Account.EnableAuthenticator.Title"].Value;
     // Store and product names stay as written in every language.
-    Func<(string Url, string Store), Microsoft.AspNetCore.Mvc.Razor.HelperResult> storeLink = @<a href="@item.Url">@item.Store</a>;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> sharedKey = @<kbd>@Model.SharedKey</kbd>;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> qrLink = @<a href="https://go.microsoft.com/fwlink/?Linkid=852423">@L["Account.EnableAuthenticator.QrLink"]</a>;
+    Func<(string Url, string Store), HelperResult> storeLink = @<a href="@item.Url">@item.Store</a>;
+    Func<object?, HelperResult> sharedKey = @<kbd>@Model.SharedKey</kbd>;
+    Func<object?, HelperResult> qrLink = @<a href="https://go.microsoft.com/fwlink/?Linkid=852423">@L["Account.EnableAuthenticator.QrLink"]</a>;
     ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
 }
 

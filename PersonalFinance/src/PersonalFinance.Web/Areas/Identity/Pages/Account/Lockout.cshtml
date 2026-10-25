@@ -2,8 +2,8 @@
 @model LockoutModel
 @{
     ViewData["Title"] = L["Account.Lockout.Title"].Value;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> contactLink = @<a asp-area="" asp-controller="Legal" asp-action="Contact">@L["Account.Common.ContactUsInlineLink"]</a>;
-    Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> cancelLink = @<strong>@L["Account.CancelDeletion.Button"]</strong>;
+    Func<object?, HelperResult> contactLink = @<a asp-area="" asp-controller="Legal" asp-action="Contact">@L["Account.Common.ContactUsInlineLink"]</a>;
+    Func<object?, HelperResult> cancelLink = @<strong>@L["Account.CancelDeletion.Button"]</strong>;
 }
 
 <h1>@ViewData["Title"]</h1>
