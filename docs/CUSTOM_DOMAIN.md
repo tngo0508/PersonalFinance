@@ -294,6 +294,61 @@ The commands used to set up production, with the real names filled in. Every com
 | Web app FQDN | `web-pf-prod-cdknljx37hrso.blueisland-19317010.westus2.azurecontainerapps.io` |
 | Hostname | `www.personalfinancex.com` |
 
+### How the DNS records work
+
+DNS turns a name into an address. A browser asks "where is `www.personalfinancex.com`?", and the DNS zone answers with records. Each record has a **name** (relative to the zone), a **type**, a **value** and a **TTL**, the number of seconds resolvers may cache the answer.
+
+**`@` means the zone itself.** Inside the zone `personalfinancex.com`, the name `www` means `www.personalfinancex.com`, and the name `@` means `personalfinancex.com` with nothing in front. That bare name is called the **apex** or root domain. `@` is DNS shorthand, not part of the domain; PowerShell needs it quoted only because PowerShell gives `@` its own meaning.
+
+**An A record maps a name to an IPv4 address.**
+
+```text
+personalfinancex.com.   3600  IN  A  20.64.184.211
+```
+
+The browser connects straight to `20.64.184.211`, the static IP of the Container Apps **environment**. Every app in the environment shares that IP. The environment's ingress picks the app from the hostname the browser sends (the `Host` header, and SNI during the TLS handshake), which is why the hostname must also be added to the app with `hostname add`.
+
+The catch: the IP is copied by hand. If the environment is ever recreated, it gets a new IP and the A record silently points at nothing.
+
+**A CNAME record maps a name to another name.**
+
+```text
+www.personalfinancex.com.  3600  IN  CNAME  web-pf-prod-cdknljx37hrso.blueisland-19317010.westus2.azurecontainerapps.io.
+```
+
+CNAME stands for canonical name: "this name is an alias, go ask about that one instead". The resolver follows the chain, and Azure's own DNS answers the last step with the current IP:
+
+```text
+www.personalfinancex.com
+  CNAME → web-pf-prod-cdknljx37hrso.blueisland-19317010.westus2.azurecontainerapps.io
+    A   → 20.64.184.211   (Azure keeps this up to date)
+```
+
+Nothing is copied by hand, so if Azure moves the app, the custom domain follows. That is why the subdomain setup prefers a CNAME.
+
+**Why the apex cannot be a CNAME.** A CNAME must be the only record at its name; it says "everything about this name lives elsewhere". The apex always holds other records the zone needs, the **SOA** (who is authoritative) and **NS** (which name servers serve the zone), plus here the TXT `asuid`. So the DNS standard (RFC 1034) forbids a CNAME at the apex, and Azure DNS refuses one. The apex must use an A record with a fixed IP, which is why it needs the static IP and HTTP validation.
+
+**The TXT `asuid` record proves ownership.** Anyone can point their DNS at your app. Before Azure lets a hostname onto the app, it looks for a TXT record named `asuid.<hostname>` holding the environment's verification ID. Only someone who controls the zone can create it. For `www` the record is `asuid.www`; for the apex it is plain `asuid`.
+
+**Certificate validation.** To issue the free certificate, the certificate authority must see that the hostname really reaches the app. With **CNAME** validation it checks that `www` is a CNAME to the app's address. With **HTTP** validation, the only option for the apex, it fetches a token over HTTP from the IP the A record points at.
+
+| | Apex `@` | Subdomain `www` |
+|---|---|---|
+| Record type | A | CNAME |
+| Value | Environment static IP | App FQDN |
+| Follows Azure if the IP changes | No | Yes |
+| Ownership record | TXT `asuid` | TXT `asuid.www` |
+| Certificate validation | HTTP | CNAME |
+
+To see what the world sees, query the records directly:
+
+```powershell
+nslookup -type=A personalfinancex.com
+nslookup -type=CNAME www.personalfinancex.com
+nslookup -type=TXT asuid.www.personalfinancex.com
+nslookup -type=NS personalfinancex.com
+```
+
 ### Apex first attempt (superseded)
 
 Production was first pointed at the bare apex, then moved to `www`. These records and bindings are not needed for `www`. The next CI deploy removes the apex hostname from the app, because the Bicep keeps only `CUSTOM_DOMAIN_NAME`.
