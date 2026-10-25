@@ -1,7 +1,7 @@
 # 0009 – Adopt D3 for Bespoke Interactive Visualisations and Admit the ISC Licence
 
 **Date:** 2026-10-23  
-**Status:** Accepted (amends ADR 0001 §2)
+**Status:** Accepted (amends ADR 0001 §2; amended by [ADR 0014](0014-adopt-mermaid-for-authored-diagrams.md) (Mermaid for authored diagrams))
 
 ## Context
 

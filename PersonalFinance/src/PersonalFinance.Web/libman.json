@@ -144,6 +144,15 @@
         "dist/maplibre-gl.css",
         "dist/LICENSE.txt"
       ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "mermaid@11.17.2",
+      "destination": "wwwroot/lib/mermaid",
+      "files": [
+        "dist/mermaid.min.js",
+        "LICENSE"
+      ]
     }
   ]
 }
