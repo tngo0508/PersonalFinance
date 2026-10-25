@@ -108,7 +108,7 @@
   "Shell.Search.Placeholder": "Tìm kiếm giao dịch, danh mục, mục tiêu...",
   "Shell.Search.ResultsLabel": "Kết quả tìm kiếm",
   "Shell.Search.TryAgain": "Thử lại",
-  "Shell.Account.MenuFor": "Menu tài khoản cho {name}",
+  "Shell.Account.MenuFor": "Menu tài khoản của {name}",
   "Shell.Account.Settings": "Cài đặt tài khoản",
   "Shell.Account.Admin": "Quản trị",
   "Shell.Account.SignOut": "Đăng xuất",
