@@ -247,3 +247,13 @@ public class PriorityTreeDiagramDto
     /// <summary>Mermaid text of the whole tree, unhighlighted (light palette).</summary>
     public string WholeTreeDiagram { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// A rejected submit (400): every message in order, and the same messages keyed by the request property they belong
+/// to (e.g. <c>MonthlyAmount</c>), so the page can show each one under its field.
+/// </summary>
+public class MoneyPrioritiesValidationErrorsDto
+{
+    public List<string> Errors { get; set; } = [];
+    public Dictionary<string, List<string>> FieldErrors { get; set; } = [];
+}
