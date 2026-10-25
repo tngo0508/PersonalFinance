@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [6.3.1] - 2026-10-25
+
+### Changed
+
+- **Identity pages owned by the app**: the 22 sign-in and Account settings pages still served precompiled by the ASP.NET Core Identity UI library are now scaffolded into `Areas/Identity/Pages`, so they can be translated (slice L1b of the localization spec, #295).
+  - Forgot and reset password, confirm email and email change, two-step sign-in and recovery codes, sign out, access denied, and Account settings' Profile, Email, Password, Set password, External logins and two-factor pages.
+  - The pages render the same HTML as before: the views are the library's own Razor files for Identity UI 10.0.0, and the page models keep its anonymous pages, emails, log messages and event IDs.
+  - A test pins that every library page is in the project, which pages allow anonymous visitors, and that the confirm-account link is never shown while a real email sender is configured.
+
 ## [6.3.0] - 2026-10-25
 
 ### Added
