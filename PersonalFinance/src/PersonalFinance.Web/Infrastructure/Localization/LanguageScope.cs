@@ -3,17 +3,20 @@ using System.Globalization;
 namespace PersonalFinance.Web.Infrastructure.Localization;
 
 /// <summary>
-/// Switches <see cref="CultureInfo.CurrentUICulture"/> to a Language for a <c>using</c> block, then restores it: how an
-/// email is composed in its recipient's Language inside someone else's request (spec §2.3). Formatting
-/// (<see cref="CultureInfo.CurrentCulture"/>) is left alone until slice L2.
+/// Switches <see cref="CultureInfo.CurrentUICulture"/> to a Language and <see cref="CultureInfo.CurrentCulture"/> to
+/// its formatting culture for a <c>using</c> block, then restores both: how an email is composed in its recipient's
+/// Language, numbers and dates inside someone else's request (spec §2.2–2.3).
 /// </summary>
 internal sealed class LanguageScope : IDisposable
 {
-    private readonly CultureInfo _previous;
+    private readonly CultureInfo _previousCulture;
+    private readonly CultureInfo _previousUiCulture;
 
     private LanguageScope(AppLanguage language)
     {
-        _previous = CultureInfo.CurrentUICulture;
+        _previousCulture = CultureInfo.CurrentCulture;
+        _previousUiCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(language.FormattingCulture);
         CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language.Code);
     }
 
@@ -25,5 +28,9 @@ internal sealed class LanguageScope : IDisposable
     }
 
     /// <inheritdoc />
-    public void Dispose() => CultureInfo.CurrentUICulture = _previous;
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _previousCulture;
+        CultureInfo.CurrentUICulture = _previousUiCulture;
+    }
 }

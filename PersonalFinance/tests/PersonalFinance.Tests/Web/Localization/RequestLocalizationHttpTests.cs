@@ -15,7 +15,8 @@ namespace PersonalFinance.Tests.Web.Localization;
 
 /// <summary>
 /// Request localization as <c>AddAppLocalization</c> configures it, over HTTP (spec §2.2–2.3): the culture cookie, then
-/// Accept-Language, then English; no query-string provider; formatting stays en-US in slice L1. Also the switcher
+/// Accept-Language, then English; no query-string provider; the formatting culture follows the UI language (vi → vi-VN,
+/// slice L2). Also the switcher
 /// endpoint refusing a POST without an antiforgery token.
 /// </summary>
 public sealed class RequestLocalizationHttpTests : IAsyncLifetime
@@ -61,8 +62,9 @@ public sealed class RequestLocalizationHttpTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("vi", "en-US|vi")]
-    [InlineData("vi-VN,vi;q=0.9,en;q=0.8", "en-US|vi")]
+    [InlineData("vi", "vi-VN|vi")]
+    [InlineData("vi-VN,vi;q=0.9,en;q=0.8", "vi-VN|vi")]
+    [InlineData("vi-VN", "vi-VN|vi")]
     [InlineData("fr-FR,fr;q=0.9", "en-US|en")]
     [InlineData("en-GB", "en-US|en")]
     public async Task AcceptLanguage_PicksASupportedLanguage(string acceptLanguage, string expected)
@@ -71,7 +73,7 @@ public sealed class RequestLocalizationHttpTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Cookie_WinsOverAcceptLanguage_AndFormattingStaysEnUs()
+    public async Task Cookie_WinsOverAcceptLanguage_AndFormatsInVietnamese()
     {
         string culture = await CultureAsync(request =>
         {
@@ -79,7 +81,17 @@ public sealed class RequestLocalizationHttpTests : IAsyncLifetime
             request.Headers.Add("Cookie", ".AspNetCore.Culture=c%3Dvi-VN%7Cuic%3Dvi");
         });
 
-        Assert.Equal("en-US|vi", culture);
+        Assert.Equal("vi-VN|vi", culture);
+    }
+
+    [Fact]
+    public async Task Cookie_WithAnotherLanguagesFormattingCulture_FormatsInItsOwnLanguagesCulture()
+    {
+        // A hand-edited or stale cookie cannot pair a language with another culture's number format.
+        string culture = await CultureAsync(request =>
+            request.Headers.Add("Cookie", ".AspNetCore.Culture=c%3Den-US%7Cuic%3Dvi"));
+
+        Assert.Equal("vi-VN|vi", culture);
     }
 
     [Fact]

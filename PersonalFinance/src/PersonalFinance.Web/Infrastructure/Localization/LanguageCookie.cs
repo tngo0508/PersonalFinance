@@ -4,8 +4,8 @@ namespace PersonalFinance.Web.Infrastructure.Localization;
 
 /// <summary>
 /// Writes the standard <c>.AspNetCore.Culture</c> cookie, so the built-in <see cref="CookieRequestCultureProvider"/>
-/// picks the language on every later request (spec §2.3). The formatting culture is written too (<c>vi-VN</c>); until
-/// slice L2 supports it, request localization falls back to <c>en-US</c> for formatting and keeps the UI language.
+/// picks the language on every later request (spec §2.3). The formatting culture is written too (<c>vi-VN</c>), though
+/// <see cref="LanguageCultureProvider"/> derives it from the language either way.
 /// </summary>
 internal static class LanguageCookie
 {

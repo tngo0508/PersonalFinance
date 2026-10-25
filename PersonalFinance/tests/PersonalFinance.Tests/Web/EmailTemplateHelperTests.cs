@@ -1,5 +1,8 @@
+using System.Globalization;
+using System.Net;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 using Xunit;
 
 namespace PersonalFinance.Tests.Web;
@@ -75,6 +78,36 @@ public class EmailTemplateHelperTests
 
         Assert.Contains("<strong>new&lt;b&gt;@example.com</strong>", email.HtmlBody);
         Assert.DoesNotContain("new<b>", email.HtmlBody);
+    }
+
+    [Theory]
+    [InlineData("en", "October 25, 2026")]
+    [InlineData("vi", "25 tháng 10, 2026")]
+    public void BuildDeletionScheduledEmail_WritesThePurgeDateInTheRecipientsCulture(string language, string expected)
+    {
+        AppLanguage recipient = AppLanguages.Find(language)!;
+        EmailMessage email;
+        using (LanguageScope.Use(recipient))
+        {
+            email = EmailTemplateHelper.BuildDeletionScheduledEmail(TestLocalization.Localizer,
+                "https://app.test/cancel", new DateTime(2026, 10, 25, 0, 0, 0, DateTimeKind.Utc), "PersonalFinance");
+        }
+
+        Assert.Contains($"<strong>{expected}</strong>", WebUtility.HtmlDecode(email.HtmlBody));
+    }
+
+    [Fact]
+    public void LanguageScope_SetsTheFormattingCulture_AndRestoresIt()
+    {
+        CultureInfo before = CultureInfo.CurrentCulture;
+
+        using (LanguageScope.Use(AppLanguages.Find("vi")!))
+        {
+            Assert.Equal("vi-VN", CultureInfo.CurrentCulture.Name);
+            Assert.Equal("vi", CultureInfo.CurrentUICulture.Name);
+        }
+
+        Assert.Equal(before, CultureInfo.CurrentCulture);
     }
 
     [Fact]
