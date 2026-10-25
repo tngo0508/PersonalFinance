@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.Web.Controllers;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Models.Home;
 using Xunit;
 using DashboardController = PersonalFinance.Web.Controllers.DashboardController;
@@ -66,8 +67,29 @@ public class HomeControllerTests
         ViewResult viewResult = Assert.IsType<ViewResult>(result);
         Assert.Null(viewResult.ViewName);
         LandingPageViewModel model = Assert.IsType<LandingPageViewModel>(viewResult.Model);
-        Assert.Equal(ExpectedCoreFeatureTitles, model.CoreFeatures.Select(f => f.Title));
-        Assert.Equal(ExpectedMoreFeatureTitles, model.MoreFeatures.Select(f => f.Title));
+        Assert.Equal(ExpectedCoreFeatureTitles, model.CoreFeatures.Select(f => English(f.TitleKey)));
+        Assert.Equal(ExpectedMoreFeatureTitles, model.MoreFeatures.Select(f => English(f.TitleKey)));
+    }
+
+    [Fact]
+    public void LandingFeatures_HaveEnglishAndVietnameseText()
+    {
+        LandingPageViewModel model = LandingPageViewModel.Create();
+
+        foreach (LandingFeature feature in model.CoreFeatures.Concat(model.MoreFeatures))
+        {
+            foreach (string key in new[] { feature.TitleKey, feature.DescriptionKey })
+            {
+                Assert.True(TestLocalization.Catalog.TryGet("en", key, out _), $"en.json has no {key}.");
+                Assert.True(TestLocalization.Catalog.TryGet("vi", key, out _), $"vi.json has no {key}.");
+            }
+        }
+    }
+
+    private static string English(string key)
+    {
+        Assert.True(TestLocalization.Catalog.TryGet("en", key, out string text), $"en.json has no {key}.");
+        return text;
     }
 
     [Fact]

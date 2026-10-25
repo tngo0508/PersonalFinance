@@ -21,36 +21,28 @@ public sealed class LandingPageViewModel
     /// </summary>
     public static LandingPageViewModel Create() => new()
     {
-        CoreFeatures =
-        [
-            new("Net Worth",
-                "Enter your savings, income and spending. See your projection to retirement in base, conservative, and aggressive scenarios."),
-            new("Budget",
-                "Split your monthly income across ten spending categories, so you know how much is left to save."),
-            new("Savings Goals",
-                "Set a target for each goal and track how much you have saved toward it.")
-        ],
+        CoreFeatures = [new("NetWorth"), new("Budget"), new("SavingsGoals")],
         MoreFeatures =
         [
-            new("Spreadsheet Analysis",
-                "Turn your budget spreadsheets into monthly income, expense, and category breakdowns."),
-            new("Investment Calculator",
-                "Model compound growth with your own contributions, return rate, and time horizon."),
-            new("Google Drive Integration",
-                "Connect a Drive folder and keep your budget spreadsheets in sync for analysis."),
-            new("AI Assistant",
-                "Ask questions about budgeting, saving, and investing in plain language."),
-            new("Finance News",
-                "Catch up on market and personal finance headlines without leaving the app."),
-            new("Community",
-                "Vote in polls and read stories from others working toward financial independence.")
+            new("SpreadsheetAnalysis"), new("InvestmentCalculator"), new("GoogleDrive"), new("AiAssistant"),
+            new("FinanceNews"), new("Community")
         ]
     };
 }
 
 /// <summary>
-/// A single feature entry on the Landing Page.
+/// A single feature entry on the Landing Page. Its name and description are localizer keys under
+/// <see cref="KeyPrefix"/> (<c>Landing.Feature.NetWorth.Title</c>), so the view shows them in the visitor's language.
 /// </summary>
-/// <param name="Title">Feature name.</param>
-/// <param name="Description">One-sentence description of the feature.</param>
-public sealed record LandingFeature(string Title, string Description);
+/// <param name="Id">The feature's key segment, for example <c>NetWorth</c>.</param>
+public sealed record LandingFeature(string Id)
+{
+    /// <summary>The prefix of every Landing Page feature key in <c>en.json</c>.</summary>
+    public const string KeyPrefix = "Landing.Feature.";
+
+    /// <summary>Gets the localizer key of the feature name.</summary>
+    public string TitleKey => $"{KeyPrefix}{Id}.Title";
+
+    /// <summary>Gets the localizer key of the one-sentence description.</summary>
+    public string DescriptionKey => $"{KeyPrefix}{Id}.Description";
+}

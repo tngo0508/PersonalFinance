@@ -1,153 +1,157 @@
 @{
-    ViewData["Title"] = "Privacy Policy";
+    ViewData["Title"] = L["Legal.Privacy.Title"].Value;
 }
 
 <div class="legal-page">
-    <h1 class="legal-page__title">Privacy Policy</h1>
-    <p class="text-muted">Last updated: October 2026</p>
+    <h1 class="legal-page__title">@L["Legal.Privacy.Title"]</h1>
+    <partial name="_EnglishOnlyNotice" />
 
-    <section class="legal-section">
-        <h2>Introduction</h2>
-        <p>PersonalFinance ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our personal finance web application (the "Service").</p>
-        <p>Please read this privacy policy carefully. By accessing or using our Service, you signify that you have read, understood, and agree to be bound by this policy.</p>
-    </section>
+    <div lang="en">
+        <p class="text-muted">Last updated: October 2026</p>
 
-    <section class="legal-section">
-        <h2>Information We Collect</h2>
-        <h3>Account Information</h3>
-        <p>When you create an account, we collect:</p>
-        <ul>
-            <li>Email address</li>
-            <li>Password (stored securely using hashing)</li>
-            <li>Account creation date</li>
-        </ul>
+        <section class="legal-section">
+            <h2>Introduction</h2>
+            <p>PersonalFinance ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our personal finance web application (the "Service").</p>
+            <p>Please read this privacy policy carefully. By accessing or using our Service, you signify that you have read, understood, and agree to be bound by this policy.</p>
+        </section>
 
-        <h3>Financial Data You Enter</h3>
-        <p>The core of our Service involves storing your personal financial information. We collect and store the data you voluntarily enter, including:</p>
-        <ul>
-            <li>Budget categories and monthly budget plans</li>
-            <li>Budget transactions and spending records</li>
-            <li>Savings goals and targets</li>
-            <li>Money Priorities answers (your extra monthly amount and your answers about debt, emergency fund, employer match, time horizon, age range and contribution limit) and the optional Purpose you write, and the Purpose Note written for it, which is stored with that result</li>
-            <li>Net worth parameters (assets, liabilities, income, expenses)</li>
-            <li>User budget allocations and source preferences</li>
-        </ul>
+        <section class="legal-section">
+            <h2>Information We Collect</h2>
+            <h3>Account Information</h3>
+            <p>When you create an account, we collect:</p>
+            <ul>
+                <li>Email address</li>
+                <li>Password (stored securely using hashing)</li>
+                <li>Account creation date</li>
+            </ul>
 
-        <h3>Google Drive Integration Data</h3>
-        <p>If you connect your Google Drive account, we store:</p>
-        <ul>
-            <li>Google Drive connection metadata</li>
-            <li>Spreadsheet budget snapshots imported from your Google Sheets</li>
-            <li>Spreadsheet transaction records</li>
-            <li>Cached file information from Google Drive</li>
-        </ul>
+            <h3>Financial Data You Enter</h3>
+            <p>The core of our Service involves storing your personal financial information. We collect and store the data you voluntarily enter, including:</p>
+            <ul>
+                <li>Budget categories and monthly budget plans</li>
+                <li>Budget transactions and spending records</li>
+                <li>Savings goals and targets</li>
+                <li>Money Priorities answers (your extra monthly amount and your answers about debt, emergency fund, employer match, time horizon, age range and contribution limit) and the optional Purpose you write, and the Purpose Note written for it, which is stored with that result</li>
+                <li>Net worth parameters (assets, liabilities, income, expenses)</li>
+                <li>User budget allocations and source preferences</li>
+            </ul>
 
-        <h3>Community Content</h3>
-        <p>If you participate in community features, we store:</p>
-        <ul>
-            <li>Community stories and posts</li>
-            <li>Comments on community posts</li>
-            <li>Poll votes and likes</li>
-        </ul>
+            <h3>Google Drive Integration Data</h3>
+            <p>If you connect your Google Drive account, we store:</p>
+            <ul>
+                <li>Google Drive connection metadata</li>
+                <li>Spreadsheet budget snapshots imported from your Google Sheets</li>
+                <li>Spreadsheet transaction records</li>
+                <li>Cached file information from Google Drive</li>
+            </ul>
 
-        <h3>Usage Data</h3>
-        <p>We collect:</p>
-        <ul>
-            <li>Saved articles</li>
-            <li>Notification preferences and history</li>
-        </ul>
-    </section>
+            <h3>Community Content</h3>
+            <p>If you participate in community features, we store:</p>
+            <ul>
+                <li>Community stories and posts</li>
+                <li>Comments on community posts</li>
+                <li>Poll votes and likes</li>
+            </ul>
 
-    <section class="legal-section">
-        <h2>Third-Party Services</h2>
-        <p>We use the following third-party services that may process your data:</p>
+            <h3>Usage Data</h3>
+            <p>We collect:</p>
+            <ul>
+                <li>Saved articles</li>
+                <li>Notification preferences and history</li>
+            </ul>
+        </section>
 
-        <h3>Google Drive and Sheets API</h3>
-        <p>If you connect your Google Drive, we use the Google Drive and Sheets API (googleapis.com) to read your spreadsheets. Your Google API key is used to authenticate these requests.</p>
+        <section class="legal-section">
+            <h2>Third-Party Services</h2>
+            <p>We use the following third-party services that may process your data:</p>
 
-        <h3>Google Fonts</h3>
-        <p>We load fonts from Google Fonts (fonts.googleapis.com). This service may collect your IP address. See our <a asp-controller="Legal" asp-action="Cookies">Cookie Policy</a> for details.</p>
+            <h3>Google Drive and Sheets API</h3>
+            <p>If you connect your Google Drive, we use the Google Drive and Sheets API (googleapis.com) to read your spreadsheets. Your Google API key is used to authenticate these requests.</p>
 
-        <h3>unpkg CDN</h3>
-        <p>We load the Lucide icon library from unpkg.com. This is a third-party content delivery network.</p>
+            <h3>Google Fonts</h3>
+            <p>We load fonts from Google Fonts (fonts.googleapis.com). This service may collect your IP address. See our <a asp-controller="Legal" asp-action="Cookies">Cookie Policy</a> for details.</p>
 
-        <h3>Brevo (Transactional Email)</h3>
-        <p>We use Brevo to send transactional emails, such as account confirmation. Brevo processes your email address for delivery purposes.</p>
+            <h3>unpkg CDN</h3>
+            <p>We load the Lucide icon library from unpkg.com. This is a third-party content delivery network.</p>
 
-        <h3>Azure Hosting</h3>
-        <p>Our application is hosted on Microsoft Azure. Your data is stored in Azure SQL Database. Azure may be located in the United States.</p>
+            <h3>Brevo (Transactional Email)</h3>
+            <p>We use Brevo to send transactional emails, such as account confirmation. Brevo processes your email address for delivery purposes.</p>
 
-        <h3>AI Chat Widget</h3>
-        <p>Our Service includes an AI-powered chat feature. Interactions with this feature may be processed by a third-party AI provider. Do not share sensitive financial details in the chat.</p>
+            <h3>Azure Hosting</h3>
+            <p>Our application is hosted on Microsoft Azure. Your data is stored in Azure SQL Database. Azure may be located in the United States.</p>
 
-        <h3>OpenAI (Money Priorities Purpose Note)</h3>
-        <p>When you give a Purpose in Money Priorities, we send that Purpose with your answers, the path through the Priority Tree and the computed figures to OpenAI to write a short Purpose Note. Nothing is sent when you leave the Purpose empty. The note is stored with that result.</p>
-    </section>
+            <h3>AI Chat Widget</h3>
+            <p>Our Service includes an AI-powered chat feature. Interactions with this feature may be processed by a third-party AI provider. Do not share sensitive financial details in the chat.</p>
 
-    <section class="legal-section">
-        <h2>How We Use Your Information</h2>
-        <ul>
-            <li>Provide, maintain, and improve the Service</li>
-            <li>Process your financial data and generate projections</li>
-            <li>Send you transactional emails (account confirmation, etc.)</li>
-            <li>Import data from your connected Google Drive spreadsheets</li>
-            <li>Respond to your support requests</li>
-        </ul>
-    </section>
+            <h3>OpenAI (Money Priorities Purpose Note)</h3>
+            <p>When you give a Purpose in Money Priorities, we send that Purpose with your answers, the path through the Priority Tree and the computed figures to OpenAI to write a short Purpose Note. Nothing is sent when you leave the Purpose empty. The note is stored with that result.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Data Retention and Deletion</h2>
-        <p>When you delete an item in our Service, such as a transaction or a savings goal, it is hidden from you but stays in our database while your account exists. This protects you from accidental loss. Deleting your account removes these items for good, as described below.</p>
-        <h3>Deleting your account</h3>
-        <p>You can delete your account yourself on the <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page in your account settings, by confirming with your password (or by typing DELETE if you sign in with Google only).</p>
-        <ul>
-            <li><strong>Straight away:</strong> your data is hidden, you are signed out, and you can no longer sign in. We email you a link to cancel the deletion.</li>
-            <li><strong>For 30 days:</strong> you can cancel with that link. Your account and your data are restored exactly as they were.</li>
-            <li><strong>Within 31 days of your request:</strong> we permanently delete your account and all of your data, including items you had deleted earlier. The deletion runs once a day after the 30 days end.</li>
-            <li><strong>Community posts:</strong> stories and comments you published stay visible, shown as written by "Deleted User", with nothing that links them to you. Stories and comments you had already deleted are removed, and your likes and poll votes are deleted.</li>
-            <li><strong>What we keep:</strong> only a record that an account deletion was requested and when it was completed, with nothing that identifies you.</li>
-            <li><strong>Backups:</strong> our database provider keeps automatic backups for up to 7 days, so deleted data disappears from backups within 7 days after the deletion.</li>
-        </ul>
-        <h3>Downloading your data</h3>
-        <p>On the same <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page, <strong>Download my data</strong> gives you a copy of everything your account holds, as a JSON file that other apps can read. Downloading never changes your data.</p>
-    </section>
+        <section class="legal-section">
+            <h2>How We Use Your Information</h2>
+            <ul>
+                <li>Provide, maintain, and improve the Service</li>
+                <li>Process your financial data and generate projections</li>
+                <li>Send you transactional emails (account confirmation, etc.)</li>
+                <li>Import data from your connected Google Drive spreadsheets</li>
+                <li>Respond to your support requests</li>
+            </ul>
+        </section>
 
-    <section class="legal-section">
-        <h2>Your GDPR Rights</h2>
-        <p>If you are located in the European Economic Area (EEA), you have the following rights under the General Data Protection Regulation (GDPR):</p>
-        <ul>
-            <li><strong>Right of Access:</strong> Request a copy of your personal data</li>
-            <li><strong>Right to Rectification:</strong> Correct inaccurate or incomplete data</li>
-            <li><strong>Right to Erasure:</strong> Request deletion of your personal data ("right to be forgotten")</li>
-            <li><strong>Right to Data Portability:</strong> Receive your data in a machine-readable format</li>
-            <li><strong>Right to Object:</strong> Object to the processing of your personal data</li>
-            <li><strong>Right to Restriction:</strong> Request restriction of processing</li>
-        </ul>
-        <p>You can exercise your rights of access, portability and erasure yourself on the <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page: download your data, or delete your account (see "Deleting your account" above). For any other request, please contact us using the details on our <a asp-controller="Legal" asp-action="Contact">Contact page</a>.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Data Retention and Deletion</h2>
+            <p>When you delete an item in our Service, such as a transaction or a savings goal, it is hidden from you but stays in our database while your account exists. This protects you from accidental loss. Deleting your account removes these items for good, as described below.</p>
+            <h3>Deleting your account</h3>
+            <p>You can delete your account yourself on the <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page in your account settings, by confirming with your password (or by typing DELETE if you sign in with Google only).</p>
+            <ul>
+                <li><strong>Straight away:</strong> your data is hidden, you are signed out, and you can no longer sign in. We email you a link to cancel the deletion.</li>
+                <li><strong>For 30 days:</strong> you can cancel with that link. Your account and your data are restored exactly as they were.</li>
+                <li><strong>Within 31 days of your request:</strong> we permanently delete your account and all of your data, including items you had deleted earlier. The deletion runs once a day after the 30 days end.</li>
+                <li><strong>Community posts:</strong> stories and comments you published stay visible, shown as written by "Deleted User", with nothing that links them to you. Stories and comments you had already deleted are removed, and your likes and poll votes are deleted.</li>
+                <li><strong>What we keep:</strong> only a record that an account deletion was requested and when it was completed, with nothing that identifies you.</li>
+                <li><strong>Backups:</strong> our database provider keeps automatic backups for up to 7 days, so deleted data disappears from backups within 7 days after the deletion.</li>
+            </ul>
+            <h3>Downloading your data</h3>
+            <p>On the same <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page, <strong>Download my data</strong> gives you a copy of everything your account holds, as a JSON file that other apps can read. Downloading never changes your data.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>International Data Transfers</h2>
-        <p>Your data is stored on Microsoft Azure servers, which may be located in the United States. If you are outside the United States, your data will be transferred across borders. We rely on appropriate safeguards, such as Standard Contractual Clauses, to ensure your data remains protected.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Your GDPR Rights</h2>
+            <p>If you are located in the European Economic Area (EEA), you have the following rights under the General Data Protection Regulation (GDPR):</p>
+            <ul>
+                <li><strong>Right of Access:</strong> Request a copy of your personal data</li>
+                <li><strong>Right to Rectification:</strong> Correct inaccurate or incomplete data</li>
+                <li><strong>Right to Erasure:</strong> Request deletion of your personal data ("right to be forgotten")</li>
+                <li><strong>Right to Data Portability:</strong> Receive your data in a machine-readable format</li>
+                <li><strong>Right to Object:</strong> Object to the processing of your personal data</li>
+                <li><strong>Right to Restriction:</strong> Request restriction of processing</li>
+            </ul>
+            <p>You can exercise your rights of access, portability and erasure yourself on the <a asp-area="Identity" asp-page="/Account/Manage/PersonalData">Personal data</a> page: download your data, or delete your account (see "Deleting your account" above). For any other request, please contact us using the details on our <a asp-controller="Legal" asp-action="Contact">Contact page</a>.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Data Security</h2>
-        <p>We use industry-standard security measures to protect your data, including encrypted connections (HTTPS), password hashing, and access controls. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.</p>
-    </section>
+        <section class="legal-section">
+            <h2>International Data Transfers</h2>
+            <p>Your data is stored on Microsoft Azure servers, which may be located in the United States. If you are outside the United States, your data will be transferred across borders. We rely on appropriate safeguards, such as Standard Contractual Clauses, to ensure your data remains protected.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Children's Privacy</h2>
-        <p>Our Service is not intended for children under 16. We do not knowingly collect personal data from children under 16. If we learn we have collected data from a child under 16, we will delete it promptly.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Data Security</h2>
+            <p>We use industry-standard security measures to protect your data, including encrypted connections (HTTPS), password hashing, and access controls. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Changes to This Policy</h2>
-        <p>We may update this Privacy Policy from time to time. We will notify you of changes by posting the new policy on this page and updating the "Last updated" date. Your continued use of the Service after changes constitutes acceptance of the updated policy.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Children's Privacy</h2>
+            <p>Our Service is not intended for children under 16. We do not knowingly collect personal data from children under 16. If we learn we have collected data from a child under 16, we will delete it promptly.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Contact Us</h2>
-        <p>If you have questions about this Privacy Policy, please contact us via our <a asp-controller="Legal" asp-action="Contact">Contact page</a>.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. We will notify you of changes by posting the new policy on this page and updating the "Last updated" date. Your continued use of the Service after changes constitutes acceptance of the updated policy.</p>
+        </section>
+
+        <section class="legal-section">
+            <h2>Contact Us</h2>
+            <p>If you have questions about this Privacy Policy, please contact us via our <a asp-controller="Legal" asp-action="Contact">Contact page</a>.</p>
+        </section>
+    </div>
 </div>

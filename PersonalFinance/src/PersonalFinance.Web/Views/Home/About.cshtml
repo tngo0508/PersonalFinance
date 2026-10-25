@@ -1,49 +1,60 @@
+@using Microsoft.AspNetCore.Html
 @using PersonalFinance.Shared.Constants
 @using PersonalFinance.Web.Infrastructure
 @{
-    ViewData["Title"] = "About";
+    ViewData["Title"] = L["About.Title"].Value;
+    string appName = AppVersion.ApplicationName;
 }
 
 <div class="legal-page">
-    <h1 class="legal-page__title">About @AppVersion.ApplicationName</h1>
+    <h1 class="legal-page__title">@L.Named("About.Heading", ("appName", appName))</h1>
 
     <section class="legal-section">
-        <h2>What it is</h2>
-        <p>@AppVersion.ApplicationName is a free web app for planning your path to financial independence. You enter your savings, income and spending, and it turns them into one plan: a target for financial independence and the age your savings can reach it.</p>
+        <h2>@L["About.WhatItIs.Title"]</h2>
+        <p>@L.Named("About.WhatItIs.Text", ("appName", appName))</p>
     </section>
 
     <section class="legal-section">
-        <h2>Why it exists</h2>
-        <p>Most people never work out how much is enough. Spreadsheets get abandoned, and many budgeting apps ask for your bank logins. @AppVersion.ApplicationName keeps the plan simple, lets you decide exactly what to enter, and shows your figures only to you.</p>
+        <h2>@L["About.Why.Title"]</h2>
+        <p>@L.Named("About.Why.Text", ("appName", appName))</p>
     </section>
 
     <section class="legal-section">
-        <h2>Who builds it</h2>
-        <p>@AppVersion.ApplicationName is a solo developer project: one person designs, builds and runs it.</p>
+        <h2>@L["About.Who.Title"]</h2>
+        <p>@L.Named("About.Who.Text", ("appName", appName))</p>
     </section>
 
     <section class="legal-section">
-        <h2>Core features</h2>
+        <h2>@L["About.Features.Title"]</h2>
         <ul>
-            <li><strong>Net Worth</strong>: enter your starting balance, income, spending and savings to project when you can reach financial independence.</li>
-            <li><strong>Budget Planner</strong>: set a monthly budget by category.</li>
-            <li><strong>Budget Tracker</strong>: record what you spend and compare it with your plan.</li>
-            <li><strong>Savings Goals</strong>: set targets and follow your progress.</li>
-            <li><strong>Analysis</strong>: explore your figures and spreadsheets with charts.</li>
-            <li><strong>Community</strong>: share ideas and questions with other users.</li>
+            <li><strong>@L["About.Features.NetWorth.Name"]</strong>: @L["About.Features.NetWorth.Text"]</li>
+            <li><strong>@L["About.Features.BudgetPlanner.Name"]</strong>: @L["About.Features.BudgetPlanner.Text"]</li>
+            <li><strong>@L["About.Features.BudgetTracker.Name"]</strong>: @L["About.Features.BudgetTracker.Text"]</li>
+            <li><strong>@L["About.Features.SavingsGoals.Name"]</strong>: @L["About.Features.SavingsGoals.Text"]</li>
+            <li><strong>@L["About.Features.Analysis.Name"]</strong>: @L["About.Features.Analysis.Text"]</li>
+            <li><strong>@L["About.Features.Community.Name"]</strong>: @L["About.Features.Community.Text"]</li>
         </ul>
     </section>
 
     @if (User.Identity?.IsAuthenticated == true)
     {
+        IHtmlContent feedbackLink = Html.ActionLink(L["About.Feedback.Link"].Value, "Index", "Feedback",
+            new { area = "", from = FeedbackSourcePage.From(Context.Request) });
         <section class="legal-section">
-            <h2>Tell us what you think</h2>
-            <p>Found a bug or have an idea? <a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">Send feedback</a>.</p>
+            <h2>@L["About.Feedback.Title"]</h2>
+            <p>@L.NamedHtml("About.Feedback.Prompt", null, ("link", feedbackLink))</p>
         </section>
     }
 
     <section class="legal-section">
-        <h2>Not financial advice</h2>
-        <p>@AppVersion.ApplicationName is a planning tool for information and education only. It is not financial, investment, tax or legal advice. Read the <a asp-area="" asp-controller="Legal" asp-action="Disclaimer">Disclaimer</a> before relying on any figure.</p>
+        <h2>@L["About.NotAdvice.Title"]</h2>
+        @{
+            IHtmlContent disclaimerLink = Html.ActionLink(L["About.NotAdvice.DisclaimerLink"].Value, "Disclaimer",
+                "Legal", new { area = "" });
+        }
+        <p>
+            @L.Named("About.NotAdvice.Text", ("appName", appName))
+            @L.NamedHtml("About.NotAdvice.ReadDisclaimer", null, ("link", disclaimerLink))
+        </p>
     </section>
 </div>
