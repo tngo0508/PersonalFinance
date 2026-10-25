@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Vietnamese number and date formats**: a Vietnamese reader now sees `1.234,56` and `25/10/2026`, and types amounts the same way (slice L2 of the localization spec, #295).
+- **Vietnamese number and date formats**: a Vietnamese reader now sees `1.234,56` and `25/10/2026`, and types amounts the same way (slice L2 of the localization spec, #353).
   - The formatting culture follows the language (`vi` → `vi-VN`, `en` → `en-US`), from the cookie or the browser.
   - Account settings › Language says so in one line.
   - Account emails write their dates in the recipient's culture.

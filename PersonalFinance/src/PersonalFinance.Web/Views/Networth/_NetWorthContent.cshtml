@@ -118,7 +118,7 @@
                             <span class="nw-savings-indicator__value" id="nwSavingsRateValue">@($"{Model.SavingsRatePercent:F1}%")</span>
                         </div>
                         <div class="nw-savings-indicator__bar">
-                            <div class="nw-savings-indicator__fill" id="nwSavingsRateFill" style="width: @($"{Math.Clamp(Model.SavingsRatePercent, 0m, 100m):F1}%")"></div>
+                            <div class="nw-savings-indicator__fill" id="nwSavingsRateFill" style="width: @Math.Clamp(Model.SavingsRatePercent, 0m, 100m).ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%"></div>
                         </div>
                     </div>
                 </div>
@@ -147,7 +147,7 @@
                             <input asp-for="StartingBalance" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwStartingBalance" />
                         </div>
-                        <input type="range" class="nw-range" id="nwStartingBalanceRange" min="0" max="1000000" step="1000" value="@Model.StartingBalance" />
+                        <input type="range" class="nw-range" id="nwStartingBalanceRange" min="0" max="1000000" step="1000" value="@Model.StartingBalance.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -159,7 +159,7 @@
                             <input asp-for="AnnualSavings" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualSavings" />
                         </div>
-                        <input type="range" class="nw-range" id="nwAnnualSavingsRange" min="0" max="200000" step="1000" value="@Model.AnnualSavings" />
+                        <input type="range" class="nw-range" id="nwAnnualSavingsRange" min="0" max="200000" step="1000" value="@Model.AnnualSavings.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -171,7 +171,7 @@
                             <input asp-for="AnnualIncome" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualIncome" />
                         </div>
-                        <input type="range" class="nw-range" id="nwAnnualIncomeRange" min="0" max="500000" step="1000" value="@Model.AnnualIncome" />
+                        <input type="range" class="nw-range" id="nwAnnualIncomeRange" min="0" max="500000" step="1000" value="@Model.AnnualIncome.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -183,7 +183,7 @@
                             <input asp-for="AnnualSpending" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualSpending" />
                         </div>
-                        <input type="range" class="nw-range" id="nwAnnualSpendingRange" min="0" max="200000" step="1000" value="@Model.AnnualSpending" />
+                        <input type="range" class="nw-range" id="nwAnnualSpendingRange" min="0" max="200000" step="1000" value="@Model.AnnualSpending.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                 </div>
             </div>
@@ -207,7 +207,7 @@
                                    class="form-control nw-slider-field__input" id="nwCurrentAge" />
                             <span class="nw-slider-field__suffix">years</span>
                         </div>
-                        <input type="range" class="nw-range" id="nwCurrentAgeRange" min="18" max="80" step="1" value="@Model.CurrentAge" />
+                        <input type="range" class="nw-range" id="nwCurrentAgeRange" min="18" max="80" step="1" value="@Model.CurrentAge.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -219,7 +219,7 @@
                                    class="form-control nw-slider-field__input" id="nwRetirementAge" />
                             <span class="nw-slider-field__suffix">years</span>
                         </div>
-                        <input type="range" class="nw-range" id="nwRetirementAgeRange" min="30" max="100" step="1" value="@Model.RetirementAge" />
+                        <input type="range" class="nw-range" id="nwRetirementAgeRange" min="30" max="100" step="1" value="@Model.RetirementAge.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                 </div>
             </div>
@@ -243,7 +243,7 @@
                                    class="form-control nw-slider-field__input" id="nwBaseRoi" />
                             <span class="nw-slider-field__suffix">%</span>
                         </div>
-                        <input type="range" class="nw-range nw-range--roi" id="nwBaseRoiRange" min="0" max="20" step="0.1" value="@Model.BaseRoi" />
+                        <input type="range" class="nw-range nw-range--roi" id="nwBaseRoiRange" min="0" max="20" step="0.1" value="@Model.BaseRoi.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -255,7 +255,7 @@
                                    class="form-control nw-slider-field__input" id="nwConservativeRoi" />
                             <span class="nw-slider-field__suffix">%</span>
                         </div>
-                        <input type="range" class="nw-range nw-range--roi" id="nwConservativeRoiRange" min="0" max="20" step="0.1" value="@Model.ConservativeRoi" />
+                        <input type="range" class="nw-range nw-range--roi" id="nwConservativeRoiRange" min="0" max="20" step="0.1" value="@Model.ConservativeRoi.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -267,7 +267,7 @@
                                    class="form-control nw-slider-field__input" id="nwAggressiveRoi" />
                             <span class="nw-slider-field__suffix">%</span>
                         </div>
-                        <input type="range" class="nw-range nw-range--roi" id="nwAggressiveRoiRange" min="0" max="20" step="0.1" value="@Model.AggressiveRoi" />
+                        <input type="range" class="nw-range nw-range--roi" id="nwAggressiveRoiRange" min="0" max="20" step="0.1" value="@Model.AggressiveRoi.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -279,7 +279,7 @@
                             <input asp-for="AggressiveSavings" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAggressiveSavings" />
                         </div>
-                        <input type="range" class="nw-range" id="nwAggressiveSavingsRange" min="0" max="200000" step="1000" value="@Model.AggressiveSavings" />
+                        <input type="range" class="nw-range" id="nwAggressiveSavingsRange" min="0" max="200000" step="1000" value="@Model.AggressiveSavings.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                 </div>
             </div>

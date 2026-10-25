@@ -15,7 +15,8 @@ internal sealed class LanguageCultureProvider : IRequestCultureProvider
 
     public LanguageCultureProvider(IRequestCultureProvider inner)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        ArgumentNullException.ThrowIfNull(inner);
+        _inner = inner;
     }
 
     /// <inheritdoc />

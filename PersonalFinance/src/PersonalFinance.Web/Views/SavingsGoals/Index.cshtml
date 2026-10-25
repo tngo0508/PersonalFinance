@@ -134,7 +134,7 @@
                         <div class="savings-goal-progress">
                             <div class="savings-goal-progress-track">
                                 <div class="savings-goal-progress-fill @(isComplete ? "savings-goal-progress-fill--complete" : "")"
-                                     style="width:@progress%" role="progressbar" aria-valuenow="@progress"
+                                     style="width:@progress.ToString(System.Globalization.CultureInfo.InvariantCulture)%" role="progressbar" aria-valuenow="@progress.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                      aria-valuemin="0" aria-valuemax="100" aria-label="@L.Named("SavingsGoals.Card.PercentComplete", ("percent", Math.Round(progress)))">
                                     <span class="savings-goal-progress-label">@Math.Round(progress)%</span>
                                 </div>
@@ -181,7 +181,7 @@
                             <div class="savings-goal-update-row">
                                 <div class="savings-goal-update-input-wrapper">
                                     <span class="savings-goal-update-prefix">$</span>
-                                    <input type="text" inputmode="decimal" data-money-input data-currency="USD"
+                                    <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
                                            name="currentAmount"
                                            class="form-control savings-goal-update-input"
                                            value="@MoneyFormatter.FormatAmount(goal.CurrentAmount, SupportedCurrencies.Default.Code)"
@@ -253,7 +253,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="goalTarget" class="form-label">@L.Named("SavingsGoals.Modal.TargetAmount", ("symbol", "$"))</label>
-                            <input type="text" inputmode="decimal" data-money-input data-currency="USD"
+                            <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
                                    name="targetAmount" class="form-control" id="goalTarget"
                                    value="@MoneyFormatter.FormatAmount(10000m, SupportedCurrencies.Default.Code)" required/>
                         </div>
@@ -261,7 +261,7 @@
                     <div class="row g-3 mt-1">
                         <div class="col-md-6">
                             <label for="goalCurrent" class="form-label">@L.Named("SavingsGoals.Modal.CurrentAmount", ("symbol", "$"))</label>
-                            <input type="text" inputmode="decimal" data-money-input data-currency="USD"
+                            <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
                                    name="currentAmount" class="form-control" id="goalCurrent"
                                    value="@MoneyFormatter.FormatAmount(0m, SupportedCurrencies.Default.Code)"/>
                         </div>

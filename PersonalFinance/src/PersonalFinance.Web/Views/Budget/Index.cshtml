@@ -75,7 +75,7 @@
                         <label asp-for="MonthlyIncome" class="budget-income-hero__label"></label>
                         <div class="budget-income-hero__input-wrapper">
                             <span class="budget-income-hero__prefix">$</span>
-                            <input asp-for="MonthlyIncome" type="text" inputmode="decimal" data-money-input data-currency="USD"
+                            <input asp-for="MonthlyIncome" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
                                    class="form-control budget-income-input" aria-describedby="incomeHelp"/>
                             <span class="budget-income-hero__suffix" id="incomeHelp">/month</span>
                         </div>
@@ -128,7 +128,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Housing" min="0" max="100" step="any"
-                                           data-category="Housing" value="@Model.PercentFor(Model.Housing)"
+                                           data-category="Housing" value="@Model.PercentFor(Model.Housing).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Housing allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number" class="form-control budget-percent-input"
@@ -138,7 +138,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Housing" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Housing" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Housing"
                                                aria-label="Housing dollar amount"/>
                                     </div>
@@ -163,7 +163,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Food" min="0" max="100" step="any"
-                                           data-category="Food" value="@Model.PercentFor(Model.Food)"
+                                           data-category="Food" value="@Model.PercentFor(Model.Food).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Food allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number" class="form-control budget-percent-input"
@@ -173,7 +173,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Food" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Food" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Food"
                                                aria-label="Food dollar amount"/>
                                     </div>
@@ -199,7 +199,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Transportation" min="0" max="100" step="any"
-                                           data-category="Transportation" value="@Model.PercentFor(Model.Transportation)"
+                                           data-category="Transportation" value="@Model.PercentFor(Model.Transportation).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Transportation allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number" class="form-control budget-percent-input"
@@ -209,7 +209,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Transportation" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Transportation" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Transportation"
                                                aria-label="Transportation dollar amount"/>
                                     </div>
@@ -234,7 +234,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Utilities" min="0" max="100" step="any"
-                                           data-category="Utilities" value="@Model.PercentFor(Model.Utilities)"
+                                           data-category="Utilities" value="@Model.PercentFor(Model.Utilities).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Utilities allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number"
@@ -245,7 +245,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Utilities" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Utilities" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Utilities"
                                                aria-label="Utilities dollar amount"/>
                                     </div>
@@ -270,7 +270,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Insurance" min="0" max="100" step="any"
-                                           data-category="Insurance" value="@Model.PercentFor(Model.Insurance)"
+                                           data-category="Insurance" value="@Model.PercentFor(Model.Insurance).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Insurance allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number"
@@ -281,7 +281,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Insurance" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Insurance" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Insurance"
                                                aria-label="Insurance dollar amount"/>
                                     </div>
@@ -306,7 +306,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Healthcare" min="0" max="100" step="any"
-                                           data-category="Healthcare" value="@Model.PercentFor(Model.Healthcare)"
+                                           data-category="Healthcare" value="@Model.PercentFor(Model.Healthcare).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Healthcare allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number"
@@ -317,7 +317,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Healthcare" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Healthcare" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Healthcare"
                                                aria-label="Healthcare dollar amount"/>
                                     </div>
@@ -342,7 +342,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Savings" min="0" max="100" step="any"
-                                           data-category="Savings" value="@Model.PercentFor(Model.Savings)"
+                                           data-category="Savings" value="@Model.PercentFor(Model.Savings).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Savings allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number" class="form-control budget-percent-input"
@@ -352,7 +352,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Savings" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Savings" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Savings"
                                                aria-label="Savings dollar amount"/>
                                     </div>
@@ -377,7 +377,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-DebtRepayment" min="0" max="100" step="any"
-                                           data-category="DebtRepayment" value="@Model.PercentFor(Model.DebtRepayment)"
+                                           data-category="DebtRepayment" value="@Model.PercentFor(Model.DebtRepayment).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Debt Repayment allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number"
@@ -388,7 +388,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="DebtRepayment" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="DebtRepayment" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="DebtRepayment"
                                                aria-label="Debt Repayment dollar amount"/>
                                     </div>
@@ -413,7 +413,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Entertainment" min="0" max="100" step="any"
-                                           data-category="Entertainment" value="@Model.PercentFor(Model.Entertainment)"
+                                           data-category="Entertainment" value="@Model.PercentFor(Model.Entertainment).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Entertainment allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number"
@@ -424,7 +424,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Entertainment" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Entertainment" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Entertainment"
                                                aria-label="Entertainment dollar amount"/>
                                     </div>
@@ -449,7 +449,7 @@
                                 <div class="budget-category-card__controls">
                                     <input type="range" class="form-range budget-slider"
                                            id="slider-Miscellaneous" min="0" max="100" step="any"
-                                           data-category="Miscellaneous" value="@Model.PercentFor(Model.Miscellaneous)"
+                                           data-category="Miscellaneous" value="@Model.PercentFor(Model.Miscellaneous).ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                            aria-label="Miscellaneous allocation percentage"/>
                                     <div class="budget-category__input-group">
                                         <input type="number"
@@ -460,7 +460,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix">$</span>
-                                        <input asp-for="Miscellaneous" type="text" inputmode="decimal" data-money-input data-currency="USD" class="form-control budget-amount-input"
+                                        <input asp-for="Miscellaneous" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
                                                data-category="Miscellaneous"
                                                aria-label="Miscellaneous dollar amount"/>
                                     </div>

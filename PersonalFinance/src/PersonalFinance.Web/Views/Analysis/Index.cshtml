@@ -236,10 +236,10 @@
                     </div>
                     <div class="analysis-progress-bar__track">
                         <div class="analysis-progress-bar__fill analysis-progress-bar__fill--budget"
-                             style="width: @(Math.Min(Model.BudgetConsumptionPercent, 100))%"
+                             style="width: @(Math.Min(Model.BudgetConsumptionPercent, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"
                              title="Budget consumption: @Model.BudgetConsumptionPercent.ToString("F1")%"></div>
                         <div class="analysis-progress-bar__marker"
-                             style="left: @(Math.Min(Model.TimeElapsedPercent, 100))%"
+                             style="left: @(Math.Min(Model.TimeElapsedPercent, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"
                              title="Time elapsed: @Model.TimeElapsedPercent.ToString("F1")%"></div>
                     </div>
                 </div>

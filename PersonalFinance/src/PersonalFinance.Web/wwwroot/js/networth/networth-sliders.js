@@ -10,6 +10,18 @@
     const NW = window.NW;
 
     /**
+     * Read what was typed in a slider field, in the page culture: the currency symbol and group separators are
+     * dropped, the culture's decimal separator kept (7,5 in vi-VN). The slider shows the result at once.
+     * @param {string} text - The field's text.
+     * @returns {number} The number, or NaN.
+     */
+    function parseTyped (text) {
+        const decimal = PFI18n.formatNumber(1.5).replace(/\d/g, '');
+        const kept = String(text).split('').filter((char) => /[\d-]/.test(char) || char === decimal).join('');
+        return PFI18n.parseNumber(kept);
+    }
+
+    /**
      * Format a number for display in a slider field input.
      * @param {number} value - The numeric value.
      * @param {string} type - 'currency', 'percent', or 'number'.
@@ -22,7 +34,7 @@
             return PFI18n.formatNumber(Math.round(num));
         }
         if (type === 'percent') {
-            return num.toFixed(1);
+            return PFI18n.formatNumber(num, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         }
         return Math.round(num).toString();
     }
@@ -48,7 +60,8 @@
             const rangeEl = document.getElementById(field.rangeId);
             const saveEl = document.getElementById(field.saveId);
             if (rangeEl && saveEl) {
-                saveEl.value = rangeEl.value;
+                // The form posts in the page culture (7,5 in vi-VN); a range's own value is always invariant.
+                saveEl.value = PFI18n.formatNumber(Number(rangeEl.value), { useGrouping: false, maximumFractionDigits: 10 });
             }
         });
     }
@@ -77,8 +90,7 @@
 
         // Input → Range (on blur and Enter key)
         inputEl.addEventListener('input', () => {
-            const raw = inputEl.value.replace(/[^0-9.]/g, '');
-            const num = NW.PF.safeParseFloat(raw, NaN);
+            const num = parseTyped(inputEl.value);
             if (!isNaN(num)) {
                 const min = NW.PF.safeParseFloat(rangeEl.min, 0);
                 const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
@@ -90,8 +102,7 @@
         });
 
         inputEl.addEventListener('blur', () => {
-            const raw = inputEl.value.replace(/[^0-9.]/g, '');
-            const num = NW.PF.safeParseFloat(raw, NaN);
+            const num = parseTyped(inputEl.value);
             if (!isNaN(num)) {
                 const min = NW.PF.safeParseFloat(rangeEl.min, 0);
                 const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
@@ -123,8 +134,8 @@
 
         if (!savingsEl || !incomeEl || !rateValueEl || !rateFillEl) { return; }
 
-        const savings = NW.PF.safeParseFloat(savingsEl.value.replace(/[^0-9.]/g, ''), 0);
-        const income = NW.PF.safeParseFloat(incomeEl.value.replace(/[^0-9.]/g, ''), 0);
+        const savings = parseTyped(savingsEl.value) || 0;
+        const income = parseTyped(incomeEl.value) || 0;
 
         if (income <= 0) {
             rateValueEl.textContent = '0%';
@@ -135,7 +146,7 @@
 
         const rate = (savings / income) * 100;
         const displayRate = Math.min(rate, 100);
-        rateValueEl.textContent = `${rate.toFixed(1) }%`;
+        rateValueEl.textContent = `${PFI18n.formatNumber(rate, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }%`;
         rateFillEl.style.width = `${displayRate }%`;
 
         // Color coding
