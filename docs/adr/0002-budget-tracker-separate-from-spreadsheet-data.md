@@ -91,3 +91,4 @@ preference that points at the other source is kept. The provider's cached source
 - [0001 – Standardize ApiService on Direct Service Injection](0001-standardize-cqrs-feature-organization.md) — the
   provider and services follow direct injection.
 - GLOSSARY.md — Budget Tracker, Actual Override, Diff, and Data Source are defined there.
+- [`docs/DIAGRAMS.md`](../DIAGRAMS.md#8-budget-data-source) — class and selection diagrams of the provider and its consumers.

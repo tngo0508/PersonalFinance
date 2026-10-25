@@ -3,6 +3,7 @@
 This guide gets you from a fresh clone to a merged pull request. Deeper material lives in:
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): how the projects fit together and where new code goes.
+- [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md): the same in pictures, from the data model to each cross-cutting flow.
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md): secrets, EF Core migrations, OAuth, e2e tests, troubleshooting.
 - [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md): full coding rules.
 - [`GLOSSARY.md`](GLOSSARY.md) and [`docs/adr/`](docs/adr/): domain terms and past decisions.
