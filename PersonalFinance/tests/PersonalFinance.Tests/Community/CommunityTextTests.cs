@@ -35,12 +35,21 @@ public class CommunityTextTests
     }
 
     [Fact]
-    public void StoryCategory_KnownCategory_IsTranslated_UnknownIsShownAsStored()
+    public void Category_KnownCategory_IsTranslated_UnknownIsShownAsStored()
     {
         using var culture = new UiCultureScope("en");
 
-        Assert.Equal("Budgeting", CommunityText.StoryCategory(TestLocalization.Localizer, "Budgeting"));
-        Assert.Equal("Side hustles", CommunityText.StoryCategory(TestLocalization.Localizer, "Side hustles"));
+        Assert.Equal("Budgeting", CommunityText.Category(TestLocalization.Localizer, "Budgeting"));
+        Assert.Equal("Side hustles", CommunityText.Category(TestLocalization.Localizer, "Side hustles"));
+    }
+
+    [Fact]
+    public void Category_SeededPollCategory_IsTranslated()
+    {
+        using var culture = new UiCultureScope("vi");
+
+        Assert.NotEqual("Goals", CommunityText.Category(TestLocalization.Localizer, "Goals"));
+        Assert.NotEqual("Budgeting", CommunityText.Category(TestLocalization.Localizer, "Budgeting"));
     }
 
     [Fact]

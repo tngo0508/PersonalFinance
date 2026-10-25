@@ -84,7 +84,6 @@ public sealed class CommunityController : Controller
         return Json(new
         {
             success = true,
-            message = _localizer["Community.Message.Voted"].Value,
             poll = updatedPoll != null ? MapPollToViewModel(updatedPoll) : null,
         });
     }
@@ -204,7 +203,6 @@ public sealed class CommunityController : Controller
         return Json(new
         {
             success = true,
-            message = _localizer["Community.Message.StorySubmitted"].Value,
             story = new
             {
                 id = story.Id,

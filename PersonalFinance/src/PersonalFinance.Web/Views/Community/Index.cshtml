@@ -63,7 +63,7 @@
             {
                 <div class="community-poll-card" data-poll-id="@poll.Id">
                     <div class="community-poll-header">
-                        <span class="community-poll-category">@poll.Category</span>
+                        <span class="community-poll-category">@CommunityText.Category(L, poll.Category)</span>
                         <span class="community-poll-votes">@L.Plural("Community.Js.Votes", poll.TotalVotes)</span>
                     </div>
                     <h3 class="community-poll-question">@poll.Question</h3>
@@ -157,7 +157,7 @@
                             </div>
                         }
                         <div class="community-story-meta">
-                            <span class="community-story-category">@CommunityText.StoryCategory(L, story.Category)</span>
+                            <span class="community-story-category">@CommunityText.Category(L, story.Category)</span>
                             <span class="community-story-readtime">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -314,7 +314,7 @@
                             <option value="">@L["Community.Modal.CategoryPlaceholder"]</option>
                             @foreach (string category in CommunityText.StoryCategories)
                             {
-                                <option value="@category">@CommunityText.StoryCategory(L, category)</option>
+                                <option value="@category">@CommunityText.Category(L, category)</option>
                             }
                         </select>
                         <div class="invalid-feedback">@L["Community.Modal.CategoryRequired"]</div>

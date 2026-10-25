@@ -16,6 +16,9 @@ public static class CommunityText
     public static IReadOnlyList<string> StoryCategories { get; } =
         ["Budgeting", "Debt", "Investing", "Savings", "Experiments", "Career", "Other"];
 
+    /// <summary>Every category with a translated label: the Story categories plus the seeded poll categories.</summary>
+    private static readonly HashSet<string> TranslatedCategories = new(StoryCategories.Append("Goals"), StringComparer.Ordinal);
+
     /// <summary>How long before <paramref name="nowUtc"/> something was posted: "just now", "5m ago", "3h ago", "2d ago".</summary>
     public static string TimeAgo(IStringLocalizer localizer, DateTime postedUtc, DateTime nowUtc)
     {
@@ -40,11 +43,14 @@ public static class CommunityText
         return localizer.Named("Community.TimeAgo.Days", ("count", (int)span.TotalDays));
     }
 
-    /// <summary>The label of a Story's category: translated when it is one the form offers, otherwise shown as stored.</summary>
-    public static string StoryCategory(IStringLocalizer localizer, string category)
+    /// <summary>
+    /// The label of a poll's or Story's category: translated when it is one the app defines (the Story form's or a
+    /// seeded poll's), otherwise shown as stored.
+    /// </summary>
+    public static string Category(IStringLocalizer localizer, string category)
     {
         ArgumentNullException.ThrowIfNull(localizer);
-        return StoryCategories.Contains(category, StringComparer.Ordinal)
+        return TranslatedCategories.Contains(category)
             ? localizer[CategoryKeyPrefix + category]
             : category;
     }
