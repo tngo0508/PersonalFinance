@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.1.0] - 2026-10-25
+
+### Added
+
+- **AI Assistant replies in your language**: the assistant answers in the Language saved on the Account, English when none is saved (#354).
+
 ## [7.0.0] - 2026-10-25
 
 ### Added
