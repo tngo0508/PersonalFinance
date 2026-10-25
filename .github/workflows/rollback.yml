@@ -180,6 +180,7 @@ jobs:
           sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
           custom_connection_string: ${{ secrets.CUSTOM_CONNECTION_STRING }}
           custom_domain_name: ${{ vars.CUSTOM_DOMAIN_NAME || '' }}
+          custom_domain_certificate_id: ${{ vars.CUSTOM_DOMAIN_CERTIFICATE_ID || '' }}
 
   # ============================================================================
   # 3. END-TO-END POST-DEPLOYMENT SMOKE TESTS (same checks as deploy-azure.yml)

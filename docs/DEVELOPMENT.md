@@ -1143,7 +1143,8 @@ Configure the following secrets in GitHub Repository Settings &rarr; **Secrets a
 |---|---|---|
 | `BREVO_SENDER_EMAIL` | Verified Brevo sender email address | `tngo0508@gmail.com` |
 | `BREVO_SENDER_NAME` | Sender display name | `PersonalFinance` |
-| `CUSTOM_DOMAIN_NAME` | *(Optional)* Custom domain name for the Web App | *(empty)* |
+| `CUSTOM_DOMAIN_NAME` | *(Optional)* Custom hostname for the Web App, e.g. `www.personalfinancex.com` | *(empty)* |
+| `CUSTOM_DOMAIN_CERTIFICATE_ID` | *(Optional)* Managed certificate resource ID for `CUSTOM_DOMAIN_NAME`; without it the domain is bound with HTTPS off. See `docs/CUSTOM_DOMAIN.md` | *(empty)* |
 | `SEC_USER_AGENT` | Contact the daily Research refresh job sends to SEC (an app name and a real email). Without it production gets World data only. Set it with `gh variable set SEC_USER_AGENT --repo tngo0508/PersonalFinance --body "PersonalFinance research <email>"`; a change takes effect at the next deploy | `PersonalFinance research tngo0508@gmail.com` |
 
 ---

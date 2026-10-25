@@ -55,6 +55,9 @@ inputs:
     required: false
   custom_domain_name:
     required: false
+  custom_domain_certificate_id:
+    description: 'Managed certificate resource ID for custom_domain_name. Empty binds the domain with HTTPS off.'
+    required: false
 
 outputs:
   webUrl:
@@ -185,6 +188,7 @@ runs:
           sqlAdministratorLoginPassword=${{ inputs.sql_admin_password }}
           customConnectionString=${{ inputs.custom_connection_string }}
           customDomainName=${{ inputs.custom_domain_name }}
+          certificateId=${{ inputs.custom_domain_certificate_id }}
           exposeApiPublicly=true
           enableScheduledScaling=true
           businessHoursTimeZone=America/Los_Angeles
