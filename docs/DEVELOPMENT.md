@@ -14,12 +14,6 @@ This document provides developer guidelines, architectural details, configuratio
   # Or update if already installed
   dotnet tool update --global dotnet-ef
   ```
-- **ASP.NET Core Code Generator (`dotnet-aspnet-codegenerator`)** *(for scaffolding Identity pages)*:
-  ```bash
-  dotnet tool install --global dotnet-aspnet-codegenerator
-  # Or update if already installed
-  dotnet tool update --global dotnet-aspnet-codegenerator
-  ```
 - **IDE**: JetBrains Rider (recommended), Visual Studio 2022+ / 2026+, or VS Code with C# Dev Kit.
 - **Git**
 
@@ -587,30 +581,26 @@ The authentication architecture is designed to support additional external provi
 
 ---
 
-#### Step 4: Identity Scaffolding CLI Commands & Custom ExternalLogin Architecture
+#### Step 4: Scaffolded Identity Pages & Custom ExternalLogin Architecture
 
-ASP.NET Core Identity uses Razor Pages located under `Areas/Identity/Pages/Account/`. Developers can scaffold new pages using the official .NET code generation tool and apply custom business logic.
+ASP.NET Core Identity uses Razor Pages located under `Areas/Identity/Pages/Account/`. **Every** Account and Manage
+page of the Identity UI library is scaffolded into the project (slice L1b of the localization spec), so none is served
+precompiled from `Microsoft.AspNetCore.Identity.UI` and each can be translated and changed in place.
 
-##### 1. CLI Scaffolding Workflow
-To generate default Identity Razor Pages from the command line:
-
-```bash
-# 1. Install or update the ASP.NET Core Code Generator global tool
-dotnet tool install --global dotnet-aspnet-codegenerator
-# Or update if already installed
-dotnet tool update --global dotnet-aspnet-codegenerator
-
-# 2. Ensure Microsoft.VisualStudio.Web.CodeGeneration.Design is referenced in the Web project
-dotnet add PersonalFinance/src/PersonalFinance.Web/PersonalFinance.Web.csproj package Microsoft.VisualStudio.Web.CodeGeneration.Design
-
-# 3. Scaffold specific Identity pages (e.g., ExternalLogin, Login, Register)
-dotnet aspnet-codegenerator identity \
-  --project PersonalFinance/src/PersonalFinance.Web/PersonalFinance.Web.csproj \
-  --dbContext PersonalFinance.Data.AppDbContext \
-  --files "Account.ExternalLogin;Account.Login;Account.Register"
-```
+##### 1. Where the scaffolded pages came from
+- The views are the library's own `Pages/V5` Razor files from `dotnet/aspnetcore` at the tag matching the
+  `Microsoft.AspNetCore.Identity.UI` version in `Directory.Packages.props` (10.0.0). The code generator's templates are
+  older than the library and render different markup, so they were not used for the views.
+- The page models are the generator's templates (Identity UI 10's classes are generic and internal), rendered for
+  `IdentityUser`, brought to the C# style rules, and aligned with the library: the same `[AllowAnonymous]` pages, email
+  through `IEmailSender<IdentityUser>`, the confirm-account link only with `NoOpEmailSender`, and the library's log
+  messages and `LoggerEventIds`. `Security/IdentityPagesScaffoldingTests` pins this.
+- `dotnet aspnet-codegenerator identity` no longer runs against this project: it compiles in memory without source
+  generators and fails on `[LoggerMessage]` and `[GeneratedRegex]` methods. When upgrading Identity UI, diff the
+  library's `Pages/V5` sources between the two tags and apply the changes by hand.
 
 ##### 2. Custom Enhancements in `ExternalLogin.cshtml.cs`
+
 Rather than relying on default boilerplate scaffolding, the `ExternalLogin` flow in this application has been customized with essential security and user experience enhancements:
 
 - **Automated User Provisioning**:
