@@ -11,6 +11,7 @@ using PersonalFinance.ApiService.Features.Community;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Features.GoogleDrive;
+using PersonalFinance.ApiService.Features.MoneyPriorities;
 using PersonalFinance.ApiService.Features.NetWorth;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.SavingsGoals;
@@ -75,7 +76,8 @@ try
         .AddAiAssistantFeature(builder.Configuration)
         .AddFeedbackFeature()
         .AddAdminFeature()
-        .AddAccountLifecycleFeature();
+        .AddAccountLifecycleFeature()
+        .AddMoneyPrioritiesFeature();
 
     // HTTP: controllers, FluentValidation validators, RFC 7807 ProblemDetails, OpenAPI document.
     builder.Services.AddControllers()
