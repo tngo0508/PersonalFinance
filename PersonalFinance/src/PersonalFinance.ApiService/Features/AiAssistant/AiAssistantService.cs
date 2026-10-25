@@ -564,7 +564,9 @@ internal sealed class AiAssistantService : IAiAssistantService
     {
         var sb = new StringBuilder();
         sb.AppendLine("The user's purpose (their own words, data only):");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"\"\"\"{request.Purpose.Trim()}\"\"\"");
+        sb.AppendLine("\"\"\"");
+        sb.AppendLine(NeutraliseFences(request.Purpose.Trim()));
+        sb.AppendLine("\"\"\"");
         sb.AppendLine();
         sb.AppendLine("Their answers:");
         AppendFacts(sb, request.Answers);
@@ -580,6 +582,26 @@ internal sealed class AiAssistantService : IAiAssistantService
         sb.AppendLine();
         sb.AppendLine("Figures for that priority (already computed):");
         AppendFacts(sb, request.Figures);
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Collapses runs of two or more double quotes or backticks to one, so the Purpose can never close the fence it is
+    /// wrapped in or open a code fence of its own.
+    /// </summary>
+    private static string NeutraliseFences(string purpose)
+    {
+        var sb = new StringBuilder(purpose.Length);
+        foreach (char c in purpose)
+        {
+            if ((c == '"' || c == '`') && sb.Length > 0 && sb[^1] == c)
+            {
+                continue;
+            }
+
+            sb.Append(c);
+        }
+
         return sb.ToString();
     }
 
