@@ -1,0 +1,44 @@
+{
+  "Title": "Mục tiêu tiết kiệm",
+  "Subtitle": "Theo dõi tiến độ đạt các cột mốc tài chính. Tạo mục tiêu và cập nhật khi bạn tiết kiệm.",
+  "AddGoal": "Thêm mục tiêu",
+  "Card": {
+    "Progress": "{current} trên {target}",
+    "PercentComplete": "Hoàn thành {percent}%",
+    "GoalReached": "Đã đạt mục tiêu!",
+    "Remaining": "Còn {amount} nữa là đạt mục tiêu",
+    "DeleteTitle": "Xóa mục tiêu",
+    "DeleteAria": "Xóa mục tiêu {name}",
+    "NewAmountPlaceholder": "Số tiền mới",
+    "UpdateAria": "Cập nhật số tiền hiện có cho {name}",
+    "Update": "Cập nhật"
+  },
+  "Empty": {
+    "Title": "Chưa có mục tiêu tiết kiệm nào",
+    "Text": "Tạo mục tiêu tiết kiệm đầu tiên để bắt đầu theo dõi tiến độ đạt các cột mốc tài chính.",
+    "AddFirst": "Thêm mục tiêu đầu tiên"
+  },
+  "Modal": {
+    "Title": "Mục tiêu tiết kiệm mới",
+    "Name": "Tên mục tiêu *",
+    "NamePlaceholder": "ví dụ: Quỹ khẩn cấp",
+    "TargetAmount": "Số tiền mục tiêu ({symbol}) *",
+    "CurrentAmount": "Số tiền hiện có ({symbol})",
+    "TargetDate": "Ngày mục tiêu",
+    "Description": "Mô tả (không bắt buộc)",
+    "Create": "Tạo mục tiêu"
+  },
+  "Js": {
+    "Summary": {
+      "Goals": {
+        "other": "{count} mục tiêu"
+      },
+      "Reached": {
+        "other": "{count} đã đạt"
+      },
+      "ToSave": "Còn {amount} cần tiết kiệm cho {goals}"
+    },
+    "ConfirmDelete": "Xóa mục tiêu tiết kiệm \"{name}\"?",
+    "NameRequired": "Vui lòng nhập tên mục tiêu."
+  }
+}

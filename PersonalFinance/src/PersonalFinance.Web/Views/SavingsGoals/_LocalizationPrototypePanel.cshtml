@@ -1,0 +1,41 @@
+@* PROTOTYPE (#340, throwaway): surfaces the localizer's state for the demo. Not production UI. *@
+@using System.Globalization
+@using PersonalFinance.Web.Infrastructure.Localization
+@inject JsonStringLocalizerFactory Factory
+@{
+    CultureInfo ui = CultureInfo.CurrentUICulture;
+    bool bundle = Context.Request.Query["js"].ToString() == "bundle";
+    var log = Context.Items[JsonStringLocalizer.RequestLogKey] as List<(string Kind, string Key)> ?? [];
+    string path = Context.Request.Path;
+    var missingVi = Factory.MissingKeys("vi").ToList();
+}
+<aside id="i18nPrototypePanel"
+       style="position:fixed;right:12px;bottom:12px;z-index:2000;max-width:420px;font:12px/1.45 ui-monospace,monospace;background:#111827;color:#e5e7eb;border-radius:8px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.35)">
+    <div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <strong style="color:#fbbf24">i18n prototype #340</strong>
+        <span>
+            <a style="color:#93c5fd" href="@(path)?lang=en@(bundle ? "&js=bundle" : "")">EN</a> ·
+            <a style="color:#93c5fd" href="@(path)?lang=vi@(bundle ? "&js=bundle" : "")">VI</a> |
+            JS: <a style="color:@(bundle ? "#93c5fd" : "#fbbf24")" href="@path">inline</a> ·
+            <a style="color:@(bundle ? "#fbbf24" : "#93c5fd")" href="@(path)?js=bundle">bundle</a>
+        </span>
+    </div>
+    <div>UI culture: <b>@ui.Name</b> · formatting culture: <b>@CultureInfo.CurrentCulture.Name</b> · &lt;html lang&gt;: <b>@ui.Name</b></div>
+    <div>Lookup chain: <b>@string.Join(" → ", JsonStringLocalizerFactory.Chain(ui))</b></div>
+    <div>Resources: <b>@System.IO.Path.GetFileName(Factory.ResourcesPath)/</b> (@string.Join(", ", Factory.Cultures.Select(c => $"{c}: {Factory.KeyCount(c)} keys")))</div>
+    <div>JS strings: <b>@(bundle ? "fetched bundle" : "inline per page")</b> <span id="i18nJsStatus" style="color:#9ca3af"></span></div>
+    <div style="margin-top:6px;color:#fbbf24">This request (server):</div>
+    @if (log.Count == 0)
+    {
+        <div style="color:#9ca3af">no fallbacks, no missing keys</div>
+    }
+    @foreach ((string kind, string key) in log)
+    {
+        <div><span style="color:@(kind == "missing" ? "#f87171" : "#fcd34d")">@kind</span> @key</div>
+    }
+    <div style="margin-top:6px;color:#fbbf24">CI report (file diff, en → vi): @missingVi.Count missing</div>
+    @foreach (string key in missingVi)
+    {
+        <div style="color:#fcd34d">@key</div>
+    }
+</aside>

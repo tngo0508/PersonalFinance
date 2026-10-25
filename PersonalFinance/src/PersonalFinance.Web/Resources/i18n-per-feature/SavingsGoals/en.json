@@ -1,0 +1,47 @@
+{
+  "Title": "Savings Goals",
+  "Subtitle": "Track your progress toward financial milestones. Create goals and update them as you save.",
+  "AddGoal": "Add Goal",
+  "Card": {
+    "Progress": "{current} of {target}",
+    "PercentComplete": "{percent}% complete",
+    "GoalReached": "Goal reached!",
+    "Remaining": "{amount} left to goal",
+    "DeleteTitle": "Delete goal",
+    "DeleteAria": "Delete {name} goal",
+    "NewAmountPlaceholder": "New amount",
+    "UpdateAria": "Update current amount for {name}",
+    "Update": "Update"
+  },
+  "Empty": {
+    "Title": "No savings goals yet",
+    "Text": "Create your first savings goal to start tracking your progress toward financial milestones.",
+    "AddFirst": "Add Your First Goal"
+  },
+  "Modal": {
+    "Title": "New Savings Goal",
+    "Name": "Goal Name *",
+    "NamePlaceholder": "e.g., Emergency Fund",
+    "TargetAmount": "Target Amount ({symbol}) *",
+    "CurrentAmount": "Current Amount ({symbol})",
+    "TargetDate": "Target Date",
+    "Description": "Description (optional)",
+    "DescriptionPlaceholder": "What's this goal for?",
+    "Create": "Create Goal"
+  },
+  "Js": {
+    "Summary": {
+      "Goals": {
+        "one": "{count} goal",
+        "other": "{count} goals"
+      },
+      "Reached": {
+        "one": "{count} reached",
+        "other": "{count} reached"
+      },
+      "ToSave": "{amount} still to save across {goals}"
+    },
+    "ConfirmDelete": "Delete the savings goal \"{name}\"?",
+    "NameRequired": "Please enter a goal name."
+  }
+}

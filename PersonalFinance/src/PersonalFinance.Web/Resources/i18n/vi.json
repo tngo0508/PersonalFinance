@@ -1,0 +1,36 @@
+{
+  "Common.Close": "Đóng",
+  "Common.Cancel": "Hủy",
+
+  "SavingsGoals.Title": "Mục tiêu tiết kiệm",
+  "SavingsGoals.Subtitle": "Theo dõi tiến độ đạt các cột mốc tài chính. Tạo mục tiêu và cập nhật khi bạn tiết kiệm.",
+  "SavingsGoals.AddGoal": "Thêm mục tiêu",
+  "SavingsGoals.Card.Progress": "{current} trên {target}",
+  "SavingsGoals.Card.PercentComplete": "Hoàn thành {percent}%",
+  "SavingsGoals.Card.GoalReached": "Đã đạt mục tiêu!",
+  "SavingsGoals.Card.Remaining": "Còn {amount} nữa là đạt mục tiêu",
+  "SavingsGoals.Card.DeleteTitle": "Xóa mục tiêu",
+  "SavingsGoals.Card.DeleteAria": "Xóa mục tiêu {name}",
+  "SavingsGoals.Card.NewAmountPlaceholder": "Số tiền mới",
+  "SavingsGoals.Card.UpdateAria": "Cập nhật số tiền hiện có cho {name}",
+  "SavingsGoals.Card.Update": "Cập nhật",
+  "SavingsGoals.Empty.Title": "Chưa có mục tiêu tiết kiệm nào",
+  "SavingsGoals.Empty.Text": "Tạo mục tiêu tiết kiệm đầu tiên để bắt đầu theo dõi tiến độ đạt các cột mốc tài chính.",
+  "SavingsGoals.Empty.AddFirst": "Thêm mục tiêu đầu tiên",
+  "SavingsGoals.Modal.Title": "Mục tiêu tiết kiệm mới",
+  "SavingsGoals.Modal.Name": "Tên mục tiêu *",
+  "SavingsGoals.Modal.NamePlaceholder": "ví dụ: Quỹ khẩn cấp",
+  "SavingsGoals.Modal.TargetAmount": "Số tiền mục tiêu ({symbol}) *",
+  "SavingsGoals.Modal.CurrentAmount": "Số tiền hiện có ({symbol})",
+  "SavingsGoals.Modal.TargetDate": "Ngày mục tiêu",
+  "SavingsGoals.Modal.Description": "Mô tả (không bắt buộc)",
+  "SavingsGoals.Modal.Create": "Tạo mục tiêu",
+
+  "SavingsGoals.Js.Summary.Goals.other": "{count} mục tiêu",
+  "SavingsGoals.Js.Summary.Reached.other": "{count} đã đạt",
+  "SavingsGoals.Js.Summary.ToSave": "Còn {amount} cần tiết kiệm cho {goals}",
+  "SavingsGoals.Js.ConfirmDelete": "Xóa mục tiêu tiết kiệm \"{name}\"?",
+  "SavingsGoals.Js.NameRequired": "Vui lòng nhập tên mục tiêu.",
+
+  "Validation.Required": "Trường {0} là bắt buộc."
+}

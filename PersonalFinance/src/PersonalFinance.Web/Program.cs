@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Localization;
+using PersonalFinance.Web.Infrastructure.Localization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
@@ -115,18 +116,24 @@ try
         options.KnownProxies.Clear();
     });
 
-    // Lock request localization to en-US so a browser Accept-Language header cannot change currency or number formats.
+    // PROTOTYPE (#340): formatting culture stays en-US; the UI language (en, vi) comes from ?lang= / cookie /
+    // Accept-Language and drives the JSON string localizer.
+    builder.Services.AddJsonLocalizationPrototype();
+    // Razor HTML-encodes every non-ASCII character by default ("C&#xF2;n"); let Vietnamese through as UTF-8.
+    builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(options =>
+        options.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
     builder.Services.Configure<RequestLocalizationOptions>(options =>
     {
-        options.DefaultRequestCulture = new RequestCulture(AppCulture.DefaultCultureName);
+        options.DefaultRequestCulture = new RequestCulture(AppCulture.DefaultCultureName, "en");
         options.SupportedCultures = [AppCulture.Default];
-        options.SupportedUICultures = [AppCulture.Default];
+        options.SupportedUICultures = LocalizationPrototypeExtensions.SupportedUICultures;
     });
 
     // MVC and Razor Pages; antiforgery tokens are validated on every unsafe (POST/PUT/PATCH/DELETE) action by default.
     builder.Services.AddRazorPages();
     builder.Services.AddControllersWithViews(options =>
             options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
+        .AddViewLocalization()
         .AddJsonOptions(opts =>
         {
             opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -148,6 +155,7 @@ try
 
     app.UseForwardedHeaders();
     app.UseHttpsRedirection();
+    app.UseLanguageQueryToggle();
     app.UseRequestLocalization();
     app.UseRouting();
 
@@ -155,6 +163,7 @@ try
     app.UseAuthorization();
     app.MapStaticAssets();
 
+    app.MapJsStringBundle();
     app.MapControllerRoute(
             name: "default",
             pattern: "{controller=Home}/{action=Index}/{id?}")
