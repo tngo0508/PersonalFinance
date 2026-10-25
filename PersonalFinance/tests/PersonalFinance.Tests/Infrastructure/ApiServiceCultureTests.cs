@@ -150,6 +150,16 @@ public sealed class ApiServiceCultureTests : IDisposable
         Assert.Equal("Your goal 'Vacation' has reached 50% of its target ($600.00 of $1,000.00).",
             notification.Message);
         Assert.DoesNotContain(CurrencySymbolOfInvariantCulture, notification.Message);
+        // Stored as key + arguments too, so the Web renders it in the reader's language (localization spec §2.3).
+        Assert.Equal("Notifications.SavingsMilestone.Title", notification.TitleKey);
+        Assert.Equal("Notifications.SavingsMilestone.Message", notification.MessageKey);
+        Assert.Equal(new Dictionary<string, string>
+        {
+            ["percent"] = "50",
+            ["goalName"] = "Vacation",
+            ["current"] = "$600.00",
+            ["target"] = "$1,000.00"
+        }, notification.Arguments);
     }
 
     /// <summary>Switches the current culture as if the host ran under a non-US locale.</summary>

@@ -2,16 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using PersonalFinance.Web.Services;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Encodings.Web;
+using System.Text;
+using System.Threading.Tasks;
+using System;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 
@@ -19,16 +20,16 @@ public class EmailModel : PageModel
 {
     private readonly UserManager<IdentityUser> _userManager;
     private readonly SignInManager<IdentityUser> _signInManager;
-    private readonly IEmailSender<IdentityUser> _emailSender;
+    private readonly IAccountEmailService _accountEmails;
 
     public EmailModel(
         UserManager<IdentityUser> userManager,
         SignInManager<IdentityUser> signInManager,
-        IEmailSender<IdentityUser> emailSender)
+        IAccountEmailService accountEmails)
     {
         _userManager = userManager;
         _signInManager = signInManager;
-        _emailSender = emailSender;
+        _accountEmails = accountEmails;
     }
 
     public string Email { get; set; }
@@ -99,7 +100,7 @@ public class EmailModel : PageModel
                 pageHandler: null,
                 values: new { area = "Identity", userId = userId, email = Input.NewEmail, code = code },
                 protocol: Request.Scheme);
-            await _emailSender.SendConfirmationLinkAsync(user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
+            await _accountEmails.SendEmailChangeAsync(user, Input.NewEmail, callbackUrl);
 
             StatusMessage = "Confirmation link to change email sent. Please check your email.";
             return RedirectToPage();
@@ -132,7 +133,7 @@ public class EmailModel : PageModel
             pageHandler: null,
             values: new { area = "Identity", userId = userId, code = code },
             protocol: Request.Scheme);
-        await _emailSender.SendConfirmationLinkAsync(user, email, HtmlEncoder.Default.Encode(callbackUrl));
+        await _accountEmails.SendConfirmationAsync(user, email, callbackUrl);
 
         StatusMessage = "Verification email sent. Please check your email.";
         return RedirectToPage();

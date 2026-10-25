@@ -23,6 +23,9 @@ public class DataExportDto
     /// <summary>Which Data Source Analysis and the Dashboard show.</summary>
     public string? BudgetDataSource { get; set; }
 
+    /// <summary>The Account's chosen Language (<c>en</c>, <c>vi</c>), or null when it never chose one.</summary>
+    public string? Language { get; set; }
+
     public List<DataExportBudgetCategoryDto> BudgetCategories { get; set; } = [];
 
     /// <summary>Budget Tracker Planned amounts and Actual Overrides, one row per category per month.</summary>

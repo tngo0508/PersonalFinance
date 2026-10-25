@@ -22,6 +22,24 @@ public class Notification : AuditableEntity
     public string Message { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the localization key of the title (e.g. <c>Notifications.SavingsMilestone.Title</c>). When set, the
+    /// Web app renders the title from this key in the reader's language and <see cref="Title"/> is the English snapshot
+    /// kept for the Data Export and for notifications written before keys existed (localization spec §2.3).
+    /// </summary>
+    public string? TitleKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the localization key of the message, rendered like <see cref="TitleKey"/>.
+    /// </summary>
+    public string? MessageKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the named arguments of <see cref="TitleKey"/> and <see cref="MessageKey"/>, as a JSON object of
+    /// strings (<c>{"goalName":"Emergency fund","percent":"50"}</c>).
+    /// </summary>
+    public string? Arguments { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether this notification has been read.
     /// </summary>
     public bool IsRead { get; set; }

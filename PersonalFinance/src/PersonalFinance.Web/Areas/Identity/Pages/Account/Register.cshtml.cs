@@ -1,18 +1,19 @@
-using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Services;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Encodings.Web;
+using System.Text;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 
@@ -23,8 +24,8 @@ public class RegisterModel : PageModel
     private readonly IUserStore<IdentityUser> _userStore;
     private readonly IUserEmailStore<IdentityUser> _emailStore;
     private readonly ILogger<RegisterModel> _logger;
-    private readonly IEmailSender _emailSender;
-    private readonly BrevoOptions _brevoOptions;
+    private readonly IAccountEmailService _accountEmails;
+    private readonly IUserPreferenceService _preferences;
     private readonly IUserConsentService _consentService;
 
     public RegisterModel(
@@ -32,8 +33,8 @@ public class RegisterModel : PageModel
         IUserStore<IdentityUser> userStore,
         SignInManager<IdentityUser> signInManager,
         ILogger<RegisterModel> logger,
-        IEmailSender emailSender,
-        IOptions<BrevoOptions> brevoOptionsAccessor,
+        IAccountEmailService accountEmails,
+        IUserPreferenceService preferences,
         IUserConsentService consentService)
     {
         _userManager = userManager;
@@ -41,8 +42,8 @@ public class RegisterModel : PageModel
         _emailStore = GetEmailStore();
         _signInManager = signInManager;
         _logger = logger;
-        _emailSender = emailSender;
-        _brevoOptions = brevoOptionsAccessor.Value;
+        _accountEmails = accountEmails;
+        _preferences = preferences;
         _consentService = consentService;
     }
 
@@ -114,6 +115,9 @@ public class RegisterModel : PageModel
                     AppVersion.Current,
                     HttpContext.Connection.RemoteIpAddress?.ToString());
 
+                // The Language the visitor registered in becomes the Account's, so its emails use it from the first.
+                await _preferences.SetLanguageAsync(userId, AppLanguages.Current().Code);
+
                 string code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                 code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
                 string? callbackUrl = Url.Page(
@@ -122,13 +126,7 @@ public class RegisterModel : PageModel
                     values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
                     protocol: Request.Scheme);
 
-                string appName = _brevoOptions.SenderName ?? "PersonalFinance";
-                string htmlBody = EmailTemplateHelper.BuildConfirmationEmail(callbackUrl ?? string.Empty, appName);
-
-                await _emailSender.SendEmailAsync(
-                    Input.Email,
-                    $"Confirm your {appName} account",
-                    htmlBody);
+                await _accountEmails.SendConfirmationAsync(user, Input.Email, callbackUrl ?? string.Empty);
 
                 if (_userManager.Options.SignIn.RequireConfirmedAccount)
                 {

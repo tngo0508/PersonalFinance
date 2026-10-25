@@ -23,6 +23,7 @@ public static class UserDataSeed
         db.NetWorthParameters.Add(new NetWorthParameters { UserId = userId, StartingBalance = 1000m });
         db.UserBudgetAllocations.Add(new UserBudgetAllocation { UserId = userId, Period = marker });
         db.UserBudgetSourcePreferences.Add(new UserBudgetSourcePreference { UserId = userId, Source = BudgetDataSource.BudgetTracker });
+        db.UserPreferences.Add(new UserPreference { UserId = userId, Language = "vi" });
 
         var category = new BudgetCategory { UserId = userId, Name = $"{marker} category", Kind = BudgetCategoryKind.Expense };
         var plan = new MonthlyBudgetPlan { UserId = userId, Year = 2026, Month = 3 };

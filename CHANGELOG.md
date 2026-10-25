@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.0.0] - 2026-10-25
+
+### Added
+
+- **Language saved to the Account**: the language an Account chooses is stored and follows it to every browser and device it signs in on (slice L1c of the localization spec, #295).
+  - New Account settings › Language page; the account-menu switcher saves the choice too.
+  - Registering, with a password or with Google, saves the language the visitor was using.
+  - Signing in writes the language cookie from the stored choice; an Account that never chose keeps its browser's language.
+  - The Data Export includes the chosen language.
+- **Emails in the Account's language**: the confirm-email, change-email, reset-password and deletion emails are written in the recipient's stored language, in the app's branded layout.
+  - Password-reset and change-email emails used the plain Identity UI text before; they now share the confirmation email's layout.
+
+### Changed
+
+- **Notifications in the reader's language**: savings milestones, budget alerts and Google Drive sync results are stored as a key with arguments and shown in the language of whoever reads them, even after switching. Notifications from before this release keep their English text.
+- **Database migration `AddUserPreferenceAndNotificationKeys`**: a new `UserPreferences` table, and `TitleKey`, `MessageKey` and `Arguments` columns on `Notifications`. Additive only; nothing existing is changed or removed.
+
 ## [6.3.1] - 2026-10-25
 
 ### Changed

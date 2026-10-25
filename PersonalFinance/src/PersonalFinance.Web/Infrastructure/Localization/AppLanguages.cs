@@ -27,6 +27,10 @@ internal static class AppLanguages
     public static IList<CultureInfo> SupportedUICultures =>
         All.Select(language => CultureInfo.GetCultureInfo(language.Code)).ToList();
 
+    /// <summary>The supported language of the current UI culture, else <see cref="Default"/>.</summary>
+    public static AppLanguage Current() =>
+        Find(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName) ?? Find(Default)!;
+
     /// <summary>Finds a supported language by its code, ignoring case; <c>null</c> when it is not supported.</summary>
     public static AppLanguage? Find(string? code) =>
         string.IsNullOrWhiteSpace(code)

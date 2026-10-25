@@ -28,7 +28,7 @@ the [Feature map](#3-feature-map) (step 10 of the add-a-feature checklist in [`A
 | [13](#13-google-drive-and-spreadsheet-analysis) | Google Drive and Spreadsheet Analysis | class + sequence | The one cross-Feature dependency, and connect-then-import |
 | [14](#14-startup-and-pipelines) | Startup and pipelines | 2 flowcharts | ApiService run modes, Web middleware order |
 | [15](#15-scheduled-and-background-work) | Scheduled and background work | table | Everything that runs without a request |
-| [16](#16-localization) | Localization | 2 flowcharts | How a request gets its language, where strings come from, how translations are made |
+| [16](#16-localization) | Localization | 3 flowcharts | How a request gets its language, where the Account's Language is stored, where strings come from, how translations are made |
 
 Diagrams that live elsewhere and are not repeated here:
 
@@ -485,6 +485,11 @@ erDiagram
         DateTime CancelledAt "nullable"
         DateTime PurgedAt "nullable"
     }
+    UserPreference {
+        int Id PK
+        string UserId UK "among non-deleted rows"
+        string Language "en or vi; the culture cookie mirrors it"
+    }
     UserConsent {
         int Id PK
         string UserId "indexed"
@@ -505,8 +510,11 @@ erDiagram
         int Id PK
         string UserId "indexed, and with IsRead"
         int Type "BudgetAlert=0, SavingsMilestone=1, SyncStatus=2"
-        string Title
-        string Message
+        string Title "English snapshot"
+        string Message "English snapshot"
+        string TitleKey "nullable; rendered in the reader's language"
+        string MessageKey "nullable"
+        string Arguments "nullable JSON of named arguments"
         bool IsRead
         DateTime ReadAt "nullable"
         string SourceFeature "nullable: Budget, SavingsGoals, GoogleDrive"
@@ -542,6 +550,7 @@ erDiagram
     }
 
     AspNetUsers ||..o| DeletionRequest : "UserId, logical"
+    AspNetUsers ||..o| UserPreference : "UserId, logical"
     AspNetUsers ||..o{ UserConsent : "UserId, logical"
     AspNetUsers ||..o{ Feedback : "UserId, logical"
     AspNetUsers ||..o{ Notification : "UserId, logical"
@@ -819,10 +828,10 @@ flowchart LR
     end
 
     ns["INotificationService (Infrastructure)<br/>Create, Get latest 50, UnreadCount,<br/>MarkAsRead, MarkAllAsRead"]
-    ent[("Notification<br/>Type, Title, Message, IsRead, SourceFeature")]
+    ent[("Notification<br/>Type, Title, Message (English),<br/>TitleKey, MessageKey, Arguments, IsRead")]
     nc["NotificationController (ApiService)<br/>api/Notification"]
     napi["INotificationApi (Refit)"]
-    wnc["NotificationController (Web)<br/>api/Notification, JsonApiErrors,<br/>antiforgery on the POSTs"]
+    wnc["NotificationController (Web)<br/>api/Notification, JsonApiErrors,<br/>antiforgery on the POSTs;<br/>NotificationText renders keys in the reader's language"]
     js["core/notifications.js<br/>unread-count once per page load,<br/>list on bell click, no polling"]
 
     bp -- "BudgetAlert" --> ns
@@ -836,7 +845,8 @@ flowchart LR
 ```
 
 Drawn from `ApiService/Infrastructure/INotificationService.cs`, `NotificationController.cs` (both apps) and
-`Web/wwwroot/js/core/notifications.js`. The Web exposes no create endpoint; producers write through the Service.
+`Web/wwwroot/js/core/notifications.js`. The Web exposes no create endpoint; producers write through the Service, each
+with a `TitleKey`, `MessageKey` and named `Arguments` beside the English text ([16](#16-localization)).
 
 ## 10. Research pipeline
 
@@ -1224,8 +1234,23 @@ flowchart TB
     loc --> da["DataAnnotations ErrorMessage and Display(Name) keys<br/>ModelBindingMessagesSetup (11 messages)"]
     loc --> idn["LocalizedIdentityErrorDescriber<br/>Identity.Error.Code"]
     loc --> js["js-strings tag helper<br/>script id i18n-strings, a JSON island"] --> pfi["core/i18n.js<br/>PFI18n.t, PFI18n.plural, html lang"]
-    sw["_LanguageSwitcher<br/>top bar (anonymous) and account menu"] -- "POST /Language/Set + antiforgery" --> lc["LanguageController<br/>LanguageCookie.Write, LocalRedirect"]
+    sw["_LanguageSwitcher<br/>top bar (anonymous) and account menu"] -- "POST /Language/Set + antiforgery" --> lc["LanguageController<br/>stores the choice when signed in,<br/>LanguageCookie.Write, LocalRedirect"]
     lc -. "cookie c=vi-VN, uic=vi" .-> rl
+```
+
+The Account's Language is stored, and the cookie only mirrors it:
+
+```mermaid
+flowchart LR
+    reg["Register, ExternalLogin<br/>(new Account)"] -- "seed: request's Language" --> ups["IUserPreferenceService<br/>(Web/Services, AppDbContext)"]
+    lc["LanguageController<br/>(signed in)"] -- "set" --> ups
+    page["Account settings › Language<br/>Manage/Language"] -- "set + cookie" --> ups
+    ups --> row[("UserPreference<br/>Language")]
+    signin["OnSignedIn<br/>LanguageSignInEvents:<br/>password, Google, 2FA, refresh"] -- "read" --> ups
+    signin -- "LanguageCookie.Write" --> cookie[".AspNetCore.Culture"]
+    mail["AccountEmailService<br/>confirm, email change,<br/>reset password, deletion"] -- "read recipient's Language" --> ups
+    mail -- "LanguageScope + EmailTemplateHelper" --> brevo["IEmailSender (Brevo)"]
+    ies["IdentityEmailSender<br/>(IEmailSender&lt;IdentityUser&gt;)"] --> mail
 ```
 
 ```mermaid
@@ -1239,8 +1264,8 @@ flowchart LR
     en --> ci
 ```
 
-Drawn from `Web/Infrastructure/Localization/`, `Web/TagHelpers/JsStringsTagHelper.cs`,
-`Web/Controllers/LanguageController.cs`, `Web/Views/Shared/_LanguageSwitcher.cshtml`, `Web/wwwroot/js/core/i18n.js`,
+Drawn from `Web/Infrastructure/Localization/`, `Web/Services/UserPreferenceService.cs`, `AccountEmailService.cs`,
+`Web/TagHelpers/JsStringsTagHelper.cs`, `Web/Controllers/LanguageController.cs`, `Web/Views/Shared/_LanguageSwitcher.cshtml`, `Web/wwwroot/js/core/i18n.js`,
 `Web/tools/i18n-translate.js`, `Web/tools/i18n-report.js` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
 A string that is not shaped like a key (English still on attributes of pages not yet translated) is shown as written,
 without the 3402 warning.

@@ -49,6 +49,17 @@ public class NotificationDto
     public string Type { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+    /// <summary>
+    /// Localization key of the title (<c>Notifications.SavingsMilestone.Title</c>). When set, the Web app renders the
+    /// title from it in the reader's language; <see cref="Title"/> is the English snapshot (localization spec §2.3).
+    /// </summary>
+    public string? TitleKey { get; set; }
+
+    /// <summary>Localization key of the message, rendered like <see cref="TitleKey"/>.</summary>
+    public string? MessageKey { get; set; }
+
+    /// <summary>The named arguments of <see cref="TitleKey"/> and <see cref="MessageKey"/>.</summary>
+    public Dictionary<string, string>? Arguments { get; set; }
     public bool IsRead { get; set; }
     public DateTime? ReadAt { get; set; }
     public string? SourceFeature { get; set; }
@@ -60,6 +71,17 @@ public class CreateNotificationRequestDto
     public string Type { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+    /// <summary>
+    /// Localization key of the title (<c>Notifications.SavingsMilestone.Title</c>). When set, the Web app renders the
+    /// title from it in the reader's language; <see cref="Title"/> is the English snapshot (localization spec §2.3).
+    /// </summary>
+    public string? TitleKey { get; set; }
+
+    /// <summary>Localization key of the message, rendered like <see cref="TitleKey"/>.</summary>
+    public string? MessageKey { get; set; }
+
+    /// <summary>The named arguments of <see cref="TitleKey"/> and <see cref="MessageKey"/>.</summary>
+    public Dictionary<string, string>? Arguments { get; set; }
     public string? SourceFeature { get; set; }
 }
 

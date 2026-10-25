@@ -1,10 +1,12 @@
 using System.Reflection;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 
 namespace PersonalFinance.Tests.Web.Localization;
@@ -26,11 +28,11 @@ public class LanguageControllerTests
     }
 
     [Fact]
-    public void Set_SupportedLanguage_WritesTheCultureCookie_AndReturnsToThePage()
+    public async Task Set_SupportedLanguage_WritesTheCultureCookie_AndReturnsToThePage()
     {
-        (LanguageController controller, HttpContext context) = Create();
+        (LanguageController controller, HttpContext context, InMemoryUserPreferenceService _) = Create();
 
-        IActionResult result = controller.Set("vi", "/SavingsGoals?x=1");
+        IActionResult result = await controller.Set("vi", "/SavingsGoals?x=1");
 
         LocalRedirectResult redirect = Assert.IsType<LocalRedirectResult>(result);
         Assert.Equal("/SavingsGoals?x=1", redirect.Url);
@@ -46,11 +48,11 @@ public class LanguageControllerTests
     [InlineData("https://evil.example/phish")]
     [InlineData("//evil.example")]
     [InlineData(null)]
-    public void Set_NonLocalReturnUrl_GoesHome(string? returnUrl)
+    public async Task Set_NonLocalReturnUrl_GoesHome(string? returnUrl)
     {
-        (LanguageController controller, HttpContext _) = Create();
+        (LanguageController controller, HttpContext _, InMemoryUserPreferenceService _) = Create();
 
-        LocalRedirectResult redirect = Assert.IsType<LocalRedirectResult>(controller.Set("en", returnUrl));
+        LocalRedirectResult redirect = Assert.IsType<LocalRedirectResult>(await controller.Set("en", returnUrl));
 
         Assert.Equal("~/", redirect.Url);
     }
@@ -59,24 +61,55 @@ public class LanguageControllerTests
     [InlineData("fr")]
     [InlineData("")]
     [InlineData(null)]
-    public void Set_UnsupportedLanguage_IsRejected_WithoutACookie(string? language)
+    public async Task Set_UnsupportedLanguage_IsRejected_WithoutACookieOrAStoredChoice(string? language)
     {
-        (LanguageController controller, HttpContext context) = Create();
+        (LanguageController controller, HttpContext context, InMemoryUserPreferenceService preferences) =
+            Create(signedInUserId: "user-1");
 
-        Assert.IsType<BadRequestResult>(controller.Set(language, "/"));
+        Assert.IsType<BadRequestResult>(await controller.Set(language, "/"));
         Assert.Equal(0, context.Response.Headers.SetCookie.Count);
+        Assert.Empty(preferences.Languages);
     }
 
-    private static (LanguageController Controller, HttpContext Context) Create()
+    [Fact]
+    public async Task Set_SignedIn_StoresTheChoiceForThatAccountOnly()
+    {
+        (LanguageController controller, HttpContext _, InMemoryUserPreferenceService preferences) =
+            Create(signedInUserId: "user-1");
+
+        await controller.Set("vi", "/");
+
+        Assert.Equal(new Dictionary<string, string> { ["user-1"] = "vi" }, preferences.Languages);
+    }
+
+    [Fact]
+    public async Task Set_Anonymous_StoresNothing()
+    {
+        (LanguageController controller, HttpContext _, InMemoryUserPreferenceService preferences) = Create();
+
+        await controller.Set("vi", "/");
+
+        Assert.Empty(preferences.Languages);
+    }
+
+    private static (LanguageController Controller, HttpContext Context, InMemoryUserPreferenceService Preferences)
+        Create(string? signedInUserId = null)
     {
         var context = new DefaultHttpContext();
         context.Request.Scheme = "https";
-        var controller = new LanguageController(new FixedTimeProvider(Now))
+        if (signedInUserId is not null)
+        {
+            context.User = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(ClaimTypes.NameIdentifier, signedInUserId)], "TestAuthType"));
+        }
+
+        var preferences = new InMemoryUserPreferenceService();
+        var controller = new LanguageController(preferences, new FixedTimeProvider(Now))
         {
             ControllerContext = new ControllerContext { HttpContext = context }
         };
         controller.Url = new UrlHelper(new ActionContext(context, new RouteData(), new ActionDescriptor()));
-        return (controller, context);
+        return (controller, context, preferences);
     }
 
     private sealed class FixedTimeProvider : TimeProvider

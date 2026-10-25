@@ -9,6 +9,7 @@ namespace PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 public static class ManageNavPages
 {
     public const string Index = "Index";
+    public const string Language = "Language";
     public const string Email = "Email";
     public const string ChangePassword = "ChangePassword";
     public const string ExternalLogins = "ExternalLogins";

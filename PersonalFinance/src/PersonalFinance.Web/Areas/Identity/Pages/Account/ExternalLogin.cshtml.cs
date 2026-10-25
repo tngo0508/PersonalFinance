@@ -1,17 +1,19 @@
-using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Services;
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using System.Text;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 
@@ -23,19 +25,19 @@ public class ExternalLoginModel : PageModel
     private readonly IUserStore<IdentityUser> _userStore;
     private readonly IUserEmailStore<IdentityUser> _emailStore;
     private readonly ILogger<ExternalLoginModel> _logger;
-    private readonly IEmailSender _emailSender;
-    private readonly BrevoOptions _brevoOptions;
+    private readonly IAccountEmailService _accountEmails;
+    private readonly IUserPreferenceService _preferences;
 
     public ExternalLoginModel(
         SignInManager<IdentityUser> signInManager,
         UserManager<IdentityUser> userManager,
         IUserStore<IdentityUser> userStore,
         ILogger<ExternalLoginModel> logger,
-        IEmailSender emailSender,
-        IOptions<BrevoOptions> brevoOptionsAccessor)
+        IAccountEmailService accountEmails,
+        IUserPreferenceService preferences)
     {
-        _emailSender = emailSender;
-        _brevoOptions = brevoOptionsAccessor.Value;
+        _accountEmails = accountEmails;
+        _preferences = preferences;
         _signInManager = signInManager;
         _userManager = userManager;
         _userStore = userStore;
@@ -172,6 +174,8 @@ public class ExternalLoginModel : PageModel
                         _logger.LogInformation("User created an account using {LoginProvider} provider.", info.LoginProvider);
                     }
                     await _userManager.AssignDefaultRoleAsync(user, _logger);
+                    // The Language the visitor signed up in becomes the Account's (localization spec §2.3).
+                    await _preferences.SetLanguageAsync(user.Id, AppLanguages.Current().Code);
                     await SynchronizeCustomClaimsAsync(user, info.Principal);
                     await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
                     return LocalRedirect(returnUrl);
@@ -239,6 +243,8 @@ public class ExternalLoginModel : PageModel
                         _logger.LogInformation("User created an unconfirmed account using {LoginProvider} provider.", info.LoginProvider);
                     }
                     await _userManager.AssignDefaultRoleAsync(user, _logger);
+                    // The Language the visitor signed up in becomes the Account's (localization spec §2.3).
+                    await _preferences.SetLanguageAsync(user.Id, AppLanguages.Current().Code);
 
                     string userId = await _userManager.GetUserIdAsync(user);
                     string code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -249,9 +255,7 @@ public class ExternalLoginModel : PageModel
                         values: new { area = "Identity", userId, code, returnUrl },
                         protocol: Request.Scheme);
 
-                    string appName = _brevoOptions.SenderName ?? "PersonalFinance";
-                    string htmlBody = EmailTemplateHelper.BuildConfirmationEmail(callbackUrl ?? string.Empty, appName);
-                    await _emailSender.SendEmailAsync(Input.Email, $"Confirm your {appName} account", htmlBody);
+                    await _accountEmails.SendConfirmationAsync(user, Input.Email, callbackUrl ?? string.Empty);
 
                     return RedirectToPage("./RegisterConfirmation", new { email = Input.Email, returnUrl });
                 }

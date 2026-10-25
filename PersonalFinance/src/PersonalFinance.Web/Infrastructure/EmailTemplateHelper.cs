@@ -1,49 +1,133 @@
 using System.Globalization;
 using System.Net;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
+using Microsoft.AspNetCore.Html;
+using Microsoft.Extensions.Localization;
+using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Web.Infrastructure;
 
+/// <summary>A composed email: its subject line and HTML body.</summary>
+public sealed class EmailMessage
+{
+    public EmailMessage(string subject, string htmlBody)
+    {
+        Subject = subject;
+        HtmlBody = htmlBody;
+    }
+
+    /// <summary>The subject line, plain text.</summary>
+    public string Subject { get; }
+
+    /// <summary>The HTML body.</summary>
+    public string HtmlBody { get; }
+}
+
+/// <summary>
+/// The app's transactional emails, in the current UI culture (localization spec §2.3: the caller sets the recipient's
+/// Language first). Every sentence is an <c>Email.*</c> key; markup inside a sentence (the bold app name, the date)
+/// goes in through named placeholders, so the translated text around it stays HTML-encoded.
+/// </summary>
 public static class EmailTemplateHelper
 {
-    public static string BuildConfirmationEmail(string confirmationUrl, string? appName = "PersonalFinance")
+    private const string DefaultAppName = "PersonalFinance";
+
+    // Keeps Vietnamese readable in the HTML; <, >, & and quotes are still encoded.
+    private static readonly HtmlEncoder Encoder = HtmlEncoder.Create(UnicodeRanges.All);
+
+    /// <summary>The email asking a new Account to confirm its address.</summary>
+    public static EmailMessage BuildConfirmationEmail(IStringLocalizer localizer, string confirmationUrl,
+        string? appName = DefaultAppName)
     {
-        string safeAppName = WebUtility.HtmlEncode(appName ?? "PersonalFinance");
-        return BuildActionEmail(safeAppName, confirmationUrl,
-            title: $"Confirm your {safeAppName} account",
-            heading: "Confirm your email address",
-            introHtml: $"Thank you for registering with <strong>{safeAppName}</strong>. Please confirm your email address to activate your account and start managing your finances.",
-            buttonText: "Confirm Email Address",
-            footerHtml: $"If you did not create an account with {safeAppName}, please disregard this email.");
+        ArgumentNullException.ThrowIfNull(localizer);
+        string name = appName ?? DefaultAppName;
+        string subject = localizer.Named("Email.Confirm.Subject", ("appName", name));
+        return new EmailMessage(subject, BuildActionEmail(localizer, name, confirmationUrl,
+            title: Encode(subject),
+            heading: Encode(localizer["Email.Confirm.Heading"]),
+            introHtml: Html(localizer, "Email.Confirm.Intro", ("appName", Strong(name))),
+            buttonText: Encode(localizer["Email.Confirm.Button"]),
+            footerHtml: Html(localizer, "Email.Confirm.Footer", ("appName", Text(name)))));
+    }
+
+    /// <summary>The email asking an Account to confirm a new email address before it replaces the old one.</summary>
+    public static EmailMessage BuildEmailChangeEmail(IStringLocalizer localizer, string confirmationUrl,
+        string newEmail, string? appName = DefaultAppName)
+    {
+        ArgumentNullException.ThrowIfNull(localizer);
+        string name = appName ?? DefaultAppName;
+        string subject = localizer.Named("Email.EmailChange.Subject", ("appName", name));
+        return new EmailMessage(subject, BuildActionEmail(localizer, name, confirmationUrl,
+            title: Encode(subject),
+            heading: Encode(localizer["Email.EmailChange.Heading"]),
+            introHtml: Html(localizer, "Email.EmailChange.Intro", ("email", Strong(newEmail)), ("appName", Strong(name))),
+            buttonText: Encode(localizer["Email.Confirm.Button"]),
+            footerHtml: Encode(localizer["Email.EmailChange.Footer"])));
+    }
+
+    /// <summary>The email with the link to choose a new password.</summary>
+    public static EmailMessage BuildPasswordResetEmail(IStringLocalizer localizer, string resetUrl,
+        string? appName = DefaultAppName)
+    {
+        ArgumentNullException.ThrowIfNull(localizer);
+        string name = appName ?? DefaultAppName;
+        string subject = localizer.Named("Email.ResetPassword.Subject", ("appName", name));
+        return new EmailMessage(subject, BuildActionEmail(localizer, name, resetUrl,
+            title: Encode(subject),
+            heading: Encode(localizer["Email.ResetPassword.Heading"]),
+            introHtml: Html(localizer, "Email.ResetPassword.Intro", ("appName", Strong(name))),
+            buttonText: Encode(localizer["Email.ResetPassword.Button"]),
+            footerHtml: Encode(localizer["Email.ResetPassword.Footer"])));
     }
 
     /// <summary>
     /// The email sent when a Deletion Request is accepted: when the Purge will happen and a single-use link to
     /// cancel it before then.
     /// </summary>
-    public static string BuildDeletionScheduledEmail(string cancelUrl, DateTime purgeAfterUtc,
-        string? appName = "PersonalFinance")
+    public static EmailMessage BuildDeletionScheduledEmail(IStringLocalizer localizer, string cancelUrl,
+        DateTime purgeAfterUtc, string? appName = DefaultAppName)
     {
-        string safeAppName = WebUtility.HtmlEncode(appName ?? "PersonalFinance");
-        string purgeDate = WebUtility.HtmlEncode(purgeAfterUtc.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture));
-        return BuildActionEmail(safeAppName, cancelUrl,
-            title: $"Your {safeAppName} account will be deleted",
-            heading: "Your account is scheduled for deletion",
-            introHtml: $"We received your request to delete your <strong>{safeAppName}</strong> account. Your data is hidden and you cannot sign in. On <strong>{purgeDate}</strong> (UTC) your account and data will be deleted permanently. Changed your mind? Cancel before then to restore everything.",
-            buttonText: "Cancel Deletion",
-            footerHtml: "This link works once. If you did not ask to delete your account, cancel now and change your password.");
+        ArgumentNullException.ThrowIfNull(localizer);
+        string name = appName ?? DefaultAppName;
+        string purgeDate = purgeAfterUtc.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture);
+        return new EmailMessage(localizer["Email.Deletion.Subject"], BuildActionEmail(localizer, name, cancelUrl,
+            title: Encode(localizer.Named("Email.Deletion.Title", ("appName", name))),
+            heading: Encode(localizer["Email.Deletion.Heading"]),
+            introHtml: Html(localizer, "Email.Deletion.Intro", ("appName", Strong(name)), ("date", Strong(purgeDate))),
+            buttonText: Encode(localizer["Email.Deletion.Button"]),
+            footerHtml: Encode(localizer["Email.Deletion.Footer"])));
+    }
+
+    private static string Encode(string text) => Encoder.Encode(text);
+
+    private static HtmlString Text(string text) => new HtmlString(WebUtility.HtmlEncode(text));
+
+    private static HtmlString Strong(string text) => new HtmlString($"<strong>{WebUtility.HtmlEncode(text)}</strong>");
+
+    /// <summary>A translated sentence with HTML-encoded text and the given markup in its named placeholders.</summary>
+    private static string Html(IStringLocalizer localizer, string key, params (string Name, IHtmlContent Value)[] args)
+    {
+        using var writer = new StringWriter(CultureInfo.InvariantCulture);
+        localizer.NamedHtml(key, null, args).WriteTo(writer, Encoder);
+        return writer.ToString();
     }
 
     /// <summary>
     /// The shared layout: a heading, an introduction, one button to <paramref name="url"/> and a footer note. Every
-    /// argument except <paramref name="url"/> must already be HTML-safe; the URL is encoded here.
+    /// text argument must already be HTML-safe; the app name and the URL are encoded here.
     /// </summary>
-    private static string BuildActionEmail(string safeAppName, string url, string title, string heading,
-        string introHtml, string buttonText, string footerHtml)
+    private static string BuildActionEmail(IStringLocalizer localizer, string appName, string url, string title,
+        string heading, string introHtml, string buttonText, string footerHtml)
     {
+        string safeAppName = WebUtility.HtmlEncode(appName);
         string safeUrl = WebUtility.HtmlEncode(url);
+        string language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        string copyLink = Encode(localizer["Email.Common.CopyLink"]);
+        string rights = Encode(localizer["Email.Common.Rights"]);
 
         return $@"<!DOCTYPE html>
-<html lang=""en"">
+<html lang=""{language}"">
 <head>
     <meta charset=""UTF-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
@@ -78,7 +162,7 @@ public static class EmailTemplateHelper
                                 </tr>
                             </table>
                             <p style=""margin: 25px 0 10px 0; font-size: 14px; color: #6b7280;"">
-                                If the button above does not work, copy and paste the following link into your web browser:
+                                {copyLink}
                             </p>
                             <p style=""margin: 0 0 25px 0; font-size: 13px; word-break: break-all; color: #0d6efd;"">
                                 <a href=""{safeUrl}"" style=""color: #0d6efd; text-decoration: underline;"">{safeUrl}</a>
@@ -92,7 +176,7 @@ public static class EmailTemplateHelper
                     <!-- Footer -->
                     <tr>
                         <td align=""center"" style=""background-color: #f9fafb; padding: 20px; font-size: 12px; color: #9ca3af; border-top: 1px solid #f3f4f6;"">
-                            &copy; {DateTime.UtcNow.Year} {safeAppName}. All rights reserved.
+                            &copy; {DateTime.UtcNow.Year} {safeAppName}. {rights}
                         </td>
                     </tr>
                 </table>

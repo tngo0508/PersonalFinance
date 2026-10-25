@@ -135,6 +135,9 @@ internal sealed class BudgetService : IBudgetService
                     Title = "Budget exceeded",
                     Message =
                         $"Your total spending has reached {percentUsed:F1}% of your budgeted amount for {period}.",
+                    TitleKey = "Notifications.BudgetExceeded.Title",
+                    MessageKey = "Notifications.BudgetAlert.Message",
+                    Arguments = BudgetAlertArguments(percentUsed, period),
                     SourceFeature = "Budget"
                 }, cancellationToken);
             }
@@ -146,6 +149,9 @@ internal sealed class BudgetService : IBudgetService
                     Title = "Budget warning",
                     Message =
                         $"Your total spending has reached {percentUsed:F1}% of your budgeted amount for {period}.",
+                    TitleKey = "Notifications.BudgetWarning.Title",
+                    MessageKey = "Notifications.BudgetAlert.Message",
+                    Arguments = BudgetAlertArguments(percentUsed, period),
                     SourceFeature = "Budget"
                 }, cancellationToken);
             }
@@ -155,4 +161,11 @@ internal sealed class BudgetService : IBudgetService
             _logger.LogWarning(ex, "Failed to check budget alerts for user {UserId}", userId);
         }
     }
+
+    /// <summary>The named arguments of the budget alert Notifications, formatted as their English text is.</summary>
+    private static Dictionary<string, string> BudgetAlertArguments(decimal percentUsed, string period) => new()
+    {
+        ["percent"] = percentUsed.ToString("F1", CultureInfo.CurrentCulture),
+        ["period"] = period
+    };
 }

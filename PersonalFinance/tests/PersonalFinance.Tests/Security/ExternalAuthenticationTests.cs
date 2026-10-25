@@ -1,7 +1,6 @@
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -12,7 +11,9 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
+using System.Security.Claims;
 using Xunit;
 
 namespace PersonalFinance.Tests.Security;
@@ -382,8 +383,8 @@ public class ExternalAuthenticationTests
             userManager,
             userStore,
             NullLogger<ExternalLoginModel>.Instance,
-            new NoOpEmailSender(),
-            Microsoft.Extensions.Options.Options.Create(new PersonalFinance.Web.Infrastructure.BrevoOptions()));
+            new RecordingAccountEmailService(),
+            new InMemoryUserPreferenceService());
 
         IActionResult result = model.OnGet();
         RedirectToPageResult redirectResult = Assert.IsType<RedirectToPageResult>(result);
