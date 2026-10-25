@@ -4,7 +4,8 @@ using System.Text;
 namespace PersonalFinance.Shared.Constants;
 
 /// <summary>
-/// User-facing Feedback messages, shared by the ApiService validators and endpoints and the Web form.
+/// User-facing Feedback messages, used by the ApiService validators and endpoints. The
+/// Web form shows its own localized copies (<c>Feedback.*</c> keys in <c>Resources/i18n/en.json</c>).
 /// </summary>
 public static class FeedbackMessages
 {
@@ -15,10 +16,10 @@ public static class FeedbackMessages
     public const string MessageRequired = "Message is required.";
 
     /// <summary>
-    /// Format of the too-long message: <c>{1}</c> is <see cref="FeedbackLimits.MessageMaxLength"/>. A constant so
-    /// the Web form's <c>StringLength</c> attribute can use it; elsewhere use <see cref="MessageTooLong"/>.
+    /// Format of the too-long message: <c>{1}</c> is <see cref="FeedbackLimits.MessageMaxLength"/>. The Web form has
+    /// its own localized key (<c>Feedback.Validation.MessageTooLong</c>); use <see cref="MessageTooLong"/>.
     /// </summary>
-    public const string MessageTooLongFormat = "Message must be {1:N0} characters or fewer.";
+    private const string MessageTooLongFormat = "Message must be {1:N0} characters or fewer.";
 
     private static readonly CompositeFormat MessageTooLongCompositeFormat = CompositeFormat.Parse(MessageTooLongFormat);
 

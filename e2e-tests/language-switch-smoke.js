@@ -114,11 +114,17 @@ async function runLanguageSwitchSmoke({browser, base, pass, fail}) {
         check(title.startsWith(vi['SavingsGoals.Title']), 'Tab title is Vietnamese', `"${title}"`, report);
 
         const island = await page.evaluate(() => {
-            const element = document.getElementById('i18n-strings');
-            return element ? JSON.parse(element.textContent) : null;
+            const elements = document.querySelectorAll('script[type="application/json"][data-i18n-strings]');
+            return elements.length === 0 ? null
+                : Object.assign({}, ...Array.from(elements, (element) => JSON.parse(element.textContent)));
         });
         check(Boolean(island) && island['SavingsGoals.Js.ConfirmDelete'] === vi['SavingsGoals.Js.ConfirmDelete'],
             'JS string island carries the Vietnamese strings', JSON.stringify(island), report);
+        check(Boolean(island) && island['Shell.Js.Search.Unavailable'] === vi['Shell.Js.Search.Unavailable'],
+            'The shell island carries the Vietnamese shell strings too', JSON.stringify(island), report);
+        const navDashboard = ((await page.locator('.sidebar-link[href^="/Dashboard"] .sidebar-link-text').first()
+            .textContent().catch(() => '')) || '').trim();
+        check(navDashboard === vi['Shell.Nav.Dashboard'], 'Sidebar navigation is Vietnamese', `"${navDashboard}"`, report);
 
         // Create a goal so the card text and the delete confirmation show.
         await addGoal.click();

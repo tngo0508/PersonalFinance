@@ -11,7 +11,7 @@
     "lint:fix": "npx eslint@8 --no-eslintrc -c PersonalFinance/src/PersonalFinance.Web/wwwroot/.eslintrc.js --fix PersonalFinance/src/PersonalFinance.Web/wwwroot/js/ PersonalFinance/src/PersonalFinance.Web/tools/",
     "i18n:translate": "node PersonalFinance/src/PersonalFinance.Web/tools/i18n-translate.js",
     "i18n:report": "node PersonalFinance/src/PersonalFinance.Web/tools/i18n-report.js",
-    "test:i18n": "node --test PersonalFinance/src/PersonalFinance.Web/tools/i18n-translate.test.js PersonalFinance/src/PersonalFinance.Web/tools/i18n-report.test.js",
+    "test:i18n": "node --test PersonalFinance/src/PersonalFinance.Web/tools/i18n-translate.test.js PersonalFinance/src/PersonalFinance.Web/tools/i18n-report.test.js PersonalFinance/src/PersonalFinance.Web/tools/i18n-client.test.js",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v",

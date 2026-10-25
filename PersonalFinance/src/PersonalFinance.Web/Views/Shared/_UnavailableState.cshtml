@@ -1,11 +1,10 @@
-@using PersonalFinance.Web.Infrastructure
 @model PersonalFinance.Web.Infrastructure.UnavailableStateViewModel
 @* Unavailable State panel: the data could not be loaded. Retry is a plain GET of the page, no JS. *@
 <section class="unavailable-state" role="status" aria-labelledby="unavailable-state-title">
     <span class="unavailable-state__icon" aria-hidden="true"><i data-lucide="cloud-off"></i></span>
     <div class="unavailable-state__body">
         <h2 id="unavailable-state-title" class="unavailable-state__title">@Model.Heading</h2>
-        <p class="unavailable-state__text">Your data is safe. @JsonApiErrorsFilter.UnavailableMessage</p>
+        <p class="unavailable-state__text">@L["Shell.Unavailable.Text"]</p>
     </div>
-    <a asp-controller="@Model.RetryController" asp-action="@Model.RetryAction" asp-all-route-data="@Model.RetryRouteValues" class="btn btn-primary btn-sm">Retry</a>
+    <a asp-controller="@Model.RetryController" asp-action="@Model.RetryAction" asp-all-route-data="@Model.RetryRouteValues" class="btn btn-primary btn-sm">@L["Shell.Unavailable.Retry"]</a>
 </section>

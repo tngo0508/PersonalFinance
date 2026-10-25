@@ -1,10 +1,11 @@
 /**
  * Client-side strings, shared by every page module (ADR 0015, spec §2.1).
- * The language is <html lang>. The strings are the page's JSON island,
- * <script type="application/json" id="i18n-strings">, rendered by the <js-strings prefix="…"> tag helper with only that
- * page's keys, already resolved through the fallback chain on the server. Nothing is fetched.
- * Modules call PFI18n.t(key, args) and PFI18n.plural(key, count, args); the island is read on first use, so it may
- * appear anywhere on the page before that.
+ * The language is <html lang>. The strings are the page's JSON islands,
+ * <script type="application/json" data-i18n-strings>, rendered by the <js-strings prefix="…"> tag helper with only the
+ * keys under its prefix, already resolved through the fallback chain on the server. A page may hold several (the
+ * layout's Shell.Js. island and the page's own); they are merged. Nothing is fetched.
+ * Modules call PFI18n.t(key, args) and PFI18n.plural(key, count, args); the islands are read on first use, so they
+ * may appear anywhere on the page before that.
  */
 (function (global) {
     'use strict';
@@ -15,7 +16,7 @@
     let strings = null;
 
     /**
-     * The page's strings, parsed once from the island.
+     * The page's strings, parsed once from every island and merged.
      * @returns {Object<string, string>} Key to translated template; empty when the page rendered no island.
      */
     function load () {
@@ -23,15 +24,15 @@
             return strings;
         }
         strings = {};
-        const island = document.getElementById('i18n-strings');
-        if (island) {
+        const islands = document.querySelectorAll('script[type="application/json"][data-i18n-strings]');
+        Array.prototype.forEach.call(islands, (island) => {
             try {
-                strings = JSON.parse(island.textContent || '{}');
+                Object.assign(strings, JSON.parse(island.textContent || '{}'));
             } catch (error) {
                 // eslint-disable-next-line no-console
                 console.warn('i18n strings could not be parsed:', error);
             }
-        }
+        });
         return strings;
     }
 

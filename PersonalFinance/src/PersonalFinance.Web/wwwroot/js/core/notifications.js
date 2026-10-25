@@ -35,7 +35,7 @@
                 return;
             }
 
-            bellButton.addEventListener('click', function (e) {
+            bellButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (dropdown.classList.contains('show')) {
                     dropdown.classList.remove('show');
@@ -45,7 +45,7 @@
             });
 
             // Close dropdown on click outside
-            document.addEventListener('click', function (e) {
+            document.addEventListener('click', (e) => {
                 if (dropdown && !dropdown.contains(e.target) &&
                     bellButton && !bellButton.contains(e.target)) {
                     dropdown.classList.remove('show');
@@ -57,23 +57,16 @@
         }
 
         /**
-         * Load unread notification count.
-         * @returns {void}
+         * Load unread notification count. A failure leaves the badge as it is.
+         * @returns {Promise<void>}
          */
-        function loadUnreadCount () {
-            fetch('/api/Notification/unread-count')
-                .then(function (response) {
-                    if (!response.ok) {
-                        throw new Error('Failed');
-                    }
-                    return response.json();
-                })
-                .then(function (data) {
-                    updateBadge(data.count);
-                })
-                .catch(function () {
-                    // Silently fail
-                });
+        async function loadUnreadCount () {
+            try {
+                const data = await getJson('/api/Notification/unread-count');
+                updateBadge(data.count);
+            } catch {
+                // Silently fail
+            }
         }
 
         /**
@@ -94,28 +87,48 @@
         }
 
         /**
-         * Load and display notifications.
-         * @returns {void}
+         * Load and display notifications. A failure keeps the dropdown closed.
+         * @returns {Promise<void>}
          */
-        function loadNotifications () {
-            fetch('/api/Notification')
-                .then(function (response) {
-                    if (!response.ok) {
-                        throw new Error('Failed');
-                    }
-                    return response.json();
-                })
-                .then(function (data) {
-                    displayNotifications(data);
-                    dropdown.classList.add('show');
-                })
-                .catch(function () {
-                    // Silently fail
-                });
+        async function loadNotifications () {
+            try {
+                const data = await getJson('/api/Notification');
+                displayNotifications(data);
+                dropdown.classList.add('show');
+            } catch {
+                // Silently fail
+            }
         }
 
         /**
-         * Display notifications in the dropdown.
+         * GET a notification endpoint as JSON.
+         * @param {string} url - Endpoint to call.
+         * @returns {Promise<*>} The parsed body.
+         */
+        async function getJson (url) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Notification request failed: ${response.status}`);
+            }
+            return response.json();
+        }
+
+        /**
+         * Create an element with a class and text content.
+         * @param {string} tag - Tag name.
+         * @param {string} className - Class attribute.
+         * @param {string} text - Text content.
+         * @returns {HTMLElement} The element.
+         */
+        function textElement (tag, className, text) {
+            const element = document.createElement(tag);
+            element.className = className;
+            element.textContent = text;
+            return element;
+        }
+
+        /**
+         * Display notifications in the dropdown. All text goes in through textContent.
          * @param {Array} notifications - List of notification objects.
          * @returns {void}
          */
@@ -125,41 +138,34 @@
             }
 
             if (!notifications || notifications.length === 0) {
-                dropdown.innerHTML = '<div class="notification-empty">No notifications</div>';
+                dropdown.replaceChildren(textElement('div', 'notification-empty',
+                    window.PFI18n.t('Shell.Js.Notifications.Empty')));
                 return;
             }
 
-            let html = '<div class="notification-dropdown-header">' +
-                '<h6>Notifications</h6>' +
-                '<button class="btn btn-sm btn-link" id="markAllReadBtn">Mark all read</button>' +
-                '</div>';
+            const header = textElement('div', 'notification-dropdown-header', '');
+            header.appendChild(textElement('h6', '', window.PFI18n.t('Shell.Js.Notifications.Title')));
+            const markAllBtn = textElement('button', 'btn btn-sm btn-link',
+                window.PFI18n.t('Shell.Js.Notifications.MarkAllRead'));
+            markAllBtn.id = 'markAllReadBtn';
+            markAllBtn.addEventListener('click', () => {
+                window.NotificationModule.markAllRead();
+            });
+            header.appendChild(markAllBtn);
 
-            notifications.forEach(function (notif) {
-                const timeAgo = getTimeAgo(notif.createdAt);
-                html += '<div class="notification-item ' + (notif.isRead ? '' : 'unread') + '" ' +
-                    'data-id="' + notif.id + '">' +
-                    '<div class="notification-title">' + escapeHtml(notif.title) + '</div>' +
-                    '<div class="notification-message">' + escapeHtml(notif.message) + '</div>' +
-                    '<div class="notification-time">' + timeAgo + '</div>' +
-                    '</div>';
+            const items = notifications.map((notif) => {
+                const item = textElement('div', notif.isRead ? 'notification-item' : 'notification-item unread', '');
+                item.setAttribute('data-id', notif.id);
+                item.appendChild(textElement('div', 'notification-title', notif.title));
+                item.appendChild(textElement('div', 'notification-message', notif.message));
+                item.appendChild(textElement('div', 'notification-time', getTimeAgo(notif.createdAt)));
+                item.addEventListener('click', () => {
+                    window.NotificationModule.markAsRead(parseInt(notif.id, 10));
+                });
+                return item;
             });
 
-            // Attach event listeners after setting innerHTML
-            dropdown.innerHTML = html;
-            const markAllBtn = dropdown.querySelector('#markAllReadBtn');
-            if (markAllBtn) {
-                markAllBtn.addEventListener('click', function () {
-                    window.NotificationModule.markAllRead();
-                });
-            }
-            dropdown.querySelectorAll('.notification-item').forEach(function (item) {
-                item.addEventListener('click', function () {
-                    const id = item.getAttribute('data-id');
-                    if (id) {
-                        window.NotificationModule.markAsRead(parseInt(id, 10));
-                    }
-                });
-            });
+            dropdown.replaceChildren(header, ...items);
         }
 
         /**
@@ -169,7 +175,7 @@
          */
         async function markAsRead (id) {
             try {
-                await postNotificationAction('/api/Notification/' + id + '/read');
+                await postNotificationAction(`/api/Notification/${ id }/read`);
                 loadUnreadCount();
             } catch {
                 // Silently fail
@@ -201,7 +207,7 @@
                 headers: { 'RequestVerificationToken': window.PFUtils.getAntiForgeryToken() }
             });
             if (!response.ok) {
-                throw new Error('Notification request failed: ' + response.status);
+                throw new Error(`Notification request failed: ${ response.status}`);
             }
         }
 
@@ -216,26 +222,15 @@
             const seconds = Math.floor((now - date) / 1000);
 
             if (seconds < 60) {
-                return 'Just now';
+                return window.PFI18n.t('Shell.Js.Notifications.JustNow');
             }
             if (seconds < 3600) {
-                return Math.floor(seconds / 60) + 'm ago';
+                return window.PFI18n.t('Shell.Js.Notifications.MinutesAgo', { count: Math.floor(seconds / 60) });
             }
             if (seconds < 86400) {
-                return Math.floor(seconds / 3600) + 'h ago';
+                return window.PFI18n.t('Shell.Js.Notifications.HoursAgo', { count: Math.floor(seconds / 3600) });
             }
-            return Math.floor(seconds / 86400) + 'd ago';
-        }
-
-        /**
-         * Escape HTML to prevent XSS.
-         * @param {string} text - The text to escape.
-         * @returns {string} Escaped text.
-         */
-        function escapeHtml (text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            return window.PFI18n.t('Shell.Js.Notifications.DaysAgo', { count: Math.floor(seconds / 86400) });
         }
 
         return {
