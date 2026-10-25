@@ -1,16 +1,21 @@
 /**
  * Money Priorities page: the form with its follow-up fields, the background submit, the result card, the Priority
- * Tree (drawn by window.MoneyPrioritiesDiagram from diagram.js) and Earlier results.
+ * Tree (drawn by window.MoneyPrioritiesDiagram from diagram.js), the Purpose Note and Earlier results.
  *
  * The ApiService computes the path, every figure and the "Your path" sentences. This module only shows and hides
  * follow-up fields, sends the answers, and formats what comes back: computed figures in whole US dollars, amounts the
  * user typed with cents, rates with up to two decimals. Rounding happens here, once, when formatting.
+ *
+ * The Purpose Note is AI-written plain text: it is asked for in the background after the result shows, never holds
+ * up the result or the diagram, and is always rendered with textContent, never as HTML.
  */
 (function () {
     'use strict';
 
     const GENERIC_ERROR = 'Something went wrong. Please try again.';
     const NETWORK_ERROR = 'The service is temporarily unavailable. Please try again.';
+    const NOTE_WRITING = 'Writing your Purpose Note…';
+    const NOTE_UNAVAILABLE = 'The note about your purpose is not available right now.';
 
     /** The request fields, in form order, with the input that holds each one. */
     const NUMBER_FIELDS = ['MonthlyAmount', 'DebtApr', 'DebtBalance', 'EmergencyFundMonths', 'MonthlyExpenses',
@@ -39,6 +44,10 @@
     let wholeTreeDiagram = '';
     /** The Priority Tree's thresholds, sent by the server: { highInterestAprPercent, emergencyFundTargetMonths, longHorizonYears }. */
     let thresholds = {};
+    /** The AI disclaimer shown under a Purpose Note (the server's reply carries its own; a saved note uses this one). */
+    let noteDisclaimer = '';
+    /** Counts the results shown, so a late Purpose Note reply for a Walk no longer on screen is ignored. */
+    let shownResult = 0;
 
     /** A computed figure, in whole dollars ("$86,542"). */
     function formatComputed (value) {
@@ -434,7 +443,82 @@
         byId('mpFigures').replaceChildren(...figureNodes(result));
         byId('mpPath').replaceChildren(...(result.pathSentences || []).map((sentence) => el('li', null, sentence)));
         byId('mpAssumptions').replaceChildren(...assumptionNodes(result));
+        startPurposeNote(result);
         await showDiagram({ wholeTree: result.wholeTreeDiagram, pathView: result.pathViewDiagram });
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // Purpose Note
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Renders the Purpose Note area in one state. Every text goes in through textContent.
+     * @param {string} state - Writing, Written, NoPurpose, Unavailable, QuotaReached or Refused.
+     * @param {string} text - The note (Written) or the message to show.
+     * @param {string} [disclaimer] - The AI disclaimer, shown under a written note.
+     */
+    function renderPurposeNote (state, text, disclaimer) {
+        const area = byId('mpNote');
+        const body = byId('mpNoteBody');
+        if (!area || !body) {
+            return;
+        }
+        area.hidden = false;
+        area.dataset.state = state;
+        body.setAttribute('aria-busy', state === 'Writing' ? 'true' : 'false');
+        if (state === 'Writing') {
+            const writing = el('p', 'mp-purpose-note__writing');
+            const spinner = el('span', 'spinner-border spinner-border-sm');
+            spinner.setAttribute('aria-hidden', 'true');
+            writing.append(spinner, el('span', null, text));
+            body.replaceChildren(writing);
+        } else if (state === 'Written') {
+            const nodes = [el('p', 'mp-purpose-note__text', text)];
+            if (disclaimer) {
+                nodes.push(el('p', 'mp-disclaimer', disclaimer));
+            }
+            body.replaceChildren(...nodes);
+        } else {
+            body.replaceChildren(el('p', 'mp-purpose-note__message', text));
+        }
+    }
+
+    /**
+     * Shows a Walk's saved Purpose Note at once, or asks the server for it in the background. Not awaited: the result
+     * and the diagram never wait on the note.
+     * @param {Object} result - The PriorityWalkResultDto (camelCase) just shown.
+     */
+    function startPurposeNote (result) {
+        shownResult += 1;
+        if (result.purposeNote) {
+            renderPurposeNote('Written', result.purposeNote, noteDisclaimer);
+            return;
+        }
+        renderPurposeNote('Writing', NOTE_WRITING);
+        loadPurposeNote(result.walkId, shownResult);
+    }
+
+    /**
+     * Requests a Walk's Purpose Note and renders its state, unless another result has been shown meanwhile.
+     * @param {number} walkId - The Walk on screen when the request started.
+     * @param {number} ticket - The value of shownResult when the request started.
+     * @returns {Promise<void>} Resolves once the reply is rendered or ignored; never rejects.
+     */
+    async function loadPurposeNote (walkId, ticket) {
+        const outcome = await send(`/MoneyPriorities/Note/${encodeURIComponent(walkId)}`, 'POST');
+        if (ticket !== shownResult) {
+            return;
+        }
+        const reply = outcome.ok && outcome.body ? outcome.body : null;
+        if (!reply) {
+            renderPurposeNote('Unavailable', NOTE_UNAVAILABLE);
+        } else if (reply.state === 'Written' && reply.note) {
+            renderPurposeNote('Written', reply.note, reply.disclaimer || noteDisclaimer);
+        } else if (reply.state !== 'Written' && reply.message) {
+            renderPurposeNote(reply.state, reply.message);
+        } else {
+            renderPurposeNote('Unavailable', NOTE_UNAVAILABLE);
+        }
     }
 
     /** Draws the Priority Tree; a failure leaves the module's own message, and "Your path" stays the text form. */
@@ -634,6 +718,7 @@
         const data = readPageData() || {};
         wholeTreeDiagram = data.wholeTreeDiagram || '';
         thresholds = data.thresholds || {};
+        noteDisclaimer = data.purposeNoteDisclaimer || '';
 
         form.addEventListener('input', applyFieldRules);
         form.addEventListener('change', applyFieldRules);
