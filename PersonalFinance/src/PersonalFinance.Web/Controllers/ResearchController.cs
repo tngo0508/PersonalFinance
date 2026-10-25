@@ -59,6 +59,16 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>
+    /// The fund industries snapshot, as JSON, from ApiService: the Sectors tab's basket view fetches it the first time
+    /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
+    /// loaded) keeps its status code with a safe message.
+    /// </summary>
+    [HttpGet]
+    [JsonApiErrors]
+    public async Task<IActionResult> FundIndustries(CancellationToken cancellationToken = default) =>
+        Json(await _researchApi.GetFundIndustriesAsync(cancellationToken));
+
+    /// <summary>
     /// Suggestions for the Companies tab's search box, as JSON, from ApiService. A rejected query is 400; an ApiService
     /// failure (such as 503 when the company list cannot be read) keeps its status code with a safe message.
     /// </summary>

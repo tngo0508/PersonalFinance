@@ -55,6 +55,7 @@ public class ResearchFixtureSeederTests
         MacroSnapshotDto? macro = await GetAsync<MacroSnapshotDto>(client, "macro");
         FundFactsSnapshotDto? facts = await GetAsync<FundFactsSnapshotDto>(client, "funds/facts");
         FundExposureSnapshotDto? exposure = await GetAsync<FundExposureSnapshotDto>(client, "funds/exposure");
+        FundIndustriesSnapshotDto? industries = await GetAsync<FundIndustriesSnapshotDto>(client, "funds/industries");
 
         // What the walkthrough needs: several years to scrub, a Technology highlight, SPY and QQQ by quarter, and a
         // % of GDP figure for the World switch.
@@ -94,6 +95,13 @@ public class ResearchFixtureSeederTests
         Assert.NotNull(exposure);
         Assert.Equal(["SPY", "QQQ"], exposure.Funds.Select(f => f.Ticker));
         Assert.Contains(exposure.Funds[1].Countries, c => c is { Code: "HK", MapId: "344" });
+        // The Sectors basket view: both funds, every fund summing to 100%, a neutral office, and unclassified stocks.
+        Assert.NotNull(industries);
+        Assert.Equal(["SPY", "QQQ"], industries.Funds.Select(f => f.Ticker));
+        Assert.All(industries.Funds, f => Assert.Equal(100m, f.Industries.Sum(i => i.Percent)
+            + f.Unclassified.Sum(c => c.Percent) + f.Bonds.Sum(b => b.Percent) + f.CashAndOther));
+        Assert.Contains("International Corp Fin", industries.Offices);
+        Assert.NotEmpty(industries.Funds[1].Unclassified);
 
         Assert.NotNull(world);
         Assert.True(world.Periods.Count >= 2);
@@ -129,7 +137,8 @@ public class ResearchFixtureSeederTests
         await ResearchFixtureSeeder.SeedAsync(db, TimeProvider.System);
 
         List<ResearchSnapshot> rows = await db.ResearchSnapshots.AsNoTracking().OrderBy(s => s.Dataset).ToListAsync();
-        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundExposure, ResearchDatasets.FundFacts, ResearchDatasets.FundOverlap,
+        Assert.Equal([ResearchDatasets.Funds, ResearchDatasets.FundExposure, ResearchDatasets.FundFacts,
+                ResearchDatasets.FundIndustries, ResearchDatasets.FundOverlap,
                 ResearchDatasets.FundReturns, ResearchDatasets.Macro, ResearchDatasets.Sectors, ResearchDatasets.World],
             rows.Select(r => r.Dataset));
         Assert.Equal("{}", rows.Single(r => r.Dataset == ResearchDatasets.World).Payload);

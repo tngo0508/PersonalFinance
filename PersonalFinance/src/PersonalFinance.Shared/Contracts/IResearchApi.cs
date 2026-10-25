@@ -58,6 +58,14 @@ public interface IResearchApi
     Task<FundExposureSnapshotDto> GetFundExposureAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the fund industries snapshot (each Tracked Fund's share of net assets by SEC industry office and SIC
+    /// industry, with the rest by issuer country, bond issuer type and cash). A dataset that has never loaded answers
+    /// 503 with a <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
+    /// </summary>
+    [Get("/api/Research/funds/industries")]
+    Task<FundIndustriesSnapshotDto> GetFundIndustriesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot. A dataset that has never loaded answers 503 with a
     /// <see cref="ResearchUnavailableDto"/>, which Refit raises as an <see cref="ApiException"/>.
     /// </summary>

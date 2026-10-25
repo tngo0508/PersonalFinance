@@ -164,6 +164,78 @@ internal static class ResearchFixtureSnapshots
     }
 
     /// <summary>
+    /// The fund industries fixture: SPY and QQQ by SEC industry office and SIC industry, each industry listing a few of
+    /// its companies with the rest left to "Other"; ASML under International Corp Fin (a foreign 20-F filer), and a
+    /// little of QQQ in foreign companies SEC does not classify.
+    /// </summary>
+    public static FundIndustriesSnapshotDto FundIndustries()
+    {
+        static FundIndustryShareDto Industry(int industry, decimal percent, int companies) =>
+            new() { Industry = industry, Percent = percent, CompanyCount = companies };
+        static FundCompanyShareDto Company(int company, decimal percent) => new() { Company = company, Percent = percent };
+        static FundNamedShareDto Named(string name, decimal percent) => new() { Name = name, Percent = percent };
+
+        return new FundIndustriesSnapshotDto
+        {
+            AsOf = new DateOnly(2026, 6, 30),
+            Signature = "fixture",
+            Offices = ["Finance", "Life Sciences", "Manufacturing", "Technology", "International Corp Fin"],
+            Industries =
+            [
+                new() { SicCode = "6021", Name = "National Commercial Banks", Office = 0 },
+                new() { SicCode = "2834", Name = "Pharmaceutical Preparations", Office = 1 },
+                new() { SicCode = "3674", Name = "Semiconductors & Related Devices", Office = 2, Technology = true },
+                new() { SicCode = "3571", Name = "Electronic Computers", Office = 3, Technology = true },
+                new() { SicCode = "7372", Name = "Services-Prepackaged Software", Office = 3, Technology = true },
+                new() { SicCode = "3559", Name = "Special Industry Machinery, NEC", Office = 4 },
+            ],
+            Companies =
+            [
+                new() { Name = "Adobe Inc.", Ticker = "ADBE", Industry = 4 },
+                new() { Name = "Amgen Inc", Ticker = "AMGN", Industry = 1 },
+                new() { Name = "Apple Inc.", Ticker = "AAPL", Industry = 3 },
+                new() { Name = "ASML Holding NV", Ticker = "ASML", Industry = 5 },
+                new() { Name = "Bank of America Corp", Ticker = "BAC", Industry = 0 },
+                new() { Name = "Broadcom Inc.", Ticker = "AVGO", Industry = 2 },
+                new() { Name = "Eli Lilly & Co", Ticker = "LLY", Industry = 1 },
+                new() { Name = "JPMorgan Chase & Co", Ticker = "JPM", Industry = 0 },
+                new() { Name = "Microsoft Corp", Ticker = "MSFT", Industry = 4 },
+                new() { Name = "Nvidia Corp", Ticker = "NVDA", Industry = 2 },
+            ],
+            Funds =
+            [
+                new()
+                {
+                    Ticker = "SPY", ReportDate = new DateOnly(2026, 6, 30), Accession = "0000000000-26-000001",
+                    Industries = [Industry(4, 30.8m, 50), Industry(2, 22m, 20), Industry(0, 20m, 60), Industry(1, 15m, 40), Industry(3, 8m, 3)],
+                    Companies =
+                    [
+                        Company(7, 2.1m), Company(4, 1.2m), Company(6, 2.4m), Company(5, 7m), Company(9, 7.5m), Company(2, 7.2m),
+                        Company(8, 6.5m), Company(0, 0.9m),
+                    ],
+                    CashAndOther = 4.2m,
+                },
+                new()
+                {
+                    Ticker = "QQQ", ReportDate = new DateOnly(2026, 6, 30), Accession = "0000000000-26-000002",
+                    Industries = [Industry(4, 40m, 40), Industry(2, 40m, 25), Industry(3, 9m, 2), Industry(1, 5m, 10), Industry(5, 3.5m, 4)],
+                    Companies =
+                    [
+                        Company(1, 1.5m), Company(5, 5m), Company(9, 9.5m), Company(2, 8.8m), Company(8, 8.5m), Company(0, 1.2m),
+                        Company(3, 1.5m),
+                    ],
+                    Unclassified =
+                    [
+                        new() { Country = "NL", Percent = 0.8m, IssuerCount = 1, Issuers = [Named("Ferrovial SE", 0.8m)] },
+                        new() { Country = "GB", Percent = 0.6m, IssuerCount = 2, Issuers = [Named("Smiths Group PLC", 0.4m), Named("Coca-Cola Europacific Partners", 0.2m)] },
+                    ],
+                    CashAndOther = 1.1m,
+                },
+            ],
+        };
+    }
+
+    /// <summary>
     /// The fund facts fixture: each fund's net assets from the funds fixture's latest quarter; QQQ with a 0.19% expense
     /// ratio and SPY without one, as a unit investment trust files no shareholder report with XBRL.
     /// </summary>

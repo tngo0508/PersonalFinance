@@ -27,8 +27,12 @@ namespace PersonalFinance.ApiService.Features.Research.Domain;
 /// <param name="Currency">
 /// The ISO 4217 code of the currency the investment is priced in (<c>curCd</c>, Item C.2.b), or null; ADRs are USD.
 /// </param>
+/// <param name="IssuerCategory">
+/// The N-PORT issuer type code (<c>issuerCat</c>, Item C.4.b), e.g. <c>CORP</c> or <c>UST</c>, or for a type N-PORT has
+/// no code for <c>issuerConditional/@issuerCat</c>; null when the report gives none.
+/// </param>
 internal sealed record NportHolding(string Name, string AssetCategory, decimal Percent, string? SecurityKey = null,
-    bool IsCashCollateral = false, string? Country = null, string? Currency = null)
+    bool IsCashCollateral = false, string? Country = null, string? Currency = null, string? IssuerCategory = null)
 {
     /// <summary>Hides <see cref="SecurityKey"/>, so a holding written to a log never shows the identifier.</summary>
     public override string ToString() =>

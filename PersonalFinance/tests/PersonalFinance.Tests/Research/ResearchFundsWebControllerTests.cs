@@ -188,6 +188,19 @@ public class ResearchFundsWebControllerTests
     }
 
     [Fact]
+    public async Task FundIndustries_ReturnsApiServicesSnapshot_AsJson_ForTheSectorsBasketView()
+    {
+        // Fetched by the Sectors tab's basket view when first shown, not read for the page (Index never asks for it).
+        var industries = new FundIndustriesSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetFundIndustriesAsync), industries);
+
+        IActionResult result = await CreateController(api).FundIndustries();
+
+        Assert.Same(industries, Assert.IsType<JsonResult>(result).Value);
+    }
+
+    [Fact]
     public async Task Index_WhenTheSectorsDataHasNeverLoaded_StillHoldsTheFunds()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();

@@ -46,6 +46,11 @@ internal static class ResearchFeature
         {
             SectorsFirstYear = configuration.GetValue($"{ResearchSettings.Section}:SectorsFirstYear", 2011),
             SubmissionsPerRefresh = configuration.GetValue($"{ResearchSettings.Section}:SubmissionsPerRefresh", 2_500),
+            FundIndustrySubmissionsPerRefresh = configuration.GetValue(
+                $"{ResearchSettings.Section}:FundIndustrySubmissionsPerRefresh", 1_000),
+            IssuerCikOverrides = configuration
+                .GetSection($"{ResearchSettings.Section}:IssuerCikOverrides")
+                .Get<List<IssuerCikOverride>>() ?? [],
             PublicFloatExclusions = configuration
                 .GetSection($"{ResearchSettings.Section}:PublicFloatExclusions")
                 .Get<List<FilerYear>>() ?? [],
@@ -71,6 +76,8 @@ internal static class ResearchFeature
         services.AddScoped<IResearchDatasetRefresher, FundsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundOverlapRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundExposureRefresher>();
+        // After the Sectors refresh: it reuses the SEC submissions that refresh has read.
+        services.AddScoped<IResearchDatasetRefresher, FundIndustriesRefresher>();
         services.AddScoped<IResearchDatasetRefresher, FundReturnsRefresher>();
         // After the funds refresh: it reads the net assets from the funds snapshot.
         services.AddScoped<IResearchDatasetRefresher, FundFactsRefresher>();
