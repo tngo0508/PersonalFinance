@@ -65,6 +65,7 @@ try
         options.LogoutPath = "/Identity/Account/Logout";
         options.AccessDeniedPath = "/Identity/Account/AccessDenied";
         ApiAwareCookieRedirects.Apply(options.Events); // 401/403 instead of a login redirect for fetch/XHR calls
+        LanguageSignInEvents.Apply(options.Events); // the stored Language becomes the culture cookie at sign-in
     });
 
     // Google sign-in, only when its credentials are configured.
@@ -104,6 +105,11 @@ try
     // UI services (Services/, ADR 0008): the Consent an Account gives to the Terms of Service and Privacy Policy at
     // registration.
     builder.Services.AddScoped<IUserConsentService, UserConsentService>();
+    // The Account's stored Language, and the Account emails composed in it (localization spec §2.3). The
+    // IEmailSender<IdentityUser> replaces Identity UI's English-only default.
+    builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
+    builder.Services.AddScoped<IAccountEmailService, AccountEmailService>();
+    builder.Services.AddScoped<IEmailSender<IdentityUser>, IdentityEmailSender>();
 
     // The clock, injected so tests can fix the time (CODING_STANDARDS "Async and time").
     builder.Services.AddSingleton(TimeProvider.System);

@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure.Localization;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Tests.Web.Localization;
 
@@ -31,6 +32,7 @@ public sealed class RequestLocalizationHttpTests : IAsyncLifetime
         });
         builder.WebHost.UseTestServer();
         builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<IUserPreferenceService, InMemoryUserPreferenceService>();
         builder.Services.AddAppLocalization(builder.Environment);
         builder.Services.AddControllersWithViews(options =>
                 options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))

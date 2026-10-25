@@ -197,6 +197,7 @@ public class DataExportServiceTests
         Assert.Single(export.NetWorthParameters);
         Assert.Single(export.BudgetAllocations);
         Assert.Equal("BudgetTracker", export.BudgetDataSource);
+        Assert.Equal("vi", export.Language);
         Assert.Equal("Expense", Assert.Single(export.BudgetCategories).Kind);
         Assert.Single(export.BudgetMonthLines);
         Assert.Single(export.BudgetTransactions);
@@ -307,6 +308,7 @@ public class DataExportServiceTests
         Assert.Null(export.Account.Email);
         Assert.Null(export.Account.RegisteredAtUtc);
         Assert.Null(export.BudgetDataSource);
+        Assert.Null(export.Language);
         Assert.Empty(export.BudgetTransactions);
         Assert.Empty(export.Community.Stories);
     }

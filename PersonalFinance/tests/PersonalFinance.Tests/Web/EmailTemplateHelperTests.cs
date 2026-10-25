@@ -1,47 +1,95 @@
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure;
 using Xunit;
 
 namespace PersonalFinance.Tests.Web;
 
+/// <summary>
+/// The Account emails: branded layout, encoded links and names, and the text of the current UI culture (localization
+/// spec §2.3), English unless a test switches it.
+/// </summary>
 public class EmailTemplateHelperTests
 {
     [Fact]
     public void BuildConfirmationEmail_ContainsBrandedCtaButtonAndConfirmationUrl()
     {
+        using var culture = new UiCultureScope("en");
         string testUrl = "https://localhost:7100/Identity/Account/ConfirmEmail?userId=123&code=abc%3D%3D";
-        string appName = "PersonalFinance";
 
-        string html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, appName);
+        EmailMessage email = EmailTemplateHelper.BuildConfirmationEmail(TestLocalization.Localizer, testUrl, "PersonalFinance");
 
-        Assert.NotNull(html);
-        Assert.Contains("PersonalFinance", html);
-        Assert.Contains("Confirm your email address", html);
-        Assert.Contains("Confirm Email Address", html);
-        Assert.Contains("background-color: #0d6efd", html);
-        Assert.Contains("https://localhost:7100/Identity/Account/ConfirmEmail?userId=123&amp;code=abc%3D%3D", html);
+        Assert.Equal("Confirm your PersonalFinance account", email.Subject);
+        Assert.Contains("<html lang=\"en\">", email.HtmlBody);
+        Assert.Contains("Confirm your email address", email.HtmlBody);
+        Assert.Contains("Confirm Email Address", email.HtmlBody);
+        Assert.Contains("Thank you for registering with <strong>PersonalFinance</strong>.", email.HtmlBody);
+        Assert.Contains("background-color: #0d6efd", email.HtmlBody);
+        Assert.Contains("https://localhost:7100/Identity/Account/ConfirmEmail?userId=123&amp;code=abc%3D%3D", email.HtmlBody);
     }
 
     [Fact]
     public void BuildConfirmationEmail_WhenAppNameIsNull_DefaultsToPersonalFinance()
     {
-        string testUrl = "https://example.com/confirm";
+        using var culture = new UiCultureScope("en");
 
-        string html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, null);
+        EmailMessage email = EmailTemplateHelper.BuildConfirmationEmail(TestLocalization.Localizer,
+            "https://example.com/confirm", null);
 
-        Assert.Contains("PersonalFinance", html);
-        Assert.Contains("https://example.com/confirm", html);
+        Assert.Contains("PersonalFinance", email.HtmlBody);
+        Assert.Contains("https://example.com/confirm", email.HtmlBody);
     }
 
     [Fact]
     public void BuildConfirmationEmail_EscapesHtmlCharactersInParameters()
     {
-        string maliciousAppName = "<script>alert('xss')</script>App";
-        string testUrl = "https://example.com/confirm?token=<test>";
+        using var culture = new UiCultureScope("en");
 
-        string html = EmailTemplateHelper.BuildConfirmationEmail(testUrl, maliciousAppName);
+        EmailMessage email = EmailTemplateHelper.BuildConfirmationEmail(TestLocalization.Localizer,
+            "https://example.com/confirm?token=<test>", "<script>alert('xss')</script>App");
 
-        Assert.DoesNotContain("<script>", html);
-        Assert.Contains("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;App", html);
-        Assert.Contains("https://example.com/confirm?token=&lt;test&gt;", html);
+        Assert.DoesNotContain("<script>", email.HtmlBody);
+        Assert.Contains("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;App", email.HtmlBody);
+        Assert.Contains("https://example.com/confirm?token=&lt;test&gt;", email.HtmlBody);
+    }
+
+    [Fact]
+    public void BuildPasswordResetEmail_LinksToTheResetPage()
+    {
+        using var culture = new UiCultureScope("en");
+
+        EmailMessage email = EmailTemplateHelper.BuildPasswordResetEmail(TestLocalization.Localizer,
+            "https://app.test/Identity/Account/ResetPassword?code=a&b=c", "PersonalFinance");
+
+        Assert.Equal("Reset your PersonalFinance password", email.Subject);
+        Assert.Contains("Reset Password", email.HtmlBody);
+        Assert.Contains("https://app.test/Identity/Account/ResetPassword?code=a&amp;b=c", email.HtmlBody);
+    }
+
+    [Fact]
+    public void BuildEmailChangeEmail_NamesTheNewAddress_Encoded()
+    {
+        using var culture = new UiCultureScope("en");
+
+        EmailMessage email = EmailTemplateHelper.BuildEmailChangeEmail(TestLocalization.Localizer,
+            "https://app.test/confirm", "new<b>@example.com", "PersonalFinance");
+
+        Assert.Contains("<strong>new&lt;b&gt;@example.com</strong>", email.HtmlBody);
+        Assert.DoesNotContain("new<b>", email.HtmlBody);
+    }
+
+    [Fact]
+    public void Emails_FollowTheUiCulture()
+    {
+        using var culture = new UiCultureScope("vi");
+        Assert.True(TestLocalization.Catalog.TryGet("vi", "Email.Confirm.Heading", out string heading));
+        Assert.True(TestLocalization.Catalog.TryGet("vi", "Email.Confirm.Button", out string button));
+
+        EmailMessage email = EmailTemplateHelper.BuildConfirmationEmail(TestLocalization.Localizer,
+            "https://app.test/confirm", "PersonalFinance");
+
+        Assert.Contains("<html lang=\"vi\">", email.HtmlBody);
+        Assert.Contains(heading, email.HtmlBody);
+        Assert.Contains(button, email.HtmlBody);
+        Assert.DoesNotContain("Confirm your email address", email.HtmlBody);
     }
 }

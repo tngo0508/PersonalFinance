@@ -1,15 +1,16 @@
-using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Services;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Encodings.Web;
+using System.Text;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 
@@ -17,19 +18,16 @@ namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 public class ResendEmailConfirmationModel : PageModel
 {
     private readonly UserManager<IdentityUser> _userManager;
-    private readonly IEmailSender _emailSender;
-    private readonly BrevoOptions _brevoOptions;
+    private readonly IAccountEmailService _accountEmails;
     private readonly ILogger<ResendEmailConfirmationModel> _logger;
 
     public ResendEmailConfirmationModel(
         UserManager<IdentityUser> userManager,
-        IEmailSender emailSender,
-        IOptions<BrevoOptions> brevoOptionsAccessor,
+        IAccountEmailService accountEmails,
         ILogger<ResendEmailConfirmationModel> logger)
     {
         _userManager = userManager;
-        _emailSender = emailSender;
-        _brevoOptions = brevoOptionsAccessor.Value;
+        _accountEmails = accountEmails;
         _logger = logger;
     }
 
@@ -71,13 +69,7 @@ public class ResendEmailConfirmationModel : PageModel
             values: new { userId = userId, code = code },
             protocol: Request.Scheme);
 
-        string appName = _brevoOptions.SenderName ?? "PersonalFinance";
-        string htmlBody = EmailTemplateHelper.BuildConfirmationEmail(callbackUrl ?? string.Empty, appName);
-
-        await _emailSender.SendEmailAsync(
-            Input.Email,
-            $"Confirm your {appName} account",
-            htmlBody);
+        await _accountEmails.SendConfirmationAsync(user, Input.Email, callbackUrl ?? string.Empty);
 
         ModelState.AddModelError(string.Empty, "Verification email sent. Please check your email.");
         return Page();

@@ -1,23 +1,24 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
 using PersonalFinance.Web.Infrastructure;
+using System.Security.Claims;
 
 namespace PersonalFinance.Tests.AccountLifecycle;
 
@@ -107,7 +108,8 @@ public class ExternalLoginLockoutTests
             var signInManager = new CallbackSignInManager(info, userManager, httpContext, sp);
             var page = new ExternalLoginModel(signInManager, userManager,
                 sp.GetRequiredService<IUserStore<IdentityUser>>(),
-                NullLogger<ExternalLoginModel>.Instance, new NoEmailSender(), Options.Create(new BrevoOptions()))
+                NullLogger<ExternalLoginModel>.Instance, new RecordingAccountEmailService(),
+                new InMemoryUserPreferenceService())
             {
                 PageContext = new PageContext { HttpContext = httpContext },
                 Url = new ContentUrlHelper(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()))

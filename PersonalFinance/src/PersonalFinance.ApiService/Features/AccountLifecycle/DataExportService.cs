@@ -89,6 +89,11 @@ internal sealed class DataExportService : IDataExportService
             .Select(p => (Shared.Enums.BudgetDataSource?)p.Source)
             .FirstOrDefaultAsync(cancellationToken);
         export.BudgetDataSource = source?.ToString();
+        export.Language = await _db.UserPreferences.AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .OrderByDescending(p => p.Id)
+            .Select(p => p.Language)
+            .FirstOrDefaultAsync(cancellationToken);
 
         export.BudgetCategories = (await _db.BudgetCategories.AsNoTracking()
                 .Where(c => c.UserId == userId)

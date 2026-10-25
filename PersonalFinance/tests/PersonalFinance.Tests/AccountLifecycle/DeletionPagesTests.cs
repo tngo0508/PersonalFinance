@@ -16,13 +16,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
 using PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Services;
 using Refit;
 
 namespace PersonalFinance.Tests.AccountLifecycle;
@@ -197,7 +200,10 @@ public class DeletionPagesTests
     [Fact]
     public void DeletionScheduledEmail_EncodesTheLink_AndNamesTheDate()
     {
-        string html = EmailTemplateHelper.BuildDeletionScheduledEmail("https://app.test/cancel?token=<x>&y=1", PurgeAfter);
+        using var culture = new UiCultureScope("en");
+
+        string html = EmailTemplateHelper.BuildDeletionScheduledEmail(TestLocalization.Localizer,
+            "https://app.test/cancel?token=<x>&y=1", PurgeAfter).HtmlBody;
 
         Assert.Contains("https://app.test/cancel?token=&lt;x&gt;&amp;y=1", html);
         Assert.Contains("November 21, 2026", html);
@@ -278,8 +284,11 @@ public class DeletionPagesTests
 
             var api = new FakeAccountDeletionApi { RequestFailure = failure };
             var email = new FakeEmailSender();
+            // The real Account emails, so the subject and body below are what an English-speaking Account receives.
+            var accountEmails = new AccountEmailService(email, new InMemoryUserPreferenceService(),
+                TestLocalization.Localizer, Options.Create(new BrevoOptions()));
             var page = new DeletePersonalDataModel(userManager,
-                signInManager, api, email,
+                signInManager, api, accountEmails,
                 NullLogger<DeletePersonalDataModel>.Instance)
             {
                 PageContext = new PageContext { HttpContext = httpContext },

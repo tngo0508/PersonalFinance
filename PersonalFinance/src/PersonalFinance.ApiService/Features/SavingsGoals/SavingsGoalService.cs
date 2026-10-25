@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
@@ -144,6 +145,15 @@ internal sealed class SavingsGoalService : ISavingsGoalService
                         Title = $"{milestone}% savings milestone reached!",
                         Message =
                             $"Your goal '{goalName}' has reached {milestone}% of its target ({currentAmount:C} of {targetAmount:C}).",
+                        TitleKey = "Notifications.SavingsMilestone.Title",
+                        MessageKey = "Notifications.SavingsMilestone.Message",
+                        Arguments = new Dictionary<string, string>
+                        {
+                            ["percent"] = milestone.ToString(CultureInfo.InvariantCulture),
+                            ["goalName"] = goalName,
+                            ["current"] = currentAmount.ToString("C", CultureInfo.CurrentCulture),
+                            ["target"] = targetAmount.ToString("C", CultureInfo.CurrentCulture)
+                        },
                         SourceFeature = "SavingsGoals"
                     }, cancellationToken);
                 }

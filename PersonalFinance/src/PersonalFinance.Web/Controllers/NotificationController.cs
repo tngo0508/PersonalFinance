@@ -1,13 +1,16 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// JSON endpoints behind the notification bell in the app shell (<c>js/core/notifications.js</c>), forwarded to
-/// ApiService through <see cref="INotificationApi"/>. Writes require the antiforgery token.
+/// ApiService through <see cref="INotificationApi"/>. Notifications are rendered in the reader's language here, at
+/// read time, from the key and arguments they were stored with. Writes require the antiforgery token.
 /// </summary>
 [Authorize]
 [JsonApiErrors]
@@ -16,10 +19,12 @@ namespace PersonalFinance.Web.Controllers;
 public class NotificationController : Controller
 {
     private readonly INotificationApi _notificationApi;
+    private readonly IStringLocalizer _localizer;
 
-    public NotificationController(INotificationApi notificationApi)
+    public NotificationController(INotificationApi notificationApi, IStringLocalizer localizer)
     {
         _notificationApi = notificationApi;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -28,7 +33,13 @@ public class NotificationController : Controller
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken cancellationToken = default)
     {
-        return Ok(await _notificationApi.GetNotificationsAsync(cancellationToken));
+        List<NotificationDto> notifications = await _notificationApi.GetNotificationsAsync(cancellationToken);
+        foreach (NotificationDto notification in notifications)
+        {
+            NotificationText.Localize(_localizer, notification);
+        }
+
+        return Ok(notifications);
     }
 
     /// <summary>

@@ -5,8 +5,8 @@
  * npm run i18n:report — the CI i18n-report step (ADR 0015, spec §2.4). Writes a Markdown report to the job summary
  * ($GITHUB_STEP_SUMMARY, else stdout):
  * - reported, never failing: missing translations per language (plural-aware), stale translations (English changed
- *   since, per i18n.lock.json), keys referenced in Razor, C# or JS but absent from en.json, and English keys nothing
- *   references;
+ *   since, per i18n.lock.json), keys referenced in Razor, C# or JS (Web, and ApiService's Notification keys) but absent
+ *   from en.json, and English keys nothing references;
  * - failing (exit 1): a resource file that is not valid JSON, and a translation whose placeholders differ from the
  *   English.
  */
@@ -26,6 +26,8 @@ const {
 } = require('./i18n-common');
 
 const WEB_ROOT = path.join(__dirname, '..');
+// ApiService stores Notification keys (TitleKey / MessageKey) that the Web renders.
+const API_ROOT = path.join(__dirname, '..', '..', 'PersonalFinance.ApiService');
 const KEY = '[A-Z][A-Za-z0-9]*(?:\\.[A-Za-z0-9]+)+';
 const SKIPPED_DIRS = new Set(['bin', 'obj', 'node_modules', 'lib', 'dist', 'tools', 'Resources']);
 const SOURCE_FILE = /\.(cshtml|cs|js)$/;
@@ -33,6 +35,8 @@ const SOURCE_FILE = /\.(cshtml|cs|js)$/;
 // A key used directly: the localizer's indexer and helpers, DataAnnotations attributes, PFI18n in JS.
 const REFERENCE_PATTERNS = [
     new RegExp(`\\b(?:L|_localizer|localizer)\\[\\s*"(${KEY})"`, 'g'),
+    new RegExp(`\\(\\s*(?:L|_localizer|localizer)\\s*,\\s*"(${KEY})"`, 'g'),
+    new RegExp(`(?:TitleKey|MessageKey)\\s*=\\s*"(${KEY})"`, 'g'),
     new RegExp(`\\.(?:Named|NamedHtml)\\(\\s*"(${KEY})"`, 'g'),
     new RegExp(`ErrorMessage\\s*=\\s*"(${KEY})"`, 'g'),
     new RegExp(`Display\\(\\s*Name\\s*=\\s*"(${KEY})"`, 'g'),
@@ -140,7 +144,8 @@ function buildReport (options = {}) {
         report.languages[language] = compareLanguage(english, target, lock[language] || {}, language, errors);
     }
 
-    const contents = options.sources || sourceFiles(WEB_ROOT).map((file) => fs.readFileSync(file, 'utf8'));
+    const roots = [WEB_ROOT, API_ROOT].filter((root) => fs.existsSync(root));
+    const contents = options.sources || roots.flatMap(sourceFiles).map((file) => fs.readFileSync(file, 'utf8'));
     const references = collectReferences(contents);
     report.referencedMissing = [...references.keys].filter((key) => !(key in english))
         .concat([...references.plurals].filter((stem) => !(`${stem}.other` in english)).map((stem) => `${stem}.other`))

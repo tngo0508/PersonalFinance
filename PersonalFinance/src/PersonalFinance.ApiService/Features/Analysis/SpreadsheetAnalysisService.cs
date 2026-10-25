@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.GoogleDrive;
@@ -481,6 +482,14 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 Title = "Google Drive sync completed",
                 Message =
                     $"Successfully synced {snapshotsCreated} budget snapshots and {transactionsCreated} transactions from '{fileName}'.",
+                TitleKey = "Notifications.SyncCompleted.Title",
+                MessageKey = "Notifications.SyncCompleted.Message",
+                Arguments = new Dictionary<string, string>
+                {
+                    ["snapshots"] = snapshotsCreated.ToString(CultureInfo.InvariantCulture),
+                    ["transactions"] = transactionsCreated.ToString(CultureInfo.InvariantCulture),
+                    ["fileName"] = fileName
+                },
                 SourceFeature = "GoogleDrive"
             }, cancellationToken);
 
@@ -499,6 +508,9 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 Type = "SyncStatus",
                 Title = "Google Drive sync failed",
                 Message = $"Sync failed: {ex.Message}",
+                TitleKey = "Notifications.SyncFailed.Title",
+                MessageKey = "Notifications.SyncFailed.Message",
+                Arguments = new Dictionary<string, string> { ["error"] = ex.Message },
                 SourceFeature = "GoogleDrive"
             }, cancellationToken);
 

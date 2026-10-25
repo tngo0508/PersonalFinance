@@ -1,13 +1,14 @@
-using System.Globalization;
-using System.Net;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Services;
+using System.Globalization;
+using System.Net;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 
@@ -23,18 +24,18 @@ public class DeletePersonalDataModel : PageModel
     public const string ConfirmationWord = "DELETE";
 
     private readonly IAccountDeletionApi _accountDeletionApi;
-    private readonly IEmailSender _emailSender;
+    private readonly IAccountEmailService _accountEmails;
     private readonly ILogger<DeletePersonalDataModel> _logger;
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
 
     public DeletePersonalDataModel(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager,
-        IAccountDeletionApi accountDeletionApi, IEmailSender emailSender, ILogger<DeletePersonalDataModel> logger)
+        IAccountDeletionApi accountDeletionApi, IAccountEmailService accountEmails, ILogger<DeletePersonalDataModel> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _accountDeletionApi = accountDeletionApi;
-        _emailSender = emailSender;
+        _accountEmails = accountEmails;
         _logger = logger;
     }
 
@@ -124,8 +125,8 @@ public class DeletePersonalDataModel : PageModel
             values: new { area = "Identity", token = accepted.CancelToken }, protocol: Request.Scheme);
         try
         {
-            await _emailSender.SendEmailAsync(user.Email, "Your account is scheduled for deletion",
-                EmailTemplateHelper.BuildDeletionScheduledEmail(cancelUrl ?? string.Empty, accepted.PurgeAfterUtc));
+            await _accountEmails.SendDeletionScheduledAsync(user, user.Email, cancelUrl ?? string.Empty,
+                accepted.PurgeAfterUtc);
             return true;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)

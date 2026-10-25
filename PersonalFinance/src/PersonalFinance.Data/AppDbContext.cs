@@ -121,6 +121,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<UserBudgetSourcePreference> UserBudgetSourcePreferences => Set<UserBudgetSourcePreference>();
 
     /// <summary>
+    /// An Account's display preferences: its Language (one row per Account).
+    /// </summary>
+    public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
+
+    /// <summary>
     /// User notifications table set — stores budget alerts, savings milestones, and sync status notifications.
     /// </summary>
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -183,6 +188,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<MonthlyBudgetLine>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<BudgetTransaction>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<UserPreference>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Feedback>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<PriorityWalk>().HasQueryFilter(e => !e.IsDeleted);
@@ -298,113 +304,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.AggressiveSavings).HasPrecision(decimalPrecision, decimalScale);
         });
 
-        // --- Community entities ---
-
-        // Configure CommunityPoll entity
-        builder.Entity<CommunityPoll>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.PollCode).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Question).IsRequired().HasMaxLength(500);
-            entity.Property(e => e.Description).HasMaxLength(2000);
-            entity.Property(e => e.Category).IsRequired().HasMaxLength(50);
-            entity.HasIndex(e => e.PollCode).IsUnique();
-            entity.HasIndex(e => e.CreatedAtUtc);
-
-            entity.HasMany(e => e.Options)
-                .WithOne(e => e.Poll)
-                .HasForeignKey(e => e.PollId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasMany(e => e.Votes)
-                .WithOne(e => e.Poll)
-                .HasForeignKey(e => e.PollId)
-                .OnDelete(DeleteBehavior.SetNull);
-        });
-
-        // Configure CommunityPollOption entity
-        builder.Entity<CommunityPollOption>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Text).IsRequired().HasMaxLength(200);
-
-            entity.HasIndex(e => e.PollId);
-
-            entity.HasMany(e => e.Votes)
-                .WithOne(e => e.Option)
-                .HasForeignKey(e => e.OptionId)
-                .OnDelete(DeleteBehavior.SetNull);
-        });
-
-        // Configure CommunityPollVote entity — one vote per user per poll
-        builder.Entity<CommunityPollVote>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.HasIndex(e => new { e.UserId, e.PollId }).IsUnique();
-            entity.HasIndex(e => e.OptionId);
-        });
-
-        // Configure CommunityComment entity
-        builder.Entity<CommunityComment>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Text).IsRequired().HasMaxLength(2000);
-            entity.Property(e => e.Topic).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.CaseStudyTitle).HasMaxLength(500);
-            entity.HasIndex(e => e.PollId);
-            entity.HasIndex(e => e.CreatedAtUtc);
-
-            entity.HasOne(e => e.Poll)
-                .WithMany()
-                .HasForeignKey(e => e.PollId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasMany(e => e.LikesList)
-                .WithOne(e => e.Comment)
-                .HasForeignKey(e => e.CommentId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        // Configure CommunityCommentLike entity — one like per user per comment
-        builder.Entity<CommunityCommentLike>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.HasIndex(e => new { e.UserId, e.CommentId }).IsUnique();
-            entity.HasIndex(e => e.CommentId);
-        });
-
-        // Configure CommunityStory entity
-        builder.Entity<CommunityStory>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
-            entity.Property(e => e.Summary).IsRequired().HasMaxLength(2000);
-            entity.Property(e => e.Body).IsRequired().HasMaxLength(10000);
-            entity.Property(e => e.Category).IsRequired().HasMaxLength(50);
-            entity.HasIndex(e => e.Category);
-            entity.HasIndex(e => e.PublishedAtUtc);
-            entity.HasIndex(e => e.IsFeatured);
-
-            entity.HasMany(e => e.LikesList)
-                .WithOne(e => e.Story)
-                .HasForeignKey(e => e.StoryId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        // Configure CommunityStoryLike entity — one like per user per story
-        builder.Entity<CommunityStoryLike>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.HasIndex(e => new { e.UserId, e.StoryId }).IsUnique();
-            entity.HasIndex(e => e.StoryId);
-        });
+        ConfigureCommunity(builder);
 
         // --- Personal Finance entities ---
 
@@ -532,6 +432,9 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Message).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.SourceFeature).HasMaxLength(50);
+            entity.Property(e => e.TitleKey).HasMaxLength(100);
+            entity.Property(e => e.MessageKey).HasMaxLength(100);
+            entity.Property(e => e.Arguments).HasMaxLength(2000);
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.UserId, e.IsRead });
@@ -610,6 +513,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
                 .HasFilter("[IsDeleted] = 0");
         });
 
+        ConfigureUserPreference(builder);
+
         // Configure UserConsent entity
         builder.Entity<UserConsent>(entity =>
         {
@@ -648,6 +553,134 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         ConfigureResearchSnapshot(builder);
         ConfigurePriorityWalk(builder);
+    }
+
+    /// <summary>
+    /// The Community entities: polls, options and votes, stories, comments and likes.
+    /// </summary>
+    private static void ConfigureCommunity(ModelBuilder builder)
+    {
+        // Configure CommunityPoll entity
+        builder.Entity<CommunityPoll>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PollCode).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Question).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Description).HasMaxLength(2000);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => e.PollCode).IsUnique();
+            entity.HasIndex(e => e.CreatedAtUtc);
+
+            entity.HasMany(e => e.Options)
+                .WithOne(e => e.Poll)
+                .HasForeignKey(e => e.PollId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasMany(e => e.Votes)
+                .WithOne(e => e.Poll)
+                .HasForeignKey(e => e.PollId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure CommunityPollOption entity
+        builder.Entity<CommunityPollOption>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Text).IsRequired().HasMaxLength(200);
+
+            entity.HasIndex(e => e.PollId);
+
+            entity.HasMany(e => e.Votes)
+                .WithOne(e => e.Option)
+                .HasForeignKey(e => e.OptionId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure CommunityPollVote entity — one vote per user per poll
+        builder.Entity<CommunityPollVote>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => new { e.UserId, e.PollId }).IsUnique();
+            entity.HasIndex(e => e.OptionId);
+        });
+
+        // Configure CommunityComment entity
+        builder.Entity<CommunityComment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Text).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Topic).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.CaseStudyTitle).HasMaxLength(500);
+            entity.HasIndex(e => e.PollId);
+            entity.HasIndex(e => e.CreatedAtUtc);
+
+            entity.HasOne(e => e.Poll)
+                .WithMany()
+                .HasForeignKey(e => e.PollId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasMany(e => e.LikesList)
+                .WithOne(e => e.Comment)
+                .HasForeignKey(e => e.CommentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure CommunityCommentLike entity — one like per user per comment
+        builder.Entity<CommunityCommentLike>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => new { e.UserId, e.CommentId }).IsUnique();
+            entity.HasIndex(e => e.CommentId);
+        });
+
+        // Configure CommunityStory entity
+        builder.Entity<CommunityStory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Summary).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Body).IsRequired().HasMaxLength(10000);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => e.Category);
+            entity.HasIndex(e => e.PublishedAtUtc);
+            entity.HasIndex(e => e.IsFeatured);
+
+            entity.HasMany(e => e.LikesList)
+                .WithOne(e => e.Story)
+                .HasForeignKey(e => e.StoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure CommunityStoryLike entity — one like per user per story
+        builder.Entity<CommunityStoryLike>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => new { e.UserId, e.StoryId }).IsUnique();
+            entity.HasIndex(e => e.StoryId);
+        });
+    }
+
+    /// <summary>
+    /// An Account's display preferences (its Language): one row per Account among non-deleted rows.
+    /// </summary>
+    private static void ConfigureUserPreference(ModelBuilder builder)
+    {
+        builder.Entity<UserPreference>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Language).IsRequired().HasMaxLength(10);
+            entity.HasIndex(e => e.UserId)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+        });
     }
 
     /// <summary>
