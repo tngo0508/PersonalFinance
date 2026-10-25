@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Shared.DTOs.MoneyPriorities;
@@ -36,7 +37,11 @@ public class SubmitPriorityWalkRequest
     /// <summary>Q4, asked when the match is full: years until the money is needed, 1 to 50.</summary>
     public int? HorizonYears { get; set; }
 
-    /// <summary>Required when the horizon is over 10 years: the age range that sets the IRS catch-up.</summary>
+    /// <summary>
+    /// Required when the horizon is over 10 years: the age range that sets the IRS catch-up. Always a number on the
+    /// wire (1, 2, 3); the attribute overrides Refit's default string enums, which the ApiService cannot bind.
+    /// </summary>
+    [JsonConverter(typeof(JsonNumberEnumConverter<RetirementAgeBand>))]
     public RetirementAgeBand? AgeBand { get; set; }
 
     /// <summary>Q5, asked when the horizon is over 10 years: already at the IRS limit for the age range.</summary>

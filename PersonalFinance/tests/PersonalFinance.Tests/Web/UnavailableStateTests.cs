@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.Shared.Contracts;
+using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Tests.TestSupport;
@@ -134,6 +135,56 @@ public class UnavailableStateTests
         Assert.IsType<RedirectToActionResult>(result);
         string error = Assert.IsType<string>(controller.TempData["Error"]);
         Assert.DoesNotContain(ExceptionText, error);
+    }
+
+    [Fact]
+    public async Task MoneyPrioritiesIndex_WhenApiFails_RendersUnavailableStateInsteadOfAnEmptyForm()
+    {
+        (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        MoneyPrioritiesController controller =
+            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance));
+
+        IActionResult result = await controller.Index();
+
+        AssertUnavailable(result, "MoneyPriorities");
+    }
+
+    [Fact]
+    public async Task MoneyPrioritiesIndex_WhenOnlyEarlierResultsFail_RendersUnavailableState()
+    {
+        (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi>? proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync), new PriorityTreeDiagramDto());
+        MoneyPrioritiesController controller =
+            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance));
+
+        IActionResult result = await controller.Index();
+
+        AssertUnavailable(result, "MoneyPriorities");
+    }
+
+    [Fact]
+    public async Task MoneyPrioritiesRecent_WhenApiFails_LetsJsonApiErrorsAnswerInsteadOfAnEmptyList()
+    {
+        (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        MoneyPrioritiesController controller =
+            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => controller.Recent());
+        Assert.NotNull(typeof(MoneyPrioritiesController).GetMethod(nameof(MoneyPrioritiesController.Recent))!
+            .GetCustomAttributes(typeof(JsonApiErrorsAttribute), inherit: true).SingleOrDefault());
+    }
+
+    [Fact]
+    public async Task MoneyPrioritiesIndex_WhenRequestIsCancelled_DoesNotSwallowCancellation()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi>? proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Throws(nameof(IMoneyPrioritiesApi.GetTreeAsync), new OperationCanceledException(cts.Token));
+        MoneyPrioritiesController controller =
+            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(cts.Token));
     }
 
     [Fact]
