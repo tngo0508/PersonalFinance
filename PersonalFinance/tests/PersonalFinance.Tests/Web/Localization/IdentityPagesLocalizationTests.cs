@@ -64,6 +64,8 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
         builder.Services.AddSingleton<IApiServiceWarmer, NoOpWarmer>();
         builder.Services.AddSingleton<IEmailSender, NoOpEmailSender>();
         builder.Services.AddSingleton<IUserPreferenceService, InMemoryUserPreferenceService>();
+        builder.Services.AddScoped<IAccountEmailService, AccountEmailService>();
+        builder.Services.AddScoped<IUserConsentService, UserConsentService>();
         builder.Services.AddAppLocalization(builder.Environment);
         // The Web project's parts go first, as they do in the app (its entry assembly), so its scaffolded pages win
         // over the Identity UI library's copies.
@@ -114,8 +116,8 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
         string html = await GetAsync("/Identity/Account/Login", signedIn: false);
 
         Assert.Contains("<html lang=\"vi\">", html);
-        Assert.Contains(Vietnamese("Account.Login.Title"), html);
-        Assert.Contains(Vietnamese("Account.Login.CreateAccount"), html);
+        Assert.Contains("<h1 class=\"auth-page__title mb-2\">Đăng nhập</h1>", html);
+        Assert.Contains("Chưa có tài khoản?", html);
         Assert.DoesNotContain("have an account?", html);
         Assert.Empty(_notFound);
     }
@@ -125,11 +127,35 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
     {
         string html = await GetAsync("/Identity/Account/Manage/ChangePassword", signedIn: true);
 
-        Assert.Contains(Vietnamese("Account.ChangePassword.Title"), html);
-        Assert.Contains(Vietnamese("Account.Nav.TwoFactor"), html);
-        Assert.Contains(Vietnamese("Identity.Field.CurrentPassword"), html);
+        Assert.Contains("<h3>Thay đổi mật khẩu</h3>", html);
+        Assert.Contains(">Xác thực hai yếu tố</a>", html);
+        Assert.Contains(">Mật khẩu hiện tại</label>", html);
         Assert.DoesNotContain("Update password", html);
         Assert.DoesNotContain("Account settings", html);
+        Assert.Empty(_notFound);
+    }
+
+    [Theory]
+    [InlineData("/Identity/Account/Register", false)]
+    [InlineData("/Identity/Account/ForgotPassword", false)]
+    [InlineData("/Identity/Account/ForgotPasswordConfirmation", false)]
+    [InlineData("/Identity/Account/ResendEmailConfirmation", false)]
+    [InlineData("/Identity/Account/ResetPassword?code=AAAA", false)]
+    [InlineData("/Identity/Account/ResetPasswordConfirmation", false)]
+    [InlineData("/Identity/Account/Lockout", false)]
+    [InlineData("/Identity/Account/AccessDenied", false)]
+    [InlineData("/Identity/Account/Logout", false)]
+    [InlineData("/Identity/Account/DeletionRequested?purgeAfter=2026-11-24&emailSent=false", false)]
+    [InlineData("/Identity/Account/Manage", true)]
+    [InlineData("/Identity/Account/Manage/Email", true)]
+    [InlineData("/Identity/Account/Manage/TwoFactorAuthentication", true)]
+    [InlineData("/Identity/Account/Manage/EnableAuthenticator", true)]
+    [InlineData("/Identity/Account/Manage/ExternalLogins", true)]
+    public async Task AnyIdentityPage_InVietnamese_RendersWithoutAMissingKey(string url, bool signedIn)
+    {
+        string html = await GetAsync(url, signedIn);
+
+        Assert.Contains("<html lang=\"vi\">", html);
         Assert.Empty(_notFound);
     }
 
@@ -139,7 +165,7 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
         string html = await GetAsync($"/Identity/Account/ConfirmEmail?userId={UserId}&code=AAAA", signedIn: false);
 
         Assert.Contains("alert-danger", html);
-        Assert.Contains(Vietnamese("Account.ConfirmEmail.ErrorConfirming"), html);
+        Assert.Contains("Lỗi khi xác nhận email của bạn.", html);
         Assert.DoesNotContain("Error confirming your email.", html);
         Assert.Empty(_notFound);
     }
@@ -156,14 +182,6 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
         Assert.Contains("See your plan and your progress to your FI target.", html);
         Assert.Contains("have an account?", html);
         Assert.Empty(_notFound);
-    }
-
-    private static string Vietnamese(string key)
-    {
-        Assert.True(TestLocalization.Catalog.TryGet("vi", key, out string vi), $"vi.json has no {key}.");
-        TestLocalization.Catalog.TryGet("en", key, out string en);
-        Assert.NotEqual(en, vi);
-        return HtmlEncoder.Create(System.Text.Unicode.UnicodeRanges.All).Encode(vi);
     }
 
     private async Task<string> GetAsync(string url, bool signedIn)
