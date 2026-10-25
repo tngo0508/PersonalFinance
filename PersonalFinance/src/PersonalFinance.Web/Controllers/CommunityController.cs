@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Community;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.Community;
 
 namespace PersonalFinance.Web.Controllers;
@@ -20,13 +22,16 @@ public sealed class CommunityController : Controller
 {
     private readonly ICommunityApi _communityApi;
     private readonly ILogger<CommunityController> _logger;
+    private readonly IStringLocalizer _localizer;
 
     public CommunityController(
         ICommunityApi communityApi,
-        ILogger<CommunityController> logger)
+        ILogger<CommunityController> logger,
+        IStringLocalizer localizer)
     {
         _communityApi = communityApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -46,7 +51,7 @@ public sealed class CommunityController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error loading community data for user {UserId}", userId);
-            return this.UnavailableView("Community", "We couldn't load the community page", "Community");
+            return this.UnavailableView(_localizer["Community.Title"], _localizer["Community.Message.Unavailable"], "Community");
         }
     }
 
@@ -59,12 +64,12 @@ public sealed class CommunityController : Controller
     {
         if (string.IsNullOrEmpty(request.PollCode))
         {
-            return BadRequest(new { success = false, error = "Poll ID is required." });
+            return BadRequest(new { success = false, error = _localizer["Community.Message.PollRequired"].Value });
         }
 
         if (request.OptionId <= 0)
         {
-            return BadRequest(new { success = false, error = "Option ID is required." });
+            return BadRequest(new { success = false, error = _localizer["Community.Message.OptionRequired"].Value });
         }
 
         var voteRequest = new CommunityVoteRequestDto
@@ -79,7 +84,7 @@ public sealed class CommunityController : Controller
         return Json(new
         {
             success = true,
-            message = "Thanks for voting!",
+            message = _localizer["Community.Message.Voted"].Value,
             poll = updatedPoll != null ? MapPollToViewModel(updatedPoll) : null,
         });
     }
@@ -93,12 +98,12 @@ public sealed class CommunityController : Controller
     {
         if (string.IsNullOrWhiteSpace(request.Text))
         {
-            return BadRequest(new { success = false, error = "Comment text is required." });
+            return BadRequest(new { success = false, error = _localizer["Community.Message.CommentRequired"].Value });
         }
 
         if (request.Text!.Length > 2000)
         {
-            return BadRequest(new { success = false, error = "Comment is too long (max 2000 characters)." });
+            return BadRequest(new { success = false, error = _localizer.Named("Community.Message.CommentTooLong", ("max", 2000)) });
         }
 
         string authorName = User.Identity?.Name ?? "Anonymous";
@@ -140,7 +145,7 @@ public sealed class CommunityController : Controller
     {
         if (request.CommentId <= 0)
         {
-            return BadRequest(new { success = false, error = "Comment ID is required." });
+            return BadRequest(new { success = false, error = _localizer["Community.Message.CommentIdRequired"].Value });
         }
 
         CommentLikeResult result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, cancellationToken);
@@ -199,7 +204,7 @@ public sealed class CommunityController : Controller
         return Json(new
         {
             success = true,
-            message = "Your story has been submitted successfully!",
+            message = _localizer["Community.Message.StorySubmitted"].Value,
             story = new
             {
                 id = story.Id,
@@ -218,7 +223,7 @@ public sealed class CommunityController : Controller
     {
         if (request.StoryId <= 0)
         {
-            return BadRequest(new { success = false, error = "Story ID is required." });
+            return BadRequest(new { success = false, error = _localizer["Community.Message.StoryIdRequired"].Value });
         }
 
         StoryLikeResult result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, cancellationToken);
@@ -242,6 +247,7 @@ public sealed class CommunityController : Controller
             ActivePolls = response.ActivePolls.Select(MapPollToViewModel).ToList(),
             QuickStats = response.QuickStats.Select(s => new CommunityStat
             {
+                Key = s.Key,
                 Title = s.Title,
                 Value = s.Value,
                 Description = s.Description,

@@ -191,7 +191,7 @@ public class UnavailableStateTests
     public async Task CommunityIndex_WhenApiFails_RendersUnavailableState()
     {
         (ICommunityApi? api, ApiProxy<ICommunityApi> _) = ApiProxy.Create<ICommunityApi>();
-        CommunityController controller = WithContext(new CommunityController(api, NullLogger<CommunityController>.Instance));
+        CommunityController controller = WithContext(new CommunityController(api, NullLogger<CommunityController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 
