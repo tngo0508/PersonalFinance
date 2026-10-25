@@ -300,3 +300,26 @@ Transaction and budget data analysis from Google Sheets. Provides dashboard view
 
 ### AI Assistant
 AI-powered financial advice via OpenAI chat integration.
+
+## Localization and Currency
+
+### Language
+The user's chosen UI language (`en`, `vi`), stored on their preference Entity and mirrored into the culture cookie. It selects the translation file and, through its Culture, the number and date formats. Independent of the Reporting Currency.
+_Avoid_: Locale (ambiguous between language and formatting), region
+
+### Culture
+The .NET culture the request runs in (`en-US`, `vi-VN`), derived from the Language. It decides separators, date formats and input parsing, never the currency symbol.
+
+### Translation Key
+The stable dotted identifier for one user-facing string (`SavingsGoals.Card.Remaining`), the same in Razor and JavaScript. The English text may change; the key does not. Plurals use `Key.one` / `Key.other`.
+_Avoid_: Resource string, label id
+
+### Currency Code
+The ISO 4217 code (`USD`, `VND`) stored on every money-bearing row. It, not the Culture, decides the symbol and minor units when an amount is displayed.
+
+### Reporting Currency
+The one currency a user's totals are shown in, stored on their preference Entity (default `USD`). Converting into it never rewrites stored amounts.
+_Avoid_: Base currency (that is the exchange-rate table's USD base), home currency, display currency
+
+### Exchange Rate
+A system-owned daily rate from USD to a quote currency on a given date, fetched by a refresher and never user-edited. Dated amounts convert at their own date's rate, balances at the latest.
