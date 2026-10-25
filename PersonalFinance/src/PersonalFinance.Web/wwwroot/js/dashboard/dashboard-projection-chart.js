@@ -10,14 +10,14 @@
     const CHART_ELEMENT_ID = 'dash-projection-chart';
     const Y_AXIS_HEADROOM = 0.1;
 
-    // Indigo Ledger tokens (wwwroot/css/site.css).
+    // Ledger tokens (wwwroot/css/site.css); the same scenario colours as the Net Worth page.
     const COLORS = {
-        base: '#4F46E5', // --app-brand
-        conservative: '#6B7280', // --app-text-muted (neutral)
-        aggressive: '#059669', // --app-accent-positive
-        fiTarget: '#111827', // --app-text
-        grid: '#E5E7EB', // --app-border
-        axis: '#6B7280', // --app-text-muted
+        base: '#1D6A50', // --app-brand
+        conservative: '#5B6B78', // --app-text-muted (neutral)
+        aggressive: '#2F6690', // --nw-aggressive
+        fiTarget: '#8A6A1E', // --app-accent-target
+        grid: '#E1E7E4', // --app-border
+        axis: '#5B6B78', // --app-text-muted
         surface: '#FFFFFF' // --app-bg
     };
 

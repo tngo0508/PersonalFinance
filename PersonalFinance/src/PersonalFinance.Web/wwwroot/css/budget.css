@@ -7,7 +7,7 @@
     --budget-primary: var(--app-brand);
     --budget-primary-hover: var(--app-brand-hover);
     --budget-primary-light: var(--app-brand-bg);
-    --budget-primary-glow: rgba(79, 70, 229, 0.15);
+    --budget-primary-glow: rgba(29, 106, 80, 0.15);
     --budget-surface: #ffffff;
     --budget-surface-soft: var(--app-surface-soft);
     --budget-border: var(--app-border);
@@ -16,11 +16,11 @@
     --budget-text-muted: var(--app-text-muted);
     --budget-text-faint: var(--app-text-disabled);
     --budget-success: var(--app-accent-positive);
-    --budget-success-light: #D1FAE5;
+    --budget-success-light: var(--app-accent-positive-soft);
     --budget-warning: var(--app-accent-warning);
-    --budget-warning-light: #FEF3C7;
+    --budget-warning-light: var(--app-accent-warning-soft);
     --budget-danger: var(--app-accent-negative);
-    --budget-danger-light: #FEE2E2;
+    --budget-danger-light: var(--app-accent-negative-soft);
     --budget-shadow-sm: var(--app-shadow-2);
     --budget-shadow-md: var(--app-shadow-4);
     --budget-radius: var(--app-radius-s);

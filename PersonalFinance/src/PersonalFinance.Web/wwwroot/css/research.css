@@ -521,11 +521,11 @@
     --research-office-6: #008300; /* Technology */
     --research-office-7: #6250d6; /* Trade & Services */
     --research-office-8: #e34948; /* Industrial Applications and Services */
-    --research-office-neutral: #9ca3af; /* Crypto Assets, International Corp Fin, Unassigned, Bonds, Cash */
+    --research-office-neutral: var(--app-text-faint); /* Crypto Assets, International Corp Fin, Unassigned, Bonds, Cash */
     --research-label-light: #ffffff;
     --research-label-dark: #0b0b0b;
     /* Stocks SEC does not classify (the basket view): grey lines at 45 degrees on light grey, never an office colour. */
-    --research-hatch-ground: #e5e7eb;
+    --research-hatch-ground: var(--app-border);
     --research-hatch-line: #8a919c;
 }
 
