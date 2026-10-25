@@ -1,0 +1,350 @@
+<!doctype html>
+<!--
+  PROTOTYPE - throwaway, never merged. Answers "Prove the Mermaid re-render with a highlighted path on a page"
+  (https://github.com/tngo0508/PersonalFinance/issues/304). Open this file directly in a browser.
+  Mermaid comes from cdnjs here only because the prototype is throwaway; production vendors it through libman.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE Priority Tree re-render</title>
+<style>
+  :root { --bg:#FFFFFF; --ink:#14283B; --muted:#5B6B78; --rule:#D6DEDB; --surface:#F3F6F5; --brand:#1D6A50; }
+  body.dark { --bg:#0F1A22; --ink:#E6EDF1; --muted:#9FB0BC; --rule:#2A3B47; --surface:#16232D; --brand:#4FB38A; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; padding:16px 16px 96px; }
+  h1 { font-size:1.25rem; margin:0 0 4px; }
+  h2 { font-size:1rem; }
+  .banner { background:#FBF3DD; color:#5c4500; border:1px solid #8A6A1E; padding:6px 10px; border-radius:6px; font-size:.85rem; margin-bottom:12px; }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0 12px; }
+  .controls button { font:inherit; padding:6px 10px; border:1px solid var(--rule); background:var(--surface); color:var(--ink); border-radius:6px; cursor:pointer; }
+  .controls button[aria-pressed="true"] { border-color:var(--brand); outline:2px solid var(--brand); }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:16px; }
+  @media (max-width: 900px) { .layout { grid-template-columns:1fr; } }
+  .frame { border:1px solid var(--rule); border-radius:8px; padding:8px; background:var(--bg); overflow:hidden; }
+  #stage { position:relative; margin:0 auto; max-width:100%; }
+  .layer { transition:opacity 200ms ease; }
+  .layer.back { position:absolute; inset:0; opacity:0; }
+  body.reduced .layer { transition:none; }
+  .state { font-size:.8rem; }
+  .state pre { white-space:pre-wrap; background:var(--surface); border:1px solid var(--rule); padding:8px; border-radius:6px; max-height:260px; overflow:auto; }
+  .state table { border-collapse:collapse; width:100%; }
+  .state td { border-bottom:1px solid var(--rule); padding:3px 4px; vertical-align:top; }
+  .bar { position:fixed; left:50%; bottom:12px; transform:translateX(-50%); display:flex; gap:6px; background:#14283B; padding:6px; border-radius:999px; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+  .bar a { color:#fff; text-decoration:none; padding:6px 12px; border-radius:999px; font-size:.85rem; }
+  .bar a.on { background:#1D6A50; }
+</style>
+</head>
+<body>
+<div class="banner">PROTOTYPE, throwaway. Switch the re-render strategy with the bar at the bottom.</div>
+<h1>Priority Tree re-render</h1>
+<div id="variantNote" class="state"></div>
+
+<div class="controls" id="pathButtons" aria-label="Fake computed paths"></div>
+<div class="controls">
+  <button id="themeBtn" aria-pressed="false">Dark palette</button>
+  <button id="motionBtn" aria-pressed="false">Reduced motion</button>
+  <button id="shapeBtn" aria-pressed="false">Compact question shapes</button>
+  <button id="pathOnlyBtn" aria-pressed="false">Path only</button>
+  <button id="stressBtn">Stress: 50 re-renders</button>
+  <label>Width <input id="width" type="range" min="320" max="1200" step="10" value="900"> <span id="widthOut">900px</span></label>
+</div>
+
+<div class="layout">
+  <div class="frame"><div id="stage"></div></div>
+  <div class="state">
+    <h2>Text equivalent of the path</h2>
+    <ol id="pathText" aria-live="polite"></ol>
+    <h2>Render state</h2>
+    <table id="stateTable"></table>
+    <h2>Generated Mermaid text</h2>
+    <pre id="source"></pre>
+  </div>
+</div>
+
+<nav class="bar" id="bar"></nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.15.0/mermaid.min.js"></script>
+<script>
+'use strict';
+// ---------- The tree as a model (source of truth); Mermaid text is generated from it ----------
+const TREE = {
+  version: 1,
+  nodes: [
+    { id: 'S', kind: 'start', label: 'Extra money each month' },
+    { id: 'Q1', kind: 'question', label: 'Debt with APR of 7% or more?' },
+    { id: 'Q2', kind: 'question', label: 'Emergency fund covers 3 months of expenses?' },
+    { id: 'Q3', kind: 'question', label: 'Getting the full employer match?' },
+    { id: 'Q4', kind: 'question', label: 'When will you need this money?' },
+    { id: 'Q5', kind: 'question', label: 'Already at the IRS limit for your age?' },
+    { id: 'L1', kind: 'leaf', label: 'Pay down the high-interest debt first' },
+    { id: 'L2', kind: 'leaf', label: 'Build the emergency fund to 3 months' },
+    { id: 'L3', kind: 'leaf', label: 'Raise 401(k) contributions to capture the full match' },
+    { id: 'L4', kind: 'leaf', label: 'High-yield savings or short-term Treasuries' },
+    { id: 'L5', kind: 'leaf', label: 'Taxable brokerage: balanced index funds' },
+    { id: 'L6', kind: 'leaf', label: 'Max the IRA, then the 401(k)' },
+    { id: 'L7', kind: 'leaf', label: 'Taxable brokerage: stock index funds' }
+  ],
+  edges: [
+    { from: 'S', to: 'Q1', label: '' },
+    { from: 'Q1', to: 'L1', label: 'Yes' }, { from: 'Q1', to: 'Q2', label: 'No' },
+    { from: 'Q2', to: 'L2', label: 'No' }, { from: 'Q2', to: 'Q3', label: 'Yes' },
+    { from: 'Q3', to: 'L3', label: 'No' }, { from: 'Q3', to: 'Q4', label: 'Yes' },
+    { from: 'Q4', to: 'L4', label: 'Under 3 years' }, { from: 'Q4', to: 'L5', label: '3 to 10 years' },
+    { from: 'Q4', to: 'Q5', label: 'Over 10 years' },
+    { from: 'Q5', to: 'L6', label: 'No' }, { from: 'Q5', to: 'L7', label: 'Yes' }
+  ]
+};
+// Fake "computed" paths, as the ApiService would return them (ordered node ids).
+const PATHS = {
+  'Before submit': null,
+  L1: ['S', 'Q1', 'L1'], L2: ['S', 'Q1', 'Q2', 'L2'], L3: ['S', 'Q1', 'Q2', 'Q3', 'L3'],
+  L4: ['S', 'Q1', 'Q2', 'Q3', 'Q4', 'L4'], L5: ['S', 'Q1', 'Q2', 'Q3', 'Q4', 'L5'],
+  L6: ['S', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'L6'], L7: ['S', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'L7']
+};
+
+// Hex only: Mermaid bakes colours into the SVG, so each palette is a full set and a theme change re-renders.
+const PALETTES = {
+  light: {
+    bg: '#FFFFFF', ink: '#14283B', soft: '#3D4F5F', faint: '#8796A2', line: '#5B6B78', dimLine: '#D6DEDB',
+    qFill: '#FBF3DD', qStroke: '#8A6A1E', lFill: '#F3F6F5', lStroke: '#D6DEDB',
+    onFill: '#E6F0EB', onStroke: '#1D6A50', chosenFill: '#1D6A50', chosenText: '#FFFFFF', chosenStroke: '#134A38',
+    dimFill: '#F8FAF9', dimStroke: '#E1E7E4'
+  },
+  dark: {
+    bg: '#0F1A22', ink: '#E6EDF1', soft: '#C3CDD3', faint: '#6B7C88', line: '#9FB0BC', dimLine: '#2A3B47',
+    qFill: '#2B2410', qStroke: '#D4A94A', lFill: '#16232D', lStroke: '#2A3B47',
+    onFill: '#16352A', onStroke: '#4FB38A', chosenFill: '#4FB38A', chosenText: '#0F1A22', chosenStroke: '#8FD6B5',
+    dimFill: '#121E26', dimStroke: '#1F2E38'
+  }
+};
+
+function shape (n) {
+  const text = '"' + n.label.replace(/"/g, '#quot;') + '"';
+  if (n.kind === 'start') return n.id + '([' + text + '])';
+  if (n.kind === 'question') return n.id + (compact ? '(' + text + ')' : '{' + text + '}');
+  return n.id + '[' + text + ']';
+}
+
+function subset (tree, path) {
+  if (!pathOnly || !path) return tree;
+  const keep = new Set(path);
+  return { version: tree.version, nodes: tree.nodes.filter(n => keep.has(n.id)),
+    edges: tree.edges.filter(e => keep.has(e.from) && keep.has(e.to) && path.includes(e.from)) };
+}
+
+function generate (fullTree, path, p) {
+  const tree = subset(fullTree, path);
+  const onPath = new Set(path || []);
+  const leaf = path ? path[path.length - 1] : null;
+  const lines = ['flowchart TD',
+    '  accTitle: Priority Tree',
+    '  accDescr: ' + (path ? 'Suggested path ending at: ' + tree.nodes.find(n => n.id === leaf).label
+      : 'The whole tree before any answers')];
+  tree.nodes.forEach(n => lines.push('  ' + shape(n)));
+  const onEdges = [];
+  tree.edges.forEach((e, i) => {
+    lines.push('  ' + e.from + (e.label ? ' -->|' + e.label + '| ' : ' --> ') + e.to);
+    const a = path ? path.indexOf(e.from) : -1;
+    if (a >= 0 && path[a + 1] === e.to) onEdges.push(i);
+  });
+  lines.push('  classDef question fill:' + p.qFill + ',stroke:' + p.qStroke + ',color:' + p.ink);
+  lines.push('  classDef leaf fill:' + p.lFill + ',stroke:' + p.lStroke + ',color:' + p.soft);
+  lines.push('  classDef start fill:' + p.bg + ',stroke:' + p.line + ',color:' + p.ink);
+  lines.push('  classDef onPath fill:' + p.onFill + ',stroke:' + p.onStroke + ',stroke-width:2px,color:' + p.ink);
+  lines.push('  classDef chosen fill:' + p.chosenFill + ',stroke:' + p.chosenStroke + ',stroke-width:3px,color:' + p.chosenText);
+  lines.push('  classDef dim fill:' + p.dimFill + ',stroke:' + p.dimStroke + ',color:' + p.faint);
+  tree.nodes.forEach(n => {
+    let c = n.kind;
+    if (path) c = n.id === leaf ? 'chosen' : onPath.has(n.id) ? 'onPath' : 'dim';
+    lines.push('  class ' + n.id + ' ' + c);
+  });
+  if (path) {
+    lines.push('  linkStyle default stroke:' + p.dimLine + ',stroke-width:1px,color:' + p.faint);
+    if (onEdges.length) lines.push('  linkStyle ' + onEdges.join(',') + ' stroke:' + p.onStroke + ',stroke-width:3px,color:' + p.ink);
+  } else {
+    lines.push('  linkStyle default stroke:' + p.line + ',stroke-width:1.5px');
+  }
+  return lines.join('\n');
+}
+
+function pathText (tree, path) {
+  if (!path) return ['No answers yet: the whole tree is shown.'];
+  const out = [];
+  for (let i = 1; i < path.length; i++) {
+    const n = tree.nodes.find(x => x.id === path[i]);
+    const e = tree.edges.find(x => x.from === path[i - 1] && x.to === path[i]);
+    const from = tree.nodes.find(x => x.id === path[i - 1]);
+    if (from.kind === 'question') out.push(from.label + ' ' + e.label + '.');
+    if (n.kind === 'leaf') out.push('Suggested priority: ' + n.label + '.');
+  }
+  return out;
+}
+
+// ---------- Re-render strategies (the variants) ----------
+const VARIANTS = {
+  swap: 'A: render offscreen with a fresh id and no container, then one innerHTML swap (the research recommendation).',
+  fade: 'B: like A, but render into a hidden back layer and crossfade 200ms (none under reduced motion).',
+  naive: 'C: pass the visible host as the container (the pitfall the research warned about), to compare.'
+};
+const requested = new URLSearchParams(location.search).get('variant');
+const variant = VARIANTS[requested] ? requested : 'swap';
+const stage = document.getElementById('stage');
+let renderCount = 0; let current = 'Before submit'; let palette = 'light';
+let compact = new URLSearchParams(location.search).get('shape') === 'compact';
+let pathOnly = new URLSearchParams(location.search).get('view') === 'path';
+let lastMs = 0; let maxMs = 0; let blankFrames = 0;
+
+function initMermaid () {
+  const p = PALETTES[palette];
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: 'base',
+    look: 'classic',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    themeVariables: {
+      fontFamily: '"IBM Plex Sans","Segoe UI",system-ui,sans-serif',
+      fontSize: '15px',
+      background: p.bg,
+      primaryColor: p.lFill,
+      primaryTextColor: p.ink,
+      primaryBorderColor: p.lStroke,
+      lineColor: p.line,
+      edgeLabelBackground: p.bg,
+      tertiaryColor: p.bg
+    }
+  });
+}
+
+async function render () {
+  const text = generate(TREE, PATHS[current], PALETTES[palette]);
+  const id = 'pt' + (++renderCount);
+  const t0 = performance.now();
+  if (variant === 'naive') {
+    const { svg } = await mermaid.render(id, text, stage);
+    if (!stage.querySelector('svg[id^="pt"]')) blankFrames++;
+    stage.innerHTML = svg;
+  } else if (variant === 'fade') {
+    const { svg } = await mermaid.render(id, text);
+    const front = stage.querySelector('.layer.front');
+    const back = document.createElement('div');
+    back.className = 'layer back';
+    back.innerHTML = svg;
+    stage.appendChild(back);
+    requestAnimationFrame(() => {
+      back.classList.remove('back');
+      back.classList.add('front');
+      if (front) {
+        front.classList.remove('front');
+        front.style.position = 'absolute';
+        front.style.inset = '0';
+        front.style.opacity = '0';
+        setTimeout(() => front.remove(), document.body.classList.contains('reduced') ? 0 : 220);
+      }
+    });
+  } else {
+    const { svg } = await mermaid.render(id, text);
+    stage.innerHTML = svg;
+  }
+  lastMs = performance.now() - t0;
+  maxMs = Math.max(maxMs, lastMs);
+  document.getElementById('source').textContent = text;
+  const ol = document.getElementById('pathText');
+  ol.innerHTML = '';
+  pathText(TREE, PATHS[current]).forEach(s => {
+    const li = document.createElement('li');
+    li.textContent = s;
+    ol.appendChild(li);
+  });
+  setTimeout(showState, 250);
+}
+
+function showState () {
+  const svgs = document.querySelectorAll('svg[id^="pt"]');
+  const outside = [...document.querySelectorAll('[id^="pt"],[id^="dpt"]')].filter(el => !stage.contains(el));
+  const svg = stage.querySelector('svg');
+  const rows = {
+    Variant: variant,
+    Path: current,
+    Palette: palette,
+    'Renders so far': renderCount,
+    'Last render ms': lastMs.toFixed(1),
+    'Slowest render ms': maxMs.toFixed(1),
+    'SVGs in document': svgs.length,
+    'Stray Mermaid elements outside the stage': outside.length,
+    'Blank frames seen (naive only)': blankFrames,
+    'SVG width / max-width': svg ? (svg.getAttribute('width') + ' / ' + svg.style.maxWidth) : '-',
+    'SVG role / aria-roledescription': svg ? (svg.getAttribute('role') + ' / ' + svg.getAttribute('aria-roledescription')) : '-',
+    'SVG title': svg && svg.querySelector('title') ? svg.querySelector('title').textContent : '-',
+    'Body child count': document.body.children.length
+  };
+  document.getElementById('stateTable').innerHTML = Object.entries(rows)
+    .map(([k, v]) => '<tr><td>' + k + '</td><td>' + String(v).replace(/</g, '&lt;') + '</td></tr>').join('');
+  window.__state = rows;
+}
+
+// ---------- Controls ----------
+const pb = document.getElementById('pathButtons');
+Object.keys(PATHS).forEach(k => {
+  const b = document.createElement('button');
+  b.textContent = k === 'Before submit' ? k : 'Path to ' + k;
+  b.setAttribute('aria-pressed', String(k === current));
+  b.addEventListener('click', () => {
+    current = k;
+    pb.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    render();
+  });
+  pb.appendChild(b);
+});
+document.getElementById('themeBtn').addEventListener('click', e => {
+  palette = palette === 'light' ? 'dark' : 'light';
+  document.body.classList.toggle('dark', palette === 'dark');
+  e.target.setAttribute('aria-pressed', String(palette === 'dark'));
+  initMermaid();
+  render();
+});
+document.getElementById('shapeBtn').setAttribute('aria-pressed', String(compact));
+document.getElementById('shapeBtn').addEventListener('click', e => {
+  compact = !compact;
+  e.target.setAttribute('aria-pressed', String(compact));
+  render();
+});
+document.getElementById('pathOnlyBtn').setAttribute('aria-pressed', String(pathOnly));
+document.getElementById('pathOnlyBtn').addEventListener('click', e => {
+  pathOnly = !pathOnly;
+  e.target.setAttribute('aria-pressed', String(pathOnly));
+  render();
+});
+document.getElementById('motionBtn').addEventListener('click', e => {
+  const on = document.body.classList.toggle('reduced');
+  e.target.setAttribute('aria-pressed', String(on));
+});
+document.getElementById('stressBtn').addEventListener('click', async () => {
+  const keys = Object.keys(PATHS);
+  for (let i = 0; i < 50; i++) {
+    current = keys[i % keys.length];
+    await render();
+  }
+});
+const width = document.getElementById('width');
+width.addEventListener('input', () => {
+  stage.style.width = width.value + 'px';
+  document.getElementById('widthOut').textContent = width.value + 'px';
+});
+stage.style.width = width.value + 'px';
+
+document.getElementById('variantNote').textContent = VARIANTS[variant];
+document.getElementById('bar').innerHTML = Object.keys(VARIANTS)
+  .map(v => '<a href="?variant=' + v + '" class="' + (v === variant ? 'on' : '') + '">' + v + '</a>').join('');
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.body.classList.add('reduced');
+
+initMermaid();
+render();
+window.__proto = {
+  setPath: k => { current = k; return render(); },
+  toggleTheme: () => document.getElementById('themeBtn').click()
+};
+</script>
+</body>
+</html>
