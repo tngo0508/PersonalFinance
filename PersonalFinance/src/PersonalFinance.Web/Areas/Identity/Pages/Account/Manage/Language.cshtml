@@ -18,6 +18,7 @@
         <form id="language-form" method="post">
             <div asp-validation-summary="All" class="text-danger" role="alert"></div>
             <p class="text-muted">@L["Account.Language.Intro"]</p>
+            <p class="text-muted">@L["Account.Language.Formats"]</p>
             <fieldset class="mb-3">
                 <legend class="visually-hidden">@L["Account.Language.Title"]</legend>
                 @foreach (var language in AppLanguages.All)

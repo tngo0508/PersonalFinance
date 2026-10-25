@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Shared JavaScript utilities for the Personal Finance application.
  * Provides common formatting, escaping, and parsing functions used across modules.
@@ -17,52 +18,40 @@
     }
 
     /**
-     * Format a numeric value as a whole-dollar currency string (no cents).
+     * Format a numeric value as a whole-unit US dollar string (no cents), in the page culture.
      * @param {number} value - The numeric value to format.
-     * @returns {string} Formatted currency string (e.g., "$1,234,567").
+     * @returns {string} Formatted currency string (e.g., "$1,234,567"; "1.234.567 $" in vi-VN).
      */
     function formatCurrency (value) {
-        return '$' + Math.round(value).toLocaleString('en-US');
+        return PFI18n.formatMoney(value, 'USD', { whole: true });
     }
 
     /**
-     * Format a numeric value as a currency string with cents.
+     * Format a numeric value as a US dollar string with cents, in the page culture.
      * @param {number} num - The numeric value to format.
-     * @returns {string} Formatted currency string (e.g., "$1,234.56").
+     * @returns {string} Formatted currency string (e.g., "$1,234.56"; "-$1,234.56").
      */
     function formatCurrencyCents (num) {
-        if (num === null || num === undefined || isNaN(num)) { return '$0.00'; }
-        const n = Number(num);
-        const formatted = '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        return n < 0 ? '-' + formatted : formatted;
+        if (num === null || num === undefined || isNaN(num)) { return PFI18n.formatMoney(0, 'USD'); }
+        return PFI18n.formatMoney(Number(num), 'USD');
     }
 
     /**
-     * Format a numeric value as a compact currency string for small displays.
+     * Format a numeric value as a compact US dollar string for small displays, in the page culture.
      * @param {number} value - The numeric value to format.
      * @returns {string} Compact currency string (e.g., "$1.2M", "$50K").
      */
     function formatCompactCurrency (value) {
-        if (value >= 1_000_000) {
-            return '$' + (value / 1_000_000).toFixed(1) + 'M';
-        }
-        if (value >= 1_000) {
-            return '$' + (value / 1_000).toFixed(0) + 'K';
-        }
-        return '$' + Math.round(value).toLocaleString('en-US');
+        return PFI18n.formatCompactMoney(value, 'USD');
     }
 
     /**
-     * Format a numeric value as a compact currency string with sign support.
+     * Format a numeric value as a compact US dollar string with sign support, in the page culture.
      * @param {number} val - The numeric value to format.
      * @returns {string} Compact currency string with sign (e.g., "-$1.2M").
      */
     function formatCompactCurrencySigned (val) {
-        const abs = Math.abs(val);
-        const sign = val < 0 ? '-' : '';
-        if (abs >= 1000000) { return sign + '$' + (abs / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'; }
-        if (abs >= 1000) { return sign + '$' + (abs / 1000).toFixed(1).replace(/\.0$/, '') + 'K'; }
-        return sign + '$' + abs.toLocaleString('en-US');
+        return PFI18n.formatCompactMoney(val, 'USD');
     }
 
     /**

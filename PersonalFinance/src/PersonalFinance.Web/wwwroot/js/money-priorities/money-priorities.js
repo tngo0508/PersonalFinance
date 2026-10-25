@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Money Priorities page: the form with its follow-up fields, the background submit, the result card, the Priority
  * Tree (drawn by window.MoneyPrioritiesDiagram from diagram.js), the Purpose Note and Earlier results.
@@ -28,14 +29,13 @@
         Aggressive: 'Aggressive'
     };
 
-    const wholeDollars = new Intl.NumberFormat('en-US',
-        { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
-    const dollarsAndCents = new Intl.NumberFormat('en-US',
-        { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const rateNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
-    const monthsNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
-    const countNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
-    const shortDate = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    // Separators and dates from the page culture, symbol from the currency (PFI18n, spec §2.2).
+    const wholeDollars = { format: (value) => PFI18n.formatMoney(value, 'USD', { whole: true }) };
+    const dollarsAndCents = { format: (value) => PFI18n.formatMoney(value, 'USD') };
+    const rateNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 2 });
+    const monthsNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 1 });
+    const countNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 0 });
+    const shortDate = new Intl.DateTimeFormat(PFI18n.culture, { year: 'numeric', month: 'short', day: 'numeric' });
 
     let form = null;
     let submitButton = null;

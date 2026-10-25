@@ -1,3 +1,4 @@
+/* global PFI18n */
 (function () {
     'use strict';
 
@@ -22,12 +23,7 @@
      * @returns {string} Formatted currency.
      */
     function formatCurrency (num) {
-        const val = Number(num) || 0;
-        const formatted = Math.abs(val).toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-        return val < 0 ? '-$' + formatted : '$' + formatted;
+        return PFI18n.formatMoney(Number(num) || 0, 'USD');
     }
 
     /**
@@ -116,7 +112,7 @@
             });
 
             if (!response.ok) {
-                const errData = await response.json().catch(function () {
+                const errData = await response.json().catch(() => {
                     return {};
                 });
                 throw new Error(errData.error || `Failed to load sheet (${response.status})`);
@@ -289,11 +285,11 @@
         const expMax = Math.max(expPlanned, expActual, 1);
         if (expBarPlanned) {
             const pct = Math.min(100, Math.max(0, (expPlanned / expMax) * 100));
-            expBarPlanned.style.width = pct.toFixed(1) + '%';
+            expBarPlanned.style.width = `${pct.toFixed(1) }%`;
         }
         if (expBarActual) {
             const pct = Math.min(100, Math.max(0, (expActual / expMax) * 100));
-            expBarActual.style.width = pct.toFixed(1) + '%';
+            expBarActual.style.width = `${pct.toFixed(1) }%`;
         }
 
         // Income Bar
@@ -308,11 +304,11 @@
         const incMax = Math.max(incPlanned, incActual, 1);
         if (incBarPlanned) {
             const pct = Math.min(100, Math.max(0, (incPlanned / incMax) * 100));
-            incBarPlanned.style.width = pct.toFixed(1) + '%';
+            incBarPlanned.style.width = `${pct.toFixed(1) }%`;
         }
         if (incBarActual) {
             const pct = Math.min(100, Math.max(0, (incActual / incMax) * 100));
-            incBarActual.style.width = pct.toFixed(1) + '%';
+            incBarActual.style.width = `${pct.toFixed(1) }%`;
         }
     }
 
@@ -343,11 +339,11 @@
         }
 
         const isMonthInitialized = Boolean(currentSheet && currentSheet.isInitialized);
-        const activeRows = rows.filter(function (r) {
+        const activeRows = rows.filter((r) => {
             return !r.isArchived;
         });
 
-        rows.forEach(function (row) {
+        rows.forEach((row) => {
             const tr = document.createElement('tr');
             tr.dataset.categoryId = String(row.categoryId);
 
@@ -378,7 +374,7 @@
             btnPlanned.title = isMonthInitialized ? 'Click or press Enter to edit planned amount' : 'Please initialize month plan before editing';
             btnPlanned.disabled = !isMonthInitialized;
 
-            btnPlanned.addEventListener('click', function (e) {
+            btnPlanned.addEventListener('click', (e) => {
                 e.preventDefault();
                 if (isMonthInitialized) {
                     startInlinePlannedEdit(tdPlanned, row.categoryId, row.planned, row.name);
@@ -415,7 +411,7 @@
             btnOverride.setAttribute('aria-label', row.actualIsOverride ? `Edit manual override for ${row.name}` : `Set manual override for ${row.name}`);
             btnOverride.innerHTML = '<i data-lucide="edit-3" style="width:13px;height:13px;"></i>';
             btnOverride.disabled = !isMonthInitialized;
-            btnOverride.addEventListener('click', function (e) {
+            btnOverride.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (isMonthInitialized) {
                     openActualOverrideModal(row);
@@ -431,7 +427,7 @@
                 btnRevert.title = 'Revert to transaction sum';
                 btnRevert.setAttribute('aria-label', `Revert override for ${row.name} to transaction sum`);
                 btnRevert.innerHTML = '<i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i>';
-                btnRevert.addEventListener('click', async function (e) {
+                btnRevert.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     await revertActualOverride(row.categoryId);
                 });
@@ -474,7 +470,7 @@
                 btnMoveUp.innerHTML = '<i data-lucide="arrow-up" style="width:13px;height:13px;"></i>';
                 btnMoveUp.dataset.boundary = String(activeIndex === 0);
                 btnMoveUp.disabled = isReordering || activeIndex === 0;
-                btnMoveUp.addEventListener('click', async function (e) {
+                btnMoveUp.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     await handleReorderCategory(row, -1, kind);
                 });
@@ -489,7 +485,7 @@
                 btnMoveDown.innerHTML = '<i data-lucide="arrow-down" style="width:13px;height:13px;"></i>';
                 btnMoveDown.dataset.boundary = String(activeIndex === activeRows.length - 1);
                 btnMoveDown.disabled = isReordering || activeIndex === activeRows.length - 1;
-                btnMoveDown.addEventListener('click', async function (e) {
+                btnMoveDown.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     await handleReorderCategory(row, 1, kind);
                 });
@@ -502,7 +498,7 @@
                 btnRename.title = 'Rename category';
                 btnRename.setAttribute('aria-label', `Rename ${row.name}`);
                 btnRename.innerHTML = '<i data-lucide="edit-2" style="width:13px;height:13px;"></i>';
-                btnRename.addEventListener('click', function (e) {
+                btnRename.addEventListener('click', (e) => {
                     e.stopPropagation();
                     openEditCategoryModal(row, kind);
                 });
@@ -515,7 +511,7 @@
                 btnDelCat.title = 'Archive category';
                 btnDelCat.setAttribute('aria-label', `Archive ${row.name}`);
                 btnDelCat.innerHTML = '<i data-lucide="trash-2" style="width:13px;height:13px;"></i>';
-                btnDelCat.addEventListener('click', function (e) {
+                btnDelCat.addEventListener('click', (e) => {
                     e.stopPropagation();
                     confirmArchiveCategory(row);
                 });
@@ -659,7 +655,7 @@
                 );
 
                 if (!response.ok) {
-                    const err = await response.json().catch(function () {
+                    const err = await response.json().catch(() => {
                         return {};
                     });
                     throw new Error(err.error || 'Failed to update planned amount.');
@@ -675,11 +671,11 @@
             }
         }
 
-        input.addEventListener('blur', function () {
+        input.addEventListener('blur', () => {
             savePlanned();
         });
 
-        input.addEventListener('keydown', function (e) {
+        input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 input.blur();
@@ -698,10 +694,10 @@
      */
     function renderTransactions (transactions) {
         const txList = transactions || [];
-        const expenseTxs = txList.filter(function (t) {
+        const expenseTxs = txList.filter((t) => {
             return t.kind === 1;
         });
-        const incomeTxs = txList.filter(function (t) {
+        const incomeTxs = txList.filter((t) => {
             return t.kind === 2;
         });
 
@@ -752,7 +748,7 @@
             emptyState.classList.add('d-none');
         }
 
-        list.forEach(function (tx) {
+        list.forEach((tx) => {
             const tr = document.createElement('tr');
 
             // Date
@@ -762,7 +758,7 @@
 
             // Amount
             const tdAmount = document.createElement('td');
-            tdAmount.className = 'text-end bt-tx-amount ' + (kind === 1 ? 'bt-tx-amount--expense' : 'bt-tx-amount--income');
+            tdAmount.className = `text-end bt-tx-amount ${ kind === 1 ? 'bt-tx-amount--expense' : 'bt-tx-amount--income'}`;
             tdAmount.textContent = formatCurrency(tx.amount);
             tr.appendChild(tdAmount);
 
@@ -786,7 +782,7 @@
             btnEdit.title = 'Edit transaction';
             btnEdit.setAttribute('aria-label', `Edit transaction ${tx.description || tx.categoryName}`);
             btnEdit.innerHTML = '<i data-lucide="edit-2" style="width:14px;height:14px;"></i>';
-            btnEdit.addEventListener('click', function () {
+            btnEdit.addEventListener('click', () => {
                 openEditTransactionModal(tx);
             });
             tdActions.appendChild(btnEdit);
@@ -797,7 +793,7 @@
             btnDel.title = 'Delete transaction';
             btnDel.setAttribute('aria-label', `Delete transaction ${tx.description || tx.categoryName}`);
             btnDel.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;"></i>';
-            btnDel.addEventListener('click', function () {
+            btnDel.addEventListener('click', () => {
                 confirmDeleteTransaction(tx);
             });
             tdActions.appendChild(btnDel);
@@ -819,10 +815,10 @@
             return;
         }
 
-        const sameKindCats = userCategories.filter(function (c) {
+        const sameKindCats = userCategories.filter((c) => {
             return c.kind === kind;
         });
-        const currentIndex = sameKindCats.findIndex(function (c) {
+        const currentIndex = sameKindCats.findIndex((c) => {
             return c.id === row.categoryId;
         });
         const targetIndex = currentIndex + direction;
@@ -839,10 +835,10 @@
         let failureMessage = null;
         try {
             // Run every update to completion (even if one fails) so the refresh below sees a settled server state.
-            const results = await Promise.allSettled(updates.map(function (u) {
+            const results = await Promise.allSettled(updates.map((u) => {
                 return putCategorySortOrder(u.category, u.sortOrder);
             }));
-            const failed = results.find(function (r) {
+            const failed = results.find((r) => {
                 return r.status === 'rejected';
             });
             if (failed) {
@@ -890,7 +886,7 @@
         }
 
         const updates = [];
-        cats.forEach(function (c, i) {
+        cats.forEach((c, i) => {
             let assignedOrder = (i + 1) * 10;
             if (i === currentIndex) {
                 assignedOrder = (targetIndex + 1) * 10;
@@ -927,7 +923,7 @@
         });
 
         if (!response.ok) {
-            const err = await response.json().catch(function () {
+            const err = await response.json().catch(() => {
                 return {};
             });
             throw new Error(err.error || 'Failed to reorder category.');
@@ -951,7 +947,7 @@
      * @returns {void}
      */
     function setReorderControlsDisabled (disabled) {
-        document.querySelectorAll('.bt-move-btn').forEach(function (btn) {
+        document.querySelectorAll('.bt-move-btn').forEach((btn) => {
             btn.disabled = disabled || btn.dataset.boundary === 'true';
         });
     }
@@ -970,7 +966,7 @@
         const nameInput = document.getElementById('inputEditCategoryName');
         const kindSelect = document.getElementById('selectEditCategoryKind');
 
-        const cat = userCategories.find(function (c) {
+        const cat = userCategories.find((c) => {
             return c.id === row.categoryId;
         });
         const currentSortOrder = cat ? cat.sortOrder : 0;
@@ -1041,7 +1037,7 @@
             });
 
             if (!response.ok) {
-                const err = await response.json().catch(function () {
+                const err = await response.json().catch(() => {
                     return {};
                 });
                 throw new Error(err.error || 'Failed to update category.');
@@ -1122,7 +1118,7 @@
             );
 
             if (!response.ok) {
-                const err = await response.json().catch(function () {
+                const err = await response.json().catch(() => {
                     return {};
                 });
                 throw new Error(err.error || 'Failed to revert actual override.');
@@ -1247,7 +1243,7 @@
         const incGroup = document.createElement('optgroup');
         incGroup.label = 'Income';
 
-        userCategories.forEach(function (cat) {
+        userCategories.forEach((cat) => {
             const opt = document.createElement('option');
             opt.value = String(cat.id);
             opt.textContent = cat.name;
@@ -1306,7 +1302,7 @@
                 });
 
                 if (!response.ok) {
-                    const err = await response.json().catch(function () {
+                    const err = await response.json().catch(() => {
                         return {};
                     });
                     throw new Error(err.error || 'Failed to delete category.');
@@ -1370,7 +1366,7 @@
                 });
 
                 if (!response.ok) {
-                    const err = await response.json().catch(function () {
+                    const err = await response.json().catch(() => {
                         return {};
                     });
                     throw new Error(err.error || 'Failed to delete transaction.');
@@ -1409,7 +1405,7 @@
         const selYear = document.getElementById('selectYear');
 
         if (btnPrev) {
-            btnPrev.addEventListener('click', function () {
+            btnPrev.addEventListener('click', () => {
                 let m = currentMonth - 1;
                 let y = currentYear;
                 if (m < 1) {
@@ -1421,7 +1417,7 @@
         }
 
         if (btnNext) {
-            btnNext.addEventListener('click', function () {
+            btnNext.addEventListener('click', () => {
                 let m = currentMonth + 1;
                 let y = currentYear;
                 if (m > 12) {
@@ -1433,13 +1429,13 @@
         }
 
         if (selMonth) {
-            selMonth.addEventListener('change', function () {
+            selMonth.addEventListener('change', () => {
                 loadSheet(currentYear, parseInt(selMonth.value, 10));
             });
         }
 
         if (selYear) {
-            selYear.addEventListener('change', function () {
+            selYear.addEventListener('change', () => {
                 loadSheet(parseInt(selYear.value, 10), currentMonth);
             });
         }
@@ -1447,7 +1443,7 @@
         // Alert dismiss
         const btnDismiss = document.getElementById('btnDismissAlert');
         if (btnDismiss) {
-            btnDismiss.addEventListener('click', function () {
+            btnDismiss.addEventListener('click', () => {
                 showAlert(null);
             });
         }
@@ -1457,13 +1453,13 @@
         const btnStartBlank = document.getElementById('btnStartBlank');
 
         if (btnCopyPrev) {
-            btnCopyPrev.addEventListener('click', async function () {
+            btnCopyPrev.addEventListener('click', async () => {
                 await initializeMonth(true);
             });
         }
 
         if (btnStartBlank) {
-            btnStartBlank.addEventListener('click', async function () {
+            btnStartBlank.addEventListener('click', async () => {
                 await initializeMonth(false);
             });
         }
@@ -1476,7 +1472,7 @@
         const selCatKind = document.getElementById('selectCategoryKind');
 
         if (btnAddExpCat) {
-            btnAddExpCat.addEventListener('click', function () {
+            btnAddExpCat.addEventListener('click', () => {
                 showModalAlert('alertAddCategory', null);
                 if (inputCatName) {
                     inputCatName.value = '';
@@ -1491,7 +1487,7 @@
         }
 
         if (btnAddIncCat) {
-            btnAddIncCat.addEventListener('click', function () {
+            btnAddIncCat.addEventListener('click', () => {
                 showModalAlert('alertAddCategory', null);
                 if (inputCatName) {
                     inputCatName.value = '';
@@ -1506,7 +1502,7 @@
         }
 
         if (formAddCat) {
-            formAddCat.addEventListener('submit', async function (e) {
+            formAddCat.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await handleCreateCategory();
             });
@@ -1515,7 +1511,7 @@
         // Edit Category Form
         const formEditCat = document.getElementById('formEditCategory');
         if (formEditCat) {
-            formEditCat.addEventListener('submit', async function (e) {
+            formEditCat.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await handleEditCategory();
             });
@@ -1524,7 +1520,7 @@
         // Actual Override Form
         const formOverride = document.getElementById('formActualOverride');
         if (formOverride) {
-            formOverride.addEventListener('submit', async function (e) {
+            formOverride.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await handleSaveActualOverride();
             });
@@ -1535,13 +1531,13 @@
         const formTx = document.getElementById('formTransaction');
 
         if (btnAddTx) {
-            btnAddTx.addEventListener('click', function () {
+            btnAddTx.addEventListener('click', () => {
                 openAddTransactionModal(null);
             });
         }
 
         if (formTx) {
-            formTx.addEventListener('submit', async function (e) {
+            formTx.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await handleSaveTransaction();
             });
@@ -1550,7 +1546,7 @@
         // Delete confirmation button
         const btnConfirmDel = document.getElementById('btnConfirmDelete');
         if (btnConfirmDel) {
-            btnConfirmDel.addEventListener('click', async function () {
+            btnConfirmDel.addEventListener('click', async () => {
                 if (pendingDeleteAction) {
                     await pendingDeleteAction();
                 }
@@ -1559,7 +1555,7 @@
 
         const modalDelEl = document.getElementById('modalDeleteConfirm');
         if (modalDelEl) {
-            modalDelEl.addEventListener('hidden.bs.modal', function () {
+            modalDelEl.addEventListener('hidden.bs.modal', () => {
                 pendingDeleteAction = null;
                 showModalAlert('alertDeleteConfirm', null);
             });
@@ -1599,7 +1595,7 @@
             });
 
             if (!response.ok) {
-                const err = await response.json().catch(function () {
+                const err = await response.json().catch(() => {
                     return {};
                 });
                 throw new Error(err.error || 'Failed to initialize month.');
@@ -1638,11 +1634,11 @@
         }
 
         // Append to the end of the same category kind
-        const sameKindCats = userCategories.filter(function (c) {
+        const sameKindCats = userCategories.filter((c) => {
             return c.kind === kind;
         });
         let maxSortOrder = 0;
-        sameKindCats.forEach(function (c) {
+        sameKindCats.forEach((c) => {
             if (c.sortOrder > maxSortOrder) {
                 maxSortOrder = c.sortOrder;
             }
@@ -1671,7 +1667,7 @@
             });
 
             if (!response.ok) {
-                const err = await response.json().catch(function () {
+                const err = await response.json().catch(() => {
                     return {};
                 });
                 throw new Error(err.error || 'Failed to create category.');
@@ -1731,7 +1727,7 @@
             );
 
             if (!response.ok) {
-                const err = await response.json().catch(function () {
+                const err = await response.json().catch(() => {
                     return {};
                 });
                 throw new Error(err.error || 'Failed to save actual override.');
@@ -1814,7 +1810,7 @@
             });
 
             if (!response.ok) {
-                const err = await response.json().catch(function () {
+                const err = await response.json().catch(() => {
                     return {};
                 });
                 throw new Error(err.error || 'Failed to save transaction.');

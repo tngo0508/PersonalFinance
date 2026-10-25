@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth slider and input synchronization module.
  * Handles slider-input pairing, formatting, and the savings rate indicator.
@@ -18,7 +19,7 @@
         const num = NW.PF.safeParseFloat(value, NaN);
         if (isNaN(num)) { return ''; }
         if (type === 'currency') {
-            return Math.round(num).toLocaleString('en-US');
+            return PFI18n.formatNumber(Math.round(num));
         }
         if (type === 'percent') {
             return num.toFixed(1);
@@ -43,7 +44,7 @@
             { rangeId: 'nwAggressiveRoiRange', saveId: 'nwSaveAggressiveRoi' },
             { rangeId: 'nwAggressiveSavingsRange', saveId: 'nwSaveAggressiveSavings' }
         ];
-        fields.forEach(function (field) {
+        fields.forEach((field) => {
             const rangeEl = document.getElementById(field.rangeId);
             const saveEl = document.getElementById(field.saveId);
             if (rangeEl && saveEl) {
@@ -67,7 +68,7 @@
         inputEl.value = formatSliderValue(rangeEl.value, formatType);
 
         // Range → Input
-        rangeEl.addEventListener('input', function () {
+        rangeEl.addEventListener('input', () => {
             inputEl.value = formatSliderValue(rangeEl.value, formatType);
             updateSavingsIndicator();
             syncSaveInputs();
@@ -75,7 +76,7 @@
         });
 
         // Input → Range (on blur and Enter key)
-        inputEl.addEventListener('input', function () {
+        inputEl.addEventListener('input', () => {
             const raw = inputEl.value.replace(/[^0-9.]/g, '');
             const num = NW.PF.safeParseFloat(raw, NaN);
             if (!isNaN(num)) {
@@ -88,7 +89,7 @@
             NW.triggerRecalculation();
         });
 
-        inputEl.addEventListener('blur', function () {
+        inputEl.addEventListener('blur', () => {
             const raw = inputEl.value.replace(/[^0-9.]/g, '');
             const num = NW.PF.safeParseFloat(raw, NaN);
             if (!isNaN(num)) {
@@ -102,7 +103,7 @@
             NW.triggerRecalculation();
         });
 
-        inputEl.addEventListener('keydown', function (e) {
+        inputEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 inputEl.blur();
@@ -134,8 +135,8 @@
 
         const rate = (savings / income) * 100;
         const displayRate = Math.min(rate, 100);
-        rateValueEl.textContent = rate.toFixed(1) + '%';
-        rateFillEl.style.width = displayRate + '%';
+        rateValueEl.textContent = `${rate.toFixed(1) }%`;
+        rateFillEl.style.width = `${displayRate }%`;
 
         // Color coding
         rateFillEl.className = 'nw-savings-indicator__fill';

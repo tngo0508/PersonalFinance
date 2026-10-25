@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth UI update module.
  * Handles updating metric cards, scenario cards, badges, and the projection table.
@@ -50,26 +51,26 @@
             const symbolEl = fiValue.querySelector('.nw-currency-symbol');
             const amountEl = fiValue.querySelector('.nw-currency-amount');
             if (symbolEl) { symbolEl.textContent = '$'; }
-            if (amountEl) { amountEl.textContent = Math.round(data.fiTarget).toLocaleString('en-US'); }
+            if (amountEl) { amountEl.textContent = PFI18n.formatNumber(Math.round(data.fiTarget)); }
         }
-        setHtml('.nw-metric-fi-sub', 'Based on ' + PF.escapeHtml(NW.formatCompact(data.annualSpending)) + '/yr spending');
+        setHtml('.nw-metric-fi-sub', `Based on ${ PF.escapeHtml(NW.formatCompact(data.annualSpending)) }/yr spending`);
 
         // Current Net Worth card
         setText('.nw-metric-current-value', NW.formatCurrency(data.base.startingBalance));
-        setText('.nw-metric-current-sub', 'Age ' + data.currentAge + ', Year ' + data.currentYear);
+        setText('.nw-metric-current-sub', `Age ${ data.currentAge }, Year ${ data.currentYear}`);
 
         // Base Final card
         setText('.nw-metric-base-value', NW.formatCurrency(data.base.finalNetWorth));
-        setText('.nw-metric-base-sub', data.base.roiPercent + '% ROI');
+        setText('.nw-metric-base-sub', `${data.base.roiPercent }% ROI`);
 
         // Aggressive Final card
         setText('.nw-metric-aggressive-value', NW.formatCurrency(data.aggressive.finalNetWorth));
-        setHtml('.nw-metric-aggressive-sub', PF.escapeHtml(String(data.aggressive.roiPercent)) + '% ROI · ' + PF.escapeHtml(NW.formatCompact(data.aggressive.annualSavings)) + '/yr savings');
+        setHtml('.nw-metric-aggressive-sub', `${PF.escapeHtml(String(data.aggressive.roiPercent)) }% ROI · ${ PF.escapeHtml(NW.formatCompact(data.aggressive.annualSavings)) }/yr savings`);
 
         // Legend
-        setHtmlById('nwLegendBase', '<span class="nw-legend-dot nw-dot-base"></span> Base (' + PF.escapeHtml(String(data.base.roiPercent)) + '%)');
-        setHtmlById('nwLegendConservative', '<span class="nw-legend-dot nw-dot-conservative"></span> Conservative (' + PF.escapeHtml(String(data.conservative.roiPercent)) + '%)');
-        setHtmlById('nwLegendAggressive', '<span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (' + PF.escapeHtml(String(data.aggressive.roiPercent)) + '%)');
+        setHtmlById('nwLegendBase', `<span class="nw-legend-dot nw-dot-base"></span> Base (${ PF.escapeHtml(String(data.base.roiPercent)) }%)`);
+        setHtmlById('nwLegendConservative', `<span class="nw-legend-dot nw-dot-conservative"></span> Conservative (${ PF.escapeHtml(String(data.conservative.roiPercent)) }%)`);
+        setHtmlById('nwLegendAggressive', `<span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (${ PF.escapeHtml(String(data.aggressive.roiPercent)) }%)`);
     }
 
     /**
@@ -88,10 +89,10 @@
      * @param {Object} scenario - The scenario data object.
      */
     function setScenarioValues (prefix, scenario) {
-        const savingsEl = document.querySelector('.' + prefix + 'savings');
-        const finalEl = document.querySelector('.' + prefix + 'final');
-        const contribEl = document.querySelector('.' + prefix + 'contrib');
-        const interestEl = document.querySelector('.' + prefix + 'interest');
+        const savingsEl = document.querySelector(`.${ prefix }savings`);
+        const finalEl = document.querySelector(`.${ prefix }final`);
+        const contribEl = document.querySelector(`.${ prefix }contrib`);
+        const interestEl = document.querySelector(`.${ prefix }interest`);
 
         if (savingsEl) { savingsEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.annualSavings)); }
         if (finalEl) { finalEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.finalNetWorth)); }
@@ -106,9 +107,9 @@
     function updateScenarioBadges (data) {
         const badges = document.querySelectorAll('.nw-scenario-badge');
         const roiValues = [data.base.roiPercent, data.conservative.roiPercent, data.aggressive.roiPercent];
-        badges.forEach(function (badge, index) {
+        badges.forEach((badge, index) => {
             if (index < roiValues.length) {
-                badge.textContent = roiValues[index] + '% ROI';
+                badge.textContent = `${roiValues[index] }% ROI`;
             }
         });
     }
@@ -151,17 +152,17 @@
         const fiTarget = data.fiTarget;
         const annualIncome = data.annualIncome;
 
-        const rows = scenario.years.map(function (year) {
+        const rows = scenario.years.map((year) => {
             const rowClass = getRowHighlightClass(year.endingBalance, fiTarget, annualIncome);
             const roiClass = year.roi >= annualIncome ? ' nw-roi-highlight' : '';
             const esc = PF.escapeHtml;
-            return '<tr' + rowClass + '>' +
-                '<td>' + esc(year.year) + '</td>' +
-                '<td>' + esc(year.age) + '</td>' +
-                '<td class="text-end nw-currency">' + esc(NW.formatCurrency(year.startingBalance)) + '</td>' +
-                '<td class="text-end nw-currency">' + esc(NW.formatCurrency(year.savings)) + '</td>' +
-                '<td class="text-end nw-currency text-success' + roiClass + '">' + esc(NW.formatCurrency(year.roi)) + '</td>' +
-                '<td class="text-end nw-currency fw-semibold">' + esc(NW.formatCurrency(year.endingBalance)) + '</td>' +
+            return `<tr${ rowClass }>` +
+                `<td>${ esc(year.year) }</td>` +
+                `<td>${ esc(year.age) }</td>` +
+                `<td class="text-end nw-currency">${ esc(NW.formatCurrency(year.startingBalance)) }</td>` +
+                `<td class="text-end nw-currency">${ esc(NW.formatCurrency(year.savings)) }</td>` +
+                `<td class="text-end nw-currency text-success${ roiClass }">${ esc(NW.formatCurrency(year.roi)) }</td>` +
+                `<td class="text-end nw-currency fw-semibold">${ esc(NW.formatCurrency(year.endingBalance)) }</td>` +
             '</tr>';
         });
 
@@ -174,10 +175,10 @@
      */
     function initScenarioTabs () {
         const buttons = document.querySelectorAll('.nw-tab-btn');
-        buttons.forEach(function (btn) {
-            btn.addEventListener('click', function () {
+        buttons.forEach((btn) => {
+            btn.addEventListener('click', () => {
                 // Update active state
-                buttons.forEach(function (b) { b.classList.remove('active'); });
+                buttons.forEach((b) => { b.classList.remove('active'); });
                 btn.classList.add('active');
 
                 // Update table
@@ -193,7 +194,7 @@
      */
     function initTooltips () {
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tooltipTriggerList.forEach(function (el) {
+        tooltipTriggerList.forEach((el) => {
             new bootstrap.Tooltip(el);
         });
     }

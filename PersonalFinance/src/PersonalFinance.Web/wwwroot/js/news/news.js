@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Finance News — Interactive features.
  * Tab switching, news refresh, save to watchlist.
@@ -60,7 +61,7 @@
         if (diffDays < 7) {
             return `${diffDays }d ago`;
         }
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return PFI18n.formatDate(date, { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
     function escapeHtml (str) {

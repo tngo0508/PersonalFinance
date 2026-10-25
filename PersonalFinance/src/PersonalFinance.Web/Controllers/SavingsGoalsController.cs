@@ -51,7 +51,8 @@ public class SavingsGoalsController : Controller
         [FromForm] string? targetDate,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(name) || targetAmount <= 0)
+        // An amount the binder rejected (written the other culture's way) arrives as 0: never save it.
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(name) || targetAmount <= 0)
         {
             ModelState.AddModelError("", _localizer["SavingsGoals.Message.InvalidGoal"]);
             return await IndexWithGoalsAsync(cancellationToken);
@@ -95,6 +96,16 @@ public class SavingsGoalsController : Controller
         [FromForm] bool isCompleted,
         CancellationToken cancellationToken = default)
     {
+        // A rejected amount arrives as 0 and would wipe the saved amount; show the binder's (localized) message instead.
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = ModelState.Values.SelectMany(entry => entry.Errors)
+                .Select(error => error.ErrorMessage)
+                .FirstOrDefault(message => !string.IsNullOrEmpty(message))
+                ?? _localizer["SavingsGoals.Message.UpdateFailed"].Value;
+            return RedirectToAction(nameof(Index));
+        }
+
         var request = new UpdateSavingsGoalRequestDto
         {
             CurrentAmount = currentAmount,

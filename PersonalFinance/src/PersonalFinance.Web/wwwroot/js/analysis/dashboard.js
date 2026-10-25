@@ -1,3 +1,4 @@
+/* global PFI18n */
 (function () {
     'use strict';
 
@@ -31,12 +32,12 @@
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: weeklyTrend.map(function (w) {
+                labels: weeklyTrend.map((w) => {
                     return w.weekLabel;
                 }),
                 datasets: [{
                     label: 'Weekly Spending',
-                    data: weeklyTrend.map(function (w) {
+                    data: weeklyTrend.map((w) => {
                         return w.totalSpent;
                     }),
                     backgroundColor: 'rgba(13, 110, 253, 0.7)',
@@ -52,10 +53,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return '$' + context.parsed.y.toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                });
+                                return PFI18n.formatMoney(context.parsed.y, 'USD');
                             }
                         }
                     }
@@ -65,7 +63,7 @@
                         beginAtZero: true,
                         ticks: {
                             callback: function (value) {
-                                return '$' + value.toLocaleString();
+                                return PFI18n.formatMoney(value, 'USD', { whole: true });
                             }
                         }
                     }
@@ -89,13 +87,13 @@
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: trendPoints.map(function (t) {
+                labels: trendPoints.map((t) => {
                     return t.monthName;
                 }),
                 datasets: [
                     {
                         label: 'Income',
-                        data: trendPoints.map(function (t) {
+                        data: trendPoints.map((t) => {
                             return t.income;
                         }),
                         borderColor: 'rgba(25, 135, 84, 1)',
@@ -105,7 +103,7 @@
                     },
                     {
                         label: 'Expenses',
-                        data: trendPoints.map(function (t) {
+                        data: trendPoints.map((t) => {
                             return t.expenses;
                         }),
                         borderColor: 'rgba(220, 53, 69, 1)',
@@ -115,7 +113,7 @@
                     },
                     {
                         label: 'Net Savings',
-                        data: trendPoints.map(function (t) {
+                        data: trendPoints.map((t) => {
                             return t.netSavings;
                         }),
                         borderColor: 'rgba(13, 110, 253, 1)',
@@ -133,10 +131,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return context.dataset.label + ': $' + context.parsed.y.toLocaleString('en-US', {
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 0
-                                });
+                                return `${context.dataset.label }: ${ PFI18n.formatMoney(context.parsed.y, 'USD', { whole: true })}`;
                             }
                         }
                     }
@@ -145,7 +140,7 @@
                     y: {
                         ticks: {
                             callback: function (value) {
-                                return '$' + value.toLocaleString();
+                                return PFI18n.formatMoney(value, 'USD', { whole: true });
                             }
                         }
                     }
@@ -189,11 +184,11 @@
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: categories.map(function (c) {
+                labels: categories.map((c) => {
                     return c.categoryName;
                 }),
                 datasets: [{
-                    data: categories.map(function (c) {
+                    data: categories.map((c) => {
                         return c.actualAmount;
                     }),
                     backgroundColor: colors.slice(0, categories.length)
@@ -212,11 +207,11 @@
                             label: function (context) {
                                 const label = context.label || '';
                                 const value = context.parsed;
-                                const total = context.dataset.data.reduce(function (a, b) {
+                                const total = context.dataset.data.reduce((a, b) => {
                                     return a + b;
                                 }, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return label + ': $' + value.toLocaleString() + ' (' + percentage + '%)';
+                                const percentage = PFI18n.formatNumber(value / total * 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                                return `${label }: ${ PFI18n.formatMoney(value, 'USD', { whole: true }) } (${ percentage }%)`;
                             }
                         }
                     }
@@ -240,13 +235,13 @@
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: categories.map(function (c) {
+                labels: categories.map((c) => {
                     return c.categoryName;
                 }),
                 datasets: [
                     {
                         label: 'Budgeted',
-                        data: categories.map(function (c) {
+                        data: categories.map((c) => {
                             return c.budgetedAmount;
                         }),
                         backgroundColor: 'rgba(108, 117, 125, 0.5)',
@@ -255,7 +250,7 @@
                     },
                     {
                         label: 'Actual',
-                        data: categories.map(function (c) {
+                        data: categories.map((c) => {
                             return c.actualAmount;
                         }),
                         backgroundColor: 'rgba(13, 110, 253, 0.7)',
@@ -272,10 +267,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return context.dataset.label + ': $' + context.parsed.x.toLocaleString('en-US', {
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 0
-                                });
+                                return `${context.dataset.label }: ${ PFI18n.formatMoney(context.parsed.x, 'USD', { whole: true })}`;
                             }
                         }
                     }
@@ -284,7 +276,7 @@
                     x: {
                         ticks: {
                             callback: function (value) {
-                                return '$' + value.toLocaleString();
+                                return PFI18n.formatMoney(value, 'USD', { whole: true });
                             }
                         }
                     }
