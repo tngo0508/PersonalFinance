@@ -38,10 +38,12 @@
 
     @if (User.Identity?.IsAuthenticated == true)
     {
-        Func<object?, HelperResult> feedbackLink =
-            @<a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">@L["About.Feedback.Link"]</a>;
         <section class="legal-section">
             <h2>@L["About.Feedback.Title"]</h2>
+            @{
+                Func<object?, HelperResult> feedbackLink =
+                    @<a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">@L["About.Feedback.Link"]</a>;
+            }
             <p>@L.NamedHtml("About.Feedback.Prompt", null, ("link", feedbackLink(null)))</p>
         </section>
     }

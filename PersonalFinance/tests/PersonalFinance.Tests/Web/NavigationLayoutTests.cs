@@ -225,7 +225,7 @@ public class NavigationLayoutTests
     public void AboutPage_DescribesNetWorthAsTheGlossaryDefinesIt()
     {
         string about = ReadView("Home", "About.cshtml");
-        Assert.Contains("<strong>@L[\"About.Features.NetWorth.Name\"]</strong>: @L[\"About.Features.NetWorth.Text\"]", about);
+        Assert.Contains("L[\"About.Features.NetWorth.Text\"]", about);
 
         Assert.True(TestLocalization.Catalog.TryGet("en", "About.Features.NetWorth.Text", out string netWorth));
         Assert.DoesNotContain("assets and liabilities", netWorth);

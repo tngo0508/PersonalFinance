@@ -31,14 +31,14 @@ public sealed class LandingPageViewModel
 }
 
 /// <summary>
-/// A single feature entry on the Landing Page. Its name and description are localizer keys under
-/// <see cref="KeyPrefix"/> (<c>Landing.Feature.NetWorth.Title</c>), so the view shows them in the visitor's language.
+/// A single feature entry on the Landing Page. Its name and description are localizer keys
+/// (<c>Landing.Feature.NetWorth.Title</c>), so the view shows them in the visitor's language.
 /// </summary>
 /// <param name="Id">The feature's key segment, for example <c>NetWorth</c>.</param>
 public sealed record LandingFeature(string Id)
 {
-    /// <summary>The prefix of every Landing Page feature key in <c>en.json</c>.</summary>
-    public const string KeyPrefix = "Landing.Feature.";
+    // The prefix of every Landing Page feature key in en.json; the i18n report counts the keys under it as used.
+    private const string KeyPrefix = "Landing.Feature.";
 
     /// <summary>Gets the localizer key of the feature name.</summary>
     public string TitleKey => $"{KeyPrefix}{Id}.Title";

@@ -7,6 +7,11 @@
     // The sample plan is in US dollars until the money formatter (spec L2) formats amounts for the culture.
     const string spending = "$40,000";
     const string target = "$1,000,000";
+    const string startingBalance = "$40,000";
+    const string monthlySaving = "$2,000";
+    const string projected = "$1,041,000";
+    const int returnRate = 5;
+    const int fiAge = 52;
 }
 
 @section Styles {
@@ -51,7 +56,7 @@
             <div class="lp-plan__head">
                 <div>
                     <p class="lp-plan__label">@L["Landing.Plan.Label"]</p>
-                    <p class="lp-plan__figure">$1,041,000 <span>@L.Named("Landing.Plan.AtAge", ("age", 52))</span></p>
+                    <p class="lp-plan__figure">@projected <span>@L.Named("Landing.Plan.AtAge", ("age", fiAge))</span></p>
                 </div>
                 <p class="lp-plan__tag">@L["Landing.Plan.Tag"]</p>
             </div>
@@ -66,7 +71,7 @@
                     <line class="lp-plan__drop" x1="440" y1="115.1" x2="440" y2="240"/>
                 </svg>
                 <span class="lp-plan__marker" style="left: 73.33%; top: 47.96%"></span>
-                <span class="lp-plan__callout" style="left: 73.33%; top: 47.96%">@L.Named("Landing.Plan.Callout", ("age", 52))</span>
+                <span class="lp-plan__callout" style="left: 73.33%; top: 47.96%">@L.Named("Landing.Plan.Callout", ("age", fiAge))</span>
                 <span class="lp-plan__target-label">@L.Named("Landing.Plan.TargetLabel", ("amount", target))</span>
                 <span class="lp-plan__ages">
                     <span>@L.Named("Landing.Plan.AxisAge", ("age", 30))</span><span>40</span><span>50</span><span>60</span>
@@ -74,8 +79,8 @@
             </div>
 
             <figcaption class="lp-plan__caption">
-                @L.Named("Landing.Plan.Caption", ("spending", spending), ("target", target), ("start", "$40,000"),
-                    ("monthly", "$2,000"), ("rate", 5), ("age", 52))
+                @L.Named("Landing.Plan.Caption", ("spending", spending), ("target", target), ("start", startingBalance),
+                    ("monthly", monthlySaving), ("rate", returnRate), ("age", fiAge))
             </figcaption>
         </figure>
     </section>
