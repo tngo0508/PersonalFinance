@@ -27,4 +27,13 @@ public interface IMoneyPrioritiesService
 
     /// <summary>The whole Priority Tree with nothing highlighted, shown before a submit.</summary>
     PriorityTreeDiagramDto GetTree();
+
+    /// <summary>
+    /// The Purpose Note of one of the Account's Priority Walks, or null when it has none with that id. A Walk without
+    /// a Purpose gets no model call. A note already saved on the Walk, or on another of the Account's Walks with the
+    /// same Purpose, answers, tree version and limits year, is reused (and copied onto this Walk) without a model call.
+    /// Otherwise the AI Assistant writes it and it is saved onto the Walk. The Walk is kept whatever happens.
+    /// </summary>
+    Task<PriorityWalkPurposeNoteDto?> WritePurposeNoteAsync(string userId, int id,
+        CancellationToken cancellationToken = default);
 }
