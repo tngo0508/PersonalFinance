@@ -47,7 +47,8 @@ public class ResearchRefreshIsolationTests
 
         ResearchRefreshSummary summary = await service.RefreshAsync(ResearchSources.WorldBank);
 
-        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Funds, ResearchDatasets.FundExposure, ResearchDatasets.FundReturns,
+        Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Funds, ResearchDatasets.FundExposure,
+                ResearchDatasets.FundIndustries, ResearchDatasets.FundReturns,
                 ResearchDatasets.FundFacts, ResearchDatasets.Macro], summary.Skipped);
         Assert.Equal([ResearchDatasets.World], summary.Built);
         Assert.Empty(summary.Failed);
@@ -105,6 +106,9 @@ public class ResearchRefreshIsolationTests
 
         public Task<SecFiler?> GetFilerAsync(long cik, CancellationToken cancellationToken) =>
             Task.FromResult<SecFiler?>(null);
+
+        public Task<IReadOnlyList<SecCompanyListing>> GetCompanyTickersAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<SecCompanyListing>>([]);
 
         public Task<IReadOnlyList<SecFundSeries>> GetFundSeriesAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<SecFundSeries>>([]);

@@ -40,6 +40,9 @@ public class ResearchRefreshJobTests
         public Task<ResearchSnapshotResult<FundExposureSnapshotDto>> GetFundExposureAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<FundExposureSnapshotDto>(null));
 
+        public Task<ResearchSnapshotResult<FundIndustriesSnapshotDto>> GetFundIndustriesAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSnapshotResult<FundIndustriesSnapshotDto>(null));
+
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(null));
 

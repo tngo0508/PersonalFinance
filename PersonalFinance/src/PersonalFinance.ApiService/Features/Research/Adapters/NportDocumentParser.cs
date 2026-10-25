@@ -81,8 +81,9 @@ internal static class NportDocumentParser
     /// <summary>
     /// One holding from its direct child elements: the issuer name (or the title when the name is missing or
     /// <c>N/A</c>), the % of net assets, the asset category from <c>assetCat</c> or, for a category N-PORT has no
-    /// code for, <c>assetConditional/@assetCat</c>, the security key (ISIN, else CUSIP; held in memory only), and
-    /// whether it is securities-lending cash collateral.
+    /// code for, <c>assetConditional/@assetCat</c>, the security key (ISIN, else CUSIP; held in memory only), whether
+    /// it is securities-lending cash collateral, the issuer's country, the currency, and the issuer type from
+    /// <c>issuerCat</c> or <c>issuerConditional/@issuerCat</c>.
     /// </summary>
     private static NportHolding ReadHolding(XElement element)
     {
@@ -101,10 +102,17 @@ internal static class NportDocumentParser
                 ?.Attribute("assetCat")?.Value.Trim();
         }
 
+        string? issuer = Child("issuerCat");
+        if (string.IsNullOrEmpty(issuer))
+        {
+            issuer = element.Elements().FirstOrDefault(e => e.Name.LocalName == "issuerConditional")
+                ?.Attribute("issuerCat")?.Value.Trim();
+        }
+
         // Item C.5.a, the country where the issuer is organized.
         return new NportHolding(string.IsNullOrEmpty(name) ? "Unnamed holding" : name,
             string.IsNullOrEmpty(category) ? OtherCategory : category, ParseDecimal(Child("pctVal")), SecurityKeyOf(element),
-            IsCashCollateral(element), CodeOrNull(Child("invCountry")), CurrencyOf(element));
+            IsCashCollateral(element), CodeOrNull(Child("invCountry")), CurrencyOf(element), CodeOrNull(issuer));
     }
 
     /// <summary>A holding's security key: its ISIN, else its CUSIP, else null (in memory only, ADR 0010).</summary>

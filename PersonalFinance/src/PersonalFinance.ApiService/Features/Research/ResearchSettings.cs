@@ -25,6 +25,20 @@ internal sealed class ResearchSettings
     public int SubmissionsPerRefresh { get; init; } = 2_500;
 
     /// <summary>
+    /// How many filers the fund industries refresh reads the SEC submissions of in one run
+    /// (<c>Research:FundIndustrySubmissionsPerRefresh</c>), largest holding first, of those the Sectors refresh has not
+    /// read. Each one read is remembered; until a filer is read, its stocks count as not classified, and the next
+    /// refresh reads more.
+    /// </summary>
+    public int FundIndustrySubmissionsPerRefresh { get; init; } = 1_000;
+
+    /// <summary>
+    /// Issuer names that match a known SEC filer although SEC's company list does not give it under that name
+    /// (<c>Research:IssuerCikOverrides</c>): renamed, re-formed or delisted companies.
+    /// </summary>
+    public IReadOnlyList<IssuerCikOverride> IssuerCikOverrides { get; init; } = [];
+
+    /// <summary>
     /// The filer years whose Public Float the Sectors snapshot leaves out by hand
     /// (<c>Research:PublicFloatExclusions</c>, a list of <c>{ "Cik": ..., "Year": ... }</c>).
     /// </summary>

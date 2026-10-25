@@ -370,12 +370,13 @@ The Research page never calls a data source while someone browses. It reads save
 | `etfs` (funds) | `api/Research/funds` | SEC Form N-PORT holdings | Funds tab tree |
 | `fund-overlap` | `api/Research/funds/overlap` | N-PORT, each fund's latest report | Funds tab overlap |
 | `fund-exposure` | `api/Research/funds/exposure` | N-PORT, each fund's latest report: issuer country and currency of every holding | World tab basket map |
+| `fund-industries` | `api/Research/funds/industries` | N-PORT, each fund's latest report, matched by issuer name to SEC's company list and submissions (`Research:IssuerCikOverrides`) | Sectors tab basket view, which fetches it from the Web app's `Research/FundIndustries` when first shown (about 600 KB, so the page does not carry it) |
 | `fund-returns` | `api/Research/funds/returns` | N-PORT Item B.5, H.15 bill rate | Funds correlation, Performance, Risk vs return |
 | `fund-facts` | `api/Research/funds/facts` | Funds snapshot net assets, N-CSR XBRL expense ratios | Risk vs return |
 | `macro` | `api/Research/macro` | BLS CPI-U, Fed H.15 (Treasury fallback), `Research:Recessions` | Performance |
 | `world` | `api/Research/world` | World Bank | World tab |
 
-`etf-filings` and `fund-return-filings` are caches of filings already read; they are not served.
+`etf-filings` and `fund-return-filings` are caches of filings already read, and `fund-industry-filers` of company submissions read for the fund industries; they are not served. The fund industries refresh reads at most `Research:FundIndustrySubmissionsPerRefresh` new submissions a run (1,000), so its first runs in a new database classify more each day.
 
 **1. Set the SEC contact (once per machine).** SEC's fair-access rules require a real contact email on every request. The committed `appsettings.json` has a placeholder on `example.com`, which the refresh refuses to send; it then skips Sectors and funds and rebuilds only World.
 

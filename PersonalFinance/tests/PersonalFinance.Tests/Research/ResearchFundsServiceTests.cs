@@ -877,9 +877,217 @@ public class ResearchFundsServiceTests
     /// A holding of a canned N-PORT filing: its name, asset category code and % of net assets, with its CUSIP and ISIN
     /// when it has them and whether it is securities-lending cash collateral.
     /// </summary>
+    // ---- Fund industries ----
+
+    private const long AppleCik = 320193;
+    private const long TsmcCik = 1046179;
+    private const long ExxonCik = 34088;
+    private const long NoSicCik = 777;
+
+    private static ResearchService CreateIndustriesService(AppDbContext db, StubNportHandler handler,
+        IReadOnlyList<IssuerCikOverride>? overrides = null, int submissionsPerRefresh = 1_500)
+    {
+        var settings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
+        var timeProvider = new FixedTimeProvider(Now);
+        var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
+        var research = new ResearchSettings
+        {
+            SectorsFirstYear = 2025,
+            Funds = [Spy],
+            FundsFirstQuarter = new DateOnly(2019, 10, 1),
+            IssuerCikOverrides = overrides ?? [],
+            FundIndustrySubmissionsPerRefresh = submissionsPerRefresh,
+        };
+        var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
+        return ResearchServiceFactory.Create(db, client, worldClient, research, timeProvider);
+    }
+
+    private static async Task<FundIndustriesSnapshotDto> RefreshIndustriesAsync(ResearchService service)
+    {
+        ResearchRefreshSummary summary = await service.RefreshAsync();
+        Assert.Contains(ResearchDatasets.FundIndustries, summary.Built);
+        return (await service.GetFundIndustriesAsync()).Snapshot!;
+    }
+
+    /// <summary>
+    /// SEC's company list and submissions for the industries tests: Apple (Technology), twelve banks (Finance), TSMC (a
+    /// foreign 20-F filer, Manufacturing), a filer with no SIC code, Exxon under its old CIK (not in the list), and a
+    /// depositary-receipt registrant.
+    /// </summary>
+    private static StubNportHandler IndustriesHandler()
+    {
+        var handler = new StubNportHandler();
+        handler.Companies.Add((AppleCik, "Apple Inc.", "AAPL"));
+        handler.Filers[AppleCik] = ("Apple Inc.", "3571", "ELECTRONIC COMPUTERS", "06 Technology");
+        for (int i = 1; i <= 12; i++)
+        {
+            handler.Companies.Add((1000 + i, $"BANK {i} CORP", $"BK{i}"));
+            handler.Filers[1000 + i] = ($"BANK {i} CORP", "6021", "NATIONAL COMMERCIAL BANKS", "02 Finance");
+        }
+
+        handler.Companies.Add((TsmcCik, "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD", "TSM"));
+        handler.Filers[TsmcCik] = ("TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD", "3674", "SEMICONDUCTORS & RELATED DEVICES",
+            "04 Manufacturing");
+        handler.Companies.Add((NoSicCik, "BRITISH WIDGETS PLC", "BWPLY"));
+        handler.Filers[NoSicCik] = ("BRITISH WIDGETS PLC", null, null, null);
+        handler.Companies.Add((888, "Samsung Electronics Co Ltd/ADR", "SSNLF"));
+        handler.Filers[ExxonCik] = ("EXXON MOBIL CORP", "2911", "PETROLEUM REFINING", "01 Energy & Transportation");
+        return handler;
+    }
+
+    [Fact]
+    public async Task RefreshAsync_PlacesStocksByIndustry_AndTheRestByCountryBondTypeAndCash()
+    {
+        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
+        StubNportHandler handler = IndustriesHandler();
+        // Twelve banks of 1% to 1.2% by 0.02 (eleven of them first, so the twelfth decides the top 10), Apple, TSMC
+        // (Taiwan, a 20-F filer), Tencent in two lines and Samsung (no SEC filer: its ADR registrant is not the
+        // company), a UK filer with no SIC code, two bonds, a money-market fund, another fund's shares filed as a fund
+        // and as a corporate stock (cash and other, as VNQ files its holding of a Vanguard fund), and cash collateral left
+        // out.
+        Holding[] holdings = Enumerable.Range(1, 12)
+            .Select(i => new Holding($"Bank {i} Corp", "EC", 0.98m + 0.02m * i, Country: "US"))
+            .Concat([
+                new Holding("Apple Inc", "EC", 7m, Country: "US"),
+                new Holding("Taiwan Semiconductor Manufacturing Co Ltd", "EC", 2m, Country: "TW"),
+                new Holding("Tencent Holdings Ltd", "EC", 1.5m, Country: "HK"),
+                new Holding("TENCENT HOLDINGS LTD", "EC", 0.5m, Country: "HK"),
+                new Holding("Samsung Electronics Co Ltd", "EC", 1.25m, Country: "KR"),
+                new Holding("British Widgets PLC", "EC", 0.75m, Country: "GB"),
+                new Holding("United States Treasury Note", "DBT", 3m, Country: "US", IssuerCategory: "UST"),
+                new Holding("Acme Corp 4% 2030", "DBT", 1m, Country: "US"),
+                new Holding("Money Market Fund", "STIV", 0.4m, Country: "US", IssuerCategory: "RF"),
+                new Holding("Some Registered Fund", "EC", 0.5m, Country: "US", IssuerCategory: "RF"),
+                new Holding("Vanguard Real Estate II Index Fund", "EC", 0.5m, Country: "US"),
+                new Holding("State Street Navigator Securities Lending", "STIV", 9m, Country: "US", CashCollateral: true),
+            ])
+            .ToArray();
+        AddSpy(handler, "0000884394-26-000001", "2026-08-27", "2026-06-30", holdings);
+
+        FundIndustriesSnapshotDto snapshot = await RefreshIndustriesAsync(CreateIndustriesService(db, handler));
+
+        Assert.Equal(new DateOnly(2026, 6, 30), snapshot.AsOf);
+        Assert.Equal(["Finance", "Manufacturing", "Technology"], snapshot.Offices);
+        Assert.Equal([("6021", "National Commercial Banks", 0, false), ("3674", "Semiconductors & Related Devices", 1, true),
+                ("3571", "Electronic Computers", 2, true)],
+            snapshot.Industries.Select(i => (i.SicCode, i.Name, i.Office, i.Technology)));
+        FundIndustriesDto spy = Assert.Single(snapshot.Funds);
+        Assert.Equal(("SPY", "0000884394-26-000001"), (spy.Ticker, spy.Accession));
+        // Every bank counts toward the industry, though only the ten largest are listed.
+        Assert.Equal([(0, 13.32m, 12), (2, 7m, 1), (1, 2m, 1)],
+            spy.Industries.Select(i => (i.Industry, i.Percent, i.CompanyCount)));
+        List<(string Name, string? Ticker, decimal Percent)> listed = spy.Companies
+            .Select(c => (snapshot.Companies[c.Company].Name, snapshot.Companies[c.Company].Ticker, c.Percent))
+            .ToList();
+        Assert.Equal(12, listed.Count); // Ten banks, TSMC and Apple.
+        Assert.Equal(("Bank 12 Corp", "BK12", 1.22m), listed[0]);
+        Assert.Equal(("Bank 3 Corp", "BK3", 1.04m), listed[9]);
+        Assert.DoesNotContain(listed, c => c.Name is "Bank 1 Corp" or "Bank 2 Corp");
+        Assert.Contains(("Apple Inc.", "AAPL", 7m), listed);
+
+        Assert.Equal([("HK", 2m, 1), ("KR", 1.25m, 1), ("GB", 0.75m, 1)],
+            spy.Unclassified.Select(c => (c.Country, c.Percent, c.IssuerCount)));
+        Assert.Equal(("Tencent Holdings Ltd", 2m), (spy.Unclassified[0].Issuers[0].Name, spy.Unclassified[0].Issuers[0].Percent));
+        Assert.Equal([("US Treasury", 3m), ("Corporate", 1m)], spy.Bonds.Select(b => (b.Name, b.Percent)));
+        // 100 less 22.32 in industries, 4 unclassified and 4 in bonds: the funds and cash not reported.
+        Assert.Equal(69.68m, spy.CashAndOther);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_AnOverrideMovesANamedIssuerFromUnclassifiedIntoItsIndustry()
+    {
+        string database = $"Funds_{Guid.NewGuid():N}";
+        StubNportHandler handler = IndustriesHandler();
+        AddSpy(handler, "0000884394-26-000001", "2026-08-27", "2026-06-30",
+            new Holding("Exxon Mobil Corp", "EC", 3m, Country: "US"), new Holding("Apple Inc", "EC", 7m, Country: "US"));
+        await using (AppDbContext db = CreateContext(database))
+        {
+            FundIndustriesDto before = Assert.Single((await RefreshIndustriesAsync(CreateIndustriesService(db, handler))).Funds);
+            Assert.Equal([("US", 3m)], before.Unclassified.Select(c => (c.Country, c.Percent)));
+        }
+
+        // The same report, with the override configured: the dataset is rebuilt without a newer filing.
+        handler.Requests.Clear();
+        await using AppDbContext later = CreateContext(database);
+        FundIndustriesSnapshotDto snapshot = await RefreshIndustriesAsync(CreateIndustriesService(later, handler,
+            [new IssuerCikOverride("EXXON MOBIL CORPORATION", ExxonCik)]));
+
+        FundIndustriesDto spy = Assert.Single(snapshot.Funds);
+        Assert.Empty(spy.Unclassified);
+        SectorsIndustryDto refining = snapshot.Industries[spy.Industries.Single(i => i.Percent == 3m).Industry];
+        Assert.Equal(("2911", "Energy & Transportation"), (refining.SicCode, snapshot.Offices[refining.Office]));
+        Assert.Contains(handler.Requests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_KeepsTheStoredIndustries_AndReadsEachFilerOnce_ReusingTheSectorsReads()
+    {
+        string database = $"Funds_{Guid.NewGuid():N}";
+        StubNportHandler handler = IndustriesHandler();
+        AddSpy(handler, "0000884394-26-000001", "2026-08-27", "2026-06-30",
+            new Holding("Apple Inc", "EC", 7m, Country: "US"), new Holding("Bank 1 Corp", "EC", 1m, Country: "US"));
+        await using (AppDbContext db = CreateContext(database))
+        {
+            // The Sectors refresh has read Bank 1's submissions already.
+            await new ResearchSnapshotStore(db, new FixedTimeProvider(Now)).StoreAsync(ResearchDatasets.SecFilers, "2025",
+                "2025", new DateOnly(2025, 12, 31), new List<SecFiler>
+                {
+                    new(1001, "BANK 1 CORP", "BK1", "6021", "NATIONAL COMMERCIAL BANKS", "02 Finance"),
+                }, CancellationToken.None);
+            await RefreshIndustriesAsync(CreateIndustriesService(db, handler));
+        }
+
+        Assert.Equal(["https://data.sec.gov/submissions/CIK0000320193.json"],
+            handler.Requests.Where(url => url.Contains("/submissions/", StringComparison.Ordinal)));
+        handler.Requests.Clear();
+        await using (AppDbContext db = CreateContext(database))
+        {
+            await CreateIndustriesService(db, handler).RefreshAsync();
+        }
+
+        Assert.DoesNotContain(handler.Requests, url => url.EndsWith("primary_doc.xml", StringComparison.Ordinal)
+            || url.Contains("/submissions/", StringComparison.Ordinal));
+
+        // A newer report is read, and only its new filer's submissions are.
+        AddSpy(handler, "0000884394-26-000002", "2026-11-26", "2026-09-30",
+            new Holding("Apple Inc", "EC", 6m, Country: "US"), new Holding("Bank 2 Corp", "EC", 2m, Country: "US"));
+        await using AppDbContext later = CreateContext(database);
+        FundIndustriesDto spy = Assert.Single((await RefreshIndustriesAsync(CreateIndustriesService(later, handler))).Funds);
+        Assert.Equal([6m, 2m], spy.Industries.Select(i => i.Percent));
+        Assert.Equal(["https://data.sec.gov/submissions/CIK0000001002.json"],
+            handler.Requests.Where(url => url.Contains("/submissions/", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_ReadsAtMostTheLimitOfNewFilers_LargestFirst_AndTheRestOnTheNextRefresh()
+    {
+        string database = $"Funds_{Guid.NewGuid():N}";
+        StubNportHandler handler = IndustriesHandler();
+        AddSpy(handler, "0000884394-26-000001", "2026-08-27", "2026-06-30",
+            new Holding("Bank 1 Corp", "EC", 1m, Country: "US"), new Holding("Apple Inc", "EC", 7m, Country: "US"));
+        await using (AppDbContext db = CreateContext(database))
+        {
+            FundIndustriesSnapshotDto first = await RefreshIndustriesAsync(CreateIndustriesService(db, handler,
+                submissionsPerRefresh: 1));
+            FundIndustriesDto spy = Assert.Single(first.Funds);
+            // Apple, the larger, is read; Bank 1 waits and counts as not classified until then.
+            Assert.Equal([7m], spy.Industries.Select(i => i.Percent));
+            Assert.Equal([("US", 1m)], spy.Unclassified.Select(c => (c.Country, c.Percent)));
+            Assert.EndsWith("+unread", first.Signature, StringComparison.Ordinal);
+        }
+
+        await using AppDbContext later = CreateContext(database);
+        FundIndustriesSnapshotDto second = await RefreshIndustriesAsync(CreateIndustriesService(later, handler,
+            submissionsPerRefresh: 1));
+        Assert.Equal([7m, 1m], Assert.Single(second.Funds).Industries.Select(i => i.Percent));
+        Assert.Empty(Assert.Single(second.Funds).Unclassified);
+        Assert.DoesNotContain("+unread", second.Signature, StringComparison.Ordinal);
+    }
+
     private sealed record Holding(string Name, string Category, decimal Percent, string? Cusip = null,
         string? Isin = null, bool CashCollateral = false, string? Country = null, string? Currency = null,
-        bool CollateralAsAttribute = false);
+        bool CollateralAsAttribute = false, string IssuerCategory = "CORP");
 
     private sealed record Filing(string ListedUnder, string Accession, string FiledOn, string FormType, long Cik,
         string Document);
@@ -891,11 +1099,19 @@ public class ResearchFundsServiceTests
     private sealed class StubNportHandler : HttpMessageHandler
     {
         private const string TickerListUrl = "https://www.sec.gov/files/company_tickers_mf.json";
+        private const string CompanyListUrl = "https://www.sec.gov/files/company_tickers_exchange.json";
+        private const string SubmissionsPrefix = "https://data.sec.gov/submissions/CIK";
         private const string BrowsePrefix = "https://www.sec.gov/cgi-bin/browse-edgar?";
 
         private readonly List<Filing> _filings = [];
 
         public List<(long Cik, string SeriesId, string ClassId, string Ticker)> Tickers { get; } = [];
+
+        /// <summary>SEC's company list (<c>company_tickers_exchange.json</c>): one row per ticker.</summary>
+        public List<(long Cik, string Name, string Ticker)> Companies { get; } = [];
+
+        /// <summary>The submissions served per CIK, with the CIK's tickers from <see cref="Companies"/>; any other CIK is not found.</summary>
+        public Dictionary<long, (string Name, string? Sic, string? SicDescription, string? OwnerOrg)> Filers { get; } = [];
         public HashSet<string> FailingDocuments { get; } = [];
         public List<string> Requests { get; } = [];
         public List<string> UserAgents { get; } = [];
@@ -925,6 +1141,31 @@ public class ResearchFundsServiceTests
                     data = Tickers.Select(t => new object[] { t.Cik, t.SeriesId, t.ClassId, t.Ticker }),
                 };
                 return Respond(JsonSerializer.Serialize(body), "application/json");
+            }
+
+            if (url == CompanyListUrl)
+            {
+                var body = new
+                {
+                    fields = new[] { "cik", "name", "ticker", "exchange" },
+                    data = Companies.Select(c => new object[] { c.Cik, c.Name, c.Ticker, "NYSE" }),
+                };
+                return Respond(JsonSerializer.Serialize(body), "application/json");
+            }
+
+            if (url.StartsWith(SubmissionsPrefix, StringComparison.Ordinal))
+            {
+                long cik = long.Parse(url[SubmissionsPrefix.Length..^".json".Length], CultureInfo.InvariantCulture);
+                return Filers.TryGetValue(cik, out (string Name, string? Sic, string? SicDescription, string? OwnerOrg) filer)
+                    ? Respond(JsonSerializer.Serialize(new
+                    {
+                        name = filer.Name,
+                        sic = filer.Sic,
+                        sicDescription = filer.SicDescription,
+                        ownerOrg = filer.OwnerOrg,
+                        tickers = Companies.Where(c => c.Cik == cik).Select(c => c.Ticker).ToArray(),
+                    }), "application/json")
+                    : Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
             }
 
             if (url.StartsWith(BrowsePrefix, StringComparison.Ordinal))
@@ -1005,7 +1246,7 @@ public class ResearchFundsServiceTests
                       <pctVal>{h.Percent}</pctVal>
                       <payoffProfile>Long</payoffProfile>
                       {category}
-                      <issuerCat>CORP</issuerCat>
+                      <issuerCat>{h.IssuerCategory}</issuerCat>
                       {(h.Country is null ? string.Empty : $"<invCountry>{h.Country}</invCountry>")}
                       {(h.Currency is null ? string.Empty : h.Currency is "USD" or "N/A" ? $"<curCd>{h.Currency}</curCd>" : $"<currencyConditional curCd=\"{h.Currency}\" exchangeRt=\"1.5\"/>")}
                       {(h.CollateralAsAttribute

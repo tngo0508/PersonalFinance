@@ -48,6 +48,12 @@ public interface IResearchService
     Task<ResearchSnapshotResult<FundExposureSnapshotDto>> GetFundExposureAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the fund industries snapshot (each Tracked Fund's share of net assets by SEC industry office and SIC
+    /// industry, and the rest by issuer country, bond issuer type and cash), or "never loaded".
+    /// </summary>
+    Task<ResearchSnapshotResult<FundIndustriesSnapshotDto>> GetFundIndustriesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the World snapshot (each country's market cap and market cap as % of GDP per year, from the World Bank),
     /// or "never loaded".
     /// </summary>
