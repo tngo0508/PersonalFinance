@@ -1,0 +1,214 @@
+name: Deploy to Azure Container Apps
+description: >-
+  Logs in to Azure with OIDC and deploys infra/main.bicep with the given images. Shared by deploy-azure.yml and
+  rollback.yml so a rollback runs exactly the same deploy steps. The caller checks out the repository first.
+
+# Composite actions cannot read `secrets`, so the caller passes each secret and variable in as an input.
+inputs:
+  environment:
+    description: 'Azure Environment Name prefix (e.g. pf-prod)'
+    required: true
+  deploy_sql:
+    description: "'true' to provision Azure SQL Database, 'false' to use CUSTOM_CONNECTION_STRING"
+    required: true
+  api_image:
+    description: 'ApiService image reference (ghcr.io/<owner>/personalfinance-api:<sha>)'
+    required: true
+  web_image:
+    description: 'Web image reference (ghcr.io/<owner>/personalfinance-web:<sha>)'
+    required: true
+  resource_group:
+    required: true
+  location:
+    required: true
+  sql_location:
+    required: true
+  azure_client_id:
+    required: true
+  azure_tenant_id:
+    required: true
+  azure_subscription_id:
+    required: true
+  google_client_id:
+    required: false
+  google_client_secret:
+    required: false
+  brevo_api_key:
+    required: false
+  brevo_sender_email:
+    required: false
+  brevo_sender_name:
+    required: false
+  google_drive_api_key:
+    required: false
+  openai_api_key:
+    required: false
+  rbac_admin_email:
+    required: false
+  internal_api_key:
+    required: false
+  sec_user_agent:
+    required: false
+  sql_admin_password:
+    required: false
+  custom_connection_string:
+    required: false
+  custom_domain_name:
+    required: false
+
+outputs:
+  webUrl:
+    description: 'Public URL of the Web Container App'
+    value: ${{ steps.deploy-bicep.outputs.webUrl }}
+  webFqdn:
+    description: 'FQDN of the Web Container App'
+    value: ${{ steps.deploy-bicep.outputs.webFqdn }}
+  apiFqdn:
+    description: 'FQDN of the ApiService Container App'
+    value: ${{ steps.deploy-bicep.outputs.apiFqdn }}
+
+runs:
+  using: composite
+  steps:
+    - name: Azure Login via Passwordless OIDC
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.azure_client_id }}
+        tenant-id: ${{ inputs.azure_tenant_id }}
+        subscription-id: ${{ inputs.azure_subscription_id }}
+
+    - name: Ensure Azure resource group exists
+      uses: azure/cli@v2
+      with:
+        inlineScript: |
+          # A resource group's location is immutable metadata only; resources inside it
+          # are deployed to AZURE_LOCATION via the Bicep `location` parameter. Reuse an
+          # existing group regardless of its region instead of failing on a mismatch.
+          if [[ "$(az group exists --name "${{ inputs.resource_group }}")" == "true" ]]; then
+            EXISTING_LOCATION=$(az group show --name "${{ inputs.resource_group }}" --query location --output tsv)
+            echo "Resource group '${{ inputs.resource_group }}' already exists in '${EXISTING_LOCATION}'; resources will deploy to '${{ inputs.location }}'."
+            exit 0
+          fi
+
+          az group create \
+            --name "${{ inputs.resource_group }}" \
+            --location "${{ inputs.location }}" \
+            --tags Application=PersonalFinance Environment="${{ inputs.environment }}" ManagedBy=GitHubActions
+
+    - name: Wait for stale Container Apps environment deletion
+      uses: azure/cli@v2
+      env:
+        RESOURCE_GROUP: ${{ inputs.resource_group }}
+        APP_ENVIRONMENT: ${{ inputs.environment }}
+      with:
+        inlineScript: |
+          ENVIRONMENT_PREFIX="cae-${APP_ENVIRONMENT}-"
+          ENVIRONMENT_NAME=$(az resource list \
+            --resource-group "$RESOURCE_GROUP" \
+            --resource-type Microsoft.App/managedEnvironments \
+            --query "[?starts_with(name, '${ENVIRONMENT_PREFIX}')].name | [0]" \
+            --output tsv)
+
+          if [[ -z "$ENVIRONMENT_NAME" ]]; then
+            echo "No existing Container Apps environment found."
+            exit 0
+          fi
+
+          ENVIRONMENT_ID=$(az resource show \
+            --resource-group "$RESOURCE_GROUP" \
+            --resource-type Microsoft.App/managedEnvironments \
+            --name "$ENVIRONMENT_NAME" \
+            --query id \
+            --output tsv)
+          STATE=$(az resource show --ids "$ENVIRONMENT_ID" --query properties.provisioningState --output tsv 2>/dev/null || true)
+
+          if [[ "$STATE" != "ScheduledForDelete" ]]; then
+            echo "Container Apps environment '$ENVIRONMENT_NAME' is in state '$STATE'."
+            exit 0
+          fi
+
+          echo "Container Apps environment '$ENVIRONMENT_NAME' is scheduled for deletion; waiting for Azure cleanup."
+          for attempt in $(seq 1 30); do
+            if ! az resource show --ids "$ENVIRONMENT_ID" --output none 2>/dev/null; then
+              echo "Container Apps environment deletion completed."
+              exit 0
+            fi
+
+            echo "Deletion still in progress (attempt $attempt/30); waiting 30 seconds."
+            sleep 30
+          done
+
+          echo "::error::Container Apps environment '$ENVIRONMENT_NAME' remained scheduled for deletion after 15 minutes."
+          exit 1
+
+    - name: Validate database deployment configuration
+      shell: bash
+      env:
+        DEPLOY_SQL: ${{ inputs.deploy_sql }}
+        SQL_ADMIN_PASSWORD: ${{ inputs.sql_admin_password }}
+        CUSTOM_CONNECTION_STRING: ${{ inputs.custom_connection_string }}
+      run: |
+        if [[ "$DEPLOY_SQL" == "true" && -z "$SQL_ADMIN_PASSWORD" ]]; then
+          echo "::error::SQL_ADMIN_PASSWORD is required when Azure SQL deployment is enabled."
+          exit 1
+        fi
+
+        if [[ "$DEPLOY_SQL" != "true" && -z "$CUSTOM_CONNECTION_STRING" ]]; then
+          echo "::error::CUSTOM_CONNECTION_STRING is required when Azure SQL deployment is disabled."
+          exit 1
+        fi
+
+    - name: Deploy Azure Infrastructure & Container Apps (Bicep)
+      id: deploy-bicep
+      uses: azure/arm-deploy@v2
+      with:
+        scope: resourcegroup
+        resourceGroupName: ${{ inputs.resource_group }}
+        template: infra/main.bicep
+        parameters: >-
+          environmentName=${{ inputs.environment }}
+          location=${{ inputs.location }}
+          sqlLocation=${{ inputs.sql_location }}
+          apiImage=${{ inputs.api_image }}
+          webImage=${{ inputs.web_image }}
+          googleClientId=${{ inputs.google_client_id }}
+          googleClientSecret=${{ inputs.google_client_secret }}
+          brevoApiKey=${{ inputs.brevo_api_key }}
+          brevoSenderEmail=${{ inputs.brevo_sender_email }}
+          brevoSenderName=${{ inputs.brevo_sender_name }}
+          googleDriveApiKey=${{ inputs.google_drive_api_key }}
+          openAiApiKey=${{ inputs.openai_api_key }}
+          rbacAdminEmail=${{ inputs.rbac_admin_email }}
+          internalApiKey=${{ inputs.internal_api_key }}
+          secUserAgent="${{ inputs.sec_user_agent }}"
+          deploySqlDatabase=${{ inputs.deploy_sql }}
+          sqlAdministratorLoginPassword=${{ inputs.sql_admin_password }}
+          customConnectionString=${{ inputs.custom_connection_string }}
+          customDomainName=${{ inputs.custom_domain_name }}
+          exposeApiPublicly=true
+          enableScheduledScaling=true
+          businessHoursTimeZone=America/Los_Angeles
+          businessHoursStartHour=8
+          businessHoursStartMinute=0
+          businessHoursEndHour=22
+
+    - name: Show Azure deployment operations on failure
+      if: ${{ failure() }}
+      uses: azure/cli@v2
+      env:
+        RESOURCE_GROUP: ${{ inputs.resource_group }}
+      with:
+        inlineScript: |
+          az deployment operation group list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name main \
+            --query "[].{state:properties.provisioningState,target:properties.targetResource.resourceName,error:properties.statusMessage.error.message}" \
+            --output json
+
+          for deployment in logAnalyticsDeployment containerEnvDeployment sqlDatabaseDeployment apiServiceDeployment webServiceDeployment; do
+            az deployment operation group list \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$deployment" \
+              --query "[].{state:properties.provisioningState,target:properties.targetResource.resourceName,error:properties.statusMessage.error.message}" \
+              --output json 2>/dev/null || true
+          done

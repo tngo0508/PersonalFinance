@@ -1,0 +1,231 @@
+name: End-to-End Smoke Tests
+description: >-
+  Probes the deployed Web app's health, login, register and auth-redirect endpoints. Shared by deploy-azure.yml and
+  rollback.yml so a rollback is verified by exactly the same checks.
+
+inputs:
+  web_url:
+    description: 'Public Web URL from the deployment outputs'
+    required: false
+  web_fqdn:
+    description: 'Web FQDN, used when web_url is empty'
+    required: false
+  api_fqdn:
+    description: 'ApiService FQDN (logged only)'
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Run HTTP Smoke Tests against Deployed Endpoints
+      shell: bash
+      env:
+        DEPLOY_WEB_URL: ${{ inputs.web_url }}
+        DEPLOY_WEB_FQDN: ${{ inputs.web_fqdn }}
+        DEPLOY_API_FQDN: ${{ inputs.api_fqdn }}
+      run: |
+        WEB_URL="${DEPLOY_WEB_URL}"
+        WEB_FQDN="${DEPLOY_WEB_FQDN}"
+        API_FQDN="${DEPLOY_API_FQDN}"
+
+        echo "Deploy outputs:"
+        echo "  inputs.web_url   = '${WEB_URL}'"
+        echo "  inputs.web_fqdn  = '${WEB_FQDN}'"
+        echo "  inputs.api_fqdn  = '${API_FQDN}'"
+
+        if [ -z "$WEB_URL" ]; then
+          if [ -n "$WEB_FQDN" ]; then
+            WEB_URL="https://${WEB_FQDN}"
+          fi
+        fi
+
+        # Normalize base URL (strip trailing slash)
+        WEB_URL="${WEB_URL%/}"
+
+        if [ -z "$WEB_URL" ] || [ "$WEB_URL" = "https://" ] || [ "$WEB_URL" = "http://" ]; then
+          echo "::error::Target Web URL could not be resolved from deployment outputs."
+          exit 1
+        fi
+
+        echo "Target WEB_URL: $WEB_URL"
+        echo ""
+
+        log_failure_details() {
+          local path="$1"
+          local headers_file="$2"
+          local body_file="$3"
+          echo "  -> Dumping response for ${path}:"
+          echo "----- Response headers -----"
+          sed -n '1,200p' "$headers_file" 2>/dev/null || true
+          echo "----- Response body (first 400 bytes) -----"
+          head -c 400 "$body_file" 2>/dev/null || true
+          echo ""
+          echo "----- end dump -----"
+        }
+
+        PASSED=0
+        FAILED=0
+
+        check_endpoint() {
+          local label="$1"
+          local path="$2"
+          local expected_status="$3"
+          local description="$4"
+
+          echo ""
+          echo "[${label}] Probing ${path}..."
+          local HEAD_FILE=$(mktemp)
+          local BODY_FILE=$(mktemp)
+          local HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 15 -D "$HEAD_FILE" -o "$BODY_FILE" -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
+          echo "  -> ${path} returned HTTP ${HTTP_CODE}"
+
+          if [ "$HTTP_CODE" = "$expected_status" ]; then
+            echo "  -> ✓ ${description}"
+            PASSED=$((PASSED + 1))
+          else
+            echo "  -> ✗ Expected HTTP ${expected_status}, got ${HTTP_CODE}  <-- FAIL: ${label} ${path}"
+            FAILED=$((FAILED + 1))
+            log_failure_details "${path}" "$HEAD_FILE" "$BODY_FILE"
+          fi
+        }
+
+        check_endpoint_redirect() {
+          local label="$1"
+          local path="$2"
+          local description="$3"
+
+          echo ""
+          echo "[${label}] Probing ${path} (expect redirect)..."
+          local HEAD_FILE=$(mktemp)
+          local BODY_FILE=$(mktemp)
+          local HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 15 -D "$HEAD_FILE" -o "$BODY_FILE" -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
+          echo "  -> ${path} returned HTTP ${HTTP_CODE}"
+
+          # Accept 301/302 as redirect, or 200 if the app renders a login page instead of redirecting
+          if [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "200" ]; then
+            echo "  -> ✓ ${description}"
+            PASSED=$((PASSED + 1))
+          else
+            echo "  -> ✗ Expected redirect (301/302) or login page (200), got HTTP ${HTTP_CODE}  <-- FAIL: ${label} ${path}"
+            FAILED=$((FAILED + 1))
+            log_failure_details "${path}" "$HEAD_FILE" "$BODY_FILE"
+          fi
+        }
+
+        check_content() {
+          local label="$1"
+          local path="$2"
+          local expected_content="$3"
+          local description="$4"
+
+          echo ""
+          echo "[${label}] Checking ${path} for content..."
+          local HEAD_FILE=$(mktemp)
+          local BODY_FILE=$(mktemp)
+          local HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 15 -D "$HEAD_FILE" -o "$BODY_FILE" -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
+          echo "  -> ${path} returned HTTP ${HTTP_CODE}"
+
+          if head -c 100000 "$BODY_FILE" 2>/dev/null | grep -qi "$expected_content"; then
+            echo "  -> ✓ ${description}"
+            PASSED=$((PASSED + 1))
+          else
+            echo "  -> ✗ Expected content '${expected_content}' not found  <-- FAIL: ${label} ${path}"
+            FAILED=$((FAILED + 1))
+            log_failure_details "${path}" "$HEAD_FILE" "$BODY_FILE"
+          fi
+        }
+
+        echo "================================================================"
+        echo " Commencing smoke tests against target: ${WEB_URL}"
+        echo " Note: ApiService (/scalar/v1, /openapi/v1.json) is internal-only"
+        echo " (ingress external=false in ACA) and validated in CI test suite."
+        echo "================================================================"
+
+        # 1. Probe readiness endpoint (/health) with longer retry loop for cold-starts
+        echo ""
+        echo "[1/12] Probing readiness health endpoint (/health)..."
+        MAX_RETRIES=60
+        HEALTH_OK=false
+
+        for i in $(seq 1 $MAX_RETRIES); do
+          HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/health" 2>/dev/null || echo "000")
+          echo "Attempt $i/$MAX_RETRIES: /health returned HTTP ${HTTP_CODE}"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "  -> Readiness probe passed (HTTP 200 OK)."
+            PASSED=$((PASSED + 1))
+            HEALTH_OK=true
+            break
+          fi
+          sleep 5
+        done
+
+        if [ "$HEALTH_OK" != "true" ]; then
+          echo "::error::Readiness health probe timed out after ${MAX_RETRIES} attempts."
+          FAILED=$((FAILED + 1))
+          # Dump headers and body to help diagnose the failure
+          tmphead=$(mktemp)
+          tmpbody=$(mktemp)
+          curl -sS -D "$tmphead" -o "$tmpbody" "${WEB_URL}/health" 2>/dev/null || true
+          log_failure_details "/health" "$tmphead" "$tmpbody"
+        fi
+
+        # 2. Probe liveness endpoint (/alive)
+        check_endpoint "2/12" "/alive" "200" "Liveness probe passed"
+
+        # 3. Probe root UI page (/)
+        echo ""
+        echo "[3/12] Probing Web home page (/)..."
+        ROOT_HEAD=$(mktemp)
+        ROOT_BODY=$(mktemp)
+        ROOT_CODE=$(curl -sS --connect-timeout 5 --max-time 15 -D "$ROOT_HEAD" -o "$ROOT_BODY" -w "%{http_code}" "${WEB_URL}/" 2>/dev/null || echo "000")
+        echo "  -> / returned HTTP ${ROOT_CODE}"
+        if [ "$ROOT_CODE" = "200" ] || [ "$ROOT_CODE" = "302" ]; then
+          echo "  -> ✓ Home page probe passed (HTTP ${ROOT_CODE})."
+          PASSED=$((PASSED + 1))
+        else
+          echo "  -> ✗ Home page probe failed with HTTP ${ROOT_CODE}."
+          FAILED=$((FAILED + 1))
+          log_failure_details "/" "$ROOT_HEAD" "$ROOT_BODY"
+        fi
+
+        # 4. Probe Identity login page (/Identity/Account/Login)
+        check_endpoint "4/12" "/Identity/Account/Login" "200" "Identity login page loaded"
+
+        # 5. Check login page content (form elements)
+        check_content "5/12" "/Identity/Account/Login" "Email" "Login page contains email field"
+
+        # 6. Check login page content (password field)
+        check_content "6/12" "/Identity/Account/Login" "password" "Login page contains password field"
+
+        # 7. Probe Register page
+        check_endpoint "7/12" "/Identity/Account/Register" "200" "Register page loaded"
+
+        # 8. Check Register page content
+        check_content "8/12" "/Identity/Account/Register" "Register" "Register page contains registration form"
+
+        # 9. Check Networth page redirects to login (auth required)
+        check_endpoint_redirect "9/12" "/Networth" "Networth redirects to login (auth required)"
+
+        # 10. Check News page redirects to login (auth required)
+        check_endpoint_redirect "10/12" "/News" "News redirects to login (auth required)"
+
+        # 11. Check Community page redirects to login (auth required)
+        check_endpoint_redirect "11/12" "/Community" "Community redirects to login (auth required)"
+
+        # 12. Check Budget page redirects to login (auth required)
+        check_endpoint_redirect "12/12" "/Budget" "Budget redirects to login (auth required)"
+
+        echo ""
+        echo "================================================================"
+        echo " Smoke Test Results"
+        echo "================================================================"
+        echo "  Passed: ${PASSED}"
+        echo "  Failed: ${FAILED}"
+        echo "================================================================"
+
+        if [ "$FAILED" -gt 0 ]; then
+          echo "::error::${FAILED} smoke test(s) failed."
+          exit 1
+        fi
+
+        echo " All post-deployment smoke tests passed successfully!"

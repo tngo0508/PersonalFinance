@@ -493,6 +493,8 @@ jobs:
 
           if [[ "${{ matrix.service }}" == "api" ]]; then IMAGE="$API_IMAGE"; else IMAGE="$WEB_IMAGE"; fi
 
+          # Stamped into the published assemblies with -p:Version (the Dockerfiles' APP_VERSION build-arg)
+          echo "app_version=$(bash .github/scripts/release-version.sh current)" >> $GITHUB_OUTPUT
           echo "owner_lc=${OWNER_LC}" >> $GITHUB_OUTPUT
           echo "image=${IMAGE}" >> $GITHUB_OUTPUT
           echo "api_image_tag=${API_IMAGE}:${SHORT_SHA}" >> $GITHUB_OUTPUT
@@ -525,6 +527,8 @@ jobs:
           push: ${{ env.PUSH_IMAGE == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.tags.outputs.app_version }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: ${{ env.PUSH_IMAGE == 'true' && format('type=gha,scope={0},mode=max,ignore-error=true', matrix.service) || '' }}
 
@@ -548,147 +552,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Azure Login via Passwordless OIDC
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Ensure Azure resource group exists
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            # A resource group's location is immutable metadata only; resources inside it
-            # are deployed to AZURE_LOCATION via the Bicep `location` parameter. Reuse an
-            # existing group regardless of its region instead of failing on a mismatch.
-            if [[ "$(az group exists --name "${{ env.AZURE_RESOURCE_GROUP }}")" == "true" ]]; then
-              EXISTING_LOCATION=$(az group show --name "${{ env.AZURE_RESOURCE_GROUP }}" --query location --output tsv)
-              echo "Resource group '${{ env.AZURE_RESOURCE_GROUP }}' already exists in '${EXISTING_LOCATION}'; resources will deploy to '${{ env.AZURE_LOCATION }}'."
-              exit 0
-            fi
-
-            az group create \
-              --name "${{ env.AZURE_RESOURCE_GROUP }}" \
-              --location "${{ env.AZURE_LOCATION }}" \
-              --tags Application=PersonalFinance Environment="${{ inputs.environment || env.ENVIRONMENT_NAME }}" ManagedBy=GitHubActions
-
-      - name: Wait for stale Container Apps environment deletion
-        uses: azure/cli@v2
-        env:
-          RESOURCE_GROUP: ${{ env.AZURE_RESOURCE_GROUP }}
-          APP_ENVIRONMENT: ${{ inputs.environment || env.ENVIRONMENT_NAME }}
-        with:
-          inlineScript: |
-            ENVIRONMENT_PREFIX="cae-${APP_ENVIRONMENT}-"
-            ENVIRONMENT_NAME=$(az resource list \
-              --resource-group "$RESOURCE_GROUP" \
-              --resource-type Microsoft.App/managedEnvironments \
-              --query "[?starts_with(name, '${ENVIRONMENT_PREFIX}')].name | [0]" \
-              --output tsv)
-
-            if [[ -z "$ENVIRONMENT_NAME" ]]; then
-              echo "No existing Container Apps environment found."
-              exit 0
-            fi
-
-            ENVIRONMENT_ID=$(az resource show \
-              --resource-group "$RESOURCE_GROUP" \
-              --resource-type Microsoft.App/managedEnvironments \
-              --name "$ENVIRONMENT_NAME" \
-              --query id \
-              --output tsv)
-            STATE=$(az resource show --ids "$ENVIRONMENT_ID" --query properties.provisioningState --output tsv 2>/dev/null || true)
-
-            if [[ "$STATE" != "ScheduledForDelete" ]]; then
-              echo "Container Apps environment '$ENVIRONMENT_NAME' is in state '$STATE'."
-              exit 0
-            fi
-
-            echo "Container Apps environment '$ENVIRONMENT_NAME' is scheduled for deletion; waiting for Azure cleanup."
-            for attempt in $(seq 1 30); do
-              if ! az resource show --ids "$ENVIRONMENT_ID" --output none 2>/dev/null; then
-                echo "Container Apps environment deletion completed."
-                exit 0
-              fi
-
-              echo "Deletion still in progress (attempt $attempt/30); waiting 30 seconds."
-              sleep 30
-            done
-
-            echo "::error::Container Apps environment '$ENVIRONMENT_NAME' remained scheduled for deletion after 15 minutes."
-            exit 1
-
-      - name: Validate database deployment configuration
-        env:
-          DEPLOY_SQL: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}
-          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
-          CUSTOM_CONNECTION_STRING: ${{ secrets.CUSTOM_CONNECTION_STRING }}
-        run: |
-          if [[ "$DEPLOY_SQL" == "true" && -z "$SQL_ADMIN_PASSWORD" ]]; then
-            echo "::error::SQL_ADMIN_PASSWORD is required when Azure SQL deployment is enabled."
-            exit 1
-          fi
-
-          if [[ "$DEPLOY_SQL" != "true" && -z "$CUSTOM_CONNECTION_STRING" ]]; then
-            echo "::error::CUSTOM_CONNECTION_STRING is required when Azure SQL deployment is disabled."
-            exit 1
-          fi
-
+      # Login, resource group, Bicep and the failure dump live in .github/actions/deploy-azure, shared with rollback.yml
       - name: Deploy Azure Infrastructure & Container Apps (Bicep)
         id: deploy-bicep
-        uses: azure/arm-deploy@v2
+        uses: ./.github/actions/deploy-azure
         with:
-          scope: resourcegroup
-          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
-          template: infra/main.bicep
-          parameters: >-
-            environmentName=${{ inputs.environment || env.ENVIRONMENT_NAME }}
-            location=${{ env.AZURE_LOCATION }}
-            sqlLocation=${{ env.AZURE_SQL_LOCATION }}
-            apiImage=${{ needs.build-and-push-containers.outputs.api_image_tag }}
-            webImage=${{ needs.build-and-push-containers.outputs.web_image_tag }}
-            googleClientId=${{ secrets.GOOGLE_CLIENT_ID }}
-            googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            brevoApiKey=${{ secrets.BREVO_API_KEY }}
-            brevoSenderEmail=${{ vars.BREVO_SENDER_EMAIL || 'tngo0508@gmail.com' }}
-            brevoSenderName=${{ vars.BREVO_SENDER_NAME || 'PersonalFinance' }}
-            googleDriveApiKey=${{ secrets.GOOGLE_DRIVE_API_KEY }}
-            openAiApiKey=${{ secrets.OPENAI_API_KEY }}
-            rbacAdminEmail=${{ vars.RBAC_ADMIN_EMAIL || 'tngo0508@gmail.com' }}
-            internalApiKey=${{ secrets.INTERNAL_API_KEY }}
-            secUserAgent="${{ vars.SEC_USER_AGENT || '' }}"
-            deploySqlDatabase=${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}
-            sqlAdministratorLoginPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
-            customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}
-            customDomainName=${{ vars.CUSTOM_DOMAIN_NAME || '' }}
-            exposeApiPublicly=true
-            enableScheduledScaling=true
-            businessHoursTimeZone=America/Los_Angeles
-            businessHoursStartHour=8
-            businessHoursStartMinute=0
-            businessHoursEndHour=22
-
-      - name: Show Azure deployment operations on failure
-        if: ${{ failure() }}
-        uses: azure/cli@v2
-        env:
-          RESOURCE_GROUP: ${{ env.AZURE_RESOURCE_GROUP }}
-        with:
-          inlineScript: |
-            az deployment operation group list \
-              --resource-group "$RESOURCE_GROUP" \
-              --name main \
-              --query "[].{state:properties.provisioningState,target:properties.targetResource.resourceName,error:properties.statusMessage.error.message}" \
-              --output json
-
-            for deployment in logAnalyticsDeployment containerEnvDeployment sqlDatabaseDeployment apiServiceDeployment webServiceDeployment; do
-              az deployment operation group list \
-                --resource-group "$RESOURCE_GROUP" \
-                --name "$deployment" \
-                --query "[].{state:properties.provisioningState,target:properties.targetResource.resourceName,error:properties.statusMessage.error.message}" \
-                --output json 2>/dev/null || true
-            done
+          environment: ${{ inputs.environment || env.ENVIRONMENT_NAME }}
+          deploy_sql: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}
+          api_image: ${{ needs.build-and-push-containers.outputs.api_image_tag }}
+          web_image: ${{ needs.build-and-push-containers.outputs.web_image_tag }}
+          resource_group: ${{ env.AZURE_RESOURCE_GROUP }}
+          location: ${{ env.AZURE_LOCATION }}
+          sql_location: ${{ env.AZURE_SQL_LOCATION }}
+          azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          brevo_api_key: ${{ secrets.BREVO_API_KEY }}
+          brevo_sender_email: ${{ vars.BREVO_SENDER_EMAIL || 'tngo0508@gmail.com' }}
+          brevo_sender_name: ${{ vars.BREVO_SENDER_NAME || 'PersonalFinance' }}
+          google_drive_api_key: ${{ secrets.GOOGLE_DRIVE_API_KEY }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          rbac_admin_email: ${{ vars.RBAC_ADMIN_EMAIL || 'tngo0508@gmail.com' }}
+          internal_api_key: ${{ secrets.INTERNAL_API_KEY }}
+          sec_user_agent: ${{ vars.SEC_USER_AGENT || '' }}
+          sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
+          custom_connection_string: ${{ secrets.CUSTOM_CONNECTION_STRING }}
+          custom_domain_name: ${{ vars.CUSTOM_DOMAIN_NAME || '' }}
 
   # ============================================================================
   # 4. END-TO-END POST-DEPLOYMENT SMOKE TESTS
@@ -700,213 +591,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Same script as rollback.yml (.github/actions/smoke-test)
       - name: Run HTTP Smoke Tests against Deployed Endpoints
-        run: |
-          WEB_URL="${{ needs.deploy-azure.outputs.web_url }}"
-          WEB_FQDN="${{ needs.deploy-azure.outputs.web_fqdn }}"
-          API_FQDN="${{ needs.deploy-azure.outputs.api_fqdn }}"
-
-          echo "Deploy outputs:"
-          echo "  needs.deploy-azure.outputs.web_url   = '${WEB_URL}'"
-          echo "  needs.deploy-azure.outputs.web_fqdn  = '${WEB_FQDN}'"
-          echo "  needs.deploy-azure.outputs.api_fqdn  = '${API_FQDN}'"
-
-          if [ -z "$WEB_URL" ]; then
-            if [ -n "$WEB_FQDN" ]; then
-              WEB_URL="https://${WEB_FQDN}"
-            fi
-          fi
-
-          # Normalize base URL (strip trailing slash)
-          WEB_URL="${WEB_URL%/}"
-
-          if [ -z "$WEB_URL" ] || [ "$WEB_URL" = "https://" ] || [ "$WEB_URL" = "http://" ]; then
-            echo "::error::Target Web URL could not be resolved from deployment outputs."
-            exit 1
-          fi
-
-          echo "Target WEB_URL: $WEB_URL"
-          echo ""
-
-          log_failure_details() {
-            local path="$1"
-            local headers_file="$2"
-            local body_file="$3"
-            echo "  -> Dumping response for ${path}:"
-            echo "----- Response headers -----"
-            sed -n '1,200p' "$headers_file" 2>/dev/null || true
-            echo "----- Response body (first 400 bytes) -----"
-            head -c 400 "$body_file" 2>/dev/null || true
-            echo ""
-            echo "----- end dump -----"
-          }
-
-          PASSED=0
-          FAILED=0
-
-          check_endpoint() {
-            local label="$1"
-            local path="$2"
-            local expected_status="$3"
-            local description="$4"
-
-            echo ""
-            echo "[${label}] Probing ${path}..."
-            local HEAD_FILE=$(mktemp)
-            local BODY_FILE=$(mktemp)
-            local HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 15 -D "$HEAD_FILE" -o "$BODY_FILE" -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
-            echo "  -> ${path} returned HTTP ${HTTP_CODE}"
-
-            if [ "$HTTP_CODE" = "$expected_status" ]; then
-              echo "  -> ✓ ${description}"
-              PASSED=$((PASSED + 1))
-            else
-              echo "  -> ✗ Expected HTTP ${expected_status}, got ${HTTP_CODE}  <-- FAIL: ${label} ${path}"
-              FAILED=$((FAILED + 1))
-              log_failure_details "${path}" "$HEAD_FILE" "$BODY_FILE"
-            fi
-          }
-
-          check_endpoint_redirect() {
-            local label="$1"
-            local path="$2"
-            local description="$3"
-
-            echo ""
-            echo "[${label}] Probing ${path} (expect redirect)..."
-            local HEAD_FILE=$(mktemp)
-            local BODY_FILE=$(mktemp)
-            local HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 15 -D "$HEAD_FILE" -o "$BODY_FILE" -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
-            echo "  -> ${path} returned HTTP ${HTTP_CODE}"
-
-            # Accept 301/302 as redirect, or 200 if the app renders a login page instead of redirecting
-            if [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "  -> ✓ ${description}"
-              PASSED=$((PASSED + 1))
-            else
-              echo "  -> ✗ Expected redirect (301/302) or login page (200), got HTTP ${HTTP_CODE}  <-- FAIL: ${label} ${path}"
-              FAILED=$((FAILED + 1))
-              log_failure_details "${path}" "$HEAD_FILE" "$BODY_FILE"
-            fi
-          }
-
-          check_content() {
-            local label="$1"
-            local path="$2"
-            local expected_content="$3"
-            local description="$4"
-
-            echo ""
-            echo "[${label}] Checking ${path} for content..."
-            local HEAD_FILE=$(mktemp)
-            local BODY_FILE=$(mktemp)
-            local HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 15 -D "$HEAD_FILE" -o "$BODY_FILE" -w "%{http_code}" "${WEB_URL}${path}" 2>/dev/null || echo "000")
-            echo "  -> ${path} returned HTTP ${HTTP_CODE}"
-
-            if head -c 100000 "$BODY_FILE" 2>/dev/null | grep -qi "$expected_content"; then
-              echo "  -> ✓ ${description}"
-              PASSED=$((PASSED + 1))
-            else
-              echo "  -> ✗ Expected content '${expected_content}' not found  <-- FAIL: ${label} ${path}"
-              FAILED=$((FAILED + 1))
-              log_failure_details "${path}" "$HEAD_FILE" "$BODY_FILE"
-            fi
-          }
-
-          echo "================================================================"
-          echo " Commencing smoke tests against target: ${WEB_URL}"
-          echo " Note: ApiService (/scalar/v1, /openapi/v1.json) is internal-only"
-          echo " (ingress external=false in ACA) and validated in CI test suite."
-          echo "================================================================"
-
-          # 1. Probe readiness endpoint (/health) with longer retry loop for cold-starts
-          echo ""
-          echo "[1/12] Probing readiness health endpoint (/health)..."
-          MAX_RETRIES=60
-          HEALTH_OK=false
-
-          for i in $(seq 1 $MAX_RETRIES); do
-            HTTP_CODE=$(curl -sS --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "${WEB_URL}/health" 2>/dev/null || echo "000")
-            echo "Attempt $i/$MAX_RETRIES: /health returned HTTP ${HTTP_CODE}"
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "  -> Readiness probe passed (HTTP 200 OK)."
-              PASSED=$((PASSED + 1))
-              HEALTH_OK=true
-              break
-            fi
-            sleep 5
-          done
-
-          if [ "$HEALTH_OK" != "true" ]; then
-            echo "::error::Readiness health probe timed out after ${MAX_RETRIES} attempts."
-            FAILED=$((FAILED + 1))
-            # Dump headers and body to help diagnose the failure
-            tmphead=$(mktemp)
-            tmpbody=$(mktemp)
-            curl -sS -D "$tmphead" -o "$tmpbody" "${WEB_URL}/health" 2>/dev/null || true
-            log_failure_details "/health" "$tmphead" "$tmpbody"
-          fi
-
-          # 2. Probe liveness endpoint (/alive)
-          check_endpoint "2/12" "/alive" "200" "Liveness probe passed"
-
-          # 3. Probe root UI page (/)
-          echo ""
-          echo "[3/12] Probing Web home page (/)..."
-          ROOT_HEAD=$(mktemp)
-          ROOT_BODY=$(mktemp)
-          ROOT_CODE=$(curl -sS --connect-timeout 5 --max-time 15 -D "$ROOT_HEAD" -o "$ROOT_BODY" -w "%{http_code}" "${WEB_URL}/" 2>/dev/null || echo "000")
-          echo "  -> / returned HTTP ${ROOT_CODE}"
-          if [ "$ROOT_CODE" = "200" ] || [ "$ROOT_CODE" = "302" ]; then
-            echo "  -> ✓ Home page probe passed (HTTP ${ROOT_CODE})."
-            PASSED=$((PASSED + 1))
-          else
-            echo "  -> ✗ Home page probe failed with HTTP ${ROOT_CODE}."
-            FAILED=$((FAILED + 1))
-            log_failure_details "/" "$ROOT_HEAD" "$ROOT_BODY"
-          fi
-
-          # 4. Probe Identity login page (/Identity/Account/Login)
-          check_endpoint "4/12" "/Identity/Account/Login" "200" "Identity login page loaded"
-
-          # 5. Check login page content (form elements)
-          check_content "5/12" "/Identity/Account/Login" "Email" "Login page contains email field"
-
-          # 6. Check login page content (password field)
-          check_content "6/12" "/Identity/Account/Login" "password" "Login page contains password field"
-
-          # 7. Probe Register page
-          check_endpoint "7/12" "/Identity/Account/Register" "200" "Register page loaded"
-
-          # 8. Check Register page content
-          check_content "8/12" "/Identity/Account/Register" "Register" "Register page contains registration form"
-
-          # 9. Check Networth page redirects to login (auth required)
-          check_endpoint_redirect "9/12" "/Networth" "Networth redirects to login (auth required)"
-
-          # 10. Check News page redirects to login (auth required)
-          check_endpoint_redirect "10/12" "/News" "News redirects to login (auth required)"
-
-          # 11. Check Community page redirects to login (auth required)
-          check_endpoint_redirect "11/12" "/Community" "Community redirects to login (auth required)"
-
-          # 12. Check Budget page redirects to login (auth required)
-          check_endpoint_redirect "12/12" "/Budget" "Budget redirects to login (auth required)"
-
-          echo ""
-          echo "================================================================"
-          echo " Smoke Test Results"
-          echo "================================================================"
-          echo "  Passed: ${PASSED}"
-          echo "  Failed: ${FAILED}"
-          echo "================================================================"
-
-          if [ "$FAILED" -gt 0 ]; then
-            echo "::error::${FAILED} smoke test(s) failed."
-            exit 1
-          fi
-
-          echo " All post-deployment smoke tests passed successfully!"
+        uses: ./.github/actions/smoke-test
+        with:
+          web_url: ${{ needs.deploy-azure.outputs.web_url }}
+          web_fqdn: ${{ needs.deploy-azure.outputs.web_fqdn }}
+          api_fqdn: ${{ needs.deploy-azure.outputs.api_fqdn }}
 
   # ============================================================================
   # 5. PROMOTE DEPLOYED IMAGES TO `latest` (only after deploy + smoke tests pass)

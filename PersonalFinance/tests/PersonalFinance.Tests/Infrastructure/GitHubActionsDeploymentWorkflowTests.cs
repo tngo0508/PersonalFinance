@@ -14,10 +14,20 @@ public class GitHubActionsDeploymentWorkflowTests
             {
                 return current.FullName;
             }
+
             current = current.Parent;
         }
+
         throw new InvalidOperationException("Could not locate repository root directory.");
     }
+
+    // The deploy steps and the smoke-test script are composite actions shared by deploy-azure.yml and rollback.yml
+    private static string ReadRepoFile(params string[] relativePath) =>
+        File.ReadAllText(Path.Combine([FindProjectRoot(), .. relativePath]));
+
+    private static string DeployAction() => ReadRepoFile(".github", "actions", "deploy-azure", "action.yml");
+
+    private static string SmokeTestAction() => ReadRepoFile(".github", "actions", "smoke-test", "action.yml");
 
     [Fact]
     public void DeploymentWorkflow_ExistsAndIsNonEmpty()
@@ -78,18 +88,25 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("packages: write", workflow);
         Assert.Contains("contents: read", workflow);
 
-        // Azure Login with OIDC secrets
-        Assert.Contains("azure/login@v2", workflow);
-        Assert.Contains("client-id: ${{ secrets.AZURE_CLIENT_ID }}", workflow);
-        Assert.Contains("tenant-id: ${{ secrets.AZURE_TENANT_ID }}", workflow);
-        Assert.Contains("subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}", workflow);
-        Assert.Contains("uses: azure/cli@v2", workflow);
-        Assert.Contains("az group exists", workflow);
-        Assert.Contains("az group create", workflow);
-        Assert.Contains("Wait for stale Container Apps environment deletion", workflow);
-        Assert.Contains("ScheduledForDelete", workflow);
-        Assert.Contains("Show Azure deployment operations on failure", workflow);
-        Assert.Contains("az deployment operation group list", workflow);
+        // The workflow hands the OIDC secrets to the shared deploy action
+        Assert.Contains("uses: ./.github/actions/deploy-azure", workflow);
+        Assert.Contains("azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}", workflow);
+        Assert.Contains("azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}", workflow);
+        Assert.Contains("azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}", workflow);
+
+        // Azure Login with OIDC, inside the shared deploy action
+        string action = DeployAction();
+        Assert.Contains("azure/login@v2", action);
+        Assert.Contains("client-id: ${{ inputs.azure_client_id }}", action);
+        Assert.Contains("tenant-id: ${{ inputs.azure_tenant_id }}", action);
+        Assert.Contains("subscription-id: ${{ inputs.azure_subscription_id }}", action);
+        Assert.Contains("uses: azure/cli@v2", action);
+        Assert.Contains("az group exists", action);
+        Assert.Contains("az group create", action);
+        Assert.Contains("Wait for stale Container Apps environment deletion", action);
+        Assert.Contains("ScheduledForDelete", action);
+        Assert.Contains("Show Azure deployment operations on failure", action);
+        Assert.Contains("az deployment operation group list", action);
     }
 
     [Fact]
@@ -115,7 +132,8 @@ public class GitHubActionsDeploymentWorkflowTests
         // The repo-root global.json pins the SDK, so CI and local builds run the same analyzers (#125)
         Assert.True(File.Exists(Path.Combine(root, "global.json")), "global.json must exist at the repository root.");
 
-        MatchCollection setupSteps = Regex.Matches(workflow, @"uses: actions/setup-dotnet@v4\s+with:\s+(?<input>[^\r\n]+)");
+        MatchCollection setupSteps =
+            Regex.Matches(workflow, @"uses: actions/setup-dotnet@v4\s+with:\s+(?<input>[^\r\n]+)");
         Assert.NotEmpty(setupSteps);
         foreach (Match step in setupSteps)
         {
@@ -147,20 +165,36 @@ public class GitHubActionsDeploymentWorkflowTests
         string root = FindProjectRoot();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
+        // The workflow maps its values onto the shared deploy action's inputs...
         Assert.Contains("deploy-azure:", workflow);
-        Assert.Contains("template: infra/main.bicep", workflow);
-        Assert.Contains("environmentName=${{ inputs.environment || env.ENVIRONMENT_NAME }}", workflow);
-        Assert.Contains("location=${{ env.AZURE_LOCATION }}", workflow);
-        Assert.Contains("exposeApiPublicly=", workflow);
-        Assert.Contains("sqlLocation=${{ env.AZURE_SQL_LOCATION }}", workflow);
-        Assert.Contains("apiImage=${{ needs.build-and-push-containers.outputs.api_image_tag }}", workflow);
-        Assert.Contains("webImage=${{ needs.build-and-push-containers.outputs.web_image_tag }}", workflow);
-        Assert.Contains("googleClientId=${{ secrets.GOOGLE_CLIENT_ID }}", workflow);
-        Assert.Contains("googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }}", workflow);
-        Assert.Contains("brevoApiKey=${{ secrets.BREVO_API_KEY }}", workflow);
-        Assert.Contains("googleDriveApiKey=${{ secrets.GOOGLE_DRIVE_API_KEY }}", workflow);
-        Assert.Contains("deploySqlDatabase=${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}", workflow);
-        Assert.Contains("customConnectionString=${{ secrets.CUSTOM_CONNECTION_STRING }}", workflow);
+        Assert.Contains("environment: ${{ inputs.environment || env.ENVIRONMENT_NAME }}", workflow);
+        Assert.Contains("location: ${{ env.AZURE_LOCATION }}", workflow);
+        Assert.Contains("sql_location: ${{ env.AZURE_SQL_LOCATION }}", workflow);
+        Assert.Contains("api_image: ${{ needs.build-and-push-containers.outputs.api_image_tag }}", workflow);
+        Assert.Contains("web_image: ${{ needs.build-and-push-containers.outputs.web_image_tag }}", workflow);
+        Assert.Contains("google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}", workflow);
+        Assert.Contains("google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}", workflow);
+        Assert.Contains("brevo_api_key: ${{ secrets.BREVO_API_KEY }}", workflow);
+        Assert.Contains("google_drive_api_key: ${{ secrets.GOOGLE_DRIVE_API_KEY }}", workflow);
+        Assert.Contains("deploy_sql: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_sql == true }}",
+            workflow);
+        Assert.Contains("custom_connection_string: ${{ secrets.CUSTOM_CONNECTION_STRING }}", workflow);
+
+        // ...and the action maps those inputs onto the Bicep parameters
+        string action = DeployAction();
+        Assert.Contains("template: infra/main.bicep", action);
+        Assert.Contains("environmentName=${{ inputs.environment }}", action);
+        Assert.Contains("location=${{ inputs.location }}", action);
+        Assert.Contains("exposeApiPublicly=", action);
+        Assert.Contains("sqlLocation=${{ inputs.sql_location }}", action);
+        Assert.Contains("apiImage=${{ inputs.api_image }}", action);
+        Assert.Contains("webImage=${{ inputs.web_image }}", action);
+        Assert.Contains("googleClientId=${{ inputs.google_client_id }}", action);
+        Assert.Contains("googleClientSecret=${{ inputs.google_client_secret }}", action);
+        Assert.Contains("brevoApiKey=${{ inputs.brevo_api_key }}", action);
+        Assert.Contains("googleDriveApiKey=${{ inputs.google_drive_api_key }}", action);
+        Assert.Contains("deploySqlDatabase=${{ inputs.deploy_sql }}", action);
+        Assert.Contains("customConnectionString=${{ inputs.custom_connection_string }}", action);
     }
 
     [Fact]
@@ -214,7 +248,8 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("web_image_tag", declaredOutputs["build-and-push-containers"]);
 
         // 2. Find all expressions referencing needs.<job_id>.outputs.<output_name>
-        MatchCollection needsOutputReferences = Regex.Matches(workflow, @"needs\.([a-zA-Z0-9_-]+)\.outputs\.([a-zA-Z0-9_-]+)");
+        MatchCollection needsOutputReferences =
+            Regex.Matches(workflow, @"needs\.([a-zA-Z0-9_-]+)\.outputs\.([a-zA-Z0-9_-]+)");
         Assert.NotEmpty(needsOutputReferences);
 
         foreach (Match refMatch in needsOutputReferences)
@@ -254,10 +289,14 @@ public class GitHubActionsDeploymentWorkflowTests
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         Assert.Contains("smoke-test:", workflow);
-        Assert.Contains("/health", workflow);
-        Assert.Contains("/alive", workflow);
-        Assert.Contains("${WEB_URL}/", workflow);
-        Assert.Contains("/Identity/Account/Login", workflow);
+        Assert.Contains("uses: ./.github/actions/smoke-test", workflow);
+        Assert.Contains("web_url: ${{ needs.deploy-azure.outputs.web_url }}", workflow);
+
+        string action = SmokeTestAction();
+        Assert.Contains("/health", action);
+        Assert.Contains("/alive", action);
+        Assert.Contains("${WEB_URL}/", action);
+        Assert.Contains("/Identity/Account/Login", action);
     }
 
     [Fact]
@@ -268,7 +307,8 @@ public class GitHubActionsDeploymentWorkflowTests
 
         // Every job (2-space indented key under `jobs:`) must declare its own timeout
         string jobsSection = workflow[workflow.IndexOf("\njobs:", StringComparison.Ordinal)..];
-        MatchCollection jobBlocks = Regex.Matches(jobsSection, @"\n  ([a-zA-Z0-9_-]+):[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
+        MatchCollection jobBlocks =
+            Regex.Matches(jobsSection, @"\n  ([a-zA-Z0-9_-]+):[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
         Assert.NotEmpty(jobBlocks);
         foreach (Match job in jobBlocks)
         {
@@ -277,7 +317,8 @@ public class GitHubActionsDeploymentWorkflowTests
         }
 
         // Verify smoke-test job specifically limits execution duration
-        Match smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
+        Match smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)",
+            RegexOptions.Singleline);
         Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
         Assert.Contains("timeout-minutes:", smokeTestJobMatch.Value);
     }
@@ -302,7 +343,8 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("cache-to: ${{ env.PUSH_IMAGE == 'true' &&", workflow);
 
         // Deployment still waits for tests, migrations on SQL Server, infra validation and both images
-        Assert.Contains("needs: [build-and-test, sql-server-migrations, validate-infra, build-and-push-containers]", workflow);
+        Assert.Contains("needs: [build-and-test, sql-server-migrations, validate-infra, build-and-push-containers]",
+            workflow);
 
         // `latest` only moves after a successful deploy + smoke test
         Assert.Contains("promote-latest:", workflow);
@@ -349,14 +391,90 @@ public class GitHubActionsDeploymentWorkflowTests
         string root = FindProjectRoot();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
-        Match smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)", RegexOptions.Singleline);
+        Match smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)",
+            RegexOptions.Singleline);
         Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
-        string content = smokeTestJobMatch.Value;
+        Assert.Contains("uses: ./.github/actions/smoke-test", smokeTestJobMatch.Value);
 
         // Verify connection timeout and max time are enforced on curl calls to prevent hanging
+        string content = SmokeTestAction();
         Assert.Contains("--connect-timeout", content);
         Assert.Contains("--max-time", content);
         Assert.Contains("echo \"000\"", content);
+
+        // No PowerShell-style backtick escapes in the bash script
+        Assert.DoesNotContain("`n", content);
+        Assert.DoesNotContain("`r", content);
+        Assert.DoesNotContain("`t", content);
+    }
+
+    [Fact]
+    public void ContainerImages_PublishWithTheAppVersion()
+    {
+        string workflow = ReadRepoFile(".github", "workflows", "deploy-azure.yml");
+
+        // The version comes from AppVersion.cs, the same source create-release tags from (ADR 0006)
+        Assert.Contains("app_version=$(bash .github/scripts/release-version.sh current)", workflow);
+        Assert.Contains("APP_VERSION=${{ steps.tags.outputs.app_version }}", workflow);
+
+        foreach (string project in new[] { "PersonalFinance.ApiService", "PersonalFinance.Web" })
+        {
+            string dockerfile = ReadRepoFile("PersonalFinance", "src", project, "Dockerfile");
+            string publishStage = dockerfile[dockerfile.IndexOf("FROM build AS publish", StringComparison.Ordinal)..];
+            Assert.Contains("ARG APP_VERSION=", publishStage);
+            Assert.Contains("/p:Version=$APP_VERSION", publishStage);
+        }
+    }
+
+    [Fact]
+    public void RollbackWorkflow_RedeploysATagWithTheSharedStepsWithoutOverlappingADeploy()
+    {
+        string rollback = ReadRepoFile(".github", "workflows", "rollback.yml");
+        string deploy = ReadRepoFile(".github", "workflows", "deploy-azure.yml");
+
+        Assert.Contains("workflow_dispatch:", rollback);
+        Assert.Contains("tag:", rollback);
+        Assert.Contains("allow_schema_drift:", rollback);
+
+        // The same deploy and smoke-test steps; the Bicep parameters live only in the shared action
+        Assert.Contains("uses: ./.github/actions/deploy-azure", rollback);
+        Assert.Contains("uses: ./.github/actions/smoke-test", rollback);
+        Assert.DoesNotContain("infra/main.bicep", rollback);
+        Assert.DoesNotContain("template: infra/main.bicep", deploy);
+
+        // The literal group a deploy-azure.yml run on main evaluates to, never cancelled
+        Assert.Contains("group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}", deploy);
+        string deployWorkflowName = Regex.Match(deploy, @"^name: (?<name>[^\r\n]+)").Groups["name"].Value;
+        Assert.Contains($"group: {deployWorkflowName}-refs/heads/main", rollback);
+        Assert.Contains("cancel-in-progress: false", rollback);
+
+        // Safety checks before anything deploys
+        Assert.Contains("github.ref != 'refs/heads/main'", rollback);
+        Assert.Contains("^{commit}", rollback);
+        Assert.Contains("docker manifest inspect", rollback);
+        Assert.Contains("Migrations/AzureSql", rollback);
+
+        // Tags and Releases are never touched: without contents: write the token cannot create either
+        Assert.DoesNotContain("contents: write", rollback);
+        Assert.DoesNotContain("gh release", rollback);
+        Assert.DoesNotContain("git push", rollback);
+
+        // The free-text tag reaches scripts only through env, never interpolated into a run block
+        foreach (Match run in Regex.Matches(rollback, @"run: \|\r?\n(?<body>(?:[ ]{10,}[^\r\n]*\r?\n|\r?\n)+)"))
+        {
+            Assert.DoesNotContain("${{ inputs.", run.Groups["body"].Value);
+        }
+
+        // Every job declares its own timeout
+        string jobsSection = rollback[rollback.IndexOf("\njobs:", StringComparison.Ordinal)..];
+        MatchCollection jobBlocks =
+            Regex.Matches(jobsSection, @"\n  ([a-zA-Z0-9_-]+):[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
+        Assert.Equal(4, jobBlocks.Count);
+        foreach (Match job in jobBlocks)
+        {
+            Assert.True(Regex.IsMatch(job.Value, @"\n    timeout-minutes:\s*\d+"),
+                $"Rollback job '{job.Groups[1].Value}' must define timeout-minutes.");
+        }
     }
 
     [Fact]
@@ -385,7 +503,8 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.True(File.Exists(readmePath), "README.md must exist in the repository root.");
         string readme = File.ReadAllText(readmePath);
 
-        Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml/badge.svg", readme);
+        Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml/badge.svg",
+            readme);
         Assert.Contains("https://github.com/tngo0508/PersonalFinance/actions/workflows/deploy-azure.yml", readme);
     }
 }
