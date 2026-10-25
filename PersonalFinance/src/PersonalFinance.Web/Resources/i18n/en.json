@@ -79,6 +79,9 @@
   "Email.Deletion.Button": "Cancel Deletion",
   "Email.Deletion.Footer": "This link works once. If you did not ask to delete your account, cancel now and change your password.",
 
+  "Notifications.BudgetExceeded.Title": "Budget exceeded",
+  "Notifications.BudgetWarning.Title": "Budget warning",
+  "Notifications.BudgetAlert.Message": "Your total spending has reached {percent}% of your budgeted amount for {period}.",
   "Notifications.SavingsMilestone.Title": "{percent}% savings milestone reached!",
   "Notifications.SavingsMilestone.Message": "Your goal '{goalName}' has reached {percent}% of its target ({current} of {target}).",
   "Notifications.SyncCompleted.Title": "Google Drive sync completed",

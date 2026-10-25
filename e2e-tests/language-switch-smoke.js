@@ -1,8 +1,10 @@
 /**
- * Language switch smoke test (localization spec §5, slice L1a, #295): a signed-out visitor switches to Vietnamese
- * with the top-bar EN | VI switcher, registers, and finds the Savings Goals page in Vietnamese, including the strings
- * its JavaScript reads from the page's JSON island. The account-menu switcher then returns to English. A browser that
- * asks for Vietnamese (Accept-Language) gets it without choosing. Run from ui-test.js as Test 9e.
+ * Language switch smoke test (localization spec §5, slices L1a and L1c, #295): a signed-out visitor switches to
+ * Vietnamese with the top-bar EN | VI switcher, registers, and finds the Savings Goals page in Vietnamese, including
+ * the strings its JavaScript reads from the page's JSON island. The account-menu switcher then returns to English.
+ * The choice is stored on the Account: Account settings › Language shows and changes it, and signing in from a fresh
+ * browser brings it back. A browser that asks for Vietnamese (Accept-Language) gets it without choosing. Run from
+ * ui-test.js as Test 9e.
  *
  * Expected texts are read from Resources/i18n/vi.json and en.json, so a re-translation does not break the test.
  */
@@ -14,15 +16,33 @@ const RESOURCES = path.join(__dirname, '..', 'PersonalFinance', 'src', 'Personal
 const vi = require(path.join(RESOURCES, 'vi.json'));
 const en = require(path.join(RESOURCES, 'en.json'));
 
+const PASSWORD = 'TestPass1!';
+
+/**
+ * Sign in with an email and password.
+ * @param {import('playwright').Page} page - A page in a signed-out context.
+ * @param {string} base - The Web app's base URL.
+ * @param {string} email - The Account's email.
+ * @returns {Promise<boolean>} True when the Account is signed in.
+ */
+async function signIn(page, base, email) {
+    await page.goto(`${base}/Identity/Account/Login`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+    await page.fill('input[type="email"]', email);
+    await page.fill('input[type="password"]', PASSWORD);
+    await page.click('#login-submit');
+    await page.waitForLoadState('networkidle', {timeout: TIMEOUT});
+    return page.locator('#sidebar').isVisible().catch(() => false);
+}
+
 /**
  * Register a fresh Account and make sure it is signed in.
  * @param {import('playwright').Page} page - A page in a signed-out context.
  * @param {string} base - The Web app's base URL.
- * @returns {Promise<boolean>} True when the Account is signed in.
+ * @returns {Promise<string|null>} The Account's email when it is signed in, else null.
  */
 async function registerFreshAccount(page, base) {
     const email = `e2elanguage_${Date.now()}@example.com`;
-    const password = 'TestPass1!';
+    const password = PASSWORD;
     await page.goto(`${base}/Identity/Account/Register`, {waitUntil: 'networkidle', timeout: TIMEOUT});
     await page.fill('input[type="email"]', email);
     const passwords = await page.locator('input[type="password"]').all();
@@ -33,14 +53,10 @@ async function registerFreshAccount(page, base) {
     await page.click('#registerSubmit');
     await page.waitForLoadState('networkidle', {timeout: TIMEOUT});
 
-    if (!await page.locator('#sidebar').isVisible().catch(() => false)) {
-        await page.goto(`${base}/Identity/Account/Login`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-        await page.fill('input[type="email"]', email);
-        await page.fill('input[type="password"]', password);
-        await page.click('#login-submit');
-        await page.waitForLoadState('networkidle', {timeout: TIMEOUT});
+    if (await page.locator('#sidebar').isVisible().catch(() => false)) {
+        return email;
     }
-    return page.locator('#sidebar').isVisible().catch(() => false);
+    return await signIn(page, base, email) ? email : null;
 }
 
 /**
@@ -83,7 +99,8 @@ async function runLanguageSwitchSmoke({browser, base, pass, fail}) {
             `html lang="${lang}", aria-pressed="${pressed}"`, report);
 
         // 2. Signed in: Savings Goals renders in Vietnamese from server and JS strings.
-        if (!await registerFreshAccount(page, base)) {
+        const email = await registerFreshAccount(page, base);
+        if (!email) {
             fail('Language smoke: could not register and sign in');
             return;
         }
@@ -141,13 +158,38 @@ async function runLanguageSwitchSmoke({browser, base, pass, fail}) {
         lang = await page.getAttribute('html', 'lang');
         check(lang === 'en' && h1En === en['SavingsGoals.Title'], 'Account-menu switch returns to English',
             `html lang="${lang}", h1 "${h1En}"`, report);
+
+        // 4. Account settings › Language shows the stored choice (English, from the menu) and changes it.
+        await page.goto(`${base}/Identity/Account/Manage/Language`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const storedEnglish = await page.isChecked('#language-en').catch(() => false);
+        check(storedEnglish, 'Account settings › Language shows the stored English', 'English not selected', report);
+        await page.check('#language-vi');
+        await Promise.all([page.waitForNavigation({waitUntil: 'networkidle', timeout: TIMEOUT}), page.click('#save-language')]);
+        lang = await page.getAttribute('html', 'lang');
+        const saved = ((await page.locator('.account-page__content .alert-success').textContent().catch(() => '')) || '').trim();
+        check(lang === 'vi' && saved.includes(vi['Account.Language.Saved']),
+            'Saving Vietnamese in Account settings reloads in Vietnamese', `html lang="${lang}", "${saved}"`, report);
+
+        // 5. The stored Language follows the Account: a fresh browser asking for English signs in to Vietnamese.
+        const fresh = await browser.newContext({locale: 'en-US', extraHTTPHeaders: {'Accept-Language': 'en-US,en;q=0.9'}});
+        try {
+            const freshPage = await fresh.newPage();
+            const signedIn = await signIn(freshPage, base, email);
+            await freshPage.goto(`${base}/SavingsGoals`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const freshLang = await freshPage.getAttribute('html', 'lang');
+            const freshH1 = ((await freshPage.locator('main h1').first().textContent().catch(() => '')) || '').trim();
+            check(signedIn && freshLang === 'vi' && freshH1 === vi['SavingsGoals.Title'],
+                'Signing in on a fresh browser restores the stored Vietnamese', `html lang="${freshLang}", h1 "${freshH1}"`, report);
+        } finally {
+            await fresh.close();
+        }
     } catch (error) {
         fail(`Language smoke failed: ${error.message}`);
     } finally {
         await context.close();
     }
 
-    // 4. A browser asking for Vietnamese gets it without choosing.
+    // 6. A browser asking for Vietnamese gets it without choosing.
     const viContext = await browser.newContext({locale: 'vi-VN', extraHTTPHeaders: {'Accept-Language': 'vi-VN,vi;q=0.9'}});
     try {
         const viPage = await viContext.newPage();
