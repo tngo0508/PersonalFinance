@@ -1,34 +1,38 @@
 @{
-    ViewData["Title"] = "Contact Us";
+    ViewData["Title"] = L["Legal.Contact.Title"].Value;
 }
 
 <div class="legal-page">
-    <h1 class="legal-page__title">Contact Us</h1>
+    <h1 class="legal-page__title">@L["Legal.Contact.Title"]</h1>
+    <partial name="_EnglishOnlyNotice" />
 
-    <section class="legal-section">
-        <h2>Get in Touch</h2>
-        <p>If you have questions about our Service, need support, or wish to exercise your data protection rights (such as accessing, correcting, or deleting your personal data), please reach out to us.</p>
+    <div lang="en">
 
-        <div class="contact-card">
-            <p><strong>Email:</strong> <a href="mailto:tngo0508@gmail.com">tngo0508@gmail.com</a></p>
-        </div>
+        <section class="legal-section">
+            <h2>Get in Touch</h2>
+            <p>If you have questions about our Service, need support, or wish to exercise your data protection rights (such as accessing, correcting, or deleting your personal data), please reach out to us.</p>
 
-        <p>We aim to respond to all inquiries within 2 business days. For data protection requests under GDPR, we will respond within 30 days as required by law.</p>
-    </section>
+            <div class="contact-card">
+                <p><strong>Email:</strong> <a href="mailto:tngo0508@gmail.com">tngo0508@gmail.com</a></p>
+            </div>
 
-    <section class="legal-section">
-        <h2>Data Protection Requests</h2>
-        <p>If you are submitting a data protection request (access, rectification, erasure, portability, objection, or restriction), please include:</p>
-        <ul>
-            <li>Your account email address</li>
-            <li>A clear description of your request</li>
-            <li>Any relevant details to help us locate your data</li>
-        </ul>
-        <p>We may ask for additional information to verify your identity before processing your request.</p>
-    </section>
+            <p>We aim to respond to all inquiries within 2 business days. For data protection requests under GDPR, we will respond within 30 days as required by law.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Reporting Security Issues</h2>
-        <p>If you discover a security vulnerability, please report it to us immediately at <a href="mailto:tngo0508@gmail.com">tngo0508@gmail.com</a>. We take security seriously and will respond promptly.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Data Protection Requests</h2>
+            <p>If you are submitting a data protection request (access, rectification, erasure, portability, objection, or restriction), please include:</p>
+            <ul>
+                <li>Your account email address</li>
+                <li>A clear description of your request</li>
+                <li>Any relevant details to help us locate your data</li>
+            </ul>
+            <p>We may ask for additional information to verify your identity before processing your request.</p>
+        </section>
+
+        <section class="legal-section">
+            <h2>Reporting Security Issues</h2>
+            <p>If you discover a security vulnerability, please report it to us immediately at <a href="mailto:tngo0508@gmail.com">tngo0508@gmail.com</a>. We take security seriously and will respond promptly.</p>
+        </section>
+    </div>
 </div>

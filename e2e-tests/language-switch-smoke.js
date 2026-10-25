@@ -3,8 +3,9 @@
  * Vietnamese with the top-bar EN | VI switcher, registers, and finds the Savings Goals page in Vietnamese, including
  * the strings its JavaScript reads from the page's JSON island. The account-menu switcher then returns to English.
  * The choice is stored on the Account: Account settings › Language shows and changes it, and signing in from a fresh
- * browser brings it back. A browser that asks for Vietnamese (Accept-Language) gets it without choosing. Run from
- * ui-test.js as Test 9e.
+ * browser brings it back. A browser that asks for Vietnamese (Accept-Language) gets it without choosing, on the
+ * Landing Page and on a Legal Page, whose text stays English under the English-only notice (L3). Run from ui-test.js
+ * as Test 9e.
  *
  * Expected texts are read from Resources/i18n/vi.json and en.json, so a re-translation does not break the test.
  */
@@ -196,6 +197,17 @@ async function runLanguageSwitchSmoke({browser, base, pass, fail}) {
         await viPage.goto(`${base}/`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         const lang = await viPage.getAttribute('html', 'lang');
         check(lang === 'vi', 'Accept-Language vi picks Vietnamese for a new visitor', `html lang="${lang}"`, report);
+        const hero = ((await viPage.locator('#lp-hero-title').textContent().catch(() => '')) || '').trim();
+        check(hero === vi['Landing.Hero.Title'], 'Landing Page hero is Vietnamese', `"${hero}"`, report);
+
+        // Legal text stays English (tagged lang="en") under a Vietnamese title and the English-only notice.
+        await viPage.goto(`${base}/privacy`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const legalH1 = ((await viPage.locator('main h1').first().textContent().catch(() => '')) || '').trim();
+        const notice = ((await viPage.locator('.legal-language-notice').textContent().catch(() => '')) || '').trim();
+        const englishBody = await viPage.locator('.legal-page [lang="en"]').count().catch(() => 0);
+        check(legalH1 === vi['Legal.Privacy.Title'] && notice === vi['Legal.EnglishOnlyNotice'] && englishBody === 1,
+            'Privacy Policy shows a Vietnamese title, the English-only notice and English text',
+            `h1 "${legalH1}", notice "${notice}", lang="en" blocks ${englishBody}`, report);
     } catch (error) {
         fail(`Language smoke (Accept-Language) failed: ${error.message}`);
     } finally {
