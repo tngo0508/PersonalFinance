@@ -5,6 +5,7 @@ using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.ApiService.Features.BudgetTracker;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.GoogleDrive;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models.Feedback;
 using BudgetController = PersonalFinance.Web.Controllers.BudgetController;
@@ -224,9 +225,11 @@ public class NavigationLayoutTests
     public void AboutPage_DescribesNetWorthAsTheGlossaryDefinesIt()
     {
         string about = ReadView("Home", "About.cshtml");
+        Assert.Contains("<strong>@L[\"About.Features.NetWorth.Name\"]</strong>: @L[\"About.Features.NetWorth.Text\"]", about);
 
-        Assert.DoesNotContain("assets and liabilities", about);
-        Assert.Contains("financial independence", about[about.IndexOf("<strong>Net Worth</strong>", StringComparison.Ordinal)..]);
+        Assert.True(TestLocalization.Catalog.TryGet("en", "About.Features.NetWorth.Text", out string netWorth));
+        Assert.DoesNotContain("assets and liabilities", netWorth);
+        Assert.Contains("financial independence", netWorth);
     }
 
     [Fact]

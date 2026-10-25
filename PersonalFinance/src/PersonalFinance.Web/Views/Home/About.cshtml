@@ -1,4 +1,4 @@
-@using Microsoft.AspNetCore.Html
+@using Microsoft.AspNetCore.Mvc.Razor
 @using PersonalFinance.Shared.Constants
 @using PersonalFinance.Web.Infrastructure
 @{
@@ -38,23 +38,23 @@
 
     @if (User.Identity?.IsAuthenticated == true)
     {
-        IHtmlContent feedbackLink = Html.ActionLink(L["About.Feedback.Link"].Value, "Index", "Feedback",
-            new { area = "", from = FeedbackSourcePage.From(Context.Request) });
+        Func<object?, HelperResult> feedbackLink =
+            @<a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">@L["About.Feedback.Link"]</a>;
         <section class="legal-section">
             <h2>@L["About.Feedback.Title"]</h2>
-            <p>@L.NamedHtml("About.Feedback.Prompt", null, ("link", feedbackLink))</p>
+            <p>@L.NamedHtml("About.Feedback.Prompt", null, ("link", feedbackLink(null)))</p>
         </section>
     }
 
     <section class="legal-section">
         <h2>@L["About.NotAdvice.Title"]</h2>
         @{
-            IHtmlContent disclaimerLink = Html.ActionLink(L["About.NotAdvice.DisclaimerLink"].Value, "Disclaimer",
-                "Legal", new { area = "" });
+            Func<object?, HelperResult> disclaimerLink =
+                @<a asp-area="" asp-controller="Legal" asp-action="Disclaimer">@L["About.NotAdvice.DisclaimerLink"]</a>;
         }
         <p>
             @L.Named("About.NotAdvice.Text", ("appName", appName))
-            @L.NamedHtml("About.NotAdvice.ReadDisclaimer", null, ("link", disclaimerLink))
+            @L.NamedHtml("About.NotAdvice.ReadDisclaimer", null, ("link", disclaimerLink(null)))
         </p>
     </section>
 </div>
