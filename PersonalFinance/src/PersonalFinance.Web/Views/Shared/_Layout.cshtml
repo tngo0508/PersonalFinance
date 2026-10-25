@@ -94,6 +94,11 @@
                     <span class="sidebar-link-icon"><i data-lucide="target"></i></span>
                     <span class="sidebar-link-text">Savings Goals</span>
                 </a>
+                <a class="sidebar-link @(currentController == "MoneyPriorities" ? "active" : "")"
+                   asp-area="" asp-controller="MoneyPriorities" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="signpost"></i></span>
+                    <span class="sidebar-link-text">Money Priorities</span>
+                </a>
                 <a class="sidebar-link @(currentController == "Analysis" ? "active" : "")"
                    asp-area="" asp-controller="Analysis" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="bar-chart-3"></i></span>
@@ -253,7 +258,7 @@
             <i data-lucide="layout-dashboard"></i>
             <span>Home</span>
         </a>
-        <a class="bottom-nav-item @(currentController == "Networth" || currentController == "Budget" || currentController == "SavingsGoals" || currentController == "Analysis" ? "active" : "")"
+        <a class="bottom-nav-item @(currentController == "Networth" || currentController == "Budget" || currentController == "SavingsGoals" || currentController == "MoneyPriorities" || currentController == "Analysis" ? "active" : "")"
            asp-area="" asp-controller="Networth" asp-action="Index">
             <i data-lucide="dollar-sign"></i>
             <span>Finances</span>

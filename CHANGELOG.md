@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [6.1.0] - 2026-10-25
+
+### Added
+
+- **Money Priorities page**: a form that asks how much you can put aside each month and the questions the Priority Tree needs, showing each follow-up question only when your answers call for it.
+  - The result card shows the recommended next step with its figures, "Your path" in plain sentences, the stated assumptions and the estimate disclaimer, and a footnote on IRA eligibility.
+- **Priority Tree diagram**: the tree is drawn with Mermaid, with your path highlighted after a submit, and switches between the whole tree and a path-only view to stay readable on narrow screens.
+- **Earlier results**: your 10 most recent Priority Walks are listed on the page, and you can view or delete each one.
+- **Navigation and Privacy page**: Money Priorities appears in the sidebar under My Finances, and the Privacy page lists the answers and Purpose it stores.
+- **E2E walkthrough**: a Playwright walkthrough submits three Walks that reach different leaves, checks Earlier results and the path view.
+- **ADR 0014 and Mermaid 11.17.2**: the decision to draw authored diagrams with Mermaid, with `mermaid@11.17.2` vendored through libman.
+
+### Fixed
+
+- **Age range sent as a number**: the page sends the age range to the API as its numeric value, which the API expects.
+
+---
+
 ## [6.0.0] - 2026-10-25
 
 ### Added
