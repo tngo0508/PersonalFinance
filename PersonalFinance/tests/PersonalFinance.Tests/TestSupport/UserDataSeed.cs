@@ -38,6 +38,8 @@ public static class UserDataSeed
 
         db.SavingsGoals.Add(new SavingsGoal { UserId = userId, Name = $"{marker} goal" });
         db.SavedArticles.Add(new SavedArticle { UserId = userId, Title = $"{marker} article", Url = "https://example.com" });
+        db.PriorityWalks.Add(new PriorityWalk
+        { UserId = userId, MonthlyAmount = 500m, Purpose = $"{marker} purpose", TreeVersion = 1, Path = "S,Q1,L1", LeafId = "L1" });
 
         var story = new CommunityStory { UserId = userId, AuthorName = marker, Title = $"{marker} story" };
         var comment = new CommunityComment

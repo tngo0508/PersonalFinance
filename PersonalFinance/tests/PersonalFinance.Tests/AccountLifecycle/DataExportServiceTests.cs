@@ -94,6 +94,90 @@ public class DataExportServiceTests
     }
 
     [Fact]
+    public async Task Export_PriorityWalks_CarryEveryAnswer_OldestFirst_WithoutDeletedOrOtherAccountsWalks()
+    {
+        await using AppDbContext db = CreateContext();
+        var newer = new PriorityWalk
+        {
+            UserId = UserId,
+            MonthlyAmount = 500.00m,
+            Purpose = "A house for my family",
+            DebtApr = 22.99m,
+            DebtBalance = 5000.00m,
+            EmergencyFundMonths = 1.5m,
+            MonthlyExpenses = 3200.50m,
+            HasFullEmployerMatch = false,
+            EmployerMatchPercent = 4.50m,
+            HorizonYears = 12,
+            AgeBand = "From50To59Or64Plus",
+            AtContributionLimit = true,
+            TreeVersion = 1,
+            LimitsTaxYear = 2026,
+            Path = "S,Q1,L1",
+            LeafId = "L1",
+            PurposeNote = "Paying the card first frees money for the house.",
+            CreatedAt = new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var older = new PriorityWalk
+        {
+            UserId = UserId,
+            MonthlyAmount = 250.00m,
+            DebtApr = 0m,
+            TreeVersion = 1,
+            Path = "S,Q1,Q2,Q3,Q4,L5",
+            LeafId = "L5",
+            CreatedAt = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var deleted = new PriorityWalk
+        { UserId = UserId, MonthlyAmount = 1m, TreeVersion = 1, Path = "S,Q1,L1", LeafId = "deleted" };
+        deleted.SoftDelete();
+        var theirs = new PriorityWalk
+        { UserId = OtherUserId, MonthlyAmount = 2m, TreeVersion = 1, Path = "S,Q1,L1", LeafId = "theirs" };
+        db.PriorityWalks.AddRange(newer, older, deleted, theirs);
+        await db.SaveChangesAsync();
+
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
+
+        Assert.Equal(["L5", "L1"], export.PriorityWalks.Select(w => w.LeafId));
+        DataExportPriorityWalkDto walk = export.PriorityWalks[1];
+        Assert.Equal(500.00m, walk.MonthlyAmount);
+        Assert.Equal("A house for my family", walk.Purpose);
+        Assert.Equal(22.99m, walk.DebtApr);
+        Assert.Equal(5000.00m, walk.DebtBalance);
+        Assert.Equal(1.5m, walk.EmergencyFundMonths);
+        Assert.Equal(3200.50m, walk.MonthlyExpenses);
+        Assert.False(walk.HasFullEmployerMatch);
+        Assert.Equal(4.50m, walk.EmployerMatchPercent);
+        Assert.Equal(12, walk.HorizonYears);
+        Assert.Equal("From50To59Or64Plus", walk.AgeBand);
+        Assert.True(walk.AtContributionLimit);
+        Assert.Equal(1, walk.TreeVersion);
+        Assert.Equal(2026, walk.LimitsTaxYear);
+        Assert.Equal("S,Q1,L1", walk.Path);
+        Assert.Equal("Paying the card first frees money for the house.", walk.PurposeNote);
+        Assert.Equal(new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc), walk.CreatedAtUtc);
+
+        // Questions not asked on the path stay null rather than turning into zeros or false.
+        DataExportPriorityWalkDto unasked = export.PriorityWalks[0];
+        Assert.Null(unasked.Purpose);
+        Assert.Null(unasked.DebtBalance);
+        Assert.Null(unasked.HasFullEmployerMatch);
+        Assert.Null(unasked.AgeBand);
+        Assert.Null(unasked.LimitsTaxYear);
+    }
+
+    [Fact]
+    public void PriorityWalkSection_HoldsNoIdOrAccountId()
+    {
+        string[] properties = typeof(DataExportPriorityWalkDto).GetProperties().Select(p => p.Name).ToArray();
+
+        Assert.DoesNotContain("Id", properties);
+        Assert.DoesNotContain("UserId", properties);
+        Assert.DoesNotContain("IsDeleted", properties);
+        Assert.DoesNotContain("DeletedAt", properties);
+    }
+
+    [Fact]
     public async Task Export_LeavesOutSoftDeletedAiUsage()
     {
         await using AppDbContext db = CreateContext();
@@ -121,6 +205,7 @@ public class DataExportServiceTests
         Assert.Single(export.SpreadsheetTransactions);
         Assert.Single(export.SavingsGoals);
         Assert.Single(export.SavedArticles);
+        Assert.Single(export.PriorityWalks);
         Assert.Single(export.Community.Stories);
         Assert.Single(export.Community.Comments);
         Assert.Single(export.Community.StoryLikes);
