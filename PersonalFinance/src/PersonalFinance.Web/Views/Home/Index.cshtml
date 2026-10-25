@@ -1,7 +1,17 @@
 @using PersonalFinance.Shared.Constants
 @model LandingPageViewModel
 @{
-    ViewData["DocumentTitle"] = $"{AppVersion.ApplicationName} — Plan for enough";
+    string appName = AppVersion.ApplicationName;
+    ViewData["DocumentTitle"] = L.Named("Landing.DocumentTitle", ("appName", appName));
+
+    // The sample plan is in US dollars until the money formatter (spec L2) formats amounts for the culture.
+    const string spending = "$40,000";
+    const string target = "$1,000,000";
+    const string startingBalance = "$40,000";
+    const string monthlySaving = "$2,000";
+    const string projected = "$1,041,000";
+    const int returnRate = 5;
+    const int fiAge = 52;
 }
 
 @section Styles {
@@ -29,18 +39,15 @@
         </div>
 
         <div class="lp-hero__copy">
-            <h1 id="lp-hero-title" class="lp-hero__title">Know how much is enough, and when you will get there.</h1>
-            <p class="lp-hero__lead">
-                @AppVersion.ApplicationName turns your income, spending, and savings into one plan: a target for
-                financial independence, and the age your savings can reach it.
-            </p>
+            <h1 id="lp-hero-title" class="lp-hero__title">@L["Landing.Hero.Title"]</h1>
+            <p class="lp-hero__lead">@L.Named("Landing.Hero.Lead", ("appName", appName))</p>
             <div class="lp-cta-row">
-                <a class="lp-btn lp-btn--primary" asp-area="Identity" asp-page="/Account/Register">Create free account</a>
-                <a class="lp-btn lp-btn--secondary" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
+                <a class="lp-btn lp-btn--primary" asp-area="Identity" asp-page="/Account/Register">@L["Landing.Cta.Register"]</a>
+                <a class="lp-btn lp-btn--secondary" asp-area="Identity" asp-page="/Account/Login">@L["Landing.Cta.SignIn"]</a>
             </div>
             <p class="lp-hero__note">
-                Free to use. No bank logins. Your figures are visible only to you.
-                <a asp-area="" asp-controller="Home" asp-action="About">About @AppVersion.ApplicationName</a>
+                @L["Landing.Hero.Note"]
+                <a asp-area="" asp-controller="Home" asp-action="About">@L.Named("Landing.Hero.About", ("appName", appName))</a>
             </p>
         </div>
 
@@ -48,10 +55,10 @@
         <figure class="lp-plan">
             <div class="lp-plan__head">
                 <div>
-                    <p class="lp-plan__label">Projected net worth</p>
-                    <p class="lp-plan__figure">$1,041,000 <span>at age 52</span></p>
+                    <p class="lp-plan__label">@L["Landing.Plan.Label"]</p>
+                    <p class="lp-plan__figure">@projected <span>@L.Named("Landing.Plan.AtAge", ("age", fiAge))</span></p>
                 </div>
-                <p class="lp-plan__tag">Sample plan</p>
+                <p class="lp-plan__tag">@L["Landing.Plan.Tag"]</p>
             </div>
 
             <div class="lp-plan__chart" aria-hidden="true">
@@ -64,16 +71,16 @@
                     <line class="lp-plan__drop" x1="440" y1="115.1" x2="440" y2="240"/>
                 </svg>
                 <span class="lp-plan__marker" style="left: 73.33%; top: 47.96%"></span>
-                <span class="lp-plan__callout" style="left: 73.33%; top: 47.96%">Age 52: financially independent</span>
-                <span class="lp-plan__target-label">FI target $1,000,000</span>
+                <span class="lp-plan__callout" style="left: 73.33%; top: 47.96%">@L.Named("Landing.Plan.Callout", ("age", fiAge))</span>
+                <span class="lp-plan__target-label">@L.Named("Landing.Plan.TargetLabel", ("amount", target))</span>
                 <span class="lp-plan__ages">
-                    <span>Age 30</span><span>40</span><span>50</span><span>60</span>
+                    <span>@L.Named("Landing.Plan.AxisAge", ("age", 30))</span><span>40</span><span>50</span><span>60</span>
                 </span>
             </div>
 
             <figcaption class="lp-plan__caption">
-                Sample plan: spending $40,000 a year gives an FI target of $1,000,000. Starting with $40,000 and
-                saving $2,000 a month at a 5% yearly return, net worth reaches that target at age 52.
+                @L.Named("Landing.Plan.Caption", ("spending", spending), ("target", target), ("start", startingBalance),
+                    ("monthly", monthlySaving), ("rate", returnRate), ("age", fiAge))
             </figcaption>
         </figure>
     </section>
@@ -81,38 +88,27 @@
     @* ---------- Mission: how the plan works ---------- *@
     <section class="lp-section lp-mission" aria-labelledby="lp-mission-title">
         <div class="lp-section__head">
-            <h2 id="lp-mission-title" class="lp-section__title">How the plan works</h2>
-            <p class="lp-section__lead">
-                Financial independence means your investments can pay for the life you live, so work becomes a
-                choice. We want everyone to see their own path there, without handing over bank logins or paying
-                for advice.
-            </p>
+            <h2 id="lp-mission-title" class="lp-section__title">@L["Landing.Mission.Title"]</h2>
+            <p class="lp-section__lead">@L["Landing.Mission.Lead"]</p>
         </div>
 
         <dl class="lp-rules">
             <div class="lp-rule">
-                <dt class="lp-rule__term">Your FI target</dt>
-                <dd class="lp-rule__sum">25 × annual spending</dd>
+                <dt class="lp-rule__term">@L["Landing.Rule.Target.Term"]</dt>
+                <dd class="lp-rule__sum">@L["Landing.Rule.Target.Sum"]</dd>
                 <dd class="lp-rule__text">
-                    At this size, withdrawing about 4% a year covers your spending. Spend $40,000 a year and your
-                    target is $1,000,000.
+                    @L.Named("Landing.Rule.Target.Text", ("spending", spending), ("target", target))
                 </dd>
             </div>
             <div class="lp-rule">
-                <dt class="lp-rule__term">Your growth</dt>
-                <dd class="lp-rule__sum">Savings + return</dd>
-                <dd class="lp-rule__text">
-                    What you save each month and the return you assume set how fast your net worth grows. Try base,
-                    conservative, and aggressive rates side by side.
-                </dd>
+                <dt class="lp-rule__term">@L["Landing.Rule.Growth.Term"]</dt>
+                <dd class="lp-rule__sum">@L["Landing.Rule.Growth.Sum"]</dd>
+                <dd class="lp-rule__text">@L["Landing.Rule.Growth.Text"]</dd>
             </div>
             <div class="lp-rule">
-                <dt class="lp-rule__term">Your FI age</dt>
-                <dd class="lp-rule__sum">Where the lines cross</dd>
-                <dd class="lp-rule__text">
-                    Your projection shows the age your net worth reaches the target. The Dashboard tracks how far
-                    along you are.
-                </dd>
+                <dt class="lp-rule__term">@L["Landing.Rule.Age.Term"]</dt>
+                <dd class="lp-rule__sum">@L["Landing.Rule.Age.Sum"]</dd>
+                <dd class="lp-rule__text">@L["Landing.Rule.Age.Text"]</dd>
             </div>
         </dl>
     </section>
@@ -120,25 +116,25 @@
     @* ---------- Tools ---------- *@
     <section class="lp-section" aria-labelledby="lp-tools-title">
         <div class="lp-section__head">
-            <h2 id="lp-tools-title" class="lp-section__title">Three tools build your plan</h2>
+            <h2 id="lp-tools-title" class="lp-section__title">@L["Landing.Tools.Title"]</h2>
         </div>
         <ul class="lp-tools">
             @foreach (var feature in Model.CoreFeatures)
             {
                 <li class="lp-tool">
-                    <h3 class="lp-tool__title">@feature.Title</h3>
-                    <p class="lp-tool__text">@feature.Description</p>
+                    <h3 class="lp-tool__title">@L[feature.TitleKey]</h3>
+                    <p class="lp-tool__text">@L[feature.DescriptionKey]</p>
                 </li>
             }
         </ul>
 
-        <h3 class="lp-more__title">Also included</h3>
+        <h3 class="lp-more__title">@L["Landing.Tools.MoreTitle"]</h3>
         <ul class="lp-more">
             @foreach (var feature in Model.MoreFeatures)
             {
                 <li class="lp-more__item">
-                    <span class="lp-more__name">@feature.Title</span>
-                    <span class="lp-more__text">@feature.Description</span>
+                    <span class="lp-more__name">@L[feature.TitleKey]</span>
+                    <span class="lp-more__text">@L[feature.DescriptionKey]</span>
                 </li>
             }
         </ul>
@@ -147,20 +143,20 @@
     @* ---------- Getting started ---------- *@
     <section class="lp-section lp-section--tinted" aria-labelledby="lp-steps-title">
         <div class="lp-section__head">
-            <h2 id="lp-steps-title" class="lp-section__title">Get your first plan in three steps</h2>
+            <h2 id="lp-steps-title" class="lp-section__title">@L["Landing.Steps.Title"]</h2>
         </div>
         <ol class="lp-steps">
             <li class="lp-step">
-                <h3 class="lp-step__title">Create your account</h3>
-                <p class="lp-step__text">Register with your email address and choose a password. No payment details are needed.</p>
+                <h3 class="lp-step__title">@L["Landing.Steps.Account.Title"]</h3>
+                <p class="lp-step__text">@L["Landing.Steps.Account.Text"]</p>
             </li>
             <li class="lp-step">
-                <h3 class="lp-step__title">Add your numbers</h3>
-                <p class="lp-step__text">Enter your savings, income, and spending, set a monthly budget, and add your savings goals.</p>
+                <h3 class="lp-step__title">@L["Landing.Steps.Numbers.Title"]</h3>
+                <p class="lp-step__text">@L["Landing.Steps.Numbers.Text"]</p>
             </li>
             <li class="lp-step">
-                <h3 class="lp-step__title">Follow your plan</h3>
-                <p class="lp-step__text">Your Dashboard shows your progress to your FI target and the age you are on track to reach it.</p>
+                <h3 class="lp-step__title">@L["Landing.Steps.Follow.Title"]</h3>
+                <p class="lp-step__text">@L["Landing.Steps.Follow.Text"]</p>
             </li>
         </ol>
     </section>
@@ -168,23 +164,23 @@
     @* ---------- Privacy ---------- *@
     <section class="lp-section" aria-labelledby="lp-privacy-title">
         <div class="lp-privacy">
-            <h2 id="lp-privacy-title" class="lp-privacy__title">Your financial data stays yours</h2>
+            <h2 id="lp-privacy-title" class="lp-privacy__title">@L["Landing.Privacy.Title"]</h2>
             <ul class="lp-privacy__list">
-                <li>Every figure you enter is tied to your account and shown only to you.</li>
-                <li>Connections are encrypted with HTTPS.</li>
-                <li>Google Drive is only accessed when you choose to connect a folder.</li>
-                <li>No bank logins are needed. You decide exactly what to enter.</li>
+                <li>@L["Landing.Privacy.OnlyYou"]</li>
+                <li>@L["Landing.Privacy.Https"]</li>
+                <li>@L["Landing.Privacy.Drive"]</li>
+                <li>@L["Landing.Privacy.NoBankLogins"]</li>
             </ul>
         </div>
     </section>
 
     @* ---------- Closing call to action ---------- *@
     <section class="lp-closing" aria-labelledby="lp-closing-title">
-        <h2 id="lp-closing-title" class="lp-closing__title">Find your FI target today</h2>
-        <p class="lp-closing__lead">Create a free account and see the age your plan reaches it.</p>
+        <h2 id="lp-closing-title" class="lp-closing__title">@L["Landing.Closing.Title"]</h2>
+        <p class="lp-closing__lead">@L["Landing.Closing.Lead"]</p>
         <div class="lp-cta-row lp-cta-row--center">
-            <a class="lp-btn lp-btn--light" asp-area="Identity" asp-page="/Account/Register">Create free account</a>
-            <a class="lp-btn lp-btn--ghost" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
+            <a class="lp-btn lp-btn--light" asp-area="Identity" asp-page="/Account/Register">@L["Landing.Cta.Register"]</a>
+            <a class="lp-btn lp-btn--ghost" asp-area="Identity" asp-page="/Account/Login">@L["Landing.Cta.SignIn"]</a>
         </div>
     </section>
 </div>

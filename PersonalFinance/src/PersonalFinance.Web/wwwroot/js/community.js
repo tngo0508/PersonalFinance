@@ -1,10 +1,19 @@
+/* global PFI18n */
 /**
- * Community page — poll voting, comment toggling, case study expand/collapse, likes, and real-time updates.
+ * Community page — poll voting, comment toggling, story expand/collapse, likes, and story submission.
+ * Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n; user content
+ * (comments, author names, topics) is set as text and never translated.
  */
 (function () {
     'use strict';
 
-    // --- Toast Notification ---
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const HEART_PATH = 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z';
+
+    /**
+     * Shows a short message in the page's toast.
+     * @param {string} message - The text to show.
+     */
     function showToast (message) {
         let toast = document.querySelector('.community-toast');
         if (!toast) {
@@ -17,8 +26,136 @@
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
+    /**
+     * POSTs a JSON body to a Community endpoint and returns the parsed JSON answer.
+     * @param {string} url - The endpoint.
+     * @param {object} payload - The request body.
+     * @returns {Promise<object>} The response body; error answers carry { success: false, error }.
+     */
+    async function postJson (url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
+            },
+            body: JSON.stringify(payload)
+        });
+        return response.json();
+    }
+
+    /**
+     * Opens or closes the comment form that follows a toggle button, focusing its textarea when opened.
+     * @param {HTMLElement} toggle - The toggle button.
+     */
+    function toggleCommentForm (toggle) {
+        const form = toggle.nextElementSibling;
+        if (!form) {
+            return;
+        }
+
+        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!isExpanded));
+        form.style.display = isExpanded ? 'none' : 'block';
+        if (!isExpanded) {
+            const input = form.querySelector('textarea');
+            if (input) {
+                input.focus();
+            }
+        }
+    }
+
+    /**
+     * Closes a comment form and marks its toggle collapsed.
+     * @param {HTMLElement} form - The comment form.
+     */
+    function closeCommentForm (form) {
+        form.style.display = 'none';
+        const toggle = form.previousElementSibling;
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    /**
+     * Sets a like button's state and count.
+     * @param {HTMLElement} likeBtn - The like button.
+     * @param {HTMLElement} countEl - Its count element.
+     * @param {boolean} liked - Whether it is liked.
+     * @param {number} count - The like count.
+     */
+    function setLike (likeBtn, countEl, liked, count) {
+        likeBtn.classList.toggle('liked', liked);
+        countEl.textContent = count;
+    }
+
+    /**
+     * Toggles a like optimistically, then confirms it with the server, reverting on failure.
+     * @param {HTMLElement} likeBtn - The like button.
+     * @param {string} countSelector - Selector of its count element.
+     * @param {string} url - The toggle endpoint.
+     * @param {object} payload - The request body.
+     */
+    async function toggleLike (likeBtn, countSelector, url, payload) {
+        const countEl = likeBtn.querySelector(countSelector);
+        if (!countEl) {
+            return;
+        }
+
+        const wasLiked = likeBtn.classList.contains('liked');
+        const count = parseInt(countEl.textContent, 10) || 0;
+        setLike(likeBtn, countEl, !wasLiked, wasLiked ? count - 1 : count + 1);
+
+        try {
+            const data = await postJson(url, payload);
+            if (data.success) {
+                setLike(likeBtn, countEl, data.isLiked, data.likes);
+            } else {
+                setLike(likeBtn, countEl, wasLiked, count);
+                showToast(data.error || PFI18n.t('Community.Js.LikeFailed'));
+            }
+        } catch {
+            setLike(likeBtn, countEl, wasLiked, count);
+            showToast(PFI18n.t('Community.Js.LikeFailedRetry'));
+        }
+    }
+
+    /**
+     * Posts a comment from a form, prepends it to Recent Community Activity, and closes the form.
+     * @param {HTMLElement} form - The comment form.
+     * @param {object} target - { pollCode } or { storyId }.
+     * @returns {Promise<boolean>} Whether the comment was posted.
+     */
+    async function postComment (form, target) {
+        const input = form.querySelector('textarea');
+        if (!input || !input.value.trim()) {
+            return false;
+        }
+
+        const text = input.value.trim();
+        input.value = '';
+
+        try {
+            const data = await postJson('/Community/AddComment', { ...target, text: text });
+            if (!data.success) {
+                input.value = text;
+                showToast(data.error || PFI18n.t('Community.Js.CommentFailed'));
+                return false;
+            }
+
+            showToast(PFI18n.t('Community.Js.CommentPosted'));
+            closeCommentForm(form);
+            prependComment(data.comment);
+            return true;
+        } catch {
+            input.value = text;
+            showToast(PFI18n.t('Community.Js.CommentFailedRetry'));
+            return false;
+        }
+    }
+
     // --- Poll Voting ---
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', async (e) => {
         const btn = e.target.closest('.community-poll-option-btn');
         if (!btn || btn.classList.contains('voted') || btn.hasAttribute('disabled')) {
             return;
@@ -33,63 +170,42 @@
 
         // Optimistically mark as voted
         const allBtns = pollCard.querySelectorAll('.community-poll-option-btn');
-        allBtns.forEach(function (b) {
-            b.classList.add('voted');
-            b.setAttribute('disabled', 'true');
+        const setVoted = (voted) => allBtns.forEach((b) => {
+            b.classList.toggle('voted', voted);
+            b.toggleAttribute('disabled', voted);
         });
-        btn.classList.add('voted');
+        setVoted(true);
 
-        // Send vote to server
-        fetch('/Community/Vote', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
-            },
-            body: JSON.stringify({ pollCode: pollCode, optionId: optionId })
-        })
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (data) {
-                if (data.success) {
-                    showToast('Thanks for voting!');
-                    // Update poll results from server response
-                    if (data.poll) {
-                        updatePollResults(pollCard, data.poll);
-                    }
-                } else {
-                    // Revert optimistic update on failure
-                    allBtns.forEach(function (b) {
-                        b.classList.remove('voted');
-                        b.removeAttribute('disabled');
-                    });
-                    showToast(data.error || 'Vote failed.');
+        try {
+            const data = await postJson('/Community/Vote', { pollCode: pollCode, optionId: optionId });
+            if (data.success) {
+                showToast(PFI18n.t('Community.Js.Voted'));
+                if (data.poll) {
+                    updatePollResults(pollCard, data.poll);
                 }
-            })
-            .catch(function () {
-                // Revert optimistic update on error
-                allBtns.forEach(function (b) {
-                    b.classList.remove('voted');
-                    b.removeAttribute('disabled');
-                });
-                showToast('Vote failed. Please try again.');
-            });
+            } else {
+                setVoted(false);
+                showToast(data.error || PFI18n.t('Community.Js.VoteFailed'));
+            }
+        } catch {
+            setVoted(false);
+            showToast(PFI18n.t('Community.Js.VoteFailedRetry'));
+        }
     });
 
     /**
-   * Update poll card with new results from the server.
-   */
+     * Updates a poll card with new results from the server.
+     * @param {HTMLElement} pollCard - The poll card.
+     * @param {object} pollData - The updated poll.
+     */
     function updatePollResults (pollCard, pollData) {
         const buttons = pollCard.querySelectorAll('.community-poll-option-btn');
         const voteSpans = pollCard.querySelectorAll('.community-poll-option-votes');
         const totalVotesEl = pollCard.querySelector('.community-poll-votes');
 
-        buttons.forEach(function (btn, index) {
+        buttons.forEach((btn, index) => {
             const optionText = btn.dataset.optionText;
-            const option = pollData.options.find(function (o) {
-                return o.text === optionText;
-            });
+            const option = pollData.options.find((o) => o.text === optionText);
             if (!option) {
                 return;
             }
@@ -102,525 +218,245 @@
                 result.style.display = 'flex';
             }
             if (bar) {
-                bar.style.width = option.percentage + '%';
+                bar.style.width = `${option.percentage}%`;
             }
             if (pct) {
-                pct.textContent = option.percentage + '%';
+                pct.textContent = `${option.percentage}%`;
             }
 
             // Mark the voted option
-            if (pollData.votedOptionId && option.id === pollData.votedOptionId) {
-                const checked = btn.querySelector('.community-poll-option-checked');
-                if (!checked) {
-                    const span = document.createElement('span');
-                    span.className = 'community-poll-option-checked';
-                    span.setAttribute('aria-hidden', 'true');
-                    span.textContent = '✓';
-                    btn.appendChild(span);
-                }
+            if (pollData.votedOptionId && option.id === pollData.votedOptionId &&
+                !btn.querySelector('.community-poll-option-checked')) {
+                const span = document.createElement('span');
+                span.className = 'community-poll-option-checked';
+                span.setAttribute('aria-hidden', 'true');
+                span.textContent = '✓';
+                btn.appendChild(span);
             }
 
-            // Update vote count
             if (voteSpans[index]) {
                 voteSpans[index].style.display = 'inline';
-                voteSpans[index].textContent = option.votes + ' votes';
+                voteSpans[index].textContent = PFI18n.plural('Community.Js.Votes', option.votes);
             }
         });
 
         if (totalVotesEl) {
-            totalVotesEl.textContent = pollData.totalVotes + ' votes';
+            totalVotesEl.textContent = PFI18n.plural('Community.Js.Votes', pollData.totalVotes);
         }
     }
 
-    // --- Poll Comment Toggles ---
-    document.addEventListener('click', function (e) {
-        const toggle = e.target.closest('.community-poll-comment-toggle');
-        if (!toggle) {
-            return;
-        }
-
-        const form = toggle.nextElementSibling;
-        if (!form) {
-            return;
-        }
-
-        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-        toggle.setAttribute('aria-expanded', String(!isExpanded));
-        form.style.display = isExpanded ? 'none' : 'block';
-        if (!isExpanded) {
-            const input = form.querySelector('textarea');
-            if (input) {
-                input.focus();
-            }
-        }
-    });
-
-    // --- Case Study Comment Toggles ---
-    document.addEventListener('click', function (e) {
-        const toggle = e.target.closest('.community-casestudy-comment-toggle');
-        if (!toggle) {
-            return;
-        }
-
-        const form = toggle.nextElementSibling;
-        if (!form) {
-            return;
-        }
-
-        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-        toggle.setAttribute('aria-expanded', String(!isExpanded));
-        form.style.display = isExpanded ? 'none' : 'block';
-        if (!isExpanded) {
-            const input = form.querySelector('textarea');
-            if (input) {
-                input.focus();
-            }
+    // --- Comment form toggles (polls and stories) ---
+    document.addEventListener('click', (e) => {
+        const toggle = e.target.closest('.community-poll-comment-toggle, .community-story-comment-toggle');
+        if (toggle) {
+            toggleCommentForm(toggle);
         }
     });
 
     // --- Story Expand/Collapse ---
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', (e) => {
         const btn = e.target.closest('.community-story-toggle-btn');
         if (!btn) {
             return;
         }
 
         const card = btn.closest('.community-story-card');
-        if (!card) {
-            return;
-        }
-
-        const body = card.querySelector('.community-story-body');
+        const body = card ? card.querySelector('.community-story-body') : null;
         if (!body) {
             return;
         }
 
         const isExpanded = btn.getAttribute('aria-expanded') === 'true';
         btn.setAttribute('aria-expanded', String(!isExpanded));
-        btn.textContent = isExpanded ? 'Read more' : 'Show less';
+        btn.textContent = PFI18n.t(isExpanded ? 'Community.Js.ReadMore' : 'Community.Js.ShowLess');
         body.classList.toggle('expanded', !isExpanded);
     });
 
     // --- Comment Like Buttons ---
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', (e) => {
         const likeBtn = e.target.closest('.community-comment-like');
-        if (!likeBtn) {
-            return;
+        const commentId = likeBtn ? parseInt(likeBtn.dataset.commentId, 10) : 0;
+        if (commentId) {
+            toggleLike(likeBtn, '.community-comment-like-count', '/Community/ToggleLike', { commentId: commentId });
         }
+    });
 
-        const commentId = parseInt(likeBtn.dataset.commentId, 10);
-        const countEl = likeBtn.querySelector('.community-comment-like-count');
-        if (!countEl || !commentId) {
-            return;
+    // --- Story Like Buttons ---
+    document.addEventListener('click', (e) => {
+        const likeBtn = e.target.closest('.community-story-like');
+        const storyId = likeBtn ? parseInt(likeBtn.dataset.storyId, 10) : 0;
+        if (storyId) {
+            toggleLike(likeBtn, '.community-story-like-count', '/Community/ToggleStoryLike', { storyId: storyId });
         }
-
-        const isLiked = likeBtn.classList.contains('liked');
-
-        // Optimistic update
-        const count = parseInt(countEl.textContent, 10) || 0;
-        if (isLiked) {
-            likeBtn.classList.remove('liked');
-            countEl.textContent = count - 1;
-        } else {
-            likeBtn.classList.add('liked');
-            countEl.textContent = count + 1;
-        }
-
-        // Send to server
-        fetch('/Community/ToggleLike', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
-            },
-            body: JSON.stringify({ commentId: commentId })
-        })
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (data) {
-                if (data.success) {
-                    countEl.textContent = data.likes;
-                    if (data.isLiked) {
-                        likeBtn.classList.add('liked');
-                    } else {
-                        likeBtn.classList.remove('liked');
-                    }
-                } else {
-                    // Revert optimistic update
-                    if (isLiked) {
-                        likeBtn.classList.add('liked');
-                    } else {
-                        likeBtn.classList.remove('liked');
-                    }
-                    countEl.textContent = count;
-                    showToast(data.error || 'Failed to update like.');
-                }
-            })
-            .catch(function () {
-                // Revert optimistic update
-                if (isLiked) {
-                    likeBtn.classList.add('liked');
-                } else {
-                    likeBtn.classList.remove('liked');
-                }
-                countEl.textContent = count;
-                showToast('Failed to update like. Please try again.');
-            });
     });
 
     // --- Poll Comment Submit ---
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', (e) => {
         const submitBtn = e.target.closest('.community-poll-comment-submit');
-        if (!submitBtn) {
-            return;
-        }
-
-        const form = submitBtn.closest('.community-poll-comment-form');
+        const form = submitBtn ? submitBtn.closest('.community-poll-comment-form') : null;
         if (!form) {
-            return;
-        }
-
-        const input = form.querySelector('textarea');
-        if (!input || !input.value.trim()) {
             return;
         }
 
         const pollCard = submitBtn.closest('.community-poll-card');
-        const pollCode = pollCard ? pollCard.dataset.pollId : '';
-
-        const text = input.value.trim();
-        input.value = ''; // Clear immediately
-
-        fetch('/Community/AddComment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
-            },
-            body: JSON.stringify({ pollCode: pollCode, text: text })
-        })
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (data) {
-                if (data.success) {
-                    showToast('Comment posted!');
-                    form.style.display = 'none';
-                    const toggle = form.previousElementSibling;
-                    if (toggle) {
-                        toggle.setAttribute('aria-expanded', 'false');
-                    }
-                    // Prepend to comments list
-                    prependComment(data.comment);
-                } else {
-                    input.value = text; // Restore on failure
-                    showToast(data.error || 'Failed to post comment.');
-                }
-            })
-            .catch(function () {
-                input.value = text; // Restore on error
-                showToast('Failed to post comment. Please try again.');
-            });
+        postComment(form, { pollCode: pollCard ? pollCard.dataset.pollId : '' });
     });
 
     // --- Story Comment Submit ---
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', async (e) => {
         const submitBtn = e.target.closest('.community-story-comment-submit');
-        if (!submitBtn) {
-            return;
-        }
-
-        const form = submitBtn.closest('.community-story-comment-form');
+        const form = submitBtn ? submitBtn.closest('.community-story-comment-form') : null;
         if (!form) {
-            return;
-        }
-
-        const input = form.querySelector('textarea');
-        if (!input || !input.value.trim()) {
             return;
         }
 
         const card = submitBtn.closest('.community-story-card');
         const storyId = card ? parseInt(card.dataset.storyId, 10) : 0;
+        const posted = await postComment(form, { storyId: storyId });
 
-        const text = input.value.trim();
-        input.value = ''; // Clear immediately
-
-        fetch('/Community/AddComment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
-            },
-            body: JSON.stringify({ storyId: storyId, text: text })
-        })
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (data) {
-                if (data.success) {
-                    showToast('Comment posted!');
-                    form.style.display = 'none';
-                    const toggle = form.previousElementSibling;
-                    if (toggle) {
-                        toggle.setAttribute('aria-expanded', 'false');
-                    }
-                    // Update comment count
-                    const countEl = card.querySelector('.community-story-comments-count');
-                    if (countEl) {
-                        const currentCount = parseInt(countEl.textContent.trim(), 10) || 0;
-                        countEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ' + (currentCount + 1);
-                    }
-                    // Prepend to comments list
-                    prependComment(data.comment);
-                } else {
-                    input.value = text; // Restore on failure
-                    showToast(data.error || 'Failed to post comment.');
-                }
-            })
-            .catch(function () {
-                input.value = text; // Restore on error
-                showToast('Failed to post comment. Please try again.');
-            });
-    });
-
-    // --- Story Like Buttons ---
-    document.addEventListener('click', function (e) {
-        const likeBtn = e.target.closest('.community-story-like');
-        if (!likeBtn) {
-            return;
-        }
-
-        const storyId = parseInt(likeBtn.dataset.storyId, 10);
-        const countEl = likeBtn.querySelector('.community-story-like-count');
-        if (!countEl || !storyId) {
-            return;
-        }
-
-        const isLiked = likeBtn.classList.contains('liked');
-
-        // Optimistic update
-        const count = parseInt(countEl.textContent, 10) || 0;
-        if (isLiked) {
-            likeBtn.classList.remove('liked');
-            countEl.textContent = count - 1;
-        } else {
-            likeBtn.classList.add('liked');
-            countEl.textContent = count + 1;
-        }
-
-        // Send to server
-        fetch('/Community/ToggleStoryLike', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
-            },
-            body: JSON.stringify({ storyId: storyId })
-        })
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (data) {
-                if (data.success) {
-                    countEl.textContent = data.likes;
-                    if (data.isLiked) {
-                        likeBtn.classList.add('liked');
-                    } else {
-                        likeBtn.classList.remove('liked');
-                    }
-                } else {
-                    // Revert optimistic update
-                    if (isLiked) {
-                        likeBtn.classList.add('liked');
-                    } else {
-                        likeBtn.classList.remove('liked');
-                    }
-                    countEl.textContent = count;
-                    showToast('Failed to update like.');
-                }
-            })
-            .catch(function () {
-                // Revert optimistic update
-                if (isLiked) {
-                    likeBtn.classList.add('liked');
-                } else {
-                    likeBtn.classList.remove('liked');
-                }
-                countEl.textContent = count;
-                showToast('Failed to update like. Please try again.');
-            });
-    });
-
-    // --- Story Comment Toggle ---
-    document.addEventListener('click', function (e) {
-        const toggle = e.target.closest('.community-story-comment-toggle');
-        if (!toggle) {
-            return;
-        }
-
-        const form = toggle.nextElementSibling;
-        if (!form) {
-            return;
-        }
-
-        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-        toggle.setAttribute('aria-expanded', String(!isExpanded));
-        form.style.display = isExpanded ? 'none' : 'block';
-        if (!isExpanded) {
-            const input = form.querySelector('textarea');
-            if (input) {
-                input.focus();
-            }
+        const countEl = posted && card ? card.querySelector('.community-story-comments-number') : null;
+        if (countEl) {
+            countEl.textContent = (parseInt(countEl.textContent.trim(), 10) || 0) + 1;
         }
     });
 
     /**
-   * Prepend a new comment to the recent comments list.
-   */
+     * Builds an element with a class and, optionally, text.
+     * @param {string} tag - The tag name.
+     * @param {string} className - The class.
+     * @param {string} [text] - Its text, set with textContent.
+     * @returns {HTMLElement} The element.
+     */
+    function el (tag, className, text) {
+        const node = document.createElement(tag);
+        node.className = className;
+        if (text !== undefined) {
+            node.textContent = text;
+        }
+        return node;
+    }
+
+    /**
+     * Builds the heart icon of a like button.
+     * @returns {SVGElement} The icon.
+     */
+    function heartIcon () {
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        const attributes = {
+            width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+            'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+        };
+        Object.keys(attributes).forEach((name) => svg.setAttribute(name, attributes[name]));
+        const path = document.createElementNS(SVG_NS, 'path');
+        path.setAttribute('d', HEART_PATH);
+        svg.appendChild(path);
+        return svg;
+    }
+
+    /**
+     * Prepends a new comment to the recent comments list.
+     * @param {object} comment - The posted comment.
+     */
     function prependComment (comment) {
         const list = document.getElementById('communityCommentsList');
-        if (!list) {
+        if (!list || !comment) {
             return;
         }
 
-        // Remove "no comments" message if present
         const noComments = list.querySelector('.community-no-comments');
         if (noComments) {
             noComments.remove();
         }
 
-        const timeStr = 'just now';
-
-        const card = document.createElement('div');
-        card.className = 'community-comment-card';
+        const card = el('div', 'community-comment-card');
         card.dataset.commentId = comment.id;
 
-        const initial = (comment.author || '?').charAt(0).toUpperCase();
+        const header = el('div', 'community-comment-header');
+        const avatar = el('div', 'community-comment-avatar', (comment.author || '?').charAt(0).toUpperCase());
+        avatar.setAttribute('aria-hidden', 'true');
 
-        card.innerHTML =
-      '<div class="community-comment-header">' +
-        '<div class="community-comment-avatar" aria-hidden="true">' + escapeHtml(initial) + '</div>' +
-        '<div class="community-comment-info">' +
-          '<strong class="community-comment-author">' + escapeHtml(comment.author) + '</strong>' +
-          ' <span class="community-comment-topic">' + escapeHtml(comment.topic || '') + '</span>' +
-          ' <time class="community-comment-time">' + timeStr + '</time>' +
-        '</div>' +
-        '<button type="button" class="community-comment-like" data-comment-id="' + comment.id + '" aria-label="Like this comment">' +
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-            '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>' +
-          '</svg>' +
-          '<span class="community-comment-like-count">' + (comment.likes || 0) + '</span>' +
-        '</button>' +
-      '</div>' +
-      '<p class="community-comment-text">' + escapeHtml(comment.text) + '</p>';
+        const info = el('div', 'community-comment-info');
+        info.append(
+            el('strong', 'community-comment-author', comment.author || ''), ' ',
+            el('span', 'community-comment-topic', comment.topic || ''), ' ',
+            el('time', 'community-comment-time', PFI18n.t('Community.Js.JustNow')));
 
-        // Insert at the beginning
-        if (list.firstChild) {
-            list.insertBefore(card, list.firstChild);
-        } else {
-            list.appendChild(card);
-        }
-    }
+        const like = el('button', 'community-comment-like');
+        like.type = 'button';
+        like.dataset.commentId = comment.id;
+        like.setAttribute('aria-label', PFI18n.t('Community.Js.LikeComment'));
+        like.append(heartIcon(), el('span', 'community-comment-like-count', String(comment.likes || 0)));
 
-    /**
-   * Escape HTML to prevent XSS.
-   */
-    function escapeHtml (str) {
-        if (!str) {
-            return '';
-        }
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+        header.append(avatar, info, like);
+        card.append(header, el('p', 'community-comment-text', comment.text || ''));
+        list.prepend(card);
     }
 
     // --- Story Submission Form ---
     const submitStoryBtn = document.getElementById('submitStoryBtn');
-    if (submitStoryBtn) {
-        submitStoryBtn.addEventListener('click', function () {
-            const form = document.getElementById('submitStoryForm');
-            if (!form) {
-                return;
-            }
 
+    /**
+     * Disables the submit button and shows "Submitting..." while a story is sent, then restores it.
+     * @param {boolean} submitting - Whether a submission is in flight.
+     */
+    function setSubmitting (submitting) {
+        submitStoryBtn.disabled = submitting;
+        const label = submitStoryBtn.querySelector('.community-submit-story-label');
+        if (label) {
+            label.textContent = PFI18n.t(submitting ? 'Community.Js.Submitting' : 'Community.Js.SubmitStory');
+        }
+    }
+
+    if (submitStoryBtn) {
+        submitStoryBtn.addEventListener('click', async () => {
+            const form = document.getElementById('submitStoryForm');
             const title = document.getElementById('storyTitle');
             const category = document.getElementById('storyCategory');
             const summary = document.getElementById('storySummary');
             const body = document.getElementById('storyBody');
+            if (!form || !title || !category || !summary || !body) {
+                return;
+            }
 
-            // Validate
+            const fields = [title, category, summary, body];
             let isValid = true;
-
-            [title, category, summary, body].forEach(function (field) {
-                if (field) {
-                    if (!field.value.trim() || (field.id === 'storyBody' && field.value.trim().length < 100)) {
-                        field.classList.add('is-invalid');
-                        isValid = false;
-                    } else {
-                        field.classList.remove('is-invalid');
-                    }
-                }
+            fields.forEach((field) => {
+                const value = field.value.trim();
+                const invalid = !value || (field === body && value.length < 100);
+                field.classList.toggle('is-invalid', invalid);
+                isValid = isValid && !invalid;
             });
 
             if (!isValid) {
                 return;
             }
 
-            // Disable button during submission
-            submitStoryBtn.disabled = true;
-            submitStoryBtn.textContent = 'Submitting...';
+            setSubmitting(true);
 
-            fetch('/Community/SubmitStory', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
-                },
-                body: JSON.stringify({
+            try {
+                const data = await postJson('/Community/SubmitStory', {
                     title: title.value.trim(),
                     category: category.value.trim(),
                     summary: summary.value.trim(),
                     body: body.value.trim()
-                })
-            })
-                .then(function (res) {
-                    return res.json();
-                })
-                .then(function (data) {
-                    if (data.success) {
-                        showToast('Your story has been submitted successfully!');
-                        // Reset form
-                        form.reset();
-                        [title, category, summary, body].forEach(function (field) {
-                            if (field) {
-                                field.classList.remove('is-invalid');
-                            }
-                        });
-                        // Close modal
-                        const modalEl = document.getElementById('submitStoryModal');
-                        if (modalEl) {
-                            const modal = bootstrap.Modal.getInstance(modalEl);
-                            if (modal) {
-                                modal.hide();
-                            }
-                        }
-                    } else {
-                        showToast(data.error || 'Failed to submit story.');
-                    }
-                })
-                .catch(function () {
-                    showToast('Failed to submit story. Please try again.');
-                })
-                .finally(function () {
-                    submitStoryBtn.disabled = false;
-                    submitStoryBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Submit Story';
                 });
+                if (data.success) {
+                    showToast(PFI18n.t('Community.Js.StorySubmitted'));
+                    form.reset();
+                    fields.forEach((field) => field.classList.remove('is-invalid'));
+                    const modalEl = document.getElementById('submitStoryModal');
+                    const modal = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+                    if (modal) {
+                        modal.hide();
+                    }
+                } else {
+                    showToast(data.error || PFI18n.t('Community.Js.StoryFailed'));
+                }
+            } catch {
+                showToast(PFI18n.t('Community.Js.StoryFailedRetry'));
+            } finally {
+                setSubmitting(false);
+            }
         });
     }
-
-    // --- Real-time stats update after vote ---
-    // (Stats are refreshed on page reload; no AJAX needed for simple counters)
-
 })();
