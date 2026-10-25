@@ -1,0 +1,85 @@
+/* ==========================================================================
+   Money Priorities: the Priority Tree drawn by Mermaid (js/money-priorities/diagram.js)
+   The page provides .mp-diagram; diagram.js creates the children below.
+   ========================================================================== */
+
+.mp-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--app-spacing-s);
+    min-width: 0;
+    max-width: 100%;
+    color: var(--app-text);
+}
+
+/* The fitted whole tree, or the path view, inside the frame's width. */
+.mp-diagram__view {
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+.mp-diagram__view[hidden] {
+    display: none;
+}
+
+.mp-diagram__view svg {
+    display: block;
+    height: auto;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+/* The path view keeps Mermaid's natural size (one column) and never grows past the frame. */
+.mp-diagram__view--path svg {
+    margin: 0;
+}
+
+.mp-diagram__toggle[hidden] {
+    display: none;
+}
+
+.mp-diagram__toggle:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+/* The whole tree at natural size; the frame scrolls sideways, the page never does. */
+.mp-diagram__scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--app-spacing-s);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    background: var(--app-bg);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+.mp-diagram__scroll[hidden] {
+    display: none;
+}
+
+.mp-diagram__scroll:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.mp-diagram__scroll svg {
+    display: block;
+    height: auto;
+}
+
+.mp-diagram__message {
+    margin: 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.mp-diagram__message[hidden] {
+    display: none;
+}
