@@ -27,4 +27,17 @@ public interface IAiAssistantService
     /// <returns>The AI-generated summary response.</returns>
     Task<NewsArticleSummaryResponseDto> SummarizeArticleAsync(string userId, NewsArticleSummaryRequestDto request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes a Money Priorities Purpose Note: plain text of about 120 words at most explaining how the given priority
+    /// serves the user's Purpose. Only the facts in <paramref name="request"/> reach the model. The Purpose gets the
+    /// prompt-injection check (not the keyword scope filter); the call counts against the shared AI quota as endpoint
+    /// <c>money-priorities-note</c>. Never throws for a missing key, a spent quota or a failed call: the
+    /// <see cref="PurposeNoteResponseDto.State"/> says which.
+    /// </summary>
+    /// <param name="userId">The Account the note is for, for the quota.</param>
+    /// <param name="request">The Walk's Purpose, answers, path labels, leaf and figures.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<PurposeNoteResponseDto> WritePurposeNoteAsync(string userId, PurposeNoteRequestDto request,
+        CancellationToken cancellationToken = default);
 }

@@ -32,4 +32,11 @@ public static class AiAssistantMessages
     /// </summary>
     public const string GreetingAcknowledgement =
         "Hello! I'm here to help with your personal finances. What can I do for you today?";
+
+    /// <summary>The Purpose Note could not be written: the AI is not configured or the call failed.</summary>
+    public const string PurposeNoteUnavailable = "The note about your purpose is not available right now.";
+
+    /// <summary>The Purpose Note was refused because the Purpose reads like an attempt to instruct the AI.</summary>
+    public const string PurposeNoteRefused =
+        "We couldn't write a note for this purpose. Try describing what you want your money to do in plain words.";
 }

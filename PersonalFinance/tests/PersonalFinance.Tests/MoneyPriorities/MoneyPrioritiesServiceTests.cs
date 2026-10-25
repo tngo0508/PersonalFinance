@@ -25,7 +25,7 @@ public class MoneyPrioritiesServiceTests
             .Options);
 
     private static MoneyPrioritiesService CreateService(AppDbContext db, DateTimeOffset? now = null) =>
-        new(db, new FixedTimeProvider(now ?? Now));
+        MoneyPrioritiesTestServices.Service(db, new FixedTimeProvider(now ?? Now));
 
     /// <summary>$5,000 at 22% APR, paying $500 a month: L1.</summary>
     private static SubmitPriorityWalkRequest DebtRequest() => new()
@@ -431,13 +431,17 @@ public class MoneyPrioritiesServiceTests
     public void Queries_TranslateToAzureSql()
     {
         using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
-        var service = new MoneyPrioritiesService(db, TimeProvider.System);
+        MoneyPrioritiesService service = MoneyPrioritiesTestServices.Service(db);
 
         string recent = AzureSqlTranslation.AssertTranslates(service.RecentWalksQuery(UserId));
         string latest = AzureSqlTranslation.AssertTranslates(service.LatestWalkQuery(UserId));
 
         Assert.Contains("ORDER BY [p].[CreatedAt] DESC, [p].[Id] DESC", recent, StringComparison.Ordinal);
         Assert.Contains("TOP", latest, StringComparison.Ordinal);
+
+        string noteCandidates = AzureSqlTranslation.AssertTranslates(service.NoteCandidatesQuery(UserId,
+            new PriorityWalk { Id = 7, Purpose = "A house", TreeVersion = 1, LeafId = "L1", MonthlyAmount = 500m }));
+        Assert.Contains("[p].[PurposeNote] IS NOT NULL", noteCandidates, StringComparison.Ordinal);
     }
 
     /// <summary>A stored L5 Walk: no debt, fund covered, full match, 10 years.</summary>

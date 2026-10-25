@@ -106,6 +106,16 @@ internal sealed class AiScopeFilter : IAiScopeFilter
     ];
 
     /// <summary>
+    /// Whether the text contains one of the prompt-injection patterns, ignoring case. This is the only check the
+    /// Money Priorities Purpose gets: the keyword scope filter would refuse ordinary purposes.
+    /// </summary>
+    public static bool LooksLikePromptInjection(string text)
+    {
+        string lower = text.ToLowerInvariant();
+        return InjectionPatterns.Any(pattern => lower.Contains(pattern, StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// Evaluates the user message and returns a canned response if the message is off-topic or a greeting.
     /// Returns null when the message is finance-related and should proceed to the LLM.
     /// </summary>
@@ -132,12 +142,9 @@ internal sealed class AiScopeFilter : IAiScopeFilter
         }
 
         // Check for prompt injection attempts
-        foreach (string pattern in InjectionPatterns)
+        if (LooksLikePromptInjection(lowerMessage))
         {
-            if (lowerMessage.Contains(pattern))
-            {
-                return CreateRefusalResponse();
-            }
+            return CreateRefusalResponse();
         }
 
         // Check for greetings / small talk

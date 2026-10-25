@@ -26,6 +26,13 @@ public interface IMoneyPrioritiesApi
     [Delete("/api/MoneyPriorities/walks/{id}")]
     Task DeleteWalkAsync(int id, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Writes (or reuses) a Priority Walk's Purpose Note and saves it onto the Walk; the state says when there is none
+    /// (no Purpose, not available, quota spent, refused). 404 when the Account has no Walk with that id.
+    /// </summary>
+    [Post("/api/MoneyPriorities/walks/{id}/note")]
+    Task<PriorityWalkPurposeNoteDto> WritePurposeNoteAsync(int id, CancellationToken cancellationToken = default);
+
     /// <summary>The whole Priority Tree with nothing highlighted.</summary>
     [Get("/api/MoneyPriorities/tree")]
     Task<PriorityTreeDiagramDto> GetTreeAsync(CancellationToken cancellationToken = default);

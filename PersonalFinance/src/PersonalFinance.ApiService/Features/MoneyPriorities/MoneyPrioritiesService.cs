@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Features.AiAssistant;
 using PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Enums;
 
@@ -15,13 +17,15 @@ namespace PersonalFinance.ApiService.Features.MoneyPriorities;
 /// </summary>
 internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
 {
+    private readonly IAiAssistantService _aiAssistant;
     private readonly AppDbContext _db;
     private readonly TimeProvider _timeProvider;
 
-    public MoneyPrioritiesService(AppDbContext db, TimeProvider timeProvider)
+    public MoneyPrioritiesService(AppDbContext db, TimeProvider timeProvider, IAiAssistantService aiAssistant)
     {
         _db = db;
         _timeProvider = timeProvider;
+        _aiAssistant = aiAssistant;
     }
 
     public async Task<PriorityWalkResultDto> SubmitAsync(string userId, SubmitPriorityWalkRequest request,
@@ -118,6 +122,84 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
         };
     }
 
+    public async Task<PriorityWalkPurposeNoteDto?> WritePurposeNoteAsync(string userId, int id,
+        CancellationToken cancellationToken = default)
+    {
+        PriorityWalk? walk = await _db.PriorityWalks
+            .FirstOrDefaultAsync(w => w.Id == id && w.UserId == userId, cancellationToken);
+        if (walk is null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(walk.Purpose))
+        {
+            return PurposeNote(walk, PurposeNoteState.NoPurpose, note: null, MoneyPrioritiesMessages.PurposeNoteInvite);
+        }
+
+        if (walk.PurposeNote is not null)
+        {
+            return PurposeNote(walk, PurposeNoteState.Written, walk.PurposeNote, message: null);
+        }
+
+        List<PriorityWalk> candidates = await NoteCandidatesQuery(userId, walk).ToListAsync(cancellationToken);
+        string? reused = candidates.FirstOrDefault(c => PriorityWalkMapping.SameAnswers(c, walk))?.PurposeNote;
+        if (reused is not null)
+        {
+            await SaveNoteAsync(walk, reused, cancellationToken);
+            return PurposeNote(walk, PurposeNoteState.Written, reused, message: null);
+        }
+
+        WalkView view = View(walk);
+        PurposeNoteResponseDto written = await _aiAssistant.WritePurposeNoteAsync(userId,
+            PurposeNoteFacts.For(walk.Purpose, view.Path.Answers, view.PathSentences, view.LeafLabel, view.Figures),
+            cancellationToken);
+        if (written.State == PurposeNoteState.Written && !string.IsNullOrWhiteSpace(written.Note))
+        {
+            await SaveNoteAsync(walk, written.Note, cancellationToken);
+            return PurposeNote(walk, PurposeNoteState.Written, written.Note, message: null);
+        }
+
+        return written.State == PurposeNoteState.NoPurpose
+            ? PurposeNote(walk, PurposeNoteState.NoPurpose, note: null, MoneyPrioritiesMessages.PurposeNoteInvite)
+            : PurposeNote(walk, written.State, note: null, written.Message);
+    }
+
+    /// <summary>
+    /// The Account's other Walks with a saved Purpose Note that could share this Walk's: same Purpose, tree version,
+    /// leaf and amount, newest first. The rest of the answers are compared in memory with
+    /// <see cref="PriorityWalkMapping.SameAnswers"/>.
+    /// </summary>
+    internal IQueryable<PriorityWalk> NoteCandidatesQuery(string userId, PriorityWalk walk) =>
+        _db.PriorityWalks
+            .AsNoTracking()
+            .Where(w => w.UserId == userId
+                        && w.Id != walk.Id
+                        && w.PurposeNote != null
+                        && w.Purpose == walk.Purpose
+                        && w.TreeVersion == walk.TreeVersion
+                        && w.LeafId == walk.LeafId
+                        && w.MonthlyAmount == walk.MonthlyAmount)
+            .OrderByDescending(w => w.CreatedAt)
+            .ThenByDescending(w => w.Id);
+
+    private async Task SaveNoteAsync(PriorityWalk walk, string note, CancellationToken cancellationToken)
+    {
+        walk.PurposeNote = note;
+        walk.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static PriorityWalkPurposeNoteDto PurposeNote(PriorityWalk walk, PurposeNoteState state, string? note,
+        string? message) => new()
+    {
+        WalkId = walk.Id,
+        State = state,
+        Note = note,
+        Message = message,
+        Disclaimer = AiAssistantMessages.Disclaimer
+    };
+
     /// <summary>The Account's Priority Walks for Earlier results: the 10 newest, newest first, <c>Id</c> breaking ties.</summary>
     internal IQueryable<PriorityWalk> RecentWalksQuery(string userId) =>
         NewestFirst(userId).Take(MoneyPrioritiesLimits.RecentWalkCount);
@@ -140,12 +222,9 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
     /// </summary>
     private PriorityWalkResultDto BuildResult(PriorityWalk walk)
     {
-        PriorityTree tree = PriorityWalkMapping.TreeFor(walk.TreeVersion);
-        PriorityAnswers answers = PriorityWalkMapping.ToAnswers(walk);
-        var path = new PriorityPath(walk.TreeVersion, walk.Path.Split(','), answers);
-        RetirementContributionLimits limits = RetirementContributionLimits.ForYear(walk.LimitsTaxYear ?? CurrentTaxYear());
-        PriorityLeafFigures figures = PriorityLeafCalculator.Calculate(path, limits);
-        string leafLabel = tree.Node(path.LeafId).Label;
+        (PriorityTree tree, PriorityPath path, RetirementContributionLimits limits, PriorityLeafFigures figures,
+            string leafLabel, IReadOnlyList<string> pathSentences) = View(walk);
+        PriorityAnswers answers = path.Answers;
 
         return new PriorityWalkResultDto
         {
@@ -159,7 +238,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
             Purpose = walk.Purpose,
             Answers = PriorityWalkMapping.ToAnswersDto(walk.Purpose, answers),
             Figures = PriorityWalkMapping.ToDto(figures, limits),
-            PathSentences = PriorityPathSentences.For(tree, path.NodeIds).ToList(),
+            PathSentences = pathSentences.ToList(),
             WholeTreeDiagram = PriorityDiagramText.WholeTree(tree, path.NodeIds, PriorityDiagramPalette.Light),
             PathViewDiagram = PriorityDiagramText.PathView(tree, path.NodeIds, PriorityDiagramPalette.Light),
             LimitsTaxYear = walk.LimitsTaxYear,
@@ -170,7 +249,24 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
                 AggressiveReturnPercent = PriorityAssumptions.AggressiveReturnPercent,
                 CashYieldPercent = PriorityAssumptions.CashYieldPercent
             },
-            Disclaimer = MoneyPrioritiesMessages.EstimateDisclaimer
+            Disclaimer = MoneyPrioritiesMessages.EstimateDisclaimer,
+            PurposeNote = walk.PurposeNote
         };
     }
+
+    /// <summary>
+    /// A stored Walk walked against its own tree version, with the figures recomputed using the limits of its stored
+    /// tax year (the current year when none is stored).
+    /// </summary>
+    private WalkView View(PriorityWalk walk)
+    {
+        PriorityTree tree = PriorityWalkMapping.TreeFor(walk.TreeVersion);
+        var path = new PriorityPath(walk.TreeVersion, walk.Path.Split(','), PriorityWalkMapping.ToAnswers(walk));
+        RetirementContributionLimits limits = RetirementContributionLimits.ForYear(walk.LimitsTaxYear ?? CurrentTaxYear());
+        return new WalkView(tree, path, limits, PriorityLeafCalculator.Calculate(path, limits),
+            tree.Node(path.LeafId).Label, PriorityPathSentences.For(tree, path.NodeIds));
+    }
+
+    private sealed record WalkView(PriorityTree Tree, PriorityPath Path, RetirementContributionLimits Limits,
+        PriorityLeafFigures Figures, string LeafLabel, IReadOnlyList<string> PathSentences);
 }

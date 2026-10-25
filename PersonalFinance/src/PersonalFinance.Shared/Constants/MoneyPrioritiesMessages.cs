@@ -67,4 +67,8 @@ public static class MoneyPrioritiesMessages
 
     /// <summary>The contribution limit question is not answered while the horizon is over 10 years.</summary>
     public const string AtContributionLimitRequired = "Say whether you already contribute the IRS limit for your age.";
+
+    /// <summary>The Walk has no Purpose, so no Purpose Note is written.</summary>
+    public const string PurposeNoteInvite =
+        "Add a purpose in your own words to get a short note on how this priority serves it.";
 }
