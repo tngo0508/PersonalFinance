@@ -1,5 +1,6 @@
 const {chromium} = require('playwright');
 const {runResearchWalkthrough} = require('./research-walkthrough');
+const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -820,6 +821,7 @@ const {runResearchWalkthrough} = require('./research-walkthrough');
                     {path: '/Networth', name: 'Net Worth'},
                     {path: '/Budget', name: 'Budget'},
                     {path: '/SavingsGoals', name: 'Savings Goals'},
+                    {path: '/MoneyPriorities', name: 'Money Priorities'},
                     {path: '/InvestmentCalculator', name: 'Investment Calculator'},
                     {path: '/News', name: 'Finance News'},
                     {path: '/Community', name: 'Community'},
@@ -884,6 +886,16 @@ const {runResearchWalkthrough} = require('./research-walkthrough');
             await runResearchWalkthrough({browser, base, pass, fail, consoleErrors, pageErrors});
         } catch (error) {
             fail(`Research walkthrough failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9d: Money Priorities walkthrough (spec #315): three leaves, Earlier results, the narrow path view
+        // =========================================================
+        console.log('\n--- Test 9d: Money Priorities Walkthrough ---');
+        try {
+            await runMoneyPrioritiesWalkthrough({browser, base, pass, fail, consoleErrors, pageErrors});
+        } catch (error) {
+            fail(`Money Priorities walkthrough failed: ${error.message}`);
         }
 
         // =========================================================
