@@ -200,6 +200,52 @@ fieldset.mp-field > legend {
     margin: 0;
 }
 
+/* --- Purpose Note --- */
+
+.mp-purpose-note {
+    display: grid;
+    gap: var(--app-spacing-s);
+    margin-top: var(--app-spacing-m);
+    padding-top: var(--app-spacing-m);
+    border-top: 1px solid var(--app-border);
+}
+
+.mp-purpose-note[hidden] {
+    display: none;
+}
+
+.mp-purpose-note .mp-subtitle {
+    margin: 0;
+}
+
+.mp-purpose-note__body {
+    display: grid;
+    gap: var(--app-spacing-s);
+}
+
+.mp-purpose-note__text {
+    color: var(--app-text);
+    white-space: pre-line;
+    margin: 0;
+}
+
+.mp-purpose-note__message {
+    color: var(--app-text-soft);
+    margin: 0;
+}
+
+.mp-purpose-note__writing {
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    color: var(--app-text-muted);
+    margin: 0;
+}
+
+.mp-purpose-note__writing[hidden] {
+    display: none;
+}
+
 /* --- Earlier results --- */
 
 .mp-card__title[tabindex="-1"]:focus {
