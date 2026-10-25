@@ -29,6 +29,7 @@ internal static class LocalizationServiceExtensions
         services.AddSingleton<IStringLocalizer>(sp =>
             sp.GetRequiredService<IStringLocalizerFactory>().Create(typeof(LocalizationServiceExtensions)));
         services.AddSingleton<IConfigureOptions<MvcOptions>, ModelBindingMessagesSetup>();
+        services.AddSingleton<IPostConfigureOptions<MvcOptions>, CultureDecimalModelBinderSetup>();
 
         // Razor HTML-encodes every non-ASCII character by default ("C&#xF2;n"); let Vietnamese through as UTF-8.
         // <, >, & and quotes are still encoded.
