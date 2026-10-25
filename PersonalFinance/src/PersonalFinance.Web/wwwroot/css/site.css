@@ -2555,6 +2555,11 @@ button.bgt-rank-row:hover { background: var(--bgt-hover); }
   margin-bottom: 2rem;
 }
 
+/* "Legal text is provided in English", shown above the English text when another language is selected. */
+.legal-language-notice {
+  margin: 0.75rem 0 1rem;
+}
+
 .contact-card {
   padding: 1.25rem;
   background: var(--app-surface);
