@@ -87,7 +87,7 @@ public class UnavailableStateTests
     public async Task SavingsGoalsIndex_WhenApiFails_RendersUnavailableStateInsteadOfEmptyList()
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 
@@ -99,7 +99,7 @@ public class UnavailableStateTests
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi>? proxy) = ApiProxy.Create<ISavingsGoalsApi>();
         proxy.Returns(nameof(ISavingsGoalsApi.GetSavingsGoalsAsync), new List<SavingsGoalDto>());
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
 
@@ -113,7 +113,7 @@ public class UnavailableStateTests
     public async Task SavingsGoalsCreate_WhenGoalsAlsoFailToLoad_RendersUnavailableState()
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
 
@@ -126,7 +126,7 @@ public class UnavailableStateTests
     public async Task SavingsGoalsUpdateAndDelete_WhenApiFails_ShowSafeErrorAfterRedirect(string action)
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = action == nameof(SavingsGoalsController.Update)
             ? await controller.Update(1, 50m, false)

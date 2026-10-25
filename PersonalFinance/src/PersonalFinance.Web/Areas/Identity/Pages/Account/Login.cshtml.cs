@@ -34,15 +34,17 @@ public class LoginModel : PageModel
 
     public class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Validation.Required")]
+        [EmailAddress(ErrorMessage = "Validation.EmailAddress")]
+        [Display(Name = "Identity.Field.Email")]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "Validation.Required")]
         [DataType(DataType.Password)]
+        [Display(Name = "Identity.Field.Password")]
         public string Password { get; set; } = string.Empty;
 
-        [Display(Name = "Remember me?")]
+        [Display(Name = "Identity.Field.RememberMe")]
         public bool RememberMe { get; set; }
     }
 

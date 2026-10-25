@@ -19,7 +19,7 @@ public class SavingsGoalsControllerTests
     public async Task Create_ParsesIsoTargetDate()
     {
         var api = new RecordingSavingsGoalsApi();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, "2026-02-03");
 
@@ -31,7 +31,7 @@ public class SavingsGoalsControllerTests
     public async Task Create_WithoutTargetDate_SendsNoTargetDate()
     {
         var api = new RecordingSavingsGoalsApi();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
 
         await controller.Create("Emergency fund", 1000m, 0m, null, "");
 
@@ -45,7 +45,7 @@ public class SavingsGoalsControllerTests
     public async Task Create_WithMalformedTargetDate_ThrowsWithoutCallingApi(string targetDate)
     {
         var api = new RecordingSavingsGoalsApi();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
 
         await Assert.ThrowsAsync<FormatException>(() =>
             controller.Create("Emergency fund", 1000m, 0m, null, targetDate));
