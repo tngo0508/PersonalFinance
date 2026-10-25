@@ -64,6 +64,14 @@ fieldset.mp-field {
     min-width: 0;
 }
 
+/* Bootstrap gives a legend heading size; these legends are field labels. */
+fieldset.mp-field > legend {
+    float: none;
+    width: auto;
+    font-size: inherit;
+    line-height: inherit;
+}
+
 .mp-follow-up {
     padding-left: var(--app-spacing-m);
     border-left: 3px solid var(--app-brand-soft);

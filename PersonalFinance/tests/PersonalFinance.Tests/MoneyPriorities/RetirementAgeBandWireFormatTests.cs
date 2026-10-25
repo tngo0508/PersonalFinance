@@ -28,7 +28,7 @@ public class RetirementAgeBandWireFormatTests
     public void TheApiServicesDefaultSerializer_ReadsTheNumberBack()
     {
         SubmitPriorityWalkRequest? request = JsonSerializer.Deserialize<SubmitPriorityWalkRequest>(
-            """{"ageBand":2}""", new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            """{"ageBand":2}""", JsonSerializerOptions.Web);
 
         Assert.Equal(RetirementAgeBand.Age50To59Or64Up, request?.AgeBand);
     }
