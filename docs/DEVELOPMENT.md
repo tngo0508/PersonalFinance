@@ -704,6 +704,26 @@ dotnet run --project PersonalFinance/src/PersonalFinance.Web
 
 ---
 
+### Development vs Release JavaScript and CSS
+
+The Web app's own scripts and stylesheets live under `wwwroot/js/` and `wwwroot/css/`. Views reference them there, as usual.
+
+- **Development** (`ASPNETCORE_ENVIRONMENT=Development`) serves those readable originals. A Debug build needs no Node.
+- **Release builds** (`dotnet build` or `dotnet publish` with `-c Release`, including the container build) run the `MinifyWebAssets` target in `PersonalFinance.Web.csproj`. It runs `npm ci` in `PersonalFinance/src/PersonalFinance.Web/` when `node_modules` is missing, then `npm run minify`, which writes a minified copy of each file to `wwwroot/dist/` with the same relative path (`js/core/utils.js` becomes `dist/js/core/utils.js`). `MapStaticAssets` then serves them with Brotli/gzip. The build fails if minification fails, so **Release builds need Node 20+** on the PATH.
+- **Outside Development**, `AssetUrlTagHelper` rewrites `/js/...` and `/css/...` references to `/dist/...?v=<hash>`. It never touches `/lib/` or external URLs.
+
+The minify tooling has its own `package.json` next to the Web project file (esbuild only; separate from the repo-root one). To run it by hand:
+
+```bash
+cd PersonalFinance/src/PersonalFinance.Web
+npm ci
+npm run minify   # wipes and rewrites wwwroot/dist (git-ignored)
+```
+
+To check minified pages locally, run a Release build in a non-Development environment, for example `dotnet run -c Release --project PersonalFinance/src/PersonalFinance.Web --no-launch-profile -- --environment Production` (with the same connection and API settings as usual).
+
+---
+
 ## 5. Database & Entity Framework Core Workflows
 
 ### ASP.NET Core Identity Schema Documentation

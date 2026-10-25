@@ -43,4 +43,32 @@
       <None Include="Views\Networth\Index.cshtml" />
     </ItemGroup>
 
+    <!--
+      Minified assets (Release only). tools/minify.js writes a minified copy of each file under wwwroot/js and
+      wwwroot/css to wwwroot/dist. The target runs before ResolveProjectStaticWebAssets, the step that turns
+      @(Content) under wwwroot into static web assets, so MapStaticAssets compresses (br/gz) and lists the dist
+      files. AssetUrlTagHelper points pages at them outside Development. Debug builds need no Node.
+    -->
+    <PropertyGroup>
+        <!-- dist is generated: only the Release target adds it, so a stale copy never reaches a Debug build -->
+        <DefaultItemExcludes>$(DefaultItemExcludes);wwwroot\dist\**</DefaultItemExcludes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- The minify tooling's manifest is not app content: keep it out of the build and publish output -->
+        <Content Remove="package.json;package-lock.json" />
+        <None Include="package.json;package-lock.json;tools\**" />
+    </ItemGroup>
+
+    <Target Name="MinifyWebAssets" BeforeTargets="ResolveProjectStaticWebAssets" Condition="'$(Configuration)' == 'Release'">
+        <Exec Command="npm ci" WorkingDirectory="$(MSBuildProjectDirectory)" Condition="!Exists('$(MSBuildProjectDirectory)\node_modules\esbuild')" />
+        <Exec Command="npm run minify" WorkingDirectory="$(MSBuildProjectDirectory)" />
+
+        <ItemGroup>
+            <_MinifiedWebAsset Include="wwwroot\dist\**" />
+            <Content Remove="@(_MinifiedWebAsset)" />
+            <Content Include="@(_MinifiedWebAsset)" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+        </ItemGroup>
+    </Target>
+
 </Project>

@@ -1,0 +1,12 @@
+{
+  "name": "personal-finance-web-assets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minifies the Web app's own JavaScript and CSS into wwwroot/dist for Release builds.",
+  "scripts": {
+    "minify": "node tools/minify.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
