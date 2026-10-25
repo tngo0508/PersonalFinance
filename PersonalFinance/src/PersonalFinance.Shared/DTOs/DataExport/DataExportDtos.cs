@@ -43,6 +43,9 @@ public class DataExportDto
 
     public List<DataExportSavedArticleDto> SavedArticles { get; set; } = [];
 
+    /// <summary>Money Priorities answers, path and Purpose Note; dollar figures are never stored, so none appear.</summary>
+    public List<DataExportPriorityWalkDto> PriorityWalks { get; set; } = [];
+
     public DataExportCommunityDto Community { get; set; } = new();
 
     public List<DataExportFeedbackDto> Feedback { get; set; } = [];
@@ -261,6 +264,45 @@ public class DataExportSavedArticleDto
     public string? Notes { get; set; }
 
     public DateTime SavedAtUtc { get; set; }
+}
+
+/// <summary>A Priority Walk. A null answer means the question was not asked on the Walk's path.</summary>
+public class DataExportPriorityWalkDto
+{
+    public decimal MonthlyAmount { get; set; }
+
+    public string? Purpose { get; set; }
+
+    public decimal DebtApr { get; set; }
+
+    public decimal? DebtBalance { get; set; }
+
+    public decimal? EmergencyFundMonths { get; set; }
+
+    public decimal? MonthlyExpenses { get; set; }
+
+    public bool? HasFullEmployerMatch { get; set; }
+
+    public decimal? EmployerMatchPercent { get; set; }
+
+    public int? HorizonYears { get; set; }
+
+    public string? AgeBand { get; set; }
+
+    public bool? AtContributionLimit { get; set; }
+
+    public int TreeVersion { get; set; }
+
+    public int? LimitsTaxYear { get; set; }
+
+    /// <summary>The ordered node ids of the path through the Priority Tree, e.g. <c>S,Q1,Q2,Q3,Q4,L5</c>.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    public string LeafId { get; set; } = string.Empty;
+
+    public string? PurposeNote { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; }
 }
 
 /// <summary>What the Account wrote and reacted to in Community.</summary>

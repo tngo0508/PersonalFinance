@@ -151,6 +151,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<ResearchSnapshot> ResearchSnapshots => Set<ResearchSnapshot>();
 
     /// <summary>
+    /// Priority Walks — an Account's saved passes through the Money Priorities Priority Tree.
+    /// </summary>
+    public DbSet<PriorityWalk> PriorityWalks => Set<PriorityWalk>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -180,6 +185,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<UserBudgetSourcePreference>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Feedback>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<PriorityWalk>().HasQueryFilter(e => !e.IsDeleted);
 
         // Configure AiUsageRecord entity — usage records are never soft-deleted
         builder.Entity<AiUsageRecord>(entity =>
@@ -641,6 +647,31 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         ConfigureResearchSnapshot(builder);
+        ConfigurePriorityWalk(builder);
+    }
+
+    /// <summary>
+    /// PriorityWalk: the column table of the Money Priorities spec; Earlier results list an Account's newest first.
+    /// </summary>
+    private static void ConfigurePriorityWalk(ModelBuilder builder)
+    {
+        builder.Entity<PriorityWalk>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.MonthlyAmount).HasPrecision(18, 2);
+            entity.Property(e => e.Purpose).HasMaxLength(300);
+            entity.Property(e => e.DebtApr).HasPrecision(5, 2);
+            entity.Property(e => e.DebtBalance).HasPrecision(18, 2);
+            entity.Property(e => e.EmergencyFundMonths).HasPrecision(4, 1);
+            entity.Property(e => e.MonthlyExpenses).HasPrecision(18, 2);
+            entity.Property(e => e.EmployerMatchPercent).HasPrecision(5, 2);
+            entity.Property(e => e.AgeBand).HasMaxLength(16);
+            entity.Property(e => e.Path).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.LeafId).IsRequired().HasMaxLength(8);
+            entity.Property(e => e.PurposeNote).HasMaxLength(2000);
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt });
+        });
     }
 
     /// <summary>
