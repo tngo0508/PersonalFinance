@@ -50,20 +50,12 @@ internal static class PriorityWalkMapping
 
     /// <summary>
     /// Whether two Walks hold exactly the same answers, Purpose, tree version and limits year, so a new submit would
-    /// show the same result.
+    /// show the same result. The answers compare by <see cref="PriorityAnswers"/> record equality, so a new answer
+    /// field takes part without a change here.
     /// </summary>
     public static bool SameAnswers(PriorityWalk a, PriorityWalk b) =>
-        a.MonthlyAmount == b.MonthlyAmount
+        ToAnswers(a) == ToAnswers(b)
         && string.Equals(a.Purpose, b.Purpose, StringComparison.Ordinal)
-        && a.DebtApr == b.DebtApr
-        && a.DebtBalance == b.DebtBalance
-        && a.EmergencyFundMonths == b.EmergencyFundMonths
-        && a.MonthlyExpenses == b.MonthlyExpenses
-        && a.HasFullEmployerMatch == b.HasFullEmployerMatch
-        && a.EmployerMatchPercent == b.EmployerMatchPercent
-        && a.HorizonYears == b.HorizonYears
-        && string.Equals(a.AgeBand, b.AgeBand, StringComparison.Ordinal)
-        && a.AtContributionLimit == b.AtContributionLimit
         && a.TreeVersion == b.TreeVersion
         && a.LimitsTaxYear == b.LimitsTaxYear;
 
