@@ -3,6 +3,8 @@
   "savings goals": "mục tiêu tiết kiệm",
   "net worth": "giá trị tài sản ròng",
   "budget": "ngân sách",
+  "budget planner": "lập kế hoạch ngân sách",
+  "debt repayment": "trả nợ",
   "reporting currency": "tiền tệ báo cáo",
   "emergency fund": "quỹ khẩn cấp",
   "financial independence": "độc lập tài chính",
@@ -12,7 +14,11 @@
   "characters": "ký tự",
   "recovery code": "mã khôi phục",
   "recovery codes": "mã khôi phục",
-  "budget tracker": "Theo dõi ngân sách",
+
+  "budget tracker": "theo dõi ngân sách",
+  "planned amount": "số tiền dự kiến",
+  "planned amounts": "số tiền dự kiến",
+
   "progress to fi": "Tiến độ đến FI",
   "net worth projection": "dự báo giá trị tài sản ròng"
 }
