@@ -100,6 +100,16 @@ test('Notification keys written by ApiService and keys passed to localizer helpe
     assert.deepStrictEqual(report.unused, []);
 });
 
+test('Identity status message keys count as references', () => {
+    const dir = folder({ 'en.json': { 'Account.A.Saved': 's' }, 'vi.json': {} });
+    const sources = ['StatusMessage = "Account.A.Saved"; StatusMessage = "Account.Gone.Saved";'];
+
+    const report = buildReport({ dir, sources });
+
+    assert.deepStrictEqual(report.referencedMissing, ['Account.Gone.Saved']);
+    assert.deepStrictEqual(report.unused, []);
+});
+
 test('English keys nothing references are reported, keys under a used prefix are not', () => {
     const dir = folder({
         'en.json': { 'A.Used': 'x', 'A.Unused': 'y', 'Errors.Code1': 'z', 'Page.Js.Hi': 'h', 'A.Count.one': 'o', 'A.Count.other': 'p' },

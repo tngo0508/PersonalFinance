@@ -2,16 +2,15 @@
 @model PersonalDataModel
 @{
     Layout = "_Layout"; // the account-settings shell in this folder, not Account/_ViewStart's sign-in layout
-    ViewData["Title"] = "Personal data";
+    ViewData["Title"] = L["Account.PersonalData.Title"].Value;
     ViewData["ActivePage"] = ManageNavPages.PersonalData;
 }
 
 <h3>@ViewData["Title"]</h3>
 
-<h4>Download your data</h4>
+<h4>@L["Account.PersonalData.DownloadHeading"]</h4>
 <p>
-    Get a copy of everything your account holds: account details, Net Worth, budgets, transactions, savings goals,
-    synced spreadsheet data, Community posts and Feedback. The file is JSON, so other apps can read it.
+    @L["Account.PersonalData.DownloadIntro"]
 </p>
 
 @if (Model.ErrorMessage is not null)
@@ -20,12 +19,11 @@
 }
 
 <form id="download-data" method="post" asp-page-handler="Download">
-    <button class="btn btn-primary" type="submit">Download my data</button>
+    <button class="btn btn-primary" type="submit">@L["Account.PersonalData.DownloadButton"]</button>
 </form>
 
-<h4>Delete your account</h4>
+<h4>@L["Account.PersonalData.DeleteHeading"]</h4>
 <p>
-    Your data is hidden straight away and you can cancel from the email we send you for 30 days. After that your
-    account and data are deleted permanently.
+    @L["Account.PersonalData.DeleteIntro"]
 </p>
-<a id="delete" class="btn btn-outline-danger" asp-page="./DeletePersonalData">Delete my account</a>
+<a id="delete" class="btn btn-outline-danger" asp-page="./DeletePersonalData">@L["Account.PersonalData.DeleteButton"]</a>

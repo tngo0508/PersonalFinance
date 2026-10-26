@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Services;
 using System.Globalization;
 using System.Net;
@@ -28,15 +30,18 @@ public class DeletePersonalDataModel : PageModel
     private readonly ILogger<DeletePersonalDataModel> _logger;
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly IStringLocalizer _localizer;
 
     public DeletePersonalDataModel(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager,
-        IAccountDeletionApi accountDeletionApi, IAccountEmailService accountEmails, ILogger<DeletePersonalDataModel> logger)
+        IAccountDeletionApi accountDeletionApi, IAccountEmailService accountEmails, ILogger<DeletePersonalDataModel> logger,
+        IStringLocalizer localizer)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _accountDeletionApi = accountDeletionApi;
         _accountEmails = accountEmails;
         _logger = logger;
+        _localizer = localizer;
     }
 
     [BindProperty] public InputModel Input { get; set; } = new();
@@ -71,8 +76,8 @@ public class DeletePersonalDataModel : PageModel
         if (!confirmed)
         {
             ModelState.AddModelError(string.Empty, RequirePassword
-                ? "Incorrect password."
-                : $"Type {ConfirmationWord} to confirm.");
+                ? _localizer["Identity.Error.PasswordMismatch"]
+                : _localizer.Named("Account.DeleteAccount.TypeToConfirmError", ("word", ConfirmationWord)));
             return Page();
         }
 
@@ -90,7 +95,7 @@ public class DeletePersonalDataModel : PageModel
             }
 
             ModelState.AddModelError(string.Empty,
-                ApiErrorMessages.ForUser(ex, "Your account could not be deleted. Please try again later."));
+                ApiErrorMessages.ForUser(ex, _localizer["Account.DeleteAccount.Failed"]));
             return Page();
         }
 

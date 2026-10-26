@@ -68,7 +68,7 @@ public class GenerateRecoveryCodesModel : PageModel
         RecoveryCodes = recoveryCodes.ToArray();
 
         _logger.LogInformation(LoggerEventIds.TwoFARecoveryGenerated, "User has generated new 2FA recovery codes.");
-        StatusMessage = "You have generated new recovery codes.";
+        StatusMessage = "Account.GenerateRecoveryCodes.Generated";
         return RedirectToPage("./ShowRecoveryCodes");
     }
 }

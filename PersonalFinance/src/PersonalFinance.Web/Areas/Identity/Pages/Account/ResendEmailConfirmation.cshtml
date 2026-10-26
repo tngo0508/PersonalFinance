@@ -1,12 +1,12 @@
 @page
 @model ResendEmailConfirmationModel
 @{
-    ViewData["Title"] = "Resend email confirmation";
+    ViewData["Title"] = L["Account.ResendEmailConfirmation.Title"].Value;
 }
 
 <div class="auth-page__header mb-5">
-    <h1 class="auth-page__title mb-2">Resend confirmation</h1>
-    <p class="auth-page__subtitle mb-0">Enter your email to receive a new account confirmation link.</p>
+    <h1 class="auth-page__title mb-2">@L["Account.ResendEmailConfirmation.Heading"]</h1>
+    <p class="auth-page__subtitle mb-0">@L["Account.ResendEmailConfirmation.Subtitle"]</p>
 </div>
 
 <div class="auth-page__form">
@@ -14,17 +14,17 @@
         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
         <div class="mb-4">
-            <label asp-for="Input.Email" class="form-label">Email</label>
+            <label asp-for="Input.Email" class="form-label">@L["Identity.Field.Email"]</label>
             <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true"
                    placeholder="name@example.com"/>
             <span asp-validation-for="Input.Email" class="invalid-feedback"></span>
         </div>
 
-        <button type="submit" class="w-100 btn btn-primary btn-lg">Resend</button>
+        <button type="submit" class="w-100 btn btn-primary btn-lg">@L["Account.ResendEmailConfirmation.Submit"]</button>
     </form>
 
     <div class="text-center mt-4">
-        <a asp-page="./Login" class="small text-decoration-none">Back to sign in</a>
+        <a asp-page="./Login" class="small text-decoration-none">@L["Account.Common.BackToSignIn"]</a>
     </div>
 </div>
 

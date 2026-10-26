@@ -4,14 +4,14 @@
     string? Current(string page) => ManageNavPages.IsActive(ViewContext, page) ? "page" : null;
 }
 <ul class="account-nav">
-    <li><a class="account-nav__link" id="profile" asp-page="./Index" aria-current="@Current(ManageNavPages.Index)">Profile</a></li>
+    <li><a class="account-nav__link" id="profile" asp-page="./Index" aria-current="@Current(ManageNavPages.Index)">@L["Account.Nav.Profile"]</a></li>
     <li><a class="account-nav__link" id="language" asp-page="./Language" aria-current="@Current(ManageNavPages.Language)">@L["Account.Nav.Language"]</a></li>
-    <li><a class="account-nav__link" id="email" asp-page="./Email" aria-current="@Current(ManageNavPages.Email)">Email</a></li>
-    <li><a class="account-nav__link" id="change-password" asp-page="./ChangePassword" aria-current="@Current(ManageNavPages.ChangePassword)">Password</a></li>
+    <li><a class="account-nav__link" id="email" asp-page="./Email" aria-current="@Current(ManageNavPages.Email)">@L["Account.Nav.Email"]</a></li>
+    <li><a class="account-nav__link" id="change-password" asp-page="./ChangePassword" aria-current="@Current(ManageNavPages.ChangePassword)">@L["Account.Nav.Password"]</a></li>
     @if (hasExternalLogins)
     {
-        <li><a class="account-nav__link" id="external-login" asp-page="./ExternalLogins" aria-current="@Current(ManageNavPages.ExternalLogins)">External logins</a></li>
+        <li><a class="account-nav__link" id="external-login" asp-page="./ExternalLogins" aria-current="@Current(ManageNavPages.ExternalLogins)">@L["Account.Nav.ExternalLogins"]</a></li>
     }
-    <li><a class="account-nav__link" id="two-factor" asp-page="./TwoFactorAuthentication" aria-current="@Current(ManageNavPages.TwoFactorAuthentication)">Two-factor authentication</a></li>
-    <li><a class="account-nav__link" id="personal-data" asp-page="./PersonalData" aria-current="@Current(ManageNavPages.PersonalData)">Personal data</a></li>
+    <li><a class="account-nav__link" id="two-factor" asp-page="./TwoFactorAuthentication" aria-current="@Current(ManageNavPages.TwoFactorAuthentication)">@L["Account.Nav.TwoFactor"]</a></li>
+    <li><a class="account-nav__link" id="personal-data" asp-page="./PersonalData" aria-current="@Current(ManageNavPages.PersonalData)">@L["Account.Nav.PersonalData"]</a></li>
 </ul>

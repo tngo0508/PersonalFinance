@@ -32,15 +32,15 @@ public class SetPasswordModel : PageModel
 
     public class InputModel
     {
-        [Required]
-        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Required(ErrorMessage = "Validation.Required")]
+        [StringLength(100, ErrorMessage = "Validation.StringLength.Range", MinimumLength = 6)]
         [DataType(DataType.Password)]
-        [Display(Name = "New password")]
+        [Display(Name = "Identity.Field.NewPassword")]
         public string NewPassword { get; set; }
 
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm new password")]
-        [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
+        [Display(Name = "Identity.Field.ConfirmNewPassword")]
+        [Compare("NewPassword", ErrorMessage = "Identity.Validation.NewPasswordsDoNotMatch")]
         public string ConfirmPassword { get; set; }
     }
 
@@ -86,7 +86,7 @@ public class SetPasswordModel : PageModel
         }
 
         await _signInManager.RefreshSignInAsync(user);
-        StatusMessage = "Your password has been set.";
+        StatusMessage = "Account.SetPassword.Set";
 
         return RedirectToPage();
     }

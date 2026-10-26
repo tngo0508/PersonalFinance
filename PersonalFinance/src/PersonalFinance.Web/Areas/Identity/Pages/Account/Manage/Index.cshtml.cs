@@ -25,6 +25,7 @@ public class IndexModel : PageModel
         _signInManager = signInManager;
     }
 
+    [Display(Name = "Identity.Field.Username")]
     public string Username { get; set; }
 
     [TempData]
@@ -35,8 +36,8 @@ public class IndexModel : PageModel
 
     public class InputModel
     {
-        [Phone]
-        [Display(Name = "Phone number")]
+        [Phone(ErrorMessage = "Validation.Phone")]
+        [Display(Name = "Identity.Field.PhoneNumber")]
         public string PhoneNumber { get; set; }
     }
 
@@ -85,13 +86,13 @@ public class IndexModel : PageModel
             IdentityResult setPhoneResult = await _userManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
             if (!setPhoneResult.Succeeded)
             {
-                StatusMessage = "Unexpected error when trying to set phone number.";
+                StatusMessage = "Account.Profile.PhoneError";
                 return RedirectToPage();
             }
         }
 
         await _signInManager.RefreshSignInAsync(user);
-        StatusMessage = "Your profile has been updated";
+        StatusMessage = "Account.Profile.Updated";
         return RedirectToPage();
     }
 }

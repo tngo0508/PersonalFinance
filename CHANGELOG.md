@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.5.0] - 2026-10-25
+
+### Added
+
+- **Sign-in and Account settings in Vietnamese**: every Identity page is translated, from sign in, register and password reset to the Account settings pages and their navigation (slice L3 of the localization spec, #355).
+  - Titles, labels, help text, buttons, placeholders, validation and status messages all come from the shared resource files; English reads as before.
+  - Status messages are stored as keys and translated when shown, and error messages keep their red style in every language.
+  - The Account emails were already translated in 7.0.0. The deletion date, in the email and on the page, keeps its English format until the shared date and number formatting lands (slice L2).
+
 ## [7.4.0] - 2026-10-25
 
 ### Added

@@ -109,7 +109,7 @@ public class ExternalLoginLockoutTests
             var page = new ExternalLoginModel(signInManager, userManager,
                 sp.GetRequiredService<IUserStore<IdentityUser>>(),
                 NullLogger<ExternalLoginModel>.Instance, new RecordingAccountEmailService(),
-                new InMemoryUserPreferenceService())
+                new InMemoryUserPreferenceService(), TestLocalization.Localizer)
             {
                 PageContext = new PageContext { HttpContext = httpContext },
                 Url = new ContentUrlHelper(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()))

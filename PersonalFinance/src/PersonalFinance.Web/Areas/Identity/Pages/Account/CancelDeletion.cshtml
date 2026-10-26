@@ -1,7 +1,8 @@
 @page
 @model CancelDeletionModel
 @{
-    ViewData["Title"] = "Cancel account deletion";
+    ViewData["Title"] = L["Account.CancelDeletion.Title"].Value;
+    Func<object?, HelperResult> contactLink = @<a asp-area="" asp-controller="Legal" asp-action="Contact">@L["Account.Common.ContactUsLink"]</a>;
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -9,25 +10,24 @@
 @if (Model.Cancelled)
 {
     <div class="alert alert-success" role="status">
-        Your account and data are restored.
+        @L["Account.CancelDeletion.Restored"]
     </div>
-    <p><a class="btn btn-primary" asp-page="./Login">Sign in</a></p>
+    <p><a class="btn btn-primary" asp-page="./Login">@L["Account.Common.SignIn"]</a></p>
 }
 else if (Model.ErrorMessage is not null)
 {
     <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
     <p>
-        Need help? <a asp-area="" asp-controller="Legal" asp-action="Contact">Contact us</a>.
+        @L.NamedHtml("Account.Common.NeedHelpContact", null, ("contactLink", contactLink(null)))
     </p>
 }
 else
 {
     <p>
-        Your account is scheduled for deletion. Cancel to restore your account and all of its data, and to sign in
-        again.
+        @L["Account.CancelDeletion.Scheduled"]
     </p>
     <form method="post">
         <input type="hidden" asp-for="Token"/>
-        <button class="btn btn-primary" type="submit">Cancel deletion</button>
+        <button class="btn btn-primary" type="submit">@L["Account.CancelDeletion.Button"]</button>
     </form>
 }

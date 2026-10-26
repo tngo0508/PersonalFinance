@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Web.Infrastructure.Localization;
@@ -27,6 +28,7 @@ public class RegisterModel : PageModel
     private readonly IAccountEmailService _accountEmails;
     private readonly IUserPreferenceService _preferences;
     private readonly IUserConsentService _consentService;
+    private readonly IStringLocalizer _localizer;
 
     public RegisterModel(
         UserManager<IdentityUser> userManager,
@@ -35,7 +37,8 @@ public class RegisterModel : PageModel
         ILogger<RegisterModel> logger,
         IAccountEmailService accountEmails,
         IUserPreferenceService preferences,
-        IUserConsentService consentService)
+        IUserConsentService consentService,
+        IStringLocalizer localizer)
     {
         _userManager = userManager;
         _userStore = userStore;
@@ -45,6 +48,7 @@ public class RegisterModel : PageModel
         _accountEmails = accountEmails;
         _preferences = preferences;
         _consentService = consentService;
+        _localizer = localizer;
     }
 
     [BindProperty]
@@ -90,7 +94,7 @@ public class RegisterModel : PageModel
         // [Required] on a bool is always satisfied, so acceptance must be enforced explicitly.
         if (!Input.AcceptTerms)
         {
-            ModelState.AddModelError("Input.AcceptTerms", "You must agree to the Terms of Service and Privacy Policy to create an account.");
+            ModelState.AddModelError("Input.AcceptTerms", _localizer["Account.Register.AcceptTermsRequired"]);
         }
 
         if (ModelState.IsValid)

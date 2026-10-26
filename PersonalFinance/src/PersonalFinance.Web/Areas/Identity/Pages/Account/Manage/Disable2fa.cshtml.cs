@@ -59,7 +59,7 @@ public class Disable2faModel : PageModel
         }
 
         _logger.LogInformation(LoggerEventIds.TwoFADisabled, "User has disabled 2fa.");
-        StatusMessage = "2fa has been disabled. You can reenable 2fa when you setup an authenticator app";
+        StatusMessage = "Account.Disable2fa.Disabled";
         return RedirectToPage("./TwoFactorAuthentication");
     }
 }
