@@ -108,7 +108,7 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
         [
             new RecentActivityDto
             {
-                Title = "Salary", Description = "Paycheck - $6,400.00", Date = DateTime.UtcNow.AddDays(-5).AddHours(-1), Type = "Income",
+                Title = "Salary", Description = "Paycheck - $6,400.00", Date = DateTime.UtcNow.Date.AddDays(-5), Type = "Income",
                 Category = "Paycheck", Amount = 6_400m
             },
             new RecentActivityDto

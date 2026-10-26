@@ -34,7 +34,10 @@ public class TimeAgoTagHelper : TagHelper
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
         if (string.IsNullOrEmpty(Datetime) ||
-            !DateTime.TryParse(Datetime, out DateTime parsedDate))
+            // A value without an offset (e.g. the Dashboard's date-only "2026-10-21") is UTC, like every date the
+            // app stores; parsing it as server-local time would shift it by the host's offset.
+            !DateTime.TryParse(Datetime, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTime parsedDate))
         {
             return;
         }
