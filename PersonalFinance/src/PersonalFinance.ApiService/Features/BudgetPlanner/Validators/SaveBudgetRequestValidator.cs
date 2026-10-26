@@ -50,14 +50,14 @@ internal sealed class SaveBudgetRequestValidator : AbstractValidator<SaveBudgetR
         RuleFor(allocation)
             .GreaterThanOrEqualTo(0m)
                 .WithErrorCode(ApiErrorKeys.BudgetPlanner.AllocationRange)
-                .WithMessage("Each category amount must be between $0 and $10,000,000.")
+                .WithMessage("The amount for each category must be between $0 and $10,000,000.")
                 .WithState(_ => AmountRangeArgs)
             .LessThanOrEqualTo(MaxAmount)
                 .WithErrorCode(ApiErrorKeys.BudgetPlanner.AllocationRange)
-                .WithMessage("Each category amount must be between $0 and $10,000,000.")
+                .WithMessage("The amount for each category must be between $0 and $10,000,000.")
                 .WithState(_ => AmountRangeArgs)
             .Must(value => value == Math.Round(value, 2))
                 .WithErrorCode(ApiErrorKeys.BudgetPlanner.AllocationWholeCents)
-                .WithMessage("Category amounts can have at most two decimal places.");
+                .WithMessage("The amount of each category can have at most two decimal places.");
     }
 }
