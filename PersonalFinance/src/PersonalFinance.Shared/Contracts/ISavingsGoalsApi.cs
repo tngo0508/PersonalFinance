@@ -33,4 +33,38 @@ public interface ISavingsGoalsApi
     /// </summary>
     [Delete("/api/SavingsGoals/{id}")]
     Task<DeleteSavingsGoalResponseDto> DeleteSavingsGoalAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists a goal's Contributions, newest first.
+    /// </summary>
+    [Get("/api/SavingsGoals/{goalId}/contributions")]
+    Task<List<ContributionDto>> GetContributionsAsync(int goalId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records a deposit (positive amount) or withdrawal (negative) on a goal.
+    /// </summary>
+    [Post("/api/SavingsGoals/{goalId}/contributions")]
+    Task<SaveContributionResponseDto> AddContributionAsync(int goalId, [Body] SaveContributionRequestDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Edits a Contribution's amount, date or note.
+    /// </summary>
+    [Put("/api/SavingsGoals/{goalId}/contributions/{contributionId}")]
+    Task<SaveContributionResponseDto> UpdateContributionAsync(int goalId, int contributionId,
+        [Body] SaveContributionRequestDto request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a Contribution.
+    /// </summary>
+    [Delete("/api/SavingsGoals/{goalId}/contributions/{contributionId}")]
+    Task<DeleteContributionResponseDto> DeleteContributionAsync(int goalId, int contributionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Corrects a goal's saved amount to a figure, recording an Adjustment of the difference.
+    /// </summary>
+    [Post("/api/SavingsGoals/{goalId}/balance-correction")]
+    Task<SaveContributionResponseDto> CorrectBalanceAsync(int goalId, [Body] CorrectBalanceRequestDto request,
+        CancellationToken cancellationToken = default);
 }

@@ -252,6 +252,22 @@ public class DataExportSavingsGoalDto
     public bool IsCompleted { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
+
+    /// <summary>The goal's deposits and withdrawals, oldest first.</summary>
+    public List<DataExportContributionDto> Contributions { get; set; } = [];
+}
+
+public class DataExportContributionDto
+{
+    public DateOnly Date { get; set; }
+
+    /// <summary>Positive for a deposit, negative for a withdrawal.</summary>
+    public decimal Amount { get; set; }
+
+    /// <summary>Regular, Opening (the starting amount) or Adjustment (a balance correction).</summary>
+    public string Kind { get; set; } = string.Empty;
+
+    public string? Note { get; set; }
 }
 
 public class DataExportSavedArticleDto
