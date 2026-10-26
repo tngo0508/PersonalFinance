@@ -78,7 +78,7 @@ Two paths, both in `PersonalFinance.ApiService/Infrastructure/`; no controller b
 ### 2.3 Resolving it (`Web`)
 
 - **`ApiErrorMessages`** stays a static helper and gains the localizer as a parameter, like `NotificationText`:
-  `ForUser(IStringLocalizer, Exception, string fallbackKey)`, `FromApiException(IStringLocalizer, ApiException)`, and
+  `ForUser(IStringLocalizer, Exception, string fallback)`, `FromApiException(IStringLocalizer, ApiException)`, and
   `Fields(IStringLocalizer, ApiException)` → `IReadOnlyDictionary<string, IReadOnlyList<string>>` for pages that render
   errors under their inputs (Money Priorities). Resolution of one entry: `localizer[key]`; `ResourceNotFound` → the
   entry's `message`; placeholders filled by `LocalizerExtensions.FormatNamed` after each arg is formatted (2.5).
@@ -90,8 +90,10 @@ Two paths, both in `PersonalFinance.ApiService/Infrastructure/`; no controller b
 - **Web's own messages become keys** in `en.json` / `vi.json` under `Errors.`: `Errors.Unavailable` ("The service is
   temporarily unavailable. Please try again."), `Errors.Unexpected`, `Errors.Server`, `Errors.NotFound`,
   `Errors.Conflict`, `Errors.InvalidRequest`, `Errors.Generic`. The `const string`s on `JsonApiErrorsFilter` go; the
-  filter resolves the keys through the localizer it is given by DI. Callers that pass their own English fallback
-  (`ForUser(ex, "Could not save the budget.")`) pass a key instead.
+  filter resolves the keys through the localizer it is given by DI. Callers pass their own fallback as text already
+  in the user's Language (`ForUser(_localizer, ex, _localizer["BudgetPlanner.Message.SaveFailed"])`); Admin passes
+  English. Because Admin shares `ApiErrorMessages`, its status fallbacks (`Errors.*`) resolve in the admin's UI
+  Language; Admin's own messages stay English.
 - **JavaScript** keeps reading `{ "error": "…" }` from Web's JSON endpoints and shows it; the text is already in the
   user's Language. No `<js-strings>` keys are added for API errors. Pages whose JS renders per-field errors receive the
   field map from the Web action as JSON, resolved server-side.
@@ -105,8 +107,10 @@ Two paths, both in `PersonalFinance.ApiService/Infrastructure/`; no controller b
 `en.json` is the display text; the ApiService `message` is never shown for a converted Feature. Two tests keep it so:
 
 - `ApiErrorKeysTests`: every `const string` on `ApiErrorKeys` (reflection over the nested classes) has an `en.json`
-  entry, and the entry's placeholders are a subset of the arg names the key is used with. Fails the build on a missing
-  key, which is how a forgotten translation surfaces, instead of English leaking at runtime.
+  entry, follows the naming rule, and is declared once. Fails the build on a missing key, which is how a forgotten
+  translation surfaces, instead of English leaking at runtime. Placeholder coverage is per Feature: each converted
+  Feature has a test that resolves every real failure (validators) or every key with its args (service rejections)
+  under `en` and asserts no `{` or `}` remains.
 - `ApiErrorArchitectureTests`: in every converted Feature folder, no `BadRequest(` whose argument is a string literal or
   an anonymous object, no `throw new ArgumentException(`/`KeyNotFoundException(` in a service, and no
   `.WithErrorCode("` with a literal. Converted Features are listed in the test and the list grows per slice; slice 3

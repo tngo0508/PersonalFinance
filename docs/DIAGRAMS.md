@@ -1301,7 +1301,7 @@ Drawn from `Web/Infrastructure/Localization/`, `Shared/Helpers/MoneyFormatter.cs
 `Web/Services/UserPreferenceService.cs`, `AccountEmailService.cs`,
 `Web/TagHelpers/JsStringsTagHelper.cs`, `Web/Controllers/LanguageController.cs`, `Web/Views/Shared/_LanguageSwitcher.cshtml`, `Web/wwwroot/js/core/i18n.js`,
 `Web/tools/i18n-translate.js`, `Web/tools/i18n-report.js`, `ApiService/Infrastructure/ApiErrorException*.cs`,
-`Web/Infrastructure/ApiErrorMessages.cs`, `ApiErrorArgFormat.cs` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
+`ErrorArgs.cs`, `ValidationResultExtensions.cs`, `Web/Infrastructure/ApiErrorMessages.cs`, `ApiErrorArgFormat.cs` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
 A string that is not shaped like a key (English still on attributes of pages not yet translated) is shown as written,
 without the 3402 warning.
 

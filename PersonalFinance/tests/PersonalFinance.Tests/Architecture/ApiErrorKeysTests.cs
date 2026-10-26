@@ -53,9 +53,16 @@ public class ApiErrorKeysTests
         Assert.True(duplicates.Count == 0, "These ApiErrorKeys values are declared more than once:\n" + string.Join("\n", duplicates));
     }
 
-    private static IEnumerable<(string Feature, string Value)> AllKeys() =>
-        typeof(ApiErrorKeys).GetNestedTypes()
+    private static List<(string Feature, string Value)> AllKeys()
+    {
+        List<(string Feature, string Value)> keys = typeof(ApiErrorKeys).GetNestedTypes()
             .SelectMany(feature => feature.GetFields(BindingFlags.Public | BindingFlags.Static)
                 .Where(field => field.IsLiteral && field.FieldType == typeof(string))
-                .Select(field => (feature.Name, (string)field.GetRawConstantValue()!)));
+                .Select(field => (feature.Name, (string)field.GetRawConstantValue()!)))
+            .ToList();
+
+        // Guards against a vacuous pass if reflection stops finding the nested Feature classes.
+        Assert.NotEmpty(keys);
+        return keys;
+    }
 }

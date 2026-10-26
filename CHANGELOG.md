@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`ApiErrorMessages` resolves through the localizer**: Web looks each key up in `en.json` / `vi.json` and formats the arguments in the request culture, money through `MoneyFormatter`; the English message is shown only for a key Web does not know.
   - Bodies without keys, from Features not yet converted, are still read as before.
-- **Web's error fallbacks are keys**: the unavailable, unexpected, server, not found, conflict, invalid request and generic messages are `Errors.*` keys, translated like any other text, and callers pass a key instead of an English fallback.
+- **Web's error fallbacks are keys**: the unavailable, unexpected, server, not found, conflict, invalid request and generic messages are `Errors.*` keys, translated like any other text, and callers pass their own fallback as already-localized text.
 - **ASP.NET validation responses show one message**: a `ProblemDetails` body is shown as its status code's message (invalid request, not found, conflict or a generic error), never parsed for text.
 
 ### Removed

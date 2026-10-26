@@ -182,7 +182,8 @@ A Web controller is named after its route, so its name can differ from its Featu
 4. **Validators** in `PersonalFinance.ApiService/Features/<Feature>/Validators/` (picked up automatically by
    `AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true)`). Every rule sets
    `.WithErrorCode(ApiErrorKeys.<Feature>.<Rule>)`, with the key's English in `Web/Resources/i18n/en.json`, and passes
-   each placeholder through `ErrorArgs` (`Text`, `Number`, `Money`); a service that rejects a request throws
+   each placeholder through `ErrorArgs` (`Text`, `Number`, `Money`), attached to the rule with
+   `.WithState(_ => ErrorArgs.…)` and read back by `ToApiError()` from `CustomState`; a service that rejects a request throws
    `ApiErrorException` instead of returning `BadRequest("…")`. Web resolves both with no extra code
    ([ADR 0017](adr/0017-api-errors-carry-localization-keys.md),
    [spec §4](specs/localized-api-errors.md#4-adding-a-rejection-future-per-feature)); `ApiErrorKeysTests` and
