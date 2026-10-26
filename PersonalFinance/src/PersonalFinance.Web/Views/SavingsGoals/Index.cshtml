@@ -1,12 +1,17 @@
 @using Microsoft.AspNetCore.Html
 @using PersonalFinance.Shared.DTOs.SavingsGoals
 @using PersonalFinance.Shared.Enums
+@using PersonalFinance.Web.Models.SavingsGoals
 @{
     ViewData["Title"] = L["SavingsGoals.Title"].Value;
     var goals = ViewData["Goals"] as List<SavingsGoalDto> ?? new List<SavingsGoalDto>();
     var today = ViewData["Today"] as DateOnly? ?? DateOnly.FromDateTime(DateTime.UtcNow);
     // <input type="date"> takes ISO yyyy-MM-dd whatever the page culture; no Contribution is dated after today.
     var todayIso = today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+    var summary = ViewData["Summary"] as SavingsGoalsSummaryViewModel ?? SavingsGoalsSummaryViewModel.From(goals, today);
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    string Money(decimal amount) => MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code);
+    string Month(DateOnly date) => date.ToString("Y", culture);
 }
 
 @section Styles {
@@ -69,6 +74,41 @@
     <!-- Goals Grid -->
     @if (goals.Any())
     {
+        @* Summary header: worked out by Web from the goal list (spec #395). *@
+        <section class="savings-summary" aria-label="@L["SavingsGoals.Summary.Label"]">
+            <div class="savings-summary__tile">
+                <span class="savings-summary__label">@L["SavingsGoals.Summary.TotalSaved"]</span>
+                <span class="savings-summary__value" data-summary="total-saved">@Money(summary.TotalSavedActive)</span>
+            </div>
+            <div class="savings-summary__tile">
+                <span class="savings-summary__label">@L["SavingsGoals.Summary.SavedThisMonth"]</span>
+                <span class="savings-summary__value" data-summary="saved-this-month">@Money(summary.SavedThisMonth)</span>
+            </div>
+            <div class="savings-summary__tile">
+                <span class="savings-summary__label">@L["SavingsGoals.Summary.OnTrack"]</span>
+                @if (summary.DatedCount > 0)
+                {
+                    <span class="savings-summary__value" data-summary="on-track">@L.Named("SavingsGoals.Summary.OnTrackValue", ("count", summary.OnTrackCount), ("total", summary.DatedCount))</span>
+                }
+                else
+                {
+                    <span class="savings-summary__note" data-summary="on-track">@L["SavingsGoals.Summary.NoDatedGoals"]</span>
+                }
+            </div>
+            <div class="savings-summary__tile">
+                <span class="savings-summary__label">@L["SavingsGoals.Summary.NextTarget"]</span>
+                @if (summary.NextTargetDate is { } nextDate)
+                {
+                    <span class="savings-summary__value" data-summary="next-target">@nextDate.ToString("d", culture)</span>
+                    <span class="savings-summary__note">@summary.NextTargetGoalName</span>
+                }
+                else
+                {
+                    <span class="savings-summary__note" data-summary="next-target">@L["SavingsGoals.Summary.NoNextTarget"]</span>
+                }
+            </div>
+        </section>
+
         <div class="savings-goals-grid">
             @foreach (var goal in goals)
             {
@@ -175,6 +215,47 @@
                                 </span>
                             }
                         </div>
+
+                        <!-- Pace: descriptive, never advice; status as text, not colour alone -->
+                        @if (goal.Pace is { } pace)
+                        {
+                        <div class="savings-goal-pace savings-goal-pace--@pace.Status.ToString().ToLowerInvariant()"
+                             data-pace-status="@pace.Status">
+                            <p class="savings-goal-pace__status">
+                                <span class="savings-goal-pace__label">@L[$"SavingsGoals.Pace.Status.{pace.Status}"]</span>
+                                @if (pace.Status == PaceStatus.PastDue)
+                                {
+                                    @L.Named("SavingsGoals.Pace.Sentence.PastDue", ("amount", Money(remaining)))
+                                }
+                                else
+                                {
+                                    @L[$"SavingsGoals.Pace.Sentence.{pace.Status}"]
+                                }
+                            </p>
+                            @if (pace.NeededPerMonth is { } needed && goal.TargetDate is { } dueDate)
+                            {
+                                <p class="savings-goal-pace__needed">@L.Named("SavingsGoals.Pace.NeededPerMonth", ("amount", MoneyFormatter.Format(needed, SupportedCurrencies.Default.Code)), ("month", Month(DateOnly.FromDateTime(dueDate))))</p>
+                            }
+                            @if (pace.Status != PaceStatus.Reached)
+                            {
+                                <p class="savings-goal-pace__projection">
+                                    @if (pace.ProjectedFinish is { } finish)
+                                    {
+                                        @L.Named("SavingsGoals.Pace.Projection", ("month", Month(finish)))
+                                    }
+                                    else if (pace.RateState == PaceRateState.Stalled)
+                                    {
+                                        @L["SavingsGoals.Pace.NoRecent"]
+                                    }
+                                    else if (pace.RateState == PaceRateState.Unknown)
+                                    {
+                                        @L["SavingsGoals.Pace.NotEnoughHistory"]
+                                    }
+                                </p>
+                            }
+                            <p class="savings-goal-pace__month">@L.Named("SavingsGoals.Card.SavedThisMonth", ("amount", MoneyFormatter.Format(goal.SavedThisMonth, SupportedCurrencies.Default.Code)))</p>
+                        </div>
+                        }
 
                         @if (goal.Contributions.Count == 0 && goal.CurrentAmount == 0)
                         {

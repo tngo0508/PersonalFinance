@@ -76,4 +76,6 @@ public sealed class SavingsGoalResponseDto
     public DateTime? UpdatedAtUtc { get; set; }
     public double ProgressPercent { get; set; }
     public List<ContributionDto> Contributions { get; set; } = [];
+    public decimal SavedThisMonth { get; set; }
+    public SavingsGoalPaceDto Pace { get; set; } = new();
 }

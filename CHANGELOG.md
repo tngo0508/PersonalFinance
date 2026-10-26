@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [8.2.0] - 2026-10-26
+
+### Added
+
+- **Savings Goals show their Pace**: each card says in words where the goal stands against its target date, what is still needed per month, and when the recent pace would reach it (slice 2 of spec #395).
+  - Statuses, first that applies: Reached, No target date, Past due, Just started (under 30 days old), then Ahead, On track or Behind against the line from the goal's start to its date, with a band of 5% of the target.
+  - The projection uses the net of the last 90 days' Contributions the user recorded; the opening amount and balance corrections are left out. Without enough history, or with no recent saving, the card says so instead.
+  - Each card shows what was saved this month.
+  - The wording describes and never tells the user what to do.
+- **A summary above the goals**: saved in active goals, saved this month, how many dated goals are on track, and the next target date with its goal's name.
+
 ## [8.1.0] - 2026-10-25
 
 ### Added

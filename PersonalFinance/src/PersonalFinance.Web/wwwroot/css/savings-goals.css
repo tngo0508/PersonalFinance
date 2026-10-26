@@ -343,6 +343,65 @@
 }
 
 /* ==========================================================================
+   Summary header and Pace line
+   ========================================================================== */
+
+/* Four tiles in a row, wrapping to two per row on a phone. */
+.savings-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.savings-summary__tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    background: var(--app-surface);
+}
+
+.savings-summary__label {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.savings-summary__value {
+    font-family: var(--app-font-mono);
+    font-size: 1.25rem;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.savings-summary__note {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+    overflow-wrap: anywhere;
+}
+
+.savings-goal-pace {
+    margin: 0 0 0.75rem;
+    font-size: var(--app-font-size-small);
+}
+
+.savings-goal-pace p {
+    margin: 0 0 0.25rem;
+}
+
+.savings-goal-pace__label {
+    margin-right: 0.375rem;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.savings-goal-pace__needed,
+.savings-goal-pace__projection,
+.savings-goal-pace__month {
+    color: var(--app-text-muted);
+}
+
+/* ==========================================================================
    Add Contribution form, history and balance correction
    ========================================================================== */
 
