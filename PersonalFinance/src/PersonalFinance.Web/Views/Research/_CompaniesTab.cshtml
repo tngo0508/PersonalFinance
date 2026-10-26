@@ -12,60 +12,54 @@
          data-releases-url="@Url.Action("Releases", "Research")"
          data-initial-ticker="@Model.CompanyTicker">
     <div class="research-card">
-        <h2 class="research-card__title">Look up a company</h2>
-        <p class="research-card__subtitle">
-            Look up any company registered with the SEC. Figures come from its own filings; there are no prices and no
-            recommendations.
-        </p>
+        <h2 class="research-card__title">@L["Research.Companies.Title"]</h2>
+        <p class="research-card__subtitle">@L["Research.Companies.Subtitle"]</p>
 
         <form class="research-companies__search" method="get" asp-controller="Research" asp-action="Index"
               role="search" data-research-company-form>
             <input type="hidden" name="tab" value="companies"/>
-            <label class="research-companies__label" for="research-company-input">Ticker or company name</label>
+            <label class="research-companies__label" for="research-company-input">@L["Research.Companies.InputLabel"]</label>
             <div class="research-companies__row">
                 <div class="research-companies__combo">
                     <input type="text" id="research-company-input" name="ticker" class="research-companies__input"
                            role="combobox" aria-autocomplete="list" aria-expanded="false"
                            aria-controls="research-company-suggestions" autocomplete="off" autocapitalize="characters"
-                           spellcheck="false" maxlength="40" placeholder="e.g. MSFT or Microsoft"
+                           spellcheck="false" maxlength="40" placeholder="@L["Research.Companies.InputPlaceholder"]"
                            value="@Model.CompanyTicker"/>
                     <ul class="research-companies__suggestions" id="research-company-suggestions" role="listbox"
-                        aria-label="Matching companies" hidden></ul>
+                        aria-label="@L["Research.Companies.SuggestionsLabel"]" hidden></ul>
                 </div>
-                <button type="submit" class="research-chip research-companies__submit">Look up</button>
+                <button type="submit" class="research-chip research-companies__submit">@L["Research.Companies.Submit"]</button>
             </div>
         </form>
 
         @* A message in place of a profile: a fund, a ticker SEC does not list, too many lookups, or SEC unreachable. *@
         <div class="research-companies__message" data-research-company-message hidden></div>
-        <p class="research-companies__loading" data-research-company-loading role="status" hidden>Loading the company…</p>
+        <p class="research-companies__loading" data-research-company-loading role="status" hidden>@L["Research.Companies.Loading"]</p>
 
         <div class="research-companies__profile" data-research-company-profile hidden>
             <header class="research-companies__identity">
                 <h3 class="research-companies__name" data-field="name" tabindex="-1"></h3>
                 <dl class="research-companies__facts">
-                    <div><dt>Ticker</dt><dd data-field="ticker"></dd></div>
-                    <div><dt>Exchange</dt><dd data-field="exchange"></dd></div>
-                    <div><dt>CIK</dt><dd data-field="cik"></dd></div>
-                    <div><dt>SIC industry</dt><dd data-field="industry"></dd></div>
-                    <div><dt>SEC industry office</dt><dd data-field="office"></dd></div>
-                    <div><dt>Incorporated in</dt><dd data-field="incorporated"></dd></div>
-                    <div><dt>Fiscal year ends</dt><dd data-field="fiscal-year-end"></dd></div>
+                    <div><dt>@L["Research.Companies.Fact.Ticker"]</dt><dd data-field="ticker"></dd></div>
+                    <div><dt>@L["Research.Companies.Fact.Exchange"]</dt><dd data-field="exchange"></dd></div>
+                    <div><dt>@L["Research.Companies.Fact.Cik"]</dt><dd data-field="cik"></dd></div>
+                    <div><dt>@L["Research.Js.Sectors.Industry"]</dt><dd data-field="industry"></dd></div>
+                    <div><dt>@L["Research.Js.Sectors.Office"]</dt><dd data-field="office"></dd></div>
+                    <div><dt>@L["Research.Companies.Fact.Incorporated"]</dt><dd data-field="incorporated"></dd></div>
+                    <div><dt>@L["Research.Companies.Fact.FiscalYearEnd"]</dt><dd data-field="fiscal-year-end"></dd></div>
                 </dl>
             </header>
 
-            <p class="research-companies__notice" data-field="ifrs-note" hidden>
-                This company reports under IFRS, which this page does not read, so some or all of its figures show as
-                "Not reported".
-            </p>
+            <p class="research-companies__notice" data-field="ifrs-note" hidden>@L["Research.Companies.IfrsNote"]</p>
 
-            <h3 class="research-companies__section">Annual figures</h3>
+            <h3 class="research-companies__section">@L["Research.Companies.AnnualFigures"]</h3>
             <p class="research-companies__hint" data-field="years-note"></p>
             @* The charts repeat the table below, which is their accessible equivalent. *@
             <div class="research-companies__charts" data-research-company-charts aria-hidden="true"></div>
             <div class="research-tooltip" id="research-company-tooltip" aria-hidden="true" hidden></div>
             <div class="research-table-wrap research-companies__table" data-research-company-table tabindex="0"
-                 role="region" aria-label="Annual figures"></div>
+                 role="region" aria-label="@L["Research.Companies.AnnualFigures"]"></div>
 
             @* Filled after the profile, from this controller's Releases action: a slow or failed read never delays the
                profile. Hidden unless the lookup says the profile's press releases are available (ApiService's
@@ -73,57 +67,40 @@
                toggled with hidden. *@
             <section class="research-companies__releases" data-research-company-releases
                      aria-labelledby="research-company-releases-title" hidden>
-                <h3 class="research-companies__section" id="research-company-releases-title">Press releases</h3>
-                <p class="research-companies__hint">Announcements the company attached to its SEC filings.</p>
-                <p class="research-companies__releases-loading" data-research-releases-loading hidden>
-                    Loading press releases…
-                </p>
+                <h3 class="research-companies__section" id="research-company-releases-title">@L["Research.Companies.Releases.Title"]</h3>
+                <p class="research-companies__hint">@L["Research.Companies.Releases.Hint"]</p>
+                <p class="research-companies__releases-loading" data-research-releases-loading hidden>@L["Research.Companies.Releases.Loading"]</p>
                 <ol class="research-companies__release-list" data-research-releases-list hidden></ol>
-                <p class="research-companies__releases-empty" data-research-releases-empty hidden>
-                    No press releases attached to SEC filings in the last 12 months.
-                </p>
+                <p class="research-companies__releases-empty" data-research-releases-empty hidden>@L["Research.Companies.Releases.Empty"]</p>
                 <section class="unavailable-state research-companies__releases-unavailable"
                          data-research-releases-unavailable hidden>
                     <div class="unavailable-state__body">
-                        <h4 class="unavailable-state__title">Press releases are unavailable right now</h4>
-                        <p class="unavailable-state__text">The rest of the profile is unaffected. Please try again.</p>
+                        <h4 class="unavailable-state__title">@L["Research.Companies.Releases.Unavailable"]</h4>
+                        <p class="unavailable-state__text">@L["Research.Companies.Releases.UnavailableText"]</p>
                     </div>
-                    <button type="button" class="btn btn-primary btn-sm" data-research-releases-retry>Retry</button>
+                    <button type="button" class="btn btn-primary btn-sm" data-research-releases-retry>@L["Shell.Unavailable.Retry"]</button>
                 </section>
             </section>
 
-            <h3 class="research-companies__section">Recent filings</h3>
+            <h3 class="research-companies__section">@L["Research.Companies.RecentFilings"]</h3>
             <ol class="research-companies__filings" data-research-company-filings></ol>
             <p class="research-companies__all-filings">
                 <a data-field="all-filings" href="https://www.sec.gov/edgar/search/" target="_blank" rel="noopener noreferrer">
-                    All filings on EDGAR<span class="visually-hidden"> (opens in a new tab)</span>
+                    @L["Research.Companies.AllFilings"]<span class="visually-hidden"> @L["Research.Common.OpensInNewTab"]</span>
                 </a>
             </p>
         </div>
 
-        <p class="research-card__source">Source: SEC EDGAR</p>
+        <p class="research-card__source">@L["Research.Source.Edgar"]</p>
     </div>
 
-    <aside class="research-panel" aria-label="About the company data">
-        <h2 class="research-panel__title">About this data</h2>
-        <p>
-            Every figure is as the company reported it to the SEC in its annual reports (Form 10-K, or 20-F and 40-F
-            for some foreign companies), in US dollars under US accounting rules (US GAAP). A restated figure replaces
-            the original.
-        </p>
-        <p>
-            There are no share prices, market values or recommendations here. A figure the company did not report in
-            this form shows as "Not reported", never as zero, and nothing is converted from another currency.
-        </p>
-        <p>
-            Margins and growth are worked out from the reported figures. They show as "Not shown" when a figure is
-            missing or when the base is zero or negative. Liabilities include anything the company does not report as equity.
-        </p>
-        <p>
-            Banks and insurers often report revenue differently, so their revenue may be missing. Shares outstanding
-            and Public float are taken from the cover of each annual report.
-        </p>
-        <h2 class="research-panel__title">Data as of</h2>
-        <p class="research-panel__as-of" data-field="as-of">Look up a company to see its latest filing date.</p>
+    <aside class="research-panel" aria-label="@L["Research.Companies.PanelLabel"]">
+        <h2 class="research-panel__title">@L["Research.Common.AboutThisData"]</h2>
+        <p>@L["Research.Companies.About1"]</p>
+        <p>@L["Research.Companies.About2"]</p>
+        <p>@L["Research.Companies.About3"]</p>
+        <p>@L["Research.Companies.About4"]</p>
+        <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
+        <p class="research-panel__as-of" data-field="as-of">@L["Research.Js.Companies.AsOfPrompt"]</p>
     </aside>
 </section>

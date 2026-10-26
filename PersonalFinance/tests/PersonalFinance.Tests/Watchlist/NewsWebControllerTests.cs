@@ -73,7 +73,7 @@ public class NewsWebControllerTests
     private static readonly DateTimeOffset Now = new(2026, 10, 23, 12, 0, 0, TimeSpan.Zero);
 
     private static NewsController CreateController(INewsApi api) =>
-        new(api, new FixedTimeProvider(Now), NullLogger<NewsController>.Instance)
+        new(api, new FixedTimeProvider(Now), NullLogger<NewsController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

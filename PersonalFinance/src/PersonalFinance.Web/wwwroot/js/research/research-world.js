@@ -1,4 +1,4 @@
-/* global d3, topojson */
+/* global d3, topojson, PFI18n */
 /**
  * Research page, World tab: a D3 choropleth of stock-market capitalisation by country, one year at a time, in an
  * Equal Earth projection without Antarctica. Reads the World snapshot from the JSON data island rendered by
@@ -35,28 +35,33 @@
     /**
      * Format a percentage of GDP to one decimal place.
      * @param {number} value - The percentage.
-     * @returns {string} The formatted percentage, e.g. 172.4%.
+     * @returns {string} The formatted percentage, e.g. 172.4%, in the page culture.
      */
     function formatPercent (value) {
-        return `${value.toFixed(1)}%`;
+        return page.formatPercent(value, 1);
     }
 
-    // The two metrics of the switch: which field they read, their seven thresholds (eight steps), and their labels.
+    // The two metrics of the switch: which field they read, their seven thresholds (eight steps), and the keys of
+    // their labels. The step labels follow the page culture ($1B, 10%).
+    const MONEY_THRESHOLDS = [1e9, 1e10, 5e10, 1e11, 5e11, 1e12, 5e12];
+    const PERCENT_THRESHOLDS = [10, 25, 50, 75, 100, 150, 200];
     const METRICS = {
         marketCap: {
-            label: 'Market cap',
-            legendTitle: 'Market cap (US$)',
+            labelKey: 'Research.Js.World.MarketCap',
+            legendTitleKey: 'Research.Js.World.LegendMarketCap',
+            noneKey: 'Research.Js.World.NoneMarketCap',
             field: 'marketCap',
-            thresholds: [1e9, 1e10, 5e10, 1e11, 5e11, 1e12, 5e12],
-            stepLabels: ['$1B', '$10B', '$50B', '$100B', '$500B', '$1T', '$5T'],
+            thresholds: MONEY_THRESHOLDS,
+            stepLabels: MONEY_THRESHOLDS.map((t) => PFI18n.formatCompactMoney(t, 'USD')),
             format: formatMoney
         },
         percentOfGdp: {
-            label: 'Market cap as % of GDP',
-            legendTitle: 'Market cap as % of GDP',
+            labelKey: 'Research.Js.World.PercentOfGdpLabel',
+            legendTitleKey: 'Research.Js.World.PercentOfGdpLabel',
+            noneKey: 'Research.Js.World.NonePercentOfGdp',
             field: 'percentOfGdp',
-            thresholds: [10, 25, 50, 75, 100, 150, 200],
-            stepLabels: ['10%', '25%', '50%', '75%', '100%', '150%', '200%'],
+            thresholds: PERCENT_THRESHOLDS,
+            stepLabels: PERCENT_THRESHOLDS.map((t) => page.formatPercent(t, 0)),
             format: formatPercent
         }
     };
@@ -132,17 +137,19 @@
         return page.createTooltip(tooltip, (line, name, figures, year) => {
             const lines = [line(name, 'research-tooltip__name')];
             if (!figures) {
-                lines.push(line(`No data for ${year}`, 'research-tooltip__muted'));
+                lines.push(line(PFI18n.t('Research.Js.World.NoDataFor', { year }), 'research-tooltip__muted'));
             } else {
                 const cap = document.createElement('span');
                 cap.className = 'research-tooltip__line';
-                cap.append(line(formatMoney(figures.marketCap), 'research-tooltip__value'), ' market cap');
+                cap.append(line(formatMoney(figures.marketCap), 'research-tooltip__value'), ' ',
+                    PFI18n.t('Research.Js.World.TooltipMarketCap'));
                 const share = document.createElement('span');
                 share.className = 'research-tooltip__line';
-                share.append(figures.percentOfGdp === null || figures.percentOfGdp === undefined
-                    ? line('No GDP figure', 'research-tooltip__muted')
+                const noGdp = figures.percentOfGdp === null || figures.percentOfGdp === undefined;
+                share.append(noGdp
+                    ? line(PFI18n.t('Research.Js.World.NoGdp'), 'research-tooltip__muted')
                     : line(formatPercent(figures.percentOfGdp), 'research-tooltip__value'),
-                figures.percentOfGdp === null || figures.percentOfGdp === undefined ? '' : ' of GDP');
+                noGdp ? '' : ` ${PFI18n.t('Research.Js.World.TooltipOfGdp')}`);
                 lines.push(cap, share, line(year, 'research-tooltip__muted'));
             }
             return lines;
@@ -162,12 +169,12 @@
         }
         const labels = colours.steps.map((_, i) => {
             if (i === 0) {
-                return `Under ${metric.stepLabels[0]}`;
+                return PFI18n.t('Research.Js.World.LegendUnder', { value: metric.stepLabels[0] });
             }
             if (i === STEPS - 1) {
-                return `${metric.stepLabels[i - 1]} or more`;
+                return PFI18n.t('Research.Js.World.LegendOrMore', { value: metric.stepLabels[i - 1] });
             }
-            return `${metric.stepLabels[i - 1]} to ${metric.stepLabels[i]}`;
+            return PFI18n.t('Research.Js.Common.FromTo', { from: metric.stepLabels[i - 1], to: metric.stepLabels[i] });
         });
         const item = (label, className, background) => {
             const li = document.createElement('li');
@@ -183,10 +190,10 @@
             li.append(swatch, text);
             return li;
         };
-        legend.setAttribute('aria-label', metric.legendTitle);
+        legend.setAttribute('aria-label', PFI18n.t(metric.legendTitleKey));
         legend.replaceChildren(
             ...labels.map((label, i) => item(label, 'research-world__swatch', colours.steps[i])),
-            item('No data', 'research-world__swatch research-world__swatch--nodata', null)
+            item(PFI18n.t('Research.Js.World.NoData'), 'research-world__swatch research-world__swatch--nodata', null)
         );
     }
 
@@ -287,12 +294,16 @@
             const reporting = Array.from(years[periodIndex].values())
                 .filter((figures) => figures[metric.field] !== null && figures[metric.field] !== undefined);
             if (reporting.length === 0) {
-                return `${year}: no country has a ${metric.label.toLowerCase()} figure.`;
+                return PFI18n.t(metric.noneKey, { year });
             }
             const largest = reporting.reduce((best, figures) =>
                 (figures[metric.field] > best[metric.field] ? figures : best));
-            return `${metric.label} by country, ${year}: ${reporting.length} countries have data. ` +
-                `Highest: ${largest.name}, ${metric.format(largest[metric.field])}.`;
+            return PFI18n.plural('Research.Js.World.Summary', reporting.length, {
+                metric: PFI18n.t(metric.labelKey),
+                year,
+                name: largest.name,
+                value: metric.format(largest[metric.field])
+            });
         }
 
         /**
@@ -301,7 +312,7 @@
          */
         function describe () {
             const text = summary();
-            svg.attr('aria-label', `World map. ${text}`);
+            svg.attr('aria-label', PFI18n.t('Research.Js.World.MapLabel', { summary: text }));
             if (subtitle) {
                 subtitle.textContent = text;
             }
@@ -345,14 +356,16 @@
             const rows = period.countries.map((value) => [
                 data.countries[value.country].name,
                 formatMoney(value.marketCap),
-                value.percentOfGdp === null || value.percentOfGdp === undefined ? 'No data' : formatPercent(value.percentOfGdp)
+                value.percentOfGdp === null || value.percentOfGdp === undefined
+                    ? PFI18n.t('Research.Js.World.NoData')
+                    : formatPercent(value.percentOfGdp)
             ]);
             return {
-                caption: `Market capitalisation of listed domestic companies by country, ${period.period}`,
+                caption: PFI18n.t('Research.Js.World.TableCaption', { period: period.period }),
                 columns: [
-                    { label: 'Country', numeric: false },
-                    { label: 'Market cap', numeric: true },
-                    { label: '% of GDP', numeric: true }
+                    { label: PFI18n.t('Research.Js.World.Country'), numeric: false },
+                    { label: PFI18n.t('Research.Js.World.MarketCap'), numeric: true },
+                    { label: PFI18n.t('Research.Js.World.PercentOfGdp'), numeric: true }
                 ],
                 rows
             };
@@ -407,7 +420,7 @@
         if (!features) {
             const message = document.createElement('p');
             message.className = 'research-card__subtitle';
-            message.textContent = 'The map could not be drawn. The table view still lists every country.';
+            message.textContent = PFI18n.t('Research.Js.World.MapFailed');
             host.replaceChildren(message);
             return;
         }

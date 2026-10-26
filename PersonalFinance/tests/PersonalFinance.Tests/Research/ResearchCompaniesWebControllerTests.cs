@@ -19,7 +19,7 @@ namespace PersonalFinance.Tests.Research;
 public class ResearchCompaniesWebControllerTests
 {
     private static ResearchController CreateController(IResearchApi api) =>
-        new(api, NullLogger<ResearchController>.Instance)
+        new(api, NullLogger<ResearchController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

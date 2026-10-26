@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Research;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Models.Research;
 using ApiException = Refit.ApiException;
 using RefitSettings = Refit.RefitSettings;
@@ -39,7 +40,7 @@ public class ResearchFundsWebControllerTests
     };
 
     private static ResearchController CreateController(IResearchApi api) =>
-        new(api, NullLogger<ResearchController>.Instance)
+        new(api, NullLogger<ResearchController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

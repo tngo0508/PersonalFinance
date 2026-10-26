@@ -1,4 +1,4 @@
-/* global d3 */
+/* global d3, PFI18n */
 /**
  * Research page, Risk vs return tab: each Tracked Fund's annualized return against its volatility over a 1-, 3- or
  * 5-year window (3 years by default).
@@ -34,12 +34,13 @@
     const ROLES_ID = 'research-risk-roles';
     const LABEL_HEIGHT = 13;
     const QUADRANTS = [
-        { x: 'left', y: 'top', text: 'Higher return, smaller swings than your basket' },
-        { x: 'right', y: 'top', text: 'Higher return, bigger swings than your basket' },
-        { x: 'left', y: 'bottom', text: 'Lower return, smaller swings than your basket' },
-        { x: 'right', y: 'bottom', text: 'Lower return, bigger swings than your basket' }
+        { x: 'left', y: 'top', key: 'Research.Js.Risk.Quadrant.HigherSmaller' },
+        { x: 'right', y: 'top', key: 'Research.Js.Risk.Quadrant.HigherBigger' },
+        { x: 'left', y: 'bottom', key: 'Research.Js.Risk.Quadrant.LowerSmaller' },
+        { x: 'right', y: 'bottom', key: 'Research.Js.Risk.Quadrant.LowerBigger' }
     ];
-    const BASKET_LABEL = 'Your basket';
+    // The basket's id in data attributes; what the page shows is its translated label.
+    const BASKET_ID = 'Your basket';
     const DEFAULT_YEARS = 3;
     const HEIGHT = 420;
     const MARGIN = { top: 20, right: 28, bottom: 44, left: 56 };
@@ -84,11 +85,29 @@
      * A number with a true minus sign and fixed decimals.
      * @param {number} value - The value.
      * @param {number} digits - The decimals.
-     * @returns {string} E.g. "−0.42".
+     * @returns {string} E.g. "−0.42", in the page culture.
      */
     function signed (value, digits) {
-        const text = Math.abs(value).toFixed(digits);
-        return value < 0 && Number(text) !== 0 ? `−${text}` : text;
+        const rounded = Number(Math.abs(value).toFixed(digits));
+        const text = page.formatFixed(rounded, digits);
+        return value < 0 && rounded !== 0 ? `−${text}` : text;
+    }
+
+    /**
+     * The basket's label, in the page language.
+     * @returns {string} "Your basket".
+     */
+    function basketLabel () {
+        return PFI18n.t('Research.Js.Common.YourBasket');
+    }
+
+    /**
+     * A window in words.
+     * @param {number} years - The window's length in years.
+     * @returns {string} E.g. "3 years".
+     */
+    function span (years) {
+        return page.formatYears(years);
     }
 
     /**
@@ -153,8 +172,8 @@
         const windowBills = Array.from({ length: months }, (_, i) => bills.get(addMonths(start, i))).filter((b) => b !== undefined);
         const treasuryBill = windowBills.length ? windowBills.reduce((a, b) => a + b, 0) / windowBills.length : null;
         return {
-            ticker: BASKET_LABEL,
-            label: BASKET_LABEL,
+            ticker: BASKET_ID,
+            label: basketLabel(),
             isBasket: true,
             annualizedReturn: annualized,
             volatility,
@@ -250,18 +269,21 @@
          * @returns {string[]} The rows, its name first.
          */
         function cardRows (point) {
-            const rows = [point.isBasket ? BASKET_LABEL : `${point.ticker}${names.has(point.ticker) ? `, ${names.get(point.ticker)}` : ''}`,
-                `Annualized return: ${signed(point.annualizedReturn, 1)}% a year`,
-                `Volatility: ${point.volatility.toFixed(1)}%`,
+            const rows = [point.isBasket ? basketLabel() : `${point.ticker}${names.has(point.ticker) ? `, ${names.get(point.ticker)}` : ''}`,
+                PFI18n.t('Research.Js.Risk.CardReturn', { value: `${signed(point.annualizedReturn, 1)}%` }),
+                PFI18n.t('Research.Js.Risk.CardVolatility', { value: page.formatPercent(point.volatility, 1) }),
                 point.sharpe === null || point.sharpe === undefined
-                    ? 'Sharpe ratio: n/a'
-                    : `Sharpe ratio: ${signed(point.sharpe, 2)} (Treasury bill ${point.treasuryBill.toFixed(2)}%)`];
+                    ? PFI18n.t('Research.Js.Risk.CardSharpeNone')
+                    : PFI18n.t('Research.Js.Risk.CardSharpe',
+                        { value: signed(point.sharpe, 2), bill: page.formatPercent(point.treasuryBill, 2) })];
             if (!point.isBasket) {
                 const fact = factsOf.get(point.ticker);
                 rows.push(fact && fact.expenseRatio !== null && fact.expenseRatio !== undefined
-                    ? `Expense ratio: ${fact.expenseRatio.toFixed(2)}%`
-                    : 'Expense ratio: n/a');
-                rows.push(fact && fact.netAssets ? `Net assets: ${page.formatMoney(fact.netAssets)}` : 'Net assets: n/a');
+                    ? PFI18n.t('Research.Js.Risk.CardExpense', { value: page.formatPercent(fact.expenseRatio, 2) })
+                    : PFI18n.t('Research.Js.Risk.CardExpenseNone'));
+                rows.push(fact && fact.netAssets
+                    ? PFI18n.t('Research.Js.Risk.CardNetAssets', { value: page.formatMoney(fact.netAssets) })
+                    : PFI18n.t('Research.Js.Risk.CardNetAssetsNone'));
             }
             return rows;
         }
@@ -282,8 +304,8 @@
             const basket = window.ResearchBasket ? window.ResearchBasket.get() : [];
             const basketFigures = basketPoint(data, macro, basket, years);
             note.textContent = basket.length === 0
-                ? 'Add funds to your Fund Basket to see where it sits.'
-                : basketFigures ? '' : `A fund in your basket has less than ${years} ${years === 1 ? 'year' : 'years'} of returns, so the basket is not shown.`;
+                ? PFI18n.t('Research.Js.Risk.NoteEmpty')
+                : basketFigures ? '' : PFI18n.t('Research.Js.Risk.NoteShort', { span: span(years) });
             allPoints = basketFigures ? [...funds, basketFigures] : funds;
             const shown = funds.filter((f) => activeRoles.size === 0 || activeRoles.has(roles.get(f.ticker)));
             return basketFigures ? [...shown, basketFigures] : shown;
@@ -308,7 +330,9 @@
                     drawRoles();
                     draw();
                     if (page.announce) {
-                        page.announce(activeRoles.size === 0 ? 'Showing every fund.' : `Showing ${[...activeRoles].join(', ')}.`);
+                        page.announce(activeRoles.size === 0
+                            ? PFI18n.t('Research.Js.Risk.ShowingAll')
+                            : PFI18n.t('Research.Js.Risk.ShowingRoles', { roles: [...activeRoles].join(', ') }));
                     }
                 });
                 return chip;
@@ -360,11 +384,12 @@
             }
             svg.append('g').attr('class', 'research-performance__axis')
                 .attr('transform', `translate(0,${HEIGHT - MARGIN.bottom})`)
-                .call(d3.axisBottom(x).ticks(Math.max(3, Math.floor(width / 90))).tickFormat((t) => `${t}%`).tickSizeOuter(0));
+                .call(d3.axisBottom(x).ticks(Math.max(3, Math.floor(width / 90)))
+                    .tickFormat((t) => `${PFI18n.formatNumber(t)}%`).tickSizeOuter(0));
             svg.append('text').attr('class', 'research-performance__panel-title').attr('x', width - MARGIN.right)
-                .attr('y', HEIGHT - 8).attr('text-anchor', 'end').text('Volatility, % a year →');
+                .attr('y', HEIGHT - 8).attr('text-anchor', 'end').text(PFI18n.t('Research.Js.Risk.AxisX'));
             svg.append('text').attr('class', 'research-performance__panel-title').attr('x', MARGIN.left)
-                .attr('y', MARGIN.top - 8).text('↑ Annualized return, % a year');
+                .attr('y', MARGIN.top - 8).text(PFI18n.t('Research.Js.Risk.AxisY'));
 
             const basketPoint = points.find((p) => p.isBasket);
             if (basketPoint) {
@@ -379,7 +404,7 @@
                         .attr('x', q.x === 'left' ? MARGIN.left + 6 : width - MARGIN.right - 6)
                         .attr('y', q.y === 'top' ? MARGIN.top + 12 : HEIGHT - MARGIN.bottom - 8)
                         .attr('text-anchor', q.x === 'left' ? 'start' : 'end')
-                        .text(q.text);
+                        .text(PFI18n.t(q.key));
                 });
             }
 
@@ -395,7 +420,7 @@
             const basket = points.find((p) => p.isBasket);
             if (basket) {
                 const g = marks.append('g').attr('class', 'research-risk__point research-risk__point--basket').attr('tabindex', 0)
-                    .attr('data-ticker', BASKET_LABEL)
+                    .attr('data-ticker', BASKET_ID)
                     .attr('transform', `translate(${x(basket.volatility)},${y(basket.annualizedReturn)})`)
                     .attr('aria-label', cardRows(basket).join('. '));
                 g.append('path').attr('class', 'research-risk__diamond')
@@ -404,7 +429,7 @@
 
             // Labels: measured, then placed clear of each other and of the marks, with leaders where they moved away.
             const labelled = [...funds.map((p) => ({ point: p, r: radiusOf(p), text: p.ticker })),
-                ...(basket ? [{ point: basket, r: DIAMOND, text: BASKET_LABEL }] : [])];
+                ...(basket ? [{ point: basket, r: DIAMOND, text: basketLabel() }] : [])];
             const labelLayer = svg.append('g').attr('class', 'research-risk__labels');
             const texts = labelled.map((l) => labelLayer.append('text')
                 .attr('class', l.point.isBasket ? 'research-risk__label research-risk__label--basket' : 'research-risk__label')
@@ -429,15 +454,16 @@
             marks.selectAll('.research-risk__point').each(function () {
                 const node = this;
                 const ticker = node.getAttribute('data-ticker');
-                const point = points.find((p) => (p.isBasket ? BASKET_LABEL : p.ticker) === ticker);
+                const point = points.find((p) => (p.isBasket ? BASKET_ID : p.ticker) === ticker);
                 node.addEventListener('pointerenter', () => showCard(point, node));
                 node.addEventListener('pointerleave', tooltip.hide);
                 node.addEventListener('focus', () => showCard(point, node));
                 node.addEventListener('blur', tooltip.hide);
             });
-            chartHost.setAttribute('aria-label', `Risk vs return over ${years} ${years === 1 ? 'year' : 'years'}: `
-                + `${funds.length} funds${activeRoles.size ? ` (${[...activeRoles].join(', ')})` : ''}`
-                + `${basket ? ' and your basket, with lines through it' : ''}. Tab to a point for its figures.`);
+            const fundsText = PFI18n.plural('Research.Js.Funds.FundCount', funds.length)
+                + (activeRoles.size ? ` (${[...activeRoles].join(', ')})` : '');
+            chartHost.setAttribute('aria-label', PFI18n.t(basket ? 'Research.Js.Risk.ChartLabelBasket' : 'Research.Js.Risk.ChartLabel',
+                { span: span(years), funds: fundsText }));
         }
 
         /**
@@ -446,8 +472,8 @@
          */
         function drawLegend () {
             const items = [
-                ['research-risk__legend-bubble', `Fund: bubble area follows net assets${facts ? '' : ' (not loaded)'}`],
-                ['research-risk__legend-diamond', BASKET_LABEL]
+                ['research-risk__legend-bubble', PFI18n.t(facts ? 'Research.Js.Risk.LegendFund' : 'Research.Js.Risk.LegendFundNoFacts')],
+                ['research-risk__legend-diamond', basketLabel()]
             ];
             legend.replaceChildren(...items.map(([cls, text]) => {
                 const item = element('li', 'research-performance__legend-item');
@@ -467,10 +493,16 @@
             const maxReturn = d3.max(sorted, (p) => Math.abs(p.annualizedReturn)) || 1;
             const maxVolatility = d3.max(sorted, (p) => p.volatility) || 1;
             const table = element('table', 'research-overlap__duplicates-table research-risk__table');
-            table.append(element('caption', null, `Risk and return over ${years} ${years === 1 ? 'year' : 'years'}, by Sharpe ratio`));
+            table.append(element('caption', null, PFI18n.t('Research.Js.Risk.TableCaption', { span: span(years) })));
             const head = element('thead');
             const headRow = element('tr');
-            ['', 'Annualized return', 'Volatility', 'Sharpe ratio', 'Expense ratio'].forEach((text, i) => {
+            [
+                '',
+                PFI18n.t('Research.Js.Common.AnnualizedReturn'),
+                PFI18n.t('Research.Js.Risk.Volatility'),
+                PFI18n.t('Research.Js.Risk.Sharpe'),
+                PFI18n.t('Research.Js.Risk.Expense')
+            ].forEach((text, i) => {
                 const th = element('th', i === 0 ? null : 'research-overlap__number', text);
                 th.scope = 'col';
                 headRow.append(th);
@@ -487,16 +519,20 @@
             };
             sorted.forEach((p) => {
                 const tr = element('tr');
-                tr.dataset.ticker = p.isBasket ? BASKET_LABEL : p.ticker;
-                const name = element('th', null, p.isBasket ? BASKET_LABEL : p.ticker);
+                tr.dataset.ticker = p.isBasket ? BASKET_ID : p.ticker;
+                const name = element('th', null, p.isBasket ? basketLabel() : p.ticker);
                 name.scope = 'row';
                 const fact = p.isBasket ? null : factsOf.get(p.ticker);
                 tr.append(name,
                     bar(p.annualizedReturn, maxReturn, 'research-risk__bar--return'),
                     bar(p.volatility, maxVolatility, 'research-risk__bar--volatility'),
-                    element('td', 'research-overlap__number', p.sharpe === null || p.sharpe === undefined ? 'n/a' : signed(p.sharpe, 2)),
+                    element('td', 'research-overlap__number', p.sharpe === null || p.sharpe === undefined
+                        ? PFI18n.t('Research.Js.Common.NotAvailable')
+                        : signed(p.sharpe, 2)),
                     element('td', 'research-overlap__number', p.isBasket ? '–'
-                        : fact && fact.expenseRatio !== null && fact.expenseRatio !== undefined ? `${fact.expenseRatio.toFixed(2)}%` : 'n/a'));
+                        : fact && fact.expenseRatio !== null && fact.expenseRatio !== undefined
+                            ? page.formatPercent(fact.expenseRatio, 2)
+                            : PFI18n.t('Research.Js.Common.NotAvailable')));
                 body.append(tr);
             });
             table.append(head, body);
@@ -523,14 +559,14 @@
             years = Number(button.dataset.riskYears);
             draw();
             if (page.announce) {
-                page.announce(`Risk vs return over ${years} ${years === 1 ? 'year' : 'years'}.`);
+                page.announce(PFI18n.t('Research.Js.Risk.Announce', { span: span(years) }));
             }
         }));
         tableToggle.addEventListener('click', () => {
             const show = tableHost.hidden;
             tableHost.hidden = !show;
             tableToggle.setAttribute('aria-pressed', String(show));
-            tableToggle.textContent = show ? 'Hide table' : 'Show as table';
+            tableToggle.textContent = PFI18n.t(show ? 'Research.Js.Common.HideTable' : 'Research.Js.Common.ShowTable');
         });
         window.addEventListener('scroll', () => tooltip.hide(), { passive: true });
         document.addEventListener('research:basketchange', draw);

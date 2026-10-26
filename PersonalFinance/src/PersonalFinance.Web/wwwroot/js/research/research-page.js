@@ -18,8 +18,9 @@
  * `[data-research-table]`. The page opens each tab on its latest period. Under prefers-reduced-motion every change
  * applies at once.
  *
- * It also holds the helpers every chart shares (prefersReducedMotion, formatMoney, readData, createTooltip, announce),
- * so it must load before the chart scripts.
+ * It also holds the helpers every chart shares (prefersReducedMotion, formatMoney, formatPercent, formatFixed,
+ * readData, createTooltip, announce), so it must load before the chart scripts. Numbers follow the page culture
+ * (PFI18n); the text is the page's Research.Js. strings.
  *
  * The selected tab is kept in the address as `?tab=<tabId>` (replacing the history entry, so Back does not step
  * through tabs), and each selection fires a `research:tabchange` event on the document with `detail.tabId`.
@@ -58,6 +59,70 @@
             return PFI18n.formatCompactMoney(amount, 'USD', { fractionDigits: 1 });
         }
         return PFI18n.formatMoney(amount, 'USD', { whole: true });
+    }
+
+    /**
+     * Format a percentage in the page culture with a fixed number of decimals: 12.3% (en), 12,3% (vi).
+     * @param {number} value - The percentage, e.g. 12.3 for 12.3%.
+     * @param {number} digits - Decimals to show.
+     * @returns {string} The formatted percentage.
+     */
+    function formatPercent (value, digits) {
+        return PFI18n.formatNumber(value / 100,
+            { style: 'percent', minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    /**
+     * Format a month in the page culture: "June 2026" (en), "tháng 6 năm 2026" (vi).
+     * @param {string} isoDate - Any day of the month, e.g. "2026-06-01".
+     * @returns {string} The month.
+     */
+    function formatMonth (isoDate) {
+        const [year, month] = isoDate.split('-').map(Number);
+        return PFI18n.formatDate(new Date(Date.UTC(year, month - 1, 1)), { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    /**
+     * Format a day as the server's Research views do ("d MMMM yyyy"): day, the culture's month name, year:
+     * "31 December 2025" (en), "31 tháng 12 2025" (vi).
+     * @param {string} isoDate - The day, e.g. "2025-12-31".
+     * @returns {string} The day.
+     */
+    function formatDay (isoDate) {
+        const [year, month, day] = isoDate.split('-').map(Number);
+        const monthName = PFI18n.formatDate(new Date(Date.UTC(year, month - 1, 1)), { month: 'long', timeZone: 'UTC' });
+        return `${day} ${monthName} ${year}`;
+    }
+
+    /**
+     * A list in words in the page language: "SPY, QQQ and VTI" (en), "SPY, QQQ và VTI" (vi).
+     * @param {string[]} items - The items.
+     * @returns {string} The list.
+     */
+    function formatList (items) {
+        if (typeof Intl !== 'undefined' && typeof Intl.ListFormat === 'function') {
+            return new Intl.ListFormat(PFI18n.lang, { style: 'long', type: 'conjunction' }).format(items);
+        }
+        return items.join(', ');
+    }
+
+    /**
+     * A span of whole years in words: "1 year", "3 years".
+     * @param {number} years - The number of years.
+     * @returns {string} The span.
+     */
+    function formatYears (years) {
+        return PFI18n.plural('Research.Js.Common.Years', years);
+    }
+
+    /**
+     * Format a plain number in the page culture with a fixed number of decimals (0.85, 0,85).
+     * @param {number} value - The number.
+     * @param {number} digits - Decimals to show.
+     * @returns {string} The formatted number.
+     */
+    function formatFixed (value, digits) {
+        return PFI18n.formatNumber(value, { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
 
     /**
@@ -196,7 +261,9 @@
         }
         const playing = playingTab === tab;
         tab.play.dataset.state = playing ? 'playing' : 'paused';
-        tab.play.setAttribute('aria-label', playing ? 'Pause' : (tab.chart.playLabel || 'Play through the years'));
+        tab.play.setAttribute('aria-label', playing
+            ? PFI18n.t('Research.Js.Page.Pause')
+            : (tab.chart.playLabel || PFI18n.t('Research.Js.Page.PlayYears')));
     }
 
     /**
@@ -403,7 +470,7 @@
             tab.play.addEventListener('click', () => {
                 if (playingTab === tab) {
                     stopPlay();
-                    announce(`Paused at ${chart.periods[tab.position]}.`);
+                    announce(PFI18n.t('Research.Js.Page.PausedAt', { period: chart.periods[tab.position] }));
                 } else {
                     startPlay(tab);
                 }
@@ -449,6 +516,12 @@
         selectTabById,
         prefersReducedMotion,
         formatMoney,
+        formatPercent,
+        formatFixed,
+        formatMonth,
+        formatDay,
+        formatYears,
+        formatList,
         readData,
         createTooltip,
         announce

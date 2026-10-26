@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.13.0] - 2026-10-25
+
+### Added
+
+- **Research and Finance News in Vietnamese**: the Research page (every tab, its charts, tooltips, tables, screen-reader text and the Fund Basket) and the Finance News page are translated (slice L3 of the localization spec, #359).
+  - Company, fund, country and industry names, headlines, sources and topics stay as the data gives them; the regions and fund roles from ApiService stay in English for now.
+  - Dates, counts and percentages follow the reader's culture (`31 tháng 12 2025`, `12,3%`), and country names in the basket views follow the page language.
+  - The tabs' Unavailable State, the Companies tab's "Enter a ticker or company name" error and the News load error answer in the reader's language.
+
+### Fixed
+
+- **Finance News times**: "Last updated" shows the refresh time again, and each article's age is drawn by the page in the reader's language; the shared relative-time tag replaced the whole text of each, leaving only "Just now" or "2d ago" and dropping the clock icon.
+  - The refresh time and each article's hover date use the culture's short date and time (`12/31/2025 at 2:05 PM`, `31/12/2025 lúc 14:05`).
+
 ## [7.12.0] - 2026-10-25
 
 ### Added

@@ -7,12 +7,13 @@
     FundExposureSnapshotDto? exposure = Model.FundExposure;
     // The basket view needs the funds data (for the basket) and the exposure.
     bool showBasketView = exposure is not null && !Model.Funds.Unavailable && exposure.Funds.Count > 0;
-    CultureInfo us = CultureInfo.GetCultureInfo("en-US");
+    CultureInfo culture = CultureInfo.CurrentCulture;
     string exposureDates = exposure is null || exposure.Funds.Count == 0
         ? string.Empty
         : exposure.Funds.Min(f => f.ReportDate) == exposure.AsOf
-            ? $"as of {exposure.AsOf.ToString("d MMMM yyyy", us)}"
-            : $"as of {exposure.Funds.Min(f => f.ReportDate).ToString("d MMMM yyyy", us)} to {exposure.AsOf.ToString("d MMMM yyyy", us)}";
+            ? L.Named("Research.Common.AsOf", ("date", exposure.AsOf.ToString(ResearchViewModel.LongDate, culture)))
+            : L.Named("Research.Common.AsOfRange", ("from", exposure.Funds.Min(f => f.ReportDate).ToString(ResearchViewModel.LongDate, culture)),
+                ("to", exposure.AsOf.ToString(ResearchViewModel.LongDate, culture)));
 }
 
 @* The World tab panel: stock-market capitalisation by country (World Bank WDI), drawn by js/research/research-world.js as a
@@ -24,9 +25,9 @@
         @* World market (the existing choropleth) or Your basket (its funds' issuer countries, weighted). It opens on Your
            basket only when a Fund Basket is set; js/research/research-world-basket.js wires it. *@
         <div class="research-world__views" id="research-world-views">
-            <div class="research-view-toggle" role="group" aria-label="Map view">
-                <button type="button" class="research-view-toggle__button" data-world-view="market" aria-pressed="true">World market</button>
-                <button type="button" class="research-view-toggle__button" data-world-view="basket" aria-pressed="false">Your basket</button>
+            <div class="research-view-toggle" role="group" aria-label="@L["Research.World.ViewLabel"]">
+                <button type="button" class="research-view-toggle__button" data-world-view="market" aria-pressed="true">@L["Research.World.Market"]</button>
+                <button type="button" class="research-view-toggle__button" data-world-view="basket" aria-pressed="false">@L["Research.Js.Common.YourBasket"]</button>
             </div>
         </div>
     }
@@ -34,12 +35,12 @@
     {
         <div class="research-scrubber" data-research-scrubber data-world-view-part="market">
             <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
-                    aria-label="Play through the years">
+                    aria-label="@L["Research.Js.Page.PlayYears"]">
                 <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
                 <svg class="research-scrubber__icon research-scrubber__icon--pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
             </button>
             <div class="research-scrubber__track">
-                <label class="visually-hidden" for="research-world-year">Year</label>
+                <label class="visually-hidden" for="research-world-year">@L["Research.Common.Year"]</label>
                 <input type="range" class="research-scrubber__range" id="research-world-year" data-research-range
                        min="0" max="@(world.Periods.Count - 1)" step="1" value="@(world.Periods.Count - 1)"
                        aria-valuetext="@world.Periods[^1]"/>
@@ -52,7 +53,7 @@
         </div>
     }
     <div class="research-card" data-world-view-part="market">
-        <h2 class="research-card__title">Stock-market value by country</h2>
+        <h2 class="research-card__title">@L["Research.World.Title"]</h2>
         @if (world is null)
         {
             <partial name="_UnavailableState" model="Model.World.UnavailableState"/>
@@ -60,64 +61,50 @@
         else
         {
             <p class="research-card__subtitle" id="research-world-subtitle">
-                Market capitalisation of listed domestic companies in @world.Periods[^1], by country.
+                @L.Named("Research.World.Subtitle", ("period", world.Periods[^1]))
             </p>
             <div class="research-world" id="research-world-map"
                  data-atlas-url="@Url.Content("~/lib/world-atlas/countries-110m.json")"></div>
             <div class="research-tooltip" id="research-world-tooltip" aria-hidden="true" hidden></div>
             <div class="research-card__actions">
                 <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
-                        aria-controls="research-world-table">Show as table</button>
+                        aria-controls="research-world-table">@L["Research.Js.Common.ShowTable"]</button>
             </div>
             <div class="research-table-host" id="research-world-table" data-research-table hidden></div>
         }
-        <p class="research-card__source">Source: World Bank WDI / WFE (CC BY 4.0). Borders: Natural Earth</p>
+        <p class="research-card__source">@L["Research.Source.World"]</p>
     </div>
 
-    <aside class="research-panel" aria-label="About the World data" data-world-view-part="market">
+    <aside class="research-panel" aria-label="@L["Research.World.PanelLabel"]" data-world-view-part="market">
         @if (world is not null)
         {
-            <h2 class="research-panel__title">Colour the map by</h2>
-            <div class="research-world__metrics" role="group" aria-label="Map metric">
+            <h2 class="research-panel__title">@L["Research.World.ColourBy"]</h2>
+            <div class="research-world__metrics" role="group" aria-label="@L["Research.World.MetricLabel"]">
                 <button type="button" class="research-chip" data-research-world-metric="marketCap"
-                        aria-pressed="true">Market cap</button>
+                        aria-pressed="true">@L["Research.Js.World.MarketCap"]</button>
                 <button type="button" class="research-chip" data-research-world-metric="percentOfGdp"
-                        aria-pressed="false">% of GDP</button>
+                        aria-pressed="false">@L["Research.Js.World.PercentOfGdp"]</button>
             </div>
-            <h2 class="research-panel__title">Legend</h2>
+            <h2 class="research-panel__title">@L["Research.World.Legend"]</h2>
             <ol class="research-legend" id="research-world-legend"></ol>
         }
-        <h2 class="research-panel__title">About this data</h2>
-        <p>
-            Market capitalisation is the share price times the number of shares of the companies listed on a country's
-            stock exchanges, at the end of each year, in current US dollars. The World Bank publishes it from the World
-            Federation of Exchanges.
-        </p>
-        <p>
-            % of GDP compares it with the size of the country's economy in the same year. Countries without a stock
-            exchange, or that do not report, show as "No data".
-        </p>
-        <h2 class="research-panel__title">Data as of</h2>
+        <h2 class="research-panel__title">@L["Research.Common.AboutThisData"]</h2>
+        <p>@L["Research.World.About1"]</p>
+        <p>@L["Research.World.About2"]</p>
+        <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
         <p class="research-panel__as-of">
-            @(Model.World.AsOf is { } asOf && world is not null ? asOf.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("en-US")) : "Not loaded yet")
+            @(Model.World.AsOf is { } asOf && world is not null ? asOf.ToString(ResearchViewModel.LongDate, culture) : L["Research.Common.NotLoadedYet"].Value)
         </p>
     </aside>
 
     @if (showBasketView)
     {
         <div class="research-card research-world-basket" id="research-world-basket" data-world-view-part="basket" hidden>
-            <h2 class="research-card__title">Your basket by issuer country</h2>
-            <p class="research-card__subtitle">
-                Where your basket's holdings are, weighted by your funds' shares. Countries are where each holding's
-                issuer is organized, as each fund reports it; currency is what each holding is priced in, so American
-                depositary receipts (ADRs) count as US dollars. This is not where companies earn their revenue. From
-                each fund's latest holdings report (@exposureDates).
-            </p>
-            <p class="research-overlap__prompt" id="research-world-basket-prompt">
-                Add funds to your Fund Basket to see where its holdings are.
-            </p>
+            <h2 class="research-card__title">@L["Research.WorldBasket.Title"]</h2>
+            <p class="research-card__subtitle">@L.Named("Research.WorldBasket.Subtitle", ("dates", exposureDates))</p>
+            <p class="research-overlap__prompt" id="research-world-basket-prompt">@L["Research.WorldBasket.Prompt"]</p>
             <div class="research-overlap__view" id="research-world-basket-view" hidden>
-                <ul class="research-overlap__callouts" id="research-world-basket-callouts" aria-label="Your basket's exposure"></ul>
+                <ul class="research-overlap__callouts" id="research-world-basket-callouts" aria-label="@L["Research.WorldBasket.CalloutsLabel"]"></ul>
                 @* Two home-bias meters: US issuers against the rest of the world, US dollars against other currencies. *@
                 <div class="research-world-basket__meters" id="research-world-basket-meters"></div>
                 <div class="research-world-basket__layout">
@@ -126,40 +113,30 @@
                         <div class="research-world research-world-basket__map" id="research-world-basket-map" role="group"
                              data-atlas-url="@Url.Content("~/lib/world-atlas/countries-110m.json")"></div>
                         <div class="research-world-basket__map-actions">
-                            <button type="button" class="research-chip" id="research-world-basket-reset">Reset zoom</button>
+                            <button type="button" class="research-chip" id="research-world-basket-reset">@L["Research.WorldBasket.ResetZoom"]</button>
                         </div>
-                        <ol class="research-legend" id="research-world-basket-legend" aria-label="Colour scale"></ol>
+                        <ol class="research-legend" id="research-world-basket-legend" aria-label="@L["Research.WorldBasket.ScaleLabel"]"></ol>
                     </div>
                     <div class="research-world-basket__bars">
                         @* Each region lights its countries on the map while pointed at or focused; choosing it keeps them lit. *@
-                        <h3 class="research-world-basket__bars-title" id="research-world-basket-regions-title">Regions</h3>
+                        <h3 class="research-world-basket__bars-title" id="research-world-basket-regions-title">@L["Research.WorldBasket.Regions"]</h3>
                         <ul class="research-world-basket__list" id="research-world-basket-regions" aria-labelledby="research-world-basket-regions-title"></ul>
-                        <h3 class="research-world-basket__bars-title" id="research-world-basket-currencies-title">Priced in</h3>
+                        <h3 class="research-world-basket__bars-title" id="research-world-basket-currencies-title">@L["Research.WorldBasket.PricedIn"]</h3>
                         <ul class="research-world-basket__list" id="research-world-basket-currencies" aria-labelledby="research-world-basket-currencies-title"></ul>
                     </div>
                 </div>
                 <p class="research-overlap__note" id="research-world-basket-note"></p>
             </div>
             <div class="research-tooltip" id="research-world-basket-tooltip" aria-hidden="true" hidden></div>
-            <p class="research-card__source">Source: SEC EDGAR (Form N-PORT holdings). Borders: Natural Earth</p>
+            <p class="research-card__source">@L["Research.Source.WorldBasket"]</p>
         </div>
 
-        <aside class="research-panel" data-world-view-part="basket" aria-label="About the basket exposure" hidden>
-            <h2 class="research-panel__title">How to read it</h2>
-            <p>
-                Each country's colour is its share of your basket. The scale tops out at the largest country outside
-                the US, so the rest of the world stays readable; the US always takes the darkest step, and its true share
-                is in its tooltip. Small places the map cannot draw, such as Hong Kong and Singapore, are dots sized by
-                their share. Shares under 0.05% read "&lt;0.1%".
-            </p>
-            <h2 class="research-panel__title">About this data</h2>
-            <p>
-                Funds report each holding's issuer country and currency on Form N-PORT. Funds follow their own
-                conventions: the same company can have a different country in different funds, and American
-                depositary receipts count as US dollars. Securities-lending collateral is left out, and cash not
-                reported as a holding is unallocated.
-            </p>
-            <h2 class="research-panel__title">Data as of</h2>
+        <aside class="research-panel" data-world-view-part="basket" aria-label="@L["Research.WorldBasket.PanelLabel"]" hidden>
+            <h2 class="research-panel__title">@L["Research.Common.HowToRead"]</h2>
+            <p>@L["Research.WorldBasket.HowToRead"]</p>
+            <h2 class="research-panel__title">@L["Research.Common.AboutThisData"]</h2>
+            <p>@L["Research.WorldBasket.About"]</p>
+            <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
             <p class="research-panel__as-of">@exposureDates</p>
         </aside>
     }

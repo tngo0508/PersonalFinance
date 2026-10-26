@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Shared.Helpers;
@@ -18,22 +19,26 @@ namespace PersonalFinance.Web.Controllers;
 [Authorize]
 public sealed class ResearchController : Controller
 {
-    /// <summary>The 400 message of a company search or lookup whose input was rejected.</summary>
-    public const string InvalidCompanyInput = "Enter a ticker or company name.";
-
     private readonly IResearchApi _researchApi;
     private readonly ILogger<ResearchController> _logger;
+    private readonly IStringLocalizer _localizer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResearchController"/> class.
     /// </summary>
     /// <param name="researchApi">ApiService client for the Research datasets.</param>
     /// <param name="logger">Logger for this controller.</param>
-    public ResearchController(IResearchApi researchApi, ILogger<ResearchController> logger)
+    /// <param name="localizer">The page's text, in the request's Language.</param>
+    public ResearchController(IResearchApi researchApi, ILogger<ResearchController> logger, IStringLocalizer localizer)
     {
         _researchApi = researchApi;
         _logger = logger;
+        _localizer = localizer;
     }
+
+    /// <summary>The 400 body of a company search or lookup whose input was rejected, in the request's Language.</summary>
+    private BadRequestObjectResult InvalidCompanyInput() =>
+        BadRequest(new { error = _localizer["Research.Message.InvalidCompanyInput"].Value });
 
     /// <summary>
     /// Displays the Research page, opening on the Sectors tab at the latest year, or on <paramref name="tab"/> when it
@@ -54,7 +59,7 @@ public sealed class ResearchController : Controller
         Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, "fund facts", cancellationToken);
         Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, "fund exposure", cancellationToken);
         await Task.WhenAll(sectors, funds, world, overlap, returns, macro, facts, exposure);
-        return View(new ResearchViewModel(await sectors, await funds, await world, tab, ticker, await overlap,
+        return View(new ResearchViewModel(_localizer, await sectors, await funds, await world, tab, ticker, await overlap,
             await returns, await macro, await facts, await exposure));
     }
 
@@ -77,7 +82,7 @@ public sealed class ResearchController : Controller
     public async Task<IActionResult> Suggest([FromQuery] string? q, CancellationToken cancellationToken = default) =>
         CompanyLookupRules.TryNormalizeQuery(q, out string? query)
             ? Json(await _researchApi.SuggestCompaniesAsync(query, cancellationToken))
-            : BadRequest(new { error = InvalidCompanyInput });
+            : InvalidCompanyInput();
 
     /// <summary>
     /// The Company Profile lookup of <paramref name="ticker"/>, as JSON, from ApiService. A rejected ticker is 400; an
@@ -88,7 +93,7 @@ public sealed class ResearchController : Controller
     public async Task<IActionResult> Company([FromQuery] string? ticker, CancellationToken cancellationToken = default) =>
         CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized)
             ? Json(await _researchApi.GetCompanyAsync(normalized, cancellationToken))
-            : BadRequest(new { error = InvalidCompanyInput });
+            : InvalidCompanyInput();
 
     /// <summary>
     /// The press releases of <paramref name="ticker"/>, as JSON, from ApiService. A rejected ticker is 400; an
@@ -101,7 +106,7 @@ public sealed class ResearchController : Controller
         CancellationToken cancellationToken = default) =>
         CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized)
             ? Json(await _researchApi.GetCompanyPressReleasesAsync(normalized, cancellationToken))
-            : BadRequest(new { error = InvalidCompanyInput });
+            : InvalidCompanyInput();
 
     /// <summary>
     /// Reads one dataset; null when it has never loaded (503) or ApiService cannot be reached, so only that tab shows

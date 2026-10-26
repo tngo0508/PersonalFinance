@@ -34,12 +34,12 @@
     const WIDE_LABELS = 290;
     const LEVELS = 3;
     const OPEN_FIRST = ['root', 'f:SPY', 'c:SPY:EC'];
-    const KIND_LABELS = {
-        root: 'Tracked funds',
-        fund: 'Fund',
-        category: 'Asset category',
-        holding: 'Holding',
-        other: 'Smaller holdings, summed'
+    const KIND_KEYS = {
+        root: 'Research.Js.Funds.Kind.Root',
+        fund: 'Research.Js.Common.Fund',
+        category: 'Research.Js.Funds.Kind.Category',
+        holding: 'Research.Js.Common.Holding',
+        other: 'Research.Js.Funds.Kind.Other'
     };
 
     /**
@@ -49,9 +49,9 @@
      */
     function formatPercent (value) {
         if (value > 0 && value < 0.005) {
-            return '<0.01%';
+            return `<${page.formatPercent(0.01, 2)}`;
         }
-        return `${value.toFixed(Math.abs(value) >= 10 ? 1 : 2)}%`;
+        return page.formatPercent(value, Math.abs(value) >= 10 ? 1 : 2);
     }
 
     /**
@@ -83,7 +83,8 @@
             return node;
         });
         return {
-            key: 'root', kind: 'root', name: `${data.funds.length} funds`, value: 100, children: funds
+            key: 'root', kind: 'root', name: PFI18n.plural('Research.Js.Funds.FundCount', data.funds.length), value: 100,
+            children: funds
         };
     }
 
@@ -112,7 +113,7 @@
             children.push({
                 key: `o:${ticker}:${category.code}`,
                 kind: 'other',
-                name: `Other (${PFI18n.formatNumber(category.otherCount)} holdings)`,
+                name: PFI18n.plural('Research.Js.Funds.OtherHoldings', category.otherCount),
                 value: category.otherPercent,
                 fund: ticker,
                 category: category.name
@@ -140,7 +141,9 @@
             return d.name;
         }
         if (d.kind === 'fund') {
-            return d.missing ? `${d.name} · no report this quarter` : `${d.name} · ${PFI18n.formatNumber(d.count)} holdings`;
+            return d.missing
+                ? PFI18n.t('Research.Js.Funds.NoReportLabel', { name: d.name })
+                : PFI18n.plural('Research.Js.Funds.FundLabel', d.count, { name: d.name });
         }
         return `${d.name}  ${formatPercent(d.value)}`;
     }
@@ -156,12 +159,18 @@
             return `${labelOf(node)}, ${d.full}`;
         }
         if (d.kind === 'holding' || d.kind === 'other') {
-            return `${d.name}, ${formatPercent(d.value)} of ${d.fund} net assets, ${d.category}`;
+            return PFI18n.t('Research.Js.Funds.HoldingName',
+                { name: d.name, value: formatPercent(d.value), fund: d.fund, category: d.category });
         }
         if (d.kind === 'category') {
-            return `${d.name}, ${formatPercent(d.value)} of ${d.fund} net assets, ${PFI18n.formatNumber(d.count)} holdings`;
+            return PFI18n.t('Research.Js.Funds.CategoryName', {
+                name: d.name,
+                value: formatPercent(d.value),
+                fund: d.fund,
+                holdings: PFI18n.plural('Research.Js.Common.Holdings', d.count)
+            });
         }
-        return `${d.name}: what the tracked funds hold`;
+        return PFI18n.t('Research.Js.Funds.RootName', { name: d.name });
     }
 
     /**
@@ -176,15 +185,16 @@
             }
             const d = node.data;
             const parts = [line(d.kind === 'fund' ? `${d.name}, ${d.full}` : d.name, 'research-tooltip__name'),
-                line(KIND_LABELS[d.kind], 'research-tooltip__muted')];
+                line(PFI18n.t(KIND_KEYS[d.kind]), 'research-tooltip__muted')];
             if (d.kind === 'fund') {
-                parts.push(line(d.missing ? 'No report for this quarter' : `${PFI18n.formatNumber(d.count)} holdings`,
-                    'research-tooltip__value'));
+                parts.push(line(d.missing
+                    ? PFI18n.t('Research.Js.Funds.NoReport')
+                    : PFI18n.plural('Research.Js.Common.Holdings', d.count), 'research-tooltip__value'));
             } else {
                 const value = line(formatPercent(d.value), 'research-tooltip__value');
                 const wrap = document.createElement('span');
                 wrap.className = 'research-tooltip__muted';
-                wrap.append(value, ` of ${d.fund} net assets`);
+                wrap.append(value, ' ', PFI18n.t('Research.Js.Funds.OfNetAssets', { fund: d.fund }));
                 parts.push(wrap);
             }
             return parts;
@@ -211,7 +221,7 @@
         const svg = d3.select(host).append('svg')
             .attr('class', 'research-funds__svg')
             .attr('role', 'tree')
-            .attr('aria-label', 'What the tracked funds hold, by asset category and holding');
+            .attr('aria-label', PFI18n.t('Research.Js.Funds.TreeLabel'));
         const linkLayer = svg.append('g').attr('class', 'research-funds__links').attr('aria-hidden', 'true');
         const nodeLayer = svg.append('g');
 
@@ -360,7 +370,8 @@
             }
             render(key, true);
             focusNode(key);
-            announce(`${d.data.name} ${expanded.has(key) ? 'opened' : 'closed'}.`);
+            announce(PFI18n.t(expanded.has(key) ? 'Research.Js.Funds.Opened' : 'Research.Js.Funds.Closed',
+                { name: d.data.name }));
             page.refreshTable(TAB_ID);
         }
 
@@ -442,17 +453,21 @@
             const period = data.values[index];
             const subtitle = document.getElementById(SUBTITLE_ID);
             if (subtitle) {
-                subtitle.textContent = `Holdings reported for ${period.period}, by asset category. Choose a fund or a ` +
-                    'category to open or close it; each category lists its 25 largest holdings.';
+                subtitle.textContent = PFI18n.t('Research.Js.Funds.Subtitle', { period: period.period });
             }
             const first = period.funds[0];
             const category = first && first.categories[0];
             const top = category && category.top[0];
+            const reported = {
+                period: period.period,
+                count: PFI18n.formatNumber(period.funds.length),
+                total: PFI18n.formatNumber(data.funds.length)
+            };
             if (!top) {
-                return `${period.period}: ${period.funds.length} of ${data.funds.length} funds reported.`;
+                return PFI18n.t('Research.Js.Funds.Summary', reported);
             }
-            return `${period.period}: ${period.funds.length} of ${data.funds.length} funds reported. ${first.ticker}'s ` +
-                `largest holding is ${top.name}, ${formatPercent(top.percent)} of net assets.`;
+            return PFI18n.t('Research.Js.Funds.SummaryTop',
+                Object.assign(reported, { ticker: first.ticker, name: top.name, value: formatPercent(top.percent) }));
         }
 
         /**
@@ -465,27 +480,28 @@
             const rows = [];
             period.funds.filter((fund) => expanded.has(`f:${fund.ticker}`)).forEach((fund) => {
                 fund.categories.forEach((category) => {
-                    rows.push([fund.ticker, category.name, `All ${PFI18n.formatNumber(category.holdingCount)} holdings`,
+                    rows.push([fund.ticker, category.name,
+                        PFI18n.plural('Research.Js.Funds.AllHoldings', category.holdingCount),
                         formatPercent(category.percent)]);
                     category.top.forEach((holding) => {
                         rows.push([fund.ticker, category.name, holding.name, formatPercent(holding.percent)]);
                     });
                     if (category.otherCount > 0) {
                         rows.push([fund.ticker, category.name,
-                            `Other (${PFI18n.formatNumber(category.otherCount)} holdings)`,
+                            PFI18n.plural('Research.Js.Funds.OtherHoldings', category.otherCount),
                             formatPercent(category.otherPercent)]);
                     }
                 });
             });
             return {
                 caption: rows.length > 0
-                    ? `Holdings of the open funds, ${period.period}, as % of each fund's net assets`
-                    : `No fund is open. Open one in the tree to list its holdings for ${period.period}.`,
+                    ? PFI18n.t('Research.Js.Funds.TableCaption', { period: period.period })
+                    : PFI18n.t('Research.Js.Funds.TableEmpty', { period: period.period }),
                 columns: [
-                    { label: 'Fund', numeric: false },
-                    { label: 'Asset category', numeric: false },
-                    { label: 'Holding', numeric: false },
-                    { label: '% of net assets', numeric: true }
+                    { label: PFI18n.t('Research.Js.Common.Fund'), numeric: false },
+                    { label: PFI18n.t('Research.Js.Funds.Kind.Category'), numeric: false },
+                    { label: PFI18n.t('Research.Js.Common.Holding'), numeric: false },
+                    { label: PFI18n.t('Research.Js.Funds.PercentOfNetAssets'), numeric: true }
                 ],
                 rows
             };
@@ -521,7 +537,7 @@
         return {
             periods: data.periods,
             transitionMs: TRANSITION_MS,
-            playLabel: 'Play through the quarters',
+            playLabel: PFI18n.t('Research.Js.Page.PlayQuarters'),
             update,
             table
         };
