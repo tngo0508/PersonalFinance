@@ -1,0 +1,410 @@
+@* PROTOTYPE — throwaway (#390 "How a goal card and the page look"). Never merge to main.
+   Three structurally different designs for the Savings Goals page, on fake Contribution data, switchable with
+   ?variant=A|B|C and the floating bar. Pace follows the rules in spec #395. Today is pinned to 2026-10-25. *@
+@using System.Globalization
+@using PersonalFinance.Shared.Helpers
+@model string
+@{
+    string variant = (Model ?? "A").ToUpperInvariant();
+    var variants = new[] { ("A", "Ring grid"), ("B", "Ledger rows"), ("C", "Focus + jar") };
+    int index = Array.FindIndex(variants, v => v.Item1 == variant);
+    if (index < 0) { index = 0; variant = "A"; }
+    List<ProtoGoal> goals = ProtoData.Goals();
+    List<ProtoGoal> active = goals.Where(g => g.Status != "Reached").ToList();
+    List<ProtoGoal> dated = active.Where(g => g.TargetDate.HasValue && g.Status != "Past due").ToList();
+    int onTrack = dated.Count(g => g.Status is "On track" or "Ahead");
+    ProtoGoal? next = active.Where(g => g.TargetDate >= ProtoData.Today).OrderBy(g => g.TargetDate).FirstOrDefault();
+    decimal totalSaved = active.Sum(g => g.Saved);
+    decimal thisMonth = goals.Sum(g => g.SavedThisMonth);
+    string selectedParam = Context.Request.Query["goal"].ToString();
+    int selected = int.TryParse(selectedParam, out int s) && s >= 0 && s < goals.Count ? s : 0;
+}
+
+<style>
+    .proto { --ok: var(--app-accent-positive); --warn: var(--app-accent-warning); --bad: var(--app-accent-negative); }
+    .proto-pill { display:inline-flex; align-items:center; gap:.35rem; font-size:.75rem; font-weight:600; padding:.15rem .55rem; border-radius:999px; background:var(--app-surface-soft); color:var(--app-text-soft); white-space:nowrap; }
+    .proto-pill::before { content:""; width:.5rem; height:.5rem; border-radius:50%; background:currentColor; }
+    .proto-pill[data-s="Ahead"], .proto-pill[data-s="On track"] { color:var(--ok); background:var(--app-accent-positive-soft); }
+    .proto-pill[data-s="Behind"] { color:var(--warn); background:var(--app-accent-warning-soft); }
+    .proto-pill[data-s="Past due"] { color:var(--bad); background:var(--app-accent-negative-soft); }
+    .proto-pill[data-s="Reached"] { color:var(--app-brand); background:var(--app-brand-soft); }
+    .proto-muted { color:var(--app-text-muted); font-size:.85rem; }
+    .proto-num { font-variant-numeric:tabular-nums; }
+
+    /* A */
+    .pa-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(10rem, 1fr)); gap:.75rem; margin-bottom:1.25rem; }
+    .pa-kpi { background:var(--app-surface); border:1px solid var(--app-border); border-radius:var(--app-radius-l); padding:.9rem 1rem; }
+    .pa-kpi b { display:block; font-size:1.4rem; }
+    .pa-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(19rem, 1fr)); gap:1rem; }
+    .pa-card { background:var(--app-surface); border:1px solid var(--app-border); border-radius:var(--app-radius-l); padding:1.1rem; display:flex; flex-direction:column; gap:.8rem; }
+    .pa-top { display:flex; gap:1rem; align-items:center; }
+    .pa-top h3 { font-size:1rem; margin:0 0 .25rem; }
+    .pa-ring text { font-size:15px; font-weight:700; fill:var(--app-text); }
+    .pa-foot { display:flex; justify-content:space-between; gap:.5rem; flex-wrap:wrap; border-top:1px solid var(--app-border); padding-top:.7rem; }
+
+    /* B */
+    .pb-banner { background:var(--app-brand-soft); border-radius:var(--app-radius-l); padding:1rem 1.25rem; margin-bottom:1.25rem; font-size:1.05rem; }
+    .pb-row { background:var(--app-surface); border:1px solid var(--app-border); border-radius:var(--app-radius-l); padding:1rem 1.25rem; margin-bottom:.75rem; display:grid; grid-template-columns:minmax(12rem, 1fr) minmax(14rem, 2fr) minmax(10rem, auto); gap:1.25rem; align-items:center; }
+    .pb-row h3 { font-size:1rem; margin:0 0 .35rem; }
+    .pb-row svg { width:100%; height:auto; display:block; }
+    .pb-nums { text-align:right; }
+    .pb-nums b { font-size:1.15rem; }
+    .pb-row details { grid-column:1 / -1; border-top:1px solid var(--app-border); padding-top:.5rem; }
+    .pb-row summary { cursor:pointer; color:var(--app-brand); font-size:.85rem; }
+    .pb-row table { width:100%; font-size:.85rem; margin-top:.5rem; }
+    .pb-row td { padding:.2rem .4rem; border-bottom:1px solid var(--app-border); }
+    @@media (max-width: 48rem) { .pb-row { grid-template-columns:1fr; } .pb-nums { text-align:left; } }
+
+    /* C */
+    .pc-stack { display:flex; height:1.6rem; border-radius:999px; overflow:hidden; margin:.5rem 0 .5rem; }
+    .pc-legend { display:flex; flex-wrap:wrap; gap:.4rem 1rem; font-size:.8rem; margin-bottom:1.25rem; }
+    .pc-legend i { display:inline-block; width:.65rem; height:.65rem; border-radius:2px; margin-right:.3rem; }
+    .pc-wrap { display:grid; grid-template-columns:minmax(14rem, 1fr) 2.2fr; gap:1rem; }
+    .pc-list a { display:block; padding:.7rem .85rem; border:1px solid var(--app-border); border-radius:var(--app-radius-m); margin-bottom:.5rem; color:inherit; text-decoration:none; background:var(--app-surface); }
+    .pc-list a[aria-current] { border-color:var(--app-brand); box-shadow:inset 3px 0 0 var(--app-brand); }
+    .pc-mini { height:.35rem; background:var(--app-surface-soft); border-radius:999px; margin-top:.4rem; overflow:hidden; }
+    .pc-mini span { display:block; height:100%; background:var(--app-brand); }
+    .pc-detail { background:var(--app-surface); border:1px solid var(--app-border); border-radius:var(--app-radius-l); padding:1.25rem; display:grid; grid-template-columns:auto 1fr; gap:1.5rem; }
+    .pc-detail h2 { font-size:1.3rem; margin:0 0 .3rem; }
+    .pc-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(8rem, 1fr)); gap:.75rem; margin:1rem 0; }
+    .pc-stats div { background:var(--app-surface-secondary); border-radius:var(--app-radius-m); padding:.6rem .75rem; }
+    .pc-stats b { display:block; font-size:1.05rem; }
+    .pc-hist { font-size:.85rem; max-height:11rem; overflow:auto; }
+    .pc-hist div { display:flex; justify-content:space-between; padding:.25rem 0; border-bottom:1px solid var(--app-border); }
+    @@media (max-width: 48rem) { .pc-wrap, .pc-detail { grid-template-columns:1fr; } }
+
+    .proto-switch { position:fixed; bottom:1rem; left:50%; transform:translateX(-50%); z-index:2000; display:flex; align-items:center; gap:.5rem; background:#111; color:#fff; padding:.4rem .6rem; border-radius:999px; box-shadow:0 6px 20px rgba(0,0,0,.35); font:600 .85rem system-ui, sans-serif; }
+    .proto-switch a { color:#fff; text-decoration:none; padding:.2rem .6rem; border-radius:999px; background:#333; }
+    .proto-switch span { min-width:10rem; text-align:center; }
+</style>
+
+<div class="proto">
+@switch (variant)
+{
+    case "A":
+        <div class="pa-kpis">
+            <div class="pa-kpi"><span class="proto-muted">Total saved (active goals)</span><b class="proto-num">@Money(totalSaved)</b></div>
+            <div class="pa-kpi"><span class="proto-muted">Saved this month</span><b class="proto-num">+@Money(thisMonth)</b></div>
+            <div class="pa-kpi"><span class="proto-muted">Dated goals on track</span><b>@onTrack of @dated.Count</b></div>
+            <div class="pa-kpi"><span class="proto-muted">Next target date</span><b>@(next is null ? "—" : next.TargetDate!.Value.ToString("MMM d, yyyy", CultureInfo.InvariantCulture))</b>@if (next is not null) {<span class="proto-muted">@next.Name</span>}</div>
+        </div>
+        <div class="pa-grid">
+            @foreach (ProtoGoal g in goals)
+            {
+                double pct = (double)g.Percent;
+                double c = 2 * Math.PI * 34;
+                <div class="pa-card">
+                    <div class="pa-top">
+                        <svg class="pa-ring" width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="@g.Percent.ToString("0")% saved">
+                            <circle cx="42" cy="42" r="34" fill="none" stroke="var(--app-surface-soft)" stroke-width="9"/>
+                            @if (pct > 0)
+                            {
+                                <circle cx="42" cy="42" r="34" fill="none" stroke="@Color(g.Status)" stroke-width="9" stroke-linecap="round"
+                                        stroke-dasharray="@F(c * pct / 100) @F(c)" transform="rotate(-90 42 42)"/>
+                            }
+                            <text x="42" y="47" text-anchor="middle">@g.Percent.ToString("0")%</text>
+                        </svg>
+                        <div style="min-width:0">
+                            <h3>@g.Name</h3>
+                            <div class="proto-num"><b>@Money(g.Saved)</b> <span class="proto-muted">of @Money(g.Target)</span></div>
+                            <span class="proto-pill" data-s="@g.Status">@g.Status</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="proto-muted" style="display:flex;justify-content:space-between"><span>Last 12 months</span><span>this month @(g.SavedThisMonth >= 0 ? "+" : "")@Money(g.SavedThisMonth)</span></div>
+                        @Html.Raw(Bars(g.MonthlyNet(12), 260, 44))
+                    </div>
+                    <div class="proto-muted">@g.PaceSentence</div>
+                    <div class="pa-foot proto-muted">
+                        <span>@(g.NeededPerMonth is null ? "" : $"Needs {Money(g.NeededPerMonth.Value)}/mo")</span>
+                        <span>@(g.TargetDate is null ? "No target date" : $"Target {g.TargetDate.Value.ToString("MMM yyyy", CultureInfo.InvariantCulture)}")</span>
+                    </div>
+                </div>
+            }
+        </div>
+        break;
+
+    case "B":
+        <div class="pb-banner">
+            You've saved <b class="proto-num">@Money(totalSaved)</b> across @active.Count active goals, <b class="proto-num">+@Money(thisMonth)</b> this month.
+            @onTrack of @dated.Count dated goals are on track@(next is null ? "." : $"; next up: {next.Name} on {next.TargetDate!.Value.ToString("MMM d", CultureInfo.InvariantCulture)}.")
+        </div>
+        @foreach (ProtoGoal g in goals)
+        {
+            <div class="pb-row">
+                <div>
+                    <h3>@g.Name <span class="proto-pill" data-s="@g.Status">@g.Status</span></h3>
+                    <div class="proto-muted">@g.PaceSentence</div>
+                </div>
+                <div>@Html.Raw(LineChart(g, 420, 96))</div>
+                <div class="pb-nums proto-num">
+                    <b>@Money(g.Saved)</b> <span class="proto-muted">/ @Money(g.Target)</span>
+                    <div class="proto-muted">@(g.NeededPerMonth is null ? "" : $"{Money(g.NeededPerMonth.Value)}/mo needed")</div>
+                    <div class="proto-muted">@(g.Projected is null ? "" : $"Finish ≈ {g.Projected.Value.ToString("MMM yyyy", CultureInfo.InvariantCulture)}")</div>
+                </div>
+                <details>
+                    <summary>@g.Contributions.Count Contributions</summary>
+                    <table>
+                        @foreach (ProtoContribution x in g.Contributions.OrderByDescending(x => x.Date).Take(8))
+                        {
+                            <tr><td>@x.Date.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</td><td>@(x.Kind == "Regular" ? x.Note : x.Kind)</td><td class="proto-num" style="text-align:right;color:@(x.Amount < 0 ? "var(--bad)" : "inherit")">@(x.Amount >= 0 ? "+" : "")@Money(x.Amount)</td></tr>
+                        }
+                    </table>
+                </details>
+            </div>
+        }
+        break;
+
+    default:
+        ProtoGoal sel = goals[selected];
+        string[] palette = ["#1F6F50", "#3B82C4", "#C2873B", "#8A5CC2", "#C2508A", "#5C9E9A"];
+        decimal all = goals.Sum(g => g.Saved);
+        <div class="proto-muted">Where your savings sit: <b class="proto-num" style="color:var(--app-text)">@Money(all)</b> across @goals.Count goals · +@Money(thisMonth) this month · @onTrack of @dated.Count dated goals on track</div>
+        <div class="pc-stack" role="img" aria-label="Savings split across goals">
+            @for (int i = 0; i < goals.Count; i++)
+            {
+                if (goals[i].Saved > 0) { <span style="width:@F((double)(goals[i].Saved / all * 100))%;background:@palette[i % palette.Length]" title="@goals[i].Name"></span> }
+            }
+        </div>
+        <div class="pc-legend">
+            @for (int i = 0; i < goals.Count; i++) { <span><i style="background:@palette[i % palette.Length]"></i>@goals[i].Name <span class="proto-num proto-muted">@Money(goals[i].Saved)</span></span> }
+        </div>
+        <div class="pc-wrap">
+            <nav class="pc-list" aria-label="Goals">
+                @for (int i = 0; i < goals.Count; i++)
+                {
+                    ProtoGoal g = goals[i];
+                    <a href="?variant=C&goal=@i" aria-current="@(i == selected ? "true" : null)">
+                        <div style="display:flex;justify-content:space-between;gap:.5rem"><b>@g.Name</b><span class="proto-pill" data-s="@g.Status">@g.Status</span></div>
+                        <div class="pc-mini"><span style="width:@F((double)g.Percent)%;background:@Color(g.Status)"></span></div>
+                    </a>
+                }
+            </nav>
+            <section class="pc-detail">
+                @Html.Raw(Jar(sel, 120, 200))
+                <div style="min-width:0">
+                    <h2>@sel.Name</h2>
+                    <span class="proto-pill" data-s="@sel.Status">@sel.Status</span>
+                    <p class="proto-muted" style="margin:.5rem 0 0">@sel.PaceSentence</p>
+                    <div class="pc-stats proto-num">
+                        <div><span class="proto-muted">Saved</span><b>@Money(sel.Saved)</b></div>
+                        <div><span class="proto-muted">Left</span><b>@Money(Math.Max(0, sel.Target - sel.Saved))</b></div>
+                        <div><span class="proto-muted">Needed / month</span><b>@(sel.NeededPerMonth is null ? "—" : Money(sel.NeededPerMonth.Value))</b></div>
+                        <div><span class="proto-muted">Finish at pace</span><b>@(sel.Projected is null ? "—" : sel.Projected.Value.ToString("MMM yyyy", CultureInfo.InvariantCulture))</b></div>
+                    </div>
+                    <div class="proto-muted">Monthly Contributions, last 12 months</div>
+                    @Html.Raw(Bars(sel.MonthlyNet(12), 420, 70))
+                    <div class="pc-hist proto-num">
+                        @foreach (ProtoContribution x in sel.Contributions.OrderByDescending(x => x.Date))
+                        {
+                            <div><span>@x.Date.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) · @(x.Kind == "Regular" ? x.Note : x.Kind)</span><span style="color:@(x.Amount < 0 ? "var(--bad)" : "inherit")">@(x.Amount >= 0 ? "+" : "")@Money(x.Amount)</span></div>
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+        break;
+}
+</div>
+
+@{
+    string prev = variants[(index + variants.Length - 1) % variants.Length].Item1;
+    string nextV = variants[(index + 1) % variants.Length].Item1;
+}
+<div class="proto-switch" role="navigation" aria-label="Prototype variant switcher">
+    <a href="?variant=@prev" id="protoPrev" aria-label="Previous variant">←</a>
+    <span>PROTOTYPE @variants[index].Item1 · @variants[index].Item2</span>
+    <a href="?variant=@nextV" id="protoNext" aria-label="Next variant">→</a>
+</div>
+<script>
+    document.addEventListener('keydown', function (e) {
+        var t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) { return; }
+        if (e.key === 'ArrowLeft') { document.getElementById('protoPrev').click(); }
+        if (e.key === 'ArrowRight') { document.getElementById('protoNext').click(); }
+    });
+</script>
+
+@functions {
+    static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+    static string Money(decimal v) => MoneyFormatter.FormatWhole(v, "USD");
+
+    static string Color(string status) => status switch
+    {
+        "Ahead" or "On track" => "var(--app-accent-positive)",
+        "Behind" => "var(--app-accent-warning)",
+        "Past due" => "var(--app-accent-negative)",
+        "Reached" => "var(--app-brand)",
+        _ => "var(--app-text-faint)"
+    };
+
+    // Monthly net bars: deposits up in brand, withdrawals down in red, zero line in the middle when any are negative.
+    static string Bars(decimal[] values, int w, int h)
+    {
+        decimal max = Math.Max(1, values.Max(v => Math.Abs(v)));
+        bool neg = values.Any(v => v < 0);
+        double zero = neg ? h / 2.0 : h - 1;
+        double bw = (double)w / values.Length;
+        var sb = new System.Text.StringBuilder($"<svg viewBox=\"0 0 {w} {h}\" width=\"100%\" height=\"{h}\" preserveAspectRatio=\"none\" aria-hidden=\"true\">");
+        sb.Append($"<line x1=\"0\" x2=\"{w}\" y1=\"{F(zero)}\" y2=\"{F(zero)}\" stroke=\"var(--app-border)\"/>");
+        for (int i = 0; i < values.Length; i++)
+        {
+            double span = (neg ? h / 2.0 - 2 : h - 2) * (double)(Math.Abs(values[i]) / max);
+            double y = values[i] >= 0 ? zero - span : zero;
+            string fill = values[i] >= 0 ? (i == values.Length - 1 ? "var(--app-brand)" : "var(--app-brand-soft)") : "var(--app-accent-negative)";
+            if (values[i] != 0) { sb.Append($"<rect x=\"{F(i * bw + 2)}\" y=\"{F(y)}\" width=\"{F(bw - 4)}\" height=\"{F(Math.Max(1, span))}\" rx=\"2\" fill=\"{fill}\"/>"); }
+        }
+        return sb.Append("</svg>").ToString();
+    }
+
+    // Saved amount over time (solid) against the ideal line to the target date (dashed) and the target (thin).
+    static string LineChart(ProtoGoal g, int w, int h)
+    {
+        DateTime start = g.Start;
+        DateTime end = g.TargetDate.HasValue && g.TargetDate > ProtoData.Today ? g.TargetDate.Value : (g.Projected ?? ProtoData.Today.AddMonths(3));
+        if (end <= ProtoData.Today) { end = ProtoData.Today.AddMonths(2); }
+        double span = (end - start).TotalDays;
+        decimal top = Math.Max(g.Target, g.Saved) * 1.05m;
+        double X(DateTime d) => 4 + (w - 8) * (d - start).TotalDays / span;
+        double Y(decimal v) => h - 4 - (h - 8) * (double)(v / top);
+        var sb = new System.Text.StringBuilder($"<svg viewBox=\"0 0 {w} {h}\" aria-hidden=\"true\">");
+        sb.Append($"<line x1=\"4\" x2=\"{w - 4}\" y1=\"{F(Y(g.Target))}\" y2=\"{F(Y(g.Target))}\" stroke=\"var(--app-border)\"/>");
+        if (g.TargetDate.HasValue)
+        {
+            sb.Append($"<line x1=\"{F(X(start))}\" y1=\"{F(Y(g.Opening))}\" x2=\"{F(X(g.TargetDate.Value))}\" y2=\"{F(Y(g.Target))}\" stroke=\"var(--app-text-faint)\" stroke-dasharray=\"4 4\"/>");
+        }
+        var pts = new List<string> { $"{F(X(start))},{F(Y(0))}" };
+        decimal run = 0;
+        foreach (ProtoContribution c in g.Contributions.OrderBy(c => c.Date))
+        {
+            pts.Add($"{F(X(c.Date))},{F(Y(run))}");
+            run += c.Amount;
+            pts.Add($"{F(X(c.Date))},{F(Y(run))}");
+        }
+        pts.Add($"{F(X(ProtoData.Today))},{F(Y(run))}");
+        sb.Append($"<polyline fill=\"none\" stroke=\"{Color(g.Status)}\" stroke-width=\"2.5\" points=\"{string.Join(' ', pts)}\"/>");
+        sb.Append($"<line x1=\"{F(X(ProtoData.Today))}\" x2=\"{F(X(ProtoData.Today))}\" y1=\"2\" y2=\"{h - 2}\" stroke=\"var(--app-text-faint)\" stroke-width=\"1\"/>");
+        sb.Append($"<circle cx=\"{F(X(ProtoData.Today))}\" cy=\"{F(Y(run))}\" r=\"4\" fill=\"{Color(g.Status)}\"/>");
+        return sb.Append("</svg>").ToString();
+    }
+
+    // A jar that fills to the saved share, with 50/75/100% milestone ticks.
+    static string Jar(ProtoGoal g, int w, int h)
+    {
+        double pct = Math.Min(100, (double)g.Percent);
+        double bodyTop = 22, bodyH = h - bodyTop - 4, bodyW = w - 44, cx = 8 + bodyW / 2;
+        double fillH = bodyH * pct / 100;
+        var sb = new System.Text.StringBuilder($"<svg width=\"{w}\" height=\"{h}\" viewBox=\"0 0 {w} {h}\" role=\"img\" aria-label=\"{g.Percent:0}% saved\">");
+        sb.Append($"<clipPath id=\"jar\"><rect x=\"8\" y=\"{bodyTop}\" width=\"{F(bodyW)}\" height=\"{bodyH}\" rx=\"18\"/></clipPath>");
+        sb.Append($"<rect x=\"{F(cx - 24)}\" y=\"4\" width=\"48\" height=\"14\" rx=\"4\" fill=\"var(--app-surface-soft)\" stroke=\"var(--app-border)\"/>");
+        sb.Append($"<rect x=\"8\" y=\"{bodyTop}\" width=\"{F(bodyW)}\" height=\"{bodyH}\" rx=\"18\" fill=\"var(--app-surface-secondary)\" stroke=\"var(--app-border)\" stroke-width=\"2\"/>");
+        sb.Append($"<rect clip-path=\"url(#jar)\" x=\"8\" y=\"{F(bodyTop + bodyH - fillH)}\" width=\"{F(bodyW)}\" height=\"{F(fillH)}\" fill=\"{Color(g.Status)}\" opacity=\".85\"/>");
+        foreach (int m in new[] { 50, 75, 100 })
+        {
+            double y = bodyTop + bodyH - bodyH * m / 100.0;
+            sb.Append($"<line x1=\"{F(8 + bodyW - 10)}\" x2=\"{F(8 + bodyW + 4)}\" y1=\"{F(y)}\" y2=\"{F(y)}\" stroke=\"var(--app-text-faint)\"/><text x=\"{F(8 + bodyW + 7)}\" y=\"{F(y + 4)}\" font-size=\"10\" fill=\"var(--app-text-muted)\">{m}%</text>");
+        }
+        sb.Append($"<text x=\"{F(cx)}\" y=\"{F(bodyTop + bodyH * 0.32)}\" text-anchor=\"middle\" font-size=\"22\" font-weight=\"700\" fill=\"var(--app-text)\">{g.Percent:0}%</text>");
+        return sb.Append("</svg>").ToString();
+    }
+
+    public sealed record ProtoContribution(DateTime Date, decimal Amount, string Kind, string Note);
+
+    public sealed class ProtoGoal
+    {
+        public required string Name { get; init; }
+        public decimal Target { get; init; }
+        public DateTime? TargetDate { get; init; }
+        public DateTime Created { get; init; }
+        public List<ProtoContribution> Contributions { get; init; } = [];
+
+        public decimal Saved => Contributions.Sum(c => c.Amount);
+        public decimal Opening => Contributions.Where(c => c.Kind == "Opening").Sum(c => c.Amount);
+        public decimal Percent => Target > 0 ? Math.Min(100, Saved / Target * 100) : 0;
+        public DateTime Start => Contributions.Count == 0 ? Created : new[] { Created, Contributions.Min(c => c.Date) }.Min();
+        public decimal SavedThisMonth => Contributions.Where(c => c.Kind == "Regular" && c.Date.Year == ProtoData.Today.Year && c.Date.Month == ProtoData.Today.Month).Sum(c => c.Amount);
+
+        // Spec #395 Pace rules: net Regular Contributions over the last 90 days (or the goal's age), per 30.44-day month.
+        public decimal? Rate
+        {
+            get
+            {
+                double age = (ProtoData.Today - Start).TotalDays;
+                if (age < 30 || !Contributions.Any(c => c.Kind == "Regular")) { return null; }
+                double window = Math.Min(90, age);
+                decimal net = Contributions.Where(c => c.Kind == "Regular" && c.Date > ProtoData.Today.AddDays(-window)).Sum(c => c.Amount);
+                return net / (decimal)(window / 30.44);
+            }
+        }
+
+        public string Status
+        {
+            get
+            {
+                if (Saved >= Target) { return "Reached"; }
+                if (TargetDate is null) { return "No date"; }
+                if (TargetDate < ProtoData.Today) { return "Past due"; }
+                double total = (TargetDate.Value - Start).TotalDays;
+                decimal ideal = Opening + (Target - Opening) * (decimal)((ProtoData.Today - Start).TotalDays / total);
+                decimal band = Target * 0.05m;
+                return Saved >= ideal + band ? "Ahead" : Saved >= ideal - band ? "On track" : "Behind";
+            }
+        }
+
+        public decimal? NeededPerMonth => Status is "Reached" or "Past due" or "No date" ? null
+            : (Target - Saved) / (decimal)Math.Max(1, (TargetDate!.Value - ProtoData.Today).TotalDays / 30.44);
+
+        public DateTime? Projected => Status == "Reached" || Rate is not > 0 ? null
+            : ProtoData.Today.AddDays((double)((Target - Saved) / Rate.Value) * 30.44);
+
+        public string PaceSentence => Status == "Reached" ? $"Reached on {Contributions.Max(c => c.Date).ToString("MMM d, yyyy", CultureInfo.InvariantCulture)}."
+            : Rate is null ? "Not enough history yet to project a finish date."
+            : Rate <= 0 ? "No recent Contributions, so there's no projected finish."
+            : Status == "Past due" ? $"Past its date with {MoneyFormatter.FormatWhole(Target - Saved, "USD")} to go; at your recent pace you'd finish in {Projected!.Value.ToString("MMMM yyyy", CultureInfo.InvariantCulture)}."
+            : $"At your recent pace ({MoneyFormatter.FormatWhole(Rate.Value, "USD")}/mo) you'd reach this in {Projected!.Value.ToString("MMMM yyyy", CultureInfo.InvariantCulture)}.";
+
+        public decimal[] MonthlyNet(int months)
+        {
+            var result = new decimal[months];
+            for (int i = 0; i < months; i++)
+            {
+                DateTime m = new DateTime(ProtoData.Today.Year, ProtoData.Today.Month, 1).AddMonths(i - months + 1);
+                result[i] = Contributions.Where(c => c.Kind == "Regular" && c.Date.Year == m.Year && c.Date.Month == m.Month).Sum(c => c.Amount);
+            }
+            return result;
+        }
+    }
+
+    public static class ProtoData
+    {
+        public static readonly DateTime Today = new(2026, 10, 25);
+
+        static List<ProtoContribution> Monthly(DateTime from, DateTime to, int day, decimal amount, string note)
+        {
+            var list = new List<ProtoContribution>();
+            for (DateTime m = new(from.Year, from.Month, 1); m <= to; m = m.AddMonths(1))
+            {
+                var d = new DateTime(m.Year, m.Month, Math.Min(day, DateTime.DaysInMonth(m.Year, m.Month)));
+                if (d >= from && d <= to) { list.Add(new ProtoContribution(d, amount, "Regular", note)); }
+            }
+            return list;
+        }
+
+        public static List<ProtoGoal> Goals() =>
+        [
+            new() { Name = "Emergency Fund", Target = 27000, TargetDate = new(2028, 12, 16), Created = new(2026, 1, 10),
+                Contributions = [new(new(2026, 1, 10), 2000, "Opening", ""), .. Monthly(new(2026, 2, 1), Today, 15, 500, "Paycheck"),
+                    new(new(2026, 7, 2), -800, "Regular", "Car repair")] },
+            new() { Name = "Japan trip", Target = 6000, TargetDate = new(2027, 4, 1), Created = new(2026, 3, 1),
+                Contributions = Monthly(new(2026, 3, 1), Today, 1, 700, "Paycheck") },
+            new() { Name = "New laptop", Target = 2500, TargetDate = null, Created = new(2026, 6, 1),
+                Contributions = [.. Monthly(new(2026, 6, 1), Today, 20, 150, "Side gig"), new(new(2026, 9, 5), 200, "Regular", "Bonus")] },
+            new() { Name = "Wedding", Target = 15000, TargetDate = new(2026, 9, 1), Created = new(2025, 9, 1),
+                Contributions = [new(new(2025, 9, 1), 3000, "Opening", ""), .. Monthly(new(2025, 10, 1), Today, 3, 800, "Paycheck"),
+                    new(new(2026, 8, 20), -400, "Adjustment", "")] },
+            new() { Name = "Car down payment", Target = 8000, TargetDate = new(2026, 12, 1), Created = new(2025, 5, 1),
+                Contributions = [.. Monthly(new(2025, 5, 1), new(2026, 8, 31), 10, 500, "Paycheck")] },
+            new() { Name = "Kitchen reno", Target = 20000, TargetDate = new(2028, 6, 1), Created = new(2026, 10, 18), Contributions = [] }
+        ];
+    }
+}

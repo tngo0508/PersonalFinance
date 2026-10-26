@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Html
 @using PersonalFinance.Shared.DTOs.SavingsGoals
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment PrototypeEnv
 @{
     ViewData["Title"] = L["SavingsGoals.Title"].Value;
     var goals = ViewData["Goals"] as List<SavingsGoalDto> ?? new List<SavingsGoalDto>();
@@ -62,8 +63,15 @@
         </div>
     </div>
 
+    @* PROTOTYPE (#390, throwaway branch prototype/savings-goal-cards): ?variant=A|B|C swaps the grid for fake-data
+       card designs, Development only. *@
+    @{ var prototypeVariant = PrototypeEnv.EnvironmentName == "Development" ? Context.Request.Query["variant"].ToString() : ""; }
     <!-- Goals Grid -->
-    @if (goals.Any())
+    @if (prototypeVariant != "")
+    {
+        <partial name="_PrototypeGoalCards" model="prototypeVariant"/>
+    }
+    else if (goals.Any())
     {
         <div class="savings-goals-grid">
             @foreach (var goal in goals)
