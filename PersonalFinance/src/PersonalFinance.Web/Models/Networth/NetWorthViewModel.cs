@@ -13,71 +13,71 @@ public class NetWorthViewModel
     /// <summary>
     /// User-configurable starting balance.
     /// </summary>
-    [Display(Name = "Starting Balance")]
-    [Range(0, 1_000_000_000, ErrorMessage = "Starting balance must be between 0 and 1 billion.")]
+    [Display(Name = "NetWorth.Field.StartingBalance")]
+    [Range(0, 1_000_000_000, ErrorMessage = "NetWorth.Validation.StartingBalanceRange")]
     public decimal StartingBalance { get; set; } = NetWorthDefaults.StartingBalance;
 
     /// <summary>
     /// User-configurable annual savings amount.
     /// </summary>
-    [Display(Name = "Annual Savings")]
-    [Range(0, 10_000_000, ErrorMessage = "Annual savings must be between 0 and 10 million.")]
+    [Display(Name = "NetWorth.Field.AnnualSavings")]
+    [Range(0, 10_000_000, ErrorMessage = "NetWorth.Validation.AnnualSavingsRange")]
     public decimal AnnualSavings { get; set; } = NetWorthDefaults.AnnualSavings;
 
     /// <summary>
     /// User-configurable annual spending.
     /// </summary>
-    [Display(Name = "Annual Spending")]
-    [Range(0, 10_000_000, ErrorMessage = "Annual spending must be between 0 and 10 million.")]
+    [Display(Name = "NetWorth.Field.AnnualSpending")]
+    [Range(0, 10_000_000, ErrorMessage = "NetWorth.Validation.AnnualSpendingRange")]
     public decimal AnnualSpending { get; set; } = NetWorthDefaults.AnnualSpending;
 
     /// <summary>
     /// User-configurable annual income.
     /// </summary>
-    [Display(Name = "Annual Income")]
-    [Range(0, 100_000_000, ErrorMessage = "Annual income must be between 0 and 100 million.")]
+    [Display(Name = "NetWorth.Field.AnnualIncome")]
+    [Range(0, 100_000_000, ErrorMessage = "NetWorth.Validation.AnnualIncomeRange")]
     public decimal AnnualIncome { get; set; } = NetWorthDefaults.AnnualIncome;
 
     /// <summary>
     /// User-configurable current age.
     /// </summary>
-    [Display(Name = "Current Age")]
-    [Range(18, 100, ErrorMessage = "Current age must be between 18 and 100.")]
+    [Display(Name = "NetWorth.Field.CurrentAge")]
+    [Range(18, 100, ErrorMessage = "NetWorth.Validation.CurrentAgeRange")]
     public int CurrentAge { get; set; } = NetWorthDefaults.CurrentAge;
 
     /// <summary>
     /// Target retirement age.
     /// </summary>
-    [Display(Name = "Retirement Age")]
-    [Range(18, 120, ErrorMessage = "Retirement age must be between 18 and 120.")]
+    [Display(Name = "NetWorth.Field.RetirementAge")]
+    [Range(18, 120, ErrorMessage = "NetWorth.Validation.RetirementAgeRange")]
     public int RetirementAge { get; set; } = NetWorthDefaults.RetirementAge;
 
     /// <summary>
     /// Base scenario ROI percentage.
     /// </summary>
-    [Display(Name = "Base ROI %")]
-    [Range(0, 50, ErrorMessage = "Base ROI must be between 0% and 50%.")]
+    [Display(Name = "NetWorth.Field.BaseRoi")]
+    [Range(0, 50, ErrorMessage = "NetWorth.Validation.BaseRoiRange")]
     public decimal BaseRoi { get; set; } = NetWorthDefaults.BaseRoi;
 
     /// <summary>
     /// Conservative scenario ROI percentage.
     /// </summary>
-    [Display(Name = "Conservative ROI %")]
-    [Range(0, 50, ErrorMessage = "Conservative ROI must be between 0% and 50%.")]
+    [Display(Name = "NetWorth.Field.ConservativeRoi")]
+    [Range(0, 50, ErrorMessage = "NetWorth.Validation.ConservativeRoiRange")]
     public decimal ConservativeRoi { get; set; } = NetWorthDefaults.ConservativeRoi;
 
     /// <summary>
     /// Aggressive scenario ROI percentage.
     /// </summary>
-    [Display(Name = "Aggressive ROI %")]
-    [Range(0, 50, ErrorMessage = "Aggressive ROI must be between 0% and 50%.")]
+    [Display(Name = "NetWorth.Field.AggressiveRoi")]
+    [Range(0, 50, ErrorMessage = "NetWorth.Validation.AggressiveRoiRange")]
     public decimal AggressiveRoi { get; set; } = NetWorthDefaults.AggressiveRoi;
 
     /// <summary>
     /// Aggressive scenario annual savings (higher savings rate).
     /// </summary>
-    [Display(Name = "Aggressive Savings")]
-    [Range(0, 10_000_000, ErrorMessage = "Aggressive savings must be between 0 and 10 million.")]
+    [Display(Name = "NetWorth.Field.AggressiveSavings")]
+    [Range(0, 10_000_000, ErrorMessage = "NetWorth.Validation.AggressiveSavingsRange")]
     public decimal AggressiveSavings { get; set; } = NetWorthDefaults.AggressiveSavings;
 
     /// <summary>
@@ -88,7 +88,7 @@ public class NetWorthViewModel
     /// <summary>
     /// Selected scenario for the detail table view.
     /// </summary>
-    [RegularExpression("^(Base|Conservative|Aggressive)$", ErrorMessage = "Invalid scenario selected.")]
+    [RegularExpression("^(Base|Conservative|Aggressive)$", ErrorMessage = "NetWorth.Validation.ScenarioInvalid")]
     public string SelectedScenario { get; set; } = "Base";
 
     /// <summary>

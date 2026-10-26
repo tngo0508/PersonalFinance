@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth Projection page — main orchestrator.
  * Coordinates all networth modules: utils, charts, sliders, api, presets, ui.
@@ -32,8 +33,8 @@
             'nwAggressiveSavings'
         ];
         cachedSavedValues = {};
-        fields.forEach(function (fieldId) {
-            const rangeEl = document.getElementById(fieldId + 'Range');
+        fields.forEach((fieldId) => {
+            const rangeEl = document.getElementById(`${fieldId }Range`);
             if (rangeEl) {
                 cachedSavedValues[fieldId] = parseFloat(rangeEl.value);
             }
@@ -65,7 +66,7 @@
         }
 
         // Auto-dismiss after 4 seconds
-        setTimeout(function () {
+        setTimeout(() => {
             if (msgEl.parentNode) {
                 msgEl.remove();
             }
@@ -134,8 +135,8 @@
         // Initialize "Clear saved parameters" dropdown item
         const clearSavedBtn = document.getElementById('nwClearSaved');
         if (clearSavedBtn) {
-            clearSavedBtn.addEventListener('click', function () {
-                const confirmed = confirm('This will delete your saved net worth parameters. Your current slider values will be reset to defaults. This action cannot be undone.');
+            clearSavedBtn.addEventListener('click', () => {
+                const confirmed = confirm(PFI18n.t('NetWorth.Js.ConfirmClear'));
                 if (confirmed) {
                     const clearForm = document.getElementById('nwClearForm');
                     if (clearForm) {

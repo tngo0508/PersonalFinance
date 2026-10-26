@@ -10,18 +10,6 @@
     const NW = window.NW;
 
     /**
-     * Read what was typed in a slider field, in the page culture: the currency symbol and group separators are
-     * dropped, the culture's decimal separator kept (7,5 in vi-VN). The slider shows the result at once.
-     * @param {string} text - The field's text.
-     * @returns {number} The number, or NaN.
-     */
-    function parseTyped (text) {
-        const decimal = PFI18n.formatNumber(1.5).replace(/\d/g, '');
-        const kept = String(text).split('').filter((char) => /[\d-]/.test(char) || char === decimal).join('');
-        return PFI18n.parseNumber(kept);
-    }
-
-    /**
      * Format a number for display in a slider field input.
      * @param {number} value - The numeric value.
      * @param {string} type - 'currency', 'percent', or 'number'.
@@ -90,7 +78,7 @@
 
         // Input → Range (on blur and Enter key)
         inputEl.addEventListener('input', () => {
-            const num = parseTyped(inputEl.value);
+            const num = NW.parseTyped(inputEl.value);
             if (!isNaN(num)) {
                 const min = NW.PF.safeParseFloat(rangeEl.min, 0);
                 const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
@@ -102,7 +90,7 @@
         });
 
         inputEl.addEventListener('blur', () => {
-            const num = parseTyped(inputEl.value);
+            const num = NW.parseTyped(inputEl.value);
             if (!isNaN(num)) {
                 const min = NW.PF.safeParseFloat(rangeEl.min, 0);
                 const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
@@ -134,8 +122,8 @@
 
         if (!savingsEl || !incomeEl || !rateValueEl || !rateFillEl) { return; }
 
-        const savings = parseTyped(savingsEl.value) || 0;
-        const income = parseTyped(incomeEl.value) || 0;
+        const savings = NW.parseTyped(savingsEl.value) || 0;
+        const income = NW.parseTyped(incomeEl.value) || 0;
 
         if (income <= 0) {
             rateValueEl.textContent = '0%';

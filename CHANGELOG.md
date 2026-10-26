@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.11.0] - 2026-10-25
+
+### Added
+
+- **Net Worth and the Investment Calculator in Vietnamese**: both pages, their charts, the FI Breakdown and the help dialog follow the UI language (slice L3 of the localization spec, #363).
+  - 160 keys under `NetWorth.` and `InvestmentCalculator.`; the pages' scripts read theirs from `<js-strings>` islands.
+  - The FI Breakdown takes its wording from the localizer, so the live cards after each recalculation match the server's.
+  - Save, clear and Unavailable State messages and the parameter validation messages are translated.
+
+### Changed
+
+- **Net Worth amounts use the shared money formatter**: the FI Target and every tile, table cell and chart label format in the reader's culture (`1.250.000 $` in Vietnamese); the hand-built `"$" + N0` is gone.
+  - The Base Final card shows the retirement age after a recalculation too, as it does on first render.
+
+### Fixed
+
+- **Net Worth reads its fields in the reader's culture**: under Vietnamese, `180.000` is read as 180,000 and `7,5` as 7.5 for the projection and its range checks, instead of 180 and 75.
+
 ## [7.10.0] - 2026-10-25
 
 ### Added

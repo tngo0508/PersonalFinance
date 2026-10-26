@@ -74,6 +74,24 @@
     }
 
     /**
+     * Format a return rate's number in the page culture, without the % sign (7.5; 7,5 in vi-VN).
+     * @param {number} ratePercent - The rate in percent.
+     * @returns {string} The formatted number.
+     */
+    function formatRate (ratePercent) {
+        return PFI18n.formatNumber(Number(ratePercent) || 0, { maximumFractionDigits: 2 });
+    }
+
+    /**
+     * The translated name of a scenario the ApiService names Base, Conservative or Aggressive.
+     * @param {string} name - The scenario's name.
+     * @returns {string} The name in the page language.
+     */
+    function scenarioName (name) {
+        return Object.prototype.hasOwnProperty.call(scenarioMap, name) ? PFI18n.t(`NetWorth.Js.Scenario.${name}`) : name;
+    }
+
+    /**
      * Convert hex color to rgba string.
      * @param {string} hex - Hex color (e.g. '#818cf8')
      * @param {number} alpha - Alpha value 0-1
@@ -169,7 +187,7 @@
         closeButton.type = 'button';
         closeButton.className = 'btn-close';
         closeButton.setAttribute('data-bs-dismiss', 'alert');
-        closeButton.setAttribute('aria-label', 'Close');
+        closeButton.setAttribute('aria-label', PFI18n.t('NetWorth.Js.Close'));
         alert.appendChild(closeButton);
         container.appendChild(alert);
     }
@@ -195,6 +213,8 @@
         VALIDATORS: VALIDATORS,
         formatCurrency: formatCurrency,
         formatCompact: formatCompact,
+        formatRate: formatRate,
+        scenarioName: scenarioName,
         hexToRgba: hexToRgba,
         parseTyped: parseTyped,
         getSliderValue: getSliderValue,

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
@@ -24,11 +25,13 @@ public class NetworthController : Controller
 
     private readonly INetWorthApi _netWorthApi;
     private readonly ILogger<NetworthController> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public NetworthController(INetWorthApi netWorthApi, ILogger<NetworthController> logger)
+    public NetworthController(INetWorthApi netWorthApi, ILogger<NetworthController> logger, IStringLocalizer localizer)
     {
         _netWorthApi = netWorthApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -72,7 +75,7 @@ public class NetworthController : Controller
     {
         NetWorthProjectionDto projection = await _netWorthApi.CalculateProjectionAsync(parameters.ToProjectionRequest(), cancellationToken);
         JsonObject result = JsonSerializer.SerializeToNode(projection, CalculateJsonOptions)!.AsObject();
-        result["breakdown"] = JsonSerializer.SerializeToNode(FiBreakdownBuilder.Build(projection), CalculateJsonOptions);
+        result["breakdown"] = JsonSerializer.SerializeToNode(FiBreakdownBuilder.Build(projection, _localizer), CalculateJsonOptions);
         return Json(result);
     }
 
@@ -94,12 +97,12 @@ public class NetworthController : Controller
         try
         {
             await _netWorthApi.SaveParametersAsync(request, HttpContext.RequestAborted);
-            TempData["SaveSuccess"] = "Parameters saved to cloud.";
+            TempData["SaveSuccess"] = _localizer["NetWorth.Message.Saved"].Value;
         }
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogError(ex, "Saving Net Worth parameters failed.");
-            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, "Failed to save parameters. Please try again."));
+            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, _localizer["NetWorth.Message.SaveFailed"]));
             return await IndexWithProjectionAsync(model, CancellationToken.None);
         }
 
@@ -121,7 +124,7 @@ public class NetworthController : Controller
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogError(ex, "Deleting Net Worth parameters failed.");
-            TempData["SaveError"] = ApiErrorMessages.ForUser(ex, "Failed to clear your saved parameters. Please try again.");
+            TempData["SaveError"] = ApiErrorMessages.ForUser(ex, _localizer["NetWorth.Message.ClearFailed"]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -147,5 +150,5 @@ public class NetworthController : Controller
     }
 
     private ViewResult Unavailable() =>
-        this.UnavailableView("Net Worth Projection", "We couldn't load your net worth projection", "Networth");
+        this.UnavailableView(_localizer["NetWorth.Title"], _localizer["NetWorth.Message.Unavailable"], "Networth");
 }

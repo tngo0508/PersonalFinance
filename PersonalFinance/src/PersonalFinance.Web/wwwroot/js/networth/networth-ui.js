@@ -8,7 +8,6 @@
     'use strict';
 
     const NW = window.NW;
-    const PF = window.PFUtils;
 
     /**
      * Safely set text content on an element if it exists.
@@ -21,23 +20,17 @@
     }
 
     /**
-     * Safely set innerHTML on an element if it exists.
-     * @param {string} selector - CSS selector
-     * @param {string} html - HTML to set
+     * Create an element with an optional class and text.
+     * @param {string} tag - The tag name.
+     * @param {string} [className] - The class attribute.
+     * @param {string} [text] - Text content.
+     * @returns {HTMLElement} The new element.
      */
-    function setHtml (selector, html) {
-        const el = document.querySelector(selector);
-        if (el) { el.innerHTML = html; }
-    }
-
-    /**
-     * Safely set innerHTML on an element by ID if it exists.
-     * @param {string} id - Element ID
-     * @param {string} html - HTML to set
-     */
-    function setHtmlById (id, html) {
-        const el = document.getElementById(id);
-        if (el) { el.innerHTML = html; }
+    function el (tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) { node.className = className; }
+        if (text !== undefined) { node.textContent = text; }
+        return node;
     }
 
     /**
@@ -45,32 +38,51 @@
      * @param {Object} data - The projection data object.
      */
     function updateMetrics (data) {
+
         // FI Target card
-        const fiValue = document.querySelector('.nw-metric-fi-value');
-        if (fiValue) {
-            const symbolEl = fiValue.querySelector('.nw-currency-symbol');
-            const amountEl = fiValue.querySelector('.nw-currency-amount');
-            if (symbolEl) { symbolEl.textContent = '$'; }
-            if (amountEl) { amountEl.textContent = PFI18n.formatNumber(Math.round(data.fiTarget)); }
-        }
-        setHtml('.nw-metric-fi-sub', `Based on ${ PF.escapeHtml(NW.formatCompact(data.annualSpending)) }/yr spending`);
+        setText('.nw-metric-fi-value', NW.formatCurrency(data.fiTarget));
+        setText('.nw-metric-fi-sub', PFI18n.t('NetWorth.Js.Metric.FiSub', { amount: NW.formatCompact(data.annualSpending) }));
 
         // Current Net Worth card
         setText('.nw-metric-current-value', NW.formatCurrency(data.base.startingBalance));
-        setText('.nw-metric-current-sub', `Age ${ data.currentAge }, Year ${ data.currentYear}`);
+        setText('.nw-metric-current-sub', PFI18n.t('NetWorth.Js.Metric.CurrentSub', { age: data.currentAge, year: data.currentYear }));
 
         // Base Final card
         setText('.nw-metric-base-value', NW.formatCurrency(data.base.finalNetWorth));
-        setText('.nw-metric-base-sub', `${data.base.roiPercent }% ROI`);
+        setText('.nw-metric-base-sub', PFI18n.t('NetWorth.Js.Metric.BaseSub', {
+            rate: NW.formatRate(data.base.roiPercent),
+            age: data.retirementAge
+        }));
 
         // Aggressive Final card
         setText('.nw-metric-aggressive-value', NW.formatCurrency(data.aggressive.finalNetWorth));
-        setHtml('.nw-metric-aggressive-sub', `${PF.escapeHtml(String(data.aggressive.roiPercent)) }% ROI · ${ PF.escapeHtml(NW.formatCompact(data.aggressive.annualSavings)) }/yr savings`);
+        setText('.nw-metric-aggressive-sub', PFI18n.t('NetWorth.Js.Metric.AggressiveSub', {
+            rate: NW.formatRate(data.aggressive.roiPercent),
+            amount: NW.formatCompact(data.aggressive.annualSavings)
+        }));
 
         // Legend
-        setHtmlById('nwLegendBase', `<span class="nw-legend-dot nw-dot-base"></span> Base (${ PF.escapeHtml(String(data.base.roiPercent)) }%)`);
-        setHtmlById('nwLegendConservative', `<span class="nw-legend-dot nw-dot-conservative"></span> Conservative (${ PF.escapeHtml(String(data.conservative.roiPercent)) }%)`);
-        setHtmlById('nwLegendAggressive', `<span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (${ PF.escapeHtml(String(data.aggressive.roiPercent)) }%)`);
+        setLegend('nwLegendBase', 'nw-dot-base', 'Base', data.base.roiPercent);
+        setLegend('nwLegendConservative', 'nw-dot-conservative', 'Conservative', data.conservative.roiPercent);
+        setLegend('nwLegendAggressive', 'nw-dot-aggressive', 'Aggressive', data.aggressive.roiPercent);
+    }
+
+    /**
+     * Set a growth chart legend item: its colour dot, then the scenario name and rate.
+     * @param {string} id - The legend item's ID.
+     * @param {string} dotClass - The dot's colour class.
+     * @param {string} scenario - Base, Conservative or Aggressive.
+     * @param {number} roiPercent - The scenario's return rate.
+     */
+    function setLegend (id, dotClass, scenario, roiPercent) {
+        const label = PFI18n.t('NetWorth.Js.Legend.Scenario', {
+            name: NW.scenarioName(scenario),
+            rate: NW.formatRate(roiPercent)
+        });
+        const item = document.getElementById(id);
+        if (item) {
+            item.replaceChildren(el('span', `nw-legend-dot ${dotClass}`), ` ${label}`);
+        }
     }
 
     /**
@@ -94,10 +106,10 @@
         const contribEl = document.querySelector(`.${ prefix }contrib`);
         const interestEl = document.querySelector(`.${ prefix }interest`);
 
-        if (savingsEl) { savingsEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.annualSavings)); }
-        if (finalEl) { finalEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.finalNetWorth)); }
-        if (contribEl) { contribEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.totalContributions)); }
-        if (interestEl) { interestEl.innerHTML = PF.escapeHtml(NW.formatCompact(scenario.totalInterestEarned)); }
+        if (savingsEl) { savingsEl.textContent = NW.formatCompact(scenario.annualSavings); }
+        if (finalEl) { finalEl.textContent = NW.formatCompact(scenario.finalNetWorth); }
+        if (contribEl) { contribEl.textContent = NW.formatCompact(scenario.totalContributions); }
+        if (interestEl) { interestEl.textContent = NW.formatCompact(scenario.totalInterestEarned); }
     }
 
     /**
@@ -109,7 +121,7 @@
         const roiValues = [data.base.roiPercent, data.conservative.roiPercent, data.aggressive.roiPercent];
         badges.forEach((badge, index) => {
             if (index < roiValues.length) {
-                badge.textContent = `${roiValues[index] }% ROI`;
+                badge.textContent = PFI18n.t('NetWorth.Js.RoiBadge', { rate: NW.formatRate(roiValues[index]) });
             }
         });
     }
@@ -119,16 +131,16 @@
      * @param {number} endingBalance - The ending balance for the year.
      * @param {number} fiTarget - The financial independence target amount.
      * @param {number} annualIncome - The annual income amount.
-     * @returns {string} Space-separated CSS class names for the row.
+     * @returns {string} The row's CSS class, or '' for none.
      */
     function getRowHighlightClass (endingBalance, fiTarget, _annualIncome) {
         const fiveMillion = 5000000;
 
         if (endingBalance >= fiveMillion) {
-            return ' class="nw-row-5m"';
+            return 'nw-row-5m';
         }
         if (endingBalance >= fiTarget) {
-            return ' class="nw-row-fi"';
+            return 'nw-row-fi';
         }
 
         return '';
@@ -153,20 +165,20 @@
         const annualIncome = data.annualIncome;
 
         const rows = scenario.years.map((year) => {
-            const rowClass = getRowHighlightClass(year.endingBalance, fiTarget, annualIncome);
+            const row = el('tr', getRowHighlightClass(year.endingBalance, fiTarget, annualIncome));
             const roiClass = year.roi >= annualIncome ? ' nw-roi-highlight' : '';
-            const esc = PF.escapeHtml;
-            return `<tr${ rowClass }>` +
-                `<td>${ esc(year.year) }</td>` +
-                `<td>${ esc(year.age) }</td>` +
-                `<td class="text-end nw-currency">${ esc(NW.formatCurrency(year.startingBalance)) }</td>` +
-                `<td class="text-end nw-currency">${ esc(NW.formatCurrency(year.savings)) }</td>` +
-                `<td class="text-end nw-currency text-success${ roiClass }">${ esc(NW.formatCurrency(year.roi)) }</td>` +
-                `<td class="text-end nw-currency fw-semibold">${ esc(NW.formatCurrency(year.endingBalance)) }</td>` +
-            '</tr>';
+            row.append(
+                el('td', '', String(year.year)),
+                el('td', '', String(year.age)),
+                el('td', 'text-end nw-currency', NW.formatCurrency(year.startingBalance)),
+                el('td', 'text-end nw-currency', NW.formatCurrency(year.savings)),
+                el('td', `text-end nw-currency text-success${roiClass}`, NW.formatCurrency(year.roi)),
+                el('td', 'text-end nw-currency fw-semibold', NW.formatCurrency(year.endingBalance))
+            );
+            return row;
         });
 
-        tbody.innerHTML = rows.join('');
+        tbody.replaceChildren(...rows);
     }
 
     /**

@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth presets and randomization module.
  * Handles preset scenario buttons, randomization, and reset to defaults.
@@ -50,9 +51,9 @@
             { id: 'nwAggressiveSavings', type: 'currency' }
         ];
 
-        fields.forEach(function (field) {
+        fields.forEach((field) => {
             if (preset[field.id] !== undefined) {
-                const rangeId = field.id + 'Range';
+                const rangeId = `${field.id }Range`;
                 const rangeEl = document.getElementById(rangeId);
                 const inputEl = document.getElementById(field.id);
                 if (rangeEl) {
@@ -66,7 +67,7 @@
 
         // Clear validation
         NW.clearValidationMessage();
-        NW.VALIDATORS.forEach(function (v) {
+        NW.VALIDATORS.forEach((v) => {
             NW.setInvalid(v.id, false);
         });
 
@@ -143,10 +144,10 @@
             }
         };
 
-        Object.keys(presets).forEach(function (key) {
-            const btn = document.getElementById('nwPreset' + key.charAt(0).toUpperCase() + key.slice(1));
+        Object.keys(presets).forEach((key) => {
+            const btn = document.getElementById(`nwPreset${ key.charAt(0).toUpperCase() }${key.slice(1)}`);
             if (btn) {
-                btn.addEventListener('click', function () {
+                btn.addEventListener('click', () => {
                     applyPreset(presets[key]);
                 });
             }
@@ -208,7 +209,7 @@
             return;
         }
         if (window.NW.showResetMessage) {
-            window.NW.showResetMessage('No saved parameters, using defaults.');
+            window.NW.showResetMessage(PFI18n.t('NetWorth.Js.UsingDefaults'));
         }
         applyPreset({
             nwStartingBalance: defaults.startingBalance,
