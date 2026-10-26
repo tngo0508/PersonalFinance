@@ -44,7 +44,7 @@ public sealed partial class BudgetTrackerPageLanguageTests : IAsyncLifetime
     [
         "Manage your monthly planned budget", "Month navigation", "Previous Month", "Next Month", ">Month<", ">Year<",
         "New Month Budget Plan", "This month has no budget plan yet", "Copy from Previous Month", "Start Blank",
-        "Summary", "Expenses Comparison", "Income Comparison", "Planned: ", "Planned Expenses", "Actual Income",
+        "Expenses Comparison", "Income Comparison", "Planned: ", "Planned Expenses", "Actual Income",
         "Add Custom Expense Category", "Add Category", "Expenses Summary Table", ">Planned<", ">Actual<", ">Diff<",
         ">Actions<", "Total Expenses", "Total Income", "Record and itemize", "Add Transaction",
         "Expense Transactions Table", ">Amount<", ">Description<", "No expense transactions recorded",
@@ -122,6 +122,7 @@ public sealed partial class BudgetTrackerPageLanguageTests : IAsyncLifetime
         string shown = NotShown().Replace(html, string.Empty);
         Assert.All(PageEnglish, text => Assert.DoesNotContain(text, shown, StringComparison.Ordinal));
         Assert.Contains(TestLocalization.Vietnamese("BudgetTracker.Title"), html);
+        Assert.Contains(TestLocalization.Vietnamese("BudgetTracker.Tabs.Summary"), html);
     }
 
     [Fact]
