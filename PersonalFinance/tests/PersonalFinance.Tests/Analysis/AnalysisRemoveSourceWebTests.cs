@@ -18,8 +18,12 @@ namespace PersonalFinance.Tests.Analysis;
 /// The Analysis page's Data Source Removal: which sources it offers, the confirmation page, and the typed
 /// confirmation the Budget Tracker needs.
 /// </summary>
-public class AnalysisRemoveSourceWebTests
+public sealed class AnalysisRemoveSourceWebTests : IDisposable
 {
+    private readonly RequestCultureScope _culture = new("en-US");
+
+    public void Dispose() => _culture.Dispose();
+
     private static readonly BudgetDataSourceSummaryDto SheetWithData =
         new() { Source = BudgetDataSource.GoogleSheet, MonthCount = 4, TransactionCount = 120 };
 
@@ -33,7 +37,8 @@ public class AnalysisRemoveSourceWebTests
         FakeBudgetTrackerApi trackerApi)
     {
         var httpContext = new DefaultHttpContext();
-        return new AnalysisController(analysisApi, trackerApi, NullLogger<AnalysisController>.Instance)
+        return new AnalysisController(analysisApi, trackerApi, NullLogger<AnalysisController>.Instance,
+            TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())

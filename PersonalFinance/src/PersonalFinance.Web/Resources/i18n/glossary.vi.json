@@ -29,5 +29,11 @@
 
   "starting balance": "số dư ban đầu",
   "interest earned": "tiền lãi thu được",
-  "compound growth": "tăng trưởng lãi kép"
+  "compound growth": "tăng trưởng lãi kép",
+
+  "spreadsheet": "bảng tính",
+  "spreadsheets": "bảng tính",
+  "Google Sheet": "Google Sheet",
+  "API key": "khóa API",
+  "shortfall": "thiếu hụt"
 }

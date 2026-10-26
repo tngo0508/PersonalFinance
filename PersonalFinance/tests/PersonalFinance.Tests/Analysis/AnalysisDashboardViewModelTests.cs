@@ -1,3 +1,4 @@
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Models.Analysis;
 
 
@@ -7,8 +8,12 @@ namespace PersonalFinance.Tests.Analysis;
 /// Presentation labels for the Analysis empty state, which must name the requested period
 /// even when the active source has no summary for that month.
 /// </summary>
-public class AnalysisDashboardViewModelTests
+public sealed class AnalysisDashboardViewModelTests : IDisposable
 {
+    private readonly RequestCultureScope _culture = new("en-US");
+
+    public void Dispose() => _culture.Dispose();
+
     [Fact]
     public void PeriodLabel_WhenMonthAndYearSelected_IsMonthNameAndYear()
     {
@@ -34,10 +39,10 @@ public class AnalysisDashboardViewModelTests
     }
 
     [Fact]
-    public void PeriodLabel_WhenNoPeriodSelected_IsThisPeriod()
+    public void PeriodLabel_WhenNoPeriodSelected_IsNull_SoTheViewSaysThisPeriod()
     {
         var model = new AnalysisDashboardViewModel();
 
-        Assert.Equal("this period", model.PeriodLabel);
+        Assert.Null(model.PeriodLabel);
     }
 }

@@ -20,10 +20,4 @@ public class RemoveSourceViewModel
     public int TransactionCount { get; set; }
 
     public bool RequiresTypedConfirmation => Source == BudgetDataSource.BudgetTracker;
-
-    public string SourceName => SourceDisplayName(Source);
-
-    /// <summary>The name the Data Source toggle shows for <paramref name="source"/>.</summary>
-    public static string SourceDisplayName(BudgetDataSource source) =>
-        source == BudgetDataSource.BudgetTracker ? "Budget Tracker" : "Google Sheet";
 }

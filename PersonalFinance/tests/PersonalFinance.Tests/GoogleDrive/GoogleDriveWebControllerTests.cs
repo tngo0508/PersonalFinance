@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models.GoogleDrive;
 using Xunit;
@@ -42,7 +43,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -87,7 +88,7 @@ public class GoogleDriveWebControllerTests
             }
         };
 
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -111,7 +112,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -131,7 +132,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -151,7 +152,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
@@ -170,7 +171,7 @@ public class GoogleDriveWebControllerTests
     {
         var apiReport = new MonthlyBudgetReportDto { FileName = "Monthly budget 2026.xlsx", FileId = "file-123" };
         var fakeApi = new FakeGoogleDriveApi { BudgetReport = apiReport };
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -185,7 +186,7 @@ public class GoogleDriveWebControllerTests
     public async Task MonthlyBudgetReport_WhenApiServiceFails_ReturnsBadGatewayInsteadOfInventedData()
     {
         var fakeApi = new FakeGoogleDriveApi { BudgetReportFailure = new HttpRequestException("ApiService down") };
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -200,7 +201,7 @@ public class GoogleDriveWebControllerTests
     public async Task MonthlyBudgetReport_WithoutFileId_ReturnsBadRequest()
     {
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -215,7 +216,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -235,7 +236,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
