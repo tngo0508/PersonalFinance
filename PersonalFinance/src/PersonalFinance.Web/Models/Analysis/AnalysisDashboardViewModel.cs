@@ -22,17 +22,17 @@ public class AnalysisDashboardViewModel
     public List<BudgetDataSource> RemovableSources { get; set; } = new();
 
     /// <summary>
-    /// User-facing period label built from the selected year and month, e.g. "March 2026".
+    /// User-facing period label built from the selected year and month in the request culture, e.g. "March 2026";
+    /// null when no period is selected, so the view says "this period" in the request's Language.
     /// Independent of whether the active source has a summary for that period.
     /// </summary>
-    public string PeriodLabel
+    public string? PeriodLabel
     {
         get
         {
             if (SelectedMonth is >= 1 and <= 12 && SelectedYear > 0)
             {
-                return new DateTime(SelectedYear, SelectedMonth.Value, 1)
-                    .ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+                return AnalysisText.MonthYear(SelectedYear, SelectedMonth.Value);
             }
 
             if (SelectedYear > 0)
@@ -40,7 +40,7 @@ public class AnalysisDashboardViewModel
                 return SelectedYear.ToString(CultureInfo.InvariantCulture);
             }
 
-            return "this period";
+            return null;
         }
     }
 
@@ -60,6 +60,9 @@ public class AnalysisDashboardViewModel
     public double BudgetConsumptionPercent { get; set; }
     public double TimeElapsedPercent { get; set; }
     public string VelocityStatus { get; set; } = string.Empty;
+
+    /// <summary><see cref="VelocityStatus"/> in the request's Language.</summary>
+    public string VelocityStatusLabel { get; set; } = string.Empty;
 
     // Trend data (for charts)
     public List<TrendPointViewModel> TrendPoints { get; set; } = new();
@@ -101,6 +104,9 @@ public sealed class CategoryInsightViewModel
     public decimal Variance { get; set; }
     public double PercentageUsed { get; set; }
     public string Status { get; set; } = string.Empty;
+
+    /// <summary><see cref="Status"/> in the request's Language.</summary>
+    public string StatusLabel { get; set; } = string.Empty;
 }
 
 public sealed class VarianceRankingViewModel
@@ -112,6 +118,9 @@ public sealed class VarianceRankingViewModel
     public decimal Variance { get; set; }
     public double VariancePercent { get; set; }
     public string Status { get; set; } = string.Empty;
+
+    /// <summary><see cref="Status"/> in the request's Language.</summary>
+    public string StatusLabel { get; set; } = string.Empty;
 }
 
 public sealed class WeeklySpendingViewModel

@@ -36,7 +36,7 @@
                     return w.weekLabel;
                 }),
                 datasets: [{
-                    label: 'Weekly Spending',
+                    label: PFI18n.t('Analysis.Js.WeeklySpending'),
                     data: weeklyTrend.map((w) => {
                         return w.totalSpent;
                     }),
@@ -92,7 +92,7 @@
                 }),
                 datasets: [
                     {
-                        label: 'Income',
+                        label: PFI18n.t('Analysis.Js.Income'),
                         data: trendPoints.map((t) => {
                             return t.income;
                         }),
@@ -102,7 +102,7 @@
                         fill: false
                     },
                     {
-                        label: 'Expenses',
+                        label: PFI18n.t('Analysis.Js.Expenses'),
                         data: trendPoints.map((t) => {
                             return t.expenses;
                         }),
@@ -112,7 +112,7 @@
                         fill: false
                     },
                     {
-                        label: 'Net Savings',
+                        label: PFI18n.t('Analysis.Js.NetSavings'),
                         data: trendPoints.map((t) => {
                             return t.netSavings;
                         }),
@@ -131,7 +131,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return `${context.dataset.label }: ${ PFI18n.formatMoney(context.parsed.y, 'USD', { whole: true })}`;
+                                return PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: PFI18n.formatMoney(context.parsed.y, 'USD', { whole: true }) });
                             }
                         }
                     }
@@ -211,7 +211,7 @@
                                     return a + b;
                                 }, 0);
                                 const percentage = PFI18n.formatNumber(value / total * 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-                                return `${label }: ${ PFI18n.formatMoney(value, 'USD', { whole: true }) } (${ percentage }%)`;
+                                return PFI18n.t('Analysis.Js.ShareTooltip', { label: label, amount: PFI18n.formatMoney(value, 'USD', { whole: true }), percent: percentage });
                             }
                         }
                     }
@@ -240,7 +240,7 @@
                 }),
                 datasets: [
                     {
-                        label: 'Budgeted',
+                        label: PFI18n.t('Analysis.Js.Budgeted'),
                         data: categories.map((c) => {
                             return c.budgetedAmount;
                         }),
@@ -249,7 +249,7 @@
                         borderWidth: 1
                     },
                     {
-                        label: 'Actual',
+                        label: PFI18n.t('Analysis.Js.Actual'),
                         data: categories.map((c) => {
                             return c.actualAmount;
                         }),
@@ -267,7 +267,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return `${context.dataset.label }: ${ PFI18n.formatMoney(context.parsed.x, 'USD', { whole: true })}`;
+                                return PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: PFI18n.formatMoney(context.parsed.x, 'USD', { whole: true }) });
                             }
                         }
                     }

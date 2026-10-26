@@ -1,4 +1,5 @@
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Models.Analysis;
 using PersonalFinance.Web.Services;
 
@@ -8,8 +9,13 @@ namespace PersonalFinance.Tests.Analysis;
 /// The Money Flow model (GLOSSARY: Money Flow, Shortfall): one month of actual income moving into spending
 /// categories and savings, drawn as a Sankey on the Analysis page.
 /// </summary>
-public class MoneyFlowBuilderTests
+public sealed class MoneyFlowBuilderTests : IDisposable
 {
+    // The labels and month names follow the request culture; these tests read them in English.
+    private readonly RequestCultureScope _culture = new("en-US");
+
+    public void Dispose() => _culture.Dispose();
+
     private static CategoryInsightsDto Month(decimal income, decimal expenses,
         params (string Name, decimal Actual)[] categories)
     {
@@ -35,19 +41,20 @@ public class MoneyFlowBuilderTests
     [Fact]
     public void Build_WhenNoInsights_ReturnsNull()
     {
-        Assert.Null(MoneyFlowBuilder.Build(null));
+        Assert.Null(MoneyFlowBuilder.Build(null, TestLocalization.Localizer));
     }
 
     [Fact]
     public void Build_WhenNoIncomeAndNoExpenses_ReturnsNull()
     {
-        Assert.Null(MoneyFlowBuilder.Build(Month(0m, 0m)));
+        Assert.Null(MoneyFlowBuilder.Build(Month(0m, 0m), TestLocalization.Localizer));
     }
 
     [Fact]
     public void Build_NormalMonth_FlowsIncomeIntoCategoriesAndSaved()
     {
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 700m, ("Rent", 500m), ("Food", 200m)));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 700m, ("Rent", 500m), ("Food", 200m)),
+            TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal("September 2026", flow.MonthLabel);
@@ -61,7 +68,8 @@ public class MoneyFlowBuilderTests
     [Fact]
     public void Build_ShortfallMonth_RoutesIncomeAndShortfallThroughSpending()
     {
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(3100m, 3420m, ("Rent", 1800m), ("Gifts", 1620m)));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(3100m, 3420m, ("Rent", 1800m), ("Gifts", 1620m)),
+            TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.True(flow.HasShortfall);
@@ -79,7 +87,7 @@ public class MoneyFlowBuilderTests
     [Fact]
     public void Build_ExpensesWithoutIncome_HasOnlyShortfallIntoSpending()
     {
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(0m, 400m, ("Rent", 400m)));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(0m, 400m, ("Rent", 400m)), TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal(["Shortfall>Spending:400", "Spending>Rent:400"], LinkLabels(flow));
@@ -89,7 +97,7 @@ public class MoneyFlowBuilderTests
     [Fact]
     public void Build_IncomeWithoutExpenses_FlowsIncomeIntoSavedOnly()
     {
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(2000m, 0m));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(2000m, 0m), TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal(["Income>Saved:2000"], LinkLabels(flow));
@@ -98,7 +106,8 @@ public class MoneyFlowBuilderTests
     [Fact]
     public void Build_WhenCategoriesFallShortOfExpenses_AddsUncategorized()
     {
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 900m, ("Rent", 600m)));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 900m, ("Rent", 600m)),
+            TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal(["Income>Rent:600", "Income>Uncategorized:300", "Income>Saved:100"], LinkLabels(flow));
@@ -108,7 +117,8 @@ public class MoneyFlowBuilderTests
     [Fact]
     public void Build_WhenCategoriesExceedExpenses_UsesTheCategoryTotal()
     {
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 500m, ("Rent", 600m)));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 500m, ("Rent", 600m)),
+            TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal(600m, flow.Expenses);
@@ -121,7 +131,7 @@ public class MoneyFlowBuilderTests
     {
         // Total flow 1000: 29.99 is under 3% and grouped; 30 is not.
         MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(
-            Month(1000m, 559.99m, ("Rent", 500m), ("Phone", 30m), ("Books", 29.99m)));
+            Month(1000m, 559.99m, ("Rent", 500m), ("Phone", 30m), ("Books", 29.99m)), TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal(
@@ -136,7 +146,8 @@ public class MoneyFlowBuilderTests
     public void Build_ShortfallCountsTowardTheOtherThreshold()
     {
         // Total flow = income 900 + Shortfall 100 = 1000, so 3% is 30.
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(900m, 1000m, ("Rent", 970m), ("Books", 30m)));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(900m, 1000m, ("Rent", 970m), ("Books", 30m)),
+            TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Contains(flow.Nodes, n => n.Label == "Books");
@@ -147,7 +158,7 @@ public class MoneyFlowBuilderTests
     public void Build_IgnoresCategoriesWithNoPositiveActual()
     {
         MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(
-            Month(1000m, 500m, ("Rent", 500m), ("Travel", 0m), ("Refunds", -20m)));
+            Month(1000m, 500m, ("Rent", 500m), ("Travel", 0m), ("Refunds", -20m)), TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal(["Rent", "Saved"], flow.TableRows.Select(r => r.Name).ToList());
@@ -156,7 +167,8 @@ public class MoneyFlowBuilderTests
     [Fact]
     public void Build_KeysNodesSoACategoryNamedLikeASpecialNodeStaysDistinct()
     {
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 600m, ("Saved", 600m)));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 600m, ("Saved", 600m)),
+            TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal(3, flow.Nodes.Select(n => n.Key).Distinct().Count());
@@ -166,7 +178,8 @@ public class MoneyFlowBuilderTests
     [Fact]
     public void Build_GivesEachCategoryItsOwnColourSlotInDisplayOrder()
     {
-        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 700m, ("Food", 200m), ("Rent", 500m)));
+        MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 700m, ("Food", 200m), ("Rent", 500m)),
+            TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         Assert.Equal([0, 1],
@@ -181,7 +194,8 @@ public class MoneyFlowBuilderTests
     {
         // Seven categories, each well above 3%: the five largest get colours, the last two join Other.
         MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(Month(1000m, 700m,
-            ("A", 160m), ("B", 140m), ("C", 120m), ("D", 100m), ("E", 80m), ("F", 60m), ("G", 40m)));
+            ("A", 160m), ("B", 140m), ("C", 120m), ("D", 100m), ("E", 80m), ("F", 60m), ("G", 40m)),
+            TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         List<MoneyFlowNodeViewModel> categories = flow.Nodes.Where(n => n.Kind == MoneyFlowNodeKind.Category).ToList();
@@ -196,7 +210,7 @@ public class MoneyFlowBuilderTests
     public void Build_OrdersCategoriesByAmountThenSpecialNodesLast()
     {
         MoneyFlowViewModel? flow = MoneyFlowBuilder.Build(
-            Month(1000m, 900m, ("Food", 200m), ("Rent", 500m), ("Fun", 10m)));
+            Month(1000m, 900m, ("Food", 200m), ("Rent", 500m), ("Fun", 10m)), TestLocalization.Localizer);
 
         Assert.NotNull(flow);
         List<string> rightHand = flow.Nodes.Where(n => n.Column > 0).Select(n => n.Label).ToList();
