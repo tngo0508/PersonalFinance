@@ -49,8 +49,9 @@ calculator feature.
 - **Encoding:** Razor HTML-encodes non-ASCII by default (`Còn` → `C&#xF2;n`). Configure `WebEncoderOptions` with
   `UnicodeRanges.All`. The JSON island uses `JavaScriptEncoder.Create(UnicodeRanges.All)`, which still escapes `<`, `>`, `&`.
 - **JS strings:** inline per page. A `<js-strings prefix="SavingsGoals.Js." />` tag helper renders a
-  `<script type="application/json" id="i18n-strings">` island with that page's keys, already resolved through the fallback
-  chain. One core module, `wwwroot/js/core/i18n.js`, reads it and `<html lang>`. No fetched bundle.
+  `<script type="application/json" data-i18n-strings>` island with that page's keys, already resolved through the fallback
+  chain. The layout adds its own `Shell.Js.` island for the shared chrome (slice L3), so a page may hold two; one core
+  module, `wwwroot/js/core/i18n.js`, merges them and reads `<html lang>`. No fetched bundle.
 
 ### 2.2 Culture and formatting ([#339](https://github.com/tngo0508/PersonalFinance/issues/339))
 

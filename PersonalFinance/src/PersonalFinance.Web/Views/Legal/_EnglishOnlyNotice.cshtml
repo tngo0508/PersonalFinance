@@ -1,0 +1,6 @@
+@using PersonalFinance.Web.Infrastructure.Localization
+@* Legal text is not translated (spec §1). A visitor reading another language is told so, in that language. *@
+@if (AppLanguages.Current().Code != AppLanguages.Default)
+{
+    <p class="alert alert-info legal-language-notice" role="note">@L["Legal.EnglishOnlyNotice"]</p>
+}

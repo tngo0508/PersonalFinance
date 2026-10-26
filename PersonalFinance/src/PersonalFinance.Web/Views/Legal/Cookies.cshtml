@@ -1,61 +1,65 @@
 @{
-    ViewData["Title"] = "Cookie Policy";
+    ViewData["Title"] = L["Legal.Cookies.Title"].Value;
 }
 
 <div class="legal-page">
-    <h1 class="legal-page__title">Cookie Policy</h1>
-    <p class="text-muted">Last updated: October 2026</p>
+    <h1 class="legal-page__title">@L["Legal.Cookies.Title"]</h1>
+    <partial name="_EnglishOnlyNotice" />
 
-    <section class="legal-section">
-        <h2>What Are Cookies</h2>
-        <p>Cookies are small text files stored on your device when you visit a website. They help the website remember your preferences and improve your experience.</p>
-    </section>
+    <div lang="en">
+        <p class="text-muted">Last updated: October 2026</p>
 
-    <section class="legal-section">
-        <h2>Essential Cookies</h2>
-        <p>We use essential cookies that are necessary for the Service to function. These cannot be disabled:</p>
-        <ul>
-            <li><strong>Authentication cookie:</strong> Keeps you signed in to your account (ASP.NET Identity)</li>
-            <li><strong>Anti-forgery cookie:</strong> Protects you from cross-site request forgery (CSRF) attacks</li>
-            <li><strong>Language cookie:</strong> Remembers the language you pick with the language switcher, for one year. It is set only when you pick one</li>
-        </ul>
-        <p>These cookies do not collect personally identifiable information beyond your session identifier.</p>
-    </section>
+        <section class="legal-section">
+            <h2>What Are Cookies</h2>
+            <p>Cookies are small text files stored on your device when you visit a website. They help the website remember your preferences and improve your experience.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Third-Party Services</h2>
-        <p>Our Service loads resources from third-party providers. These providers may set their own cookies or collect information such as your IP address:</p>
-        <ul>
-            <li><strong>Google Fonts:</strong> We load fonts from Google Fonts (fonts.googleapis.com). Google may collect your IP address and browser information.</li>
-            <li><strong>unpkg CDN:</strong> We load the Lucide icon library from unpkg.com. This content delivery network may set cookies.</li>
-        </ul>
-        <p>We recommend reviewing the privacy policies of these third parties for details on their data collection practices.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Essential Cookies</h2>
+            <p>We use essential cookies that are necessary for the Service to function. These cannot be disabled:</p>
+            <ul>
+                <li><strong>Authentication cookie:</strong> Keeps you signed in to your account (ASP.NET Identity)</li>
+                <li><strong>Anti-forgery cookie:</strong> Protects you from cross-site request forgery (CSRF) attacks</li>
+                <li><strong>Language cookie:</strong> Remembers the language you pick with the language switcher, for one year. It is set only when you pick one</li>
+            </ul>
+            <p>These cookies do not collect personally identifiable information beyond your session identifier.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Analytics</h2>
-        <p>We do not currently use web analytics services (such as Google Analytics) on our Service.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Third-Party Services</h2>
+            <p>Our Service loads resources from third-party providers. These providers may set their own cookies or collect information such as your IP address:</p>
+            <ul>
+                <li><strong>Google Fonts:</strong> We load fonts from Google Fonts (fonts.googleapis.com). Google may collect your IP address and browser information.</li>
+                <li><strong>unpkg CDN:</strong> We load the Lucide icon library from unpkg.com. This content delivery network may set cookies.</li>
+            </ul>
+            <p>We recommend reviewing the privacy policies of these third parties for details on their data collection practices.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Managing Cookies</h2>
-        <p>You can control and delete cookies through your browser settings. Most browsers allow you to:</p>
-        <ul>
-            <li>View cookies that are stored</li>
-            <li>Delete all cookies or cookies from specific sites</li>
-            <li>Block third-party cookies</li>
-            <li>Block all cookies</li>
-        </ul>
-        <p>Please note that blocking essential cookies may prevent the Service from functioning properly.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Analytics</h2>
+            <p>We do not currently use web analytics services (such as Google Analytics) on our Service.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Changes to This Policy</h2>
-        <p>We may update this Cookie Policy from time to time. Changes will be posted on this page.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Managing Cookies</h2>
+            <p>You can control and delete cookies through your browser settings. Most browsers allow you to:</p>
+            <ul>
+                <li>View cookies that are stored</li>
+                <li>Delete all cookies or cookies from specific sites</li>
+                <li>Block third-party cookies</li>
+                <li>Block all cookies</li>
+            </ul>
+            <p>Please note that blocking essential cookies may prevent the Service from functioning properly.</p>
+        </section>
 
-    <section class="legal-section">
-        <h2>Contact</h2>
-        <p>If you have questions about our use of cookies, please contact us via our <a asp-controller="Legal" asp-action="Contact">Contact page</a>.</p>
-    </section>
+        <section class="legal-section">
+            <h2>Changes to This Policy</h2>
+            <p>We may update this Cookie Policy from time to time. Changes will be posted on this page.</p>
+        </section>
+
+        <section class="legal-section">
+            <h2>Contact</h2>
+            <p>If you have questions about our use of cookies, please contact us via our <a asp-controller="Legal" asp-action="Contact">Contact page</a>.</p>
+        </section>
+    </div>
 </div>

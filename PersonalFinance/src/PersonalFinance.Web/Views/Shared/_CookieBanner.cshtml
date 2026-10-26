@@ -1,12 +1,16 @@
-<div id="cookieBanner" class="cookie-banner" role="region" aria-label="Cookie consent" hidden>
+@using Microsoft.AspNetCore.Html
+@{
+    // The link sits inside the sentence; NamedHtml puts it wherever the translation places {learnMore}.
+    Func<object?, IHtmlContent> learnMore = @<a asp-area="" asp-controller="Legal" asp-action="Cookies">@L["Shell.Cookie.LearnMore"]</a>;
+}
+<div id="cookieBanner" class="cookie-banner" role="region" aria-label="@L["Shell.Cookie.Label"]" hidden>
     <div class="cookie-banner__content">
         <p class="cookie-banner__text">
-            We use essential cookies to keep your account secure. We also load fonts and icons from third-party services.
-            <a asp-area="" asp-controller="Legal" asp-action="Cookies">Learn more</a>.
+            @L.NamedHtml("Shell.Cookie.Text", null, ("learnMore", learnMore(null)))
         </p>
         <div class="cookie-banner__actions">
-            <button id="cookieAcceptAll" class="btn btn-primary btn-sm" type="button">Accept All</button>
-            <button id="cookieAcceptEssential" class="btn btn-outline-secondary btn-sm" type="button">Essential Only</button>
+            <button id="cookieAcceptAll" class="btn btn-primary btn-sm" type="button">@L["Shell.Cookie.AcceptAll"]</button>
+            <button id="cookieAcceptEssential" class="btn btn-outline-secondary btn-sm" type="button">@L["Shell.Cookie.EssentialOnly"]</button>
         </div>
     </div>
 </div>

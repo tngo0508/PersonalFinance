@@ -109,6 +109,11 @@ public sealed class PollOption
 public sealed class CommunityStat
 {
     /// <summary>
+    /// Gets or sets the stable key the view translates the title and description by.
+    /// </summary>
+    public string Key { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the stat title.
     /// </summary>
     public string Title { get; set; } = string.Empty;

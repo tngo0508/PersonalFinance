@@ -4,6 +4,7 @@ using PersonalFinance.ApiService.Features.Community;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Community;
 
@@ -78,5 +79,21 @@ public class CommunityServiceTests
         Assert.Collection(dto.Options,
             o => { Assert.Equal("Under 10%", o.Text); Assert.Equal(1, o.Votes); Assert.Equal(33.3, o.Percentage); },
             o => { Assert.Equal("10% or more", o.Text); Assert.Equal(2, o.Votes); Assert.Equal(66.7, o.Percentage); });
+    }
+
+    [Fact]
+    public async Task GetCommunity_QuickStatsCarryAStableKey_ThePageTranslatesThemBy()
+    {
+        await using AppDbContext db = CreateContext();
+
+        CommunityResponseDto response = await CreateService(db).GetCommunityAsync(UserId);
+
+        Assert.Equal(["ActivePolls", "TotalVotes", "Stories", "Comments"], response.QuickStats.Select(s => s.Key));
+        IReadOnlyCollection<string> english = TestLocalization.Catalog.Keys("en");
+        Assert.All(response.QuickStats, stat =>
+        {
+            Assert.Contains($"Community.Stats.{stat.Key}.Title", english);
+            Assert.Contains($"Community.Stats.{stat.Key}.Description", english);
+        });
     }
 }

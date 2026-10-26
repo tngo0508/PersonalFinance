@@ -34,7 +34,7 @@ public class JsStringsTagHelperTests
     }
 
     [Fact]
-    public void RendersAJsonScriptIsland_ReadableVietnamese_AndNoClosingTag()
+    public void RendersAMarkedJsonScriptIsland_ReadableVietnamese_AndNoClosingTag()
     {
         using var culture = new UiCultureScope("vi");
 
@@ -42,7 +42,9 @@ public class JsStringsTagHelperTests
 
         Assert.Equal("script", output.TagName);
         Assert.Equal("application/json", output.Attributes["type"].Value);
-        Assert.Equal(JsStringsTagHelper.ElementId, output.Attributes["id"].Value);
+        Assert.True(output.Attributes.ContainsName(JsStringsTagHelper.MarkerAttribute));
+        // No id: the layout's shell island and the page's own island are both on the page (core/i18n.js merges them).
+        Assert.False(output.Attributes.ContainsName("id"));
         string json = output.Content.GetContent();
         Assert.Contains("Xóa", json);
         Assert.DoesNotContain("</script>", json);

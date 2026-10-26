@@ -24,7 +24,7 @@
 
         const token = window.PFUtils.getAntiForgeryToken(container);
         const buttons = container.querySelectorAll('.data-source-btn');
-        buttons.forEach(function (btn) {
+        buttons.forEach((btn) => {
             btn.disabled = true;
         });
 
@@ -47,7 +47,7 @@
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error('Error switching data source:', error);
-            buttons.forEach(function (btn) {
+            buttons.forEach((btn) => {
                 btn.disabled = false;
             });
             const existingError = container.querySelector('.data-source-error');
@@ -57,9 +57,9 @@
             const errorDiv = document.createElement('div');
             errorDiv.className = 'data-source-error';
             errorDiv.setAttribute('role', 'alert');
-            errorDiv.textContent = 'Failed to switch budget data source. Please try again.';
+            errorDiv.textContent = window.PFI18n.t('Shell.Js.DataSource.SwitchFailed');
             container.appendChild(errorDiv);
-            setTimeout(function () {
+            setTimeout(() => {
                 if (errorDiv.parentNode) {
                     errorDiv.remove();
                 }
@@ -73,9 +73,9 @@
      */
     function init () {
         const toggles = document.querySelectorAll('.data-source-toggle');
-        toggles.forEach(function (toggle) {
+        toggles.forEach((toggle) => {
             const buttons = toggle.querySelectorAll('.data-source-btn');
-            buttons.forEach(function (btn) {
+            buttons.forEach((btn) => {
                 btn.removeEventListener('click', handleSourceClick);
                 btn.addEventListener('click', handleSourceClick);
             });

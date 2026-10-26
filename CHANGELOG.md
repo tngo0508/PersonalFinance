@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [7.2.0] - 2026-10-25
+## [7.5.0] - 2026-10-25
 
 ### Added
 
@@ -15,6 +15,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Titles, labels, help text, buttons, placeholders, validation and status messages all come from the shared resource files; English reads as before.
   - Status messages are stored as keys and translated when shown, and error messages keep their red style in every language.
   - The Account emails were already translated in 7.0.0. The deletion date, in the email and on the page, keeps its English format until the shared date and number formatting lands (slice L2).
+
+## [7.4.0] - 2026-10-25
+
+### Added
+
+- **App shell in Vietnamese**: the navigation, top bar, footer, mobile bottom nav, account menu, cookie banner, data source toggle, Unavailable State and Send feedback page follow the chosen language (slice L3 of the localization spec, #357).
+  - The top-bar search, the notifications dropdown and the data source toggle's error message are translated too.
+  - The Send feedback form's labels, categories, confirmation and validation messages are translated; messages ApiService returns stay in English.
+
+### Changed
+
+- **Several JS string islands per page**: `<js-strings>` islands are marked with `data-i18n-strings` instead of an id, and `core/i18n.js` merges every island, so the layout's `Shell.Js.` strings sit beside a page's own.
+- **Notifications dropdown built with DOM nodes**: the dropdown no longer assigns `innerHTML`; its markup and behaviour are unchanged.
+
+## [7.3.0] - 2026-10-25
+
+### Added
+
+- **Community page in Vietnamese**: the Community page's own wording (headings, stats, buttons, the story form, toasts and error messages) follows the chosen language (slice L3 of the localization spec, #358).
+  - Polls, stories, comments and author names are user content and stay as written; they are never translated.
+  - Poll and story category labels are translated; the stored category value does not change.
+  - Vote counts use plural forms, and "5m ago"-style times are translated.
+
+## [7.2.0] - 2026-10-25
+
+### Added
+
+- **Landing Page and About in Vietnamese**: the Landing Page and the About page are shown in the visitor's language, from the language cookie or the browser's `Accept-Language` (slice L3 of the localization spec, #356).
+  - The sample plan keeps its US dollar figures until amounts are formatted per language.
+- **English-only notice on the Legal Pages**: Privacy, Terms, Disclaimer, Cookies and Contact keep their English text, now under a translated title and the notice "Legal text is provided in English" for visitors using another language.
+  - The English text is tagged `lang="en"`, so screen readers read it as English.
 
 ## [7.1.0] - 2026-10-25
 
