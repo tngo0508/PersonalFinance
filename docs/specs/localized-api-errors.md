@@ -162,7 +162,7 @@ This is added as a step to the add-a-feature checklist in `ARCHITECTURE.md`.
   reads the legacy shapes; `Fields` groups by field; `JsonApiErrorsFilter` returns the localized `Errors.Unavailable`.
   Tests that read the culture pin it (as #384 does).
 - Playwright: one smoke in E1: switch to Vietnamese, submit the Money Priorities form with an out-of-range amount, assert
-  the field error is Vietnamese and shows `10.000.000`. No further E2E per Feature.
+  the field error is Vietnamese and shows `1.000.000`. No further E2E per Feature.
 - Security (`financial-security` skill): the filter never writes exception details or stack traces into `message`;
   `Text` args are HTML-encoded by Razor on output and never inserted as markup; third-party text is passed as an arg,
   never as a key.
