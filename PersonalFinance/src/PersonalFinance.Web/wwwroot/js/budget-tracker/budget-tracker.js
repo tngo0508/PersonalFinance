@@ -27,6 +27,30 @@
     }
 
     /**
+     * Formats a transaction's ISO date (yyyy-MM-dd) in the page culture, without shifting it across time zones.
+     * @param {string} isoDate - The date as the server sends it.
+     * @returns {string} The date in the culture, or the input when it is not an ISO date.
+     */
+    function formatTxDate (isoDate) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(isoDate || ''));
+        if (!match) {
+            return isoDate || '';
+        }
+        const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        return PFI18n.formatDate(date, { year: 'numeric', month: '2-digit', day: '2-digit' });
+    }
+
+    /**
+     * Names a month and year in the page culture, e.g. "September 2026" or "tháng 9 năm 2026".
+     * @param {number} year - The year.
+     * @param {number} month - The month, 1-12.
+     * @returns {string} The month name and year.
+     */
+    function formatMonthYear (year, month) {
+        return PFI18n.formatDate(new Date(year, month - 1, 1), { month: 'long', year: 'numeric' });
+    }
+
+    /**
      * Shows or hides the global loading spinner.
      * @param {boolean} show - Whether to display spinner.
      * @returns {void}
@@ -92,6 +116,20 @@
     }
 
     /**
+     * Creates a Lucide icon placeholder that refreshIcons() turns into an SVG.
+     * @param {string} name - Lucide icon name.
+     * @param {number} size - Width and height in pixels.
+     * @returns {HTMLElement} The icon element.
+     */
+    function iconElement (name, size) {
+        const icon = document.createElement('i');
+        icon.dataset.lucide = name;
+        icon.style.width = `${size}px`;
+        icon.style.height = `${size}px`;
+        return icon;
+    }
+
+    /**
      * Fetches the complete sheet for the given year and month.
      * @param {number} year - The target year.
      * @param {number} month - The target month.
@@ -115,7 +153,7 @@
                 const errData = await response.json().catch(() => {
                     return {};
                 });
-                throw new Error(errData.error || `Failed to load sheet (${response.status})`);
+                throw new Error(errData.error || PFI18n.t('BudgetTracker.Js.LoadFailedStatus', { status: response.status }));
             }
 
             const data = await response.json();
@@ -131,7 +169,7 @@
             renderSheet(data);
         } catch (err) {
             if (requestId === activeRequestId) {
-                showAlert(err.message || 'Failed to load budget sheet.');
+                showAlert(err.message || PFI18n.t('BudgetTracker.Js.LoadFailed'));
                 renderMonthSelector();
             }
         } finally {
@@ -242,22 +280,23 @@
 
         promptBanner.classList.remove('d-none');
 
-        if (sheet.canCopyFromPrevious && sheet.previousMonthLabel) {
+        if (sheet.canCopyFromPrevious && sheet.previousPlanYear && sheet.previousPlanMonth) {
+            const previousMonth = formatMonthYear(sheet.previousPlanYear, sheet.previousPlanMonth);
             if (btnCopy) {
                 btnCopy.classList.remove('d-none');
             }
             if (btnCopyText) {
-                btnCopyText.textContent = `Copy from ${sheet.previousMonthLabel}`;
+                btnCopyText.textContent = PFI18n.t('BudgetTracker.Js.CopyFrom', { month: previousMonth });
             }
             if (desc) {
-                desc.textContent = `This month has no budget plan yet. You can copy planned amounts from ${sheet.previousMonthLabel} or start blank.`;
+                desc.textContent = PFI18n.t('BudgetTracker.Js.InitPromptCopy', { month: previousMonth });
             }
         } else {
             if (btnCopy) {
                 btnCopy.classList.add('d-none');
             }
             if (desc) {
-                desc.textContent = 'This month has no budget plan yet. Click "Start Blank" to initialize categories with zero planned amounts.';
+                desc.textContent = PFI18n.t('BudgetTracker.Js.InitPromptBlank');
             }
         }
     }
@@ -279,7 +318,10 @@
         const expBarActual = document.getElementById('expenseActualBar');
 
         if (expNumbers) {
-            expNumbers.textContent = `Planned: ${formatCurrency(expPlanned)} | Actual: ${formatCurrency(expActual)}`;
+            expNumbers.textContent = PFI18n.t('BudgetTracker.Js.BarNumbers', {
+                planned: formatCurrency(expPlanned),
+                actual: formatCurrency(expActual)
+            });
         }
 
         const expMax = Math.max(expPlanned, expActual, 1);
@@ -298,7 +340,10 @@
         const incBarActual = document.getElementById('incomeActualBar');
 
         if (incNumbers) {
-            incNumbers.textContent = `Planned: ${formatCurrency(incPlanned)} | Actual: ${formatCurrency(incActual)}`;
+            incNumbers.textContent = PFI18n.t('BudgetTracker.Js.BarNumbers', {
+                planned: formatCurrency(incPlanned),
+                actual: formatCurrency(incActual)
+            });
         }
 
         const incMax = Math.max(incPlanned, incActual, 1);
@@ -332,7 +377,7 @@
             const td = document.createElement('td');
             td.colSpan = 5;
             td.className = 'text-center text-muted py-3';
-            td.textContent = 'No categories found.';
+            td.textContent = PFI18n.t('BudgetTracker.Js.NoCategories');
             tr.appendChild(td);
             tbody.appendChild(tr);
             return;
@@ -357,7 +402,7 @@
             if (row.isArchived) {
                 const badge = document.createElement('span');
                 badge.className = 'bt-archived-badge ms-1';
-                badge.textContent = 'Archived';
+                badge.textContent = PFI18n.t('BudgetTracker.Js.Archived');
                 tdName.appendChild(badge);
             }
             tr.appendChild(tdName);
@@ -370,8 +415,10 @@
             btnPlanned.type = 'button';
             btnPlanned.className = 'bt-planned-btn';
             btnPlanned.textContent = formatCurrency(row.planned);
-            btnPlanned.setAttribute('aria-label', `Edit planned amount for ${row.name}`);
-            btnPlanned.title = isMonthInitialized ? 'Click or press Enter to edit planned amount' : 'Please initialize month plan before editing';
+            btnPlanned.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.EditPlannedAria', { name: row.name }));
+            btnPlanned.title = isMonthInitialized
+                ? PFI18n.t('BudgetTracker.Js.EditPlannedTitle')
+                : PFI18n.t('BudgetTracker.Js.InitializeFirst');
             btnPlanned.disabled = !isMonthInitialized;
 
             btnPlanned.addEventListener('click', (e) => {
@@ -394,8 +441,8 @@
             if (row.actualIsOverride) {
                 const manualBadge = document.createElement('span');
                 manualBadge.className = 'bt-manual-badge';
-                manualBadge.textContent = 'Manual';
-                manualBadge.title = 'Manual Actual Override';
+                manualBadge.textContent = PFI18n.t('BudgetTracker.Js.ManualBadge');
+                manualBadge.title = PFI18n.t('BudgetTracker.Js.ManualBadgeTitle');
                 actualWrapper.appendChild(manualBadge);
             }
 
@@ -407,9 +454,13 @@
             const btnOverride = document.createElement('button');
             btnOverride.type = 'button';
             btnOverride.className = 'bt-btn-icon';
-            btnOverride.title = row.actualIsOverride ? 'Edit manual override' : 'Set manual override';
-            btnOverride.setAttribute('aria-label', row.actualIsOverride ? `Edit manual override for ${row.name}` : `Set manual override for ${row.name}`);
-            btnOverride.innerHTML = '<i data-lucide="edit-3" style="width:13px;height:13px;"></i>';
+            btnOverride.title = row.actualIsOverride
+                ? PFI18n.t('BudgetTracker.Js.OverrideEditTitle')
+                : PFI18n.t('BudgetTracker.Js.OverrideSetTitle');
+            btnOverride.setAttribute('aria-label', row.actualIsOverride
+                ? PFI18n.t('BudgetTracker.Js.OverrideEditAria', { name: row.name })
+                : PFI18n.t('BudgetTracker.Js.OverrideSetAria', { name: row.name }));
+            btnOverride.appendChild(iconElement('edit-3', 13));
             btnOverride.disabled = !isMonthInitialized;
             btnOverride.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -424,9 +475,9 @@
                 const btnRevert = document.createElement('button');
                 btnRevert.type = 'button';
                 btnRevert.className = 'bt-btn-icon';
-                btnRevert.title = 'Revert to transaction sum';
-                btnRevert.setAttribute('aria-label', `Revert override for ${row.name} to transaction sum`);
-                btnRevert.innerHTML = '<i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i>';
+                btnRevert.title = PFI18n.t('BudgetTracker.Js.RevertTitle');
+                btnRevert.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.RevertAria', { name: row.name }));
+                btnRevert.appendChild(iconElement('rotate-ccw', 13));
                 btnRevert.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     await revertActualOverride(row.categoryId);
@@ -465,9 +516,9 @@
                 const btnMoveUp = document.createElement('button');
                 btnMoveUp.type = 'button';
                 btnMoveUp.className = 'bt-btn-icon bt-move-btn';
-                btnMoveUp.title = 'Move up';
-                btnMoveUp.setAttribute('aria-label', `Move ${row.name} up`);
-                btnMoveUp.innerHTML = '<i data-lucide="arrow-up" style="width:13px;height:13px;"></i>';
+                btnMoveUp.title = PFI18n.t('BudgetTracker.Js.MoveUpTitle');
+                btnMoveUp.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.MoveUpAria', { name: row.name }));
+                btnMoveUp.appendChild(iconElement('arrow-up', 13));
                 btnMoveUp.dataset.boundary = String(activeIndex === 0);
                 btnMoveUp.disabled = isReordering || activeIndex === 0;
                 btnMoveUp.addEventListener('click', async (e) => {
@@ -480,9 +531,9 @@
                 const btnMoveDown = document.createElement('button');
                 btnMoveDown.type = 'button';
                 btnMoveDown.className = 'bt-btn-icon bt-move-btn';
-                btnMoveDown.title = 'Move down';
-                btnMoveDown.setAttribute('aria-label', `Move ${row.name} down`);
-                btnMoveDown.innerHTML = '<i data-lucide="arrow-down" style="width:13px;height:13px;"></i>';
+                btnMoveDown.title = PFI18n.t('BudgetTracker.Js.MoveDownTitle');
+                btnMoveDown.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.MoveDownAria', { name: row.name }));
+                btnMoveDown.appendChild(iconElement('arrow-down', 13));
                 btnMoveDown.dataset.boundary = String(activeIndex === activeRows.length - 1);
                 btnMoveDown.disabled = isReordering || activeIndex === activeRows.length - 1;
                 btnMoveDown.addEventListener('click', async (e) => {
@@ -495,9 +546,9 @@
                 const btnRename = document.createElement('button');
                 btnRename.type = 'button';
                 btnRename.className = 'bt-btn-icon text-primary';
-                btnRename.title = 'Rename category';
-                btnRename.setAttribute('aria-label', `Rename ${row.name}`);
-                btnRename.innerHTML = '<i data-lucide="edit-2" style="width:13px;height:13px;"></i>';
+                btnRename.title = PFI18n.t('BudgetTracker.Js.RenameTitle');
+                btnRename.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.RenameAria', { name: row.name }));
+                btnRename.appendChild(iconElement('edit-2', 13));
                 btnRename.addEventListener('click', (e) => {
                     e.stopPropagation();
                     openEditCategoryModal(row, kind);
@@ -508,9 +559,9 @@
                 const btnDelCat = document.createElement('button');
                 btnDelCat.type = 'button';
                 btnDelCat.className = 'bt-btn-icon text-danger';
-                btnDelCat.title = 'Archive category';
-                btnDelCat.setAttribute('aria-label', `Archive ${row.name}`);
-                btnDelCat.innerHTML = '<i data-lucide="trash-2" style="width:13px;height:13px;"></i>';
+                btnDelCat.title = PFI18n.t('BudgetTracker.Js.ArchiveTitle');
+                btnDelCat.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.ArchiveAria', { name: row.name }));
+                btnDelCat.appendChild(iconElement('trash-2', 13));
                 btnDelCat.addEventListener('click', (e) => {
                     e.stopPropagation();
                     confirmArchiveCategory(row);
@@ -602,7 +653,7 @@
         input.max = '9999999999999999.99';
         input.className = 'form-control form-control-sm bt-inline-input';
         input.value = (Number(currentVal) || 0).toFixed(2);
-        input.setAttribute('aria-label', `Planned amount for ${categoryName}`);
+        input.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.PlannedInputAria', { name: categoryName }));
 
         cell.textContent = '';
         cell.appendChild(input);
@@ -622,7 +673,7 @@
 
             // If invalid value
             if (isNaN(newVal) || newVal < 0) {
-                showAlert('Planned amount must be a positive number or zero.');
+                showAlert(PFI18n.t('BudgetTracker.Js.PlannedInvalid'));
                 renderSheet(currentSheet);
                 return;
             }
@@ -658,13 +709,13 @@
                     const err = await response.json().catch(() => {
                         return {};
                     });
-                    throw new Error(err.error || 'Failed to update planned amount.');
+                    throw new Error(err.error || PFI18n.t('BudgetTracker.Js.PlannedFailed'));
                 }
 
                 const updatedSheet = await response.json();
                 applyUpdatedSheet(updatedSheet);
             } catch (err) {
-                showAlert(err.message || 'Failed to update planned amount.');
+                showAlert(err.message || PFI18n.t('BudgetTracker.Js.PlannedFailed'));
                 renderSheet(currentSheet);
             } finally {
                 setLoading(false);
@@ -753,7 +804,7 @@
 
             // Date
             const tdDate = document.createElement('td');
-            tdDate.textContent = tx.date;
+            tdDate.textContent = formatTxDate(tx.date);
             tr.appendChild(tdDate);
 
             // Amount
@@ -779,9 +830,9 @@
             const btnEdit = document.createElement('button');
             btnEdit.type = 'button';
             btnEdit.className = 'bt-btn-icon text-primary me-1';
-            btnEdit.title = 'Edit transaction';
-            btnEdit.setAttribute('aria-label', `Edit transaction ${tx.description || tx.categoryName}`);
-            btnEdit.innerHTML = '<i data-lucide="edit-2" style="width:14px;height:14px;"></i>';
+            btnEdit.title = PFI18n.t('BudgetTracker.Js.EditTransactionTitle');
+            btnEdit.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.EditTransactionAria', { name: tx.description || tx.categoryName }));
+            btnEdit.appendChild(iconElement('edit-2', 14));
             btnEdit.addEventListener('click', () => {
                 openEditTransactionModal(tx);
             });
@@ -790,9 +841,9 @@
             const btnDel = document.createElement('button');
             btnDel.type = 'button';
             btnDel.className = 'bt-btn-icon text-danger';
-            btnDel.title = 'Delete transaction';
-            btnDel.setAttribute('aria-label', `Delete transaction ${tx.description || tx.categoryName}`);
-            btnDel.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;"></i>';
+            btnDel.title = PFI18n.t('BudgetTracker.Js.DeleteTransactionTitle');
+            btnDel.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.DeleteTransactionAria', { name: tx.description || tx.categoryName }));
+            btnDel.appendChild(iconElement('trash-2', 14));
             btnDel.addEventListener('click', () => {
                 confirmDeleteTransaction(tx);
             });
@@ -844,10 +895,10 @@
             if (failed) {
                 failureMessage = failed.reason && failed.reason.message
                     ? failed.reason.message
-                    : 'Failed to reorder category.';
+                    : PFI18n.t('BudgetTracker.Js.ReorderFailed');
             }
         } catch (err) {
-            failureMessage = err && err.message ? err.message : 'Failed to reorder category.';
+            failureMessage = err && err.message ? err.message : PFI18n.t('BudgetTracker.Js.ReorderFailed');
         }
 
         try {
@@ -926,7 +977,7 @@
             const err = await response.json().catch(() => {
                 return {};
             });
-            throw new Error(err.error || 'Failed to reorder category.');
+            throw new Error(err.error || PFI18n.t('BudgetTracker.Js.ReorderFailed'));
         }
     }
 
@@ -1011,7 +1062,7 @@
         const kind = kindInput ? parseInt(kindInput.value, 10) : (kindSelect ? parseInt(kindSelect.value, 10) : 1);
 
         if (!name) {
-            showModalAlert('alertEditCategory', 'Please enter a valid category name.');
+            showModalAlert('alertEditCategory', PFI18n.t('BudgetTracker.Js.CategoryNameRequired'));
             return;
         }
 
@@ -1040,7 +1091,7 @@
                 const err = await response.json().catch(() => {
                     return {};
                 });
-                throw new Error(err.error || 'Failed to update category.');
+                throw new Error(err.error || PFI18n.t('BudgetTracker.Js.UpdateCategoryFailed'));
             }
 
             if (modalEditCategoryInstance) {
@@ -1050,7 +1101,7 @@
             await loadCategories();
             await loadSheet(currentYear, currentMonth);
         } catch (err) {
-            showModalAlert('alertEditCategory', err.message || 'Failed to update category.');
+            showModalAlert('alertEditCategory', err.message || PFI18n.t('BudgetTracker.Js.UpdateCategoryFailed'));
         } finally {
             if (btnSubmit) {
                 btnSubmit.disabled = false;
@@ -1121,13 +1172,13 @@
                 const err = await response.json().catch(() => {
                     return {};
                 });
-                throw new Error(err.error || 'Failed to revert actual override.');
+                throw new Error(err.error || PFI18n.t('BudgetTracker.Js.RevertFailed'));
             }
 
             const updatedSheet = await response.json();
             applyUpdatedSheet(updatedSheet);
         } catch (err) {
-            showAlert(err.message || 'Failed to revert override.');
+            showAlert(err.message || PFI18n.t('BudgetTracker.Js.RevertFailed'));
         } finally {
             setLoading(false);
         }
@@ -1148,7 +1199,7 @@
         const descInput = document.getElementById('inputTxDescription');
 
         if (title) {
-            title.textContent = 'Add Transaction';
+            title.textContent = PFI18n.t('BudgetTracker.Js.AddTransaction');
         }
         if (idInput) {
             idInput.value = '';
@@ -1196,7 +1247,7 @@
         const descInput = document.getElementById('inputTxDescription');
 
         if (title) {
-            title.textContent = 'Edit Transaction';
+            title.textContent = PFI18n.t('BudgetTracker.Js.EditTransaction');
         }
         if (idInput) {
             idInput.value = String(tx.id);
@@ -1234,14 +1285,14 @@
 
         const defaultOpt = document.createElement('option');
         defaultOpt.value = '';
-        defaultOpt.textContent = 'Select a category...';
+        defaultOpt.textContent = PFI18n.t('BudgetTracker.Js.SelectCategory');
         selectEl.appendChild(defaultOpt);
 
         const expGroup = document.createElement('optgroup');
-        expGroup.label = 'Expenses';
+        expGroup.label = PFI18n.t('BudgetTracker.Js.Expenses');
 
         const incGroup = document.createElement('optgroup');
-        incGroup.label = 'Income';
+        incGroup.label = PFI18n.t('BudgetTracker.Js.Income');
 
         userCategories.forEach((cat) => {
             const opt = document.createElement('option');
@@ -1278,13 +1329,13 @@
         const btnDelete = document.getElementById('btnConfirmDelete');
 
         if (title) {
-            title.textContent = 'Archive Category';
+            title.textContent = PFI18n.t('BudgetTracker.Js.ArchiveCategory');
         }
         if (btnDelete) {
-            btnDelete.textContent = 'Archive';
+            btnDelete.textContent = PFI18n.t('BudgetTracker.Js.Archive');
         }
         if (msg) {
-            msg.textContent = `Are you sure you want to archive "${row.name}"? Past months with this category will retain their history.`;
+            msg.textContent = PFI18n.t('BudgetTracker.Js.ArchiveConfirm', { name: row.name });
         }
 
         pendingDeleteAction = async function () {
@@ -1305,7 +1356,7 @@
                     const err = await response.json().catch(() => {
                         return {};
                     });
-                    throw new Error(err.error || 'Failed to delete category.');
+                    throw new Error(err.error || PFI18n.t('BudgetTracker.Js.ArchiveFailed'));
                 }
 
                 pendingDeleteAction = null;
@@ -1316,7 +1367,7 @@
                 await loadCategories();
                 await loadSheet(currentYear, currentMonth);
             } catch (err) {
-                showModalAlert('alertDeleteConfirm', err.message || 'Failed to archive category.');
+                showModalAlert('alertDeleteConfirm', err.message || PFI18n.t('BudgetTracker.Js.ArchiveFailed'));
             } finally {
                 if (btnDelete) {
                     btnDelete.disabled = false;
@@ -1342,13 +1393,16 @@
         const btnDelete = document.getElementById('btnConfirmDelete');
 
         if (title) {
-            title.textContent = 'Delete Transaction';
+            title.textContent = PFI18n.t('BudgetTracker.Js.DeleteTransaction');
         }
         if (btnDelete) {
-            btnDelete.textContent = 'Delete';
+            btnDelete.textContent = PFI18n.t('BudgetTracker.Js.Delete');
         }
         if (msg) {
-            msg.textContent = `Are you sure you want to delete transaction "${tx.description || tx.categoryName}" (${formatCurrency(tx.amount)})?`;
+            msg.textContent = PFI18n.t('BudgetTracker.Js.DeleteTransactionConfirm', {
+                name: tx.description || tx.categoryName,
+                amount: formatCurrency(tx.amount)
+            });
         }
 
         pendingDeleteAction = async function () {
@@ -1369,7 +1423,7 @@
                     const err = await response.json().catch(() => {
                         return {};
                     });
-                    throw new Error(err.error || 'Failed to delete transaction.');
+                    throw new Error(err.error || PFI18n.t('BudgetTracker.Js.DeleteTransactionFailed'));
                 }
 
                 pendingDeleteAction = null;
@@ -1379,7 +1433,7 @@
 
                 await loadSheet(currentYear, currentMonth);
             } catch (err) {
-                showModalAlert('alertDeleteConfirm', err.message || 'Failed to delete transaction.');
+                showModalAlert('alertDeleteConfirm', err.message || PFI18n.t('BudgetTracker.Js.DeleteTransactionFailed'));
             } finally {
                 if (btnDelete) {
                     btnDelete.disabled = false;
@@ -1598,13 +1652,13 @@
                 const err = await response.json().catch(() => {
                     return {};
                 });
-                throw new Error(err.error || 'Failed to initialize month.');
+                throw new Error(err.error || PFI18n.t('BudgetTracker.Js.InitializeFailed'));
             }
 
             const updatedSheet = await response.json();
             applyUpdatedSheet(updatedSheet);
         } catch (err) {
-            showAlert(err.message || 'Failed to initialize month.');
+            showAlert(err.message || PFI18n.t('BudgetTracker.Js.InitializeFailed'));
         } finally {
             if (btnCopy) {
                 btnCopy.disabled = false;
@@ -1629,7 +1683,7 @@
         const kind = kindSelect ? parseInt(kindSelect.value, 10) : 1;
 
         if (!name) {
-            showModalAlert('alertAddCategory', 'Please enter a valid category name.');
+            showModalAlert('alertAddCategory', PFI18n.t('BudgetTracker.Js.CategoryNameRequired'));
             return;
         }
 
@@ -1670,7 +1724,7 @@
                 const err = await response.json().catch(() => {
                     return {};
                 });
-                throw new Error(err.error || 'Failed to create category.');
+                throw new Error(err.error || PFI18n.t('BudgetTracker.Js.CreateCategoryFailed'));
             }
 
             if (modalAddCategoryInstance) {
@@ -1680,7 +1734,7 @@
             await loadCategories();
             await loadSheet(currentYear, currentMonth);
         } catch (err) {
-            showModalAlert('alertAddCategory', err.message || 'Failed to create category.');
+            showModalAlert('alertAddCategory', err.message || PFI18n.t('BudgetTracker.Js.CreateCategoryFailed'));
         } finally {
             if (btnSubmit) {
                 btnSubmit.disabled = false;
@@ -1702,7 +1756,7 @@
         const amount = amountInput ? parseFloat(amountInput.value) : 0;
 
         if (isNaN(amount) || amount < 0) {
-            showModalAlert('alertActualOverride', 'Manual Actual amount must be a positive number or zero.');
+            showModalAlert('alertActualOverride', PFI18n.t('BudgetTracker.Js.OverrideInvalid'));
             return;
         }
 
@@ -1730,7 +1784,7 @@
                 const err = await response.json().catch(() => {
                     return {};
                 });
-                throw new Error(err.error || 'Failed to save actual override.');
+                throw new Error(err.error || PFI18n.t('BudgetTracker.Js.OverrideFailed'));
             }
 
             if (modalActualOverrideInstance) {
@@ -1740,7 +1794,7 @@
             const updatedSheet = await response.json();
             applyUpdatedSheet(updatedSheet);
         } catch (err) {
-            showModalAlert('alertActualOverride', err.message || 'Failed to save actual override.');
+            showModalAlert('alertActualOverride', err.message || PFI18n.t('BudgetTracker.Js.OverrideFailed'));
         } finally {
             if (btnSubmit) {
                 btnSubmit.disabled = false;
@@ -1768,15 +1822,15 @@
         const desc = descInput ? descInput.value.trim() : '';
 
         if (!categoryId) {
-            showModalAlert('alertTransaction', 'Please select a category.');
+            showModalAlert('alertTransaction', PFI18n.t('BudgetTracker.Js.CategoryRequired'));
             return;
         }
         if (!date) {
-            showModalAlert('alertTransaction', 'Please enter a valid date.');
+            showModalAlert('alertTransaction', PFI18n.t('BudgetTracker.Js.DateRequired'));
             return;
         }
         if (isNaN(amount) || amount <= 0) {
-            showModalAlert('alertTransaction', 'Transaction amount must be greater than zero.');
+            showModalAlert('alertTransaction', PFI18n.t('BudgetTracker.Js.AmountInvalid'));
             return;
         }
 
@@ -1813,7 +1867,7 @@
                 const err = await response.json().catch(() => {
                     return {};
                 });
-                throw new Error(err.error || 'Failed to save transaction.');
+                throw new Error(err.error || PFI18n.t('BudgetTracker.Js.SaveTransactionFailed'));
             }
 
             if (modalTransactionInstance) {
@@ -1823,7 +1877,7 @@
             // Refresh the current sheet view
             await loadSheet(currentYear, currentMonth);
         } catch (err) {
-            showModalAlert('alertTransaction', err.message || 'Failed to save transaction.');
+            showModalAlert('alertTransaction', err.message || PFI18n.t('BudgetTracker.Js.SaveTransactionFailed'));
         } finally {
             if (btnSubmit) {
                 btnSubmit.disabled = false;

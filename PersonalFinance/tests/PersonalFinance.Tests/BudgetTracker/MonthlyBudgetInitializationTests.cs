@@ -54,6 +54,25 @@ public class MonthlyBudgetInitializationTests
     }
 
     [Fact]
+    public async Task PreviousPlanMonth_IsGivenAsNumbers_SoThePageCanNameItInTheUserLanguage()
+    {
+        await using AppDbContext db = CreateContext();
+        var service = new MonthlyBudgetService(db);
+        await service.EnsureDefaultCategoriesAsync(UserId);
+
+        BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
+        await service.SetPlannedAsync(UserId, 2025, 11, food.Id, new SetPlannedRequest { Amount = 600m });
+
+        MonthlyBudgetSheetDto febSheet = await service.GetSheetAsync(UserId, 2026, 2);
+        MonthlyBudgetSheetDto novSheet = await service.GetSheetAsync(UserId, 2025, 11);
+
+        Assert.Equal(2025, febSheet.PreviousPlanYear);
+        Assert.Equal(11, febSheet.PreviousPlanMonth);
+        Assert.Null(novSheet.PreviousPlanYear);
+        Assert.Null(novSheet.PreviousPlanMonth);
+    }
+
+    [Fact]
     public async Task InitializeMonth_CopyFromPrevious_CopiesOnlyPlannedAmounts()
     {
         await using AppDbContext db = CreateContext();
