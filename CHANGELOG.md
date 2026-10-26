@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.13.1] - 2026-10-25
+
+### Fixed
+
+- **Tests pass on any machine locale**: the tests that read the machine's culture now set the culture they expect, so the suite passes on a non-English or Windows machine as it does in CI (#384).
+  - `FormatBytes` runs in ApiService's pinned `en-US`, and the plural test sets the language's formatting culture as a request does; no product code was wrong.
+  - The Dashboard rendering test compares with LF line endings, so a Windows checkout (CRLF views) passes too.
+
 ## [7.13.0] - 2026-10-25
 
 ### Added

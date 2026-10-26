@@ -76,7 +76,8 @@ public class LocalizerExtensionsTests
     public void Plural_PicksTheCategoryOfTheLanguage(string uiCulture, int count, string expected)
     {
         JsonStringLocalizer localizer = LocalizationTestCatalog.Localizer(En, Vi);
-        using var culture = new UiCultureScope(uiCulture);
+        // The count is formatted in the language's formatting culture, so set both, as a request does.
+        using var language = LanguageScope.Use(AppLanguages.Find(uiCulture)!);
 
         Assert.Equal(expected, localizer.Plural("Goal.Count", count));
     }
