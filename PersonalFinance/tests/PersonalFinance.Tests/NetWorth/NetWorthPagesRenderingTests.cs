@@ -34,7 +34,7 @@ namespace PersonalFinance.Tests.NetWorth;
 public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
 {
     private const string VietnameseCookie = ".AspNetCore.Culture=c%3Dvi-VN%7Cuic%3Dvi";
-    private const char Nbsp = ' ';
+    private const char Nbsp = '\u00A0';
 
     // Visible English text of the Net Worth page. Each must render in English, and none may render in Vietnamese.
     // The preset names FIRE, Coast FI and Ultra are terms of art and stay as they are.

@@ -14,7 +14,7 @@
      * @returns {string} The formatted currency string.
      */
     function formatCurrency (value) {
-        return PFI18n.formatMoney(value, 'USD', { whole: true });
+        return PFI18n.formatMoney(value, null, { whole: true });
     }
 
     /**
@@ -416,7 +416,7 @@
      * @returns {string} The formatted string.
      */
     function formatAxisValue (val) {
-        return PFI18n.formatCompactMoney(val, 'USD');
+        return PFI18n.formatCompactMoney(val);
     }
 
     /**
