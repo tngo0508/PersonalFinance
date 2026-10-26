@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.7.0] - 2026-10-25
+
+### Added
+
+- **Budget Planner in Vietnamese**: the Budget Planner page reads in the chosen language (slice L3 of the localization spec, #361).
+  - Headings, category labels, ARIA labels, the chart's labels and tooltip, the remaining/over-budget label, field names and validation messages.
+  - The save confirmation, the over-income warning, the save failure and the Unavailable State.
+  - Percentages use the reader's number format (`12,5%` in Vietnamese); the money symbols come from the money formatter, not from the page.
+
 ## [7.6.1] - 2026-10-26
 
 ### Fixed

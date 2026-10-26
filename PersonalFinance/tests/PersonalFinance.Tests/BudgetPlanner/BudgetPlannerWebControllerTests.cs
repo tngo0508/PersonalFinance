@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.Budget;
 
 namespace PersonalFinance.Tests.BudgetPlanner;
@@ -27,7 +29,7 @@ public class BudgetPlannerWebControllerTests
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
         var tempData = new TempDataDictionary(httpContext, new TestTempDataProvider());
 
-        return new BudgetController(api, NullLogger<BudgetController>.Instance)
+        return new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = tempData
@@ -71,6 +73,70 @@ public class BudgetPlannerWebControllerTests
         Assert.Equal(200.00m, fakeApi.SavedRequest.Allocations.Entertainment);
         Assert.Equal(76.82m, fakeApi.SavedRequest.Allocations.Miscellaneous);
         Assert.Equal("Budget saved successfully.", controller.TempData["SaveSuccess"]);
+    }
+
+    [Fact]
+    public async Task Save_InVietnamese_ConfirmsInVietnamese()
+    {
+        using var culture = new UiCultureScope("vi");
+        BudgetController controller = CreateController(new FakeBudgetPlannerApi());
+
+        await controller.Save(new BudgetViewModel { MonthlyIncome = 3000m, Housing = 1000m });
+
+        Assert.Equal(TestLocalization.Vietnamese("BudgetPlanner.Message.Saved"), controller.TempData["SaveSuccess"]);
+    }
+
+    [Fact]
+    public async Task Save_OverIncome_InVietnamese_WarnsInVietnamese_WithBothAmounts()
+    {
+        using var culture = new UiCultureScope("vi");
+        BudgetController controller = CreateController(new FakeBudgetPlannerApi());
+
+        await controller.Save(new BudgetViewModel { MonthlyIncome = 3000m, Housing = 2000m, Food = 1500m });
+
+        string expected = TestLocalization.Vietnamese("BudgetPlanner.Message.SavedOverIncome")
+            .Replace("{total}", MoneyFormatter.Format(3500m, "USD"), StringComparison.Ordinal)
+            .Replace("{income}", MoneyFormatter.Format(3000m, "USD"), StringComparison.Ordinal);
+        Assert.Equal(expected, controller.TempData["SaveWarning"]);
+    }
+
+    [Fact]
+    public async Task Save_WithoutIncome_InVietnamese_SaysWhyInVietnamese()
+    {
+        using var culture = new UiCultureScope("vi");
+        BudgetController controller = CreateController(new FakeBudgetPlannerApi());
+
+        await controller.Save(new BudgetViewModel { MonthlyIncome = 0m });
+
+        Assert.Equal(TestLocalization.Vietnamese("BudgetPlanner.Message.IncomeRequired"),
+            Assert.Single(controller.ModelState[string.Empty]!.Errors).ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Save_WhenTheApiFails_InVietnamese_SaysSoInVietnamese()
+    {
+        using var culture = new UiCultureScope("vi");
+        var fakeApi = new FakeBudgetPlannerApi { SaveException = new InvalidOperationException("boom") };
+        BudgetController controller = CreateController(fakeApi);
+
+        IActionResult result = await controller.Save(new BudgetViewModel { MonthlyIncome = 3000m });
+
+        Assert.IsType<ViewResult>(result);
+        Assert.Equal(TestLocalization.Vietnamese("BudgetPlanner.Message.SaveFailed"),
+            Assert.Single(controller.ModelState[string.Empty]!.Errors).ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Index_WhenTheApiFails_InVietnamese_ShowsTheUnavailableStateInVietnamese()
+    {
+        using var culture = new UiCultureScope("vi");
+        BudgetController controller = CreateController(new FakeBudgetPlannerApi { GetException = new HttpRequestException() });
+
+        IActionResult result = await controller.Index();
+
+        UnavailableStateViewModel model = Assert.IsType<UnavailableStateViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(TestLocalization.Vietnamese("BudgetPlanner.Title"), model.PageTitle);
+        Assert.Equal(TestLocalization.Vietnamese("BudgetPlanner.Message.Unavailable"), model.Heading);
     }
 
     [Fact]
@@ -192,12 +258,19 @@ public class FakeBudgetPlannerApi : IBudgetPlannerApi
 {
     public SaveBudgetRequestDto? SavedRequest { get; private set; }
     public BudgetResponseDto BudgetResponse { get; set; } = new();
+    public Exception? GetException { get; set; }
+    public Exception? SaveException { get; set; }
 
     public Task<BudgetResponseDto> GetBudgetAsync(string period, CancellationToken cancellationToken = default)
-        => Task.FromResult(BudgetResponse);
+        => GetException is null ? Task.FromResult(BudgetResponse) : Task.FromException<BudgetResponseDto>(GetException);
 
     public Task<SaveBudgetResponseDto> SaveBudgetAsync(SaveBudgetRequestDto request, CancellationToken cancellationToken = default)
     {
+        if (SaveException is not null)
+        {
+            return Task.FromException<SaveBudgetResponseDto>(SaveException);
+        }
+
         SavedRequest = request;
         return Task.FromResult(new SaveBudgetResponseDto { Success = true });
     }
