@@ -96,7 +96,7 @@ public class GoogleDriveController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Loading Google Drive connections failed for user {UserId}", userId);
-            model.ErrorMessage = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.LoadFailed"]);
+            model.ErrorMessage = ApiErrorMessages.ForUser(_localizer, ex, _localizer["GoogleDrive.Message.LoadFailed"]);
         }
 
         return View(model);
@@ -152,7 +152,7 @@ public class GoogleDriveController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error synchronizing connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.SyncFailed"]);
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(_localizer, ex, _localizer["GoogleDrive.Message.SyncFailed"]);
         }
 
         return RedirectToAction(nameof(Index), new { connectionId = id });
@@ -197,7 +197,7 @@ public class GoogleDriveController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error re-authenticating connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.ReauthFailed"]);
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(_localizer, ex, _localizer["GoogleDrive.Message.ReauthFailed"]);
         }
 
         return RedirectToAction(nameof(Index), new { connectionId = id });
@@ -226,7 +226,7 @@ public class GoogleDriveController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error deleting connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.RemoveFailed"]);
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(_localizer, ex, _localizer["GoogleDrive.Message.RemoveFailed"]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -304,7 +304,7 @@ public class GoogleDriveController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Connecting a Google Drive folder failed.");
-            model.ErrorMessage = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.ConnectFailed"]);
+            model.ErrorMessage = ApiErrorMessages.ForUser(_localizer, ex, _localizer["GoogleDrive.Message.ConnectFailed"]);
             model.ShowConnectForm = true;
         }
 

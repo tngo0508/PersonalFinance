@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure;
 using Refit;
 
@@ -16,7 +17,7 @@ public class ApiErrorMessagesForUserTests
     {
         ApiException ex = await CreateApiExceptionAsync(HttpStatusCode.Conflict, """{"error":"Category 'Food' already exists."}""");
 
-        Assert.Equal("Category 'Food' already exists.", ApiErrorMessages.ForUser(ex, "fallback"));
+        Assert.Equal("Category 'Food' already exists.", ApiErrorMessages.ForUser(TestLocalization.Localizer, ex, "fallback"));
     }
 
     [Fact]
@@ -24,21 +25,24 @@ public class ApiErrorMessagesForUserTests
     {
         ApiException ex = await CreateApiExceptionAsync(HttpStatusCode.InternalServerError, """{"error":"NullReferenceException at ..."}""");
 
-        Assert.Equal("fallback", ApiErrorMessages.ForUser(ex, "fallback"));
+        Assert.Equal("fallback", ApiErrorMessages.ForUser(TestLocalization.Localizer, ex, "fallback"));
     }
 
     [Fact]
     public void UnreachableApiService_ShowsUnavailableMessage()
     {
-        Assert.Equal(JsonApiErrorsFilter.UnavailableMessage,
-            ApiErrorMessages.ForUser(new HttpRequestException("connection refused"), "fallback"));
+        using var ui = new UiCultureScope("en");
+        Assert.True(TestLocalization.Catalog.TryGet("en", "Errors.Unavailable", out string unavailable));
+
+        Assert.Equal(unavailable,
+            ApiErrorMessages.ForUser(TestLocalization.Localizer, new HttpRequestException("connection refused"), "fallback"));
     }
 
     [Fact]
     public void AnyOtherException_ShowsFallbackNotExceptionText()
     {
         Assert.Equal("fallback",
-            ApiErrorMessages.ForUser(new InvalidOperationException("Sequence contains no elements"), "fallback"));
+            ApiErrorMessages.ForUser(TestLocalization.Localizer, new InvalidOperationException("Sequence contains no elements"), "fallback"));
     }
 
     private static async Task<ApiException> CreateApiExceptionAsync(HttpStatusCode statusCode, string content)

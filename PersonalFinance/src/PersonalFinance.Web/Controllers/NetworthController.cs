@@ -102,7 +102,7 @@ public class NetworthController : Controller
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogError(ex, "Saving Net Worth parameters failed.");
-            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, _localizer["NetWorth.Message.SaveFailed"]));
+            ModelState.AddModelError("", ApiErrorMessages.ForUser(_localizer, ex, _localizer["NetWorth.Message.SaveFailed"]));
             return await IndexWithProjectionAsync(model, CancellationToken.None);
         }
 
@@ -124,7 +124,7 @@ public class NetworthController : Controller
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogError(ex, "Deleting Net Worth parameters failed.");
-            TempData["SaveError"] = ApiErrorMessages.ForUser(ex, _localizer["NetWorth.Message.ClearFailed"]);
+            TempData["SaveError"] = ApiErrorMessages.ForUser(_localizer, ex, _localizer["NetWorth.Message.ClearFailed"]);
         }
 
         return RedirectToAction(nameof(Index));

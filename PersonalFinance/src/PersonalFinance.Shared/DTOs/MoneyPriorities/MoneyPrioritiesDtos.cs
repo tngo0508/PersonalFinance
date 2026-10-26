@@ -279,16 +279,6 @@ public class PriorityTreeThresholdsDto
 }
 
 /// <summary>
-/// A rejected submit (400): every message in order, and the same messages keyed by the request property they belong
-/// to (e.g. <c>MonthlyAmount</c>), so the page can show each one under its field.
-/// </summary>
-public class MoneyPrioritiesValidationErrorsDto
-{
-    public List<string> Errors { get; set; } = [];
-    public Dictionary<string, List<string>> FieldErrors { get; set; } = [];
-}
-
-/// <summary>
 /// A Priority Walk's Purpose Note, or why it has none (<see cref="State"/>). The note is plain text, shown as text and
 /// never as HTML, with <see cref="Disclaimer"/> under it.
 /// </summary>

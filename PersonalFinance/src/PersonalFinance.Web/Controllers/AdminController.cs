@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Admin;
@@ -22,12 +23,18 @@ public class AdminController : Controller
     private readonly IAdminApi _adminApi;
     private readonly IFeedbackApi _feedbackApi;
     private readonly ILogger<AdminController> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public AdminController(IAdminApi adminApi, IFeedbackApi feedbackApi, ILogger<AdminController> logger)
+    /// <param name="localizer">
+    /// Resolves ApiService's keyed error messages; the Admin pages themselves are not localized.
+    /// </param>
+    public AdminController(IAdminApi adminApi, IFeedbackApi feedbackApi, ILogger<AdminController> logger,
+        IStringLocalizer localizer)
     {
         _adminApi = adminApi;
         _feedbackApi = feedbackApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -104,7 +111,7 @@ public class AdminController : Controller
                                    && !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Failed to change the Feedback Status.");
-            TempData["AdminError"] = ApiErrorMessages.ForUser(ex, "The status could not be changed. Try again later.");
+            TempData["AdminError"] = ApiErrorMessages.ForUser(_localizer, ex, "The status could not be changed. Try again later.");
         }
 
         return RedirectToAction(nameof(Feedback), new { status = filter });
@@ -168,7 +175,7 @@ public class AdminController : Controller
         catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException)
         {
             _logger.LogWarning(ex, "Admin role operation failed.");
-            TempData["AdminError"] = ApiErrorMessages.ForUser(ex, "The operation failed. Try again later.");
+            TempData["AdminError"] = ApiErrorMessages.ForUser(_localizer, ex, "The operation failed. Try again later.");
         }
 
         return RedirectToAction(nameof(Index));

@@ -13,9 +13,12 @@ public interface ICommunityService
     Task<CommunityResponseDto> GetCommunityAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Votes on a poll option.
+    /// Votes on a poll option and returns the updated active polls.
     /// </summary>
-    Task<CommunityVoteResultDto> VoteAsync(string userId, CommunityVoteRequestDto request, CancellationToken cancellationToken = default);
+    /// <exception cref="PersonalFinance.ApiService.Infrastructure.ApiErrorException">
+    /// The request names no poll or option, the poll is unknown or inactive, or the option is not the poll's.
+    /// </exception>
+    Task<CommunityResponseDto> VoteAsync(string userId, CommunityVoteRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Adds a comment to a poll or story.
@@ -46,14 +49,4 @@ public interface ICommunityService
     /// Gets a single story by ID.
     /// </summary>
     Task<CommunityStoryDto?> GetStoryByIdAsync(string userId, int storyId, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Result of a vote operation.
-/// </summary>
-public sealed class CommunityVoteResultDto
-{
-    public bool Success { get; set; }
-    public string? ErrorMessage { get; set; }
-    public CommunityResponseDto? Response { get; set; }
 }

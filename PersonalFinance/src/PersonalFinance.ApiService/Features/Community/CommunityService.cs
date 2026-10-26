@@ -1,7 +1,9 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Community;
 
 namespace PersonalFinance.ApiService.Features.Community;
@@ -44,16 +46,16 @@ internal sealed class CommunityService : ICommunityService
         return response;
     }
 
-    public async Task<CommunityVoteResultDto> VoteAsync(string userId, CommunityVoteRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<CommunityResponseDto> VoteAsync(string userId, CommunityVoteRequestDto request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(request.PollCode))
         {
-            return new CommunityVoteResultDto { Success = false, ErrorMessage = "Poll code is required." };
+            throw new ApiErrorException(ApiErrorKeys.Community.PollCodeRequired, "A poll code is required.");
         }
 
         if (request.OptionId <= 0)
         {
-            return new CommunityVoteResultDto { Success = false, ErrorMessage = "Option ID is required." };
+            throw new ApiErrorException(ApiErrorKeys.Community.OptionIdRequired, "Option ID is required.");
         }
 
         // Look up the poll by its code
@@ -63,7 +65,7 @@ internal sealed class CommunityService : ICommunityService
         if (poll == null || !poll.IsActive)
         {
             _logger.LogWarning("Vote attempt on invalid or inactive poll: PollCode={PollCode}", request.PollCode);
-            return new CommunityVoteResultDto { Success = false, ErrorMessage = "Poll not found or inactive." };
+            throw new ApiErrorException(ApiErrorKeys.Community.PollNotFound, "The poll was not found or is inactive.");
         }
 
         // Check if the option belongs to the poll
@@ -72,7 +74,7 @@ internal sealed class CommunityService : ICommunityService
 
         if (option == null)
         {
-            return new CommunityVoteResultDto { Success = false, ErrorMessage = "Invalid option." };
+            throw new ApiErrorException(ApiErrorKeys.Community.InvalidOption, "Invalid option.");
         }
 
         // Check if user already voted
@@ -124,7 +126,7 @@ internal sealed class CommunityService : ICommunityService
 
         response.ActivePolls = updatedPolls.Select(p => MapPollToDto(p, userId)).ToList();
 
-        return new CommunityVoteResultDto { Success = true, Response = response };
+        return response;
     }
 
     public async Task<CommunityCommentDto> AddCommentAsync(string userId, CommunityCommentRequestDto request, string authorName, CancellationToken cancellationToken = default)
@@ -132,12 +134,13 @@ internal sealed class CommunityService : ICommunityService
         string trimmedText = request.Text.Trim();
         if (string.IsNullOrEmpty(trimmedText))
         {
-            throw new ArgumentException("Comment text cannot be empty.");
+            throw new ApiErrorException(ApiErrorKeys.Community.CommentEmpty, "Comment text cannot be empty.", "Text");
         }
 
         if (trimmedText.Length > 2000)
         {
-            throw new ArgumentException("Comment text is too long (max 2000 characters).");
+            throw new ApiErrorException(ApiErrorKeys.Community.CommentTooLong, "Comment text is too long (max 2000 characters).", "Text",
+                ErrorArgs.Number("max", 2000));
         }
 
         int? pollId = null;
@@ -148,7 +151,7 @@ internal sealed class CommunityService : ICommunityService
                 .FirstOrDefaultAsync(p => p.PollCode == request.PollCode, cancellationToken);
             if (poll == null)
             {
-                throw new ArgumentException("Invalid poll.");
+                throw new ApiErrorException(ApiErrorKeys.Community.InvalidPoll, "No poll matches this code.");
             }
             pollId = poll.Id;
         }
@@ -161,7 +164,7 @@ internal sealed class CommunityService : ICommunityService
                 .FindAsync([request.StoryId.Value], cancellationToken);
             if (story == null || !story.IsVisible)
             {
-                throw new ArgumentException("Invalid story.");
+                throw new ApiErrorException(ApiErrorKeys.Community.InvalidStory, "Invalid story.");
             }
             storyId = story.Id;
             storyTitle = story.Title;
@@ -208,7 +211,7 @@ internal sealed class CommunityService : ICommunityService
 
         if (comment == null)
         {
-            throw new KeyNotFoundException("Comment not found.");
+            throw new ApiErrorException(ApiErrorKeys.Community.CommentNotFound, "Comment not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
         CommunityCommentLike? existingLike = await _dbContext.CommunityCommentLikes
@@ -248,7 +251,8 @@ internal sealed class CommunityService : ICommunityService
 
         if (poll == null)
         {
-            throw new KeyNotFoundException("Poll not found.");
+            throw new ApiErrorException(ApiErrorKeys.Community.PollNotFound, "The poll was not found or is inactive.",
+                statusCode: StatusCodes.Status404NotFound);
         }
 
         List<CommunityCommentDto> comments = await _dbContext.CommunityComments
@@ -279,27 +283,32 @@ internal sealed class CommunityService : ICommunityService
 
         if (string.IsNullOrEmpty(trimmedTitle) || trimmedTitle.Length > 500)
         {
-            throw new ArgumentException("Title is required and must be under 500 characters.");
+            throw new ApiErrorException(ApiErrorKeys.Community.StoryTitle, "A title is required and must be under 500 characters.", "Title",
+                ErrorArgs.Number("max", 500));
         }
 
         if (string.IsNullOrEmpty(trimmedSummary) || trimmedSummary.Length > 2000)
         {
-            throw new ArgumentException("Summary is required and must be under 2000 characters.");
+            throw new ApiErrorException(ApiErrorKeys.Community.StorySummary, "Summary is required and must be under 2000 characters.",
+                "Summary", ErrorArgs.Number("max", 2000));
         }
 
         if (string.IsNullOrEmpty(trimmedBody) || trimmedBody.Length < 100)
         {
-            throw new ArgumentException("Story body must be at least 100 characters.");
+            throw new ApiErrorException(ApiErrorKeys.Community.StoryBodyMin, "Story body must have at least 100 characters.", "Body",
+                ErrorArgs.Number("min", 100));
         }
 
         if (trimmedBody.Length > 10000)
         {
-            throw new ArgumentException("Story body must be under 10000 characters.");
+            throw new ApiErrorException(ApiErrorKeys.Community.StoryBodyMax, "Story body must be shorter than 10000 characters.", "Body",
+                ErrorArgs.Number("max", 10000));
         }
 
         if (string.IsNullOrEmpty(trimmedCategory) || trimmedCategory.Length > 50)
         {
-            throw new ArgumentException("Category is required and must be under 50 characters.");
+            throw new ApiErrorException(ApiErrorKeys.Community.StoryCategory, "Category is required and must be under 50 characters.",
+                "Category", ErrorArgs.Number("max", 50));
         }
 
         int wordCount = trimmedBody.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
@@ -352,7 +361,7 @@ internal sealed class CommunityService : ICommunityService
 
         if (story == null)
         {
-            throw new KeyNotFoundException("Story not found.");
+            throw new ApiErrorException(ApiErrorKeys.Community.StoryNotFound, "Story not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
         CommunityStoryLike? existingLike = await _dbContext.CommunityStoryLikes

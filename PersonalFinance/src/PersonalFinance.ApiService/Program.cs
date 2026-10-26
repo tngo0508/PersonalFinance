@@ -80,7 +80,7 @@ try
         .AddMoneyPrioritiesFeature();
 
     // HTTP: controllers, FluentValidation validators, RFC 7807 ProblemDetails, OpenAPI document.
-    builder.Services.AddControllers()
+    builder.Services.AddControllers(options => options.Filters.Add<ApiErrorExceptionFilter>())
         .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true);
     builder.Services.AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true);
     builder.Services.AddProblemDetails();

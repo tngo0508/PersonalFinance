@@ -47,13 +47,7 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        CommunityVoteResultDto result = await _communityService.VoteAsync(userId, request, cancellationToken);
-        if (!result.Success)
-        {
-            return BadRequest(result.ErrorMessage);
-        }
-
-        return Ok(result.Response);
+        return Ok(await _communityService.VoteAsync(userId, request, cancellationToken));
     }
 
     /// <summary>
@@ -68,16 +62,9 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        try
-        {
-            CommunityCommentDto comment =
-                await _communityService.AddCommentAsync(userId, request, authorName ?? string.Empty, cancellationToken);
-            return CreatedAtAction(nameof(GetCommunity), comment);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        CommunityCommentDto comment =
+            await _communityService.AddCommentAsync(userId, request, authorName ?? string.Empty, cancellationToken);
+        return CreatedAtAction(nameof(GetCommunity), comment);
     }
 
     /// <summary>
@@ -90,15 +77,8 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        try
-        {
-            CommentLikeResult result = await _communityService.ToggleCommentLikeAsync(userId, commentId, cancellationToken);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        CommentLikeResult result = await _communityService.ToggleCommentLikeAsync(userId, commentId, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>
@@ -110,15 +90,8 @@ public class CommunityController : ControllerBase
         [FromQuery] string pollCode,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            List<CommunityCommentDto> comments = await _communityService.GetPollCommentsAsync(pollCode, cancellationToken);
-            return Ok(comments);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        List<CommunityCommentDto> comments = await _communityService.GetPollCommentsAsync(pollCode, cancellationToken);
+        return Ok(comments);
     }
 
     /// <summary>
@@ -133,16 +106,9 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        try
-        {
-            CommunityStoryDto story = await _communityService.SubmitStoryAsync(userId, request, authorName ?? string.Empty,
-                cancellationToken);
-            return CreatedAtAction(nameof(GetCommunity), story);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        CommunityStoryDto story = await _communityService.SubmitStoryAsync(userId, request, authorName ?? string.Empty,
+            cancellationToken);
+        return CreatedAtAction(nameof(GetCommunity), story);
     }
 
     /// <summary>
@@ -155,15 +121,8 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        try
-        {
-            StoryLikeResult result = await _communityService.ToggleStoryLikeAsync(userId, storyId, cancellationToken);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        StoryLikeResult result = await _communityService.ToggleStoryLikeAsync(userId, storyId, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>

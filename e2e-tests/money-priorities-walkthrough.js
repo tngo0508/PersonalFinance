@@ -12,15 +12,39 @@
  * The ApiService computes every figure and the "Your path" sentences; these checks read them as the page shows them.
  * Runs on the InMemory database like the rest of the suite: a fresh Account starts with no Earlier results, and each
  * submit varies its answers, because an identical resubmit returns the existing Walk.
+ *
+ * Last, the account menu switches to Vietnamese and an out-of-range monthly amount shows the ApiService's keyed range
+ * error in Vietnamese (#385). Expected texts are read from Resources/i18n/vi.json, so a re-translation does not break
+ * the test.
  */
 
+const path = require('path');
+
 const TIMEOUT = 15000;
+const RESOURCES = path.join(__dirname, '..', 'PersonalFinance', 'src', 'PersonalFinance.Web', 'Resources', 'i18n');
+const vi = require(path.join(RESOURCES, 'vi.json'));
 
 const DEBT_LEAF = 'Pay down the high-interest debt first';
 const FUND_LEAF = 'Build the emergency fund to 3 months';
 const IRA_LEAF = 'Max the IRA, then the 401(k)';
 
 const NOTE_INVITE = 'Add a purpose in your own words to get a short note on how this priority serves it.';
+
+/**
+ * A whole-dollar amount as MoneyFormatter.FormatWhole writes it in vi-VN ("1.000.000 $", non-breaking space): the
+ * culture's grouping and symbol position with the currency's own symbol, as PFI18n.formatMoney does in the browser.
+ * @param {number} amount - The amount.
+ * @returns {string} The formatted amount.
+ */
+function viWholeDollars(amount) {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'USD',
+        currencyDisplay: 'narrowSymbol',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount).replace(/US\$|\$/, '$').replace(/ /g, '\u00A0');
+}
 
 /**
  * Register a fresh Account and make sure it is signed in.
@@ -357,6 +381,34 @@ async function runMoneyPrioritiesWalkthrough({browser, base, pass, fail, console
             } else {
                 fail(`Money Priorities 7: toggle "${label}", aria-expanded ${closed} -> ${opened} -> ${closedAgain}, ` +
                     `page scrolls sideways ${pageScrolls}`);
+            }
+        });
+
+        // Step 8: in Vietnamese, an out-of-range amount shows the ApiService's keyed error in Vietnamese (#385), with
+        // the limits in the vi-VN whole-dollar format.
+        await step('Money Priorities 8', fail, async () => {
+            await page.setViewportSize({width: 1280, height: 800});
+            await page.goto(`${base}/MoneyPriorities`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.click('.app-user-toggle');
+            const viItem = page.locator('.app-user-menu .language-switcher button[data-language="vi"]');
+            await Promise.all([page.waitForNavigation({waitUntil: 'networkidle', timeout: TIMEOUT}), viItem.click()]);
+            const lang = await page.getAttribute('html', 'lang');
+
+            await answer(page, {fields: {mpMonthlyAmount: '2000000'}});
+            const response = page.waitForResponse((r) => r.url().includes('/MoneyPriorities/Submit'), {timeout: TIMEOUT});
+            await page.click('#mpSubmit');
+            const status = (await response).status();
+            const slot = page.locator('#mpErrMonthlyAmount');
+            await slot.waitFor({state: 'visible', timeout: TIMEOUT});
+            const shown = ((await slot.textContent()) || '').trim();
+            const expected = vi['MoneyPriorities.Validation.MonthlyAmountRange']
+                .replace('{min}', () => viWholeDollars(0))
+                .replace('{max}', () => viWholeDollars(1000000));
+            if (lang === 'vi' && status === 400 && shown === expected) {
+                pass('Money Priorities 8: in Vietnamese, 2000000 a month shows the Vietnamese range error with ' +
+                    `"${viWholeDollars(1000000)}"`);
+            } else {
+                fail(`Money Priorities 8: html lang="${lang}", submit ${status}, error "${shown}", expected "${expected}"`);
             }
         });
     } finally {

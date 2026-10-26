@@ -63,7 +63,7 @@ public class PersonalDataModel : PageModel
                                    && !HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Exporting personal data failed.");
-            ErrorMessage = ApiErrorMessages.ForUser(ex, _localizer["Account.PersonalData.ExportFailed"]);
+            ErrorMessage = ApiErrorMessages.ForUser(_localizer, ex, _localizer["Account.PersonalData.ExportFailed"]);
             return Page();
         }
     }

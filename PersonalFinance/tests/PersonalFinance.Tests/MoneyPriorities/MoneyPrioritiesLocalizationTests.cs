@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Net;
-using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -23,9 +22,9 @@ using Refit;
 namespace PersonalFinance.Tests.MoneyPriorities;
 
 /// <summary>
-/// The Money Priorities page answers in the request's Language: the Web controller's own wording, and the ApiService's
-/// fixed wording it recognizes (leaf labels by id, the disclaimers, Purpose Note messages, validation messages), which
-/// it swaps for the translation. Text it does not recognize passes through as the ApiService wrote it.
+/// The Money Priorities page answers in the request's Language: the Web controller's own wording, leaf labels by id,
+/// the disclaimers and Purpose Note messages by their fixed keys and the note's state, and validation messages by the
+/// keys of the ApiService's <see cref="ApiErrorDto"/>. A leaf label it has no key for passes through as written.
 /// </summary>
 public class MoneyPrioritiesLocalizationTests
 {
@@ -35,6 +34,7 @@ public class MoneyPrioritiesLocalizationTests
           "MoneyPriorities.Message.Unavailable": "We couldn't load Money Priorities",
           "MoneyPriorities.Note.Disclaimer": "Not advice.",
           "MoneyPriorities.Note.Unavailable": "The note is not available right now.",
+          "MoneyPriorities.Note.QuotaReached": "You've used today's notes.",
           "MoneyPriorities.Leaf.L1": "Pay down the high-interest debt first",
           "MoneyPriorities.Result.HeadlineLeaf": "{leaf}.",
           "MoneyPriorities.Result.EstimateDisclaimer": "Estimates only.",
@@ -53,6 +53,7 @@ public class MoneyPrioritiesLocalizationTests
           "MoneyPriorities.Message.Unavailable": "Không thể tải Ưu tiên tiền bạc",
           "MoneyPriorities.Note.Disclaimer": "Không phải lời khuyên.",
           "MoneyPriorities.Note.Unavailable": "Ghi chú hiện chưa có.",
+          "MoneyPriorities.Note.QuotaReached": "Bạn đã dùng hết ghi chú hôm nay.",
           "MoneyPriorities.Leaf.L1": "Trả nợ lãi cao trước",
           "MoneyPriorities.Result.HeadlineLeaf": "{leaf}.",
           "MoneyPriorities.Result.EstimateDisclaimer": "Chỉ là ước tính.",
@@ -64,6 +65,8 @@ public class MoneyPrioritiesLocalizationTests
           "MoneyPriorities.Validation.MonthlyAmountRange": "Nhập số tiền hằng tháng trên {min} và tối đa {max}."
         }
         """;
+
+    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
 
     [Fact]
     public async Task Index_WhenTheApiFails_ShowsTheUnavailableStateInTheRequestLanguage()
@@ -113,7 +116,7 @@ public class MoneyPrioritiesLocalizationTests
     }
 
     [Fact]
-    public async Task Walk_WithALeafOrDisclaimerThePageHasNoKeyFor_KeepsTheApiServiceText()
+    public async Task Walk_WithALeafThePageHasNoKeyFor_KeepsTheApiServiceLabel()
     {
         using var culture = new UiCultureScope("vi");
         PriorityWalkResultDto english = EnglishWalk("L9");
@@ -127,7 +130,7 @@ public class MoneyPrioritiesLocalizationTests
         PriorityWalkResultDto walk = Assert.IsType<PriorityWalkResultDto>(Assert.IsType<JsonResult>(result).Value);
         Assert.Equal("A leaf from a later tree", walk.LeafLabel);
         Assert.Equal("A leaf from a later tree.", walk.HeadlineLeafLabel);
-        Assert.Equal("A disclaimer the page does not know.", walk.Disclaimer);
+        Assert.Equal("Chỉ là ước tính.", walk.Disclaimer);
     }
 
     [Fact]
@@ -150,18 +153,18 @@ public class MoneyPrioritiesLocalizationTests
     }
 
     [Theory]
-    [InlineData(PurposeNoteState.NoPurpose, MoneyPrioritiesMessages.PurposeNoteInvite, "Thêm mục đích.")]
-    [InlineData(PurposeNoteState.Unavailable, AiAssistantMessages.PurposeNoteUnavailable, "Ghi chú hiện chưa có.")]
-    [InlineData(PurposeNoteState.Refused, AiAssistantMessages.PurposeNoteRefused, "Không thể viết ghi chú.")]
-    [InlineData(PurposeNoteState.QuotaReached, "The quota's own message.", "The quota's own message.")]
+    [InlineData(PurposeNoteState.NoPurpose, "Thêm mục đích.")]
+    [InlineData(PurposeNoteState.Unavailable, "Ghi chú hiện chưa có.")]
+    [InlineData(PurposeNoteState.QuotaReached, "Bạn đã dùng hết ghi chú hôm nay.")]
+    [InlineData(PurposeNoteState.Refused, "Không thể viết ghi chú.")]
     public async Task Note_ReturnsTheStateMessageAndDisclaimer_InTheRequestLanguage(PurposeNoteState state,
-        string english, string expected)
+        string expected)
     {
         using var culture = new UiCultureScope("vi");
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.WritePurposeNoteAsync), new PriorityWalkPurposeNoteDto
         {
-            WalkId = 7, State = state, Message = english, Disclaimer = AiAssistantMessages.Disclaimer
+            WalkId = 7, State = state, Message = "whatever", Disclaimer = "whatever"
         });
         MoneyPrioritiesController controller = CreateController(api);
 
@@ -197,25 +200,21 @@ public class MoneyPrioritiesLocalizationTests
     public async Task Submit_WhenTheApiRejectsTheAnswers_ReturnsEachMessageInTheRequestLanguage()
     {
         using var culture = new UiCultureScope("vi");
-        string body = JsonSerializer.Serialize(new MoneyPrioritiesValidationErrorsDto
-        {
-            Errors = [MoneyPrioritiesMessages.DebtBalanceRequired, "A rule the page does not know."],
-            FieldErrors = new Dictionary<string, List<string>>
-            {
-                ["DebtBalance"] = [MoneyPrioritiesMessages.DebtBalanceRequired],
-                ["DebtApr"] = ["A rule the page does not know."]
-            }
-        });
+        string body = KeyedBody(
+            Entry(ApiErrorKeys.MoneyPriorities.DebtBalanceRequired, MoneyPrioritiesMessages.DebtBalanceRequired,
+                "DebtBalance"),
+            Entry("MoneyPriorities.Validation.ALaterRule", "A rule the page does not know.", "DebtApr"));
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Throws(nameof(IMoneyPrioritiesApi.SubmitWalkAsync), await ApiExceptionAsync(HttpStatusCode.BadRequest, body));
         MoneyPrioritiesController controller = CreateController(api);
 
         IActionResult result = await controller.Submit(new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 22m });
 
-        MoneyPrioritiesValidationErrorsDto errors = ErrorsOf(result);
-        Assert.Equal(["Nhập số dư của khoản nợ đó.", "A rule the page does not know."], errors.Errors);
+        MoneyPrioritiesErrorsViewModel errors = ErrorsOf(result);
+        Assert.Empty(errors.Errors);
         Assert.Equal(["Nhập số dư của khoản nợ đó."], errors.FieldErrors["DebtBalance"]);
         Assert.Equal(["A rule the page does not know."], errors.FieldErrors["DebtApr"]);
+        Assert.Equal(2, errors.FieldErrors.Count);
     }
 
     [Fact]
@@ -226,11 +225,8 @@ public class MoneyPrioritiesLocalizationTests
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
         try
         {
-            string body = JsonSerializer.Serialize(new MoneyPrioritiesValidationErrorsDto
-            {
-                Errors = [MoneyPrioritiesMessages.MonthlyAmountRange],
-                FieldErrors = new Dictionary<string, List<string>> { ["MonthlyAmount"] = [MoneyPrioritiesMessages.MonthlyAmountRange] }
-            });
+            string body = KeyedBody(Entry(ApiErrorKeys.MoneyPriorities.MonthlyAmountRange,
+                MoneyPrioritiesMessages.MonthlyAmountRange, "MonthlyAmount", MoneyRangeArgs(1_000_000m)));
             (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
             proxy.Throws(nameof(IMoneyPrioritiesApi.SubmitWalkAsync),
                 await ApiExceptionAsync(HttpStatusCode.BadRequest, body));
@@ -238,7 +234,37 @@ public class MoneyPrioritiesLocalizationTests
 
             IActionResult result = await controller.Submit(new SubmitPriorityWalkRequest { MonthlyAmount = 0m, DebtApr = 0m });
 
-            Assert.Equal(["Enter a monthly amount over $0 and at most $1,000,000."], ErrorsOf(result).Errors);
+            Assert.Equal(["Enter a monthly amount over $0 and at most $1,000,000."],
+                ErrorsOf(result).FieldErrors["MonthlyAmount"]);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = formatting;
+        }
+    }
+
+    [Fact]
+    public async Task Fields_KeepsEveryMessageOfAField_InOrder()
+    {
+        using var culture = new UiCultureScope("vi");
+        CultureInfo formatting = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+        try
+        {
+            string body = KeyedBody(
+                Entry(ApiErrorKeys.MoneyPriorities.MonthlyAmountRange, MoneyPrioritiesMessages.MonthlyAmountRange,
+                    "MonthlyAmount", MoneyRangeArgs(1_000_000m)),
+                Entry(ApiErrorKeys.MoneyPriorities.WholeCents, MoneyPrioritiesMessages.WholeCents, "MonthlyAmount"));
+            (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+            proxy.Throws(nameof(IMoneyPrioritiesApi.SubmitWalkAsync),
+                await ApiExceptionAsync(HttpStatusCode.BadRequest, body));
+            MoneyPrioritiesController controller = CreateController(api);
+
+            IActionResult result = await controller.Submit(new SubmitPriorityWalkRequest { MonthlyAmount = 0m, DebtApr = 0m });
+
+            // WholeCents has no key in this test catalog, so it keeps the ApiService's English message.
+            Assert.Equal(["Nhập số tiền hằng tháng trên $0 và tối đa $1,000,000.", MoneyPrioritiesMessages.WholeCents],
+                ErrorsOf(result).FieldErrors["MonthlyAmount"]);
         }
         finally
         {
@@ -272,36 +298,6 @@ public class MoneyPrioritiesLocalizationTests
         Assert.Equal(["Hãy kiểm tra câu trả lời rồi thử lại."], ErrorsOf(result).Errors);
     }
 
-    /// <summary>
-    /// Every fixed ApiService message the page translates reads in en.json exactly as the ApiService writes it, so
-    /// translating an English reply into English changes nothing.
-    /// </summary>
-    [Fact]
-    public void EveryFixedMessage_ReadsInEnglishExactlyAsTheApiServiceWritesIt()
-    {
-        using var culture = new UiCultureScope("en");
-        CultureInfo formatting = CultureInfo.CurrentCulture;
-        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
-        try
-        {
-            IEnumerable<string> messages = typeof(MoneyPrioritiesMessages)
-                .GetFields(BindingFlags.Public | BindingFlags.Static)
-                .Where(f => f.IsLiteral && f.FieldType == typeof(string))
-                .Select(f => (string)f.GetRawConstantValue()!)
-                .Concat([AiAssistantMessages.Disclaimer, AiAssistantMessages.PurposeNoteUnavailable,
-                    AiAssistantMessages.PurposeNoteRefused]);
-
-            foreach (string message in messages)
-            {
-                Assert.Equal(message, MoneyPrioritiesText.Message(TestLocalization.Localizer, message));
-            }
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = formatting;
-        }
-    }
-
     [Fact]
     public void EveryLeafOfTheTree_HasAnEnglishLabelMatchingTheApiService()
     {
@@ -315,8 +311,24 @@ public class MoneyPrioritiesLocalizationTests
     private static IEnumerable<(string LeafId, string Label)> TreeLeaves() =>
         PriorityTreeV1.Tree.Nodes.Where(n => n.Kind == PriorityNodeKind.Leaf).Select(n => (n.Id, n.Label));
 
-    private static MoneyPrioritiesValidationErrorsDto ErrorsOf(IActionResult result) =>
-        Assert.IsType<MoneyPrioritiesValidationErrorsDto>(Assert.IsType<BadRequestObjectResult>(result).Value);
+    private static MoneyPrioritiesErrorsViewModel ErrorsOf(IActionResult result) =>
+        Assert.IsType<MoneyPrioritiesErrorsViewModel>(Assert.IsType<BadRequestObjectResult>(result).Value);
+
+    private static ApiErrorEntryDto Entry(string key, string message, string? field,
+        Dictionary<string, ApiErrorArgDto>? args = null) =>
+        new() { Key = key, Message = message, Field = field, Args = args };
+
+    private static string KeyedBody(params ApiErrorEntryDto[] entries) =>
+        JsonSerializer.Serialize(new ApiErrorDto { Errors = [.. entries] }, WebJson);
+
+    private static Dictionary<string, ApiErrorArgDto> MoneyRangeArgs(decimal max) => new()
+    {
+        ["min"] = new ApiErrorArgDto { Kind = ApiErrorArgKind.Money, Value = "0", Currency = "USD" },
+        ["max"] = new ApiErrorArgDto
+        {
+            Kind = ApiErrorArgKind.Money, Value = max.ToString(CultureInfo.InvariantCulture), Currency = "USD"
+        }
+    };
 
     private static async Task<ApiException> ApiExceptionAsync(HttpStatusCode statusCode, string content)
     {

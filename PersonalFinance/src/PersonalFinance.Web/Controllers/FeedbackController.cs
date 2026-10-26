@@ -74,7 +74,7 @@ public class FeedbackController : Controller
         {
             _logger.LogWarning(ex, "Sending feedback failed.");
             ModelState.AddModelError(string.Empty,
-                ApiErrorMessages.ForUser(ex, _localizer["Feedback.Message.SendFailed"]));
+                ApiErrorMessages.ForUser(_localizer, ex, _localizer["Feedback.Message.SendFailed"]));
             return View(nameof(Index), model);
         }
 

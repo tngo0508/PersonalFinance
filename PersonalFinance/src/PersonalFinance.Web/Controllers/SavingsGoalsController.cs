@@ -88,7 +88,7 @@ public class SavingsGoalsController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Creating a savings goal failed.");
-            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, _localizer["SavingsGoals.Message.CreateFailed"]));
+            ModelState.AddModelError("", ApiErrorMessages.ForUser(_localizer, ex, _localizer["SavingsGoals.Message.CreateFailed"]));
             return await IndexWithGoalsAsync(cancellationToken);
         }
 
@@ -187,7 +187,7 @@ public class SavingsGoalsController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Correcting the balance of savings goal {GoalId} failed.", goalId);
-            TempData["Error"] = ApiErrorMessages.ForUser(ex, _localizer["SavingsGoals.Message.UpdateFailed"]);
+            TempData["Error"] = ApiErrorMessages.ForUser(_localizer, ex, _localizer["SavingsGoals.Message.UpdateFailed"]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -210,7 +210,7 @@ public class SavingsGoalsController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Deleting savings goal {GoalId} failed.", id);
-            TempData["Error"] = ApiErrorMessages.ForUser(ex, _localizer["SavingsGoals.Message.DeleteFailed"]);
+            TempData["Error"] = ApiErrorMessages.ForUser(_localizer, ex, _localizer["SavingsGoals.Message.DeleteFailed"]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -290,7 +290,7 @@ public class SavingsGoalsController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Saving a Contribution to savings goal {GoalId} failed.", goalId);
-            TempData["Error"] = ApiErrorMessages.ForUser(ex, _localizer["SavingsGoals.Message.UpdateFailed"]);
+            TempData["Error"] = ApiErrorMessages.ForUser(_localizer, ex, _localizer["SavingsGoals.Message.UpdateFailed"]);
         }
 
         return RedirectToAction(nameof(Index));

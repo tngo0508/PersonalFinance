@@ -70,7 +70,7 @@ public class CancelDeletionModel : PageModel
                                    && !HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Cancelling a Deletion Request failed.");
-            ErrorMessage = ApiErrorMessages.ForUser(ex, _localizer["Account.CancelDeletion.Failed"]);
+            ErrorMessage = ApiErrorMessages.ForUser(_localizer, ex, _localizer["Account.CancelDeletion.Failed"]);
         }
 
         return Page();

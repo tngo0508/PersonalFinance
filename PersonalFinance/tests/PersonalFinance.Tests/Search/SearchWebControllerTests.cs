@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Search;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
 using Refit;
@@ -78,7 +79,7 @@ public class SearchWebControllerTests
         ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status502BadGateway, objectResult.StatusCode);
         string body = System.Text.Json.JsonSerializer.Serialize(objectResult.Value);
-        Assert.Contains(JsonApiErrorsFilter.UnavailableMessage, body);
+        Assert.Contains(TestLocalization.Localizer["Errors.Unavailable"].Value, body);
         Assert.DoesNotContain("connection refused", body);
     }
 }

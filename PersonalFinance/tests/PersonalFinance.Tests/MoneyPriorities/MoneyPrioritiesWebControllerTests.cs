@@ -154,7 +154,8 @@ public class MoneyPrioritiesWebControllerTests
     public async Task Submit_WhenTheApiRejectsTheAnswers_Returns400WithTheErrorsKeyedByField()
     {
         const string body =
-            """{"errors":["Enter the balance of that debt."],"fieldErrors":{"DebtBalance":["Enter the balance of that debt."]}}""";
+            """{"errors":[{"key":"MoneyPriorities.Validation.DebtBalanceRequired","message":"Enter the balance of that debt.","field":"DebtBalance"}]}""";
+        using var culture = new UiCultureScope("en");
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Throws(nameof(IMoneyPrioritiesApi.SubmitWalkAsync), await ApiExceptionAsync(HttpStatusCode.BadRequest, body));
         MoneyPrioritiesController controller = CreateController(api);
@@ -162,9 +163,9 @@ public class MoneyPrioritiesWebControllerTests
         IActionResult result = await controller.Submit(new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 22m });
 
         BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        MoneyPrioritiesValidationErrorsDto errors = Assert.IsType<MoneyPrioritiesValidationErrorsDto>(badRequest.Value);
+        MoneyPrioritiesErrorsViewModel errors = Assert.IsType<MoneyPrioritiesErrorsViewModel>(badRequest.Value);
         Assert.Equal(["Enter the balance of that debt."], errors.FieldErrors["DebtBalance"]);
-        Assert.Equal(["Enter the balance of that debt."], errors.Errors);
+        Assert.Empty(errors.Errors);
     }
 
     [Fact]
@@ -179,7 +180,7 @@ public class MoneyPrioritiesWebControllerTests
         IActionResult result = await controller.Submit(new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 0m });
 
         BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        MoneyPrioritiesValidationErrorsDto errors = Assert.IsType<MoneyPrioritiesValidationErrorsDto>(badRequest.Value);
+        MoneyPrioritiesErrorsViewModel errors = Assert.IsType<MoneyPrioritiesErrorsViewModel>(badRequest.Value);
         Assert.Empty(errors.FieldErrors);
         Assert.NotEmpty(errors.Errors);
         Assert.DoesNotContain("ageBand", string.Join(" ", errors.Errors));
@@ -194,7 +195,7 @@ public class MoneyPrioritiesWebControllerTests
         IActionResult result = await controller.Submit(null);
 
         BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.NotEmpty(Assert.IsType<MoneyPrioritiesValidationErrorsDto>(badRequest.Value).Errors);
+        Assert.NotEmpty(Assert.IsType<MoneyPrioritiesErrorsViewModel>(badRequest.Value).Errors);
         Assert.Empty(proxy.Calls);
     }
 

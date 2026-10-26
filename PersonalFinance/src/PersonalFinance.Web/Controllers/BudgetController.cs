@@ -110,7 +110,7 @@ public class BudgetController : Controller
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogError(ex, "Saving the budget failed.");
-            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, _localizer["BudgetPlanner.Message.SaveFailed"]));
+            ModelState.AddModelError("", ApiErrorMessages.ForUser(_localizer, ex, _localizer["BudgetPlanner.Message.SaveFailed"]));
             return View("Index", model);
         }
 
