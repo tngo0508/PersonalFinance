@@ -263,28 +263,27 @@
    ========================================================================== */
 
 .savings-goal-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
     margin-bottom: 0.75rem;
 }
 
+/* The track carries its own border so an empty goal still shows a visible bar. */
 .savings-goal-progress-track {
-    height: 24px;
+    flex: 1;
+    height: 0.625rem;
     background: var(--app-surface-soft, var(--app-surface-secondary));
-    border-radius: 12px;
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
     overflow: hidden;
-    position: relative;
 }
 
 .savings-goal-progress-fill {
     height: 100%;
     background: var(--app-brand);
-    border-radius: 12px;
+    border-radius: 999px;
     transition: width 0.5s ease;
-    min-width: 0;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 0 6px;
 }
 
 .savings-goal-progress-fill--complete {
@@ -292,12 +291,11 @@
 }
 
 .savings-goal-progress-label {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: var(--app-font-weight-bold);
-    color: #fff;
+    color: var(--app-text-muted);
     white-space: nowrap;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================

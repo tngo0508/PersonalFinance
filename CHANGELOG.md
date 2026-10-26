@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.13.2] - 2026-10-25
+
+### Fixed
+
+- **A new savings goal shows its progress bar**: a goal with nothing saved yet showed a dark blob with a clipped "0%" instead of an empty bar.
+  - The percentage now sits beside the track instead of inside the fill, so a narrow fill can't hide it, and the track has a visible border.
+  - Screen readers read the progress from the track, as on the Dashboard.
+
 ## [7.13.1] - 2026-10-25
 
 ### Fixed

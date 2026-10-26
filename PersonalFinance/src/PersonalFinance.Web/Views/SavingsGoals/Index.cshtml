@@ -130,15 +130,15 @@
                                 ("target", new HtmlString($"<span class=\"savings-goal-target\">{MoneyFormatter.FormatWhole(goal.TargetAmount, SupportedCurrencies.Default.Code)}</span>")))
                         </div>
 
-                        <!-- Progress Bar with Percentage Overlay -->
+                        <!-- Progress Bar; the percentage sits beside the track so a narrow fill never clips it -->
                         <div class="savings-goal-progress">
-                            <div class="savings-goal-progress-track">
+                            <div class="savings-goal-progress-track" role="progressbar"
+                                 aria-valuenow="@progress.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                 aria-valuemin="0" aria-valuemax="100" aria-label="@L.Named("SavingsGoals.Card.PercentComplete", ("percent", Math.Round(progress)))">
                                 <div class="savings-goal-progress-fill @(isComplete ? "savings-goal-progress-fill--complete" : "")"
-                                     style="width:@progress.ToString(System.Globalization.CultureInfo.InvariantCulture)%" role="progressbar" aria-valuenow="@progress.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                     aria-valuemin="0" aria-valuemax="100" aria-label="@L.Named("SavingsGoals.Card.PercentComplete", ("percent", Math.Round(progress)))">
-                                    <span class="savings-goal-progress-label">@Math.Round(progress)%</span>
-                                </div>
+                                     style="width:@progress.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
                             </div>
+                            <span class="savings-goal-progress-label" aria-hidden="true">@Math.Round(progress)%</span>
                         </div>
 
                         <!-- Remaining + Metadata -->
