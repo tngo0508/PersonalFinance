@@ -471,7 +471,7 @@
                         <!-- Remaining Allocation Indicator -->
                         <div class="budget-remaining" id="budgetRemaining">
                             <span class="budget-remaining__label">@L["BudgetPlanner.Js.RemainingLabel"]</span>
-                            <span class="budget-remaining__value" id="budgetRemainingValue">@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code) (0%)</span>
+                            <span class="budget-remaining__value" id="budgetRemainingValue">@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code) (@(0m.ToString("N1", System.Globalization.CultureInfo.CurrentCulture))%)</span>
                         </div>
                     </div>
                     <div class="budget-card__footer">
@@ -516,7 +516,7 @@
                             <div class="budget-summary-total" id="budgetSummaryTotal">
                                 <div class="budget-summary-total__label">@L["BudgetPlanner.Breakdown.Total"]</div>
                                 <div class="budget-summary-total__values">
-                                    <span id="budgetSummaryTotalPercent">0%</span>
+                                    <span id="budgetSummaryTotalPercent">@(0m.ToString("N1", System.Globalization.CultureInfo.CurrentCulture))%</span>
                                     <span id="budgetSummaryTotalAmount">@MoneyFormatter.Format(0, SupportedCurrencies.Default.Code)</span>
                                 </div>
                             </div>
