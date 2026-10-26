@@ -11,7 +11,10 @@ public class SavingsGoal : AuditableEntity
     /// <summary>Target amount in dollars.</summary>
     public decimal TargetAmount { get; set; }
 
-    /// <summary>Current amount saved in dollars.</summary>
+    /// <summary>
+    /// The saved amount: the total of the goal's Contributions, cached here and rewritten in the same save as every
+    /// Contribution change. Dashboard, Search, the AI Assistant and Data Export read it.
+    /// </summary>
     public decimal CurrentAmount { get; set; }
 
     /// <summary>Optional description of the goal.</summary>
@@ -20,6 +23,12 @@ public class SavingsGoal : AuditableEntity
     /// <summary>Optional target date to reach the goal.</summary>
     public DateTime? TargetDate { get; set; }
 
-    /// <summary>Whether this goal is marked as completed.</summary>
+    /// <summary>Reached: derived, true while the saved amount meets or passes the target. The user never sets it.</summary>
     public bool IsCompleted { get; set; }
+
+    /// <summary>
+    /// The highest milestone (0, 50, 75 or 100 percent) a Notification has been sent for. It never falls, so a
+    /// withdrawal and re-deposit don't repeat a milestone Notification.
+    /// </summary>
+    public int HighestMilestoneNotified { get; set; }
 }

@@ -19,14 +19,45 @@ public interface ISavingsGoalService
     Task<int> CreateSavingsGoalAsync(string userId, CreateSavingsGoalRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates an existing savings goal.
+    /// Updates a goal's name, target, description or date. Its saved amount only changes through Contributions.
     /// </summary>
     Task<bool> UpdateSavingsGoalAsync(string userId, int id, UpdateSavingsGoalRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Deletes a savings goal.
+    /// Deletes a savings goal and its Contributions.
     /// </summary>
     Task<bool> DeleteSavingsGoalAsync(string userId, int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists a goal's Contributions, newest first; null when the goal does not exist for this user.
+    /// </summary>
+    Task<List<ContributionDto>?> GetContributionsAsync(string userId, int goalId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records a deposit or withdrawal (a Regular Contribution), dated today unless the request gives a date.
+    /// </summary>
+    Task<ContributionResult> AddContributionAsync(string userId, int goalId, SaveContributionRequestDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Edits a Regular or Opening Contribution's amount, date (kept when the request has none) and note.
+    /// </summary>
+    Task<ContributionResult> UpdateContributionAsync(string userId, int goalId, int contributionId,
+        SaveContributionRequestDto request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a Contribution of any kind.
+    /// </summary>
+    Task<ContributionResult> DeleteContributionAsync(string userId, int goalId, int contributionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Corrects a goal's saved amount to a figure by recording an Adjustment of the difference, or nothing when there
+    /// is none.
+    /// </summary>
+    Task<ContributionResult> CorrectBalanceAsync(string userId, int goalId, CorrectBalanceRequestDto request,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -44,4 +75,5 @@ public sealed class SavingsGoalResponseDto
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
     public double ProgressPercent { get; set; }
+    public List<ContributionDto> Contributions { get; set; } = [];
 }

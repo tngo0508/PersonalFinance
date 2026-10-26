@@ -209,7 +209,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | GoogleDrive | `GoogleDriveController` (`api/GoogleDrive`) | `IDriveConnectionService`, `ISpreadsheetReader`, `IGoogleDriveFileSource` (internal) | `GoogleDriveConnection`, `GoogleDriveCachedFile` | `IGoogleDriveApi` | `GoogleDrive` | `google-drive/` | Typed `HttpClient`s to Google Drive; a 1,450-line static parser; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | NetWorth | `NetWorthController` (`api/NetWorth`) | `INetWorthParametersService` | `NetWorthParameters` | `INetWorthApi` | `Networth` | `networth/` | `calculate` is pure: a static Validator and the static `NetWorthProjectionService`, no Service, no database |
 | Research | `ResearchController` (`api/Research`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, nine `IResearchDatasetRefresher`, `ResearchSnapshotStore` | `ResearchSnapshot` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
-| SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`) | `ISavingsGoalService` | `SavingsGoal` | `ISavingsGoalsApi` | `SavingsGoals` | none | No Validators; raises Notifications |
+| SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`, Contributions under `{goalId}/contributions`) | `ISavingsGoalService` | `SavingsGoal`, `Contribution` | `ISavingsGoalsApi` | `SavingsGoals` | `savingsgoals/` | Validators for a new goal, a Contribution and a balance correction; the saved amount is the Contribution total, cached on the goal in the same save; raises each milestone Notification once |
 | Search | `SearchController` (`api/Search`) | `ISearchService` | none (reads `BudgetTransaction`, `BudgetCategory`, `SpreadsheetTransactionRecord`, `SavingsGoal`) | `ISearchApi` | `Search` (JSON only) | `core/search.js` | Read-only; picks the source through `IBudgetDataSourceService` |
 | Watchlist | `WatchlistController` (`api/Watchlist`), `NewsController` (`api/News`) | `IWatchlistService`, `INewsService`, `INewsFeedClient` (internal) | `SavedArticle` | `IWatchlistApi`, `INewsApi` | `Watchlist` (JSON only), `News` | `news/` | RSS adapter with `IMemoryCache` (5 minutes); `NewsService` has no database |
 | Notifications (Infrastructure) | `NotificationController` (`api/Notification`) | `INotificationService` | `Notification` | `INotificationApi` | `Notification` (JSON only) | `core/notifications.js` | Shared by three Features; see [9](#9-notifications) |
@@ -288,10 +288,20 @@ erDiagram
         string UserId
         string Name
         decimal TargetAmount "18,2"
-        decimal CurrentAmount "18,2"
+        decimal CurrentAmount "18,2, cached total of its Contributions"
         string Description "nullable"
         DateTime TargetDate "nullable"
-        bool IsCompleted
+        bool IsCompleted "derived: CurrentAmount at or over TargetAmount"
+        int HighestMilestoneNotified "0, 50, 75 or 100, never falls"
+    }
+    Contribution {
+        int Id PK
+        string UserId "indexed with SavingsGoalId and Date"
+        int SavingsGoalId FK
+        decimal Amount "18,2, signed, never zero"
+        DateOnly Date
+        string Note "nullable, max 200"
+        int Kind "ContributionKind: Regular=0, Opening=1, Adjustment=2"
     }
     NetWorthParameters {
         int Id PK
@@ -309,10 +319,12 @@ erDiagram
     BudgetCategory ||--o{ BudgetTransaction : "CategoryId, Restrict"
     BudgetCategory ||--o{ MonthlyBudgetLine : "CategoryId, Restrict"
     MonthlyBudgetPlan ||--o{ MonthlyBudgetLine : "PlanId, Cascade"
+    SavingsGoal ||--o{ Contribution : "SavingsGoalId, Restrict"
 ```
 
-`UserBudgetAllocation`, `SavingsGoal` and `NetWorthParameters` have no relationships; they are drawn here because the
-Dashboard and the AI Assistant read them together with the budget data.
+`UserBudgetAllocation` and `NetWorthParameters` have no relationships; they are drawn here, with `SavingsGoal`, because
+the Dashboard and the AI Assistant read them together with the budget data. Deleting a goal soft-deletes its
+Contributions with it.
 
 ### 4.2 Google Drive and spreadsheet data
 
@@ -823,7 +835,7 @@ count once per page and the list on click.
 flowchart LR
     subgraph producers["Producers: ApiService Features"]
         bp["BudgetService.SaveBudgetAsync<br/>CheckBudgetAlerts: 80% warning, 100% exceeded"]
-        sg["SavingsGoalService.UpdateSavingsGoalAsync<br/>milestones at 50, 75, 100%"]
+        sg["SavingsGoalService, on every Contribution change<br/>milestones at 50, 75, 100%, each once per goal"]
         sa["SpreadsheetAnalysisService.SyncSpreadsheetBudgetAsync<br/>sync completed or failed"]
     end
 

@@ -204,7 +204,7 @@ public class DataExportServiceTests
         Assert.Single(export.GoogleDriveConnections);
         Assert.Single(export.SpreadsheetMonths);
         Assert.Single(export.SpreadsheetTransactions);
-        Assert.Single(export.SavingsGoals);
+        Assert.Equal("Regular", Assert.Single(Assert.Single(export.SavingsGoals).Contributions).Kind);
         Assert.Single(export.SavedArticles);
         Assert.Single(export.PriorityWalks);
         Assert.Single(export.Community.Stories);

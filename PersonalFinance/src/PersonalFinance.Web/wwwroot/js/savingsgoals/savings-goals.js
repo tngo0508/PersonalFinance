@@ -1,7 +1,7 @@
 /* global PFI18n */
 /**
- * Savings Goals page: confirms a delete with the goal's name, and replaces the browser's own "fill in this field"
- * message on the goal name with the page language's. Strings come from the page's <js-strings> island via PFI18n.
+ * Savings Goals page: confirms deleting a goal (naming it) or a Contribution, and replaces the browser's own "fill in
+ * this field" message on the goal name with the page language's. Strings come from the page's <js-strings> island via PFI18n.
  */
 (function () {
     'use strict';
@@ -12,6 +12,17 @@
             form.addEventListener('submit', (event) => {
                 const message = PFI18n.t('SavingsGoals.Js.ConfirmDelete', { name: form.dataset.goalName || '' });
                 if (!window.confirm(message)) {
+                    event.preventDefault();
+                }
+            });
+        });
+    }
+
+    /** Ask before deleting a Contribution from a goal's history. */
+    function wireContributionDeleteConfirm () {
+        document.querySelectorAll('.savings-history-delete-form').forEach((form) => {
+            form.addEventListener('submit', (event) => {
+                if (!window.confirm(PFI18n.t('SavingsGoals.Js.ConfirmDeleteContribution'))) {
                     event.preventDefault();
                 }
             });
@@ -35,6 +46,7 @@
     /** Wire the page once the DOM is ready. */
     function init () {
         wireDeleteConfirm();
+        wireContributionDeleteConfirm();
         wireNameValidation();
     }
 

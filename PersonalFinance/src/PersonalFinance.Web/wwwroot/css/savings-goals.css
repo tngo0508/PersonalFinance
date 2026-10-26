@@ -263,28 +263,27 @@
    ========================================================================== */
 
 .savings-goal-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
     margin-bottom: 0.75rem;
 }
 
+/* The track carries its own border so an empty goal still shows a visible bar. */
 .savings-goal-progress-track {
-    height: 24px;
+    flex: 1;
+    height: 0.625rem;
     background: var(--app-surface-soft, var(--app-surface-secondary));
-    border-radius: 12px;
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
     overflow: hidden;
-    position: relative;
 }
 
 .savings-goal-progress-fill {
     height: 100%;
     background: var(--app-brand);
-    border-radius: 12px;
+    border-radius: 999px;
     transition: width 0.5s ease;
-    min-width: 0;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 0 6px;
 }
 
 .savings-goal-progress-fill--complete {
@@ -292,12 +291,11 @@
 }
 
 .savings-goal-progress-label {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: var(--app-font-weight-bold);
-    color: #fff;
+    color: var(--app-text-muted);
     white-space: nowrap;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================
@@ -345,29 +343,45 @@
 }
 
 /* ==========================================================================
-   Update Form
+   Add Contribution form, history and balance correction
    ========================================================================== */
 
-.savings-goal-update-form {
+.savings-goal-empty-prompt {
+    margin: 0 0 0.75rem;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.savings-contribution-form {
     margin-top: auto;
     padding-top: 1rem;
     border-top: 1px solid var(--app-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-.savings-goal-update-row {
+/* Wraps rather than scrolling on a narrow card. */
+.savings-contribution-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     align-items: stretch;
 }
 
-.savings-goal-update-input-wrapper {
-    flex: 1;
+.savings-contribution-direction {
+    flex-shrink: 0;
+}
+
+.savings-contribution-input-wrapper {
+    flex: 1 1 8rem;
+    min-width: 0;
     position: relative;
     display: flex;
     align-items: center;
 }
 
-.savings-goal-update-prefix {
+.savings-contribution-prefix {
     position: absolute;
     left: 0.75rem;
     color: var(--app-text-muted);
@@ -376,10 +390,9 @@
     z-index: 1;
 }
 
-.savings-goal-update-input-wrapper .savings-goal-update-input {
+.savings-contribution-input-wrapper .savings-contribution-input {
     width: 100%;
     padding-left: 1.75rem;
-    height: 40px;
     font-size: var(--app-font-size-small);
     font-family: var(--app-font-mono);
     border-radius: var(--app-radius-s);
@@ -387,21 +400,134 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.savings-goal-update-input-wrapper .savings-goal-update-input:focus {
+.savings-contribution-input-wrapper .savings-contribution-input:focus {
     border-color: var(--app-brand);
     box-shadow: 0 0 0 2px var(--app-brand-bg);
     outline: none;
 }
 
-.savings-goal-update-btn {
-    height: 40px;
+.savings-contribution-btn {
     padding: 0 1rem;
     font-size: var(--app-font-size-small);
     font-weight: var(--app-font-weight-semibold);
     border-radius: var(--app-radius-s);
     white-space: nowrap;
     flex-shrink: 0;
-    min-width: 80px;
+}
+
+.savings-contribution-field {
+    flex: 1 1 10rem;
+    min-width: 0;
+    margin: 0;
+}
+
+.savings-contribution-field .form-label {
+    margin-bottom: 0.25rem;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.savings-goal-history,
+.savings-goal-correct {
+    margin-top: 0.75rem;
+    font-size: var(--app-font-size-small);
+}
+
+.savings-goal-history > summary,
+.savings-goal-correct > summary,
+.savings-history-edit > summary {
+    cursor: pointer;
+    color: var(--app-brand);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.savings-history-list {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+}
+
+.savings-history-item {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--app-border);
+}
+
+.savings-history-item__main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.savings-history-item__date {
+    color: var(--app-text-muted);
+}
+
+.savings-history-item__amount {
+    font-family: var(--app-font-mono);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.savings-history-item__amount--out {
+    color: var(--app-text-muted);
+}
+
+.savings-history-item__kind {
+    padding: 0 0.5rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-s);
+    color: var(--app-text-muted);
+}
+
+.savings-history-item__note {
+    overflow-wrap: anywhere;
+}
+
+.savings-history-item__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+.savings-history-edit-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.savings-history-edit-form .form-control {
+    flex: 1 1 8rem;
+    min-width: 0;
+}
+
+.savings-history-delete-form {
+    margin: 0;
+}
+
+.savings-history-delete-btn {
+    padding: 0;
+    font-size: inherit;
+}
+
+.savings-goal-correct-form {
+    margin-top: 0.5rem;
+}
+
+.savings-goal-correct-form .form-control {
+    flex: 1 1 8rem;
+    min-width: 0;
+}
+
+.savings-goal-correct-help {
+    margin: 0.25rem 0 0;
+    color: var(--app-text-muted);
 }
 
 /* ==========================================================================
@@ -569,14 +695,6 @@
     .savings-goal-current {
         font-size: 1.25rem;
     }
-
-    .savings-goal-update-row {
-        flex-direction: column;
-    }
-
-    .savings-goal-update-btn {
-        width: 100%;
-    }
 }
 
 /* ==========================================================================
@@ -584,7 +702,7 @@
    ========================================================================== */
 
 .savings-goal-delete-btn:focus-visible,
-.savings-goal-update-btn:focus-visible,
+.savings-contribution-btn:focus-visible,
 .savings-add-btn:focus-visible,
 .savings-empty__btn:focus-visible {
     outline: 2px solid var(--app-brand);
@@ -596,7 +714,7 @@
     .savings-goal-card,
     .savings-goal-progress-fill,
     .savings-goal-delete-btn,
-    .savings-goal-update-input-wrapper .savings-goal-update-input {
+    .savings-contribution-input-wrapper .savings-contribution-input {
         transition: none;
     }
 }

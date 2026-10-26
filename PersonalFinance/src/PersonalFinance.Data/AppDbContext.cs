@@ -81,6 +81,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
 
     /// <summary>
+    /// Contributions — dated deposits and withdrawals of a Savings Goal; the goal's saved amount is their total.
+    /// </summary>
+    public DbSet<Contribution> Contributions => Set<Contribution>();
+
+    /// <summary>
     /// User saved articles (watchlist) table set.
     /// </summary>
     public DbSet<SavedArticle> SavedArticles => Set<SavedArticle>();
@@ -172,6 +177,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // Global query filters for soft deletes — automatically exclude soft-deleted records
         builder.Entity<NetWorthParameters>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<SavingsGoal>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<Contribution>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<SavedArticle>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<UserBudgetAllocation>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<GoogleDriveConnection>().HasQueryFilter(e => !e.IsDeleted);
@@ -342,6 +348,23 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             const int decScale2 = 2;
             entity.Property(e => e.TargetAmount).HasPrecision(decPrec2, decScale2);
             entity.Property(e => e.CurrentAmount).HasPrecision(decPrec2, decScale2);
+        });
+
+        // Configure Contribution entity — a Savings Goal's dated deposits and withdrawals
+        builder.Entity<Contribution>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.Property(e => e.Date).IsRequired();
+            entity.Property(e => e.Note).HasMaxLength(200);
+            entity.Property(e => e.Kind).IsRequired();
+            entity.HasIndex(e => new { e.UserId, e.SavingsGoalId, e.Date });
+
+            entity.HasOne(e => e.SavingsGoal)
+                .WithMany()
+                .HasForeignKey(e => e.SavingsGoalId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configure SavedArticle entity

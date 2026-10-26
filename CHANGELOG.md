@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [7.14.0] - 2026-10-25
+## [8.1.0] - 2026-10-25
 
 ### Added
 
@@ -30,6 +30,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`MoneyPrioritiesValidationErrorsDto`**: Money Priorities returns `ApiErrorDto`, and Web reads the field errors from it.
 - **The English-matching table in `MoneyPrioritiesText`**: the page no longer swaps translations in by matching ApiService's English text; the id-keyed lookups stay.
 - **`CommunityVoteResultDto`**: a rejected vote throws `ApiErrorException` instead of returning an error message, and `VoteAsync` returns the response.
+## [8.0.0] - 2026-10-25
+
+### Added
+
+- **Savings Goals keep a Contribution log**: each goal records every deposit and withdrawal with its date and an optional note, and its saved amount is their total instead of a number typed over (slice 1 of spec #395).
+  - An "Add Contribution" form (amount, deposit or withdrawal, optional date, optional note) replaces the card's Update input. The date defaults to today and can't be in the future or before 2000.
+  - Each card has a collapsible history, newest first, where a Contribution can be edited or deleted.
+  - "Correct balance" sets the saved amount to the figure the bank shows and records the difference as a balance correction in the history.
+  - No change can take a goal's saved amount below zero; the page says so in the reader's language.
+  - Data Export lists each goal's Contributions; deleting an Account hides them with the goals and the Purge erases them.
+
+### Changed
+
+- **A goal shows as reached on its own**: Reached is set whenever the saved amount meets or passes the target, and cleared when a withdrawal takes it back below.
+- **Each milestone Notification goes out once per goal**: the 50%, 75% and 100% Notifications no longer repeat after a withdrawal and a re-deposit, and a goal created part-way gets none for the milestones it starts past.
+- **The goal update API no longer takes the saved amount**: `UpdateSavingsGoalRequestDto` drops `CurrentAmount` and `IsCompleted`; the amount changes only through the new Contribution endpoints under `api/SavingsGoals/{goalId}`. Web is the only client.
+
+### Database
+
+- **New `Contributions` table and `SavingsGoals.HighestMilestoneNotified` column** (migration `AddContributions`).
+  - Every goal with a saved amount gets one Opening Contribution of that amount, dated the goal's creation, so nothing entered before is lost.
+  - Milestones the goal has already passed are marked as notified, and Reached is set from the saved amount.
+
+## [7.13.2] - 2026-10-25
+
+### Fixed
+
+- **A new savings goal shows its progress bar**: a goal with nothing saved yet showed a dark blob with a clipped "0%" instead of an empty bar.
+  - The percentage now sits beside the track instead of inside the fill, so a narrow fill can't hide it, and the track has a visible border.
+  - Screen readers read the progress from the track, as on the Dashboard.
 
 ## [7.13.1] - 2026-10-25
 

@@ -264,7 +264,23 @@ never changes the suggestion.
 _Avoid_: AI note, advice, recommendation
 
 ### Savings Goals
-Target savings goals tracking with progress monitoring.
+The Feature where a user sets a target amount, optionally with a target date, and records every movement of money
+toward it as a Contribution. The page shows each goal's saved amount against its target. Information only: it never
+moves money or gives advice.
+_Avoid_: savings account, pot
+
+### Contribution
+One dated movement of money into or out of a Savings Goal: a signed amount (a deposit is positive, a withdrawal
+negative, never zero), a date no later than today, an optional short note, and a kind. A Regular Contribution is one
+the user recorded; the Opening Contribution is the goal's starting amount (at most one per goal); an Adjustment is
+recorded by a balance correction and can only be deleted. It has no currency of its own: it is in its goal's currency.
+_Avoid_: transaction (that is the Budget Tracker), deposit as the general term
+
+### Saved amount
+The total of a Savings Goal's Contributions. Never typed over: it changes only when a Contribution is added, edited
+or deleted, and it never goes below zero. It is stored on the goal as a cached total (`CurrentAmount`) for the
+Dashboard, Search, the AI Assistant and Data Export. The goal is Reached while it meets or passes the target.
+_Avoid_: current amount, balance (except in "correct balance")
 
 ### Watchlist
 Item tracking and article watchlist for financial news and interests.

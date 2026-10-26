@@ -162,7 +162,18 @@ internal sealed class DataExportService : IDataExportService
                 CurrentAmount = g.CurrentAmount,
                 TargetDate = g.TargetDate,
                 IsCompleted = g.IsCompleted,
-                CreatedAtUtc = g.CreatedAt
+                CreatedAtUtc = g.CreatedAt,
+                Contributions = _db.Contributions
+                    .Where(c => c.UserId == userId && c.SavingsGoalId == g.Id)
+                    .OrderBy(c => c.Date).ThenBy(c => c.Id)
+                    .Select(c => new DataExportContributionDto
+                    {
+                        Date = c.Date,
+                        Amount = c.Amount,
+                        Kind = c.Kind.ToString(),
+                        Note = c.Note
+                    })
+                    .ToList()
             })
             .ToListAsync(cancellationToken);
 
