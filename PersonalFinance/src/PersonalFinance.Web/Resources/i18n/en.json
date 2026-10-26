@@ -311,7 +311,7 @@
   "Notifications.SyncCompleted.Title": "Google Drive sync completed",
   "Notifications.SyncCompleted.Message": "Successfully synced {snapshots} budget snapshots and {transactions} transactions from '{fileName}'.",
   "Notifications.SyncFailed.Title": "Google Drive sync failed",
-  "Notifications.SyncFailed.Message": "Sync failed: {error}",
+  "Notifications.SyncFailed.Message": "We couldn't sync your spreadsheet. Please try again later.",
 
   "Community.Title": "Community",
   "Community.Header.Title": "Community Hub",

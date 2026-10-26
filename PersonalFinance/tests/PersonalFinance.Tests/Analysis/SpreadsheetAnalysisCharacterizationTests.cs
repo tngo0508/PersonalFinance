@@ -44,7 +44,7 @@ public class SpreadsheetAnalysisCharacterizationTests
     {
         notificationService ??= new FakeNotificationService();
         return new SpreadsheetAnalysisService(db, new FakeSpreadsheetReader(), notificationService,
-            TestBudgetDataProviderFactory.Create(db));
+            TestBudgetDataProviderFactory.Create(db), NullLogger<SpreadsheetAnalysisService>.Instance);
     }
 
     private static SpreadsheetAnalysisController CreateAnalysisController(AppDbContext db)
