@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.10.0] - 2026-10-25
+
+### Added
+
+- **Money Priorities in Vietnamese**: the page, its form, result card, Earlier results, Purpose Note area and Priority Tree controls read in the user's Language (slice L3 of the localization spec, #364).
+  - The leaf labels, the estimate and AI disclaimers, the Purpose Note messages and the submit validation messages the ApiService sends are swapped for their translation by the Web app; text it does not recognize shows as sent.
+  - Months and years use plural forms; dates, amounts and rates use the page culture.
+  - Still in English: the "Your path" sentences and the Priority Tree diagram labels (written by the ApiService), the AI quota message and the AI-written Purpose Note itself.
+
+### Changed
+
+- **Purpose Note facts use the shared money formatter**: the AI prompt's dollar figures go through `MoneyFormatter` instead of a hand-built `$` and `N0`; the prompt still reads in English.
+
 ## [7.9.0] - 2026-10-25
 
 ### Added
