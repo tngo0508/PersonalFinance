@@ -5,7 +5,9 @@
  *
  * The ApiService computes the path, every figure and the "Your path" sentences. This module only shows and hides
  * follow-up fields, sends the answers, and formats what comes back: computed figures in whole US dollars, amounts the
- * user typed with cents, rates with up to two decimals. Rounding happens here, once, when formatting.
+ * user typed with cents, rates with up to two decimals. Rounding happens here, once, when formatting. Every word the
+ * page writes comes from the MoneyPriorities.Js. strings (PFI18n.t); the leaf labels, disclaimers and messages the
+ * server sends are already in the request's Language.
  *
  * The Purpose Note is AI-written plain text: it is asked for in the background after the result shows, never holds
  * up the result or the diagram, and is always rendered with textContent, never as HTML.
@@ -13,21 +15,14 @@
 (function () {
     'use strict';
 
-    const GENERIC_ERROR = 'Something went wrong. Please try again.';
-    const NETWORK_ERROR = 'The service is temporarily unavailable. Please try again.';
-    const NOTE_WRITING = 'Writing your Purpose Note…';
-
     /** The request fields, in form order, with the input that holds each one. */
     const NUMBER_FIELDS = ['MonthlyAmount', 'DebtApr', 'DebtBalance', 'EmergencyFundMonths', 'MonthlyExpenses',
         'EmployerMatchPercent', 'HorizonYears', 'AgeBand'];
     const BOOLEAN_FIELDS = ['HasFullEmployerMatch', 'AtContributionLimit'];
 
-    const SCENARIO_LABELS = {
-        Cash: 'High-yield savings',
-        Conservative: 'Conservative',
-        Base: 'Base',
-        Aggressive: 'Aggressive'
-    };
+    /** The scenarios the page has a label for (MoneyPriorities.Js.Scenario.<name>). */
+    const SCENARIOS = ['Cash', 'Conservative', 'Base', 'Aggressive'];
+    const SCENARIO_PREFIX = 'MoneyPriorities.Js.Scenario.';
 
     // Separators and dates from the page culture, symbol from the currency (PFI18n, spec §2.2).
     const wholeDollars = { format: (value) => PFI18n.formatMoney(value, 'USD', { whole: true }) };
@@ -35,7 +30,6 @@
     const rateNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 2 });
     const monthsNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 1 });
     const countNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 0 });
-    const shortDate = new Intl.DateTimeFormat(PFI18n.culture, { year: 'numeric', month: 'short', day: 'numeric' });
 
     let form = null;
     let submitButton = null;
@@ -65,17 +59,29 @@
         return `${rateNumber.format(value)}%`;
     }
 
-    /** A whole number of months, singular or plural. */
+    /** A whole number of months, singular or plural in the page's Language. */
     function formatMonths (value) {
-        return value === 1 ? '1 month' : `${countNumber.format(value)} months`;
+        return PFI18n.plural('MoneyPriorities.Js.Months', value);
     }
 
-    /** A UTC timestamp from the server as a short en-US date. */
+    /** A tax year as written, never grouped ("2026", not "2.026"). */
+    function formatYear (value) {
+        return String(value);
+    }
+
+    /** A UTC timestamp from the server as a short date in the page culture. */
     function formatDate (value) {
         const text = String(value || '');
         const hasZone = /(?:Z|[+-]\d{2}:\d{2})$/.test(text);
         const date = new Date(hasZone ? text : `${text}Z`);
-        return Number.isNaN(date.getTime()) ? '' : shortDate.format(date);
+        return Number.isNaN(date.getTime())
+            ? ''
+            : PFI18n.formatDate(date, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    /** The page's label of a growth scenario; the name as sent when the page has none. */
+    function scenarioLabel (name) {
+        return SCENARIOS.includes(name) ? PFI18n.t(SCENARIO_PREFIX + name) : name;
     }
 
     /**
@@ -303,75 +309,91 @@
         const nodes = [];
         if (debt.outcome === 'PaidOff') {
             nodes.push(figureList([
-                ['Debt balance', formatTyped(debt.balance)],
-                ['Paid off in', formatMonths(debt.months)],
-                ['Total interest', formatComputed(debt.totalInterest)],
-                ['Last payment', formatComputed(debt.finalPayment)]
+                [PFI18n.t('MoneyPriorities.Js.Debt.Balance'), formatTyped(debt.balance)],
+                [PFI18n.t('MoneyPriorities.Js.Debt.PaidOffIn'), formatMonths(debt.months)],
+                [PFI18n.t('MoneyPriorities.Js.Debt.TotalInterest'), formatComputed(debt.totalInterest)],
+                [PFI18n.t('MoneyPriorities.Js.Debt.LastPayment'), formatComputed(debt.finalPayment)]
             ]));
         } else if (debt.outcome === 'AmountDoesNotCoverInterest') {
-            nodes.push(note(`${formatTyped(monthlyAmount)} a month does not cover the ${
-                formatComputed(debt.firstMonthInterest)} of interest this ${formatTyped(debt.balance)} debt adds in ` +
-                'its first month, so the balance would never go down. No payoff figures are shown: paying more ' +
-                'each month is the only way to clear it.'));
+            nodes.push(note(PFI18n.t('MoneyPriorities.Js.Debt.DoesNotCoverInterest', {
+                amount: formatTyped(monthlyAmount),
+                interest: formatComputed(debt.firstMonthInterest),
+                balance: formatTyped(debt.balance)
+            })));
         } else {
-            nodes.push(note(`At ${formatTyped(monthlyAmount)} a month, paying off this ${formatTyped(debt.balance)} ` +
-                `debt would take longer than ${countNumber.format(debt.maximumYears)} years, so no payoff ` +
-                'figures are shown. Paying more each month shortens it.'));
+            nodes.push(note(PFI18n.t('MoneyPriorities.Js.Debt.LongerThanMaximum', {
+                amount: formatTyped(monthlyAmount),
+                balance: formatTyped(debt.balance),
+                years: countNumber.format(debt.maximumYears)
+            })));
         }
-        nodes.push(note(`Every dollar toward a ${formatRate(debt.aprPercent)} APR debt earns a guaranteed ${
-            formatRate(debt.aprPercent)} by not paying that interest, against the ${
-            formatRate(debt.assumedReturnPercent)} assumed investment return.`));
+        nodes.push(note(PFI18n.t('MoneyPriorities.Js.Debt.Comparison', {
+            apr: formatRate(debt.aprPercent),
+            assumed: formatRate(debt.assumedReturnPercent)
+        })));
         return nodes;
     }
 
     function emergencyFundFigures (fund) {
         return [
             figureList([
-                ['Monthly expenses', formatTyped(fund.monthlyExpenses)],
-                ['Your fund covers now', `${monthsNumber.format(fund.monthsCovered)} months`],
-                [`Target (${monthsNumber.format(fund.targetMonths)} months of expenses)`, formatComputed(fund.targetAmount)],
-                ['Gap to the target', formatComputed(fund.gap)],
-                ['Months to close the gap', formatMonths(fund.monthsToClose)]
+                [PFI18n.t('MoneyPriorities.Js.Fund.MonthlyExpenses'), formatTyped(fund.monthlyExpenses)],
+                [PFI18n.t('MoneyPriorities.Js.Fund.CoversNow'),
+                    PFI18n.t('MoneyPriorities.Js.Fund.MonthsCovered', { months: monthsNumber.format(fund.monthsCovered) })],
+                [PFI18n.t('MoneyPriorities.Js.Fund.Target', { months: monthsNumber.format(fund.targetMonths) }),
+                    formatComputed(fund.targetAmount)],
+                [PFI18n.t('MoneyPriorities.Js.Fund.Gap'), formatComputed(fund.gap)],
+                [PFI18n.t('MoneyPriorities.Js.Fund.MonthsToClose'), formatMonths(fund.monthsToClose)]
             ]),
-            note('Kept in cash, with no growth assumed.')
+            note(PFI18n.t('MoneyPriorities.Js.Fund.NoGrowth'))
         ];
     }
 
     function employerMatchFigures (match) {
         return [
             figureList([
-                ['Employer match', formatRate(match.matchPercent)],
-                ['Match you could capture', `Up to ${formatComputed(match.yearlyMatch)} a year`]
+                [PFI18n.t('MoneyPriorities.Js.Match.Percent'), formatRate(match.matchPercent)],
+                [PFI18n.t('MoneyPriorities.Js.Match.Capture'),
+                    PFI18n.t('MoneyPriorities.Js.Match.UpToYearly', { amount: formatComputed(match.yearlyMatch) })]
             ]),
-            note("Your employer's cap may be lower."),
-            note(`A ${formatRate(match.matchPercent)} match is an instant ${formatRate(match.matchPercent)} return on ` +
-                `what you put in, against the ${formatRate(match.assumedReturnPercent)} assumed investment return.`)
+            note(PFI18n.t('MoneyPriorities.Js.Match.CapNote')),
+            note(PFI18n.t('MoneyPriorities.Js.Match.Comparison', {
+                match: formatRate(match.matchPercent),
+                assumed: formatRate(match.assumedReturnPercent)
+            }))
         ];
     }
 
     function retirementSplitFigures (split) {
         return [
-            el('h3', 'mp-subtitle', `Where each year's ${formatComputed(split.yearlyAmount)} goes (${split.taxYear} limits)`),
+            el('h3', 'mp-subtitle', PFI18n.t('MoneyPriorities.Js.Split.Heading', {
+                amount: formatComputed(split.yearlyAmount),
+                year: formatYear(split.taxYear)
+            })),
             figureList([
-                [`IRA (limit ${formatComputed(split.iraLimit)})`, formatComputed(split.toIra)],
-                [`401(k) (limit ${formatComputed(split.employeeDeferralLimit)})`, formatComputed(split.toEmployeePlan)],
-                ['Taxable brokerage account', formatComputed(split.toTaxable)]
+                [PFI18n.t('MoneyPriorities.Js.Split.Ira', { limit: formatComputed(split.iraLimit) }),
+                    formatComputed(split.toIra)],
+                [PFI18n.t('MoneyPriorities.Js.Split.EmployeePlan', { limit: formatComputed(split.employeeDeferralLimit) }),
+                    formatComputed(split.toEmployeePlan)],
+                [PFI18n.t('MoneyPriorities.Js.Split.Taxable'), formatComputed(split.toTaxable)]
             ]),
-            el('p', 'mp-footnote', `Roth IRA eligibility depends on your income, which this page does not ask. In ${
-                split.taxYear} it phases out between ${formatComputed(split.rothPhaseOutSingleStart)} and ${
-                formatComputed(split.rothPhaseOutSingleEnd)} for single filers, and between ${
-                formatComputed(split.rothPhaseOutJointStart)} and ${formatComputed(split.rothPhaseOutJointEnd)} ` +
-                'for joint filers.')
+            el('p', 'mp-footnote', PFI18n.t('MoneyPriorities.Js.Split.RothFootnote', {
+                year: formatYear(split.taxYear),
+                singleStart: formatComputed(split.rothPhaseOutSingleStart),
+                singleEnd: formatComputed(split.rothPhaseOutSingleEnd),
+                jointStart: formatComputed(split.rothPhaseOutJointStart),
+                jointEnd: formatComputed(split.rothPhaseOutJointEnd)
+            }))
         ];
     }
 
     function scenarioFigures (figures) {
         const table = el('table', 'table mp-scenarios');
-        table.append(el('caption', null, `Balance after ${figures.horizonYears === 1 ? '1 year' : `${
-            countNumber.format(figures.horizonYears)} years`}`));
+        table.append(el('caption', null, PFI18n.plural('MoneyPriorities.Js.Scenarios.Caption', figures.horizonYears)));
         const head = el('thead');
         const headRow = el('tr');
-        ['Scenario', 'Yearly rate', 'Balance'].forEach((label) => {
+        [PFI18n.t('MoneyPriorities.Js.Scenarios.Scenario'), PFI18n.t('MoneyPriorities.Js.Scenarios.Rate'),
+            PFI18n.t('MoneyPriorities.Js.Scenarios.Balance')].forEach((label) => {
             const cell = el('th', null, label);
             cell.scope = 'col';
             headRow.append(cell);
@@ -380,7 +402,7 @@
         const body = el('tbody');
         figures.scenarios.forEach((scenario) => {
             const row = el('tr');
-            const name = el('th', null, SCENARIO_LABELS[scenario.scenario] || scenario.scenario);
+            const name = el('th', null, scenarioLabel(scenario.scenario));
             name.scope = 'row';
             row.append(name, el('td', null, formatRate(scenario.ratePercent)),
                 el('td', 'mp-money', formatComputed(scenario.balance)));
@@ -389,7 +411,9 @@
         table.append(head, body);
         const nodes = [table];
         if (figures.totalContributed !== null && figures.totalContributed !== undefined) {
-            nodes.push(figureList([['Total you put in', formatComputed(figures.totalContributed)]]));
+            nodes.push(figureList([
+                [PFI18n.t('MoneyPriorities.Js.Scenarios.TotalContributed'), formatComputed(figures.totalContributed)]
+            ]));
         }
         return nodes;
     }
@@ -418,17 +442,20 @@
     function assumptionNodes (result) {
         const a = result.assumptions || {};
         const items = [
-            `Assumed yearly returns: conservative ${formatRate(a.conservativeReturnPercent)}, base ${
-                formatRate(a.baseReturnPercent)}, aggressive ${formatRate(a.aggressiveReturnPercent)}; cash ${
-                formatRate(a.cashYieldPercent)}.`,
-            'Contributions are made at the end of each month and compounded monthly.'
+            PFI18n.t('MoneyPriorities.Js.Assumptions.Returns', {
+                conservative: formatRate(a.conservativeReturnPercent),
+                base: formatRate(a.baseReturnPercent),
+                aggressive: formatRate(a.aggressiveReturnPercent),
+                cash: formatRate(a.cashYieldPercent)
+            }),
+            PFI18n.t('MoneyPriorities.Js.Assumptions.Compounding')
         ];
         if (result.limitsTaxYear) {
-            items.push(`IRS contribution limits are for the ${result.limitsTaxYear} tax year.`);
+            items.push(PFI18n.t('MoneyPriorities.Js.Assumptions.LimitsYear', { year: formatYear(result.limitsTaxYear) }));
         }
         const list = el('ul', 'mp-assumption-list');
         items.forEach((item) => list.append(el('li', null, item)));
-        return [el('h3', 'mp-subtitle', 'Assumptions'), list, el('p', 'mp-disclaimer', result.disclaimer)];
+        return [el('h3', 'mp-subtitle', PFI18n.t('MoneyPriorities.Js.Assumptions.Heading')), list, el('p', 'mp-disclaimer', result.disclaimer)];
     }
 
     /**
@@ -440,7 +467,10 @@
         byId('mpEmpty').hidden = true;
         byId('mpResult').hidden = false;
         const headline = byId('mpHeadline');
-        headline.textContent = `Put your ${formatTyped(result.monthlyAmount)} a month toward: ${result.headlineLeafLabel}`;
+        headline.textContent = PFI18n.t('MoneyPriorities.Js.Headline', {
+            amount: formatTyped(result.monthlyAmount),
+            leaf: result.headlineLeafLabel
+        });
         byId('mpFigures').replaceChildren(...figureNodes(result));
         byId('mpPath').replaceChildren(...(result.pathSentences || []).map((sentence) => el('li', null, sentence)));
         byId('mpAssumptions').replaceChildren(...assumptionNodes(result));
@@ -495,7 +525,7 @@
             renderPurposeNote('Written', result.purposeNote, noteDisclaimer);
             return;
         }
-        renderPurposeNote('Writing', NOTE_WRITING);
+        renderPurposeNote('Writing', PFI18n.t('MoneyPriorities.Js.NoteWriting'));
         loadPurposeNote(result.walkId, shownResult);
     }
 
@@ -578,9 +608,11 @@
 
     function errorMessage (outcome) {
         if (outcome.status === 0) {
-            return NETWORK_ERROR;
+            return PFI18n.t('MoneyPriorities.Js.NetworkError');
         }
-        return outcome.body && typeof outcome.body.error === 'string' ? outcome.body.error : GENERIC_ERROR;
+        return outcome.body && typeof outcome.body.error === 'string'
+            ? outcome.body.error
+            : PFI18n.t('MoneyPriorities.Js.GenericError');
     }
 
     async function onSubmit (event) {
@@ -632,16 +664,21 @@
             const details = el('div', 'mp-earlier__details');
             details.append(
                 el('span', 'mp-earlier__date', date),
-                el('span', 'mp-earlier__amount', `${formatTyped(walk.monthlyAmount)} a month`),
+                el('span', 'mp-earlier__amount',
+                    PFI18n.t('MoneyPriorities.Js.Earlier.Amount', { amount: formatTyped(walk.monthlyAmount) })),
                 el('span', 'mp-earlier__leaf', walk.leafLabel));
             const actions = el('div', 'mp-earlier__actions');
-            const view = el('button', 'btn btn-sm btn-outline-primary mp-earlier__view', 'View');
+            const view = el('button', 'btn btn-sm btn-outline-primary mp-earlier__view',
+                PFI18n.t('MoneyPriorities.Js.Earlier.View'));
             view.type = 'button';
-            view.setAttribute('aria-label', `View the result from ${date}: ${walk.leafLabel}`);
+            view.setAttribute('aria-label',
+                PFI18n.t('MoneyPriorities.Js.Earlier.ViewAria', { date: date, leaf: walk.leafLabel }));
             view.addEventListener('click', () => viewWalk(walk.walkId));
-            const remove = el('button', 'btn btn-sm btn-outline-danger mp-earlier__delete', 'Delete');
+            const remove = el('button', 'btn btn-sm btn-outline-danger mp-earlier__delete',
+                PFI18n.t('MoneyPriorities.Js.Earlier.Delete'));
             remove.type = 'button';
-            remove.setAttribute('aria-label', `Delete the result from ${date}: ${walk.leafLabel}`);
+            remove.setAttribute('aria-label',
+                PFI18n.t('MoneyPriorities.Js.Earlier.DeleteAria', { date: date, leaf: walk.leafLabel }));
             remove.addEventListener('click', () => deleteWalk(walk.walkId));
             actions.append(view, remove);
             item.append(details, actions);
@@ -655,7 +692,7 @@
             showEarlierError('');
             renderEarlier(outcome.body);
         } else {
-            showEarlierError(`Earlier results could not be refreshed. ${errorMessage(outcome)}`);
+            showEarlierError(PFI18n.t('MoneyPriorities.Js.Earlier.RefreshFailed', { error: errorMessage(outcome) }));
         }
     }
 
@@ -677,7 +714,7 @@
 
     /** Asks, then removes an earlier Walk and refreshes the list. */
     async function deleteWalk (walkId) {
-        if (!window.confirm('Delete this earlier result?')) {
+        if (!window.confirm(PFI18n.t('MoneyPriorities.Js.Earlier.ConfirmDelete'))) {
             return;
         }
         showEarlierError('');

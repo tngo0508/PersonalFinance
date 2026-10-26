@@ -2,6 +2,7 @@ using PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Features.MoneyPriorities;
 
@@ -125,8 +126,12 @@ internal static class PurposeNoteFacts
 
     private static PurposeNoteFactDto Fact(string label, string value) => new() { Label = label, Value = value };
 
+    /// <summary>
+    /// Whole dollars through the shared money formatter, in the app's default culture: the prompt is written in
+    /// English, so its figures read the English way whatever the user's Language.
+    /// </summary>
     private static string Dollars(decimal amount) =>
-        "$" + DisplayRounding.WholeDollars(amount).ToString("N0", AppCulture.Default);
+        MoneyFormatter.FormatWhole(DisplayRounding.WholeDollars(amount), SupportedCurrencies.Default.Code, AppCulture.Default);
 
     private static string Percent(decimal percent) => percent.ToString("0.##", AppCulture.Default) + "%";
 

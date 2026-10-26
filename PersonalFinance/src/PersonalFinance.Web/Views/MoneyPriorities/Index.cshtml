@@ -1,6 +1,7 @@
 @model PersonalFinance.Web.Models.MoneyPriorities.MoneyPrioritiesViewModel
 @{
-    ViewData["Title"] = "Money Priorities";
+    ViewData["Title"] = L["MoneyPriorities.Title"].Value;
+    string symbol = SupportedCurrencies.Default.Symbol;
 }
 
 @section Styles {
@@ -10,25 +11,25 @@
 
 <div class="mp-page">
     <header class="mp-header mb-4">
-        <h1 class="mp-title">Money Priorities</h1>
-        <p class="mp-intro">Have extra money each month? Answer a few questions to see which priority to put it toward first.</p>
+        <h1 class="mp-title">@L["MoneyPriorities.Title"]</h1>
+        <p class="mp-intro">@L["MoneyPriorities.Intro"]</p>
     </header>
 
     <noscript>
-        <div class="alert alert-warning">Money Priorities needs JavaScript. Turn it on to answer the questions.</div>
+        <div class="alert alert-warning">@L["MoneyPriorities.NoScript"]</div>
     </noscript>
 
     <div class="row g-3">
         <div class="col-lg-4">
             <section class="card mp-card" aria-labelledby="mpFormHeading">
                 <div class="mp-card__body">
-                    <h2 class="mp-card__title" id="mpFormHeading">Your answers</h2>
+                    <h2 class="mp-card__title" id="mpFormHeading">@L["MoneyPriorities.Form.Heading"]</h2>
                     <form id="mpForm" novalidate>
                         @Html.AntiForgeryToken()
                         <div class="alert alert-danger mp-form-error" id="mpFormError" role="alert" hidden></div>
 
                         <div class="mp-field">
-                            <label for="mpMonthlyAmount" class="form-label">Extra money each month ($)</label>
+                            <label for="mpMonthlyAmount" class="form-label">@L.Named("MoneyPriorities.Form.MonthlyAmount", ("symbol", symbol))</label>
                             <input type="number" class="form-control" id="mpMonthlyAmount" name="MonthlyAmount"
                                    min="0.01" max="1000000" step="0.01" inputmode="decimal" required
                                    aria-describedby="mpErrMonthlyAmount"/>
@@ -36,31 +37,31 @@
                         </div>
 
                         <div class="mp-field">
-                            <label for="mpPurpose" class="form-label">Purpose <span class="mp-optional">(optional)</span></label>
+                            <label for="mpPurpose" class="form-label">@L["MoneyPriorities.Form.Purpose"] <span class="mp-optional">@L["MoneyPriorities.Form.Optional"]</span></label>
                             <textarea class="form-control" id="mpPurpose" name="Purpose" rows="2" maxlength="300"
                                       aria-describedby="mpPurposeHint mpErrPurpose"></textarea>
-                            <div class="form-text" id="mpPurposeHint">What you want this money to do, in your own words. Up to 300 characters.</div>
+                            <div class="form-text" id="mpPurposeHint">@L.Named("MoneyPriorities.Form.PurposeHint", ("max", MoneyPrioritiesLimits.PurposeMaxLength))</div>
                             <div class="mp-field-error" id="mpErrPurpose" data-mp-error="Purpose" hidden></div>
                         </div>
 
                         <div class="mp-field">
-                            <label for="mpDebtApr" class="form-label">Your highest debt interest rate (APR %)</label>
+                            <label for="mpDebtApr" class="form-label">@L["MoneyPriorities.Form.DebtApr"]</label>
                             <input type="number" class="form-control" id="mpDebtApr" name="DebtApr"
                                    min="0" max="100" step="0.01" inputmode="decimal"
                                    aria-describedby="mpDebtAprHint mpErrDebtApr"/>
-                            <div class="form-text" id="mpDebtAprHint">Enter 0 if you have no debt.</div>
+                            <div class="form-text" id="mpDebtAprHint">@L["MoneyPriorities.Form.DebtAprHint"]</div>
                             <div class="mp-field-error" id="mpErrDebtApr" data-mp-error="DebtApr" hidden></div>
                         </div>
 
                         <div class="mp-field mp-follow-up" id="mpDebtBalanceField" data-mp-follow-up="DebtBalance" hidden>
-                            <label for="mpDebtBalance" class="form-label">Balance of that debt ($)</label>
+                            <label for="mpDebtBalance" class="form-label">@L.Named("MoneyPriorities.Form.DebtBalance", ("symbol", symbol))</label>
                             <input type="number" class="form-control" id="mpDebtBalance" name="DebtBalance"
                                    min="0.01" step="0.01" inputmode="decimal" aria-describedby="mpErrDebtBalance"/>
                             <div class="mp-field-error" id="mpErrDebtBalance" data-mp-error="DebtBalance" hidden></div>
                         </div>
 
                         <div class="mp-field">
-                            <label for="mpEmergencyFundMonths" class="form-label">Months of expenses your emergency fund covers</label>
+                            <label for="mpEmergencyFundMonths" class="form-label">@L["MoneyPriorities.Form.EmergencyFundMonths"]</label>
                             <input type="number" class="form-control" id="mpEmergencyFundMonths" name="EmergencyFundMonths"
                                    min="0" max="120" step="0.1" inputmode="decimal"
                                    aria-describedby="mpErrEmergencyFundMonths"/>
@@ -68,27 +69,27 @@
                         </div>
 
                         <div class="mp-field mp-follow-up" id="mpMonthlyExpensesField" data-mp-follow-up="MonthlyExpenses" hidden>
-                            <label for="mpMonthlyExpenses" class="form-label">Your monthly expenses ($)</label>
+                            <label for="mpMonthlyExpenses" class="form-label">@L.Named("MoneyPriorities.Form.MonthlyExpenses", ("symbol", symbol))</label>
                             <input type="number" class="form-control" id="mpMonthlyExpenses" name="MonthlyExpenses"
                                    min="0.01" step="0.01" inputmode="decimal" aria-describedby="mpErrMonthlyExpenses"/>
                             <div class="mp-field-error" id="mpErrMonthlyExpenses" data-mp-error="MonthlyExpenses" hidden></div>
                         </div>
 
                         <fieldset class="mp-field" aria-describedby="mpErrHasFullEmployerMatch">
-                            <legend class="form-label">Do you get your employer's full retirement match?</legend>
+                            <legend class="form-label">@L["MoneyPriorities.Form.HasFullEmployerMatch"]</legend>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="HasFullEmployerMatch" id="mpMatchYes" value="true"/>
-                                <label class="form-check-label" for="mpMatchYes">Yes</label>
+                                <label class="form-check-label" for="mpMatchYes">@L["MoneyPriorities.Form.Yes"]</label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="HasFullEmployerMatch" id="mpMatchNo" value="false"/>
-                                <label class="form-check-label" for="mpMatchNo">No</label>
+                                <label class="form-check-label" for="mpMatchNo">@L["MoneyPriorities.Form.No"]</label>
                             </div>
                             <div class="mp-field-error" id="mpErrHasFullEmployerMatch" data-mp-error="HasFullEmployerMatch" hidden></div>
                         </fieldset>
 
                         <div class="mp-field mp-follow-up" id="mpEmployerMatchPercentField" data-mp-follow-up="EmployerMatchPercent" hidden>
-                            <label for="mpEmployerMatchPercent" class="form-label">Your employer's match (% of your pay)</label>
+                            <label for="mpEmployerMatchPercent" class="form-label">@L["MoneyPriorities.Form.EmployerMatchPercent"]</label>
                             <input type="number" class="form-control" id="mpEmployerMatchPercent" name="EmployerMatchPercent"
                                    min="0" max="100" step="0.01" inputmode="decimal"
                                    aria-describedby="mpErrEmployerMatchPercent"/>
@@ -96,38 +97,38 @@
                         </div>
 
                         <div class="mp-field">
-                            <label for="mpHorizonYears" class="form-label">Years until you need this money</label>
+                            <label for="mpHorizonYears" class="form-label">@L["MoneyPriorities.Form.HorizonYears"]</label>
                             <input type="number" class="form-control" id="mpHorizonYears" name="HorizonYears"
                                    min="1" max="50" step="1" inputmode="numeric" aria-describedby="mpErrHorizonYears"/>
                             <div class="mp-field-error" id="mpErrHorizonYears" data-mp-error="HorizonYears" hidden></div>
                         </div>
 
                         <div class="mp-field mp-follow-up" id="mpAgeBandField" data-mp-follow-up="AgeBand" hidden>
-                            <label for="mpAgeBand" class="form-label">Your age this year</label>
+                            <label for="mpAgeBand" class="form-label">@L["MoneyPriorities.Form.AgeBand"]</label>
                             <select class="form-select" id="mpAgeBand" name="AgeBand" aria-describedby="mpErrAgeBand">
-                                <option value="">Choose your age range</option>
-                                <option value="1">Under 50</option>
-                                <option value="2">50 to 59, or 64 and over</option>
-                                <option value="3">60 to 63</option>
+                                <option value="">@L["MoneyPriorities.Form.AgeBand.Choose"]</option>
+                                <option value="1">@L["MoneyPriorities.Form.AgeBand.Under50"]</option>
+                                <option value="2">@L["MoneyPriorities.Form.AgeBand.Age50To59Or64Up"]</option>
+                                <option value="3">@L["MoneyPriorities.Form.AgeBand.Age60To63"]</option>
                             </select>
                             <div class="mp-field-error" id="mpErrAgeBand" data-mp-error="AgeBand" hidden></div>
                         </div>
 
                         <fieldset class="mp-field mp-follow-up" id="mpAtContributionLimitField" data-mp-follow-up="AtContributionLimit"
                                   aria-describedby="mpErrAtContributionLimit" hidden>
-                            <legend class="form-label">Do you already put in the IRS yearly limit for your age?</legend>
+                            <legend class="form-label">@L["MoneyPriorities.Form.AtContributionLimit"]</legend>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="AtContributionLimit" id="mpLimitYes" value="true"/>
-                                <label class="form-check-label" for="mpLimitYes">Yes</label>
+                                <label class="form-check-label" for="mpLimitYes">@L["MoneyPriorities.Form.Yes"]</label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="AtContributionLimit" id="mpLimitNo" value="false"/>
-                                <label class="form-check-label" for="mpLimitNo">No</label>
+                                <label class="form-check-label" for="mpLimitNo">@L["MoneyPriorities.Form.No"]</label>
                             </div>
                             <div class="mp-field-error" id="mpErrAtContributionLimit" data-mp-error="AtContributionLimit" hidden></div>
                         </fieldset>
 
-                        <button type="submit" class="btn btn-primary w-100" id="mpSubmit">Show my priority</button>
+                        <button type="submit" class="btn btn-primary w-100" id="mpSubmit">@L["MoneyPriorities.Form.Submit"]</button>
                     </form>
                 </div>
             </section>
@@ -136,16 +137,16 @@
         <div class="col-lg-8">
             <section class="card mp-card mp-result" aria-labelledby="mpResultHeading">
                 <div class="mp-card__body">
-                    <h2 class="mp-card__title" id="mpResultHeading">Your priority</h2>
-                    <p class="mp-empty" id="mpEmpty">Answer the questions to see where your extra money should go first</p>
+                    <h2 class="mp-card__title" id="mpResultHeading">@L["MoneyPriorities.Result.Heading"]</h2>
+                    <p class="mp-empty" id="mpEmpty">@L["MoneyPriorities.Result.Empty"]</p>
                     <div id="mpResult" hidden>
                         <p class="mp-headline" id="mpHeadline" tabindex="-1"></p>
                         <div class="mp-figures" id="mpFigures"></div>
-                        <h3 class="mp-subtitle" id="mpPathHeading">Your path</h3>
+                        <h3 class="mp-subtitle" id="mpPathHeading">@L["MoneyPriorities.Result.PathHeading"]</h3>
                         <ol class="mp-path" id="mpPath" aria-labelledby="mpPathHeading" aria-live="polite"></ol>
                         <div class="mp-assumptions" id="mpAssumptions"></div>
                         <section class="mp-purpose-note" id="mpNote" aria-labelledby="mpNoteHeading" hidden>
-                            <h3 class="mp-subtitle" id="mpNoteHeading">Your Purpose Note</h3>
+                            <h3 class="mp-subtitle" id="mpNoteHeading">@L["MoneyPriorities.Note.Heading"]</h3>
                             <div class="mp-purpose-note__body" id="mpNoteBody" aria-live="polite"></div>
                         </section>
                     </div>
@@ -156,15 +157,15 @@
 
     <section class="card mp-card mt-3" aria-labelledby="mpTreeHeading">
         <div class="mp-card__body">
-            <h2 class="mp-card__title" id="mpTreeHeading">Priority Tree</h2>
-            <div id="mp-diagram" class="mp-diagram" role="group" aria-label="Priority Tree"></div>
+            <h2 class="mp-card__title" id="mpTreeHeading">@L["MoneyPriorities.Tree.Heading"]</h2>
+            <div id="mp-diagram" class="mp-diagram" role="group" aria-label="@L["MoneyPriorities.Tree.Heading"]"></div>
         </div>
     </section>
 
     <section class="card mp-card mt-3" aria-labelledby="mpEarlierHeading">
         <div class="mp-card__body">
-            <h2 class="mp-card__title" id="mpEarlierHeading" tabindex="-1">Earlier results</h2>
-            <p class="mp-empty" id="mpEarlierEmpty" hidden>Your earlier results will appear here</p>
+            <h2 class="mp-card__title" id="mpEarlierHeading" tabindex="-1">@L["MoneyPriorities.Earlier.Heading"]</h2>
+            <p class="mp-empty" id="mpEarlierEmpty" hidden>@L["MoneyPriorities.Earlier.Empty"]</p>
             <div class="alert alert-danger" id="mpEarlierError" role="alert" hidden></div>
             <ul class="mp-earlier" id="mpEarlier"></ul>
         </div>
@@ -172,6 +173,7 @@
 </div>
 
 <script type="application/json" id="mpPageData">@Json.Serialize(Model)</script>
+<js-strings prefix="MoneyPriorities.Js." />
 
 @section Scripts {
     <script src="~/lib/mermaid/dist/mermaid.min.js"></script>
