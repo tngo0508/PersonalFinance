@@ -87,7 +87,8 @@ public class UnavailableStateTests
     public async Task SavingsGoalsIndex_WhenApiFails_RendersUnavailableStateInsteadOfEmptyList()
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer,
+            TimeProvider.System));
 
         IActionResult result = await controller.Index();
 
@@ -99,7 +100,8 @@ public class UnavailableStateTests
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi>? proxy) = ApiProxy.Create<ISavingsGoalsApi>();
         proxy.Returns(nameof(ISavingsGoalsApi.GetSavingsGoalsAsync), new List<SavingsGoalDto>());
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer,
+            TimeProvider.System));
 
         IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
 
@@ -113,7 +115,8 @@ public class UnavailableStateTests
     public async Task SavingsGoalsCreate_WhenGoalsAlsoFailToLoad_RendersUnavailableState()
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer,
+            TimeProvider.System));
 
         IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
 
@@ -121,15 +124,16 @@ public class UnavailableStateTests
     }
 
     [Theory]
-    [InlineData(nameof(SavingsGoalsController.Update))]
+    [InlineData(nameof(SavingsGoalsController.AddContribution))]
     [InlineData(nameof(SavingsGoalsController.Delete))]
-    public async Task SavingsGoalsUpdateAndDelete_WhenApiFails_ShowSafeErrorAfterRedirect(string action)
+    public async Task SavingsGoalsContributionAndDelete_WhenApiFails_ShowSafeErrorAfterRedirect(string action)
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
-        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer));
+        SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer,
+            TimeProvider.System));
 
-        IActionResult result = action == nameof(SavingsGoalsController.Update)
-            ? await controller.Update(1, 50m, false)
+        IActionResult result = action == nameof(SavingsGoalsController.AddContribution)
+            ? await controller.AddContribution(1, 50m, "deposit", null, null)
             : await controller.Delete(1);
 
         Assert.IsType<RedirectToActionResult>(result);

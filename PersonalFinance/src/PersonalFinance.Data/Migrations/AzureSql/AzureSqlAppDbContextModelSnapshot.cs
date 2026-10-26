@@ -739,6 +739,57 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.ToTable("CommunityStoryLikes");
                 });
 
+            modelBuilder.Entity("PersonalFinance.Data.Entities.Contribution", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("SavingsGoalId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SavingsGoalId");
+
+                    b.HasIndex("UserId", "SavingsGoalId", "Date");
+
+                    b.ToTable("Contributions");
+                });
+
             modelBuilder.Entity("PersonalFinance.Data.Entities.DeletionRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -1444,6 +1495,9 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<int>("HighestMilestoneNotified")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
 
@@ -1974,6 +2028,17 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .IsRequired();
 
                     b.Navigation("Story");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.Contribution", b =>
+                {
+                    b.HasOne("PersonalFinance.Data.Entities.SavingsGoal", "SavingsGoal")
+                        .WithMany()
+                        .HasForeignKey("SavingsGoalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SavingsGoal");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveCachedFile", b =>

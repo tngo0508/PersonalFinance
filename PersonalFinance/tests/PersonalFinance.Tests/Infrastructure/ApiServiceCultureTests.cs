@@ -141,12 +141,13 @@ public sealed class ApiServiceCultureTests : IDisposable
         db.SavingsGoals.Add(goal);
         await db.SaveChangesAsync();
         var notifications = new CapturingNotificationService();
-        var service = new SavingsGoalService(db, NullLogger<SavingsGoalService>.Instance, notifications);
+        var service = new SavingsGoalService(db, NullLogger<SavingsGoalService>.Instance, notifications,
+            TimeProvider.System);
 
-        bool updated = await service.UpdateSavingsGoalAsync(UserId, goal.Id,
-            new UpdateSavingsGoalRequestDto { CurrentAmount = 600m });
+        ContributionResult added = await service.AddContributionAsync(UserId, goal.Id,
+            new SaveContributionRequestDto { Amount = 600m });
 
-        Assert.True(updated);
+        Assert.Equal(ContributionOutcome.Saved, added.Outcome);
         CreateNotificationRequestDto notification = Assert.Single(notifications.Created);
         Assert.Equal("Your goal 'Vacation' has reached 50% of its target ($600.00 of $1,000.00).",
             notification.Message);

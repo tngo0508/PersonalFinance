@@ -1,8 +1,12 @@
 @using Microsoft.AspNetCore.Html
 @using PersonalFinance.Shared.DTOs.SavingsGoals
+@using PersonalFinance.Shared.Enums
 @{
     ViewData["Title"] = L["SavingsGoals.Title"].Value;
     var goals = ViewData["Goals"] as List<SavingsGoalDto> ?? new List<SavingsGoalDto>();
+    var today = ViewData["Today"] as DateOnly? ?? DateOnly.FromDateTime(DateTime.UtcNow);
+    // <input type="date"> takes ISO yyyy-MM-dd whatever the page culture; no Contribution is dated after today.
+    var todayIso = today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 }
 
 @section Styles {
@@ -172,27 +176,147 @@
                             }
                         </div>
 
-                        <!-- Update Form -->
-                        <form asp-action="Update" asp-controller="SavingsGoals" method="post"
-                              class="savings-goal-update-form">
+                        @if (goal.Contributions.Count == 0 && goal.CurrentAmount == 0)
+                        {
+                            <p class="savings-goal-empty-prompt">@L["SavingsGoals.Card.EmptyPrompt"]</p>
+                        }
+
+                        <!-- Add Contribution: the amount is positive, the toggle gives its direction -->
+                        <form asp-action="AddContribution" asp-controller="SavingsGoals" method="post"
+                              class="savings-contribution-form" aria-label="@L["SavingsGoals.Contribution.Heading"]">
                             @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@goal.Id"/>
-                            <input type="hidden" name="isCompleted" value="false"/>
-                            <div class="savings-goal-update-row">
-                                <div class="savings-goal-update-input-wrapper">
-                                    <span class="savings-goal-update-prefix">$</span>
-                                    <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
-                                           name="currentAmount"
-                                           class="form-control savings-goal-update-input"
-                                           value="@MoneyFormatter.FormatAmount(goal.CurrentAmount, SupportedCurrencies.Default.Code)"
-                                           placeholder="@L["SavingsGoals.Card.NewAmountPlaceholder"]"
-                                           aria-label="@L.Named("SavingsGoals.Card.UpdateAria", ("name", goal.Name))"/>
+                            <input type="hidden" name="goalId" value="@goal.Id"/>
+                            <div class="savings-contribution-row">
+                                <div class="btn-group savings-contribution-direction" role="group"
+                                     aria-label="@L["SavingsGoals.Contribution.Direction"]">
+                                    <input type="radio" class="btn-check" name="direction" value="deposit"
+                                           id="deposit-@goal.Id" checked/>
+                                    <label class="btn btn-sm btn-outline-success" for="deposit-@goal.Id">@L["SavingsGoals.Contribution.Deposit"]</label>
+                                    <input type="radio" class="btn-check" name="direction" value="withdrawal"
+                                           id="withdrawal-@goal.Id"/>
+                                    <label class="btn btn-sm btn-outline-secondary" for="withdrawal-@goal.Id">@L["SavingsGoals.Contribution.Withdrawal"]</label>
                                 </div>
-                                <button type="submit" class="btn savings-goal-update-btn">
-                                    @L["SavingsGoals.Card.Update"]
+                                <div class="savings-contribution-input-wrapper">
+                                    <span class="savings-contribution-prefix" aria-hidden="true">$</span>
+                                    <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                                           name="amount" required
+                                           class="form-control savings-contribution-input"
+                                           placeholder="@L["SavingsGoals.Contribution.Amount"]"
+                                           aria-label="@L.Named("SavingsGoals.Contribution.AmountAria", ("name", goal.Name))"/>
+                                </div>
+                                <button type="submit" class="btn savings-contribution-btn">
+                                    @L["SavingsGoals.Contribution.Add"]
                                 </button>
                             </div>
+                            <div class="savings-contribution-row savings-contribution-row--details">
+                                <label class="savings-contribution-field">
+                                    <span class="form-label">@L["SavingsGoals.Contribution.Date"]</span>
+                                    <input type="date" name="date" class="form-control form-control-sm" min="2000-01-01" max="@todayIso"/>
+                                </label>
+                                <label class="savings-contribution-field">
+                                    <span class="form-label">@L["SavingsGoals.Contribution.Note"]</span>
+                                    <input type="text" name="note" class="form-control form-control-sm" maxlength="200"
+                                           placeholder="@L["SavingsGoals.Contribution.NotePlaceholder"]"/>
+                                </label>
+                            </div>
                         </form>
+
+                        <!-- Contribution history, newest first; collapsed until opened -->
+                        @if (goal.Contributions.Count > 0)
+                        {
+                            <details class="savings-goal-history">
+                                <summary>@L.Named("SavingsGoals.History.Summary", ("count", goal.Contributions.Count))</summary>
+                                <ul class="savings-history-list">
+                                    @foreach (var contribution in goal.Contributions)
+                                    {
+                                        var amountText = MoneyFormatter.Format(Math.Abs(contribution.Amount), SupportedCurrencies.Default.Code);
+                                        var signedText = (contribution.Amount < 0 ? "−" : "+") + amountText;
+                                        var dateText = contribution.Date.ToString("d", System.Globalization.CultureInfo.CurrentCulture);
+                                        <li class="savings-history-item" data-contribution-id="@contribution.Id">
+                                            <div class="savings-history-item__main">
+                                                <span class="savings-history-item__date">@dateText</span>
+                                                <span class="savings-history-item__amount @(contribution.Amount < 0 ? "savings-history-item__amount--out" : "")">@signedText</span>
+                                                @if (contribution.Kind == ContributionKind.Opening)
+                                                {
+                                                    <span class="savings-history-item__kind">@L["SavingsGoals.History.Opening"]</span>
+                                                }
+                                                else if (contribution.Kind == ContributionKind.Adjustment)
+                                                {
+                                                    <span class="savings-history-item__kind">@L["SavingsGoals.History.Adjustment"]</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(contribution.Note))
+                                                {
+                                                    <span class="savings-history-item__note">@contribution.Note</span>
+                                                }
+                                            </div>
+                                            <div class="savings-history-item__actions">
+                                                @if (contribution.Kind != ContributionKind.Adjustment)
+                                                {
+                                                    <details class="savings-history-edit">
+                                                        <summary aria-label="@L.Named("SavingsGoals.History.EditAria", ("amount", signedText), ("date", dateText))">@L["SavingsGoals.History.Edit"]</summary>
+                                                        <form asp-action="EditContribution" asp-controller="SavingsGoals" method="post"
+                                                              class="savings-history-edit-form">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="goalId" value="@goal.Id"/>
+                                                            <input type="hidden" name="contributionId" value="@contribution.Id"/>
+                                                            <div class="btn-group savings-contribution-direction" role="group"
+                                                                 aria-label="@L["SavingsGoals.Contribution.Direction"]">
+                                                                <input type="radio" class="btn-check" name="direction" value="deposit"
+                                                                       id="deposit-@goal.Id-@contribution.Id" checked="@(contribution.Amount > 0)"/>
+                                                                <label class="btn btn-sm btn-outline-success" for="deposit-@goal.Id-@contribution.Id">@L["SavingsGoals.Contribution.Deposit"]</label>
+                                                                <input type="radio" class="btn-check" name="direction" value="withdrawal"
+                                                                       id="withdrawal-@goal.Id-@contribution.Id" checked="@(contribution.Amount < 0)"/>
+                                                                <label class="btn btn-sm btn-outline-secondary" for="withdrawal-@goal.Id-@contribution.Id">@L["SavingsGoals.Contribution.Withdrawal"]</label>
+                                                            </div>
+                                                            <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                                                                   name="amount" required class="form-control form-control-sm"
+                                                                   value="@MoneyFormatter.FormatAmount(Math.Abs(contribution.Amount), SupportedCurrencies.Default.Code)"
+                                                                   aria-label="@L["SavingsGoals.Contribution.Amount"]"/>
+                                                            <input type="date" name="date" class="form-control form-control-sm" required
+                                                                   min="2000-01-01" max="@todayIso"
+                                                                   value="@contribution.Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)"
+                                                                   aria-label="@L["SavingsGoals.Contribution.Date"]"/>
+                                                            <input type="text" name="note" class="form-control form-control-sm" maxlength="200"
+                                                                   value="@contribution.Note" aria-label="@L["SavingsGoals.Contribution.Note"]"/>
+                                                            <button type="submit" class="btn btn-sm btn-primary">@L["SavingsGoals.Contribution.Save"]</button>
+                                                        </form>
+                                                    </details>
+                                                }
+                                                @* js/savingsgoals/savings-goals.js asks for confirmation. *@
+                                                <form asp-action="DeleteContribution" asp-controller="SavingsGoals" method="post"
+                                                      class="savings-history-delete-form">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="goalId" value="@goal.Id"/>
+                                                    <input type="hidden" name="contributionId" value="@contribution.Id"/>
+                                                    <button type="submit" class="btn btn-sm btn-link savings-history-delete-btn"
+                                                            aria-label="@L.Named("SavingsGoals.History.DeleteAria", ("amount", signedText), ("date", dateText))">@L["SavingsGoals.History.Delete"]</button>
+                                                </form>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+                            </details>
+                        }
+
+                        <!-- Correct balance: the difference is recorded as an Adjustment -->
+                        <details class="savings-goal-correct">
+                            <summary>@L["SavingsGoals.Balance.Summary"]</summary>
+                            <form asp-action="CorrectBalance" asp-controller="SavingsGoals" method="post"
+                                  class="savings-goal-correct-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="goalId" value="@goal.Id"/>
+                                <label class="savings-contribution-field" for="balance-@goal.Id">
+                                    <span class="form-label">@L.Named("SavingsGoals.Balance.Label", ("symbol", "$"))</span>
+                                </label>
+                                <div class="savings-contribution-row">
+                                    <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                                           name="balance" id="balance-@goal.Id" required class="form-control form-control-sm"
+                                           value="@MoneyFormatter.FormatAmount(goal.CurrentAmount, SupportedCurrencies.Default.Code)"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">@L["SavingsGoals.Balance.Submit"]</button>
+                                </div>
+                                <p class="savings-goal-correct-help">@L["SavingsGoals.Balance.Help"]</p>
+                            </form>
+                        </details>
                     </div>
                 </div>
             }
