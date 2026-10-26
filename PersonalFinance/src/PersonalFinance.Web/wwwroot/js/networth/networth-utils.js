@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth shared utilities, constants, and validation.
  * Exposes NW namespace on window for other networth modules.
@@ -73,6 +74,24 @@
     }
 
     /**
+     * Format a return rate's number in the page culture, without the % sign (7.5; 7,5 in vi-VN).
+     * @param {number} ratePercent - The rate in percent.
+     * @returns {string} The formatted number.
+     */
+    function formatRate (ratePercent) {
+        return PFI18n.formatNumber(Number(ratePercent) || 0, { maximumFractionDigits: 2 });
+    }
+
+    /**
+     * The translated name of a scenario the ApiService names Base, Conservative or Aggressive.
+     * @param {string} name - The scenario's name.
+     * @returns {string} The name in the page language.
+     */
+    function scenarioName (name) {
+        return Object.prototype.hasOwnProperty.call(scenarioMap, name) ? PFI18n.t(`NetWorth.Js.Scenario.${name}`) : name;
+    }
+
+    /**
      * Convert hex color to rgba string.
      * @param {string} hex - Hex color (e.g. '#818cf8')
      * @param {number} alpha - Alpha value 0-1
@@ -86,15 +105,27 @@
     }
 
     /**
-     * Get the raw numeric value from a slider field (strips formatting).
+     * Read what was typed in a slider field, in the page culture: the currency symbol and group separators are
+     * dropped, the culture's decimal separator kept (7,5 in vi-VN).
+     * @param {string} text - The field's text.
+     * @returns {number} The number, or NaN.
+     */
+    function parseTyped (text) {
+        const decimal = PFI18n.formatNumber(1.5).replace(/\d/g, '');
+        const kept = String(text).split('').filter((char) => /[\d-]/.test(char) || char === decimal).join('');
+        return PFI18n.parseNumber(kept);
+    }
+
+    /**
+     * Get the numeric value of a slider field, read in the page culture (180.000 is 180000 in vi-VN).
      * @param {string} inputId - The text input ID.
-     * @returns {number} The parsed numeric value.
+     * @returns {number} The parsed numeric value, 0 when the field is missing or unreadable.
      */
     function getSliderValue (inputId) {
         const el = document.getElementById(inputId);
         if (!el) { return 0; }
-        const raw = el.value.replace(/[^0-9.]/g, '');
-        return PF.safeParseFloat(raw, 0);
+        const value = parseTyped(el.value);
+        return Number.isNaN(value) ? 0 : value;
     }
 
     /**
@@ -156,7 +187,7 @@
         closeButton.type = 'button';
         closeButton.className = 'btn-close';
         closeButton.setAttribute('data-bs-dismiss', 'alert');
-        closeButton.setAttribute('aria-label', 'Close');
+        closeButton.setAttribute('aria-label', PFI18n.t('NetWorth.Js.Close'));
         alert.appendChild(closeButton);
         container.appendChild(alert);
     }
@@ -182,7 +213,10 @@
         VALIDATORS: VALIDATORS,
         formatCurrency: formatCurrency,
         formatCompact: formatCompact,
+        formatRate: formatRate,
+        scenarioName: scenarioName,
         hexToRgba: hexToRgba,
+        parseTyped: parseTyped,
         getSliderValue: getSliderValue,
         setInvalid: setInvalid,
         validateInputs: validateInputs,

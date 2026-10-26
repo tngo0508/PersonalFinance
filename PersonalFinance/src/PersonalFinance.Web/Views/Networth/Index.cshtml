@@ -3,28 +3,8 @@
 @using PersonalFinance.Shared.DTOs.NetWorth
 
 @{
-    ViewData["Title"] = "Net Worth Projection";
+    ViewData["Title"] = L["NetWorth.Title"].Value;
     var projection = Model.Projection;
-}
-
-@functions {
-    private static string FormatCurrency(decimal value)
-    {
-        return MoneyFormatter.FormatWhole(value, SupportedCurrencies.Default.Code);
-    }
-
-    private static string FormatCompact(decimal value)
-    {
-        if (value >= 1_000_000m)
-        {
-            return $"{value / 1_000_000m:F1}M";
-        }
-        if (value >= 1_000m)
-        {
-            return $"{value / 1_000m:F0}K";
-        }
-        return value.ToString("F0");
-    }
 }
 
 @section Styles {
@@ -36,7 +16,7 @@
     {
         <div class="alert alert-success alert-dismissible fade show nw-alert" role="alert">
             @Model.StatusMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
         </div>
     }
 
@@ -44,14 +24,14 @@
     {
         <div class="alert alert-danger alert-dismissible fade show nw-alert" role="alert">
             @Model.ErrorMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
         </div>
     }
 
     @if (projection == null)
     {
         <div class="text-center py-5">
-            <p class="text-muted">Unable to load projection data.</p>
+            <p class="text-muted">@L["NetWorth.Message.LoadFailed"]</p>
         </div>
     }
     else

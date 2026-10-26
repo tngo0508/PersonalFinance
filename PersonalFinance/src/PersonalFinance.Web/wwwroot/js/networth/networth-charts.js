@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth chart rendering module.
  * Renders the growth line chart and comparison bar chart using Chart.js.
@@ -90,7 +91,7 @@
      */
     function buildLineDataset (name, roiPercent, years, colorHex, gradient, borderWidth) {
         return {
-            label: `${name } (${ roiPercent }%)`,
+            label: PFI18n.t('NetWorth.Js.Legend.Scenario', { name: NW.scenarioName(name), rate: NW.formatRate(roiPercent) }),
             data: years.map((y) => { return y.endingBalance; }),
             borderColor: colorHex,
             backgroundColor: gradient,
@@ -132,7 +133,7 @@
             buildLineDataset('Conservative', data.conservative.roiPercent, data.conservative.years, colors.conservative, consGrad, 2),
             buildLineDataset('Aggressive', data.aggressive.roiPercent, data.aggressive.years, colors.aggressive, aggGrad, 3),
             {
-                label: 'FI Target',
+                label: PFI18n.t('NetWorth.Js.FiTarget'),
                 data: Array(labels.length).fill(fiTarget),
                 borderColor: colors.fi,
                 backgroundColor: 'transparent',
@@ -213,9 +214,9 @@
         comparisonChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Base', 'Conservative', 'Aggressive'],
+                labels: ['Base', 'Conservative', 'Aggressive'].map(NW.scenarioName),
                 datasets: [{
-                    label: 'Final Net Worth',
+                    label: PFI18n.t('NetWorth.Js.FinalNetWorth'),
                     data: [
                         baseLastYear ? baseLastYear.endingBalance : 0,
                         conservativeLastYear ? conservativeLastYear.endingBalance : 0,
@@ -243,9 +244,9 @@
                     legend: { display: false },
                     tooltip: Object.assign({}, tooltipConfig(), {
                         callbacks: {
-                            title: function (items) { return `\u{1f4ca} ${ items[0].label } Scenario`; },
+                            title: function (items) { return `\u{1f4ca} ${ PFI18n.t('NetWorth.Js.ScenarioTitle', { name: items[0].label }) }`; },
                             label: function (context) {
-                                return ` Final Net Worth:  ${ NW.formatCurrency(context.parsed.y)}`;
+                                return ` ${ PFI18n.t('NetWorth.Js.FinalNetWorth') }:  ${ NW.formatCurrency(context.parsed.y)}`;
                             }
                         }
                     })

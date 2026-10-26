@@ -50,7 +50,7 @@ public class UnavailableStateTests
     public async Task NetWorthIndex_WhenParametersFailToLoad_RendersUnavailableState()
     {
         (INetWorthApi? api, ApiProxy<INetWorthApi>? proxy) = ApiProxy.Create<INetWorthApi>();
-        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
+        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 
@@ -63,7 +63,7 @@ public class UnavailableStateTests
     {
         (INetWorthApi? api, ApiProxy<INetWorthApi>? proxy) = ApiProxy.Create<INetWorthApi>();
         proxy.Returns(nameof(INetWorthApi.LoadParametersAsync), new NetWorthParametersDto());
-        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
+        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 
@@ -74,7 +74,7 @@ public class UnavailableStateTests
     public async Task NetWorthDeleteParameters_WhenApiFails_ShowsSafeErrorAfterRedirect()
     {
         (INetWorthApi? api, ApiProxy<INetWorthApi> _) = ApiProxy.Create<INetWorthApi>();
-        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance));
+        NetworthController controller = WithContext(new NetworthController(api, NullLogger<NetworthController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.DeleteParameters();
 
