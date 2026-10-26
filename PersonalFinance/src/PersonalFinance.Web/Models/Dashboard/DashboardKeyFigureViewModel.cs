@@ -15,8 +15,8 @@ public class DashboardKeyFigureViewModel
     /// <summary>Optional supporting line beneath the value.</summary>
     public string? Caption { get; init; }
 
-    /// <summary>Text shown in place of the value when <see cref="Value"/> is null.</summary>
-    public string UnavailableText { get; init; } = "Not set up";
+    /// <summary>Text shown in place of the value when <see cref="Value"/> is null, already in the request's Language.</summary>
+    public string UnavailableText { get; init; } = string.Empty;
 
     /// <summary>Whether the value is money or a number that should use tabular monospace figures.</summary>
     public bool IsNumeric { get; init; } = true;
