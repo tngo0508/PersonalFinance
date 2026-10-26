@@ -111,6 +111,7 @@
         @if (Model.LastRefreshed.HasValue)
         {
             <div class="finance-hub-refresh-bar">
+                @* <!time> opts out of TimeAgoTagHelper, which would replace this text with an English relative time. *@
                 <!time class="finance-hub-refresh-time" datetime="@Model.LastRefreshed.Value.ToString("o")">
                     @L.Named("News.LastUpdated", ("time", DateAndTime(Model.LastRefreshed.Value)))
                 </!time>

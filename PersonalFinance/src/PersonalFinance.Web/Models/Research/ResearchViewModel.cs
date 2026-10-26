@@ -33,7 +33,8 @@ public sealed class ResearchViewModel
     public const string CompaniesTab = "companies";
 
     /// <summary>
-    /// The page's date format, "31 December 2025" in English; month names and order come from the request culture.
+    /// The page's date format, "31 December 2025" in English: day, month name and year in this order; only the month
+    /// name comes from the request culture.
     /// </summary>
     public const string LongDate = "d MMMM yyyy";
 

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Finance News times**: "Last updated" shows the refresh time again, and each article's age is drawn by the page in the reader's language; the shared relative-time tag had replaced both with an English "Just now" or "2d ago".
+  - The refresh time and each article's hover date use the culture's short date and time (`12/31/2025 at 2:05 PM`, `31/12/2025 lúc 14:05`).
 
 ## [7.6.1] - 2026-10-26
 
