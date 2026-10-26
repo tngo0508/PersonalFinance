@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.BudgetTracker;
@@ -27,7 +28,7 @@ public class BudgetTrackerWebControllerTests
             new(ClaimTypes.Name, "test-user-123@example.com")
         }, "TestAuthType");
 
-        return new BudgetTrackerController(api, logger)
+        return new BudgetTrackerController(api, logger, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext
             {

@@ -361,7 +361,8 @@ public class MoneyPrioritiesWebControllerTests
 
     private static MoneyPrioritiesController CreateController(IMoneyPrioritiesApi api)
     {
-        var controller = new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance);
+        var controller = new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
+            TestLocalization.Localizer);
         var httpContext = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(

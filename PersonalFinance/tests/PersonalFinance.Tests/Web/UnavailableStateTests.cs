@@ -28,7 +28,7 @@ public class UnavailableStateTests
     public async Task BudgetIndex_WhenApiFails_RendersUnavailableStateInsteadOfDefaults()
     {
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi> _) = ApiProxy.Create<IBudgetPlannerApi>();
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 
@@ -39,7 +39,7 @@ public class UnavailableStateTests
     public async Task BudgetGetBudgetData_WhenApiFails_LetsJsonApiErrorsAnswerInsteadOfEmptyBudget()
     {
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi> _) = ApiProxy.Create<IBudgetPlannerApi>();
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => controller.GetBudgetData());
         Assert.NotNull(typeof(BudgetController).GetMethod(nameof(BudgetController.GetBudgetData))!
@@ -142,7 +142,8 @@ public class UnavailableStateTests
     {
         (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
         MoneyPrioritiesController controller =
-            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance));
+            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
+            TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 
@@ -155,7 +156,8 @@ public class UnavailableStateTests
         (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi>? proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync), new PriorityTreeDiagramDto());
         MoneyPrioritiesController controller =
-            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance));
+            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
+            TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 
@@ -167,7 +169,8 @@ public class UnavailableStateTests
     {
         (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
         MoneyPrioritiesController controller =
-            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance));
+            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
+            TestLocalization.Localizer));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => controller.Recent());
         Assert.NotNull(typeof(MoneyPrioritiesController).GetMethod(nameof(MoneyPrioritiesController.Recent))!
@@ -182,7 +185,8 @@ public class UnavailableStateTests
         (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi>? proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Throws(nameof(IMoneyPrioritiesApi.GetTreeAsync), new OperationCanceledException(cts.Token));
         MoneyPrioritiesController controller =
-            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance));
+            WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
+            TestLocalization.Localizer));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(cts.Token));
     }
@@ -223,7 +227,7 @@ public class UnavailableStateTests
         await cts.CancelAsync();
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi>? proxy) = ApiProxy.Create<IBudgetPlannerApi>();
         proxy.Throws(nameof(IBudgetPlannerApi.GetBudgetAsync), new OperationCanceledException(cts.Token));
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(cts.Token));
     }

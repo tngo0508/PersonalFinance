@@ -25,6 +25,7 @@ using PersonalFinance.Web.Areas.Identity.Pages.Account;
 using PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Services;
 using Refit;
 
@@ -200,7 +201,9 @@ public class DeletionPagesTests
     [Fact]
     public void DeletionScheduledEmail_EncodesTheLink_AndNamesTheDate()
     {
-        using var culture = new UiCultureScope("en");
+        // The date follows the formatting culture, so pin it too: ApiServiceCultureTests changes the process default
+        // culture while it runs, and a bare UI culture let this test see an invariant date.
+        using var language = LanguageScope.Use(AppLanguages.Find("en")!);
 
         string html = EmailTemplateHelper.BuildDeletionScheduledEmail(TestLocalization.Localizer,
             "https://app.test/cancel?token=<x>&y=1", PurgeAfter).HtmlBody;

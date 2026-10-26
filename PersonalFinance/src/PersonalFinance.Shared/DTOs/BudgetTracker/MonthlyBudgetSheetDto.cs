@@ -20,8 +20,11 @@ public class MonthlyBudgetSheetDto
     /// <summary>Whether an earlier month exists to copy planned amounts from.</summary>
     public bool CanCopyFromPrevious { get; set; }
 
-    /// <summary>Display label of the most recent earlier month with a plan, e.g., "September 2026".</summary>
-    public string? PreviousMonthLabel { get; set; }
+    /// <summary>Year of the most recent earlier month with a plan, so the page can name it in the user's Language.</summary>
+    public int? PreviousPlanYear { get; set; }
+
+    /// <summary>Month (1-12) of the most recent earlier month with a plan.</summary>
+    public int? PreviousPlanMonth { get; set; }
 
     /// <summary>Expenses section with rows and totals.</summary>
     public SheetSectionDto Expenses { get; set; } = new();

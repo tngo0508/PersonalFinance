@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Web.Infrastructure;
@@ -18,11 +19,14 @@ public class BudgetTrackerController : Controller
 {
     private readonly IBudgetTrackerApi _budgetTrackerApi;
     private readonly ILogger<BudgetTrackerController> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public BudgetTrackerController(IBudgetTrackerApi budgetTrackerApi, ILogger<BudgetTrackerController> logger)
+    public BudgetTrackerController(IBudgetTrackerApi budgetTrackerApi, ILogger<BudgetTrackerController> logger,
+        IStringLocalizer localizer)
     {
         _budgetTrackerApi = budgetTrackerApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -62,7 +66,7 @@ public class BudgetTrackerController : Controller
         {
             _logger.LogWarning(ex, "Failed to load initial budget tracker sheet for {Year}-{Month}", selectedYear,
                 selectedMonth);
-            model.ErrorMessage = "Unable to load budget tracker data. Please try again.";
+            model.ErrorMessage = _localizer["BudgetTracker.Message.LoadFailed"].Value;
         }
 
         return View(model);
@@ -92,7 +96,7 @@ public class BudgetTrackerController : Controller
     {
         if (request == null || !ModelState.IsValid)
         {
-            return BadRequest(new { error = "Invalid month initialization request." });
+            return BadRequest(new { error = _localizer["BudgetTracker.Message.InvalidInitializeMonth"].Value });
         }
 
         MonthlyBudgetSheetDto sheet = await _budgetTrackerApi.InitializeMonthAsync(request, cancellationToken);
@@ -113,7 +117,7 @@ public class BudgetTrackerController : Controller
     {
         if (request == null || !ModelState.IsValid)
         {
-            return BadRequest(new { error = "Invalid planned amount request." });
+            return BadRequest(new { error = _localizer["BudgetTracker.Message.InvalidPlanned"].Value });
         }
 
         MonthlyBudgetSheetDto sheet = await _budgetTrackerApi.SetPlannedAsync(year, month, categoryId, request, cancellationToken);
@@ -134,7 +138,7 @@ public class BudgetTrackerController : Controller
     {
         if (request == null || !ModelState.IsValid)
         {
-            return BadRequest(new { error = "Invalid actual override request." });
+            return BadRequest(new { error = _localizer["BudgetTracker.Message.InvalidActualOverride"].Value });
         }
 
         MonthlyBudgetSheetDto sheet = await _budgetTrackerApi.SetActualOverrideAsync(year, month, categoryId, request,
@@ -165,7 +169,7 @@ public class BudgetTrackerController : Controller
     {
         if (request == null || !ModelState.IsValid)
         {
-            return BadRequest(new { error = "Invalid category request." });
+            return BadRequest(new { error = _localizer["BudgetTracker.Message.InvalidCategory"].Value });
         }
 
         BudgetCategoryDto category = await _budgetTrackerApi.CreateCategoryAsync(request, cancellationToken);
@@ -184,7 +188,7 @@ public class BudgetTrackerController : Controller
     {
         if (request == null || !ModelState.IsValid)
         {
-            return BadRequest(new { error = "Invalid category update request." });
+            return BadRequest(new { error = _localizer["BudgetTracker.Message.InvalidCategoryUpdate"].Value });
         }
 
         BudgetCategoryDto category = await _budgetTrackerApi.UpdateCategoryAsync(id, request, cancellationToken);
@@ -215,7 +219,7 @@ public class BudgetTrackerController : Controller
     {
         if (request == null || !ModelState.IsValid)
         {
-            return BadRequest(new { error = "Invalid transaction request." });
+            return BadRequest(new { error = _localizer["BudgetTracker.Message.InvalidTransaction"].Value });
         }
 
         BudgetTransactionDto transaction = await _budgetTrackerApi.CreateTransactionAsync(request, cancellationToken);
@@ -234,7 +238,7 @@ public class BudgetTrackerController : Controller
     {
         if (request == null || !ModelState.IsValid)
         {
-            return BadRequest(new { error = "Invalid transaction update request." });
+            return BadRequest(new { error = _localizer["BudgetTracker.Message.InvalidTransactionUpdate"].Value });
         }
 
         BudgetTransactionDto transaction = await _budgetTrackerApi.UpdateTransactionAsync(id, request, cancellationToken);
@@ -275,7 +279,7 @@ public class BudgetTrackerController : Controller
     {
         if (request == null || !ModelState.IsValid)
         {
-            return BadRequest(new { error = "Invalid data source preference request." });
+            return BadRequest(new { error = _localizer["BudgetTracker.Message.InvalidDataSource"].Value });
         }
 
         BudgetDataSourceDto updated = await _budgetTrackerApi.SetDataSourceAsync(request, cancellationToken);

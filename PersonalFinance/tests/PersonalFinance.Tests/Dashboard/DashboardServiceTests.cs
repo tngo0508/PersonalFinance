@@ -309,4 +309,49 @@ public class DashboardServiceTests
         Assert.Equal("Expense", groceries.Type);
         Assert.Equal(new DateTime(2026, 10, 5), groceries.Date);
     }
+
+    [Fact]
+    public async Task Summary_RecentActivity_CarriesTheRawFields_SoWebCanWordThemInTheUsersLanguage()
+    {
+        await using AppDbContext db = CreateContext();
+        db.UserBudgetSourcePreferences.Add(new UserBudgetSourcePreference
+        {
+            UserId = UserId,
+            Source = BudgetDataSource.BudgetTracker
+        });
+        var category = new BudgetCategory { UserId = UserId, Name = "Groceries", Kind = BudgetCategoryKind.Expense };
+        db.BudgetCategories.Add(category);
+        await db.SaveChangesAsync();
+        db.BudgetTransactions.Add(new BudgetTransaction
+        {
+            UserId = UserId,
+            CategoryId = category.Id,
+            Date = new DateOnly(2026, 10, 5),
+            Amount = 75.50m,
+            Description = "Supermarket"
+        });
+        db.SavingsGoals.Add(new SavingsGoal
+        {
+            UserId = UserId,
+            Name = "Car",
+            TargetAmount = 20_000m,
+            CurrentAmount = 5_000m,
+            CreatedAt = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await db.SaveChangesAsync();
+
+        DashboardSummaryDto summary = await GetSummaryAsync(db);
+
+        RecentActivityDto groceries = summary.RecentActivity.Single(a => a.Title == "Supermarket");
+        Assert.Equal("Groceries", groceries.Category);
+        Assert.Equal(75.50m, groceries.Amount);
+        Assert.Null(groceries.TargetAmount);
+        Assert.Null(groceries.SavedAmount);
+
+        RecentActivityDto car = summary.RecentActivity.Single(a => a.Title == "Car");
+        Assert.Equal(20_000m, car.TargetAmount);
+        Assert.Equal(5_000m, car.SavedAmount);
+        Assert.Null(car.Category);
+        Assert.Null(car.Amount);
+    }
 }
