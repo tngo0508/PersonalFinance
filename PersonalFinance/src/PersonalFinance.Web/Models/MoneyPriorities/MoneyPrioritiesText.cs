@@ -21,38 +21,50 @@ public static class MoneyPrioritiesText
     /// </summary>
     private static readonly Dictionary<string, Func<IStringLocalizer, string>> Messages = new(StringComparer.Ordinal)
     {
-        [AiAssistantMessages.Disclaimer] = Key("MoneyPriorities.Note.Disclaimer"),
-        [AiAssistantMessages.PurposeNoteUnavailable] = Key("MoneyPriorities.Note.Unavailable"),
-        [AiAssistantMessages.PurposeNoteRefused] = Key("MoneyPriorities.Note.Refused"),
-        [MoneyPrioritiesMessages.PurposeNoteInvite] = Key("MoneyPriorities.Note.Invite"),
-        [MoneyPrioritiesMessages.EstimateDisclaimer] = Key("MoneyPriorities.Result.EstimateDisclaimer"),
-        [MoneyPrioritiesMessages.MonthlyAmountRequired] = Key("MoneyPriorities.Validation.MonthlyAmountRequired"),
+        [AiAssistantMessages.Disclaimer] = localizer => localizer["MoneyPriorities.Note.Disclaimer"],
+        [AiAssistantMessages.PurposeNoteUnavailable] = localizer => localizer["MoneyPriorities.Note.Unavailable"],
+        [AiAssistantMessages.PurposeNoteRefused] = localizer => localizer["MoneyPriorities.Note.Refused"],
+        [MoneyPrioritiesMessages.PurposeNoteInvite] = localizer => localizer["MoneyPriorities.Note.Invite"],
+        [MoneyPrioritiesMessages.EstimateDisclaimer] =
+            localizer => localizer["MoneyPriorities.Result.EstimateDisclaimer"],
+        [MoneyPrioritiesMessages.MonthlyAmountRequired] =
+            localizer => localizer["MoneyPriorities.Validation.MonthlyAmountRequired"],
         [MoneyPrioritiesMessages.MonthlyAmountRange] =
-            AmountRange("MoneyPriorities.Validation.MonthlyAmountRange", MoneyPrioritiesLimits.MonthlyAmountMax),
-        [MoneyPrioritiesMessages.WholeCents] = Key("MoneyPriorities.Validation.WholeCents"),
-        [MoneyPrioritiesMessages.PurposeTooLong] = Key("MoneyPriorities.Validation.PurposeTooLong"),
-        [MoneyPrioritiesMessages.DebtAprRequired] = Key("MoneyPriorities.Validation.DebtAprRequired"),
-        [MoneyPrioritiesMessages.DebtAprRange] = Key("MoneyPriorities.Validation.DebtAprRange"),
-        [MoneyPrioritiesMessages.DebtBalanceRequired] = Key("MoneyPriorities.Validation.DebtBalanceRequired"),
+            localizer => localizer.Named("MoneyPriorities.Validation.MonthlyAmountRange",
+                AmountRange(MoneyPrioritiesLimits.MonthlyAmountMax)),
+        [MoneyPrioritiesMessages.WholeCents] = localizer => localizer["MoneyPriorities.Validation.WholeCents"],
+        [MoneyPrioritiesMessages.PurposeTooLong] = localizer => localizer["MoneyPriorities.Validation.PurposeTooLong"],
+        [MoneyPrioritiesMessages.DebtAprRequired] =
+            localizer => localizer["MoneyPriorities.Validation.DebtAprRequired"],
+        [MoneyPrioritiesMessages.DebtAprRange] = localizer => localizer["MoneyPriorities.Validation.DebtAprRange"],
+        [MoneyPrioritiesMessages.DebtBalanceRequired] =
+            localizer => localizer["MoneyPriorities.Validation.DebtBalanceRequired"],
         [MoneyPrioritiesMessages.DebtBalanceRange] =
-            AmountRange("MoneyPriorities.Validation.DebtBalanceRange", MoneyPrioritiesLimits.DebtBalanceMax),
+            localizer => localizer.Named("MoneyPriorities.Validation.DebtBalanceRange",
+                AmountRange(MoneyPrioritiesLimits.DebtBalanceMax)),
         [MoneyPrioritiesMessages.EmergencyFundMonthsRequired] =
-            Key("MoneyPriorities.Validation.EmergencyFundMonthsRequired"),
-        [MoneyPrioritiesMessages.EmergencyFundMonthsRange] = Key("MoneyPriorities.Validation.EmergencyFundMonthsRange"),
-        [MoneyPrioritiesMessages.MonthlyExpensesRequired] = Key("MoneyPriorities.Validation.MonthlyExpensesRequired"),
+            localizer => localizer["MoneyPriorities.Validation.EmergencyFundMonthsRequired"],
+        [MoneyPrioritiesMessages.EmergencyFundMonthsRange] =
+            localizer => localizer["MoneyPriorities.Validation.EmergencyFundMonthsRange"],
+        [MoneyPrioritiesMessages.MonthlyExpensesRequired] =
+            localizer => localizer["MoneyPriorities.Validation.MonthlyExpensesRequired"],
         [MoneyPrioritiesMessages.MonthlyExpensesRange] =
-            AmountRange("MoneyPriorities.Validation.MonthlyExpensesRange", MoneyPrioritiesLimits.MonthlyExpensesMax),
+            localizer => localizer.Named("MoneyPriorities.Validation.MonthlyExpensesRange",
+                AmountRange(MoneyPrioritiesLimits.MonthlyExpensesMax)),
         [MoneyPrioritiesMessages.HasFullEmployerMatchRequired] =
-            Key("MoneyPriorities.Validation.HasFullEmployerMatchRequired"),
+            localizer => localizer["MoneyPriorities.Validation.HasFullEmployerMatchRequired"],
         [MoneyPrioritiesMessages.EmployerMatchPercentRequired] =
-            Key("MoneyPriorities.Validation.EmployerMatchPercentRequired"),
+            localizer => localizer["MoneyPriorities.Validation.EmployerMatchPercentRequired"],
         [MoneyPrioritiesMessages.EmployerMatchPercentRange] =
-            Key("MoneyPriorities.Validation.EmployerMatchPercentRange"),
-        [MoneyPrioritiesMessages.HorizonYearsRequired] = Key("MoneyPriorities.Validation.HorizonYearsRequired"),
-        [MoneyPrioritiesMessages.HorizonYearsRange] = Key("MoneyPriorities.Validation.HorizonYearsRange"),
-        [MoneyPrioritiesMessages.AgeBandRequired] = Key("MoneyPriorities.Validation.AgeBandRequired"),
+            localizer => localizer["MoneyPriorities.Validation.EmployerMatchPercentRange"],
+        [MoneyPrioritiesMessages.HorizonYearsRequired] =
+            localizer => localizer["MoneyPriorities.Validation.HorizonYearsRequired"],
+        [MoneyPrioritiesMessages.HorizonYearsRange] =
+            localizer => localizer["MoneyPriorities.Validation.HorizonYearsRange"],
+        [MoneyPrioritiesMessages.AgeBandRequired] =
+            localizer => localizer["MoneyPriorities.Validation.AgeBandRequired"],
         [MoneyPrioritiesMessages.AtContributionLimitRequired] =
-            Key("MoneyPriorities.Validation.AtContributionLimitRequired")
+            localizer => localizer["MoneyPriorities.Validation.AtContributionLimitRequired"]
     };
 
     /// <summary>
@@ -127,12 +139,12 @@ public static class MoneyPrioritiesText
         return walks;
     }
 
-    private static Func<IStringLocalizer, string> Key(string key) => localizer => localizer[key];
-
-    /// <summary>A "from over nothing to at most <paramref name="max"/>" message, its amounts in whole dollars.</summary>
-    private static Func<IStringLocalizer, string> AmountRange(string key, decimal max) => localizer => localizer.Named(key,
+    /// <summary>The placeholders of an "over {min} and at most {max}" message, in whole dollars of the request culture.</summary>
+    private static (string Name, object? Value)[] AmountRange(decimal max) =>
+    [
         ("min", MoneyFormatter.FormatWhole(0m, SupportedCurrencies.Default.Code)),
-        ("max", MoneyFormatter.FormatWhole(max, SupportedCurrencies.Default.Code)));
+        ("max", MoneyFormatter.FormatWhole(max, SupportedCurrencies.Default.Code))
+    ];
 
     private static bool TryLeafLabel(IStringLocalizer localizer, string leafId, out string label)
     {
