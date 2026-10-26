@@ -5,7 +5,7 @@ namespace PersonalFinance.Shared.Contracts;
 
 /// <summary>
 /// Refit API contract for Money Priorities. Every call is scoped to the signed-in Account. A rejected submit fails
-/// with 400 and a <see cref="MoneyPrioritiesValidationErrorsDto"/> body.
+/// with 400 and an <see cref="ApiErrorDto"/> body.
 /// </summary>
 public interface IMoneyPrioritiesApi
 {

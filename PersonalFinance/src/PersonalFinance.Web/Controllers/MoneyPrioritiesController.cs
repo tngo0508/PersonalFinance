@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
@@ -69,7 +68,7 @@ public class MoneyPrioritiesController : Controller
 
     /// <summary>
     /// Submits the answers as one Priority Walk and returns its result. A rejected submit answers 400 with the
-    /// ApiService's messages keyed by field, so the page can show each one under its field.
+    /// ApiService's messages in the request's Language, keyed by field, so the page can show each one under its field.
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -79,7 +78,7 @@ public class MoneyPrioritiesController : Controller
     {
         if (request == null)
         {
-            return BadRequest(new MoneyPrioritiesValidationErrorsDto
+            return BadRequest(new MoneyPrioritiesErrorsViewModel
             {
                 Errors = [_localizer["MoneyPriorities.Message.NoAnswers"]]
             });
@@ -92,35 +91,38 @@ public class MoneyPrioritiesController : Controller
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
         {
-            return BadRequest(await ValidationErrorsAsync(ex));
+            return BadRequest(Errors(ex));
         }
     }
 
     /// <summary>
-    /// The ApiService's field-keyed validation errors. Any other 400 body (say, a model-binding problem) becomes one
-    /// general message, never its raw text.
+    /// The ApiService's keyed validation errors in the request's Language: whole-request messages in
+    /// <see cref="MoneyPrioritiesErrorsViewModel.Errors"/>, the rest under their field. Any other 400 body (say, a
+    /// model-binding problem) becomes one general message, never its raw text.
     /// </summary>
-    private async Task<MoneyPrioritiesValidationErrorsDto> ValidationErrorsAsync(ApiException ex)
+    private MoneyPrioritiesErrorsViewModel Errors(ApiException ex)
     {
-        MoneyPrioritiesValidationErrorsDto? errors = null;
-        try
+        IReadOnlyDictionary<string, IReadOnlyList<string>> fields = ApiErrorMessages.Fields(_localizer, ex);
+        if (fields.Count == 0)
         {
-            errors = await ex.GetContentAsAsync<MoneyPrioritiesValidationErrorsDto>();
-        }
-        catch (JsonException)
-        {
-            _logger.LogWarning("ApiService rejected a Money Priorities submit with a body that is not field errors.");
+            _logger.LogWarning("ApiService rejected a Money Priorities submit with a body that is not keyed errors.");
+            return new MoneyPrioritiesErrorsViewModel { Errors = [_localizer["MoneyPriorities.Message.CheckAnswers"]] };
         }
 
-        errors ??= new MoneyPrioritiesValidationErrorsDto();
-        if (errors.Errors.Count == 0)
+        var errors = new MoneyPrioritiesErrorsViewModel();
+        foreach ((string field, IReadOnlyList<string> messages) in fields)
         {
-            errors.FieldErrors.Clear();
-            errors.Errors.Add(_localizer["MoneyPriorities.Message.CheckAnswers"]);
-            return errors;
+            if (field.Length == 0)
+            {
+                errors.Errors.AddRange(messages);
+            }
+            else
+            {
+                errors.FieldErrors[field] = [.. messages];
+            }
         }
 
-        return MoneyPrioritiesText.Localize(_localizer, errors);
+        return errors;
     }
 
     /// <summary>Returns one earlier Priority Walk with its figures recomputed (404 when the Account has none).</summary>

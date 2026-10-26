@@ -1,8 +1,14 @@
+using System.Globalization;
+using System.Reflection;
 using FluentValidation.Results;
 using PersonalFinance.ApiService.Features.MoneyPriorities.Validators;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Tests.MoneyPriorities;
 
@@ -363,5 +369,103 @@ public class SubmitPriorityWalkRequestValidatorTests
         longHorizon.EmployerMatchPercent = -3m;
 
         AssertValid(longHorizon);
+    }
+
+    /// <summary>Requests that, between them, break most rules: missing answers, out-of-range values and extra cents.</summary>
+    private static IEnumerable<SubmitPriorityWalkRequest> InvalidRequests() =>
+    [
+        new SubmitPriorityWalkRequest(),
+        new SubmitPriorityWalkRequest
+        {
+            MonthlyAmount = 2_000_000m, DebtApr = 200m, DebtBalance = -1m, Purpose = new string('x', 301)
+        },
+        new SubmitPriorityWalkRequest { MonthlyAmount = 10.001m, DebtApr = 22m, DebtBalance = 2_000_000m },
+        new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 0m, EmergencyFundMonths = 1m },
+        new SubmitPriorityWalkRequest
+        {
+            MonthlyAmount = 500m, DebtApr = 0m, EmergencyFundMonths = 1m, MonthlyExpenses = 2_000_000m
+        },
+        new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 0m, EmergencyFundMonths = 500m },
+        new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 0m, EmergencyFundMonths = 3m },
+        new SubmitPriorityWalkRequest
+        {
+            MonthlyAmount = 500m, DebtApr = 0m, EmergencyFundMonths = 3m, HasFullEmployerMatch = false,
+            EmployerMatchPercent = 500m
+        },
+        new SubmitPriorityWalkRequest
+        {
+            MonthlyAmount = 500m, DebtApr = 0m, EmergencyFundMonths = 3m, HasFullEmployerMatch = true
+        },
+        new SubmitPriorityWalkRequest
+        {
+            MonthlyAmount = 500m, DebtApr = 0m, EmergencyFundMonths = 3m, HasFullEmployerMatch = true,
+            HorizonYears = 99
+        },
+        new SubmitPriorityWalkRequest
+        {
+            MonthlyAmount = 500m, DebtApr = 0m, EmergencyFundMonths = 3m, HasFullEmployerMatch = true,
+            HorizonYears = 25
+        }
+    ];
+
+    private List<ValidationFailure> FailuresOf(IEnumerable<SubmitPriorityWalkRequest> requests) =>
+        requests.SelectMany(request => _validator.Validate(request).Errors).ToList();
+
+    [Fact]
+    public void EveryFailure_HasAKeyFromApiErrorKeys()
+    {
+        HashSet<string> keys = typeof(ApiErrorKeys.MoneyPriorities)
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(f => f.IsLiteral && f.FieldType == typeof(string))
+            .Select(f => (string)f.GetRawConstantValue()!)
+            .ToHashSet(StringComparer.Ordinal);
+        List<ValidationFailure> failures = FailuresOf(InvalidRequests());
+
+        Assert.NotEmpty(failures);
+        Assert.All(failures, failure => Assert.Contains(failure.ErrorCode, keys));
+    }
+
+    [Fact]
+    public void RangeFailures_CarryMinAndMaxMoneyArgs()
+    {
+        SubmitPriorityWalkRequest request = DebtPath();
+        request.MonthlyAmount = 2_000_000m;
+
+        ValidationFailure failure = Assert.Single(_validator.Validate(request).Errors);
+
+        Assert.Equal(ApiErrorKeys.MoneyPriorities.MonthlyAmountRange, failure.ErrorCode);
+        IReadOnlyDictionary<string, ApiErrorArgDto> args =
+            Assert.IsAssignableFrom<IReadOnlyDictionary<string, ApiErrorArgDto>>(failure.CustomState);
+        Assert.Equal("1000000", args["max"].Value);
+        Assert.Equal(ApiErrorArgKind.Money, args["max"].Kind);
+        Assert.Equal("USD", args["max"].Currency);
+        Assert.Equal("0", args["min"].Value);
+        Assert.Equal(ApiErrorArgKind.Money, args["min"].Kind);
+        Assert.Equal("USD", args["min"].Currency);
+    }
+
+    [Fact]
+    public void ResolvingEveryFailureInEnglish_LeavesNoPlaceholder()
+    {
+        using var uiCulture = new UiCultureScope("en");
+        CultureInfo formatting = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+        try
+        {
+            ApiErrorDto body = new ValidationResult(FailuresOf(InvalidRequests())).ToApiError();
+
+            Assert.NotEmpty(body.Errors);
+            foreach (ApiErrorEntryDto entry in body.Errors)
+            {
+                Assert.False(TestLocalization.Localizer[entry.Key].ResourceNotFound, entry.Key);
+                string text = ApiErrorMessages.Resolve(TestLocalization.Localizer, entry);
+                Assert.DoesNotContain("{", text);
+                Assert.DoesNotContain("}", text);
+            }
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = formatting;
+        }
     }
 }

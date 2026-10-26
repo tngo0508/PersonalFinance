@@ -2,6 +2,8 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Helpers;
 
@@ -29,11 +31,12 @@ public class MoneyPrioritiesController : ControllerBase
 
     /// <summary>
     /// Walks the Priority Tree from the answers and saves a Priority Walk, unless it is identical to the Account's
-    /// latest one, which is returned instead. A rejected request gets 400 with its messages keyed by field.
+    /// latest one, which is returned instead. A rejected request gets 400 with an <see cref="ApiErrorDto"/>: one keyed
+    /// entry per broken rule, with its field.
     /// </summary>
     [HttpPost("walks")]
     [ProducesResponseType(typeof(PriorityWalkResultDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(MoneyPrioritiesValidationErrorsDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Submit([FromBody] SubmitPriorityWalkRequest request,
         CancellationToken cancellationToken = default)
@@ -41,7 +44,7 @@ public class MoneyPrioritiesController : ControllerBase
         ValidationResult validation = await _submitValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(ToErrors(validation));
+            return BadRequest(validation.ToApiError());
         }
 
         return Ok(await _service.SubmitAsync(User.GetUserId(), request, cancellationToken));
@@ -93,12 +96,4 @@ public class MoneyPrioritiesController : ControllerBase
     [ProducesResponseType(typeof(PriorityTreeDiagramDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public IActionResult Tree() => Ok(_service.GetTree());
-
-    private static MoneyPrioritiesValidationErrorsDto ToErrors(ValidationResult validation) => new()
-    {
-        Errors = validation.Errors.Select(e => e.ErrorMessage).ToList(),
-        FieldErrors = validation.Errors
-            .GroupBy(e => e.PropertyName, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToList(), StringComparer.Ordinal)
-    };
 }

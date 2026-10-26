@@ -1,6 +1,8 @@
 using FluentValidation;
 using PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 
 namespace PersonalFinance.ApiService.Features.MoneyPriorities.Validators;
@@ -13,67 +15,136 @@ namespace PersonalFinance.ApiService.Features.MoneyPriorities.Validators;
 /// </summary>
 internal sealed class SubmitPriorityWalkRequestValidator : AbstractValidator<SubmitPriorityWalkRequest>
 {
+    // The {min} and {max} of each "over {min} and at most {max}" amount message.
+    private static readonly IReadOnlyDictionary<string, ApiErrorArgDto> MonthlyAmountRangeArgs =
+        ErrorArgs.MoneyRange(0m, MoneyPrioritiesLimits.MonthlyAmountMax, SupportedCurrencies.Default.Code);
+
+    private static readonly IReadOnlyDictionary<string, ApiErrorArgDto> DebtBalanceRangeArgs =
+        ErrorArgs.MoneyRange(0m, MoneyPrioritiesLimits.DebtBalanceMax, SupportedCurrencies.Default.Code);
+
+    private static readonly IReadOnlyDictionary<string, ApiErrorArgDto> MonthlyExpensesRangeArgs =
+        ErrorArgs.MoneyRange(0m, MoneyPrioritiesLimits.MonthlyExpensesMax, SupportedCurrencies.Default.Code);
+
     public SubmitPriorityWalkRequestValidator()
     {
         RuleFor(x => x.MonthlyAmount)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.MonthlyAmountRequired)
-            .GreaterThan(0m).WithMessage(MoneyPrioritiesMessages.MonthlyAmountRange)
-            .LessThanOrEqualTo(MoneyPrioritiesLimits.MonthlyAmountMax).WithMessage(MoneyPrioritiesMessages.MonthlyAmountRange)
-            .PrecisionScale(18, 2, true).WithMessage(MoneyPrioritiesMessages.WholeCents);
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyAmountRequired)
+                .WithMessage(MoneyPrioritiesMessages.MonthlyAmountRequired)
+            .GreaterThan(0m)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyAmountRange)
+                .WithMessage(MoneyPrioritiesMessages.MonthlyAmountRange)
+                .WithState(_ => MonthlyAmountRangeArgs)
+            .LessThanOrEqualTo(MoneyPrioritiesLimits.MonthlyAmountMax)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyAmountRange)
+                .WithMessage(MoneyPrioritiesMessages.MonthlyAmountRange)
+                .WithState(_ => MonthlyAmountRangeArgs)
+            .PrecisionScale(18, 2, true)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.WholeCents)
+                .WithMessage(MoneyPrioritiesMessages.WholeCents);
 
         RuleFor(x => x.Purpose)
-            .MaximumLength(MoneyPrioritiesLimits.PurposeMaxLength).WithMessage(MoneyPrioritiesMessages.PurposeTooLong);
+            .MaximumLength(MoneyPrioritiesLimits.PurposeMaxLength)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.PurposeTooLong)
+                .WithMessage(MoneyPrioritiesMessages.PurposeTooLong);
 
         RuleFor(x => x.DebtApr)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.DebtAprRequired)
-            .InclusiveBetween(0m, MoneyPrioritiesLimits.DebtAprMax).WithMessage(MoneyPrioritiesMessages.DebtAprRange)
-            .PrecisionScale(5, 2, true).WithMessage(MoneyPrioritiesMessages.DebtAprRange);
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.DebtAprRequired)
+                .WithMessage(MoneyPrioritiesMessages.DebtAprRequired)
+            .InclusiveBetween(0m, MoneyPrioritiesLimits.DebtAprMax)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.DebtAprRange)
+                .WithMessage(MoneyPrioritiesMessages.DebtAprRange)
+            .PrecisionScale(5, 2, true)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.DebtAprRange)
+                .WithMessage(MoneyPrioritiesMessages.DebtAprRange);
 
         RuleFor(x => x.DebtBalance)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.DebtBalanceRequired)
-            .GreaterThan(0m).WithMessage(MoneyPrioritiesMessages.DebtBalanceRange)
-            .LessThanOrEqualTo(MoneyPrioritiesLimits.DebtBalanceMax).WithMessage(MoneyPrioritiesMessages.DebtBalanceRange)
-            .PrecisionScale(18, 2, true).WithMessage(MoneyPrioritiesMessages.WholeCents)
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.DebtBalanceRequired)
+                .WithMessage(MoneyPrioritiesMessages.DebtBalanceRequired)
+            .GreaterThan(0m)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.DebtBalanceRange)
+                .WithMessage(MoneyPrioritiesMessages.DebtBalanceRange)
+                .WithState(_ => DebtBalanceRangeArgs)
+            .LessThanOrEqualTo(MoneyPrioritiesLimits.DebtBalanceMax)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.DebtBalanceRange)
+                .WithMessage(MoneyPrioritiesMessages.DebtBalanceRange)
+                .WithState(_ => DebtBalanceRangeArgs)
+            .PrecisionScale(18, 2, true)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.WholeCents)
+                .WithMessage(MoneyPrioritiesMessages.WholeCents)
             .When(AsksDebtBalance);
 
         RuleFor(x => x.EmergencyFundMonths)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.EmergencyFundMonthsRequired)
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.EmergencyFundMonthsRequired)
+                .WithMessage(MoneyPrioritiesMessages.EmergencyFundMonthsRequired)
             .InclusiveBetween(0m, MoneyPrioritiesLimits.EmergencyFundMonthsMax)
-            .WithMessage(MoneyPrioritiesMessages.EmergencyFundMonthsRange)
-            .PrecisionScale(4, 1, true).WithMessage(MoneyPrioritiesMessages.EmergencyFundMonthsRange)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.EmergencyFundMonthsRange)
+                .WithMessage(MoneyPrioritiesMessages.EmergencyFundMonthsRange)
+            .PrecisionScale(4, 1, true)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.EmergencyFundMonthsRange)
+                .WithMessage(MoneyPrioritiesMessages.EmergencyFundMonthsRange)
             .When(AsksEmergencyFund);
 
         RuleFor(x => x.MonthlyExpenses)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRequired)
-            .GreaterThan(0m).WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRange)
-            .LessThanOrEqualTo(MoneyPrioritiesLimits.MonthlyExpensesMax).WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRange)
-            .PrecisionScale(18, 2, true).WithMessage(MoneyPrioritiesMessages.WholeCents)
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyExpensesRequired)
+                .WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRequired)
+            .GreaterThan(0m)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyExpensesRange)
+                .WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRange)
+                .WithState(_ => MonthlyExpensesRangeArgs)
+            .LessThanOrEqualTo(MoneyPrioritiesLimits.MonthlyExpensesMax)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyExpensesRange)
+                .WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRange)
+                .WithState(_ => MonthlyExpensesRangeArgs)
+            .PrecisionScale(18, 2, true)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.WholeCents)
+                .WithMessage(MoneyPrioritiesMessages.WholeCents)
             .When(AsksMonthlyExpenses);
 
         RuleFor(x => x.HasFullEmployerMatch)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.HasFullEmployerMatchRequired)
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.HasFullEmployerMatchRequired)
+                .WithMessage(MoneyPrioritiesMessages.HasFullEmployerMatchRequired)
             .When(AsksEmployerMatch);
 
         RuleFor(x => x.EmployerMatchPercent)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.EmployerMatchPercentRequired)
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.EmployerMatchPercentRequired)
+                .WithMessage(MoneyPrioritiesMessages.EmployerMatchPercentRequired)
             .InclusiveBetween(0m, MoneyPrioritiesLimits.EmployerMatchPercentMax)
-            .WithMessage(MoneyPrioritiesMessages.EmployerMatchPercentRange)
-            .PrecisionScale(5, 2, true).WithMessage(MoneyPrioritiesMessages.EmployerMatchPercentRange)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.EmployerMatchPercentRange)
+                .WithMessage(MoneyPrioritiesMessages.EmployerMatchPercentRange)
+            .PrecisionScale(5, 2, true)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.EmployerMatchPercentRange)
+                .WithMessage(MoneyPrioritiesMessages.EmployerMatchPercentRange)
             .When(AsksEmployerMatchPercent);
 
         RuleFor(x => x.HorizonYears)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.HorizonYearsRequired)
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.HorizonYearsRequired)
+                .WithMessage(MoneyPrioritiesMessages.HorizonYearsRequired)
             .InclusiveBetween(MoneyPrioritiesLimits.HorizonYearsMin, MoneyPrioritiesLimits.HorizonYearsMax)
-            .WithMessage(MoneyPrioritiesMessages.HorizonYearsRange)
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.HorizonYearsRange)
+                .WithMessage(MoneyPrioritiesMessages.HorizonYearsRange)
             .When(AsksHorizon);
 
         RuleFor(x => x.AgeBand)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.AgeBandRequired)
-            .IsInEnum().WithMessage(MoneyPrioritiesMessages.AgeBandRequired)
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.AgeBandRequired)
+                .WithMessage(MoneyPrioritiesMessages.AgeBandRequired)
+            .IsInEnum()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.AgeBandRequired)
+                .WithMessage(MoneyPrioritiesMessages.AgeBandRequired)
             .When(AsksContributionLimit);
 
         RuleFor(x => x.AtContributionLimit)
-            .NotNull().WithMessage(MoneyPrioritiesMessages.AtContributionLimitRequired)
+            .NotNull()
+                .WithErrorCode(ApiErrorKeys.MoneyPriorities.AtContributionLimitRequired)
+                .WithMessage(MoneyPrioritiesMessages.AtContributionLimitRequired)
             .When(AsksContributionLimit);
     }
 

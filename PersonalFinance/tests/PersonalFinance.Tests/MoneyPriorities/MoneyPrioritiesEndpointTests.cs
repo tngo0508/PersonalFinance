@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Features.MoneyPriorities.Validators;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using MoneyPrioritiesApiController = PersonalFinance.ApiService.Features.MoneyPriorities.MoneyPrioritiesController;
 
@@ -61,7 +62,7 @@ public class MoneyPrioritiesEndpointTests
     }
 
     [Fact]
-    public async Task Submit_AnInvalidWalk_Returns400_WithMessagesKeyedByField_AndSavesNothing()
+    public async Task Submit_AnInvalidWalk_Returns400_WithAKeyedEntryPerField_AndSavesNothing()
     {
         await using AppDbContext db = CreateContext();
         var request = new SubmitPriorityWalkRequest { MonthlyAmount = 0m, DebtApr = 22m };
@@ -69,13 +70,15 @@ public class MoneyPrioritiesEndpointTests
         IActionResult result = await CreateController(db).Submit(request);
 
         BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        MoneyPrioritiesValidationErrorsDto body = Assert.IsType<MoneyPrioritiesValidationErrorsDto>(badRequest.Value);
-        Assert.Equal([MoneyPrioritiesMessages.MonthlyAmountRange],
-            body.FieldErrors[nameof(SubmitPriorityWalkRequest.MonthlyAmount)]);
-        Assert.Equal([MoneyPrioritiesMessages.DebtBalanceRequired],
-            body.FieldErrors[nameof(SubmitPriorityWalkRequest.DebtBalance)]);
-        Assert.Equal(2, body.FieldErrors.Count);
-        Assert.Equal([MoneyPrioritiesMessages.MonthlyAmountRange, MoneyPrioritiesMessages.DebtBalanceRequired], body.Errors);
+        ApiErrorDto body = Assert.IsType<ApiErrorDto>(badRequest.Value);
+        Assert.Equal(
+            [
+                (ApiErrorKeys.MoneyPriorities.MonthlyAmountRange, MoneyPrioritiesMessages.MonthlyAmountRange,
+                    nameof(SubmitPriorityWalkRequest.MonthlyAmount)),
+                (ApiErrorKeys.MoneyPriorities.DebtBalanceRequired, MoneyPrioritiesMessages.DebtBalanceRequired,
+                    nameof(SubmitPriorityWalkRequest.DebtBalance))
+            ],
+            body.Errors.Select(e => (e.Key, e.Message, e.Field)));
         Assert.Empty(await db.PriorityWalks.ToListAsync());
     }
 
