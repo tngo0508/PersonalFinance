@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure;
 
@@ -51,7 +52,7 @@ public partial class WebApiRouteTests
             Exception = new OperationCanceledException()
         };
 
-        new JsonApiErrorsFilter(NullLogger<JsonApiErrorsFilter>.Instance).OnException(context);
+        new JsonApiErrorsFilter(NullLogger<JsonApiErrorsFilter>.Instance, TestLocalization.Localizer).OnException(context);
 
         Assert.False(context.ExceptionHandled);
         Assert.Null(context.Result);

@@ -69,7 +69,7 @@ public class PersonalDataPageTests
         IActionResult result = await page.OnPostDownloadAsync();
 
         Assert.IsType<PageResult>(result);
-        Assert.Equal(JsonApiErrorsFilter.UnavailableMessage, page.ErrorMessage);
+        Assert.Equal(TestLocalization.Localizer["Errors.Unavailable"].Value, page.ErrorMessage);
         Assert.DoesNotContain("connection refused", page.ErrorMessage);
     }
 

@@ -181,7 +181,7 @@ public class DeletionPagesTests
         await page.OnPostAsync();
 
         Assert.False(page.Cancelled);
-        Assert.Equal(JsonApiErrorsFilter.UnavailableMessage, page.ErrorMessage);
+        Assert.Equal(TestLocalization.Localizer["Errors.Unavailable"].Value, page.ErrorMessage);
     }
 
     [Theory]

@@ -25,7 +25,7 @@ public class AdminFeedbackInboxWebTests
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "admin-user")], "TestAuthType");
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
 
-        return new AdminController(adminApi, feedbackApi, NullLogger<AdminController>.Instance)
+        return new AdminController(adminApi, feedbackApi, NullLogger<AdminController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())

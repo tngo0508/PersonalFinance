@@ -95,7 +95,7 @@ public class DeletePersonalDataModel : PageModel
             }
 
             ModelState.AddModelError(string.Empty,
-                ApiErrorMessages.ForUser(ex, _localizer["Account.DeleteAccount.Failed"]));
+                ApiErrorMessages.ForUser(_localizer, ex, _localizer["Account.DeleteAccount.Failed"]));
             return Page();
         }
 

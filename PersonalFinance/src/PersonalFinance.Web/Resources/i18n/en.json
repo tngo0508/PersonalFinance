@@ -303,6 +303,14 @@
   "Email.Deletion.Button": "Cancel Deletion",
   "Email.Deletion.Footer": "This link works once. If you did not ask to delete your account, cancel now and change your password.",
 
+  "Errors.Conflict": "A conflict occurred while processing the request.",
+  "Errors.Generic": "An error occurred while processing the request.",
+  "Errors.InvalidRequest": "The request was invalid.",
+  "Errors.NotFound": "The requested resource was not found.",
+  "Errors.Server": "A server error occurred. Please try again.",
+  "Errors.Unavailable": "The service is temporarily unavailable. Please try again.",
+  "Errors.Unexpected": "Something went wrong. Please try again.",
+
   "Notifications.BudgetExceeded.Title": "Budget exceeded",
   "Notifications.BudgetWarning.Title": "Budget warning",
   "Notifications.BudgetAlert.Message": "Your total spending has reached {percent}% of your budgeted amount for {period}.",

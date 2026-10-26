@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Tests;
@@ -23,7 +24,7 @@ public static class FilteredAction
             var actionContext = new ActionContext(controller.HttpContext, controller.RouteData ?? new(),
                 controller.ControllerContext.ActionDescriptor ?? new ActionDescriptor());
             var context = new ExceptionContext(actionContext, []) { Exception = ex };
-            new JsonApiErrorsFilter(NullLogger<JsonApiErrorsFilter>.Instance).OnException(context);
+            new JsonApiErrorsFilter(NullLogger<JsonApiErrorsFilter>.Instance, TestLocalization.Localizer).OnException(context);
             if (!context.ExceptionHandled)
             {
                 throw;

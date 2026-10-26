@@ -84,23 +84,22 @@ public class BudgetTrackerWebControllerTests
         string json = """{"errors": ["Year must be between 1900 and 2100.", "Month must be between 1 and 12."]}""";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
         Assert.Equal("Year must be between 1900 and 2100.; Month must be between 1 and 12.", msg);
     }
 
     [Fact]
-    public async Task GetApiErrorMessage_WhenObjectDictionaryErrors_PrefersErrorsOverTitle()
+    public async Task GetApiErrorMessage_WhenValidationProblemDetails_ShowsInvalidRequestNotItsEnglishText()
     {
         string json =
             """{"title": "One or more validation errors occurred.", "errors": {"Amount": ["Amount must be greater than 0."], "Date": ["Date is required."]}}""";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
-        Assert.Contains("Amount must be greater than 0.", msg);
-        Assert.Contains("Date is required.", msg);
-        Assert.DoesNotContain("One or more validation errors occurred.", msg);
+        Assert.Equal(TestLocalization.Localizer["Errors.InvalidRequest"].Value, msg);
+        Assert.DoesNotContain("Amount must be greater than 0.", msg);
     }
 
     [Fact]
@@ -109,7 +108,7 @@ public class BudgetTrackerWebControllerTests
         string json = """{"error": "Category 'Dining' already exists."}""";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.Conflict, json);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
         Assert.Equal("Category 'Dining' already exists.", msg);
     }
@@ -120,7 +119,7 @@ public class BudgetTrackerWebControllerTests
         string json = """{"detail": "The specified monthly budget line was not found."}""";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.NotFound, json);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
         Assert.Equal("The specified monthly budget line was not found.", msg);
     }
@@ -131,7 +130,7 @@ public class BudgetTrackerWebControllerTests
         string json = """{"title": "Invalid Request Parameters"}""";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
         Assert.Equal("Invalid Request Parameters", msg);
     }
@@ -142,9 +141,9 @@ public class BudgetTrackerWebControllerTests
         string json = """{"title": "Internal Server Error", "detail": "System.NullReferenceException at Service.cs:42"}""";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.InternalServerError, json);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
-        Assert.Equal("A server error occurred. Please try again.", msg);
+        Assert.Equal(TestLocalization.Localizer["Errors.Server"].Value, msg);
     }
 
     [Fact]
@@ -153,9 +152,9 @@ public class BudgetTrackerWebControllerTests
         string html = "<html><body>502 Bad Gateway</body></html>";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadGateway, html);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
-        Assert.Equal("A server error occurred. Please try again.", msg);
+        Assert.Equal(TestLocalization.Localizer["Errors.Server"].Value, msg);
     }
 
     [Fact]
@@ -164,9 +163,9 @@ public class BudgetTrackerWebControllerTests
         string text = "plain text bad request";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, text);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
-        Assert.Equal("An error occurred while processing the request.", msg);
+        Assert.Equal(TestLocalization.Localizer["Errors.Generic"].Value, msg);
     }
 
     [Fact]
@@ -174,9 +173,9 @@ public class BudgetTrackerWebControllerTests
     {
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.NotFound, string.Empty);
 
-        string msg = ApiErrorMessages.FromApiException(apiEx);
+        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
-        Assert.Equal("The requested resource was not found.", msg);
+        Assert.Equal(TestLocalization.Localizer["Errors.NotFound"].Value, msg);
     }
 
     [Fact]

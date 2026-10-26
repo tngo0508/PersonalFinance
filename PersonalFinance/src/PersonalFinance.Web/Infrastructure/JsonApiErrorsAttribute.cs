@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Localization;
 using Refit;
 
 namespace PersonalFinance.Web.Infrastructure;
@@ -24,18 +25,17 @@ public sealed class JsonApiErrorsAttribute : TypeFilterAttribute
 /// <item>ApiService unreachable: 502.</item>
 /// <item>Anything else: 500 with a generic message (details are logged, never returned).</item>
 /// </list>
-/// A cancelled request (the browser went away) is not handled.
+/// Messages are in the reader's language. A cancelled request (the browser went away) is not handled.
 /// </summary>
 public sealed class JsonApiErrorsFilter : IExceptionFilter
 {
-    public const string UnavailableMessage = "The service is temporarily unavailable. Please try again.";
-    public const string UnexpectedMessage = "Something went wrong. Please try again.";
-
     private readonly ILogger<JsonApiErrorsFilter> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public JsonApiErrorsFilter(ILogger<JsonApiErrorsFilter> logger)
+    public JsonApiErrorsFilter(ILogger<JsonApiErrorsFilter> logger, IStringLocalizer localizer)
     {
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <inheritdoc />
@@ -53,19 +53,19 @@ public sealed class JsonApiErrorsFilter : IExceptionFilter
         {
             case ApiException apiException:
                 statusCode = (int)apiException.StatusCode;
-                message = ApiErrorMessages.FromApiException(apiException);
+                message = ApiErrorMessages.FromApiException(_localizer, apiException);
                 _logger.LogWarning(apiException, "ApiService returned {StatusCode} for {Action}.", statusCode, action);
                 break;
             case HttpRequestException:
             case TimeoutException:
             case TaskCanceledException:
                 statusCode = StatusCodes.Status502BadGateway;
-                message = UnavailableMessage;
+                message = _localizer["Errors.Unavailable"].Value;
                 _logger.LogError(context.Exception, "ApiService unreachable for {Action}.", action);
                 break;
             default:
                 statusCode = StatusCodes.Status500InternalServerError;
-                message = UnexpectedMessage;
+                message = _localizer["Errors.Unexpected"].Value;
                 _logger.LogError(context.Exception, "Unexpected error in {Action}.", action);
                 break;
         }
