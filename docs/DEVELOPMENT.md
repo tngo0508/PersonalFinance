@@ -101,6 +101,9 @@ MSSQL_SA_PASSWORD=<your strong password>
 SQL_HOST_PORT=1433
 ```
 
+The `AZURE_TRANSLATOR_KEY`, `AZURE_TRANSLATOR_REGION` and `AZURE_TRANSLATOR_ENDPOINT` lines are optional: only
+`npm run i18n:translate` reads them (see "Translations"). Leave them blank unless you draft translations locally.
+
 SQL Server refuses to start with a weak password. It must be **at least 8 characters** and contain characters from
 **at least three** of these four groups: uppercase letters, lowercase letters, digits, and symbols. Avoid `'`, `"` and
 `;` in the password so it stays easy to quote in a connection string.
