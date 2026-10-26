@@ -37,7 +37,8 @@
                     <div class="dash-activity__body">
                         <div class="dash-activity__row">
                             <span class="dash-activity__title">@activity.Title</span>
-                            <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@activity.Date.ToString("MMM d, yyyy")</time>
+                            @* TimeAgoTagHelper writes the text ("5d ago", or the date in the reader's format) from the datetime attribute. *@
+                            <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"></time>
                         </div>
                         <span class="dash-activity__description">@DashboardText.ActivityDescription(L, activity)</span>
                     </div>
