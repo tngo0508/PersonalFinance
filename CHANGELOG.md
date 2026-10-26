@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [8.3.0] - 2026-10-26
+
+### Added
+
+- **Budget Tracker and Budget Planner errors in Vietnamese**: every rejection the two Features return carries a localization key, so the Budget Tracker's category, transaction, planned-amount and month errors and the Budget Planner's income and allocation errors answer in the reader's language, with limits formatted in the reader's culture (slice E2 of the localized API errors spec, #385).
+  - The six Budget Tracker validators and the Budget Planner validator set `.WithErrorCode(ApiErrorKeys…)` on every rule and pass their bounds as typed arguments; `MonthlyBudgetService` throws `ApiErrorException` for a missing category or transaction (404), a duplicate category (409), a kind change and an archived category; the "Invalid year or month." route check is a key.
+  - The Budget Planner's allocation rules are one shared helper per field instead of ten repeated blocks.
+- **Wire-format guard for keyed errors**: a `WebApplicationFactory` test calls the real ApiService pipeline and asserts a service rejection arrives as a camelCase `ApiErrorDto` with its status code, so the global `ApiErrorExceptionFilter` registration in `Program.cs` cannot be dropped unnoticed.
+- **Guard tests cover the budget Features**: `ApiErrorArchitectureTests` scans Budget Tracker and Budget Planner for literal error bodies and unkeyed rejections, and each Feature has a test that resolves every validator failure in English with no placeholder left.
+
+### Removed
+
+- **`DuplicateCategoryException`**: the Budget Tracker's duplicate-category rejection is an `ApiErrorException` with the `BudgetTracker.Error.DuplicateCategory` key; `BudgetTrackerController` no longer catches and rewraps service exceptions, and `BudgetController` no longer returns the `{ ErrorCode, ErrorMessage }` shape.
 ## [8.2.0] - 2026-10-26
 
 ### Added

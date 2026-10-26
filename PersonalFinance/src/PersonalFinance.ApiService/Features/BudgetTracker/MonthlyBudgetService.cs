@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
@@ -349,7 +350,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (category == null)
         {
-            throw new KeyNotFoundException("Category not found.");
+            throw CategoryNotFound();
         }
 
         await EnsureArchivedCategoryIsEditableInMonthAsync(category, userId, year, month, ct);
@@ -425,7 +426,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (category == null)
         {
-            throw new KeyNotFoundException("Category not found.");
+            throw CategoryNotFound();
         }
 
         await EnsureArchivedCategoryIsEditableInMonthAsync(category, userId, year, month, ct);
@@ -533,7 +534,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (duplicate)
         {
-            throw new DuplicateCategoryException($"Category '{name}' already exists for {request.Kind}.");
+            throw DuplicateCategory(name);
         }
 
         var category = new BudgetCategory
@@ -563,7 +564,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
             if (existing)
             {
-                throw new DuplicateCategoryException($"Category '{name}' already exists for {request.Kind}.");
+                throw DuplicateCategory(name);
             }
 
             throw;
@@ -590,12 +591,13 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (category == null)
         {
-            throw new KeyNotFoundException("Category not found.");
+            throw CategoryNotFound();
         }
 
         if (request.Kind != category.Kind)
         {
-            throw new ArgumentException("Category kind cannot be changed.");
+            throw new ApiErrorException(ApiErrorKeys.BudgetTracker.CategoryKindImmutable,
+                "Category kind cannot be changed.", nameof(SaveCategoryRequest.Kind));
         }
 
         string name = request.Name.Trim();
@@ -605,7 +607,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (duplicate)
         {
-            throw new DuplicateCategoryException($"Category '{name}' already exists for {category.Kind}.");
+            throw DuplicateCategory(name);
         }
 
         category.Name = name;
@@ -632,7 +634,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (category == null)
         {
-            throw new KeyNotFoundException("Category not found.");
+            throw CategoryNotFound();
         }
 
         category.SoftDelete();
@@ -655,10 +657,10 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
             if (archivedCat != null)
             {
-                throw new ArgumentException("Cannot add transaction to an archived category.");
+                throw ArchivedCategory();
             }
 
-            throw new KeyNotFoundException("Category not found.");
+            throw CategoryNotFound();
         }
 
         var transaction = new BudgetTransaction
@@ -694,7 +696,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (transaction == null)
         {
-            throw new KeyNotFoundException("Transaction not found.");
+            throw TransactionNotFound();
         }
 
         BudgetCategory? category = await _dbContext.BudgetCategories
@@ -708,10 +710,10 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
             if (archivedCat != null)
             {
-                throw new ArgumentException("Cannot assign transaction to an archived category.");
+                throw ArchivedCategory();
             }
 
-            throw new KeyNotFoundException("Category not found.");
+            throw CategoryNotFound();
         }
 
         transaction.CategoryId = request.CategoryId;
@@ -742,7 +744,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (transaction == null)
         {
-            throw new KeyNotFoundException("Transaction not found.");
+            throw TransactionNotFound();
         }
 
         transaction.SoftDelete();
@@ -841,9 +843,27 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         if (!hasTransactions)
         {
-            throw new KeyNotFoundException("Category not found.");
+            throw CategoryNotFound();
         }
     }
+
+    /// <summary>The 404 for a category that does not exist, is another user's, or is archived where that is not allowed.</summary>
+    private static ApiErrorException CategoryNotFound() =>
+        new(ApiErrorKeys.BudgetTracker.CategoryNotFound, "Category not found.", statusCode: StatusCodes.Status404NotFound);
+
+    /// <summary>The 404 for a transaction that does not exist or is another user's.</summary>
+    private static ApiErrorException TransactionNotFound() =>
+        new(ApiErrorKeys.BudgetTracker.TransactionNotFound, "Transaction not found.", statusCode: StatusCodes.Status404NotFound);
+
+    /// <summary>The 409 for a category whose name another category of the same kind already has.</summary>
+    private static ApiErrorException DuplicateCategory(string name) =>
+        new(ApiErrorKeys.BudgetTracker.DuplicateCategory, $"A category named \"{name}\" already exists.",
+            nameof(SaveCategoryRequest.Name), ErrorArgs.Text("name", name), StatusCodes.Status409Conflict);
+
+    /// <summary>The 400 for a transaction given to an archived category.</summary>
+    private static ApiErrorException ArchivedCategory() =>
+        new(ApiErrorKeys.BudgetTracker.ArchivedCategory, "Transactions cannot be added to an archived category.",
+            nameof(SaveTransactionRequest.CategoryId));
 
     /// <summary>
     /// Matches a category whose name equals <paramref name="name"/>, ignoring case. Used by the duplicate-category

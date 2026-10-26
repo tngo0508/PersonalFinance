@@ -8,6 +8,8 @@ using PersonalFinance.ApiService.Features.BudgetTracker;
 using PersonalFinance.ApiService.Features.BudgetTracker.Validators;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
@@ -93,18 +95,21 @@ public class BudgetTrackerControllerTests
     }
 
     [Fact]
-    public async Task GetSheet_WithInvalidMonth_Returns400BadRequest()
+    public async Task GetSheet_WithInvalidMonth_RejectsWithTheInvalidMonthKeyAs400()
     {
+        // The global ApiErrorExceptionFilter renders the exception as a 400 ApiErrorDto (ADR 0017).
         (BudgetTrackerController? controller, AppDbContext? db) = CreateController();
         await using (db)
         {
-            IActionResult result = await controller.GetSheet(2026, 13);
-            Assert.IsType<BadRequestObjectResult>(result);
+            ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(() => controller.GetSheet(2026, 13));
+
+            Assert.Equal(ApiErrorKeys.BudgetTracker.InvalidYearOrMonth, ex.Key);
+            Assert.Equal(StatusCodes.Status400BadRequest, ex.StatusCode);
         }
     }
 
     [Fact]
-    public async Task CreateCategory_WithDuplicateName_Returns409Conflict()
+    public async Task CreateCategory_WithDuplicateName_RejectsWithTheDuplicateKeyAs409()
     {
         (BudgetTrackerController? controller, AppDbContext? db) = CreateController();
         await using (db)
@@ -119,20 +124,21 @@ public class BudgetTrackerControllerTests
             Assert.IsType<ObjectResult>(result1);
             Assert.Equal(StatusCodes.Status201Created, ((ObjectResult)result1).StatusCode);
 
-            // Duplicate creation
-            IActionResult result2 = await controller.CreateCategory(new SaveCategoryRequest
-            {
-                Name = "freelance",
-                Kind = BudgetCategoryKind.Income,
-                SortOrder = 2
-            });
-            ConflictObjectResult conflict = Assert.IsType<ConflictObjectResult>(result2);
-            Assert.NotNull(conflict.Value);
+            // Duplicate creation: the service's rejection reaches the filter uncaught, as a 409
+            ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
+                controller.CreateCategory(new SaveCategoryRequest
+                {
+                    Name = "freelance",
+                    Kind = BudgetCategoryKind.Income,
+                    SortOrder = 2
+                }));
+            Assert.Equal(ApiErrorKeys.BudgetTracker.DuplicateCategory, ex.Key);
+            Assert.Equal(StatusCodes.Status409Conflict, ex.StatusCode);
         }
     }
 
     [Fact]
-    public async Task UpdateCategory_WithKindChange_Returns400BadRequest()
+    public async Task UpdateCategory_WithKindChange_RejectsWithTheImmutableKindKeyAs400()
     {
         (BudgetTrackerController? controller, AppDbContext? db) = CreateController();
         await using (db)
@@ -146,19 +152,21 @@ public class BudgetTrackerControllerTests
             var createdDto = (BudgetCategoryDto)((ObjectResult)created).Value!;
 
             // Attempt to change kind to Expense
-            IActionResult updateResult = await controller.UpdateCategory(createdDto.Id, new SaveCategoryRequest
-            {
-                Name = "Freelance",
-                Kind = BudgetCategoryKind.Expense,
-                SortOrder = 1
-            });
+            ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
+                controller.UpdateCategory(createdDto.Id, new SaveCategoryRequest
+                {
+                    Name = "Freelance",
+                    Kind = BudgetCategoryKind.Expense,
+                    SortOrder = 1
+                }));
 
-            Assert.IsType<BadRequestObjectResult>(updateResult);
+            Assert.Equal(ApiErrorKeys.BudgetTracker.CategoryKindImmutable, ex.Key);
+            Assert.Equal(StatusCodes.Status400BadRequest, ex.StatusCode);
         }
     }
 
     [Fact]
-    public async Task CreateTransaction_WithInvalidAmount_Returns400BadRequest()
+    public async Task CreateTransaction_WithInvalidAmount_Returns400WithTheKeyedBody()
     {
         (BudgetTrackerController? controller, AppDbContext? db) = CreateController();
         await using (db)
@@ -172,7 +180,11 @@ public class BudgetTrackerControllerTests
                 CategoryId = 1
             });
 
-            Assert.IsType<BadRequestObjectResult>(result);
+            BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            ApiErrorDto body = Assert.IsType<ApiErrorDto>(badRequest.Value);
+            ApiErrorEntryDto entry = Assert.Single(body.Errors);
+            Assert.Equal(ApiErrorKeys.BudgetTracker.TransactionAmountWholeCents, entry.Key);
+            Assert.Equal(nameof(SaveTransactionRequest.Amount), entry.Field);
         }
     }
 

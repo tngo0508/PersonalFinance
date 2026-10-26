@@ -3,6 +3,8 @@ using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Helpers;
 
@@ -11,6 +13,9 @@ namespace PersonalFinance.ApiService.Features.BudgetTracker;
 /// <summary>
 /// RESTful API controller for the Budget Tracker feature: monthly sheets, categories, transactions, and data source preference.
 /// All operations are isolated and scoped to the user identified by the authenticated Account (see XUserIdAuthenticationHandler).
+/// Every rejection is an <see cref="ApiErrorDto"/> carrying an <see cref="ApiErrorKeys.BudgetTracker"/> key (ADR 0017):
+/// a failed validator through <c>ToApiError()</c>, a service rejection through <see cref="ApiErrorException"/> and
+/// the global <see cref="ApiErrorExceptionFilter"/>.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -55,14 +60,11 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpGet("sheet")]
     [ProducesResponseType(typeof(MonthlyBudgetSheetDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetSheet([FromQuery] int year, [FromQuery] int month,
         CancellationToken ct = default)
     {
-        if (year < 1900 || year > 2100 || month < 1 || month > 12)
-        {
-            return BadRequest(new { error = "Invalid year or month." });
-        }
+        EnsureValidMonth(year, month);
 
         string userId = User.GetUserId();
         MonthlyBudgetSheetDto sheet = await _budgetService.GetSheetAsync(userId, year, month, ct);
@@ -74,14 +76,14 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpPost("months")]
     [ProducesResponseType(typeof(MonthlyBudgetSheetDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> InitializeMonth([FromBody] InitializeMonthRequest request,
         CancellationToken ct = default)
     {
         ValidationResult validation = await _initializeMonthValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
@@ -94,32 +96,22 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpPut("months/{year:int}/{month:int}/lines/{categoryId:int}/planned")]
     [ProducesResponseType(typeof(MonthlyBudgetSheetDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetPlanned(int year, int month, int categoryId,
         [FromBody] SetPlannedRequest request, CancellationToken ct = default)
     {
-        if (year < 1900 || year > 2100 || month < 1 || month > 12)
-        {
-            return BadRequest(new { error = "Invalid year or month." });
-        }
+        EnsureValidMonth(year, month);
 
         ValidationResult validation = await _setPlannedValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
-        try
-        {
-            MonthlyBudgetSheetDto sheet = await _budgetService.SetPlannedAsync(userId, year, month, categoryId, request, ct);
-            return Ok(sheet);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        MonthlyBudgetSheetDto sheet = await _budgetService.SetPlannedAsync(userId, year, month, categoryId, request, ct);
+        return Ok(sheet);
     }
 
     /// <summary>
@@ -127,32 +119,22 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpPut("months/{year:int}/{month:int}/lines/{categoryId:int}/actual-override")]
     [ProducesResponseType(typeof(MonthlyBudgetSheetDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetActualOverride(int year, int month, int categoryId,
         [FromBody] SetActualOverrideRequest request, CancellationToken ct = default)
     {
-        if (year < 1900 || year > 2100 || month < 1 || month > 12)
-        {
-            return BadRequest(new { error = "Invalid year or month." });
-        }
+        EnsureValidMonth(year, month);
 
         ValidationResult validation = await _setActualOverrideValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
-        try
-        {
-            MonthlyBudgetSheetDto sheet = await _budgetService.SetActualOverrideAsync(userId, year, month, categoryId, request, ct);
-            return Ok(sheet);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        MonthlyBudgetSheetDto sheet = await _budgetService.SetActualOverrideAsync(userId, year, month, categoryId, request, ct);
+        return Ok(sheet);
     }
 
     /// <summary>
@@ -173,27 +155,20 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpPost("categories")]
     [ProducesResponseType(typeof(BudgetCategoryDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreateCategory([FromBody] SaveCategoryRequest request,
         CancellationToken ct = default)
     {
         ValidationResult validation = await _saveCategoryValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
-        try
-        {
-            BudgetCategoryDto created = await _budgetService.CreateCategoryAsync(userId, request, ct);
-            return StatusCode(StatusCodes.Status201Created, created);
-        }
-        catch (DuplicateCategoryException ex)
-        {
-            return Conflict(new { error = ex.Message });
-        }
+        BudgetCategoryDto created = await _budgetService.CreateCategoryAsync(userId, request, ct);
+        return StatusCode(StatusCodes.Status201Created, created);
     }
 
     /// <summary>
@@ -201,36 +176,21 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpPut("categories/{id:int}")]
     [ProducesResponseType(typeof(BudgetCategoryDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateCategory(int id, [FromBody] SaveCategoryRequest request,
         CancellationToken ct = default)
     {
         ValidationResult validation = await _saveCategoryValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
-        try
-        {
-            BudgetCategoryDto updated = await _budgetService.UpdateCategoryAsync(userId, id, request, ct);
-            return Ok(updated);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
-        catch (DuplicateCategoryException ex)
-        {
-            return Conflict(new { error = ex.Message });
-        }
+        BudgetCategoryDto updated = await _budgetService.UpdateCategoryAsync(userId, id, request, ct);
+        return Ok(updated);
     }
 
     /// <summary>
@@ -238,19 +198,12 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpDelete("categories/{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteCategory(int id, CancellationToken ct = default)
     {
         string userId = User.GetUserId();
-        try
-        {
-            await _budgetService.DeleteCategoryAsync(userId, id, ct);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        await _budgetService.DeleteCategoryAsync(userId, id, ct);
+        return NoContent();
     }
 
     /// <summary>
@@ -258,31 +211,20 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpPost("transactions")]
     [ProducesResponseType(typeof(BudgetTransactionDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateTransaction([FromBody] SaveTransactionRequest request,
         CancellationToken ct = default)
     {
         ValidationResult validation = await _saveTransactionValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
-        try
-        {
-            BudgetTransactionDto created = await _budgetService.CreateTransactionAsync(userId, request, ct);
-            return StatusCode(StatusCodes.Status201Created, created);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        BudgetTransactionDto created = await _budgetService.CreateTransactionAsync(userId, request, ct);
+        return StatusCode(StatusCodes.Status201Created, created);
     }
 
     /// <summary>
@@ -290,31 +232,20 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpPut("transactions/{id:int}")]
     [ProducesResponseType(typeof(BudgetTransactionDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateTransaction(int id, [FromBody] SaveTransactionRequest request,
         CancellationToken ct = default)
     {
         ValidationResult validation = await _saveTransactionValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
-        try
-        {
-            BudgetTransactionDto updated = await _budgetService.UpdateTransactionAsync(userId, id, request, ct);
-            return Ok(updated);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        BudgetTransactionDto updated = await _budgetService.UpdateTransactionAsync(userId, id, request, ct);
+        return Ok(updated);
     }
 
     /// <summary>
@@ -322,19 +253,12 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpDelete("transactions/{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteTransaction(int id, CancellationToken ct = default)
     {
         string userId = User.GetUserId();
-        try
-        {
-            await _budgetService.DeleteTransactionAsync(userId, id, ct);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
+        await _budgetService.DeleteTransactionAsync(userId, id, ct);
+        return NoContent();
     }
 
     /// <summary>
@@ -354,14 +278,14 @@ public class BudgetTrackerController : ControllerBase
     /// </summary>
     [HttpPut("data-source")]
     [ProducesResponseType(typeof(BudgetDataSourceDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SetDataSource([FromBody] SetBudgetDataSourceRequest request,
         CancellationToken ct = default)
     {
         ValidationResult validation = await _setDataSourceValidator.ValidateAsync(request, ct);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
@@ -391,5 +315,14 @@ public class BudgetTrackerController : ControllerBase
         string userId = User.GetUserId();
         BudgetDataSourceSummaryDto removed = await _removalService.RemoveAsync(userId, ct);
         return Ok(removed);
+    }
+
+    /// <summary>Rejects a route whose year or month no sheet can be addressed by, before any service call.</summary>
+    private static void EnsureValidMonth(int year, int month)
+    {
+        if (!BudgetTrackerLimits.IsValidMonth(year, month))
+        {
+            throw new ApiErrorException(ApiErrorKeys.BudgetTracker.InvalidYearOrMonth, "Invalid year or month.");
+        }
     }
 }
