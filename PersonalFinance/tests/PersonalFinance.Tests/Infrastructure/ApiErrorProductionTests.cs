@@ -28,7 +28,7 @@ public class ApiErrorProductionTests
     public void Filter_RendersApiErrorException_AsItsStatusAndDto()
     {
         ExceptionContext context = RunFilter(
-            new ApiErrorException("Community.Error.PollNotFound", "Poll not found or inactive.", statusCode: 404));
+            new ApiErrorException("Community.Error.PollNotFound", "The poll was not found or is inactive.", statusCode: 404));
 
         Assert.True(context.ExceptionHandled);
         ObjectResult result = Assert.IsType<ObjectResult>(context.Result);
@@ -36,7 +36,7 @@ public class ApiErrorProductionTests
         ApiErrorDto dto = Assert.IsType<ApiErrorDto>(result.Value);
         ApiErrorEntryDto entry = Assert.Single(dto.Errors);
         Assert.Equal("Community.Error.PollNotFound", entry.Key);
-        Assert.Equal("Poll not found or inactive.", entry.Message);
+        Assert.Equal("The poll was not found or is inactive.", entry.Message);
         Assert.Null(entry.Field);
         Assert.Null(entry.Args);
     }

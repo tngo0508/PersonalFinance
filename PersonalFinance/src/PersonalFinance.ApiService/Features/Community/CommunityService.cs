@@ -50,7 +50,7 @@ internal sealed class CommunityService : ICommunityService
     {
         if (string.IsNullOrEmpty(request.PollCode))
         {
-            throw new ApiErrorException(ApiErrorKeys.Community.PollCodeRequired, "Poll code is required.");
+            throw new ApiErrorException(ApiErrorKeys.Community.PollCodeRequired, "A poll code is required.");
         }
 
         if (request.OptionId <= 0)
@@ -65,7 +65,7 @@ internal sealed class CommunityService : ICommunityService
         if (poll == null || !poll.IsActive)
         {
             _logger.LogWarning("Vote attempt on invalid or inactive poll: PollCode={PollCode}", request.PollCode);
-            throw new ApiErrorException(ApiErrorKeys.Community.PollNotFound, "Poll not found or inactive.");
+            throw new ApiErrorException(ApiErrorKeys.Community.PollNotFound, "The poll was not found or is inactive.");
         }
 
         // Check if the option belongs to the poll
@@ -151,7 +151,7 @@ internal sealed class CommunityService : ICommunityService
                 .FirstOrDefaultAsync(p => p.PollCode == request.PollCode, cancellationToken);
             if (poll == null)
             {
-                throw new ApiErrorException(ApiErrorKeys.Community.InvalidPoll, "Invalid poll.");
+                throw new ApiErrorException(ApiErrorKeys.Community.InvalidPoll, "No poll matches this code.");
             }
             pollId = poll.Id;
         }
@@ -251,7 +251,7 @@ internal sealed class CommunityService : ICommunityService
 
         if (poll == null)
         {
-            throw new ApiErrorException(ApiErrorKeys.Community.PollNotFound, "Poll not found or inactive.",
+            throw new ApiErrorException(ApiErrorKeys.Community.PollNotFound, "The poll was not found or is inactive.",
                 statusCode: StatusCodes.Status404NotFound);
         }
 
@@ -283,7 +283,7 @@ internal sealed class CommunityService : ICommunityService
 
         if (string.IsNullOrEmpty(trimmedTitle) || trimmedTitle.Length > 500)
         {
-            throw new ApiErrorException(ApiErrorKeys.Community.StoryTitle, "Title is required and must be under 500 characters.", "Title",
+            throw new ApiErrorException(ApiErrorKeys.Community.StoryTitle, "A title is required and must be under 500 characters.", "Title",
                 ErrorArgs.Number("max", 500));
         }
 
@@ -295,13 +295,13 @@ internal sealed class CommunityService : ICommunityService
 
         if (string.IsNullOrEmpty(trimmedBody) || trimmedBody.Length < 100)
         {
-            throw new ApiErrorException(ApiErrorKeys.Community.StoryBodyMin, "Story body must be at least 100 characters.", "Body",
+            throw new ApiErrorException(ApiErrorKeys.Community.StoryBodyMin, "Story body must have at least 100 characters.", "Body",
                 ErrorArgs.Number("min", 100));
         }
 
         if (trimmedBody.Length > 10000)
         {
-            throw new ApiErrorException(ApiErrorKeys.Community.StoryBodyMax, "Story body must be under 10000 characters.", "Body",
+            throw new ApiErrorException(ApiErrorKeys.Community.StoryBodyMax, "Story body must be shorter than 10000 characters.", "Body",
                 ErrorArgs.Number("max", 10000));
         }
 
