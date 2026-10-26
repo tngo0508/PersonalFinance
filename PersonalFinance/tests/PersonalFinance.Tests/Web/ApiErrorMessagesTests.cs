@@ -203,9 +203,8 @@ public class ApiErrorMessagesTests
         ObjectResult result = RunFilter(new HttpRequestException("connection refused"));
 
         Assert.Equal(StatusCodes.Status502BadGateway, result.StatusCode);
-        // vi.json gains Errors.* in a later task; until then the chain answers English, after it Vietnamese.
-        Assert.Equal(L["Errors.Unavailable"].Value, ErrorOf(result));
-        Assert.NotEqual("Errors.Unavailable", ErrorOf(result));
+        Assert.True(TestLocalization.Catalog.TryGet("vi", "Errors.Unavailable", out string text));
+        Assert.Equal(text, ErrorOf(result));
     }
 
     [Fact]

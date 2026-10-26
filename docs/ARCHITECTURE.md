@@ -180,7 +180,13 @@ A Web controller is named after its route, so its name can differ from its Featu
    Feature's `Add<Feature>Feature()` (a new Feature gets a new `<Feature>Feature.cs`, called from
    `ApiService/Program.cs`). `tests/Architecture/ApiServiceCompositionTests` fails if the interface is not registered.
 4. **Validators** in `PersonalFinance.ApiService/Features/<Feature>/Validators/` (picked up automatically by
-   `AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true)`).
+   `AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true)`). Every rule sets
+   `.WithErrorCode(ApiErrorKeys.<Feature>.<Rule>)`, with the key's English in `Web/Resources/i18n/en.json`, and passes
+   each placeholder through `ErrorArgs` (`Text`, `Number`, `Money`); a service that rejects a request throws
+   `ApiErrorException` instead of returning `BadRequest("…")`. Web resolves both with no extra code
+   ([ADR 0017](adr/0017-api-errors-carry-localization-keys.md),
+   [spec §4](specs/localized-api-errors.md#4-adding-a-rejection-future-per-feature)); `ApiErrorKeysTests` and
+   `ApiErrorArchitectureTests` fail when a key is missing from `en.json` or a converted Feature rejects without one.
 5. **ApiService controller** in `PersonalFinance.ApiService/Features/<Feature>/`, with `[Authorize]`, reading the
    Account id from claims.
 6. **Refit Contract** in `PersonalFinance.Shared/Contracts/`, one per ApiService controller and named after it

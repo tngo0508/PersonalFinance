@@ -1281,10 +1281,27 @@ flowchart LR
     en --> ci
 ```
 
+ApiService is still language-free, but its rejections now carry a localization key and typed arguments
+([ADR 0017](adr/0017-api-errors-carry-localization-keys.md), [spec](specs/localized-api-errors.md)): a validator rule
+sets `.WithErrorCode(ApiErrorKeys…)` and a service throws `ApiErrorException`, both rendered as one `ApiErrorDto`.
+Web resolves each entry through the localizer and formats the arguments in the request culture; the English
+`message` is only a fallback for a key missing from `en.json`. Web's own fallbacks are `Errors.*` keys.
+
+```mermaid
+flowchart LR
+    src["Validator or service<br/>(ApiService Feature)"] --> raise["ApiErrorException<br/>or ValidationResult.ToApiError()<br/>key, English, field, ErrorArgs"]
+    raise --> filt["ApiErrorExceptionFilter<br/>(ApiService/Infrastructure)<br/>the fitting 4xx"]
+    filt -- "HTTP body" --> dto["ApiErrorDto<br/>errors: {key, message, field, args}"]
+    dto --> aem["Web ApiErrorMessages<br/>FromApiException, ForUser, Fields"]
+    aem --> loc["IStringLocalizer en.json, vi.json<br/>+ ApiErrorArgFormat<br/>Text, Number, Money (MoneyFormatter)"]
+    loc --> out["page field errors<br/>or JSON {error}"]
+```
+
 Drawn from `Web/Infrastructure/Localization/`, `Shared/Helpers/MoneyFormatter.cs`, `Shared/Constants/SupportedCurrencies.cs`,
 `Web/Services/UserPreferenceService.cs`, `AccountEmailService.cs`,
 `Web/TagHelpers/JsStringsTagHelper.cs`, `Web/Controllers/LanguageController.cs`, `Web/Views/Shared/_LanguageSwitcher.cshtml`, `Web/wwwroot/js/core/i18n.js`,
-`Web/tools/i18n-translate.js`, `Web/tools/i18n-report.js` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
+`Web/tools/i18n-translate.js`, `Web/tools/i18n-report.js`, `ApiService/Infrastructure/ApiErrorException*.cs`,
+`Web/Infrastructure/ApiErrorMessages.cs`, `ApiErrorArgFormat.cs` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
 A string that is not shaped like a key (English still on attributes of pages not yet translated) is shown as written,
 without the 3402 warning.
 

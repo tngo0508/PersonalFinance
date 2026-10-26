@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.14.0] - 2026-10-25
+
+### Added
+
+- **API errors carry localization keys**: every rejection from a converted Feature arrives as one `ApiErrorDto`, a list of errors each with a key, an English message, an optional field and typed arguments, so Web shows it in the reader's language (slice E1 of the localized API errors spec, #385).
+  - `ApiErrorKeys` in Shared names every key; each is a key of `en.json`.
+  - A service throws `ApiErrorException` and one filter in ApiService renders it as the fitting 4xx; validators set `.WithErrorCode(ApiErrorKeys…)` and `ToApiError()` turns their result into the same shape. Arguments go through `ErrorArgs` as `Text`, `Number` or `Money`.
+  - ADR 0017 and the spec `docs/specs/localized-api-errors.md` record the contract and the slices that convert the other Features.
+- **Money Priorities and Community errors in Vietnamese**: the Money Priorities form's field errors, its AI-note quota message and Community's poll, comment and story rejections answer in the reader's language, with limits formatted in the reader's culture (`1.000.000 $`).
+- **Guard tests for keyed errors**: one test fails when an `ApiErrorKeys` constant has no `en.json` entry, and another when Money Priorities or Community returns a `BadRequest` with a literal, throws an unkeyed rejection or gives `.WithErrorCode` a literal.
+
+### Changed
+
+- **`ApiErrorMessages` resolves through the localizer**: Web looks each key up in `en.json` / `vi.json` and formats the arguments in the request culture, money through `MoneyFormatter`; the English message is shown only for a key Web does not know.
+  - Bodies without keys, from Features not yet converted, are still read as before.
+- **Web's error fallbacks are keys**: the unavailable, unexpected, server, not found, conflict, invalid request and generic messages are `Errors.*` keys, translated like any other text, and callers pass a key instead of an English fallback.
+- **ASP.NET validation responses show one message**: a `ProblemDetails` body is shown as its status code's message (invalid request, not found, conflict or a generic error), never parsed for text.
+
+### Removed
+
+- **`MoneyPrioritiesValidationErrorsDto`**: Money Priorities returns `ApiErrorDto`, and Web reads the field errors from it.
+- **The English-matching table in `MoneyPrioritiesText`**: the page no longer swaps translations in by matching ApiService's English text; the id-keyed lookups stay.
+- **`CommunityVoteResultDto`**: a rejected vote throws `ApiErrorException` instead of returning an error message, and `VoteAsync` returns the response.
+
 ## [7.13.1] - 2026-10-25
 
 ### Fixed
