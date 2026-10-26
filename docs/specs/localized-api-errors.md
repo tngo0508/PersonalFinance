@@ -83,7 +83,8 @@ Two paths, both in `PersonalFinance.ApiService/Infrastructure/`; no controller b
   errors under their inputs (Money Priorities). Resolution of one entry: `localizer[key]`; `ResourceNotFound` → the
   entry's `message`; placeholders filled by `LocalizerExtensions.FormatNamed` after each arg is formatted (2.5).
 - **Three body shapes, detected in order:** (1) `errors` is an array whose items have `key` → `ApiErrorDto`;
-  (2) `title` plus `errors` as an object, or a `type` URL → ASP.NET `ProblemDetails`, shown as `Errors.InvalidRequest`
+  (2) `title` plus `errors` as an object, or a `type` URL → ASP.NET `ProblemDetails`, shown as the status code's key
+  (`Errors.InvalidRequest` for 400, `Errors.NotFound` for 404, `Errors.Conflict` for 409, otherwise `Errors.Generic`)
   with no text taken from the body; (3) anything else → today's best-effort parsing, kept until the last Feature is
   converted, then deleted (slice 3).
 - **Web's own messages become keys** in `en.json` / `vi.json` under `Errors.`: `Errors.Unavailable` ("The service is
@@ -157,7 +158,7 @@ This is added as a step to the add-a-feature checklist in `ARCHITECTURE.md`.
   `ApiErrorException` with its status and `ApiErrorDto` body; each converted validator asserts error **codes**, not
   English; `ApiErrorKeysTests` and `ApiErrorArchitectureTests` (2.4).
 - xUnit, `Web`: `ApiErrorMessages` resolves a known key in `vi`, falls back to `message` for an unknown key, formats a
-  `Money` arg in `vi-VN` with the arg's currency, maps `ProblemDetails` to `Errors.InvalidRequest`, and (until E3) still
+  `Money` arg in `vi-VN` with the arg's currency, maps `ProblemDetails` to its status code's key, and (until E3) still
   reads the legacy shapes; `Fields` groups by field; `JsonApiErrorsFilter` returns the localized `Errors.Unavailable`.
   Tests that read the culture pin it (as #384 does).
 - Playwright: one smoke in E1: switch to Vietnamese, submit the Money Priorities form with an out-of-range amount, assert

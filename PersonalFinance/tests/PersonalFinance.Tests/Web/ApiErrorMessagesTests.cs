@@ -128,6 +128,36 @@ public class ApiErrorMessagesTests
         Assert.DoesNotContain("'x'", message);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound, "Errors.NotFound")]
+    [InlineData(HttpStatusCode.Conflict, "Errors.Conflict")]
+    public async Task ProblemDetailsBody_PicksTheKeyFromTheStatusCode(HttpStatusCode status, string key)
+    {
+        using var ui = new UiCultureScope("en");
+        ApiException ex = await CreateApiExceptionAsync(status,
+            $$"""{"status":{{(int)status}},"type":"https://tools.ietf.org/html/rfc9110#section-15.5.5","title":"Not Found"}""");
+
+        Assert.True(TestLocalization.Catalog.TryGet("en", key, out string text));
+        Assert.Equal(text, ApiErrorMessages.FromApiException(L, ex));
+    }
+
+    [Fact]
+    public async Task KeyedBodyWithNullArgOrMessage_NeverThrows()
+    {
+        using var ui = new UiCultureScope("en");
+        ApiException nullArg = await CreateApiExceptionAsync(HttpStatusCode.BadRequest,
+            $$"""{"errors":[{"key":"{{CommentTooLong}}","message":"EN","args":{"max":null} }]}""");
+        ApiException nullMessage = await CreateApiExceptionAsync(HttpStatusCode.BadRequest,
+            """{"errors":[{"key":"Nope.Nope","message":null}]}""");
+
+        string withNullArg = WithCulture(CultureInfo.GetCultureInfo("en-US"), () => ApiErrorMessages.FromApiException(L, nullArg));
+        string withNullMessage = ApiErrorMessages.FromApiException(L, nullMessage);
+
+        Assert.Contains("{max}", withNullArg);
+        Assert.Equal(string.Empty, withNullMessage);
+        Assert.Equal(string.Empty, ApiErrorMessages.Resolve(L, new ApiErrorEntryDto { Key = "Nope.Nope", Message = null! }));
+    }
+
     [Fact]
     public async Task LegacyErrorBody_StillShowsItsText()
     {

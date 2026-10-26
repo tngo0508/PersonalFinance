@@ -14,7 +14,7 @@ namespace PersonalFinance.Web.Infrastructure;
 /// (ADR 0017). A body is read as one of three shapes, in this order:
 /// <list type="number">
 /// <item>an <see cref="ApiErrorDto"/>: each entry rendered from its key;</item>
-/// <item>ASP.NET's own validation <c>ProblemDetails</c>: a generic "invalid request", never its English text;</item>
+/// <item>ASP.NET's own <c>ProblemDetails</c>: the generic message of its status code, never its English text;</item>
 /// <item>the older bodies of Features not converted yet (<c>{ "error": "..." }</c> and friends): their text as sent.</item>
 /// </list>
 /// </summary>
@@ -60,7 +60,7 @@ public static class ApiErrorMessages
 
                 if (IsProblemDetails(root))
                 {
-                    return localizer["Errors.InvalidRequest"].Value;
+                    return StatusMessage(localizer, ex.StatusCode);
                 }
 
                 if (LegacyMessage(root) is { } legacy)
@@ -74,13 +74,7 @@ public static class ApiErrorMessages
             }
         }
 
-        return localizer[ex.StatusCode switch
-        {
-            HttpStatusCode.NotFound => "Errors.NotFound",
-            HttpStatusCode.Conflict => "Errors.Conflict",
-            HttpStatusCode.BadRequest => "Errors.InvalidRequest",
-            _ => "Errors.Generic"
-        }].Value;
+        return StatusMessage(localizer, ex.StatusCode);
     }
 
     /// <summary>
@@ -130,15 +124,16 @@ public static class ApiErrorMessages
     /// </summary>
     public static string Resolve(IStringLocalizer localizer, ApiErrorEntryDto entry)
     {
+        string english = entry.Message ?? string.Empty;
         if (string.IsNullOrWhiteSpace(entry.Key))
         {
-            return entry.Message;
+            return english;
         }
 
         LocalizedString template = localizer[entry.Key];
         if (template.ResourceNotFound)
         {
-            return entry.Message;
+            return english;
         }
 
         if (entry.Args is not { Count: > 0 } args)
@@ -147,10 +142,23 @@ public static class ApiErrorMessages
         }
 
         CultureInfo culture = CultureInfo.CurrentCulture;
-        Dictionary<string, object?> formatted = args.ToDictionary(pair => pair.Key,
-            object? (pair) => ApiErrorArgFormat.Format(pair.Value, culture), StringComparer.Ordinal);
+        // A malformed body can carry a null argument; it is skipped and its placeholder stays as written.
+        Dictionary<string, object?> formatted = args
+            .Where(pair => pair.Value is not null)
+            .ToDictionary(pair => pair.Key,
+                object? (pair) => ApiErrorArgFormat.Format(pair.Value, culture), StringComparer.Ordinal);
         return LocalizerExtensions.FormatNamed(template.Value, formatted);
     }
+
+    /// <summary>The generic message for <paramref name="statusCode"/>, for bodies whose own text is not shown.</summary>
+    private static string StatusMessage(IStringLocalizer localizer, HttpStatusCode statusCode) =>
+        localizer[statusCode switch
+        {
+            HttpStatusCode.NotFound => "Errors.NotFound",
+            HttpStatusCode.Conflict => "Errors.Conflict",
+            HttpStatusCode.BadRequest => "Errors.InvalidRequest",
+            _ => "Errors.Generic"
+        }].Value;
 
     private static bool TryParse(JsonElement root, [NotNullWhen(true)] out ApiErrorDto? dto)
     {
@@ -173,7 +181,7 @@ public static class ApiErrorMessages
         item.TryGetProperty("key", out JsonElement key) &&
         key.ValueKind == JsonValueKind.String;
 
-    /// <summary>ASP.NET's own model-validation answer: a <c>title</c> with an <c>errors</c> object, or a <c>type</c> URI.</summary>
+    /// <summary>ASP.NET's own answer (model validation, a bare <c>NotFound()</c>): a <c>title</c> with an <c>errors</c> object, or a <c>type</c> URI.</summary>
     private static bool IsProblemDetails(JsonElement root) =>
         root.ValueKind == JsonValueKind.Object &&
         ((root.TryGetProperty("title", out _) &&
