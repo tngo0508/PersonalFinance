@@ -11,10 +11,11 @@
         // Matches SearchService.MinQueryLength on the server.
         const minQueryLength = 2;
         const debounceMs = 300;
+        // Group headings are Shell.Js.Search.Group.* strings from the layout's island.
         const groups = [
-            { key: 'transactions', label: 'Transactions' },
-            { key: 'categories', label: 'Budget Categories' },
-            { key: 'savingsGoals', label: 'Savings Goals' }
+            { key: 'transactions', labelKey: 'Shell.Js.Search.Group.Transactions' },
+            { key: 'categories', labelKey: 'Shell.Js.Search.Group.Categories' },
+            { key: 'savingsGoals', labelKey: 'Shell.Js.Search.Group.SavingsGoals' }
         ];
 
         let input;
@@ -191,7 +192,7 @@
                 const heading = document.createElement('div');
                 heading.id = headingId;
                 heading.className = 'search-results-source';
-                heading.textContent = group.label;
+                heading.textContent = window.PFI18n.t(group.labelKey);
                 groupEl.appendChild(heading);
 
                 safeItems.forEach((item) => {
@@ -202,12 +203,12 @@
             });
 
             if (options.length === 0) {
-                showMessage(`No results for "${query}"`, false);
+                showMessage(window.PFI18n.t('Shell.Js.Search.NoResults', { query }), false);
                 return;
             }
 
             message.hidden = true;
-            announce(options.length === 1 ? '1 result' : `${options.length} results`);
+            announce(window.PFI18n.plural('Shell.Js.Search.Results', options.length));
             open();
         }
 
@@ -252,7 +253,7 @@
          */
         function showUnavailable () {
             clearList();
-            showMessage('Search is unavailable right now.', true);
+            showMessage(window.PFI18n.t('Shell.Js.Search.Unavailable'), true);
         }
 
         /**

@@ -131,7 +131,7 @@ public class LanguagePreferenceTests
         (string to, string subject, string body) = Assert.Single(sender.Sent);
         Assert.Equal("me@example.com", to);
         Assert.NotEqual("Reset your PersonalFinance password", subject);
-        Assert.Contains("<html lang=\"vi\">", body);
+        Assert.Contains("<html lang=\"vi\"", body);
         Assert.Contains(heading, body);
         Assert.Equal("en", System.Globalization.CultureInfo.CurrentUICulture.Name);
     }

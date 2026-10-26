@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
@@ -13,13 +14,16 @@ public class LoginModel : PageModel
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly ILogger<LoginModel> _logger;
     private readonly IApiServiceWarmer _apiServiceWarmer;
+    private readonly IStringLocalizer _localizer;
 
     public LoginModel(SignInManager<IdentityUser> signInManager, ILogger<LoginModel> logger,
-        IApiServiceWarmer apiServiceWarmer)
+        IApiServiceWarmer apiServiceWarmer,
+        IStringLocalizer localizer)
     {
         _signInManager = signInManager;
         _logger = logger;
         _apiServiceWarmer = apiServiceWarmer;
+        _localizer = localizer;
     }
 
     [BindProperty]
@@ -93,12 +97,12 @@ public class LoginModel : PageModel
             }
             if (result.IsNotAllowed)
             {
-                ModelState.AddModelError(string.Empty, "Email confirmation required. Please check your email or resend confirmation link.");
+                ModelState.AddModelError(string.Empty, _localizer["Account.Login.EmailConfirmationRequired"]);
                 return Page();
             }
             else
             {
-                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                ModelState.AddModelError(string.Empty, _localizer["Account.Login.InvalidAttempt"]);
                 return Page();
             }
         }

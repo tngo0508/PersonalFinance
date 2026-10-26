@@ -52,6 +52,24 @@ public partial class ResourceFilesTests
         Assert.All(keys, key => Assert.True(english.Contains(key), $"en.json has no {key}."));
     }
 
+    [Fact]
+    public void IdentityPageKeys_ExistInEnglish()
+    {
+        // Every key a scaffolded Identity page or its model names (L["…"], L.Named, a StatusMessage key), so no
+        // Account page logs 3402 LocalizationNotFound.
+        IReadOnlyCollection<string> english = TestLocalization.Catalog.Keys("en");
+        string pages = Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.Web"), "Areas", "Identity");
+        List<string> missing = Directory.EnumerateFiles(pages, "*.cs*", SearchOption.AllDirectories)
+            .SelectMany(file => QuotedKey().Matches(File.ReadAllText(file))
+                .Select(m => (File: Path.GetFileName(file), Key: m.Groups[1].Value)))
+            .Where(found => !english.Contains(found.Key))
+            .Select(found => $"{found.File}: {found.Key}")
+            .Distinct()
+            .ToList();
+
+        Assert.True(missing.Count == 0, "en.json has no " + string.Join(", ", missing));
+    }
+
     private static string? PluralBase(string key)
     {
         int dot = key.LastIndexOf('.');
@@ -63,4 +81,7 @@ public partial class ResourceFilesTests
 
     [GeneratedRegex(@"\{[A-Za-z0-9]+\}")]
     private static partial Regex Placeholder();
+
+    [GeneratedRegex(@"""((?:Account|Common|Email|Identity|Validation)\.[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)+)""")]
+    private static partial Regex QuotedKey();
 }

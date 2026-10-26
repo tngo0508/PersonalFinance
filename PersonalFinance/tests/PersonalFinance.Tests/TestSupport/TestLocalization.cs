@@ -15,4 +15,11 @@ internal static class TestLocalization
         AppLanguages.All.Select(language => language.Code));
 
     public static IStringLocalizer Localizer { get; } = new JsonStringLocalizer(Catalog, NullLogger.Instance);
+
+    /// <summary>The committed Vietnamese text of <paramref name="key"/>; fails the test when vi.json lacks it.</summary>
+    public static string Vietnamese(string key)
+    {
+        Assert.True(Catalog.TryGet("vi", key, out string value), $"vi.json has no {key}.");
+        return value;
+    }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Services;
 using System.ComponentModel.DataAnnotations;
@@ -20,15 +21,18 @@ public class ResendEmailConfirmationModel : PageModel
     private readonly UserManager<IdentityUser> _userManager;
     private readonly IAccountEmailService _accountEmails;
     private readonly ILogger<ResendEmailConfirmationModel> _logger;
+    private readonly IStringLocalizer _localizer;
 
     public ResendEmailConfirmationModel(
         UserManager<IdentityUser> userManager,
         IAccountEmailService accountEmails,
-        ILogger<ResendEmailConfirmationModel> logger)
+        ILogger<ResendEmailConfirmationModel> logger,
+        IStringLocalizer localizer)
     {
         _userManager = userManager;
         _accountEmails = accountEmails;
         _logger = logger;
+        _localizer = localizer;
     }
 
     [BindProperty]
@@ -56,7 +60,7 @@ public class ResendEmailConfirmationModel : PageModel
         IdentityUser? user = await _userManager.FindByEmailAsync(Input.Email);
         if (user == null)
         {
-            ModelState.AddModelError(string.Empty, "Verification email sent. Please check your email.");
+            ModelState.AddModelError(string.Empty, _localizer["Account.Common.VerificationSent"]);
             return Page();
         }
 
@@ -71,7 +75,7 @@ public class ResendEmailConfirmationModel : PageModel
 
         await _accountEmails.SendConfirmationAsync(user, Input.Email, callbackUrl ?? string.Empty);
 
-        ModelState.AddModelError(string.Empty, "Verification email sent. Please check your email.");
+        ModelState.AddModelError(string.Empty, _localizer["Account.Common.VerificationSent"]);
         return Page();
     }
 }

@@ -789,7 +789,7 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 - `GitHubActionsDeploymentWorkflowTests`: Validates CI/CD workflow configuration including job timeouts, concurrency settings, `paths-ignore`, per-image cache scopes, deploy gating, and `promote-latest` behavior.
 - `ReleaseAutomationTests`: `AppVersion.Current` matches its components and has a `CHANGELOG.md` section, and the `create-release` job and `release-check` workflow keep their gates.
 - `ModelValidationConventionTests`: Fails when `[Required]` is placed on a `bool` property (it is always satisfied, so it never rejects an unchecked box).
-- `Web/Localization/*`: the JSON localizer's fallback chain and log events, named placeholders and plurals, the `<js-strings>` island, model-binding and Identity messages (identical to the framework's in English), request localization over HTTP, the language switcher, and the committed `Resources/i18n` files.
+- `Web/Localization/*`: the JSON localizer's fallback chain and log events, named placeholders and plurals, the `<js-strings>` island, model-binding and Identity messages (identical to the framework's in English), request localization over HTTP, the language switcher, the committed `Resources/i18n` files, and the app shell and Send feedback page rendered through the compiled Razor views in English and Vietnamese (`AppShellRenderingTests`). `tools/i18n-client.test.js` (in `npm run test:i18n`) covers `core/i18n.js` merging several islands.
 
 ### Translations
 

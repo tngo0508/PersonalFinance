@@ -384,7 +384,8 @@ public class ExternalAuthenticationTests
             userStore,
             NullLogger<ExternalLoginModel>.Instance,
             new RecordingAccountEmailService(),
-            new InMemoryUserPreferenceService());
+            new InMemoryUserPreferenceService(),
+            TestLocalization.Localizer);
 
         IActionResult result = model.OnGet();
         RedirectToPageResult redirectResult = Assert.IsType<RedirectToPageResult>(result);

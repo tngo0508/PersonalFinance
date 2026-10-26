@@ -1,10 +1,15 @@
 @model string
-
+@*
+    The pages store a key (Account.ChangePassword.Changed), translated here at render time. A key whose last segment
+    starts with "Error" is shown as an error, as the library does for its English "Error ..." messages.
+*@
 @if (!String.IsNullOrEmpty(Model))
 {
-    var statusMessageClass = Model.StartsWith("Error") ? "danger" : "success";
+    var isKey = JsonStringLocalizer.IsKey(Model);
+    var isError = isKey ? Model[(Model.LastIndexOf('.') + 1)..].StartsWith("Error", StringComparison.Ordinal) : Model.StartsWith("Error");
+    var statusMessageClass = isError ? "danger" : "success";
     <div class="alert alert-@statusMessageClass alert-dismissible" role="alert">
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        @Model
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
+        @(isKey ? L[Model].Value : Model)
     </div>
 }

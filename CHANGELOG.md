@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [7.4.0] - 2026-10-25
+## [7.6.0] - 2026-10-25
 
 ### Added
 
@@ -24,6 +24,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Amounts are read in the reader's culture, strictly**: a posted amount must group digits in threes and use the culture's decimal separator, so `1234.56` typed under Vietnamese is refused instead of being saved as 123,456.
   - Budget Planner and Savings Goals money fields group digits as you type.
   - Savings Goals no longer saves an amount it could not read as 0; it shows why instead.
+
+## [7.5.0] - 2026-10-25
+
+### Added
+
+- **Sign-in and Account settings in Vietnamese**: every Identity page is translated, from sign in, register and password reset to the Account settings pages and their navigation (slice L3 of the localization spec, #355).
+  - Titles, labels, help text, buttons, placeholders, validation and status messages all come from the shared resource files; English reads as before.
+  - Status messages are stored as keys and translated when shown, and error messages keep their red style in every language.
+  - The Account emails were already translated in 7.0.0. The deletion date, in the email and on the page, keeps its English format until the shared date and number formatting lands (slice L2).
+
+## [7.4.0] - 2026-10-25
+
+### Added
+
+- **App shell in Vietnamese**: the navigation, top bar, footer, mobile bottom nav, account menu, cookie banner, data source toggle, Unavailable State and Send feedback page follow the chosen language (slice L3 of the localization spec, #357).
+  - The top-bar search, the notifications dropdown and the data source toggle's error message are translated too.
+  - The Send feedback form's labels, categories, confirmation and validation messages are translated; messages ApiService returns stay in English.
+
+### Changed
+
+- **Several JS string islands per page**: `<js-strings>` islands are marked with `data-i18n-strings` instead of an id, and `core/i18n.js` merges every island, so the layout's `Shell.Js.` strings sit beside a page's own.
+- **Notifications dropdown built with DOM nodes**: the dropdown no longer assigns `innerHTML`; its markup and behaviour are unchanged.
 
 ## [7.3.0] - 2026-10-25
 

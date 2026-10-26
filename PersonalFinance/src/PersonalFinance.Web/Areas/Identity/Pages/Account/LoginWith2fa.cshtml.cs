@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Localization;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using System;
@@ -21,15 +22,18 @@ public class LoginWith2faModel : PageModel
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
     private readonly ILogger<LoginWith2faModel> _logger;
+    private readonly IStringLocalizer _localizer;
 
     public LoginWith2faModel(
         SignInManager<IdentityUser> signInManager,
         UserManager<IdentityUser> userManager,
-        ILogger<LoginWith2faModel> logger)
+        ILogger<LoginWith2faModel> logger,
+        IStringLocalizer localizer)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _logger = logger;
+        _localizer = localizer;
     }
 
     [BindProperty]
@@ -41,13 +45,13 @@ public class LoginWith2faModel : PageModel
 
     public class InputModel
     {
-        [Required]
-        [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [Required(ErrorMessage = "Validation.Required")]
+        [StringLength(7, ErrorMessage = "Validation.StringLength.Range", MinimumLength = 6)]
         [DataType(DataType.Text)]
-        [Display(Name = "Authenticator code")]
+        [Display(Name = "Identity.Field.AuthenticatorCode")]
         public string TwoFactorCode { get; set; }
 
-        [Display(Name = "Remember this machine")]
+        [Display(Name = "Identity.Field.RememberMachine")]
         public bool RememberMachine { get; set; }
     }
 
@@ -101,7 +105,7 @@ public class LoginWith2faModel : PageModel
         else
         {
             _logger.LogWarning(LoggerEventIds.InvalidAuthenticatorCode, "Invalid authenticator code entered.");
-            ModelState.AddModelError(string.Empty, "Invalid authenticator code.");
+            ModelState.AddModelError(string.Empty, _localizer["Account.LoginWith2fa.InvalidCode"]);
             return Page();
         }
     }

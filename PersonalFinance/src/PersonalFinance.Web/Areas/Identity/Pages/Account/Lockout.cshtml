@@ -1,16 +1,17 @@
 @page
 @model LockoutModel
 @{
-    ViewData["Title"] = "Account locked";
+    ViewData["Title"] = L["Account.Lockout.Title"].Value;
+    Func<object?, HelperResult> contactLink = @<a asp-area="" asp-controller="Legal" asp-action="Contact">@L["Account.Common.ContactUsInlineLink"]</a>;
+    Func<object?, HelperResult> cancelLink = @<strong>@L["Account.CancelDeletion.Button"]</strong>;
 }
 
 <h1>@ViewData["Title"]</h1>
 
-<p>You cannot sign in to this account right now.</p>
+<p>@L["Account.Lockout.CannotSignIn"]</p>
 <p>
-    If you asked to delete your account, it is scheduled for deletion. To keep it, use the
-    <strong>Cancel deletion</strong> link in the email we sent you.
+    @L.NamedHtml("Account.Lockout.Deletion", null, ("cancelLink", cancelLink(null)))
 </p>
 <p>
-    Otherwise, try again later or <a asp-area="" asp-controller="Legal" asp-action="Contact">contact us</a>.
+    @L.NamedHtml("Account.Lockout.Otherwise", null, ("contactLink", contactLink(null)))
 </p>

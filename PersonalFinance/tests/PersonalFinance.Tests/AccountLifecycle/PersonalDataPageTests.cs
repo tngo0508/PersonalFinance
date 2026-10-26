@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.DataExport;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Areas.Identity.Pages.Account.Manage;
 using PersonalFinance.Web.Infrastructure;
 
@@ -21,7 +22,7 @@ public class PersonalDataPageTests
     private static PersonalDataModel CreatePage(IDataExportApi api)
     {
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "export-user")], "TestAuthType");
-        return new PersonalDataModel(api, NullLogger<PersonalDataModel>.Instance)
+        return new PersonalDataModel(api, NullLogger<PersonalDataModel>.Instance, TestLocalization.Localizer)
         {
             PageContext = new PageContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) } }
         };

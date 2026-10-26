@@ -32,6 +32,7 @@ public class EmailModel : PageModel
         _accountEmails = accountEmails;
     }
 
+    [Display(Name = "Identity.Field.Email")]
     public string Email { get; set; }
 
     public bool IsEmailConfirmed { get; set; }
@@ -44,9 +45,9 @@ public class EmailModel : PageModel
 
     public class InputModel
     {
-        [Required]
-        [EmailAddress]
-        [Display(Name = "New email")]
+        [Required(ErrorMessage = "Validation.Required")]
+        [EmailAddress(ErrorMessage = "Validation.EmailAddress")]
+        [Display(Name = "Identity.Field.NewEmail")]
         public string NewEmail { get; set; }
     }
 
@@ -102,11 +103,11 @@ public class EmailModel : PageModel
                 protocol: Request.Scheme);
             await _accountEmails.SendEmailChangeAsync(user, Input.NewEmail, callbackUrl);
 
-            StatusMessage = "Confirmation link to change email sent. Please check your email.";
+            StatusMessage = "Account.Email.ChangeLinkSent";
             return RedirectToPage();
         }
 
-        StatusMessage = "Your email is unchanged.";
+        StatusMessage = "Account.Email.Unchanged";
         return RedirectToPage();
     }
 
@@ -135,7 +136,7 @@ public class EmailModel : PageModel
             protocol: Request.Scheme);
         await _accountEmails.SendConfirmationAsync(user, email, callbackUrl);
 
-        StatusMessage = "Verification email sent. Please check your email.";
+        StatusMessage = "Account.Common.VerificationSent";
         return RedirectToPage();
     }
 }

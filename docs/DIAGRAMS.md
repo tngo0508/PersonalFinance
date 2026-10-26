@@ -1235,7 +1235,7 @@ flowchart TB
     loc --> razor["Razor: @L[key], L.Named, L.NamedHtml, L.Plural<br/>(_ViewImports injects L)"]
     loc --> da["DataAnnotations ErrorMessage and Display(Name) keys<br/>ModelBindingMessagesSetup (11 messages)"]
     loc --> idn["LocalizedIdentityErrorDescriber<br/>Identity.Error.Code"]
-    loc --> js["js-strings tag helper<br/>script id i18n-strings, a JSON island"] --> pfi["core/i18n.js<br/>PFI18n.t, PFI18n.plural, html lang"]
+    loc --> js["js-strings tag helper<br/>script data-i18n-strings JSON islands:<br/>the layout's Shell.Js. and the page's own"] --> pfi["core/i18n.js<br/>merges the islands; PFI18n.t, PFI18n.plural, html lang"]
     sw["_LanguageSwitcher<br/>top bar (anonymous) and account menu"] -- "POST /Language/Set + antiforgery" --> lc["LanguageController<br/>stores the choice when signed in,<br/>LanguageCookie.Write, LocalRedirect"]
     lc -. "cookie c=vi-VN, uic=vi" .-> rl
 ```

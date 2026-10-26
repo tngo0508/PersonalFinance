@@ -2,12 +2,12 @@
 @model LoginModel
 
 @{
-    ViewData["Title"] = "Sign in";
+    ViewData["Title"] = L["Account.Login.Title"].Value;
 }
 
 <div class="auth-page__header mb-5">
-    <h1 class="auth-page__title mb-2">Sign in</h1>
-    <p class="auth-page__subtitle mb-0">See your plan and your progress to your FI target.</p>
+    <h1 class="auth-page__title mb-2">@L["Account.Login.Title"]</h1>
+    <p class="auth-page__subtitle mb-0">@L["Account.Login.Subtitle"]</p>
 </div>
 
 <div class="auth-page__form">
@@ -15,16 +15,16 @@
         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
         <div class="mb-4">
-            <label asp-for="Input.Email" class="form-label">Email</label>
+            <label asp-for="Input.Email" class="form-label">@L["Identity.Field.Email"]</label>
             <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true"
                    placeholder="name@example.com"/>
             <span asp-validation-for="Input.Email" class="invalid-feedback"></span>
         </div>
 
         <div class="mb-4">
-            <label asp-for="Input.Password" class="form-label">Password</label>
+            <label asp-for="Input.Password" class="form-label">@L["Identity.Field.Password"]</label>
             <input asp-for="Input.Password" class="form-control" autocomplete="current-password"
-                   aria-required="true" placeholder="password"/>
+                   aria-required="true" placeholder="@L["Account.Common.PasswordPlaceholder"]"/>
             <span asp-validation-for="Input.Password" class="invalid-feedback"></span>
         </div>
 
@@ -35,19 +35,18 @@
                     @Html.DisplayNameFor(m => m.Input.RememberMe)
                 </label>
             </div>
-            <a id="forgot-password" asp-page="./ForgotPassword" class="small text-decoration-none">Forgot
-                password?</a>
+            <a id="forgot-password" asp-page="./ForgotPassword" class="small text-decoration-none">@L["Account.Login.ForgotPassword"]</a>
         </div>
 
         <button id="login-submit" data-test-id="login-submit" type="submit" class="w-100 btn btn-primary btn-lg">
-            Sign in
+            @L["Account.Common.SignIn"]
         </button>
     </form>
 
     @if ((Model.ExternalLogins?.Count ?? 0) > 0)
     {
         <div class="text-center my-4">
-            <span class="text-muted small">or continue with</span>
+            <span class="text-muted small">@L["Account.Login.OrContinueWith"]</span>
         </div>
         <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
             <div class="d-grid gap-2">
@@ -56,8 +55,8 @@
                     <button type="submit"
                             class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2 py-2"
                             name="provider" value="@provider.Name"
-                            title="Sign in using your @provider.DisplayName account"
-                            aria-label="Sign in with @provider.DisplayName">
+                            title="@L.Named("Account.Login.ProviderTitle", ("provider", provider.DisplayName))"
+                            aria-label="@L.Named("Account.Login.ProviderLabel", ("provider", provider.DisplayName))">
                         @if (provider.Name.Equals("Google", StringComparison.OrdinalIgnoreCase))
                         {
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 48 48">
@@ -72,7 +71,7 @@
                                 <path fill="none" d="M0 0h48v48H0z"/>
                             </svg>
                         }
-                        <span>Continue with @provider.DisplayName</span>
+                        <span>@L.Named("Account.Login.ContinueWith", ("provider", provider.DisplayName))</span>
                     </button>
                 }
             </div>
@@ -80,15 +79,14 @@
     }
 
     <div class="text-center mt-4">
-        <span class="text-muted small">Don't have an account?</span>
-        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="small text-decoration-none ms-1">Create
-            one</a>
+        <span class="text-muted small">@L["Account.Login.NoAccount"]</span>
+        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="small text-decoration-none ms-1">@L["Account.Login.CreateAccount"]</a>
     </div>
 
     <div class="text-center mt-2">
         <a id="resend-confirmation" asp-page="./ResendEmailConfirmation"
            class="text-muted small text-decoration-none">
-            Didn't receive confirmation email? Resend
+            @L["Account.Login.ResendConfirmation"]
         </a>
     </div>
 </div>
