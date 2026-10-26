@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Research page, Sectors tab: the "Market | Your basket" switch and the basket view's data.
  *
@@ -128,7 +129,7 @@
             const noun = more === 1 ? other.noun : `${other.noun.replace(/y$/, 'ie')}s`;
             children.push({
                 key: other.key,
-                name: more > 0 ? `Other (${more.toLocaleString('en-US')} ${noun})` : `Other ${other.noun.replace(/y$/, 'ie')}s`,
+                name: more > 0 ? `Other (${PFI18n.formatNumber(more)} ${noun})` : `Other ${other.noun.replace(/y$/, 'ie')}s`,
                 note: other.note,
                 office: other.office,
                 technology: other.technology,
@@ -385,7 +386,7 @@
         const rest = unclassified ? `; ${formatShare(unclassified.value)} is not classified by the SEC` : '';
         const where = focus.depth > 0 ? ` Showing ${trail}: ${formatShare(focus.value || 0)} of your basket.` : '';
         const summary = `Your basket: ${formatShare(classified)} in ${offices.length} SEC industry offices${rest}.${where}`;
-        const asOf = new Date(`${data.asOf}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+        const asOf = PFI18n.formatDate(new Date(`${data.asOf}T00:00:00`), { day: 'numeric', month: 'long', year: 'numeric' });
         return {
             aria: `Sunburst of your basket by SEC industry office and SIC industry. ${summary}`,
             subtitle: `Your basket by SEC industry office, SIC industry and company, from each fund's holdings as of ${asOf} ` +

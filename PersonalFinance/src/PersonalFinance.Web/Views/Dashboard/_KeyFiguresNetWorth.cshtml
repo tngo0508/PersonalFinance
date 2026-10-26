@@ -10,7 +10,7 @@
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
     Label = "Net Worth",
-    Value = netWorth?.CurrentNetWorth.ToString("C0"),
+    Value = netWorth is null ? null : MoneyFormatter.FormatWhole(netWorth.CurrentNetWorth, SupportedCurrencies.Default.Code),
     Caption = netWorth is null ? "Add your Net Worth settings" : "From Net Worth settings",
     Icon = "wallet",
     Controller = "Networth"

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.6.0] - 2026-10-25
+
+### Added
+
+- **Vietnamese number and date formats**: a Vietnamese reader now sees `1.234,56` and `25/10/2026`, and types amounts the same way (slice L2 of the localization spec, #353).
+  - The formatting culture follows the language (`vi` → `vi-VN`, `en` → `en-US`), from the cookie or the browser.
+  - Account settings › Language says so in one line.
+  - Account emails write their dates in the recipient's culture.
+- **One money formatter for server and browser**: the currency symbol and decimals come from the amount's currency, the separators from the culture (`$1,234.56`; `1.234,56 $`; `1.234.567 ₫`).
+  - `SupportedCurrencies` constant (USD, VND; only USD is used yet) and `MoneyFormatter` in Shared; `PFI18n.formatMoney`, `formatNumber`, `formatDate` and `parseNumber` in `core/i18n.js`.
+  - Every `"C"` / `"C0"` format and every hardcoded `'en-US'` in page scripts is replaced, chart axes and tooltips included; a test bans `"C"` formats.
+
+### Changed
+
+- **Amounts are read in the reader's culture, strictly**: a posted amount must group digits in threes and use the culture's decimal separator, so `1234.56` typed under Vietnamese is refused instead of being saved as 123,456.
+  - Budget Planner and Savings Goals money fields group digits as you type.
+  - Savings Goals no longer saves an amount it could not read as 0; it shows why instead.
+
 ## [7.5.0] - 2026-10-25
 
 ### Added

@@ -2,8 +2,10 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Search;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Features.Search;
 
@@ -108,7 +110,7 @@ internal sealed class SearchService : ISearchService
                 Id = t.Id.ToString(CultureInfo.InvariantCulture),
                 Title = t.Description,
                 Description =
-                    $"{t.Date:MMM d, yyyy} - {t.Category!.Name} - {t.Amount:C} ({t.Category!.Kind})",
+                    $"{t.Date:MMM d, yyyy} - {t.Category!.Name} - {MoneyFormatter.Format(t.Amount, SupportedCurrencies.Default.Code)} ({t.Category!.Kind})",
                 Source = "Transaction",
                 Url = $"/BudgetTracker?year={t.Date.Year}&month={t.Date.Month}",
                 Date = t.Date.ToDateTime(TimeOnly.MinValue),
@@ -130,7 +132,7 @@ internal sealed class SearchService : ISearchService
             {
                 Id = t.Id.ToString(CultureInfo.InvariantCulture),
                 Title = t.Description,
-                Description = $"{t.Date:MMM d, yyyy} - {t.Category} - {t.Amount:C} ({t.Type})",
+                Description = $"{t.Date:MMM d, yyyy} - {t.Category} - {MoneyFormatter.Format(t.Amount, SupportedCurrencies.Default.Code)} ({t.Type})",
                 Source = "Transaction",
                 Url = $"/Analysis?year={t.Date.Year}&month={t.Date.Month}",
                 Date = t.Date,
@@ -206,7 +208,7 @@ internal sealed class SearchService : ISearchService
             {
                 Id = g.Id.ToString(CultureInfo.InvariantCulture),
                 Title = g.Name,
-                Description = g.Description ?? $"Target: {g.TargetAmount:C}",
+                Description = g.Description ?? $"Target: {MoneyFormatter.Format(g.TargetAmount, SupportedCurrencies.Default.Code)}",
                 Source = "SavingsGoal",
                 Url = "/SavingsGoals"
             });

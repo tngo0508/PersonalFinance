@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Research page shell: the WAI-ARIA tabs, and in each tab panel a time scrubber (play/pause, a range slider and the
  * period label), a polite live region and the "Show as table" view. Each tab keeps its own scrubber position.
@@ -51,15 +52,12 @@
     function formatMoney (amount) {
         const absolute = Math.abs(amount);
         if (absolute >= 1e12) {
-            return `$${(amount / 1e12).toFixed(2)}T`;
-        }
-        if (absolute >= 1e9) {
-            return `$${(amount / 1e9).toFixed(1)}B`;
+            return PFI18n.formatCompactMoney(amount, 'USD', { fractionDigits: 2 });
         }
         if (absolute >= 1e6) {
-            return `$${(amount / 1e6).toFixed(1)}M`;
+            return PFI18n.formatCompactMoney(amount, 'USD', { fractionDigits: 1 });
         }
-        return `$${Math.round(amount).toLocaleString('en-US')}`;
+        return PFI18n.formatMoney(amount, 'USD', { whole: true });
     }
 
     /**

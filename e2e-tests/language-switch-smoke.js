@@ -142,7 +142,7 @@ async function runLanguageSwitchSmoke({browser, base, pass, fail}) {
         check(alert.includes(vi['SavingsGoals.Message.Created']), 'Create confirmation is Vietnamese', `"${alert}"`, report);
         const remaining = ((await page.locator('.savings-goal-remaining').first().textContent().catch(() => '')) || '').trim();
         const [remainingBefore] = vi['SavingsGoals.Card.Remaining'].split('{amount}');
-        check(remaining.startsWith(remainingBefore.trim()) && remaining.includes('$4,000'),
+        check(remaining.startsWith(remainingBefore.trim()) && remaining.includes('4.000\u00A0$'),
             'Goal card uses the translated template with its amount', `"${remaining}"`, report);
 
         let dialogMessage = null;

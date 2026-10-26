@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Dashboard budget donut.
  * Draws the planned budget split from the "budget" slice of the dashboard data island
@@ -69,7 +70,7 @@
         }
 
         // Dollar amounts stay in the server-rendered legend so currency formatting has one source.
-        const percent = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+        const percent = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 1 });
 
         const chart = new window.ApexCharts(element, {
             chart: {

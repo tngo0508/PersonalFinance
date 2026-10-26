@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.Budget;
 
@@ -92,7 +93,7 @@ public class BudgetController : Controller
             if (model.TotalAllocated > model.MonthlyIncome)
             {
                 TempData["SaveWarning"] =
-                    $"Budget saved. Note: Total allocations (${model.TotalAllocated:F2}) exceed your monthly income of ${model.MonthlyIncome:F2}.";
+                    $"Budget saved. Note: Total allocations ({MoneyFormatter.Format(model.TotalAllocated, SupportedCurrencies.Default.Code)}) exceed your monthly income of {MoneyFormatter.Format(model.MonthlyIncome, SupportedCurrencies.Default.Code)}.";
             }
             else
             {

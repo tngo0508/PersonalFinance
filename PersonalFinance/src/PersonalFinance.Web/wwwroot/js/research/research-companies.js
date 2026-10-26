@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Research Companies tab: look up a company registered with the SEC by ticker or name and show its Company Profile
  * (identity, annual figures as four D3 bar charts and a table, press releases, recent filings), for information only.
@@ -73,14 +74,14 @@
         case 'millions': {
             const millions = value / 1e6;
             const digits = Math.abs(millions) >= 100 ? 0 : 1;
-            return withMinus(millions.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits }));
+            return withMinus(PFI18n.formatNumber(millions, { minimumFractionDigits: digits, maximumFractionDigits: digits }));
         }
         case 'eps':
-            return withMinus(value.toFixed(2));
+            return withMinus(PFI18n.formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         case 'percent':
-            return `${withMinus((value * 100).toFixed(1))}%`;
+            return `${withMinus(PFI18n.formatNumber(value * 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 }))}%`;
         case 'ratio':
-            return `${withMinus(value.toFixed(2))}×`;
+            return `${withMinus(PFI18n.formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}×`;
         default:
             return withMinus(window.ResearchPage.formatMoney(value));
         }
@@ -93,7 +94,7 @@
      * @returns {string} The formatted value.
      */
     function formatChartValue (value, format) {
-        return format === 'eps' ? `${value < 0 ? MINUS : ''}$${Math.abs(value).toFixed(2)}` : formatValue(value, 'money');
+        return format === 'eps' ? withMinus(PFI18n.formatMoney(value, 'USD')) : formatValue(value, 'money');
     }
 
     /**

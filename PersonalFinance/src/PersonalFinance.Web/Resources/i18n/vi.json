@@ -269,6 +269,7 @@
   "Account.TwoFactor.BrowserForgotten": "Trình duyệt hiện tại đã bị quên. Khi bạn đăng nhập lại từ trình duyệt này, bạn sẽ được yêu cầu nhập mã xác thực 2fa.",
   "Account.Language.Title": "Ngôn ngữ",
   "Account.Language.Intro": "Chọn ngôn ngữ hiển thị của ứng dụng. Lựa chọn của bạn được lưu vào tài khoản, nên sẽ được áp dụng khi bạn đăng nhập trên thiết bị khác.",
+  "Account.Language.Formats": "Tiếng Việt cũng dùng định dạng số và ngày tháng của Việt Nam, chẳng hạn 1.234,56 và 25/10/2026.",
   "Account.Language.Save": "Lưu",
   "Account.Language.Saved": "Đã lưu ngôn ngữ của bạn.",
   "Account.Language.Invalid": "Chọn một trong các ngôn ngữ được liệt kê.",

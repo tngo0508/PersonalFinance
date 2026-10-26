@@ -1,4 +1,4 @@
-/* global d3 */
+/* global d3, PFI18n */
 /**
  * Research page, Funds tab: a D3 collapsible tree of what the Tracked Funds hold, one quarter at a time. Levels: the funds,
  * then each fund's N-PORT asset categories, then each category's 25 largest holdings and an "Other" node for the rest.
@@ -112,7 +112,7 @@
             children.push({
                 key: `o:${ticker}:${category.code}`,
                 kind: 'other',
-                name: `Other (${category.otherCount.toLocaleString('en-US')} holdings)`,
+                name: `Other (${PFI18n.formatNumber(category.otherCount)} holdings)`,
                 value: category.otherPercent,
                 fund: ticker,
                 category: category.name
@@ -140,7 +140,7 @@
             return d.name;
         }
         if (d.kind === 'fund') {
-            return d.missing ? `${d.name} · no report this quarter` : `${d.name} · ${d.count.toLocaleString('en-US')} holdings`;
+            return d.missing ? `${d.name} · no report this quarter` : `${d.name} · ${PFI18n.formatNumber(d.count)} holdings`;
         }
         return `${d.name}  ${formatPercent(d.value)}`;
     }
@@ -159,7 +159,7 @@
             return `${d.name}, ${formatPercent(d.value)} of ${d.fund} net assets, ${d.category}`;
         }
         if (d.kind === 'category') {
-            return `${d.name}, ${formatPercent(d.value)} of ${d.fund} net assets, ${d.count.toLocaleString('en-US')} holdings`;
+            return `${d.name}, ${formatPercent(d.value)} of ${d.fund} net assets, ${PFI18n.formatNumber(d.count)} holdings`;
         }
         return `${d.name}: what the tracked funds hold`;
     }
@@ -178,7 +178,7 @@
             const parts = [line(d.kind === 'fund' ? `${d.name}, ${d.full}` : d.name, 'research-tooltip__name'),
                 line(KIND_LABELS[d.kind], 'research-tooltip__muted')];
             if (d.kind === 'fund') {
-                parts.push(line(d.missing ? 'No report for this quarter' : `${d.count.toLocaleString('en-US')} holdings`,
+                parts.push(line(d.missing ? 'No report for this quarter' : `${PFI18n.formatNumber(d.count)} holdings`,
                     'research-tooltip__value'));
             } else {
                 const value = line(formatPercent(d.value), 'research-tooltip__value');
@@ -465,14 +465,14 @@
             const rows = [];
             period.funds.filter((fund) => expanded.has(`f:${fund.ticker}`)).forEach((fund) => {
                 fund.categories.forEach((category) => {
-                    rows.push([fund.ticker, category.name, `All ${category.holdingCount.toLocaleString('en-US')} holdings`,
+                    rows.push([fund.ticker, category.name, `All ${PFI18n.formatNumber(category.holdingCount)} holdings`,
                         formatPercent(category.percent)]);
                     category.top.forEach((holding) => {
                         rows.push([fund.ticker, category.name, holding.name, formatPercent(holding.percent)]);
                     });
                     if (category.otherCount > 0) {
                         rows.push([fund.ticker, category.name,
-                            `Other (${category.otherCount.toLocaleString('en-US')} holdings)`,
+                            `Other (${PFI18n.formatNumber(category.otherCount)} holdings)`,
                             formatPercent(category.otherPercent)]);
                     }
                 });

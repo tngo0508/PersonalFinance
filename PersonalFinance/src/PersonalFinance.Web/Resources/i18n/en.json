@@ -274,6 +274,7 @@
   "Account.TwoFactor.BrowserForgotten": "The current browser has been forgotten. When you login again from this browser you will be prompted for your 2fa code.",
   "Account.Language.Title": "Language",
   "Account.Language.Intro": "Choose the language the app is shown in. Your choice is saved to your account, so it follows you when you sign in on another device.",
+  "Account.Language.Formats": "Vietnamese also uses Vietnamese number and date formats, such as 1.234,56 and 25/10/2026.",
   "Account.Language.Save": "Save",
   "Account.Language.Saved": "Your language has been saved.",
   "Account.Language.Invalid": "Choose one of the languages listed.",

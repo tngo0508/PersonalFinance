@@ -11,7 +11,7 @@
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
     Label = "Budgeted income",
-    Value = income?.ToString("C0"),
+    Value = income is { } amount ? MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code) : null,
     Caption = caption,
     Icon = "pie-chart",
     Controller = "Budget",

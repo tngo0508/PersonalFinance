@@ -21,19 +21,19 @@
         <dl class="dash-stats" aria-label="Planned versus actual income and expenses for @monthlyBudget.Period">
             <div class="dash-stats__item">
                 <dt>Planned income</dt>
-                <dd class="dash-money">@monthlyBudget.BudgetedIncome.ToString("C0")</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.BudgetedIncome, SupportedCurrencies.Default.Code)</dd>
             </div>
             <div class="dash-stats__item">
                 <dt>Actual income</dt>
-                <dd class="dash-money">@monthlyBudget.ActualIncome.ToString("C0")</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.ActualIncome, SupportedCurrencies.Default.Code)</dd>
             </div>
             <div class="dash-stats__item">
                 <dt>Planned expenses</dt>
-                <dd class="dash-money">@monthlyBudget.BudgetedExpenses.ToString("C0")</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.BudgetedExpenses, SupportedCurrencies.Default.Code)</dd>
             </div>
             <div class="dash-stats__item">
                 <dt>Actual expenses</dt>
-                <dd class="dash-money">@monthlyBudget.ActualExpenses.ToString("C0")</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.ActualExpenses, SupportedCurrencies.Default.Code)</dd>
             </div>
         </dl>
         <a asp-controller="@(isTracker ? "BudgetTracker" : "Analysis")" asp-action="Index" class="dash-link">

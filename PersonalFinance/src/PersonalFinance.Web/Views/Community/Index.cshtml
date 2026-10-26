@@ -81,7 +81,7 @@
                                         aria-label="@L.Named("Community.Polls.VoteFor", ("option", option.Text))">
                                     <span class="community-poll-option-text">@option.Text</span>
                                     <span class="community-poll-option-result" style="display:@(poll.HasVoted ? "flex" : "none");">
-                                        <span class="community-poll-option-bar" style="width: @(poll.HasVoted ? option.Percentage + "%" : "0%");" data-percentage="@option.Percentage"></span>
+                                        <span class="community-poll-option-bar" style="width: @(poll.HasVoted ? option.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture) + "%" : "0%");" data-percentage="@option.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture)"></span>
                                         <span class="community-poll-option-percentage">@option.Percentage%</span>
                                     </span>
                                     @if (isVoted)

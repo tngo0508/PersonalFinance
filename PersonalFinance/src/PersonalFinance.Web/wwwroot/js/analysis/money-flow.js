@@ -1,3 +1,4 @@
+/* global PFI18n */
 (function () {
     'use strict';
 
@@ -31,7 +32,7 @@
      * @returns {string} The formatted amount.
      */
     function formatAmount (amount) {
-        return `$${Math.round(amount).toLocaleString('en-US')}`;
+        return PFI18n.formatMoney(amount, 'USD', { whole: true });
     }
 
     /**

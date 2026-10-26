@@ -1,9 +1,10 @@
+/* global PFI18n */
 // Monthly Budget Summary modal on the Google Drive page.
 // Server values come from data- attributes on #monthlyBudgetModal (data-report-url, data-connection-id).
 (function ($) {
     'use strict';
 
-    $(function () {
+    $(() => {
         const $modal = $('#monthlyBudgetModal');
         if ($modal.length === 0) { return; }
 
@@ -36,9 +37,7 @@
 
         // Whole-dollar format for prose and tiles where cents are noise
         function formatMoney (num) {
-            const n = Number(num) || 0;
-            const formatted = '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
-            return n < 0 ? '-' + formatted : formatted;
+            return PFI18n.formatMoney(Number(num) || 0, 'USD', { whole: true });
         }
 
         function formatCompactCurrency (val) {
@@ -56,7 +55,7 @@
         // Status always ships as icon + label, never color alone
         function statusPill (tone, label) {
             const icon = tone === 'good' ? '&#10003;' : (tone === 'warning' ? '!' : '&#10005;');
-            return '<span class="bgt-status bgt-status--' + tone + '"><span class="bgt-status-icon" aria-hidden="true">' + icon + '</span>' + escapeHtml(label) + '</span>';
+            return `<span class="bgt-status bgt-status--${ tone }"><span class="bgt-status-icon" aria-hidden="true">${ icon }</span>${ escapeHtml(label) }</span>`;
         }
 
         function monthStatusTone (status) {
@@ -98,22 +97,22 @@
         function balanceText (start, end) {
             if (!hasValue(start) || !hasValue(end)) { return ''; }
             const change = end - start;
-            return 'Balance ' + formatMoney(start) + ' &rarr; ' + formatMoney(end) +
-                ' (' + (change >= 0 ? '+' : '') + formatMoney(change) + ')';
+            return `Balance ${ formatMoney(start) } &rarr; ${ formatMoney(end)
+            } (${ change >= 0 ? '+' : '' }${formatMoney(change) })`;
         }
 
         function planDeltaText (actual, planned, aboveWord, belowWord) {
             if (!(planned > 0)) { return ''; }
             const diff = actual - planned;
-            if (Math.abs(diff) < 0.005) { return 'Exactly on plan (' + formatMoney(planned) + ')'; }
-            return formatMoney(Math.abs(diff)) + ' ' + (diff > 0 ? aboveWord : belowWord) + ' plan of ' + formatMoney(planned);
+            if (Math.abs(diff) < 0.005) { return `Exactly on plan (${ formatMoney(planned) })`; }
+            return `${formatMoney(Math.abs(diff)) } ${ diff > 0 ? aboveWord : belowWord } plan of ${ formatMoney(planned)}`;
         }
 
         function aggregateCategories (months) {
             const map = {};
             const order = [];
-            months.forEach(function (m) {
-                (m.categories || []).forEach(function (c) {
+            months.forEach((m) => {
+                (m.categories || []).forEach((c) => {
                     if (!map[c.categoryName]) {
                         map[c.categoryName] = { categoryName: c.categoryName, budgetedAmount: 0, actualAmount: 0 };
                         order.push(c.categoryName);
@@ -122,19 +121,19 @@
                     map[c.categoryName].actualAmount += c.actualAmount || 0;
                 });
             });
-            return order.map(function (k) { return map[k]; });
+            return order.map((k) => { return map[k]; });
         }
 
         function setPeriodChips () {
             let html = '';
-            budgetPeriods.forEach(function (p) {
+            budgetPeriods.forEach((p) => {
                 const isActive = p.month === currentSelectedMonth;
-                html += '<button type="button" role="tab" class="bgt-period-btn budget-month-btn' + (p.month === 0 ? ' bgt-period-btn--year' : '') + (isActive ? ' active' : '') + '"' +
-                    ' data-month="' + p.month + '" aria-selected="' + isActive + '" title="' + escapeHtml(p.title) + '">' + escapeHtml(p.label) + '</button>';
+                html += `<button type="button" role="tab" class="bgt-period-btn budget-month-btn${ p.month === 0 ? ' bgt-period-btn--year' : '' }${isActive ? ' active' : '' }"` +
+                    ` data-month="${ p.month }" aria-selected="${ isActive }" title="${ escapeHtml(p.title) }">${ escapeHtml(p.label) }</button>`;
             });
             $('#budgetMonthButtonGroup').html(html);
 
-            const idx = budgetPeriods.findIndex(function (p) { return p.month === currentSelectedMonth; });
+            const idx = budgetPeriods.findIndex((p) => { return p.month === currentSelectedMonth; });
             $('#btnBudgetPrev').prop('disabled', idx <= 0);
             $('#btnBudgetNext').prop('disabled', idx === -1 || idx >= budgetPeriods.length - 1);
             $('#btnBudgetPrev, #btnBudgetNext').toggle(budgetPeriods.length > 1);
@@ -163,10 +162,10 @@
             const scale = Math.max(actual, planned) || 1;
             const fillPct = Math.max(0, actual) / scale * 100;
             const planPct = planned / scale * 100;
-            $el.html('<div class="bgt-mini-meter" role="meter" aria-valuemin="0" aria-valuemax="' + Math.round(scale) + '" aria-valuenow="' + Math.round(actual) + '"' +
-                ' aria-label="' + escapeHtml(label + ': ' + formatMoney(actual) + ' of ' + formatMoney(planned) + ' planned') + '">' +
-                '<div class="bgt-mini-meter-fill bgt-mini-meter-fill--' + kind + '" style="width:' + fillPct.toFixed(1) + '%"></div>' +
-                '<div class="bgt-mini-meter-mark" style="left:' + planPct.toFixed(1) + '%" title="Plan: ' + formatMoney(planned) + '"></div>' +
+            $el.html(`<div class="bgt-mini-meter" role="meter" aria-valuemin="0" aria-valuemax="${ Math.round(scale) }" aria-valuenow="${ Math.round(actual) }"` +
+                ` aria-label="${ escapeHtml(`${label }: ${ formatMoney(actual) } of ${ formatMoney(planned) } planned`) }">` +
+                `<div class="bgt-mini-meter-fill bgt-mini-meter-fill--${ kind }" style="width:${ fillPct.toFixed(1) }%"></div>` +
+                `<div class="bgt-mini-meter-mark" style="left:${ planPct.toFixed(1) }%" title="Plan: ${ formatMoney(planned) }"></div>` +
                 '</div>');
         }
 
@@ -175,16 +174,16 @@
         function renderSavingsRate (rate) {
             const scale = Math.max(SAVINGS_GOAL_PCT * 1.5, rate);
             const fill = Math.max(0, rate) / scale * 100;
-            $('#kpiSavingsRate').text(rate.toFixed(1) + '%');
-            $('#kpiSavingsMeter').html('<div class="bgt-mini-meter" role="meter" aria-valuemin="0" aria-valuemax="' + Math.round(scale) + '" aria-valuenow="' + Math.round(rate) + '"' +
-                ' aria-label="Savings rate ' + rate.toFixed(1) + '% against a ' + SAVINGS_GOAL_PCT + '% goal">' +
-                '<div class="bgt-mini-meter-fill bgt-mini-meter-fill--income" style="width:' + fill.toFixed(1) + '%"></div>' +
-                '<div class="bgt-mini-meter-mark" style="left:' + (SAVINGS_GOAL_PCT / scale * 100).toFixed(1) + '%" title="Goal: ' + SAVINGS_GOAL_PCT + '%"></div>' +
+            $('#kpiSavingsRate').text(`${rate.toFixed(1) }%`);
+            $('#kpiSavingsMeter').html(`<div class="bgt-mini-meter" role="meter" aria-valuemin="0" aria-valuemax="${ Math.round(scale) }" aria-valuenow="${ Math.round(rate) }"` +
+                ` aria-label="Savings rate ${ rate.toFixed(1) }% against a ${ SAVINGS_GOAL_PCT }% goal">` +
+                `<div class="bgt-mini-meter-fill bgt-mini-meter-fill--income" style="width:${ fill.toFixed(1) }%"></div>` +
+                `<div class="bgt-mini-meter-mark" style="left:${ (SAVINGS_GOAL_PCT / scale * 100).toFixed(1) }%" title="Goal: ${ SAVINGS_GOAL_PCT }%"></div>` +
                 '</div>');
             const gap = rate - SAVINGS_GOAL_PCT;
             $('#kpiSavingsRateSub').text(gap >= 0
-                ? 'Meets the ' + SAVINGS_GOAL_PCT + '% savings goal'
-                : Math.abs(gap).toFixed(1) + ' pts below the ' + SAVINGS_GOAL_PCT + '% goal');
+                ? `Meets the ${ SAVINGS_GOAL_PCT }% savings goal`
+                : `${Math.abs(gap).toFixed(1) } pts below the ${ SAVINGS_GOAL_PCT }% goal`);
         }
 
         // Income split into spent vs. saved; spending beyond income shows as a hatched "overspent" segment
@@ -202,21 +201,21 @@
             const spentWithinIncome = Math.min(spending, income);
             const saved = Math.max(0, income - spending);
             const overspent = Math.max(0, spending - income);
-            const pct = function (v) { return (v / scale * 100).toFixed(2) + '%'; };
+            const pct = function (v) { return `${(v / scale * 100).toFixed(2) }%`; };
             const segment = function (cls, value, label) {
                 return value > 0
-                    ? '<div class="bgt-alloc-seg bgt-alloc-seg--' + cls + '" style="width:' + pct(value) + '" title="' + escapeHtml(label + ': ' + formatMoney(value)) + '">' +
-                      '<span>' + escapeHtml(label) + ' ' + formatMoney(value) + '</span></div>'
+                    ? `<div class="bgt-alloc-seg bgt-alloc-seg--${ cls }" style="width:${ pct(value) }" title="${ escapeHtml(`${label }: ${ formatMoney(value)}`) }">` +
+                      `<span>${ escapeHtml(label) } ${ formatMoney(value) }</span></div>`
                     : '';
             };
 
-            $bar.html('<div class="bgt-alloc" role="img" aria-label="' + escapeHtml(
-                'Income ' + formatMoney(income) + ': spent ' + formatMoney(spending) +
-                    (overspent > 0 ? ', overspent by ' + formatMoney(overspent) : ', saved ' + formatMoney(saved))) + '">' +
-                segment('spend', spentWithinIncome, 'Spent') +
-                segment('save', saved, 'Saved') +
-                segment('over', overspent, 'Overspent') +
-                '</div>');
+            $bar.html(`<div class="bgt-alloc" role="img" aria-label="${ escapeHtml(
+                `Income ${ formatMoney(income) }: spent ${ formatMoney(spending)
+                }${overspent > 0 ? `, overspent by ${ formatMoney(overspent)}` : `, saved ${ formatMoney(saved)}`}`) }">${
+                segment('spend', spentWithinIncome, 'Spent')
+            }${segment('save', saved, 'Saved')
+            }${segment('over', overspent, 'Overspent')
+            }</div>`);
 
             let legend = '<span><span class="bgt-swatch bgt-swatch--spend"></span>Spent</span>';
             legend += overspent > 0
@@ -227,8 +226,8 @@
             if (income > 0) {
                 const per100Spent = Math.round(spending / income * 100);
                 $('#budgetAllocationSub').text(overspent > 0
-                    ? 'For every $100 earned, you spent $' + per100Spent + ', more than came in.'
-                    : 'For every $100 earned, you spent $' + per100Spent + ' and saved $' + (100 - per100Spent) + '.');
+                    ? `For every $100 earned, you spent $${ per100Spent }, more than came in.`
+                    : `For every $100 earned, you spent $${ per100Spent } and saved $${ 100 - per100Spent }.`);
             } else {
                 $('#budgetAllocationSub').text('No income was recorded for this period.');
             }
@@ -240,9 +239,9 @@
         function sortedVisibleCategories () {
             const sortBy = $('#budgetCategorySort').val();
             const overOnly = $('#budgetOverOnly').is(':checked');
-            let items = currentCategories.filter(function (c) { return (c.actualAmount || 0) !== 0 || (c.budgetedAmount || 0) !== 0; });
-            if (overOnly) { items = items.filter(function (c) { return categoryTone(c) === 'critical'; }); }
-            items.sort(function (a, b) {
+            let items = currentCategories.filter((c) => { return (c.actualAmount || 0) !== 0 || (c.budgetedAmount || 0) !== 0; });
+            if (overOnly) { items = items.filter((c) => { return categoryTone(c) === 'critical'; }); }
+            items.sort((a, b) => {
                 if (sortBy === 'name') { return a.categoryName.localeCompare(b.categoryName); }
                 if (sortBy === 'over') { return (b.actualAmount - b.budgetedAmount) - (a.actualAmount - a.budgetedAmount); }
                 return b.actualAmount - a.actualAmount;
@@ -254,36 +253,36 @@
             if (categories) { currentCategories = categories; }
             const items = sortedVisibleCategories();
             if (items.length === 0) {
-                $('#budgetCategoryList').html('<div class="text-muted small">' +
-                    ($('#budgetOverOnly').is(':checked') ? 'No category went over budget in this period.' : 'No category spending was found for this period.') +
-                    '</div>');
+                $('#budgetCategoryList').html(`<div class="text-muted small">${
+                    $('#budgetOverOnly').is(':checked') ? 'No category went over budget in this period.' : 'No category spending was found for this period.'
+                }</div>`);
                 return;
             }
-            const maxActual = Math.max.apply(null, items.map(function (c) { return c.actualAmount; }).concat([1]));
+            const maxActual = Math.max.apply(null, items.map((c) => { return c.actualAmount; }).concat([1]));
 
             let html = '';
-            items.forEach(function (c) {
+            items.forEach((c) => {
                 const tone = categoryTone(c);
                 const hasBudget = tone !== 'none';
                 const pct = hasBudget ? (c.actualAmount / c.budgetedAmount) * 100 : 0;
                 const width = hasBudget ? Math.min(pct, 100) : Math.max(0, (c.actualAmount / maxActual) * 100);
                 const remaining = c.budgetedAmount - c.actualAmount;
                 const footLeft = hasBudget
-                    ? (remaining >= 0 ? formatMoney(remaining) + ' left' : formatMoney(-remaining) + ' over')
+                    ? (remaining >= 0 ? `${formatMoney(remaining) } left` : `${formatMoney(-remaining) } over`)
                     : 'No budget set';
-                const footRight = hasBudget ? Math.round(pct) + '% used' : '';
-                const statusHtml = (tone === 'warning' || tone === 'critical') ? ' ' + statusPill(tone, categoryStatusLabel(tone)) : '';
+                const footRight = hasBudget ? `${Math.round(pct) }% used` : '';
+                const statusHtml = (tone === 'warning' || tone === 'critical') ? ` ${ statusPill(tone, categoryStatusLabel(tone))}` : '';
 
                 html += '<div class="bgt-cat-row">' +
                     '<div class="bgt-cat-head">' +
-                        '<span class="bgt-cat-name" title="' + escapeHtml(c.categoryName) + '">' + escapeHtml(c.categoryName) + '</span>' +
-                        '<span class="bgt-cat-amount">' + formatMoney(c.actualAmount) + (hasBudget ? ' <small>of ' + formatMoney(c.budgetedAmount) + '</small>' : '') + '</span>' +
+                        `<span class="bgt-cat-name" title="${ escapeHtml(c.categoryName) }">${ escapeHtml(c.categoryName) }</span>` +
+                        `<span class="bgt-cat-amount">${ formatMoney(c.actualAmount) }${hasBudget ? ` <small>of ${ formatMoney(c.budgetedAmount) }</small>` : '' }</span>` +
                     '</div>' +
-                    '<div class="bgt-meter' + (hasBudget ? '' : ' bgt-meter--nobudget') + '" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(width) + '"' +
-                        ' aria-label="' + escapeHtml(c.categoryName) + ': ' + (hasBudget ? Math.round(pct) + '% of budget used' : 'no budget set') + '">' +
-                        '<div class="bgt-meter-fill bgt-meter-fill--' + tone + '" style="width: ' + width.toFixed(1) + '%;"></div>' +
+                    `<div class="bgt-meter${ hasBudget ? '' : ' bgt-meter--nobudget' }" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${ Math.round(width) }"` +
+                        ` aria-label="${ escapeHtml(c.categoryName) }: ${ hasBudget ? `${Math.round(pct) }% of budget used` : 'no budget set' }">` +
+                        `<div class="bgt-meter-fill bgt-meter-fill--${ tone }" style="width: ${ width.toFixed(1) }%;"></div>` +
                     '</div>' +
-                    '<div class="bgt-cat-foot"><span>' + footLeft + statusHtml + '</span><span>' + footRight + '</span></div>' +
+                    `<div class="bgt-cat-foot"><span>${ footLeft }${statusHtml }</span><span>${ footRight }</span></div>` +
                 '</div>';
             });
             $('#budgetCategoryList').html(html);
@@ -339,22 +338,22 @@
 
         function renderYearCharts (months) {
             destroyYearCharts();
-            const labels = months.map(function (m) { return m.monthName.substring(0, 3); });
+            const labels = months.map((m) => { return m.monthName.substring(0, 3); });
             const barStyle = { borderRadius: 4, borderSkipped: 'start', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.9 };
 
             const mainOptions = baseChartOptions(months);
-            mainOptions.plugins.tooltip.callbacks.label = function (ctx) { return ' ' + ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y); };
+            mainOptions.plugins.tooltip.callbacks.label = function (ctx) { return ` ${ ctx.dataset.label }: ${ formatCurrency(ctx.parsed.y)}`; };
             mainOptions.plugins.tooltip.callbacks.afterBody = function (items) {
                 const m = items.length ? months[items[0].dataIndex] : null;
-                return m ? ' Net: ' + formatCurrency(m.netSavings) : '';
+                return m ? ` Net: ${ formatCurrency(m.netSavings)}` : '';
             };
             budgetMainChartInstance = new Chart(document.getElementById('budgetMainChart').getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [
-                        $.extend({ label: 'Income', data: months.map(function (m) { return m.actualIncome; }), backgroundColor: BUDGET_COLORS.income }, barStyle),
-                        $.extend({ label: 'Spending', data: months.map(function (m) { return m.actualExpenses; }), backgroundColor: BUDGET_COLORS.spend }, barStyle)
+                        $.extend({ label: 'Income', data: months.map((m) => { return m.actualIncome; }), backgroundColor: BUDGET_COLORS.income }, barStyle),
+                        $.extend({ label: 'Spending', data: months.map((m) => { return m.actualExpenses; }), backgroundColor: BUDGET_COLORS.spend }, barStyle)
                     ]
                 },
                 options: mainOptions
@@ -363,13 +362,13 @@
             const netOptions = baseChartOptions(months);
             netOptions.plugins.tooltip.callbacks.label = function (ctx) {
                 const v = ctx.parsed.y;
-                return v >= 0 ? ' Saved ' + formatCurrency(v) : ' Overspent ' + formatCurrency(-v);
+                return v >= 0 ? ` Saved ${ formatCurrency(v)}` : ` Overspent ${ formatCurrency(-v)}`;
             };
             netOptions.scales.y.beginAtZero = true;
             netOptions.scales.x.ticks.maxRotation = 0;
             netOptions.scales.x.ticks.autoSkipPadding = 6;
             netOptions.scales.y.grid.color = function (ctx) { return ctx.tick && ctx.tick.value === 0 ? BUDGET_COLORS.axis : BUDGET_COLORS.grid; };
-            const netValues = months.map(function (m) { return m.netSavings; });
+            const netValues = months.map((m) => { return m.netSavings; });
             budgetNetChartInstance = new Chart(document.getElementById('budgetNetChart').getContext('2d'), {
                 type: 'bar',
                 data: {
@@ -377,7 +376,7 @@
                     datasets: [$.extend({
                         label: 'Net saved',
                         data: netValues,
-                        backgroundColor: netValues.map(function (v) { return v >= 0 ? BUDGET_COLORS.income : BUDGET_COLORS.negative; })
+                        backgroundColor: netValues.map((v) => { return v >= 0 ? BUDGET_COLORS.income : BUDGET_COLORS.negative; })
                     }, barStyle, { categoryPercentage: 0.6, barPercentage: 1 })]
                 },
                 options: netOptions
@@ -387,18 +386,18 @@
         function renderYearView (data) {
             const months = data.months;
             const status = yearStatus(data);
-            const underCount = months.filter(function (m) { return m.status === 'Under Budget'; }).length;
+            const underCount = months.filter((m) => { return m.status === 'Under Budget'; }).length;
 
-            $('#budgetPeriodTitle').text(data.year + ' · Full year');
-            $('#budgetPeriodSubtitle').html(balanceText(data.startingBalance, data.endingBalance) || (months.length + ' months of data'));
+            $('#budgetPeriodTitle').text(`${data.year } · Full year`);
+            $('#budgetPeriodSubtitle').html(balanceText(data.startingBalance, data.endingBalance) || (`${months.length } months of data`));
 
             // KPI tiles
             $('#kpiTotalIncome').text(formatMoney(data.totalAnnualIncome));
             $('#kpiIncomeSubtext').text(planDeltaText(data.totalAnnualIncome, data.totalAnnualBudgetedIncome, 'above', 'below') ||
-                ('Avg ' + formatMoney(data.totalAnnualIncome / months.length) + ' / month'));
+                (`Avg ${ formatMoney(data.totalAnnualIncome / months.length) } / month`));
             $('#kpiTotalExpenses').text(formatMoney(data.totalAnnualExpenses));
             $('#kpiExpensesSubtext').text(planDeltaText(data.totalAnnualExpenses, data.totalAnnualBudgetedExpenses, 'over', 'under') ||
-                ('Avg ' + formatMoney(data.totalAnnualExpenses / months.length) + ' / month'));
+                (`Avg ${ formatMoney(data.totalAnnualExpenses / months.length) } / month`));
             $('#kpiNetSavings').text(formatMoney(data.totalAnnualSavings));
             $('#kpiSavingsSubtext').text(data.totalAnnualSavings >= 0 ? 'Income minus spending' : 'Spent more than you earned');
             renderTileMeter('#kpiIncomeMeter', data.totalAnnualIncome, data.totalAnnualBudgetedIncome, 'income', 'Income');
@@ -407,19 +406,19 @@
             renderAllocation(data.totalAnnualIncome, data.totalAnnualExpenses);
 
             // Plain-language summary
-            const best = months.reduce(function (a, b) { return b.netSavings > a.netSavings ? b : a; });
-            const worst = months.reduce(function (a, b) { return b.netSavings < a.netSavings ? b : a; });
+            const best = months.reduce((a, b) => { return b.netSavings > a.netSavings ? b : a; });
+            const worst = months.reduce((a, b) => { return b.netSavings < a.netSavings ? b : a; });
             const categories = aggregateCategories(months);
-            const top = categories.slice().sort(function (a, b) { return b.actualAmount - a.actualAmount; })[0];
+            const top = categories.slice().sort((a, b) => { return b.actualAmount - a.actualAmount; })[0];
             const sentences = [
                 data.totalAnnualSavings >= 0
-                    ? 'In ' + data.year + ' you saved <strong>' + formatMoney(data.totalAnnualSavings) + '</strong>, <strong>' + data.averageSavingsRate.toFixed(0) + '%</strong> of your income.'
-                    : 'In ' + data.year + ' you spent <strong>' + formatMoney(-data.totalAnnualSavings) + ' more</strong> than you earned.',
-                '<strong>' + underCount + ' of ' + months.length + '</strong> months came in under budget.',
-                months.length > 1 && best.netSavings > 0 ? 'Best month: ' + escapeHtml(best.monthName) + ' (saved ' + formatMoney(best.netSavings) + ').' : '',
-                months.length > 1 && worst.netSavings < 0 ? 'Toughest month: ' + escapeHtml(worst.monthName) + ' (overspent ' + formatMoney(-worst.netSavings) + ').' : '',
+                    ? `In ${ data.year } you saved <strong>${ formatMoney(data.totalAnnualSavings) }</strong>, <strong>${ data.averageSavingsRate.toFixed(0) }%</strong> of your income.`
+                    : `In ${ data.year } you spent <strong>${ formatMoney(-data.totalAnnualSavings) } more</strong> than you earned.`,
+                `<strong>${ underCount } of ${ months.length }</strong> months came in under budget.`,
+                months.length > 1 && best.netSavings > 0 ? `Best month: ${ escapeHtml(best.monthName) } (saved ${ formatMoney(best.netSavings) }).` : '',
+                months.length > 1 && worst.netSavings < 0 ? `Toughest month: ${ escapeHtml(worst.monthName) } (overspent ${ formatMoney(-worst.netSavings) }).` : '',
                 top && top.actualAmount > 0 && data.totalAnnualExpenses > 0
-                    ? 'Biggest expense: ' + escapeHtml(top.categoryName) + ' (' + formatMoney(top.actualAmount) + ', ' + Math.round(top.actualAmount / data.totalAnnualExpenses * 100) + '% of spending).'
+                    ? `Biggest expense: ${ escapeHtml(top.categoryName) } (${ formatMoney(top.actualAmount) }, ${ Math.round(top.actualAmount / data.totalAnnualExpenses * 100) }% of spending).`
                     : ''
             ];
             renderInsight(monthStatusTone(status), sentences, statusPill(monthStatusTone(status), monthStatusLabel(status)));
@@ -429,7 +428,7 @@
             renderYearCharts(months);
 
             // Categories
-            $('#budgetCategoryTitle').text('Spending by category in ' + data.year);
+            $('#budgetCategoryTitle').text(`Spending by category in ${ data.year}`);
             $('#budgetCategorySubtitle').text('Totals across all months. Bars show how much of each yearly budget is used.');
             renderCategoryList(categories);
 
@@ -446,16 +445,16 @@
                 '<th scope="col">Status</th>' +
                 '<th scope="col" class="text-end"><span class="visually-hidden">Open</span></th>' +
                 '</tr></thead><tbody>';
-            months.forEach(function (m) {
-                tableHtml += '<tr class="bgt-row-link btn-drill-month" data-month="' + m.monthNumber + '">' +
-                    '<td class="fw-semibold">' + escapeHtml(m.monthName) + '</td>' +
-                    '<td class="text-end">' + formatCurrency(m.actualIncome) + '</td>' +
-                    '<td class="text-end text-muted">' + (m.budgetedExpenses > 0 ? formatCurrency(m.budgetedExpenses) : '&mdash;') + '</td>' +
-                    '<td class="text-end">' + formatCurrency(m.actualExpenses) + '</td>' +
-                    '<td class="text-end fw-semibold">' + formatCurrency(m.netSavings) + '</td>' +
-                    '<td class="text-end">' + m.savingsRate.toFixed(1) + '%</td>' +
-                    '<td>' + statusPill(monthStatusTone(m.status), monthStatusLabel(m.status)) + '</td>' +
-                    '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-0 btn-drill-month" data-month="' + m.monthNumber + '">Open &rarr;</button></td>' +
+            months.forEach((m) => {
+                tableHtml += `<tr class="bgt-row-link btn-drill-month" data-month="${ m.monthNumber }">` +
+                    `<td class="fw-semibold">${ escapeHtml(m.monthName) }</td>` +
+                    `<td class="text-end">${ formatCurrency(m.actualIncome) }</td>` +
+                    `<td class="text-end text-muted">${ m.budgetedExpenses > 0 ? formatCurrency(m.budgetedExpenses) : '&mdash;' }</td>` +
+                    `<td class="text-end">${ formatCurrency(m.actualExpenses) }</td>` +
+                    `<td class="text-end fw-semibold">${ formatCurrency(m.netSavings) }</td>` +
+                    `<td class="text-end">${ m.savingsRate.toFixed(1) }%</td>` +
+                    `<td>${ statusPill(monthStatusTone(m.status), monthStatusLabel(m.status)) }</td>` +
+                    `<td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-0 btn-drill-month" data-month="${ m.monthNumber }">Open &rarr;</button></td>` +
                     '</tr>';
             });
             tableHtml += '</tbody></table>';
@@ -467,7 +466,7 @@
             const tone = monthStatusTone(monthData.status);
             const single = data.months.length === 1;
 
-            $('#budgetPeriodTitle').text(monthData.monthName + ' ' + data.year);
+            $('#budgetPeriodTitle').text(`${monthData.monthName } ${ data.year}`);
             $('#budgetPeriodSubtitle').html(balanceText(monthData.startingBalance, monthData.endingBalance));
 
             // KPI tiles
@@ -478,7 +477,7 @@
             $('#kpiNetSavings').text(formatMoney(monthData.netSavings));
             $('#kpiSavingsSubtext').text(
                 (monthData.budgetedIncome > 0 || monthData.budgetedExpenses > 0)
-                    ? 'Planned: ' + formatMoney(monthData.budgetedNetSavings !== undefined ? monthData.budgetedNetSavings : monthData.budgetedIncome - monthData.budgetedExpenses)
+                    ? `Planned: ${ formatMoney(monthData.budgetedNetSavings !== undefined ? monthData.budgetedNetSavings : monthData.budgetedIncome - monthData.budgetedExpenses)}`
                     : (monthData.netSavings >= 0 ? 'Income minus spending' : 'Spent more than you earned'));
             renderTileMeter('#kpiIncomeMeter', monthData.actualIncome, monthData.budgetedIncome, 'income', 'Income');
             renderTileMeter('#kpiExpensesMeter', monthData.actualExpenses, monthData.budgetedExpenses, 'spend', 'Spending');
@@ -488,24 +487,24 @@
             // Plain-language summary
             const categories = monthData.categories || [];
             const overList = categories
-                .filter(function (c) { return categoryTone(c) === 'critical'; })
-                .sort(function (a, b) { return (b.actualAmount - b.budgetedAmount) - (a.actualAmount - a.budgetedAmount); });
-            const budgetedCount = categories.filter(function (c) { return c.budgetedAmount > 0; }).length;
+                .filter((c) => { return categoryTone(c) === 'critical'; })
+                .sort((a, b) => { return (b.actualAmount - b.budgetedAmount) - (a.actualAmount - a.budgetedAmount); });
+            const budgetedCount = categories.filter((c) => { return c.budgetedAmount > 0; }).length;
             let overText = '';
             if (overList.length > 0) {
-                overText = '<strong>' + overList.length + (overList.length === 1 ? ' category' : ' categories') + ' went over budget:</strong> ' +
-                    overList.slice(0, 3).map(function (c) { return escapeHtml(c.categoryName) + ' (+' + formatMoney(c.actualAmount - c.budgetedAmount) + ')'; }).join(', ') +
-                    (overList.length > 3 ? ', and ' + (overList.length - 3) + ' more' : '') + '.';
+                overText = `<strong>${ overList.length }${overList.length === 1 ? ' category' : ' categories' } went over budget:</strong> ${
+                    overList.slice(0, 3).map((c) => { return `${escapeHtml(c.categoryName) } (+${ formatMoney(c.actualAmount - c.budgetedAmount) })`; }).join(', ')
+                }${overList.length > 3 ? `, and ${ overList.length - 3 } more` : '' }.`;
             } else if (budgetedCount > 0) {
                 overText = 'Every budgeted category stayed within its limit.';
             }
             const planDiff = monthData.budgetedExpenses - monthData.actualExpenses;
             renderInsight(tone, [
                 monthData.netSavings >= 0
-                    ? 'You saved <strong>' + formatMoney(monthData.netSavings) + '</strong> in ' + escapeHtml(monthData.monthName) + ', <strong>' + monthData.savingsRate.toFixed(0) + '%</strong> of your income.'
-                    : 'You spent <strong>' + formatMoney(-monthData.netSavings) + ' more</strong> than you earned in ' + escapeHtml(monthData.monthName) + '.',
+                    ? `You saved <strong>${ formatMoney(monthData.netSavings) }</strong> in ${ escapeHtml(monthData.monthName) }, <strong>${ monthData.savingsRate.toFixed(0) }%</strong> of your income.`
+                    : `You spent <strong>${ formatMoney(-monthData.netSavings) } more</strong> than you earned in ${ escapeHtml(monthData.monthName) }.`,
                 monthData.budgetedExpenses > 0
-                    ? 'Spending came in <strong>' + formatMoney(Math.abs(planDiff)) + (planDiff >= 0 ? ' under' : ' over') + '</strong> your ' + formatMoney(monthData.budgetedExpenses) + ' plan.'
+                    ? `Spending came in <strong>${ formatMoney(Math.abs(planDiff)) }${planDiff >= 0 ? ' under' : ' over' }</strong> your ${ formatMoney(monthData.budgetedExpenses) } plan.`
                     : '',
                 overText
             ], statusPill(tone, monthStatusLabel(monthData.status)));
@@ -520,7 +519,7 @@
             renderCategoryList(categories);
 
             // Category table
-            $('#tableSectionTitle').text(monthData.monthName + ' category details');
+            $('#tableSectionTitle').text(`${monthData.monthName } category details`);
             let tableHtml = '<table class="table table-hover align-middle mb-0 bgt-table">' +
                 '<thead><tr>' +
                 '<th scope="col">Category</th>' +
@@ -530,16 +529,16 @@
                 '<th scope="col" class="text-end">% used</th>' +
                 '<th scope="col">Status</th>' +
                 '</tr></thead><tbody>';
-            categories.slice().sort(function (a, b) { return b.actualAmount - a.actualAmount; }).forEach(function (c) {
+            categories.slice().sort((a, b) => { return b.actualAmount - a.actualAmount; }).forEach((c) => {
                 const cTone = categoryTone(c);
                 const hasBudget = cTone !== 'none';
                 tableHtml += '<tr>' +
-                    '<td class="fw-semibold">' + escapeHtml(c.categoryName) + '</td>' +
-                    '<td class="text-end text-muted">' + (hasBudget ? formatCurrency(c.budgetedAmount) : '&mdash;') + '</td>' +
-                    '<td class="text-end">' + formatCurrency(c.actualAmount) + '</td>' +
-                    '<td class="text-end">' + (hasBudget ? (c.variance >= 0 ? formatCurrency(c.variance) + ' left' : formatCurrency(-c.variance) + ' over') : '&mdash;') + '</td>' +
-                    '<td class="text-end">' + (hasBudget ? c.percentageUsed.toFixed(0) + '%' : '&mdash;') + '</td>' +
-                    '<td>' + (hasBudget ? statusPill(cTone, categoryStatusLabel(cTone)) : '<span class="text-muted small">No budget set</span>') + '</td>' +
+                    `<td class="fw-semibold">${ escapeHtml(c.categoryName) }</td>` +
+                    `<td class="text-end text-muted">${ hasBudget ? formatCurrency(c.budgetedAmount) : '&mdash;' }</td>` +
+                    `<td class="text-end">${ formatCurrency(c.actualAmount) }</td>` +
+                    `<td class="text-end">${ hasBudget ? (c.variance >= 0 ? `${formatCurrency(c.variance) } left` : `${formatCurrency(-c.variance) } over`) : '&mdash;' }</td>` +
+                    `<td class="text-end">${ hasBudget ? `${c.percentageUsed.toFixed(0) }%` : '&mdash;' }</td>` +
+                    `<td>${ hasBudget ? statusPill(cTone, categoryStatusLabel(cTone)) : '<span class="text-muted small">No budget set</span>' }</td>` +
                     '</tr>';
             });
             tableHtml += '</tbody></table>';
@@ -556,7 +555,7 @@
                 setPeriodChips();
                 renderYearView(currentBudgetData);
             } else {
-                const monthData = currentBudgetData.months.find(function (m) { return m.monthNumber === monthNum; }) || currentBudgetData.months[0];
+                const monthData = currentBudgetData.months.find((m) => { return m.monthNumber === monthNum; }) || currentBudgetData.months[0];
                 currentSelectedMonth = monthData.monthNumber;
                 setPeriodChips();
                 renderMonthView(currentBudgetData, monthData);
@@ -564,7 +563,7 @@
         }
 
         function stepBudgetPeriod (direction) {
-            const idx = budgetPeriods.findIndex(function (p) { return p.month === currentSelectedMonth; });
+            const idx = budgetPeriods.findIndex((p) => { return p.month === currentSelectedMonth; });
             const next = budgetPeriods[idx + direction];
             if (next) {
                 renderBudgetMonth(next.month);
@@ -609,19 +608,19 @@
                     }
 
                     currentBudgetData = data;
-                    const rowsText = data.parsedRowCount > 0 ? ' · ' + data.parsedRowCount + ' rows read' : '';
+                    const rowsText = data.parsedRowCount > 0 ? ` · ${ data.parsedRowCount } rows read` : '';
                     const sourceClass = data.isLiveSpreadsheetData ? 'bgt-source--live' : 'bgt-source--sample';
-                    $('#budgetModalDataSource').html('<span class="bgt-source ' + sourceClass + '">' + escapeHtml(data.dataSource || 'Google Spreadsheet') + escapeHtml(rowsText) + '</span>');
+                    $('#budgetModalDataSource').html(`<span class="bgt-source ${ sourceClass }">${ escapeHtml(data.dataSource || 'Google Spreadsheet') }${escapeHtml(rowsText) }</span>`);
 
                     budgetPeriods = [];
                     if (data.months.length > 1) {
-                        budgetPeriods.push({ month: 0, label: 'Full year', title: data.year + ' overview' });
+                        budgetPeriods.push({ month: 0, label: 'Full year', title: `${data.year } overview` });
                     }
-                    data.months.forEach(function (m) {
+                    data.months.forEach((m) => {
                         budgetPeriods.push({
                             month: m.monthNumber,
-                            label: data.months.length > 1 ? m.monthName.substring(0, 3) : m.monthName + ' ' + data.year,
-                            title: m.monthName + ' ' + data.year
+                            label: data.months.length > 1 ? m.monthName.substring(0, 3) : `${m.monthName } ${ data.year}`,
+                            title: `${m.monthName } ${ data.year}`
                         });
                     });
 
@@ -645,7 +644,7 @@
             });
         });
 
-        $('#btnBudgetRetry').on('click', function () {
+        $('#btnBudgetRetry').on('click', () => {
             if (lastBudgetRequest) { loadBudgetReport(lastBudgetRequest); }
         });
 
@@ -653,9 +652,9 @@
         $(document).on('click', '.budget-month-btn', function () {
             renderBudgetMonth(parseInt($(this).data('month'), 10));
         });
-        $('#btnBudgetPrev').on('click', function () { stepBudgetPeriod(-1); });
-        $('#btnBudgetNext').on('click', function () { stepBudgetPeriod(1); });
-        $('#monthlyBudgetModal').on('keydown', function (e) {
+        $('#btnBudgetPrev').on('click', () => { stepBudgetPeriod(-1); });
+        $('#btnBudgetNext').on('click', () => { stepBudgetPeriod(1); });
+        $('#monthlyBudgetModal').on('keydown', (e) => {
             if (!currentBudgetData || $(e.target).is('input, select, textarea')) { return; }
             if (e.key === 'ArrowLeft') { e.preventDefault(); stepBudgetPeriod(-1); }
             if (e.key === 'ArrowRight') { e.preventDefault(); stepBudgetPeriod(1); }
@@ -668,74 +667,74 @@
             $('#monthlyBudgetModal .modal-body').scrollTop(0);
         });
 
-        $('#budgetCategorySort, #budgetOverOnly').on('change', function () {
+        $('#budgetCategorySort, #budgetOverOnly').on('change', () => {
             renderCategoryList();
         });
 
         // Export the table behind the current view: months for the full year, categories for a month
         function csvCell (value) {
             const text = String(value === null || value === undefined ? '' : value);
-            return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+            return /[",\n]/.test(text) ? `"${ text.replace(/"/g, '""') }"` : text;
         }
 
         function downloadCsv (fileName, rows) {
-            const csv = rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
+            const csv = rows.map((r) => { return r.map(csvCell).join(','); }).join('\r\n');
             // BOM so Excel opens the file as UTF-8
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+            const blob = new Blob([`\ufeff${ csv}`], { type: 'text/csv;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = fileName;
             document.body.appendChild(link);
             link.click();
             link.remove();
-            setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+            setTimeout(() => { URL.revokeObjectURL(link.href); }, 1000);
         }
 
-        $('#btnExportBudget').on('click', function () {
+        $('#btnExportBudget').on('click', () => {
             if (!currentBudgetData) { return; }
             const baseName = String(lastBudgetRequest && lastBudgetRequest.fileName || 'budget').replace(/\.[^.]+$/, '');
             const isYear = currentSelectedMonth === 0 && currentBudgetData.months.length > 1;
             let rows;
             if (isYear) {
                 rows = [['Month', 'Planned income', 'Income', 'Planned spending', 'Spent', 'Net saved', 'Savings rate %', 'Status']];
-                currentBudgetData.months.forEach(function (m) {
+                currentBudgetData.months.forEach((m) => {
                     rows.push([m.monthName, m.budgetedIncome, m.actualIncome, m.budgetedExpenses, m.actualExpenses, m.netSavings, m.savingsRate.toFixed(1), m.status]);
                 });
             } else {
-                const month = currentBudgetData.months.find(function (m) { return m.monthNumber === currentSelectedMonth; }) || currentBudgetData.months[0];
+                const month = currentBudgetData.months.find((m) => { return m.monthNumber === currentSelectedMonth; }) || currentBudgetData.months[0];
                 rows = [['Category', 'Planned', 'Spent', 'Left (negative = over)', '% used', 'Status']];
-                (month.categories || []).forEach(function (c) {
+                (month.categories || []).forEach((c) => {
                     const tone = categoryTone(c);
                     rows.push([c.categoryName, c.budgetedAmount, c.actualAmount, (c.budgetedAmount - c.actualAmount).toFixed(2),
                         c.budgetedAmount > 0 ? c.percentageUsed.toFixed(0) : '', categoryStatusLabel(tone)]);
                 });
             }
-            const period = isYear ? String(currentBudgetData.year) : (currentBudgetData.months.find(function (m) { return m.monthNumber === currentSelectedMonth; }) || {}).monthName || 'month';
-            downloadCsv(baseName + ' - ' + period + '.csv', rows);
+            const period = isYear ? String(currentBudgetData.year) : (currentBudgetData.months.find((m) => { return m.monthNumber === currentSelectedMonth; }) || {}).monthName || 'month';
+            downloadCsv(`${baseName } - ${ period }.csv`, rows);
         });
 
-        $('#btnToggleBudgetTable').on('click', function () {
+        $('#btnToggleBudgetTable').on('click', () => {
             budgetTableUserToggled = true;
             setTableVisible($('#budgetReportTableContainer').hasClass('d-none'));
         });
 
         // Charts rendered during the open animation can measure a zero-size canvas; re-measure once visible
-        $('#monthlyBudgetModal').on('shown.bs.modal', function () {
+        $('#monthlyBudgetModal').on('shown.bs.modal', () => {
             if (budgetMainChartInstance) { budgetMainChartInstance.resize(); }
             if (budgetNetChartInstance) { budgetNetChartInstance.resize(); }
         });
 
-        $('#monthlyBudgetModal').on('hidden.bs.modal', function () {
+        $('#monthlyBudgetModal').on('hidden.bs.modal', () => {
             budgetRequestSeq++;
             destroyYearCharts();
         });
 
         // Print Budget Report Handler: print only the report, with the table expanded
-        $('#btnPrintBudgetReport').on('click', function () {
+        $('#btnPrintBudgetReport').on('click', () => {
             $('body').addClass('bgt-printing');
             window.print();
         });
-        window.addEventListener('afterprint', function () {
+        window.addEventListener('afterprint', () => {
             $('body').removeClass('bgt-printing');
         });
     });

@@ -18,7 +18,7 @@
     {
         <div class="dash-summary__body">
             <div class="dash-summary__headline">
-                <p class="dash-summary__value dash-money">@netWorth.CurrentNetWorth.ToString("C0")</p>
+                <p class="dash-summary__value dash-money">@MoneyFormatter.FormatWhole(netWorth.CurrentNetWorth, SupportedCurrencies.Default.Code)</p>
                 <p class="dash-note">From your Net Worth settings.</p>
             </div>
 
@@ -44,7 +44,7 @@
                         <div class="dash-progress__bar" style="width: @barPercent.ToString("F1", CultureInfo.InvariantCulture)%"></div>
                     </div>
                     <p class="dash-summary__fi-target">
-                        FI Target <span class="dash-money">@netWorth.FiTarget.ToString("C0")</span>
+                        FI Target <span class="dash-money">@MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code)</span>
                         <span class="dash-summary__fi-hint">annual spending × 25</span>
                     </p>
                     @if (netWorth.FiReachedAge is not null)

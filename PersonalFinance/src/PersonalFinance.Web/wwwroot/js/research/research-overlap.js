@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Research page, Funds tab: how much the Fund Basket's funds overlap, from each fund's latest reported holdings.
  *
@@ -212,7 +213,7 @@
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, pair) => [
             line(`${pair.first.ticker} and ${pair.second.ticker}`, 'research-tooltip__name'),
             line(`${formatPercent(pair.overlap)} overlap by weight`, 'research-tooltip__value'),
-            line(`${pair.sharedCount.toLocaleString('en-US')} securities in common`, 'research-tooltip__muted')
+            line(`${PFI18n.formatNumber(pair.sharedCount)} securities in common`, 'research-tooltip__muted')
         ]);
         let current = null;
         let filterTicker = null;
@@ -309,7 +310,7 @@
             }
             td.tabIndex = 0;
             td.setAttribute('aria-label', `${pair.first.ticker} and ${pair.second.ticker}: ${formatPercent(pair.overlap)} `
-                + `overlap by weight, ${pair.sharedCount.toLocaleString('en-US')} securities in common`);
+                + `overlap by weight, ${PFI18n.formatNumber(pair.sharedCount)} securities in common`);
             td.addEventListener('pointermove', (event) => {
                 tooltip.show(event, pair);
                 highlight(pair);

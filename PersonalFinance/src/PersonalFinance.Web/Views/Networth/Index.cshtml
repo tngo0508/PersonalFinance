@@ -10,7 +10,7 @@
 @functions {
     private static string FormatCurrency(decimal value)
     {
-        return value.ToString("C0");
+        return MoneyFormatter.FormatWhole(value, SupportedCurrencies.Default.Code);
     }
 
     private static string FormatCompact(decimal value)

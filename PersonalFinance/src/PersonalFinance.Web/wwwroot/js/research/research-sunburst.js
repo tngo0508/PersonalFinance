@@ -1,4 +1,4 @@
-/* global d3 */
+/* global d3, PFI18n */
 /**
  * Research page, Sectors tab: a D3 sunburst of the largest SEC filers by Public float, one year at a time.
  * Rings, inside out: SEC industry office, SIC industry, company (plus one "Other" slice per industry for the smaller
@@ -187,7 +187,7 @@
         });
         (period.other || []).forEach((row) => {
             const node = industryNode(row.industry);
-            const filers = `${row.count.toLocaleString('en-US')} ${row.count === 1 ? 'filer' : 'filers'}`;
+            const filers = `${PFI18n.formatNumber(row.count)} ${row.count === 1 ? 'filer' : 'filers'}`;
             node.children.push({
                 key: `x${row.industry}`,
                 name: `Other (${filers})`,
@@ -1322,7 +1322,7 @@
             svg.attr('aria-label',
                 `Sunburst of SEC filers by Public float in ${period.period}: ${total}${where}${largestText}`);
             if (subtitle) {
-                const filers = (period.ranked.length + (period.restCount || 0)).toLocaleString('en-US');
+                const filers = PFI18n.formatNumber(period.ranked.length + (period.restCount || 0));
                 subtitle.textContent = `The ${period.ranked.length} largest of ${filers} filers in ${period.period}, ` +
                     'by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.';
             }

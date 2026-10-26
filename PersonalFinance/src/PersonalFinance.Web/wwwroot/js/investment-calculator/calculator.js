@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Investment Calculator — Compound growth projection.
  */
@@ -13,12 +14,7 @@
      * @returns {string} The formatted currency string.
      */
     function formatCurrency (value) {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(value);
+        return PFI18n.formatMoney(value, 'USD', { whole: true });
     }
 
     /**
@@ -413,13 +409,7 @@
      * @returns {string} The formatted string.
      */
     function formatAxisValue (val) {
-        if (val >= 1000000) {
-            return `$${ (val / 1000000).toFixed(1).replace(/\.0$/, '') }M`;
-        }
-        if (val >= 1000) {
-            return `$${ (val / 1000).toFixed(0) }k`;
-        }
-        return `$${ val.toFixed(0)}`;
+        return PFI18n.formatCompactMoney(val, 'USD');
     }
 
     /**

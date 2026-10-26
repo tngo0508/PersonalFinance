@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth slider and input synchronization module.
  * Handles slider-input pairing, formatting, and the savings rate indicator.
@@ -9,6 +10,18 @@
     const NW = window.NW;
 
     /**
+     * Read what was typed in a slider field, in the page culture: the currency symbol and group separators are
+     * dropped, the culture's decimal separator kept (7,5 in vi-VN). The slider shows the result at once.
+     * @param {string} text - The field's text.
+     * @returns {number} The number, or NaN.
+     */
+    function parseTyped (text) {
+        const decimal = PFI18n.formatNumber(1.5).replace(/\d/g, '');
+        const kept = String(text).split('').filter((char) => /[\d-]/.test(char) || char === decimal).join('');
+        return PFI18n.parseNumber(kept);
+    }
+
+    /**
      * Format a number for display in a slider field input.
      * @param {number} value - The numeric value.
      * @param {string} type - 'currency', 'percent', or 'number'.
@@ -18,10 +31,10 @@
         const num = NW.PF.safeParseFloat(value, NaN);
         if (isNaN(num)) { return ''; }
         if (type === 'currency') {
-            return Math.round(num).toLocaleString('en-US');
+            return PFI18n.formatNumber(Math.round(num));
         }
         if (type === 'percent') {
-            return num.toFixed(1);
+            return PFI18n.formatNumber(num, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         }
         return Math.round(num).toString();
     }
@@ -43,11 +56,12 @@
             { rangeId: 'nwAggressiveRoiRange', saveId: 'nwSaveAggressiveRoi' },
             { rangeId: 'nwAggressiveSavingsRange', saveId: 'nwSaveAggressiveSavings' }
         ];
-        fields.forEach(function (field) {
+        fields.forEach((field) => {
             const rangeEl = document.getElementById(field.rangeId);
             const saveEl = document.getElementById(field.saveId);
             if (rangeEl && saveEl) {
-                saveEl.value = rangeEl.value;
+                // The form posts in the page culture (7,5 in vi-VN); a range's own value is always invariant.
+                saveEl.value = PFI18n.formatNumber(Number(rangeEl.value), { useGrouping: false, maximumFractionDigits: 10 });
             }
         });
     }
@@ -67,7 +81,7 @@
         inputEl.value = formatSliderValue(rangeEl.value, formatType);
 
         // Range → Input
-        rangeEl.addEventListener('input', function () {
+        rangeEl.addEventListener('input', () => {
             inputEl.value = formatSliderValue(rangeEl.value, formatType);
             updateSavingsIndicator();
             syncSaveInputs();
@@ -75,9 +89,8 @@
         });
 
         // Input → Range (on blur and Enter key)
-        inputEl.addEventListener('input', function () {
-            const raw = inputEl.value.replace(/[^0-9.]/g, '');
-            const num = NW.PF.safeParseFloat(raw, NaN);
+        inputEl.addEventListener('input', () => {
+            const num = parseTyped(inputEl.value);
             if (!isNaN(num)) {
                 const min = NW.PF.safeParseFloat(rangeEl.min, 0);
                 const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
@@ -88,9 +101,8 @@
             NW.triggerRecalculation();
         });
 
-        inputEl.addEventListener('blur', function () {
-            const raw = inputEl.value.replace(/[^0-9.]/g, '');
-            const num = NW.PF.safeParseFloat(raw, NaN);
+        inputEl.addEventListener('blur', () => {
+            const num = parseTyped(inputEl.value);
             if (!isNaN(num)) {
                 const min = NW.PF.safeParseFloat(rangeEl.min, 0);
                 const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
@@ -102,7 +114,7 @@
             NW.triggerRecalculation();
         });
 
-        inputEl.addEventListener('keydown', function (e) {
+        inputEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 inputEl.blur();
@@ -122,8 +134,8 @@
 
         if (!savingsEl || !incomeEl || !rateValueEl || !rateFillEl) { return; }
 
-        const savings = NW.PF.safeParseFloat(savingsEl.value.replace(/[^0-9.]/g, ''), 0);
-        const income = NW.PF.safeParseFloat(incomeEl.value.replace(/[^0-9.]/g, ''), 0);
+        const savings = parseTyped(savingsEl.value) || 0;
+        const income = parseTyped(incomeEl.value) || 0;
 
         if (income <= 0) {
             rateValueEl.textContent = '0%';
@@ -134,8 +146,8 @@
 
         const rate = (savings / income) * 100;
         const displayRate = Math.min(rate, 100);
-        rateValueEl.textContent = rate.toFixed(1) + '%';
-        rateFillEl.style.width = displayRate + '%';
+        rateValueEl.textContent = `${PFI18n.formatNumber(rate, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }%`;
+        rateFillEl.style.width = `${displayRate }%`;
 
         // Color coding
         rateFillEl.className = 'nw-savings-indicator__fill';

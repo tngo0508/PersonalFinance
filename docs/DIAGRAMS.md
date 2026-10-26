@@ -1190,7 +1190,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    a["Serilog request logging"] --> b["/health, /alive"] --> c["ExceptionHandler + HSTS<br/>(outside Development)"] --> d["ForwardedHeaders"] --> e["HttpsRedirection"] --> f["RequestLocalization<br/>cookie, Accept-Language, en<br/>(formatting en-US)"] --> g["Routing"] --> h["Authentication<br/>Identity cookie, Google"] --> i["Authorization<br/>AdminNotFound handler"] --> j["Static assets"] --> k["MVC default route<br/>+ Razor Pages"] --> l["MigrateAndRunAsync"]
+    a["Serilog request logging"] --> b["/health, /alive"] --> c["ExceptionHandler + HSTS<br/>(outside Development)"] --> d["ForwardedHeaders"] --> e["HttpsRedirection"] --> f["RequestLocalization<br/>cookie, Accept-Language, en<br/>(formatting en-US or vi-VN)"] --> g["Routing"] --> h["Authentication<br/>Identity cookie, Google"] --> i["Authorization<br/>AdminNotFound handler"] --> j["Static assets"] --> k["MVC default route<br/>+ Razor Pages"] --> l["MigrateAndRunAsync"]
 ```
 
 Drawn from `ApiService/Program.cs`, `Web/Program.cs`, `Data/DatabaseMigrationExtensions.cs` and
@@ -1220,13 +1220,14 @@ listed here.
 
 The Web app speaks English and Vietnamese ([ADR 0015](adr/0015-json-localization-with-custom-string-localizer.md),
 [spec](specs/localization-and-multi-currency.md)). One flat JSON file per language holds every string; one in-house
-localizer serves Razor, DataAnnotations, model binding, Identity errors and the JS island. Formatting (numbers, dates)
-stays `en-US` until slice L2. ApiService is not localized.
+localizer serves Razor, DataAnnotations, model binding, Identity errors and the JS island. The formatting culture
+follows the Language (`en` → `en-US`, `vi` → `vi-VN`) for separators, dates and typed amounts; the currency symbol
+always comes from the amount's currency (ADR 0016). ApiService is not localized and formats in `en-US`.
 
 ```mermaid
 flowchart TB
     req["Request"] --> rl{"RequestLocalization<br/>(no query-string provider)"}
-    rl -- "1. .AspNetCore.Culture cookie" --> ui["CurrentUICulture en or vi<br/>CurrentCulture en-US"]
+    rl -- "1. .AspNetCore.Culture cookie" --> ui["LanguageCultureProvider<br/>CurrentUICulture en or vi<br/>CurrentCulture en-US or vi-VN"]
     rl -- "2. Accept-Language" --> ui
     rl -- "3. otherwise" --> ui
     ui --> loc["IStringLocalizer (JsonStringLocalizer)<br/>uiCulture, parent, then en<br/>3401 LocalizationFallback, 3402 LocalizationNotFound"]
@@ -1237,6 +1238,21 @@ flowchart TB
     loc --> js["js-strings tag helper<br/>script data-i18n-strings JSON islands:<br/>the layout's Shell.Js. and the page's own"] --> pfi["core/i18n.js<br/>merges the islands; PFI18n.t, PFI18n.plural, html lang"]
     sw["_LanguageSwitcher<br/>top bar (anonymous) and account menu"] -- "POST /Language/Set + antiforgery" --> lc["LanguageController<br/>stores the choice when signed in,<br/>LanguageCookie.Write, LocalRedirect"]
     lc -. "cookie c=vi-VN, uic=vi" .-> rl
+```
+
+Money, numbers and typed amounts, on the server and in the browser:
+
+```mermaid
+flowchart LR
+    cur["SupportedCurrencies<br/>(Shared/Constants)<br/>code, minor units, symbol"] --> mf["MoneyFormatter<br/>(Shared/Helpers)<br/>Format, FormatWhole, FormatAmount"]
+    cul["CurrentCulture<br/>separators, symbol position"] --> mf
+    mf --> views["Razor views, Web services,<br/>ApiService text"]
+    ban["CurrencyFormatBanTests<br/>no 'C' format elsewhere"] -.-> views
+    cul --> html["html data-culture"] --> pfi2["core/i18n.js<br/>PFI18n.formatMoney, formatNumber,<br/>formatDate, parseNumber"]
+    pfi2 --> charts["page modules,<br/>Chart.js and D3 axes and tooltips"]
+    pfi2 --> input["input data-money-input<br/>as-you-type grouping"]
+    input -- "form post 1.234,56" --> bind["CultureDecimalModelBinder<br/>CultureDecimalParser (strict grouping)"]
+    bind -- "1234.56, or a ModelState error" --> ctrl["Web controller"]
 ```
 
 The Account's Language is stored, and the cookie only mirrors it:
@@ -1265,7 +1281,8 @@ flowchart LR
     en --> ci
 ```
 
-Drawn from `Web/Infrastructure/Localization/`, `Web/Services/UserPreferenceService.cs`, `AccountEmailService.cs`,
+Drawn from `Web/Infrastructure/Localization/`, `Shared/Helpers/MoneyFormatter.cs`, `Shared/Constants/SupportedCurrencies.cs`,
+`Web/Services/UserPreferenceService.cs`, `AccountEmailService.cs`,
 `Web/TagHelpers/JsStringsTagHelper.cs`, `Web/Controllers/LanguageController.cs`, `Web/Views/Shared/_LanguageSwitcher.cshtml`, `Web/wwwroot/js/core/i18n.js`,
 `Web/tools/i18n-translate.js`, `Web/tools/i18n-report.js` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
 A string that is not shaped like a key (English still on attributes of pages not yet translated) is shown as written,

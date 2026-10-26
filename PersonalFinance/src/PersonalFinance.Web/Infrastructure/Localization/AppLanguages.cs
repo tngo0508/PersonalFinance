@@ -14,7 +14,7 @@ internal static class AppLanguages
 
     /// <summary>
     /// Every supported language: its code (the JSON file name and the UI culture), the formatting culture it maps to
-    /// (spec §2.2, used once slice L2 adds <c>vi-VN</c> to the supported cultures) and its name in itself, which the
+    /// (spec §2.2) and its name in itself, which the
     /// switcher shows untranslated so a reader can always find their own language.
     /// </summary>
     public static readonly IReadOnlyList<AppLanguage> All =
@@ -22,6 +22,10 @@ internal static class AppLanguages
         new AppLanguage { Code = "en", FormattingCulture = "en-US", NativeName = "English" },
         new AppLanguage { Code = "vi", FormattingCulture = "vi-VN", NativeName = "Tiếng Việt" }
     ];
+
+    /// <summary>The formatting cultures handed to <c>RequestLocalizationOptions.SupportedCultures</c> (en-US, vi-VN).</summary>
+    public static IList<CultureInfo> SupportedCultures =>
+        All.Select(language => CultureInfo.GetCultureInfo(language.FormattingCulture)).ToList();
 
     /// <summary>The UI cultures handed to <c>RequestLocalizationOptions.SupportedUICultures</c>.</summary>
     public static IList<CultureInfo> SupportedUICultures =>

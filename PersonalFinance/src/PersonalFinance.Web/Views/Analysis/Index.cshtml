@@ -161,7 +161,7 @@
             <div class="col-6 col-lg-3">
                 <div class="analysis-card analysis-card--income h-100">
                     <div class="analysis-card__label">Income</div>
-                    <div class="analysis-card__value">$@Model.TotalIncome.ToString("N0")</div>
+                    <div class="analysis-card__value">@MoneyFormatter.FormatWhole(Model.TotalIncome, SupportedCurrencies.Default.Code)</div>
                     <div class="analysis-card__sub">Total
                         for @(Model.MonthName)@(Model.SelectedMonth.HasValue ? "" : $" {Model.SelectedYear}")</div>
                 </div>
@@ -169,7 +169,7 @@
             <div class="col-6 col-lg-3">
                 <div class="analysis-card analysis-card--expenses h-100">
                     <div class="analysis-card__label">Expenses</div>
-                    <div class="analysis-card__value">$@Model.TotalExpenses.ToString("N0")</div>
+                    <div class="analysis-card__value">@MoneyFormatter.FormatWhole(Model.TotalExpenses, SupportedCurrencies.Default.Code)</div>
                     <div class="analysis-card__sub">Total
                         for @(Model.MonthName)@(Model.SelectedMonth.HasValue ? "" : $" {Model.SelectedYear}")</div>
                 </div>
@@ -178,7 +178,7 @@
                 <div class="analysis-card analysis-card--savings h-100">
                     <div class="analysis-card__label">Net Savings</div>
                     <div class="analysis-card__value" style="color: @(Model.NetSavings >= 0 ? "#198754" : "#dc3545")">
-                        $@Model.NetSavings.ToString("N0")</div>
+                        @MoneyFormatter.FormatWhole(Model.NetSavings, SupportedCurrencies.Default.Code)</div>
                     <div class="analysis-card__sub">Income minus expenses</div>
                 </div>
             </div>
@@ -207,7 +207,7 @@
                     <div class="col-md-4">
                         <div class="analysis-velocity-card">
                             <div class="analysis-velocity-card__label">Daily Burn Rate</div>
-                            <div class="analysis-velocity-card__value">$@Model.DailyBurnRate.ToString("N2")</div>
+                            <div class="analysis-velocity-card__value">@MoneyFormatter.Format(Model.DailyBurnRate, SupportedCurrencies.Default.Code)</div>
                             <div class="analysis-velocity-card__sub">Average daily spending</div>
                         </div>
                     </div>
@@ -215,14 +215,14 @@
                         <div class="analysis-velocity-card">
                             <div class="analysis-velocity-card__label">Projected Monthly</div>
                             <div class="analysis-velocity-card__value">
-                                $@Model.ProjectedMonthlySpend.ToString("N0")</div>
+                                @MoneyFormatter.FormatWhole(Model.ProjectedMonthlySpend, SupportedCurrencies.Default.Code)</div>
                             <div class="analysis-velocity-card__sub">At current rate</div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="analysis-velocity-card">
                             <div class="analysis-velocity-card__label">Budget</div>
-                            <div class="analysis-velocity-card__value">$@Model.BudgetedExpenses.ToString("N0")</div>
+                            <div class="analysis-velocity-card__value">@MoneyFormatter.FormatWhole(Model.BudgetedExpenses, SupportedCurrencies.Default.Code)</div>
                             <div class="analysis-velocity-card__sub">Planned spending</div>
                         </div>
                     </div>
@@ -236,10 +236,10 @@
                     </div>
                     <div class="analysis-progress-bar__track">
                         <div class="analysis-progress-bar__fill analysis-progress-bar__fill--budget"
-                             style="width: @(Math.Min(Model.BudgetConsumptionPercent, 100))%"
+                             style="width: @(Math.Min(Model.BudgetConsumptionPercent, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"
                              title="Budget consumption: @Model.BudgetConsumptionPercent.ToString("F1")%"></div>
                         <div class="analysis-progress-bar__marker"
-                             style="left: @(Math.Min(Model.TimeElapsedPercent, 100))%"
+                             style="left: @(Math.Min(Model.TimeElapsedPercent, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"
                              title="Time elapsed: @Model.TimeElapsedPercent.ToString("F1")%"></div>
                     </div>
                 </div>
@@ -281,7 +281,7 @@
                 @if (flow.HasShortfall)
                 {
                     <p class="money-flow__note mb-3">
-                        You spent <strong>$@flow.Shortfall.ToString("N0")</strong> more than you earned in @flow.MonthName.
+                        You spent <strong>@MoneyFormatter.FormatWhole(flow.Shortfall, SupportedCurrencies.Default.Code)</strong> more than you earned in @flow.MonthName.
                     </p>
                 }
                 <div class="d-flex flex-column gap-3">
@@ -315,7 +315,7 @@
                                             <span class="text-muted small">(in Other)</span>
                                         }
                                     </th>
-                                    <td class="text-end">$@row.Amount.ToString("N0")</td>
+                                    <td class="text-end">@MoneyFormatter.FormatWhole(row.Amount, SupportedCurrencies.Default.Code)</td>
                                     <td class="text-end">@row.SharePercent.ToString("F1")%</td>
                                 </tr>
                             }
@@ -323,14 +323,14 @@
                             <tfoot>
                             <tr>
                                 <th scope="row">Income</th>
-                                <td class="text-end fw-semibold">$@flow.Income.ToString("N0")</td>
+                                <td class="text-end fw-semibold">@MoneyFormatter.FormatWhole(flow.Income, SupportedCurrencies.Default.Code)</td>
                                 <td></td>
                             </tr>
                             @if (flow.HasShortfall)
                             {
                                 <tr class="money-flow__shortfall-row">
                                     <th scope="row">Shortfall</th>
-                                    <td class="text-end fw-semibold">$@flow.Shortfall.ToString("N0")</td>
+                                    <td class="text-end fw-semibold">@MoneyFormatter.FormatWhole(flow.Shortfall, SupportedCurrencies.Default.Code)</td>
                                     <td></td>
                                 </tr>
                             }
@@ -381,10 +381,10 @@
                         {
                             <tr>
                                 <td class="fw-semibold">@category.CategoryName</td>
-                                <td class="text-end">$@category.BudgetedAmount.ToString("N0")</td>
-                                <td class="text-end">$@category.ActualAmount.ToString("N0")</td>
+                                <td class="text-end">@MoneyFormatter.FormatWhole(category.BudgetedAmount, SupportedCurrencies.Default.Code)</td>
+                                <td class="text-end">@MoneyFormatter.FormatWhole(category.ActualAmount, SupportedCurrencies.Default.Code)</td>
                                 <td class="text-end" style="color: @(category.Variance >= 0 ? "#198754" : "#dc3545")">
-                                    @(category.Variance >= 0 ? "+" : "")$@category.Variance.ToString("N0")
+                                    @(category.Variance >= 0 ? "+" : "")@MoneyFormatter.FormatWhole(category.Variance, SupportedCurrencies.Default.Code)
                                 </td>
                                 <td class="text-end">@category.PercentageUsed.ToString("F1")%</td>
                                 <td class="text-end">
@@ -426,10 +426,10 @@
                             <tr>
                                 <td>@ranking.Rank</td>
                                 <td class="fw-semibold">@ranking.CategoryName</td>
-                                <td class="text-end">$@ranking.BudgetedAmount.ToString("N0")</td>
-                                <td class="text-end">$@ranking.ActualAmount.ToString("N0")</td>
+                                <td class="text-end">@MoneyFormatter.FormatWhole(ranking.BudgetedAmount, SupportedCurrencies.Default.Code)</td>
+                                <td class="text-end">@MoneyFormatter.FormatWhole(ranking.ActualAmount, SupportedCurrencies.Default.Code)</td>
                                 <td class="text-end" style="color: @(ranking.Variance >= 0 ? "#198754" : "#dc3545")">
-                                    @(ranking.Variance >= 0 ? "+" : "")$@ranking.Variance.ToString("N0")
+                                    @(ranking.Variance >= 0 ? "+" : "")@MoneyFormatter.FormatWhole(ranking.Variance, SupportedCurrencies.Default.Code)
                                 </td>
                                 <td class="text-end">
                                         <span

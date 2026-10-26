@@ -29,6 +29,7 @@ internal static class LocalizationServiceExtensions
         services.AddSingleton<IStringLocalizer>(sp =>
             sp.GetRequiredService<IStringLocalizerFactory>().Create(typeof(LocalizationServiceExtensions)));
         services.AddSingleton<IConfigureOptions<MvcOptions>, ModelBindingMessagesSetup>();
+        services.AddSingleton<IPostConfigureOptions<MvcOptions>, CultureDecimalModelBinderSetup>();
 
         // Razor HTML-encodes every non-ASCII character by default ("C&#xF2;n"); let Vietnamese through as UTF-8.
         // <, >, & and quotes are still encoded.
@@ -36,16 +37,16 @@ internal static class LocalizationServiceExtensions
             options.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All));
 
         // The UI language comes from the culture cookie, then Accept-Language, then English. There is no query-string
-        // provider. Formatting stays en-US until slice L2 adds vi-VN to SupportedCultures.
+        // provider. The formatting culture is always the language's own (vi -> vi-VN), whatever the provider read.
         services.Configure<RequestLocalizationOptions>(options =>
         {
             options.DefaultRequestCulture = new RequestCulture(AppCulture.DefaultCultureName, AppLanguages.Default);
-            options.SupportedCultures = [AppCulture.Default];
+            options.SupportedCultures = AppLanguages.SupportedCultures;
             options.SupportedUICultures = AppLanguages.SupportedUICultures;
             options.RequestCultureProviders =
             [
-                new CookieRequestCultureProvider(),
-                new AcceptLanguageHeaderRequestCultureProvider()
+                new LanguageCultureProvider(new CookieRequestCultureProvider()),
+                new LanguageCultureProvider(new AcceptLanguageHeaderRequestCultureProvider())
             ];
         });
 

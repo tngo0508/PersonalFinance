@@ -1,9 +1,10 @@
+/* global PFI18n */
 // Spreadsheet Transactions modal on the Google Drive page.
 // Server values come from data- attributes on #transactionsModal (data-transactions-url, data-connection-id).
 (function ($) {
     'use strict';
 
-    $(function () {
+    $(() => {
         const $modal = $('#transactionsModal');
         if ($modal.length === 0) { return; }
 
@@ -28,9 +29,7 @@
 
         // Whole dollars for tiles and prose where cents are noise
         function formatMoney (num) {
-            const n = Number(num) || 0;
-            const formatted = '$' + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
-            return n < 0 ? '-' + formatted : formatted;
+            return PFI18n.formatMoney(Number(num) || 0, 'USD', { whole: true });
         }
 
         function formatCompactCurrency (val) {
@@ -50,13 +49,13 @@
         function formatDate (iso, withYear) {
             const d = toDate(iso);
             if (!d) { return ''; }
-            return d.toLocaleDateString('en-US', withYear === false
+            return PFI18n.formatDate(d, withYear === false
                 ? { month: 'short', day: 'numeric' }
                 : { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
         function dayKey (d) {
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            return `${d.getFullYear() }-${ String(d.getMonth() + 1).padStart(2, '0') }-${ String(d.getDate()).padStart(2, '0')}`;
         }
 
         function isIncome (tx) {
@@ -64,7 +63,7 @@
         }
 
         function plural (n, word) {
-            return n + ' ' + word + (n === 1 ? '' : 's');
+            return `${n } ${ word }${n === 1 ? '' : 's'}`;
         }
 
         function showTxState (state) {
@@ -90,18 +89,18 @@
 
         function categoryTotals (expenses) {
             const map = {};
-            expenses.forEach(function (t) {
+            expenses.forEach((t) => {
                 const key = t.category || 'Uncategorized';
                 if (!map[key]) { map[key] = { name: key, total: 0, count: 0 }; }
                 map[key].total += t.amount;
                 map[key].count += 1;
             });
-            return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.total - a.total; });
+            return Object.keys(map).map((k) => { return map[k]; }).sort((a, b) => { return b.total - a.total; });
         }
 
         function renderSummary (data) {
             const txs = data.transactions;
-            const expenses = txs.filter(function (t) { return !isIncome(t); });
+            const expenses = txs.filter((t) => { return !isIncome(t); });
             const incomes = txs.filter(isIncome);
             const first = toDate(data.firstDate);
             const last = toDate(data.lastDate);
@@ -110,43 +109,43 @@
 
             $('#txKpiExpenses').text(formatMoney(data.totalExpenses));
             $('#txKpiExpensesSub').text(days > 1
-                ? plural(expenses.length, 'purchase') + ' · avg ' + formatMoney(data.totalExpenses / days) + '/day'
+                ? `${plural(expenses.length, 'purchase') } · avg ${ formatMoney(data.totalExpenses / days) }/day`
                 : plural(expenses.length, 'purchase'));
             $('#txKpiIncome').text(formatMoney(data.totalIncome));
             $('#txKpiIncomeSub').text(plural(incomes.length, 'deposit'));
             $('#txKpiNet').text(formatMoney(net));
             $('#txKpiNetSub').text(data.totalIncome > 0
-                ? (net >= 0 ? 'Kept ' + Math.round(net / data.totalIncome * 100) + '% of income' : 'Spent more than came in')
+                ? (net >= 0 ? `Kept ${ Math.round(net / data.totalIncome * 100) }% of income` : 'Spent more than came in')
                 : 'Income minus spending');
-            $('#txKpiCount').text(txs.length.toLocaleString('en-US'));
-            $('#txKpiRange').text(first && last ? formatDate(data.firstDate) + ' – ' + formatDate(data.lastDate) : 'No dates recorded');
+            $('#txKpiCount').text(PFI18n.formatNumber(txs.length));
+            $('#txKpiRange').text(first && last ? `${formatDate(data.firstDate) } – ${ formatDate(data.lastDate)}` : 'No dates recorded');
 
             // Highlights
             const facts = [];
-            const largest = expenses.slice().sort(function (a, b) { return b.amount - a.amount; })[0];
+            const largest = expenses.slice().sort((a, b) => { return b.amount - a.amount; })[0];
             if (largest) {
-                facts.push(['Largest expense', escapeHtml(largest.description || largest.category || 'Expense') + ' · ' + formatMoney(largest.amount) +
-                    (largest.date ? ' on ' + formatDate(largest.date, false) : '')]);
+                facts.push(['Largest expense', `${escapeHtml(largest.description || largest.category || 'Expense') } · ${ formatMoney(largest.amount)
+                }${largest.date ? ` on ${ formatDate(largest.date, false)}` : ''}`]);
             }
             const cats = categoryTotals(expenses);
             if (cats.length && data.totalExpenses > 0) {
-                facts.push(['Top category', escapeHtml(cats[0].name) + ' · ' + Math.round(cats[0].total / data.totalExpenses * 100) + '% of spending']);
-                const frequent = cats.slice().sort(function (a, b) { return b.count - a.count || b.total - a.total; })[0];
+                facts.push(['Top category', `${escapeHtml(cats[0].name) } · ${ Math.round(cats[0].total / data.totalExpenses * 100) }% of spending`]);
+                const frequent = cats.slice().sort((a, b) => { return b.count - a.count || b.total - a.total; })[0];
                 if (frequent.count > 1) {
-                    facts.push(['Most frequent', escapeHtml(frequent.name) + ' · ' + plural(frequent.count, 'purchase')]);
+                    facts.push(['Most frequent', `${escapeHtml(frequent.name) } · ${ plural(frequent.count, 'purchase')}`]);
                 }
             }
-            $('#txInsights').html(facts.map(function (f) {
-                return '<li><span class="bgt-facts-label">' + f[0] + '</span><span class="bgt-facts-value">' + f[1] + '</span></li>';
+            $('#txInsights').html(facts.map((f) => {
+                return `<li><span class="bgt-facts-label">${ f[0] }</span><span class="bgt-facts-value">${ f[1] }</span></li>`;
             }).join('')).toggleClass('d-none', facts.length === 0);
 
             renderCategoryRank(cats, data.totalExpenses);
             renderTimeline(expenses, first, last);
 
             // Category filter options
-            const allCategories = Array.from(new Set(txs.map(function (t) { return t.category; }).filter(Boolean))).sort();
+            const allCategories = Array.from(new Set(txs.map((t) => { return t.category; }).filter(Boolean))).sort();
             const $select = $('#txCategoryFilter').empty().append('<option value="">All categories</option>');
-            allCategories.forEach(function (c) {
+            allCategories.forEach((c) => {
                 $select.append($('<option>').val(c).text(c));
             });
         }
@@ -162,29 +161,29 @@
             const rest = cats.slice(TOP_CATEGORY_COUNT);
             if (rest.length) {
                 rows = rows.concat([{
-                    name: 'Other (' + rest.length + ')',
-                    total: rest.reduce(function (s, c) { return s + c.total; }, 0),
-                    count: rest.reduce(function (s, c) { return s + c.count; }, 0),
+                    name: `Other (${ rest.length })`,
+                    total: rest.reduce((s, c) => { return s + c.total; }, 0),
+                    count: rest.reduce((s, c) => { return s + c.count; }, 0),
                     isOther: true
                 }]);
             }
-            const max = rows.reduce(function (m, c) { return Math.max(m, c.total); }, 0) || 1;
-            $list.html(rows.map(function (c) {
+            const max = rows.reduce((m, c) => { return Math.max(m, c.total); }, 0) || 1;
+            $list.html(rows.map((c) => {
                 const share = Math.round(c.total / totalExpenses * 100);
-                const inner = '<span class="bgt-rank-head"><span class="bgt-rank-name">' + escapeHtml(c.name) + '</span>' +
-                    '<span class="bgt-rank-value">' + formatMoney(c.total) + ' <small>' + share + '%</small></span></span>' +
-                    '<span class="bgt-rank-track"><span class="bgt-rank-fill" style="width:' + (c.total / max * 100).toFixed(1) + '%"></span></span>';
+                const inner = `<span class="bgt-rank-head"><span class="bgt-rank-name">${ escapeHtml(c.name) }</span>` +
+                    `<span class="bgt-rank-value">${ formatMoney(c.total) } <small>${ share }%</small></span></span>` +
+                    `<span class="bgt-rank-track"><span class="bgt-rank-fill" style="width:${ (c.total / max * 100).toFixed(1) }%"></span></span>`;
                 // "Other" groups several categories, so it isn't a filter target
                 return c.isOther
-                    ? '<div class="bgt-rank-row bgt-rank-row--static">' + inner + '</div>'
-                    : '<button type="button" class="bgt-rank-row" data-category="' + escapeHtml(c.name === 'Uncategorized' ? '' : c.name) + '"' +
-                      ' aria-pressed="false" title="Show only ' + escapeHtml(c.name) + '">' + inner + '</button>';
+                    ? `<div class="bgt-rank-row bgt-rank-row--static">${ inner }</div>`
+                    : `<button type="button" class="bgt-rank-row" data-category="${ escapeHtml(c.name === 'Uncategorized' ? '' : c.name) }"` +
+                      ` aria-pressed="false" title="Show only ${ escapeHtml(c.name) }">${ inner }</button>`;
             }).join(''));
         }
 
         // Spending per day for ranges up to two months, otherwise per month
         function renderTimeline (expenses, first, last) {
-            const dated = expenses.filter(function (t) { return toDate(t.date); });
+            const dated = expenses.filter((t) => { return toDate(t.date); });
             const $box = $('#txTimelineChart').closest('.bgt-chart-box');
             $box.find('.bgt-chart-empty').remove();
             if (dated.length === 0 || !first || !last) {
@@ -200,32 +199,32 @@
                 for (let d = new Date(first.getFullYear(), first.getMonth(), first.getDate()); d <= last; d = new Date(d.getTime() + DAY_MS)) {
                     const key = dayKey(d);
                     index[key] = buckets.length;
-                    buckets.push({ label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), total: 0, count: 0 });
+                    buckets.push({ label: PFI18n.formatDate(d, { month: 'short', day: 'numeric' }), total: 0, count: 0 });
                 }
             } else {
                 for (let d = new Date(first.getFullYear(), first.getMonth(), 1); d <= last; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
-                    const key = d.getFullYear() + '-' + d.getMonth();
+                    const key = `${d.getFullYear() }-${ d.getMonth()}`;
                     index[key] = buckets.length;
-                    buckets.push({ label: d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), total: 0, count: 0 });
+                    buckets.push({ label: PFI18n.formatDate(d, { month: 'short', year: 'numeric' }), total: 0, count: 0 });
                 }
             }
-            dated.forEach(function (t) {
+            dated.forEach((t) => {
                 const d = toDate(t.date);
-                const key = byDay ? dayKey(d) : d.getFullYear() + '-' + d.getMonth();
+                const key = byDay ? dayKey(d) : `${d.getFullYear() }-${ d.getMonth()}`;
                 const b = buckets[index[key]];
                 if (b) { b.total += t.amount; b.count += 1; }
             });
 
-            const peak = buckets.reduce(function (a, b) { return b.total > a.total ? b : a; });
-            $('#txTimelineSub').text((byDay ? 'Daily' : 'Monthly') + ' totals · highest: ' + peak.label + ' (' + formatMoney(peak.total) + ')');
+            const peak = buckets.reduce((a, b) => { return b.total > a.total ? b : a; });
+            $('#txTimelineSub').text(`${byDay ? 'Daily' : 'Monthly' } totals · highest: ${ peak.label } (${ formatMoney(peak.total) })`);
 
             txChart = new Chart(document.getElementById('txTimelineChart').getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: buckets.map(function (b) { return b.label; }),
+                    labels: buckets.map((b) => { return b.label; }),
                     datasets: [{
                         label: 'Spending',
-                        data: buckets.map(function (b) { return b.total; }),
+                        data: buckets.map((b) => { return b.total; }),
                         backgroundColor: TX_COLORS.spend,
                         borderRadius: 4,
                         borderSkipped: 'start',
@@ -245,10 +244,10 @@
                             padding: 10,
                             cornerRadius: 8,
                             callbacks: {
-                                label: function (ctx) { return ' Spent ' + formatCurrency(ctx.parsed.y); },
+                                label: function (ctx) { return ` Spent ${ formatCurrency(ctx.parsed.y)}`; },
                                 afterLabel: function (ctx) {
                                     const n = buckets[ctx.dataIndex].count;
-                                    return n ? ' ' + plural(n, 'purchase') : ' No purchases';
+                                    return n ? ` ${ plural(n, 'purchase')}` : ' No purchases';
                                 }
                             }
                         }
@@ -273,7 +272,7 @@
         // ---------- Table & filters ----------
 
         function exactPattern (value) {
-            return value ? '^' + DataTable.util.escapeRegex(value) + '$' : '';
+            return value ? `^${ DataTable.util.escapeRegex(value) }$` : '';
         }
 
         function applyFilters () {
@@ -298,14 +297,14 @@
         function renderFilterSummary () {
             if (!txTable || !currentTx) { return; }
             const rows = txTable.rows({ search: 'applied' }).data().toArray();
-            const spent = rows.filter(function (t) { return !isIncome(t); }).reduce(function (s, t) { return s + t.amount; }, 0);
-            const earned = rows.filter(isIncome).reduce(function (s, t) { return s + t.amount; }, 0);
+            const spent = rows.filter((t) => { return !isIncome(t); }).reduce((s, t) => { return s + t.amount; }, 0);
+            const earned = rows.filter(isIncome).reduce((s, t) => { return s + t.amount; }, 0);
             const total = currentTx.transactions.length;
             const parts = [
-                rows.length === total ? 'Showing all ' + plural(total, 'transaction') : 'Showing ' + rows.length + ' of ' + total,
-                'Spending <strong>' + formatCurrency(spent) + '</strong>'
+                rows.length === total ? `Showing all ${ plural(total, 'transaction')}` : `Showing ${ rows.length } of ${ total}`,
+                `Spending <strong>${ formatCurrency(spent) }</strong>`
             ];
-            if (earned > 0) { parts.push('Income <strong>' + formatCurrency(earned) + '</strong>'); }
+            if (earned > 0) { parts.push(`Income <strong>${ formatCurrency(earned) }</strong>`); }
             $('#txFilterSummary').html(parts.join('<span aria-hidden="true"> · </span>'));
         }
 
@@ -330,8 +329,8 @@
                         render: function (value, type, row) {
                             if (type !== 'display') { return value || ''; }
                             // Category repeats under the description on narrow screens, where its column is hidden
-                            return '<div class="fw-semibold">' + escapeHtml(value || '—') + '</div>' +
-                                '<div class="small text-muted d-md-none">' + escapeHtml(row.category || 'Uncategorized') + '</div>';
+                            return `<div class="fw-semibold">${ escapeHtml(value || '—') }</div>` +
+                                `<div class="small text-muted d-md-none">${ escapeHtml(row.category || 'Uncategorized') }</div>`;
                         }
                     },
                     {
@@ -339,7 +338,7 @@
                         className: 'd-none d-md-table-cell',
                         render: function (value, type) {
                             if (type !== 'display') { return value || ''; }
-                            return '<span class="bgt-chip">' + escapeHtml(value || 'Uncategorized') + '</span>';
+                            return `<span class="bgt-chip">${ escapeHtml(value || 'Uncategorized') }</span>`;
                         }
                     },
                     { data: 'type', visible: false },
@@ -349,7 +348,7 @@
                         render: function (value, type, row) {
                             if (type !== 'display') { return value; }
                             return isIncome(row)
-                                ? '<span class="bgt-amount-in">+' + formatCurrency(value) + '</span>'
+                                ? `<span class="bgt-amount-in">+${ formatCurrency(value) }</span>`
                                 : formatCurrency(value);
                         }
                     }
@@ -410,8 +409,8 @@
 
                     currentTx = data;
                     const sourceClass = data.isLiveSpreadsheetData ? 'bgt-source--live' : 'bgt-source--sample';
-                    $('#txModalDataSource').html('<span class="bgt-source ' + sourceClass + '">' + escapeHtml(data.dataSource || 'Google Spreadsheet') + '</span>');
-                    $('#txSheetName').text(data.sheetName ? 'Read from sheet: ' + data.sheetName : '');
+                    $('#txModalDataSource').html(`<span class="bgt-source ${ sourceClass }">${ escapeHtml(data.dataSource || 'Google Spreadsheet') }</span>`);
+                    $('#txSheetName').text(data.sheetName ? `Read from sheet: ${ data.sheetName}` : '');
 
                     showTxState('content');
                     renderSummary(data);
@@ -445,7 +444,7 @@
             });
         });
 
-        $('#btnTxRetry').on('click', function () {
+        $('#btnTxRetry').on('click', () => {
             if (lastTxRequest) { loadTransactions(lastTxRequest); }
         });
 
@@ -470,49 +469,49 @@
         $('#txSearch').on('input', function () {
             const value = $(this).val().trim();
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(function () {
+            searchTimer = setTimeout(() => {
                 filters.search = value;
                 applyFilters();
             }, 150);
         });
 
-        $('#txClearFilters').on('click', function () {
+        $('#txClearFilters').on('click', () => {
             resetFilters();
             applyFilters();
         });
 
         // Export the rows the current filters show
-        $('#btnExportTx').on('click', function () {
+        $('#btnExportTx').on('click', () => {
             if (!txTable || !currentTx) { return; }
             const rows = [['Date', 'Description', 'Category', 'Type', 'Amount']];
-            txTable.rows({ search: 'applied', order: 'applied' }).data().toArray().forEach(function (t) {
+            txTable.rows({ search: 'applied', order: 'applied' }).data().toArray().forEach((t) => {
                 const d = toDate(t.date);
                 rows.push([d ? dayKey(d) : (t.dateText || ''), t.description, t.category, isIncome(t) ? 'Income' : 'Spending', t.amount.toFixed(2)]);
             });
-            const csv = rows.map(function (r) {
-                return r.map(function (v) {
+            const csv = rows.map((r) => {
+                return r.map((v) => {
                     const text = String(v === null || v === undefined ? '' : v);
-                    return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+                    return /[",\n]/.test(text) ? `"${ text.replace(/"/g, '""') }"` : text;
                 }).join(',');
             }).join('\r\n');
             // BOM so Excel opens the file as UTF-8
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+            const blob = new Blob([`\ufeff${ csv}`], { type: 'text/csv;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = String(currentTx.fileName || 'transactions').replace(/\.[^.]+$/, '') + ' - transactions.csv';
+            link.download = `${String(currentTx.fileName || 'transactions').replace(/\.[^.]+$/, '') } - transactions.csv`;
             document.body.appendChild(link);
             link.click();
             link.remove();
-            setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+            setTimeout(() => { URL.revokeObjectURL(link.href); }, 1000);
         });
 
         // Tables and charts built during the open animation measure zero width; re-measure once visible
-        $modal.on('shown.bs.modal', function () {
+        $modal.on('shown.bs.modal', () => {
             if (txTable) { txTable.columns.adjust(); }
             if (txChart) { txChart.resize(); }
         });
 
-        $modal.on('hidden.bs.modal', function () {
+        $modal.on('hidden.bs.modal', () => {
             txRequestSeq++;
             destroyTxViews();
         });

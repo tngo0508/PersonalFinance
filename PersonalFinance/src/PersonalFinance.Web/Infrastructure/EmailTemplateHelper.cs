@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using System.Text.Unicode;
 using Microsoft.AspNetCore.Html;
 using Microsoft.Extensions.Localization;
@@ -90,13 +91,24 @@ public static class EmailTemplateHelper
     {
         ArgumentNullException.ThrowIfNull(localizer);
         string name = appName ?? DefaultAppName;
-        string purgeDate = purgeAfterUtc.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture);
+        string purgeDate = LongDateWithoutWeekday(purgeAfterUtc, CultureInfo.CurrentCulture);
         return new EmailMessage(localizer["Email.Deletion.Subject"], BuildActionEmail(localizer, name, cancelUrl,
             title: Encode(localizer.Named("Email.Deletion.Title", ("appName", name))),
             heading: Encode(localizer["Email.Deletion.Heading"]),
             introHtml: Html(localizer, "Email.Deletion.Intro", ("appName", Strong(name)), ("date", Strong(purgeDate))),
             buttonText: Encode(localizer["Email.Deletion.Button"]),
             footerHtml: Encode(localizer["Email.Deletion.Footer"])));
+    }
+
+    /// <summary>
+    /// The culture's long date without the weekday or its literal words, so it fits in a sentence:
+    /// <c>October 25, 2026</c> in en-US, <c>25 tháng 10, 2026</c> in vi-VN (pattern <c>dddd, 'ngày' d MMMM, yyyy</c>).
+    /// </summary>
+    private static string LongDateWithoutWeekday(DateTime date, CultureInfo culture)
+    {
+        string pattern = Regex.Replace(culture.DateTimeFormat.LongDatePattern, @"dddd,?\s*|'[^']*'\s*", string.Empty,
+            RegexOptions.None, TimeSpan.FromSeconds(1));
+        return date.ToString(pattern.Trim(), culture);
     }
 
     private static string Encode(string text) => Encoder.Encode(text);

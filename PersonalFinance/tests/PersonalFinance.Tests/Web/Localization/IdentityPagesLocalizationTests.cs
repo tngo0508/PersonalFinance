@@ -119,7 +119,7 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
     {
         string html = await GetAsync("/Identity/Account/Login", signedIn: false);
 
-        Assert.Contains("<html lang=\"vi\">", html);
+        Assert.Contains("<html lang=\"vi\"", html);
         Assert.Contains("<h1 class=\"auth-page__title mb-2\">Đăng nhập</h1>", html);
         Assert.Contains("Chưa có tài khoản?", html);
         Assert.DoesNotContain("have an account?", html);
@@ -164,7 +164,7 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
     {
         string html = await GetAsync(url, signedIn);
 
-        Assert.Contains("<html lang=\"vi\">", html);
+        Assert.Contains("<html lang=\"vi\"", html);
         Assert.Empty(_notFound);
     }
 
@@ -187,7 +187,7 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
         string html = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("<html lang=\"en\">", html);
+        Assert.Contains("<html lang=\"en\"", html);
         Assert.Contains("See your plan and your progress to your FI target.", html);
         Assert.Contains("have an account?", html);
         Assert.Empty(_notFound);

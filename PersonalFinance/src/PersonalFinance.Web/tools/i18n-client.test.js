@@ -28,8 +28,13 @@ function load (islands, lang) {
         Intl,
         console: { warn () {} },
         document: {
-            documentElement: { lang: lang || 'en' },
+            documentElement: { lang: lang || 'en', getAttribute: () => null },
+            readyState: 'complete',
             querySelectorAll (selector) {
+                // The module also binds money inputs on load; this page has none.
+                if (selector === 'input[data-money-input]') {
+                    return [];
+                }
                 assert.strictEqual(selector, 'script[type="application/json"][data-i18n-strings]');
                 return elements;
             }

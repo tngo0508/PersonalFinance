@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Dashboard net worth projection.
  * Draws the Base, Conservative, and Aggressive scenarios from current age to retirement age, with the FI Target as
@@ -27,18 +28,10 @@
         { key: 'aggressive', name: 'Aggressive', color: COLORS.aggressive, width: 2 }
     ];
 
-    const currencyFormatter = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0
-    });
+    // Separators from the page culture, symbol from the currency (PFI18n, spec §2.2).
+    const currencyFormatter = { format: (value) => PFI18n.formatMoney(value, 'USD', { whole: true }) };
 
-    const compactFormatter = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        notation: 'compact',
-        maximumFractionDigits: 1
-    });
+    const compactFormatter = { format: (value) => PFI18n.formatCompactMoney(value, 'USD') };
 
     /**
      * Chart height that scales with the viewport so the plot stays legible on phones and desktops.

@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
+using PersonalFinance.Shared.Helpers;
 using CreateNotificationRequestDto = PersonalFinance.ApiService.Infrastructure.CreateNotificationRequestDto;
 namespace PersonalFinance.ApiService.Features.SavingsGoals;
 
@@ -144,15 +146,15 @@ internal sealed class SavingsGoalService : ISavingsGoalService
                         Type = "SavingsMilestone",
                         Title = $"{milestone}% savings milestone reached!",
                         Message =
-                            $"Your goal '{goalName}' has reached {milestone}% of its target ({currentAmount:C} of {targetAmount:C}).",
+                            $"Your goal '{goalName}' has reached {milestone}% of its target ({MoneyFormatter.Format(currentAmount, SupportedCurrencies.Default.Code)} of {MoneyFormatter.Format(targetAmount, SupportedCurrencies.Default.Code)}).",
                         TitleKey = "Notifications.SavingsMilestone.Title",
                         MessageKey = "Notifications.SavingsMilestone.Message",
                         Arguments = new Dictionary<string, string>
                         {
                             ["percent"] = milestone.ToString(CultureInfo.InvariantCulture),
                             ["goalName"] = goalName,
-                            ["current"] = currentAmount.ToString("C", CultureInfo.CurrentCulture),
-                            ["target"] = targetAmount.ToString("C", CultureInfo.CurrentCulture)
+                            ["current"] = MoneyFormatter.Format(currentAmount, SupportedCurrencies.Default.Code),
+                            ["target"] = MoneyFormatter.Format(targetAmount, SupportedCurrencies.Default.Code)
                         },
                         SourceFeature = "SavingsGoals"
                     }, cancellationToken);

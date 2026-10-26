@@ -1,3 +1,4 @@
+/* global PFI18n */
 (function () {
     'use strict';
 
@@ -91,14 +92,14 @@
                 percentInput.value = percent > 0 ? percent.toFixed(2) : '';
             }
             if (amountInput) {
-                amountInput.value = amount > 0 ? amount.toFixed(2) : '';
+                amountInput.value = amount > 0 ? PFI18n.formatAmount(amount, 'USD') : '';
             }
         });
 
         // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput && incomeCents > 0) {
-            incomeInput.value = (incomeCents / 100).toFixed(2);
+            incomeInput.value = PFI18n.formatAmount(incomeCents / 100, 'USD');
         }
     }
 
@@ -110,7 +111,7 @@
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
             incomeInput.addEventListener('input', function () {
-                incomeCents = Math.round(parseFloat(this.value) * 100) || 0;
+                incomeCents = Math.round(PFI18n.parseNumber(this.value) * 100) || 0;
                 updateAll();
             });
         }
@@ -153,7 +154,7 @@
         amountInputs.forEach((amountInput) => {
             amountInput.addEventListener('input', function () {
                 const cat = this.getAttribute('data-category');
-                const cents = Math.round(parseFloat(this.value) * 100) || 0;
+                const cents = Math.round(PFI18n.parseNumber(this.value) * 100) || 0;
                 const normalizedCat = normalizeCategory(cat);
                 setCategoryFromCents(normalizedCat, cents);
                 updateAll();
@@ -235,7 +236,7 @@
         // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
-            incomeInput.value = (incomeCents / 100).toFixed(2);
+            incomeInput.value = PFI18n.formatAmount(incomeCents / 100, 'USD');
         }
 
         // Sync each category amount input (the asp-for bound field)
@@ -247,7 +248,7 @@
             // The asp-for input ID matches the PascalCase property name (e.g. "Housing")
             const input = document.getElementById(capitalized);
             if (input) {
-                input.value = amount.toFixed(2);
+                input.value = PFI18n.formatAmount(amount, 'USD');
             }
         });
     }
@@ -280,7 +281,7 @@
             // Sync the editable amount input (only if not currently focused)
             const amountInput = document.querySelector(`.budget-amount-input[data-category="${ capitalized }"]`);
             if (amountInput && document.activeElement !== amountInput) {
-                amountInput.value = amount > 0 ? amount.toFixed(2) : '';
+                amountInput.value = amount > 0 ? PFI18n.formatAmount(amount, 'USD') : '';
             }
         });
     }
@@ -299,7 +300,7 @@
         const remainingLabelEl = document.querySelector('.budget-remaining__label');
 
         if (remainingEl) {
-            remainingEl.textContent = `$${ formatCurrency(Math.abs(remainingAmount)) } (${ Math.abs(remainingPct).toFixed(1) }%)`;
+            remainingEl.textContent = `${ formatDollars(Math.abs(remainingAmount)) } (${ PFI18n.formatNumber(Math.abs(remainingPct), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }%)`;
         }
 
         if (remainingContainer) {
@@ -334,10 +335,10 @@
         const incomeSpan = document.getElementById('budgetIncomeAmount');
 
         if (totalSpan) {
-            totalSpan.textContent = `$${ formatCurrency(totalAmount)}`;
+            totalSpan.textContent = formatDollars(totalAmount);
         }
         if (incomeSpan) {
-            incomeSpan.textContent = `$${ formatCurrency(incomeAmount)}`;
+            incomeSpan.textContent = formatDollars(incomeAmount);
         }
 
         if (badge) {
@@ -416,7 +417,7 @@
 
             const amountSpan = document.createElement('span');
             amountSpan.className = 'budget-summary-item__amount';
-            amountSpan.textContent = `$${ formatCurrency(amount)}`;
+            amountSpan.textContent = formatDollars(amount);
 
             values.appendChild(percentSpan);
             values.appendChild(amountSpan);
@@ -440,7 +441,7 @@
             totalPercentEl.textContent = `${totalPercent.toFixed(1) }%`;
         }
         if (totalAmountEl) {
-            totalAmountEl.textContent = `$${ formatCurrency(totalAmount)}`;
+            totalAmountEl.textContent = formatDollars(totalAmount);
         }
     }
 
@@ -651,7 +652,7 @@
                                 const value = context.parsed || 0;
                                 const income = incomeCents / 100;
                                 const amount = (income * value) / 100;
-                                return `${label }: ${ value.toFixed(1) }% ($${ formatCurrency(amount) })`;
+                                return `${label }: ${ PFI18n.formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }% (${ formatDollars(amount) })`;
                             }
                         }
                     }
@@ -688,15 +689,22 @@
     }
 
     /**
-     * Format a number as currency (no $ sign, commas, no decimals for whole numbers).
+     * Format a number as currency (no $ sign, grouped in the page culture, no decimals for whole numbers).
      * @param {number} value - The amount to format
      * @returns {string} Formatted currency string
      */
     function formatCurrency (value) {
-        if (value === Math.floor(value)) {
-            return value.toLocaleString('en-US');
-        }
-        return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const decimals = value === Math.floor(value) ? 0 : 2;
+        return PFI18n.formatNumber(value, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    /**
+     * Format US dollars with the symbol in the page culture, no decimals for whole numbers ($1,500; $1,500.50).
+     * @param {number} value - The amount to format
+     * @returns {string} Formatted amount
+     */
+    function formatDollars (value) {
+        return PFI18n.formatMoney(value, 'USD', { whole: value === Math.floor(value) });
     }
 
     /**
