@@ -117,4 +117,87 @@ public static class ApiErrorKeys
         /// <summary>A story's category was empty or longer than the <c>max</c> argument.</summary>
         public const string StoryCategory = "Community.Validation.StoryCategory";
     }
+
+    /// <summary>The keys of the Budget Tracker Feature's rejections.</summary>
+    public static class BudgetTracker
+    {
+        /// <summary>A month request named a year outside the <c>min</c> to <c>max</c> arguments.</summary>
+        public const string YearRange = "BudgetTracker.Validation.YearRange";
+
+        /// <summary>A month request named a month outside the <c>min</c> to <c>max</c> arguments.</summary>
+        public const string MonthRange = "BudgetTracker.Validation.MonthRange";
+
+        /// <summary>A planned amount was outside the <c>min</c> to <c>max</c> amount arguments.</summary>
+        public const string PlannedAmountRange = "BudgetTracker.Validation.PlannedAmountRange";
+
+        /// <summary>A planned amount had more than two decimal places.</summary>
+        public const string PlannedAmountWholeCents = "BudgetTracker.Validation.PlannedAmountWholeCents";
+
+        /// <summary>An Actual Override was outside the <c>min</c> to <c>max</c> amount arguments.</summary>
+        public const string ActualOverrideRange = "BudgetTracker.Validation.ActualOverrideRange";
+
+        /// <summary>An Actual Override had more than two decimal places.</summary>
+        public const string ActualOverrideWholeCents = "BudgetTracker.Validation.ActualOverrideWholeCents";
+
+        /// <summary>A category's name was empty.</summary>
+        public const string CategoryNameRequired = "BudgetTracker.Validation.CategoryNameRequired";
+
+        /// <summary>A category's name was longer than the <c>max</c> argument.</summary>
+        public const string CategoryNameTooLong = "BudgetTracker.Validation.CategoryNameTooLong";
+
+        /// <summary>A category's kind was neither Expense nor Income.</summary>
+        public const string CategoryKindInvalid = "BudgetTracker.Validation.CategoryKindInvalid";
+
+        /// <summary>A category's sort order was negative.</summary>
+        public const string SortOrderNegative = "BudgetTracker.Validation.SortOrderNegative";
+
+        /// <summary>A transaction had no date.</summary>
+        public const string TransactionDateRequired = "BudgetTracker.Validation.TransactionDateRequired";
+
+        /// <summary>A transaction's amount was outside the <c>min</c> to <c>max</c> amount arguments.</summary>
+        public const string TransactionAmountRange = "BudgetTracker.Validation.TransactionAmountRange";
+
+        /// <summary>A transaction's amount had more than two decimal places.</summary>
+        public const string TransactionAmountWholeCents = "BudgetTracker.Validation.TransactionAmountWholeCents";
+
+        /// <summary>A transaction's description was longer than the <c>max</c> argument.</summary>
+        public const string DescriptionTooLong = "BudgetTracker.Validation.DescriptionTooLong";
+
+        /// <summary>A transaction named no category.</summary>
+        public const string CategoryRequired = "BudgetTracker.Validation.CategoryRequired";
+
+        /// <summary>A Data Source preference named an unknown source.</summary>
+        public const string DataSourceInvalid = "BudgetTracker.Validation.DataSourceInvalid";
+
+        /// <summary>A sheet or line was addressed with a year or month outside the supported range.</summary>
+        public const string InvalidYearOrMonth = "BudgetTracker.Error.InvalidYearOrMonth";
+
+        /// <summary>The category does not exist, belongs to another user, or is archived where that is not allowed.</summary>
+        public const string CategoryNotFound = "BudgetTracker.Error.CategoryNotFound";
+
+        /// <summary>The transaction does not exist or belongs to another user.</summary>
+        public const string TransactionNotFound = "BudgetTracker.Error.TransactionNotFound";
+
+        /// <summary>A category of the same kind already has the <c>name</c> argument as its name.</summary>
+        public const string DuplicateCategory = "BudgetTracker.Error.DuplicateCategory";
+
+        /// <summary>A category update tried to change its kind.</summary>
+        public const string CategoryKindImmutable = "BudgetTracker.Error.CategoryKindImmutable";
+
+        /// <summary>A transaction was given to an archived category.</summary>
+        public const string ArchivedCategory = "BudgetTracker.Error.ArchivedCategory";
+    }
+
+    /// <summary>The keys of the Budget Planner Feature's rejections.</summary>
+    public static class BudgetPlanner
+    {
+        /// <summary>The monthly income was outside the <c>min</c> to <c>max</c> amount arguments.</summary>
+        public const string MonthlyIncomeRange = "BudgetPlanner.Validation.MonthlyIncomeRange";
+
+        /// <summary>A category's allocation was outside the <c>min</c> to <c>max</c> amount arguments.</summary>
+        public const string AllocationRange = "BudgetPlanner.Validation.AllocationRange";
+
+        /// <summary>A category's allocation had more than two decimal places.</summary>
+        public const string AllocationWholeCents = "BudgetPlanner.Validation.AllocationWholeCents";
+    }
 }

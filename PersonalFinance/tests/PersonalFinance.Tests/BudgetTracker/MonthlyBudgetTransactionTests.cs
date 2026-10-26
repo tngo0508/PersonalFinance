@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.BudgetTracker;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
@@ -187,8 +190,8 @@ public class MonthlyBudgetTransactionTests
         // Archive custom category
         await service.DeleteCategoryAsync(UserId, customCat.Id);
 
-        // 1. Attempt to create transaction in archived category -> ArgumentException
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        // 1. Attempt to create transaction in archived category -> ArchivedCategory
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.CreateTransactionAsync(UserId, new SaveTransactionRequest
             {
                 Date = new DateOnly(2026, 10, 15),
@@ -197,8 +200,8 @@ public class MonthlyBudgetTransactionTests
                 CategoryId = customCat.Id
             }));
 
-        // 2. Attempt to update existing transaction to archived category -> ArgumentException
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        // 2. Attempt to update existing transaction to archived category -> ArchivedCategory
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.UpdateTransactionAsync(UserId, tx.Id, new SaveTransactionRequest
             {
                 Date = new DateOnly(2026, 10, 10),
@@ -229,7 +232,7 @@ public class MonthlyBudgetTransactionTests
         });
 
         // Other user cannot update or delete it
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.UpdateTransactionAsync(OtherUserId, tx.Id, new SaveTransactionRequest
             {
                 Date = new DateOnly(2026, 10, 15),
@@ -238,11 +241,11 @@ public class MonthlyBudgetTransactionTests
                 CategoryId = otherFood.Id
             }));
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.DeleteTransactionAsync(OtherUserId, tx.Id));
 
         // User cannot assign transaction to other user's category
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.CreateTransactionAsync(UserId, new SaveTransactionRequest
             {
                 Date = new DateOnly(2026, 10, 15),
@@ -287,5 +290,44 @@ public class MonthlyBudgetTransactionTests
         BudgetTransaction deleted = await db.BudgetTransactions.IgnoreQueryFilters().SingleAsync(t => t.Id == tx.Id);
         Assert.True(deleted.IsDeleted);
         Assert.NotNull(deleted.DeletedAt);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_InArchivedCategory_IsRejectedWithTheArchivedCategoryKey()
+    {
+        await using AppDbContext db = CreateContext();
+        var service = new MonthlyBudgetService(db);
+        BudgetCategoryDto category = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
+        {
+            Name = "Gym",
+            Kind = BudgetCategoryKind.Expense,
+            SortOrder = 99
+        });
+        await service.DeleteCategoryAsync(UserId, category.Id);
+
+        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
+            service.CreateTransactionAsync(UserId, new SaveTransactionRequest
+            {
+                Date = new DateOnly(2026, 10, 15),
+                Amount = 50m,
+                CategoryId = category.Id
+            }));
+
+        Assert.Equal(ApiErrorKeys.BudgetTracker.ArchivedCategory, ex.Key);
+        Assert.Equal(StatusCodes.Status400BadRequest, ex.StatusCode);
+        Assert.Equal(nameof(SaveTransactionRequest.CategoryId), ex.Field);
+    }
+
+    [Fact]
+    public async Task DeleteTransaction_Unknown_IsRejectedWithTheNotFoundKeyAnd404()
+    {
+        await using AppDbContext db = CreateContext();
+        var service = new MonthlyBudgetService(db);
+
+        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
+            service.DeleteTransactionAsync(UserId, 99999));
+
+        Assert.Equal(ApiErrorKeys.BudgetTracker.TransactionNotFound, ex.Key);
+        Assert.Equal(StatusCodes.Status404NotFound, ex.StatusCode);
     }
 }

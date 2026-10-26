@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using PersonalFinance.ApiService.Features.BudgetTracker;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
@@ -168,7 +170,7 @@ public class MonthlyBudgetConcurrencyTests
     }
 
     [Fact]
-    public async Task CreateCategory_RecoversFromConcurrentDuplicate_ThrowingDuplicateCategoryException()
+    public async Task CreateCategory_RecoversFromConcurrentDuplicate_RejectingTheDuplicate()
     {
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
@@ -190,8 +192,8 @@ public class MonthlyBudgetConcurrencyTests
                 await secondaryDb.SaveChangesAsync();
             };
 
-            // Attempting to create duplicate concurrently should throw DuplicateCategoryException
-            await Assert.ThrowsAsync<DuplicateCategoryException>(() =>
+            // Attempting to create duplicate concurrently is rejected as a duplicate
+            await Assert.ThrowsAsync<ApiErrorException>(() =>
                 service.CreateCategoryAsync(UserId, new SaveCategoryRequest
                 {
                     Name = "Freelance Consulting",

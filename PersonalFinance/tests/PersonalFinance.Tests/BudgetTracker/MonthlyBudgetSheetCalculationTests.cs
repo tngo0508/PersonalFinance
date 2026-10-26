@@ -359,7 +359,7 @@ public class MonthlyBudgetSheetCalculationTests
     }
 
     [Fact]
-    public async Task SetPlanned_And_SetActualOverride_WithOtherUserCategory_ThrowsKeyNotFoundException()
+    public async Task SetPlanned_And_SetActualOverride_WithOtherUserCategory_IsRejectedAsNotFound()
     {
         await using AppDbContext db = CreateContext();
         var service = new MonthlyBudgetService(db);
@@ -368,10 +368,10 @@ public class MonthlyBudgetSheetCalculationTests
 
         BudgetCategory otherFood = await db.BudgetCategories.FirstAsync(c => c.UserId == OtherUserId && c.Name == "Food");
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.SetPlannedAsync(UserId, 2026, 10, otherFood.Id, new SetPlannedRequest { Amount = 100m }));
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.SetActualOverrideAsync(UserId, 2026, 10, otherFood.Id,
                 new SetActualOverrideRequest { Amount = 100m }));
     }
@@ -396,11 +396,11 @@ public class MonthlyBudgetSheetCalculationTests
         // Archive the category
         await service.DeleteCategoryAsync(UserId, customCat.Id);
 
-        // 1. Attempting to set planned amount or override in fresh month (December 2026) where it has no data -> KeyNotFoundException
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        // 1. Attempting to set planned amount or override in fresh month (December 2026) where it has no data -> CategoryNotFound
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.SetPlannedAsync(UserId, 2026, 12, customCat.Id, new SetPlannedRequest { Amount = 25m }));
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.SetActualOverrideAsync(UserId, 2026, 12, customCat.Id,
                 new SetActualOverrideRequest { Amount = 25m }));
 

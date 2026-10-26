@@ -1,11 +1,13 @@
 using FluentValidation;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 
 namespace PersonalFinance.ApiService.Features.BudgetTracker.Validators;
 
 /// <summary>
-/// Validator for budget data source selection requests.
+/// Validator for budget data source selection requests. The rule carries its <see cref="ApiErrorKeys.BudgetTracker"/>
+/// key (ADR 0017).
 /// </summary>
 internal sealed class SetBudgetDataSourceRequestValidator : AbstractValidator<SetBudgetDataSourceRequest>
 {
@@ -13,6 +15,7 @@ internal sealed class SetBudgetDataSourceRequestValidator : AbstractValidator<Se
     {
         RuleFor(x => x.Source)
             .IsInEnum()
-            .WithMessage("Valid budget data source is required.");
+                .WithErrorCode(ApiErrorKeys.BudgetTracker.DataSourceInvalid)
+                .WithMessage("Valid budget data source is required.");
     }
 }

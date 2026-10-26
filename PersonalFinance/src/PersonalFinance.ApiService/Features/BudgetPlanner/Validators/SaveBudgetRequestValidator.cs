@@ -1,101 +1,63 @@
+using System.Linq.Expressions;
 using FluentValidation;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 namespace PersonalFinance.ApiService.Features.BudgetPlanner.Validators;
 
 /// <summary>
-/// Validator for save budget requests. Ensures amounts are non-negative and valid.
+/// Validator for save budget requests: the monthly income is over 0 and at most <see cref="MaxAmount"/>; every
+/// category allocation is from 0 to <see cref="MaxAmount"/> in whole cents. Every rule carries its
+/// <see cref="ApiErrorKeys.BudgetPlanner"/> key and the bounds as arguments (ADR 0017).
 /// </summary>
 internal sealed class SaveBudgetRequestValidator : AbstractValidator<SaveBudgetRequestDto>
 {
+    /// <summary>The largest monthly income or category allocation.</summary>
+    public const decimal MaxAmount = 10_000_000m;
+
+    private static readonly IReadOnlyDictionary<string, ApiErrorArgDto> AmountRangeArgs =
+        ErrorArgs.MoneyRange(0m, MaxAmount, SupportedCurrencies.Default.Code);
+
     public SaveBudgetRequestValidator()
     {
         RuleFor(x => x.MonthlyIncome)
-            .GreaterThanOrEqualTo(0.01m)
-            .WithMessage("Monthly income must be greater than 0.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Monthly income must not exceed 10,000,000.");
+            .GreaterThan(0m)
+                .WithErrorCode(ApiErrorKeys.BudgetPlanner.MonthlyIncomeRange)
+                .WithMessage("Monthly income must be over $0 and at most $10,000,000.")
+                .WithState(_ => AmountRangeArgs)
+            .LessThanOrEqualTo(MaxAmount)
+                .WithErrorCode(ApiErrorKeys.BudgetPlanner.MonthlyIncomeRange)
+                .WithMessage("Monthly income must be over $0 and at most $10,000,000.")
+                .WithState(_ => AmountRangeArgs);
 
-        RuleFor(x => x.Allocations.Housing)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Housing amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Housing amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Housing amount must have at most 2 decimal places.");
+        AllocationRules(x => x.Allocations.Housing);
+        AllocationRules(x => x.Allocations.Food);
+        AllocationRules(x => x.Allocations.Transportation);
+        AllocationRules(x => x.Allocations.Utilities);
+        AllocationRules(x => x.Allocations.Insurance);
+        AllocationRules(x => x.Allocations.Healthcare);
+        AllocationRules(x => x.Allocations.Savings);
+        AllocationRules(x => x.Allocations.DebtRepayment);
+        AllocationRules(x => x.Allocations.Entertainment);
+        AllocationRules(x => x.Allocations.Miscellaneous);
+    }
 
-        RuleFor(x => x.Allocations.Food)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Food amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Food amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Food amount must have at most 2 decimal places.");
-
-        RuleFor(x => x.Allocations.Transportation)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Transportation amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Transportation amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Transportation amount must have at most 2 decimal places.");
-
-        RuleFor(x => x.Allocations.Utilities)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Utilities amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Utilities amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Utilities amount must have at most 2 decimal places.");
-
-        RuleFor(x => x.Allocations.Insurance)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Insurance amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Insurance amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Insurance amount must have at most 2 decimal places.");
-
-        RuleFor(x => x.Allocations.Healthcare)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Healthcare amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Healthcare amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Healthcare amount must have at most 2 decimal places.");
-
-        RuleFor(x => x.Allocations.Savings)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Savings amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Savings amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Savings amount must have at most 2 decimal places.");
-
-        RuleFor(x => x.Allocations.DebtRepayment)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Debt repayment amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Debt repayment amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Debt repayment amount must have at most 2 decimal places.");
-
-        RuleFor(x => x.Allocations.Entertainment)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Entertainment amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Entertainment amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Entertainment amount must have at most 2 decimal places.");
-
-        RuleFor(x => x.Allocations.Miscellaneous)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("Miscellaneous amount must be 0 or greater.")
-            .LessThanOrEqualTo(10_000_000m)
-            .WithMessage("Miscellaneous amount must not exceed 10,000,000.")
-            .Must(v => v == Math.Round(v, 2))
-            .WithMessage("Miscellaneous amount must have at most 2 decimal places.");
+    /// <summary>The range and whole-cents rules every category allocation shares; the failure names the field.</summary>
+    private void AllocationRules(Expression<Func<SaveBudgetRequestDto, decimal>> allocation)
+    {
+        RuleFor(allocation)
+            .GreaterThanOrEqualTo(0m)
+                .WithErrorCode(ApiErrorKeys.BudgetPlanner.AllocationRange)
+                .WithMessage("The amount for each category must be between $0 and $10,000,000.")
+                .WithState(_ => AmountRangeArgs)
+            .LessThanOrEqualTo(MaxAmount)
+                .WithErrorCode(ApiErrorKeys.BudgetPlanner.AllocationRange)
+                .WithMessage("The amount for each category must be between $0 and $10,000,000.")
+                .WithState(_ => AmountRangeArgs)
+            .Must(value => value == Math.Round(value, 2))
+                .WithErrorCode(ApiErrorKeys.BudgetPlanner.AllocationWholeCents)
+                .WithMessage("The amount of each category can have at most two decimal places.");
     }
 }

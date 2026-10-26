@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.BudgetPlanner.Validators;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Shared.Helpers;
@@ -13,6 +14,7 @@ namespace PersonalFinance.ApiService.Features.BudgetPlanner;
 /// <summary>
 /// API controller for budget allocation endpoints.
 /// All endpoints are scoped to the current user identified by the authenticated Account (see XUserIdAuthenticationHandler).
+/// A rejected save is an <see cref="ApiErrorDto"/> carrying <see cref="ApiErrorKeys.BudgetPlanner"/> keys (ADR 0017).
 /// </summary>
 [Authorize]
 [ApiController]
@@ -105,7 +107,7 @@ public class BudgetController : ControllerBase
     /// </summary>
     [HttpPost("budget")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SaveBudget([FromBody] SaveBudgetRequestDto request,
         CancellationToken cancellationToken = default)
@@ -113,7 +115,7 @@ public class BudgetController : ControllerBase
         ValidationResult validationResult = await _validator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            return BadRequest(validationResult.Errors.Select(e => new { e.ErrorCode, e.ErrorMessage }));
+            return BadRequest(validationResult.ToApiError());
         }
 
         string userId = User.GetUserId();

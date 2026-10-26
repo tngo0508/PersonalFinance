@@ -12,7 +12,7 @@ namespace PersonalFinance.Tests.Architecture;
 public class ApiErrorArchitectureTests
 {
     /// <summary>The Features under <c>Features/</c> whose rejections carry keys.</summary>
-    private static readonly string[] ConvertedFeatures = ["MoneyPriorities", "Community"];
+    private static readonly string[] ConvertedFeatures = ["MoneyPriorities", "Community", "BudgetTracker", "BudgetPlanner"];
 
     private static readonly Regex LiteralBadRequest = new(
         @"BadRequest\(\s*""|BadRequest\(\s*\$""|BadRequest\(\s*new\s*\{|BadRequest\(\s*[a-zA-Z_.]+\.(Error)?Message\s*\)",
