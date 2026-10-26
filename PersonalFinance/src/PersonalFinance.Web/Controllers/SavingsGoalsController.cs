@@ -6,6 +6,7 @@ using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Models.SavingsGoals;
 using ApiException = Refit.ApiException;
 
 namespace PersonalFinance.Web.Controllers;
@@ -310,8 +311,11 @@ public class SavingsGoalsController : Controller
     {
         try
         {
-            ViewData["Goals"] = await _savingsGoalsApi.GetSavingsGoalsAsync(cancellationToken);
-            ViewData["Today"] = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+            List<SavingsGoalDto> goals = await _savingsGoalsApi.GetSavingsGoalsAsync(cancellationToken);
+            var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+            ViewData["Goals"] = goals;
+            ViewData["Today"] = today;
+            ViewData["Summary"] = SavingsGoalsSummaryViewModel.From(goals, today);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {

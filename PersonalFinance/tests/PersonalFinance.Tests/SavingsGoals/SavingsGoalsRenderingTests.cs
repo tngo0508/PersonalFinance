@@ -29,7 +29,8 @@ namespace PersonalFinance.Tests.SavingsGoals;
 /// <summary>
 /// The Savings Goals page rendered through the real compiled Razor views. A goal with nothing saved yet still shows its
 /// percentage: the label sits beside the progress track, not inside a fill too narrow to hold it. Each card records
-/// Contributions through an "Add Contribution" form, lists them in a collapsible history, and offers "Correct balance".
+/// Contributions through an "Add Contribution" form, lists them in a collapsible history, offers "Correct balance", and
+/// says its Pace in words; a four-tile summary sits above the goals.
 /// </summary>
 public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
 {
@@ -209,6 +210,170 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
         Assert.DoesNotContain(">Deposit<", html, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(PaceStatus.NoTargetDate, "No target date", "This goal has no target date to compare with.")]
+    [InlineData(PaceStatus.JustStarted, "Just started", "This goal has just started, so it&#x27;s too early to compare with its date.")]
+    [InlineData(PaceStatus.Ahead, "Ahead", "You&#x27;re ahead of the line to your date.")]
+    [InlineData(PaceStatus.OnTrack, "On track", "You&#x27;re on track for your date.")]
+    [InlineData(PaceStatus.Behind, "Behind", "You&#x27;re behind the line to your date.")]
+    [InlineData(PaceStatus.Reached, "Reached", "This goal has reached its target.")]
+    public async Task PaceLine_SaysTheStatusInWords(PaceStatus status, string label, string sentence)
+    {
+        _api.Goals.Add(PacedGoal(new SavingsGoalPaceDto { Status = status }));
+
+        (_, string html) = await GetPageAsync();
+
+        string pace = PaceBlock().Match(html).Value;
+        Assert.Contains($"data-pace-status=\"{status}\"", pace, StringComparison.Ordinal);
+        Assert.Contains($"<span class=\"savings-goal-pace__label\">{label}</span>", pace, StringComparison.Ordinal);
+        Assert.Contains(sentence, pace, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PaceLine_ForAPastDueGoal_SaysWhatIsLeft()
+    {
+        _api.Goals.Add(PacedGoal(new SavingsGoalPaceDto { Status = PaceStatus.PastDue }));
+
+        (_, string html) = await GetPageAsync();
+
+        Assert.Contains($"The target date has passed, with {MoneyFormatter.FormatWhole(1_350m, SupportedCurrencies.Default.Code)} still to go.",
+            PaceBlock().Match(html).Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PaceLine_ShowsNeededPerMonth_TheProjection_AndSavedThisMonth()
+    {
+        SavingsGoalDto goal = PacedGoal(new SavingsGoalPaceDto
+        {
+            Status = PaceStatus.Behind,
+            NeededPerMonth = 112.5m,
+            RateState = PaceRateState.Positive,
+            RatePerMonth = 80m,
+            ProjectedFinish = new DateOnly(2028, 3, 14)
+        });
+        goal.TargetDate = new DateTime(2027, 10, 1);
+        goal.SavedThisMonth = 40m;
+        _api.Goals.Add(goal);
+
+        (_, string html) = await GetPageAsync();
+
+        string pace = PaceBlock().Match(html).Value;
+        Assert.Contains("$112.50 a month would reach the target by October 2027.", pace, StringComparison.Ordinal);
+        Assert.Contains("At your recent pace you&#x27;d reach this in March 2028.", pace, StringComparison.Ordinal);
+        Assert.Contains("Saved this month: $40.00", pace, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(PaceRateState.Unknown, "Not enough history yet for a projection.")]
+    [InlineData(PaceRateState.Stalled, "No recent Contributions to project from.")]
+    public async Task PaceLine_WithoutAProjection_SaysWhy(PaceRateState state, string sentence)
+    {
+        _api.Goals.Add(PacedGoal(new SavingsGoalPaceDto { Status = PaceStatus.NoTargetDate, RateState = state }));
+
+        (_, string html) = await GetPageAsync();
+
+        Assert.Contains(sentence, PaceBlock().Match(html).Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PaceLine_ReadsAsInformation_NeverAdvice()
+    {
+        _api.Goals.Add(PacedGoal(new SavingsGoalPaceDto { Status = PaceStatus.Behind, NeededPerMonth = 50m }));
+
+        (_, string html) = await GetPageAsync();
+
+        string pace = PaceBlock().Match(html).Value;
+        Assert.DoesNotContain("should", pace, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("need to", pace, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SummaryHeader_AddsUpTheGoals()
+    {
+        _api.Goals.AddRange(
+        [
+            Goal(1, "Car", 400m, 1_000m, new DateTime(2027, 6, 1), PaceStatus.OnTrack, savedThisMonth: 50m),
+            Goal(2, "House", 2_000m, 20_000m, new DateTime(2026, 12, 1), PaceStatus.Behind, savedThisMonth: 25.5m),
+            Goal(3, "Trip", 500m, 2_000m, new DateTime(2026, 9, 1), PaceStatus.PastDue),
+            Goal(4, "Laptop", 1_500m, 1_500m, new DateTime(2026, 11, 1), PaceStatus.Reached, completed: true),
+            Goal(5, "Rainy day", 300m, 5_000m, null, PaceStatus.NoTargetDate, savedThisMonth: 10m)
+        ]);
+
+        (_, string html) = await GetPageAsync();
+
+        // Active goals only: 400 + 2,000 + 500 + 300; Laptop is reached.
+        Assert.Contains($"data-summary=\"total-saved\">{MoneyFormatter.FormatWhole(3_200m, SupportedCurrencies.Default.Code)}<",
+            html, StringComparison.Ordinal);
+        Assert.Contains($"data-summary=\"saved-this-month\">{MoneyFormatter.FormatWhole(85.5m, SupportedCurrencies.Default.Code)}<",
+            html, StringComparison.Ordinal);
+        // Dated goals with a verdict: Car, House, Trip (Past due); Laptop is reached, Rainy day undated.
+        Assert.Contains("data-summary=\"on-track\">1 of 3<", html, StringComparison.Ordinal);
+        // The nearest target date still ahead, of a goal not reached: House, not Trip (past) or Laptop (reached).
+        Assert.Matches("data-summary=\"next-target\">12/1/2026</span>\\s*<span class=\"savings-summary__note\">House</span>", html);
+    }
+
+    [Fact]
+    public async Task SummaryHeader_WithoutDatedGoals_SaysSo()
+    {
+        _api.Goals.Add(Goal(5, "Rainy day", 300m, 5_000m, null, PaceStatus.NoTargetDate));
+
+        (_, string html) = await GetPageAsync();
+
+        Assert.Contains("No dated goals to compare yet", html, StringComparison.Ordinal);
+        Assert.Contains("No upcoming target date", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NoGoals_ShowsNoSummaryHeader()
+    {
+        (_, string html) = await GetPageAsync();
+
+        Assert.DoesNotContain("class=\"savings-summary\"", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PaceAndSummary_InVietnamese_ShowNoEnglish()
+    {
+        SavingsGoalDto goal = PacedGoal(new SavingsGoalPaceDto
+        {
+            Status = PaceStatus.OnTrack,
+            NeededPerMonth = 100m,
+            RateState = PaceRateState.Positive,
+            RatePerMonth = 120m,
+            ProjectedFinish = new DateOnly(2027, 8, 1)
+        });
+        goal.TargetDate = new DateTime(2027, 10, 1);
+        _api.Goals.Add(goal);
+        CultureInfo vietnam = CultureInfo.GetCultureInfo("vi-VN");
+
+        (_, string html) = await GetPageAsync(VietnameseCookie);
+
+        Assert.Contains(TestLocalization.Vietnamese("SavingsGoals.Pace.Status.OnTrack"), html, StringComparison.Ordinal);
+        Assert.Contains(TestLocalization.Vietnamese("SavingsGoals.Summary.SavedThisMonth"), html, StringComparison.Ordinal);
+        Assert.Contains(TestLocalization.Vietnamese("SavingsGoals.Pace.Projection")
+            .Replace("{month}", new DateOnly(2027, 8, 1).ToString("Y", vietnam), StringComparison.Ordinal), html, StringComparison.Ordinal);
+        Assert.DoesNotContain("On track", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("At your recent pace", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Saved this month", html, StringComparison.Ordinal);
+    }
+
+    private static SavingsGoalDto PacedGoal(SavingsGoalPaceDto pace) =>
+        new() { Id = 4, Name = "Vacation", TargetAmount = 2_000m, CurrentAmount = 650m, Pace = pace };
+
+    private static SavingsGoalDto Goal(int id, string name, decimal saved, decimal target, DateTime? targetDate,
+        PaceStatus status, decimal savedThisMonth = 0m, bool completed = false) =>
+        new()
+        {
+            Id = id,
+            Name = name,
+            CurrentAmount = saved,
+            TargetAmount = target,
+            TargetDate = targetDate,
+            IsCompleted = completed,
+            SavedThisMonth = savedThisMonth,
+            Pace = new SavingsGoalPaceDto { Status = status }
+        };
+
     private async Task<(HttpStatusCode Status, string Html)> GetPageAsync(string? cookie = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "/SavingsGoals");
@@ -246,6 +411,9 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
 
     [GeneratedRegex("""<li class="savings-history-item" data-contribution-id="(\d+)">""")]
     private static partial Regex HistoryItem();
+
+    [GeneratedRegex("""<div class="savings-goal-pace[\s\S]*?savings-goal-pace__month[^<]*</p>""")]
+    private static partial Regex PaceBlock();
 
     /// <summary>Signs the request in as an Account when it carries the test header, as Identity's cookie would.</summary>
     private sealed class HeaderSignInHandler(

@@ -282,6 +282,13 @@ or deleted, and it never goes below zero. It is stored on the goal as a cached t
 Dashboard, Search, the AI Assistant and Data Export. The goal is Reached while it meets or passes the target.
 _Avoid_: current amount, balance (except in "correct balance")
 
+### Pace
+What the Savings Goals page works out from a goal's Contribution log at today's date: its status against the target
+date (Reached, No target date, Past due, Just started, Ahead, On track, Behind), what is still needed per month to
+reach the target by that date, and when the recent rate (the last 90 days of Regular Contributions) would finish it.
+Descriptive only: it never says what the user should do.
+_Avoid_: forecast, plan, recommendation
+
 ### Watchlist
 Item tracking and article watchlist for financial news and interests.
 

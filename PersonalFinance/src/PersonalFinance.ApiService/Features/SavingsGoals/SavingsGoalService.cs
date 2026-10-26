@@ -66,9 +66,13 @@ internal sealed class SavingsGoalService : ISavingsGoalService
                 .Where(c => c.UserId == userId && goalIds.Contains(c.SavingsGoalId)))
             .ToListAsync(cancellationToken))
             .ToLookup(c => c.SavingsGoalId);
+        DateOnly today = ContributionRules.Today(_timeProvider);
         foreach (SavingsGoalResponseDto goal in goals)
         {
             goal.Contributions = contributions[goal.Id].ToList();
+            goal.SavedThisMonth = SavingsGoalPace.SavedThisMonth(goal.Contributions, today);
+            goal.Pace = SavingsGoalPace.Calculate(goal.CurrentAmount, goal.TargetAmount, goal.CreatedAtUtc,
+                goal.TargetDate, goal.Contributions, today);
         }
 
         return goals;

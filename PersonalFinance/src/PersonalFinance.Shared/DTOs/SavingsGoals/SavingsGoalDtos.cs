@@ -17,6 +17,32 @@ public class SavingsGoalDto
 
     /// <summary>The goal's Contributions, newest first (date descending, then id).</summary>
     public List<ContributionDto> Contributions { get; set; } = [];
+
+    /// <summary>The net of the goal's Regular Contributions dated this calendar month.</summary>
+    public decimal SavedThisMonth { get; set; }
+
+    /// <summary>The goal's Pace, worked out from its Contribution log at today's date; null from an older ApiService.</summary>
+    public SavingsGoalPaceDto? Pace { get; set; }
+}
+
+/// <summary>
+/// What the Contribution log says about a goal (GLOSSARY.md: Pace): its status against the target date, what is
+/// still needed per month, and when the recent rate would finish it. Descriptive only, never advice.
+/// </summary>
+public class SavingsGoalPaceDto
+{
+    public PaceStatus Status { get; set; }
+
+    /// <summary>Remaining amount per month until the target date; only for dated goals not reached or past due.</summary>
+    public decimal? NeededPerMonth { get; set; }
+
+    public PaceRateState RateState { get; set; }
+
+    /// <summary>The net of Regular Contributions per month over the last 90 days; set when the state is Positive.</summary>
+    public decimal? RatePerMonth { get; set; }
+
+    /// <summary>Today plus the remaining amount at the recent rate; null unless the rate is positive and the goal not reached.</summary>
+    public DateOnly? ProjectedFinish { get; set; }
 }
 
 public class CreateSavingsGoalRequestDto
