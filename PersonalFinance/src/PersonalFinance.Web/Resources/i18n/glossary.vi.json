@@ -3,9 +3,8 @@
   "savings goals": "mục tiêu tiết kiệm",
   "net worth": "giá trị tài sản ròng",
   "budget": "ngân sách",
-  "budget tracker": "theo dõi ngân sách",
-  "planned amount": "số tiền dự kiến",
-  "planned amounts": "số tiền dự kiến",
+  "budget planner": "lập kế hoạch ngân sách",
+  "debt repayment": "trả nợ",
   "reporting currency": "tiền tệ báo cáo",
   "emergency fund": "quỹ khẩn cấp",
   "financial independence": "độc lập tài chính",
@@ -14,5 +13,9 @@
   "polls": "cuộc thăm dò",
   "characters": "ký tự",
   "recovery code": "mã khôi phục",
-  "recovery codes": "mã khôi phục"
+  "recovery codes": "mã khôi phục",
+
+  "budget tracker": "theo dõi ngân sách",
+  "planned amount": "số tiền dự kiến",
+  "planned amounts": "số tiền dự kiến"
 }

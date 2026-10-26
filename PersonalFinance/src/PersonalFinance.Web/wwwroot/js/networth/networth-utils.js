@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth shared utilities, constants, and validation.
  * Exposes NW namespace on window for other networth modules.
@@ -86,15 +87,27 @@
     }
 
     /**
-     * Get the raw numeric value from a slider field (strips formatting).
+     * Read what was typed in a slider field, in the page culture: the currency symbol and group separators are
+     * dropped, the culture's decimal separator kept (7,5 in vi-VN).
+     * @param {string} text - The field's text.
+     * @returns {number} The number, or NaN.
+     */
+    function parseTyped (text) {
+        const decimal = PFI18n.formatNumber(1.5).replace(/\d/g, '');
+        const kept = String(text).split('').filter((char) => /[\d-]/.test(char) || char === decimal).join('');
+        return PFI18n.parseNumber(kept);
+    }
+
+    /**
+     * Get the numeric value of a slider field, read in the page culture (180.000 is 180000 in vi-VN).
      * @param {string} inputId - The text input ID.
-     * @returns {number} The parsed numeric value.
+     * @returns {number} The parsed numeric value, 0 when the field is missing or unreadable.
      */
     function getSliderValue (inputId) {
         const el = document.getElementById(inputId);
         if (!el) { return 0; }
-        const raw = el.value.replace(/[^0-9.]/g, '');
-        return PF.safeParseFloat(raw, 0);
+        const value = parseTyped(el.value);
+        return Number.isNaN(value) ? 0 : value;
     }
 
     /**
@@ -183,6 +196,7 @@
         formatCurrency: formatCurrency,
         formatCompact: formatCompact,
         hexToRgba: hexToRgba,
+        parseTyped: parseTyped,
         getSliderValue: getSliderValue,
         setInvalid: setInvalid,
         validateInputs: validateInputs,
