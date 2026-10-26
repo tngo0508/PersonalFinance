@@ -37,10 +37,11 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
     private const char Nbsp = ' ';
 
     // Visible English text of the Net Worth page. Each must render in English, and none may render in Vietnamese.
+    // The preset names FIRE, Coast FI and Ultra are terms of art and stay as they are.
     private static readonly string[] NetWorthEnglish =
     [
         "Net Worth &amp; FI Projection", "Net Worth & FI Projection", "Explore market research", "How it works",
-        "Quick Presets", "Coast FI", "Savings Rate", "Financial Overview", "Starting Balance",
+        "Quick Presets", "Savings Rate", "Financial Overview", "Starting Balance",
         "Your current total investable assets", "Annual Spending", "Return Assumptions", "Conservative ROI",
         "Randomize", "Reset to saved", "Clear saved parameters", "FI Target (4% Rule)", "Current Net Worth",
         "Base Final Net Worth", "/yr spending", "How this is calculated", ">from<", "Net Worth Growth Over Time",
