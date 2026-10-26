@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.7.0] - 2026-10-25
+
+### Added
+
+- **Analysis and Google Drive in Vietnamese**: both pages, their dialogs and their charts are translated (slice L3 of the localization spec, #365).
+  - Analysis: summary cards, Spending Velocity, Money Flow, category and variance tables, status badges, Data Source Removal and the sync-conflict dialog.
+  - Google Drive: the drive list, connect form, file list and filters, the budget report and transactions dialogs, CSV export headers, and the help and new-budget guides.
+  - Month names, dates and percentages follow the reader's culture. File-type labels are translated; the type filter still matches the type the API sends.
+  - Names the app matches stay in English: the "Monthly budget" file name prefix, the template's Summary and Transactions tabs, and the Date and Amount columns.
+
+### Fixed
+
+- **Drive sync failures no longer show the exception text**: the sync-failed Notification and the Analysis error alert say only that the spreadsheet could not be synced or read, and the exception is logged instead.
+  - The Notification is translated; Notifications already stored show the new message too, since the message comes from its key.
+
 ## [7.6.0] - 2026-10-25
 
 ### Added
