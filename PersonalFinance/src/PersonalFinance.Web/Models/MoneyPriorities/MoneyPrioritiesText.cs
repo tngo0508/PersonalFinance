@@ -108,7 +108,7 @@ public static class MoneyPrioritiesText
         if (TryLeafLabel(localizer, walk.LeafId, out string label))
         {
             walk.LeafLabel = label;
-            walk.HeadlineLeafLabel = localizer.Named("MoneyPriorities.Leaf.Headline", ("leaf", label));
+            walk.HeadlineLeafLabel = localizer.Named("MoneyPriorities.Result.HeadlineLeaf", ("leaf", label));
         }
 
         walk.Disclaimer = Message(localizer, walk.Disclaimer) ?? string.Empty;

@@ -59,7 +59,7 @@
         return `${rateNumber.format(value)}%`;
     }
 
-    /** A whole number of months, singular or plural in the page's Language. */
+    /** A number of months (up to one decimal), singular or plural in the page's Language. */
     function formatMonths (value) {
         return PFI18n.plural('MoneyPriorities.Js.Months', value);
     }
@@ -339,7 +339,7 @@
             figureList([
                 [PFI18n.t('MoneyPriorities.Js.Fund.MonthlyExpenses'), formatTyped(fund.monthlyExpenses)],
                 [PFI18n.t('MoneyPriorities.Js.Fund.CoversNow'),
-                    PFI18n.t('MoneyPriorities.Js.Fund.MonthsCovered', { months: monthsNumber.format(fund.monthsCovered) })],
+                    formatMonths(fund.monthsCovered)],
                 [PFI18n.t('MoneyPriorities.Js.Fund.Target', { months: monthsNumber.format(fund.targetMonths) }),
                     formatComputed(fund.targetAmount)],
                 [PFI18n.t('MoneyPriorities.Js.Fund.Gap'), formatComputed(fund.gap)],
