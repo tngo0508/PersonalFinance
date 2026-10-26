@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [7.7.0] - 2026-10-25
+## [7.10.0] - 2026-10-25
 
 ### Added
 
@@ -19,6 +19,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Purpose Note facts use the shared money formatter**: the AI prompt's dollar figures go through `MoneyFormatter` instead of a hand-built `$` and `N0`; the prompt still reads in English.
+
+## [7.9.0] - 2026-10-25
+
+### Added
+
+- **Dashboard in Vietnamese**: every section of the Dashboard, its charts and its Unavailable State read in the chosen language (slice L3 of the localization spec, #360).
+  - Amounts, percentages (`12,5%`) and month labels (`Tháng 10 năm 2026`) follow the reader's culture.
+  - Chart series, axis, tooltips and the FI Target line come from a `Dashboard.Js.` strings island; the budget donut takes its slice names from the translated legend.
+  - Recent activity descriptions are worded in the reader's language from new raw fields on `RecentActivityDto` (`Category`, `Amount`, `TargetAmount`, `SavedAmount`); `Description` stays as the English fallback.
+  - Budget Planner category names are shared keys under `Common.BudgetCategory.`.
+
+### Changed
+
+- **Relative times are translated everywhere**: the `<time datetime>` tag helper ("5d ago", "Just now") now uses `Common.TimeAgo.` keys, and dates older than a week use the language's date format, on every page that shows them.
+
+## [7.8.0] - 2026-10-25
+
+### Added
+
+- **Budget Tracker in Vietnamese**: the page, its dialogs, its script messages and its error responses are translated (slice L3 of the localization spec, #362).
+  - 131 `BudgetTracker.*` keys; the script reads its strings from the page's `BudgetTracker.Js.` island.
+  - The monthly sheet carries `PreviousPlanYear` and `PreviousPlanMonth` in place of the English `PreviousMonthLabel`, so "Copy from September 2026" names the month in the reader's language.
+
+### Changed
+
+- **Budget Tracker dates and amounts follow the reader's culture**: transaction dates show as `10/25/2026` or `25/10/2026` instead of `2026-10-25`, and the initial `$0.00` placeholders and the `($)` field labels come from the money formatter and the currency.
+
+## [7.7.0] - 2026-10-25
+
+### Added
+
+- **Budget Planner in Vietnamese**: the Budget Planner page reads in the chosen language (slice L3 of the localization spec, #361).
+  - Headings, category labels, ARIA labels, the chart's labels and tooltip, the remaining/over-budget label, field names and validation messages.
+  - The save confirmation, the over-income warning, the save failure and the Unavailable State.
+  - Percentages use the reader's number format (`12,5%` in Vietnamese); the money symbols come from the money formatter, not from the page.
+
+## [7.6.1] - 2026-10-26
+
+### Fixed
+
+- **Net Worth projection with Vietnamese number formats**: the Net Worth page now reads its own fields in the page culture, so `180.000` is 180,000 and `7,5` is 7.5 under Vietnamese; before, they were read as 180 and 75, which gave a wrong projection and rejected valid return rates.
 
 ## [7.6.0] - 2026-10-25
 

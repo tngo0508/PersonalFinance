@@ -1,9 +1,10 @@
+@using Microsoft.AspNetCore.Mvc.Razor
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Savings goals section (ticket 07): the five most recent goals, completed goals marked with a check badge. *@
 <section class="dash-card dash-goals" aria-labelledby="dash-goals-title">
     <div class="dash-card__header">
-        <h2 id="dash-goals-title" class="dash-card__title">Savings goals</h2>
-        <a asp-controller="SavingsGoals" asp-action="Index" class="dash-link">View all<span class="visually-hidden"> savings goals</span></a>
+        <h2 id="dash-goals-title" class="dash-card__title">@L["Dashboard.Goals.Title"]</h2>
+        <a asp-controller="SavingsGoals" asp-action="Index" class="dash-link">@L["Dashboard.Goals.ViewAll"]<span class="visually-hidden"> @L["Dashboard.Goals.ViewAllHidden"]</span></a>
     </div>
     @if (Model.SavingsGoals.Count > 0)
     {
@@ -20,20 +21,25 @@
                             {
                                 <span class="dash-goal__badge">
                                     <i data-lucide="check" aria-hidden="true"></i>
-                                    Complete
+                                    @L["Dashboard.Goals.Complete"]
                                 </span>
                             }
                         </span>
                         <span class="dash-money dash-goal__percent">@progress%</span>
                     </div>
-                    <div class="dash-progress" role="progressbar" aria-label="@goal.Name progress"
+                    <div class="dash-progress" role="progressbar" aria-label="@L.Named("Dashboard.Goals.ProgressLabel", ("name", goal.Name))"
                          aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100"
-                         aria-valuetext="@progress% funded">
+                         aria-valuetext="@L.Named("Dashboard.Goals.Funded", ("percent", progress))">
                         <div class="dash-progress__bar" style="width: @progress%"></div>
                     </div>
+                    @{
+                        Func<object?, HelperResult> current =
+                            @<span class="dash-money">@MoneyFormatter.FormatWhole(goal.CurrentAmount, SupportedCurrencies.Default.Code)</span>;
+                        Func<object?, HelperResult> target =
+                            @<span class="dash-money">@MoneyFormatter.FormatWhole(goal.TargetAmount, SupportedCurrencies.Default.Code)</span>;
+                    }
                     <span class="dash-goal__amounts">
-                        <span class="dash-money">@MoneyFormatter.FormatWhole(goal.CurrentAmount, SupportedCurrencies.Default.Code)</span>
-                        of <span class="dash-money">@MoneyFormatter.FormatWhole(goal.TargetAmount, SupportedCurrencies.Default.Code)</span>
+                        @L.NamedHtml("Dashboard.Goals.Amounts", null, ("current", current(null)), ("target", target(null)))
                     </span>
                 </li>
             }
@@ -41,6 +47,6 @@
     }
     else
     {
-        <p class="dash-empty">Add a savings goal to track your progress here.</p>
+        <p class="dash-empty">@L["Dashboard.Goals.Empty"]</p>
     }
 </section>

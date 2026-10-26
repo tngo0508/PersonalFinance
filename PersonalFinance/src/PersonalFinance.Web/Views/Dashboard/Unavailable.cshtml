@@ -1,13 +1,13 @@
 @using System.Security.Claims
 @using PersonalFinance.Web.Infrastructure
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = L["Shell.Nav.Dashboard"].Value;
     var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? string.Empty;
     var displayName = User.FindFirst(ClaimTypes.GivenName)?.Value
                       ?? (email.Contains('@') ? email[..email.IndexOf('@')] : email);
     var unavailable = new UnavailableStateViewModel
     {
-        Heading = "We couldn't load your dashboard",
+        Heading = L["Dashboard.Unavailable.Heading"],
         RetryController = "Dashboard"
     };
 }
@@ -20,9 +20,9 @@
    because those tell a returning user their data is gone. *@
 <div class="dash">
     <header class="dash-header">
-        <p class="dash-header__eyebrow">Dashboard</p>
+        <p class="dash-header__eyebrow">@L["Shell.Nav.Dashboard"]</p>
         <h1 class="dash-header__title">
-            @(string.IsNullOrWhiteSpace(displayName) ? "Welcome back" : $"Welcome back, {displayName}")
+            @(string.IsNullOrWhiteSpace(displayName) ? L["Dashboard.Header.Welcome"] : L.Named("Dashboard.Header.WelcomeNamed", ("name", displayName)))
         </h1>
     </header>
 

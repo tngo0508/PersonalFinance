@@ -1,8 +1,11 @@
+@using Microsoft.AspNetCore.Html
 @using System.Text.Json
 @model BudgetTrackerViewModel
 
 @{
-    ViewData["Title"] = "Budget Tracker";
+    ViewData["Title"] = L["BudgetTracker.Title"].Value;
+    string zero = MoneyFormatter.Format(0m, SupportedCurrencies.Default.Code);
+    string currencySymbol = SupportedCurrencies.Default.Symbol;
 }
 
 @section Styles {
@@ -15,7 +18,7 @@
     <!-- Loading Overlay -->
     <div id="btGlobalLoading" class="bt-loading-overlay d-none">
         <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">@L["BudgetTracker.Loading"]</span>
         </div>
     </div>
 
@@ -24,19 +27,18 @@
         <div class="bt-page-header__text">
             <h1 class="bt-page-header__title">
                 <i data-lucide="receipt" class="text-primary" style="width:28px;height:28px;"></i>
-                Budget Tracker
+                @L["BudgetTracker.Title"]
             </h1>
-            <p class="bt-page-header__subtitle">Manage your monthly planned budget, actual spending, and itemized
-                transactions.</p>
+            <p class="bt-page-header__subtitle">@L["BudgetTracker.Subtitle"]</p>
         </div>
 
-        <div class="bt-month-nav" aria-label="Month navigation">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnPrevMonth" title="Previous Month"
-                    aria-label="Previous Month">
+        <div class="bt-month-nav" aria-label="@L["BudgetTracker.MonthNav.Label"]">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnPrevMonth" title="@L["BudgetTracker.MonthNav.Previous"]"
+                    aria-label="@L["BudgetTracker.MonthNav.Previous"]">
                 <i data-lucide="chevron-left" style="width:18px;height:18px;"></i>
             </button>
 
-            <label for="selectMonth" class="visually-hidden">Month</label>
+            <label for="selectMonth" class="visually-hidden">@L["BudgetTracker.MonthNav.Month"]</label>
             <select id="selectMonth" class="form-select form-select-sm w-auto">
                 @for (int m = 1; m <= 12; m++)
                 {
@@ -45,7 +47,7 @@
                 }
             </select>
 
-            <label for="selectYear" class="visually-hidden">Year</label>
+            <label for="selectYear" class="visually-hidden">@L["BudgetTracker.MonthNav.Year"]</label>
             <select id="selectYear" class="form-select form-select-sm w-auto">
                 @for (int y = Model.Year - 3; y <= Model.Year + 3; y++)
                 {
@@ -53,8 +55,8 @@
                 }
             </select>
 
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnNextMonth" title="Next Month"
-                    aria-label="Next Month">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnNextMonth" title="@L["BudgetTracker.MonthNav.Next"]"
+                    aria-label="@L["BudgetTracker.MonthNav.Next"]">
                 <i data-lucide="chevron-right" style="width:18px;height:18px;"></i>
             </button>
         </div>
@@ -70,7 +72,7 @@
     <!-- Global Alert / Status Box -->
     <div id="btAlert" class="alert alert-danger alert-dismissible fade bt-alert" role="alert">
         <span id="btAlertMessage"></span>
-        <button type="button" class="btn-close" id="btnDismissAlert" aria-label="Close"></button>
+        <button type="button" class="btn-close" id="btnDismissAlert" aria-label="@L["Common.Close"]"></button>
     </div>
 
     <!-- New Month Prompt Banner (if month not initialized) -->
@@ -78,19 +80,19 @@
         <div class="bt-init-prompt__text">
             <h2 class="bt-init-prompt__title">
                 <i data-lucide="calendar-plus" style="width:18px;height:18px;vertical-align:-2px;"></i>
-                <span id="initPromptHeading">New Month Budget Plan</span>
+                <span id="initPromptHeading">@L["BudgetTracker.InitPrompt.Heading"]</span>
             </h2>
             <p class="bt-init-prompt__desc" id="initPromptDesc">
-                This month has no budget plan yet. You can copy planned amounts from an earlier month or start blank.
+                @L["BudgetTracker.InitPrompt.Description"]
             </p>
         </div>
         <div class="bt-init-prompt__actions">
             <button type="button" class="btn btn-primary btn-sm d-none" id="btnCopyPrevious">
                 <i data-lucide="copy" style="width:16px;height:16px;vertical-align:-2px;"></i>
-                <span id="btnCopyPreviousText">Copy from Previous Month</span>
+                <span id="btnCopyPreviousText">@L["BudgetTracker.InitPrompt.CopyPrevious"]</span>
             </button>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="btnStartBlank">
-                Start Blank
+                @L["BudgetTracker.InitPrompt.StartBlank"]
             </button>
         </div>
     </div>
@@ -101,14 +103,14 @@
             <button class="nav-link active" id="tabSummary-btn" data-bs-toggle="tab" data-bs-target="#tabSummary"
                     type="button" role="tab" aria-controls="tabSummary" aria-selected="true">
                 <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i>
-                Summary
+                @L["BudgetTracker.Tabs.Summary"]
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="tabTransactions-btn" data-bs-toggle="tab" data-bs-target="#tabTransactions"
                     type="button" role="tab" aria-controls="tabTransactions" aria-selected="false">
                 <i data-lucide="list" style="width:18px;height:18px;"></i>
-                Transactions
+                @L["BudgetTracker.Tabs.Transactions"]
                 <span class="badge bg-secondary rounded-pill ms-1" id="txCountBadge">0</span>
             </button>
         </li>
@@ -125,15 +127,15 @@
                     <div class="col-md-6">
                         <div class="bt-bar-group">
                             <div class="bt-bar-header">
-                                <span class="bt-bar-title">Expenses Comparison</span>
+                                <span class="bt-bar-title">@L["BudgetTracker.Bars.ExpensesTitle"]</span>
                                 <span class="bt-bar-numbers"
-                                      id="expensesBarNumbers">Planned: $0.00 | Actual: $0.00</span>
+                                      id="expensesBarNumbers">@L.Named("BudgetTracker.Js.BarNumbers", ("planned", zero), ("actual", zero))</span>
                             </div>
-                            <div class="bt-bar-track" title="Expenses Planned vs Actual">
+                            <div class="bt-bar-track" title="@L["BudgetTracker.Bars.ExpensesTrack"]">
                                 <div id="expensePlannedBar" class="bt-bar-fill bt-bar-fill--planned" style="width: 0%;"
-                                     aria-label="Planned Expenses"></div>
+                                     aria-label="@L["BudgetTracker.Bars.PlannedExpenses"]"></div>
                                 <div id="expenseActualBar" class="bt-bar-fill bt-bar-fill--actual-expense"
-                                     style="width: 0%;" aria-label="Actual Expenses"></div>
+                                     style="width: 0%;" aria-label="@L["BudgetTracker.Bars.ActualExpenses"]"></div>
                             </div>
                         </div>
                     </div>
@@ -141,14 +143,14 @@
                     <div class="col-md-6">
                         <div class="bt-bar-group">
                             <div class="bt-bar-header">
-                                <span class="bt-bar-title">Income Comparison</span>
-                                <span class="bt-bar-numbers" id="incomeBarNumbers">Planned: $0.00 | Actual: $0.00</span>
+                                <span class="bt-bar-title">@L["BudgetTracker.Bars.IncomeTitle"]</span>
+                                <span class="bt-bar-numbers" id="incomeBarNumbers">@L.Named("BudgetTracker.Js.BarNumbers", ("planned", zero), ("actual", zero))</span>
                             </div>
-                            <div class="bt-bar-track" title="Income Planned vs Actual">
+                            <div class="bt-bar-track" title="@L["BudgetTracker.Bars.IncomeTrack"]">
                                 <div id="incomePlannedBar" class="bt-bar-fill bt-bar-fill--planned" style="width: 0%;"
-                                     aria-label="Planned Income"></div>
+                                     aria-label="@L["BudgetTracker.Bars.PlannedIncome"]"></div>
                                 <div id="incomeActualBar" class="bt-bar-fill bt-bar-fill--actual-income"
-                                     style="width: 0%;" aria-label="Actual Income"></div>
+                                     style="width: 0%;" aria-label="@L["BudgetTracker.Bars.ActualIncome"]"></div>
                             </div>
                         </div>
                     </div>
@@ -163,25 +165,25 @@
                         <div class="bt-card-header">
                             <h2 class="bt-card-title text-danger">
                                 <i data-lucide="arrow-down-circle" style="width:20px;height:20px;"></i>
-                                Expenses
+                                @L["BudgetTracker.Js.Expenses"]
                             </h2>
                             <button type="button" class="btn btn-sm btn-outline-danger" id="btnAddExpenseCategory"
-                                    title="Add Custom Expense Category">
+                                    title="@L["BudgetTracker.Summary.AddExpenseCategory"]">
                                 <i data-lucide="plus" style="width:16px;height:16px;vertical-align:-2px;"></i>
-                                Add Category
+                                @L["BudgetTracker.Summary.AddCategory"]
                             </button>
                         </div>
 
                         <div class="bt-table-responsive">
-                            <table class="bt-table" id="tableExpenses" aria-label="Expenses Summary Table">
+                            <table class="bt-table" id="tableExpenses" aria-label="@L["BudgetTracker.Summary.ExpensesTable"]">
                                 <thead>
                                 <tr>
-                                    <th scope="col" style="min-width: 140px;">Category</th>
-                                    <th scope="col" class="text-end" style="min-width: 90px;">Planned</th>
-                                    <th scope="col" class="text-end" style="min-width: 110px;">Actual</th>
-                                    <th scope="col" class="text-end" style="min-width: 90px;">Diff</th>
+                                    <th scope="col" style="min-width: 140px;">@L["BudgetTracker.Column.Category"]</th>
+                                    <th scope="col" class="text-end" style="min-width: 90px;">@L["BudgetTracker.Column.Planned"]</th>
+                                    <th scope="col" class="text-end" style="min-width: 110px;">@L["BudgetTracker.Column.Actual"]</th>
+                                    <th scope="col" class="text-end" style="min-width: 90px;">@L["BudgetTracker.Column.Diff"]</th>
                                     <th scope="col" style="min-width: 110px;" class="text-end"><span
-                                                class="visually-hidden">Actions</span></th>
+                                                class="visually-hidden">@L["BudgetTracker.Column.Actions"]</span></th>
                                 </tr>
                                 </thead>
                                 <tbody id="tbodyExpenses">
@@ -189,10 +191,10 @@
                                 </tbody>
                                 <tfoot>
                                 <tr>
-                                    <th scope="row">Total Expenses</th>
-                                    <td class="text-end" id="totalExpensePlanned">$0.00</td>
-                                    <td class="text-end" id="totalExpenseActual">$0.00</td>
-                                    <td class="text-end" id="totalExpenseDiff">$0.00</td>
+                                    <th scope="row">@L["BudgetTracker.Summary.TotalExpenses"]</th>
+                                    <td class="text-end" id="totalExpensePlanned">@zero</td>
+                                    <td class="text-end" id="totalExpenseActual">@zero</td>
+                                    <td class="text-end" id="totalExpenseDiff">@zero</td>
                                     <td></td>
                                 </tr>
                                 </tfoot>
@@ -207,25 +209,25 @@
                         <div class="bt-card-header">
                             <h2 class="bt-card-title text-success">
                                 <i data-lucide="arrow-up-circle" style="width:20px;height:20px;"></i>
-                                Income
+                                @L["BudgetTracker.Js.Income"]
                             </h2>
                             <button type="button" class="btn btn-sm btn-outline-success" id="btnAddIncomeCategory"
-                                    title="Add Custom Income Category">
+                                    title="@L["BudgetTracker.Summary.AddIncomeCategory"]">
                                 <i data-lucide="plus" style="width:16px;height:16px;vertical-align:-2px;"></i>
-                                Add Category
+                                @L["BudgetTracker.Summary.AddCategory"]
                             </button>
                         </div>
 
                         <div class="bt-table-responsive">
-                            <table class="bt-table" id="tableIncome" aria-label="Income Summary Table">
+                            <table class="bt-table" id="tableIncome" aria-label="@L["BudgetTracker.Summary.IncomeTable"]">
                                 <thead>
                                 <tr>
-                                    <th scope="col" style="min-width: 140px;">Category</th>
-                                    <th scope="col" class="text-end" style="min-width: 90px;">Planned</th>
-                                    <th scope="col" class="text-end" style="min-width: 110px;">Actual</th>
-                                    <th scope="col" class="text-end" style="min-width: 90px;">Diff</th>
+                                    <th scope="col" style="min-width: 140px;">@L["BudgetTracker.Column.Category"]</th>
+                                    <th scope="col" class="text-end" style="min-width: 90px;">@L["BudgetTracker.Column.Planned"]</th>
+                                    <th scope="col" class="text-end" style="min-width: 110px;">@L["BudgetTracker.Column.Actual"]</th>
+                                    <th scope="col" class="text-end" style="min-width: 90px;">@L["BudgetTracker.Column.Diff"]</th>
                                     <th scope="col" style="min-width: 110px;" class="text-end"><span
-                                                class="visually-hidden">Actions</span></th>
+                                                class="visually-hidden">@L["BudgetTracker.Column.Actions"]</span></th>
                                 </tr>
                                 </thead>
                                 <tbody id="tbodyIncome">
@@ -233,10 +235,10 @@
                                 </tbody>
                                 <tfoot>
                                 <tr>
-                                    <th scope="row">Total Income</th>
-                                    <td class="text-end" id="totalIncomePlanned">$0.00</td>
-                                    <td class="text-end" id="totalIncomeActual">$0.00</td>
-                                    <td class="text-end" id="totalIncomeDiff">$0.00</td>
+                                    <th scope="row">@L["BudgetTracker.Summary.TotalIncome"]</th>
+                                    <td class="text-end" id="totalIncomePlanned">@zero</td>
+                                    <td class="text-end" id="totalIncomeActual">@zero</td>
+                                    <td class="text-end" id="totalIncomeDiff">@zero</td>
                                     <td></td>
                                 </tr>
                                 </tfoot>
@@ -251,10 +253,10 @@
         <div class="tab-pane fade" id="tabTransactions" role="tabpanel" aria-labelledby="tabTransactions-btn"
              tabindex="0">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <p class="text-muted mb-0">Record and itemize spending and income for this month.</p>
+                <p class="text-muted mb-0">@L["BudgetTracker.Transactions.Intro"]</p>
                 <button type="button" class="btn btn-primary btn-sm" id="btnAddTransaction">
                     <i data-lucide="plus-circle" style="width:16px;height:16px;vertical-align:-2px;"></i>
-                    Add Transaction
+                    @L["BudgetTracker.Js.AddTransaction"]
                 </button>
             </div>
 
@@ -265,21 +267,21 @@
                         <div class="bt-card-header">
                             <h2 class="bt-card-title text-danger">
                                 <i data-lucide="shopping-cart" style="width:20px;height:20px;"></i>
-                                Expenses
+                                @L["BudgetTracker.Js.Expenses"]
                             </h2>
                             <span class="badge bg-danger rounded-pill" id="expenseTxCountBadge">0</span>
                         </div>
 
                         <div class="bt-table-responsive">
                             <table class="bt-table bt-tx-table" id="tableExpenseTx"
-                                   aria-label="Expense Transactions Table">
+                                   aria-label="@L["BudgetTracker.Transactions.ExpensesTable"]">
                                 <thead>
                                 <tr>
-                                    <th scope="col" style="width: 95px;">Date</th>
-                                    <th scope="col" class="text-end" style="width: 85px;">Amount</th>
-                                    <th scope="col">Description</th>
-                                    <th scope="col" style="width: 120px;">Category</th>
-                                    <th scope="col" style="width: 70px;" class="text-end"><span class="visually-hidden">Actions</span>
+                                    <th scope="col" style="width: 95px;">@L["BudgetTracker.Column.Date"]</th>
+                                    <th scope="col" class="text-end" style="width: 85px;">@L["BudgetTracker.Column.Amount"]</th>
+                                    <th scope="col">@L["BudgetTracker.Column.Description"]</th>
+                                    <th scope="col" style="width: 120px;">@L["BudgetTracker.Column.Category"]</th>
+                                    <th scope="col" style="width: 70px;" class="text-end"><span class="visually-hidden">@L["BudgetTracker.Column.Actions"]</span>
                                     </th>
                                 </tr>
                                 </thead>
@@ -290,7 +292,7 @@
                         </div>
                         <div id="emptyExpenseTx" class="bt-empty-state d-none">
                             <i data-lucide="inbox" class="bt-empty-state__icon"></i>
-                            <p class="bt-empty-state__text">No expense transactions recorded for this month.</p>
+                            <p class="bt-empty-state__text">@L["BudgetTracker.Transactions.EmptyExpenses"]</p>
                         </div>
                     </div>
                 </div>
@@ -301,21 +303,21 @@
                         <div class="bt-card-header">
                             <h2 class="bt-card-title text-success">
                                 <i data-lucide="wallet" style="width:20px;height:20px;"></i>
-                                Income
+                                @L["BudgetTracker.Js.Income"]
                             </h2>
                             <span class="badge bg-success rounded-pill" id="incomeTxCountBadge">0</span>
                         </div>
 
                         <div class="bt-table-responsive">
                             <table class="bt-table bt-tx-table" id="tableIncomeTx"
-                                   aria-label="Income Transactions Table">
+                                   aria-label="@L["BudgetTracker.Transactions.IncomeTable"]">
                                 <thead>
                                 <tr>
-                                    <th scope="col" style="width: 95px;">Date</th>
-                                    <th scope="col" class="text-end" style="width: 85px;">Amount</th>
-                                    <th scope="col">Description</th>
-                                    <th scope="col" style="width: 120px;">Category</th>
-                                    <th scope="col" style="width: 70px;" class="text-end"><span class="visually-hidden">Actions</span>
+                                    <th scope="col" style="width: 95px;">@L["BudgetTracker.Column.Date"]</th>
+                                    <th scope="col" class="text-end" style="width: 85px;">@L["BudgetTracker.Column.Amount"]</th>
+                                    <th scope="col">@L["BudgetTracker.Column.Description"]</th>
+                                    <th scope="col" style="width: 120px;">@L["BudgetTracker.Column.Category"]</th>
+                                    <th scope="col" style="width: 70px;" class="text-end"><span class="visually-hidden">@L["BudgetTracker.Column.Actions"]</span>
                                     </th>
                                 </tr>
                                 </thead>
@@ -326,7 +328,7 @@
                         </div>
                         <div id="emptyIncomeTx" class="bt-empty-state d-none">
                             <i data-lucide="inbox" class="bt-empty-state__icon"></i>
-                            <p class="bt-empty-state__text">No income transactions recorded for this month.</p>
+                            <p class="bt-empty-state__text">@L["BudgetTracker.Transactions.EmptyIncome"]</p>
                         </div>
                     </div>
                 </div>
@@ -341,28 +343,28 @@
             <div class="modal-content">
                 <form id="formAddCategory">
                     <div class="modal-header">
-                        <h3 class="modal-title fs-5" id="modalAddCategoryTitle">Add Budget Category</h3>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h3 class="modal-title fs-5" id="modalAddCategoryTitle">@L["BudgetTracker.AddCategory.Title"]</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                     </div>
                     <div class="modal-body">
                         <div class="alert alert-danger d-none modal-error-alert mb-3" id="alertAddCategory"
                              role="alert"></div>
                         <div class="mb-3">
-                            <label for="inputCategoryName" class="form-label">Category Name</label>
+                            <label for="inputCategoryName" class="form-label">@L["BudgetTracker.Category.Name"]</label>
                             <input type="text" class="form-control" id="inputCategoryName" maxlength="100" required
-                                   placeholder="e.g. Subscriptions"/>
+                                   placeholder="@L["BudgetTracker.AddCategory.NamePlaceholder"]"/>
                         </div>
                         <div class="mb-3">
-                            <label for="selectCategoryKind" class="form-label">Category Type</label>
+                            <label for="selectCategoryKind" class="form-label">@L["BudgetTracker.Category.Type"]</label>
                             <select class="form-select" id="selectCategoryKind" required>
-                                <option value="1">Expense</option>
-                                <option value="2">Income</option>
+                                <option value="1">@L["BudgetTracker.Category.Expense"]</option>
+                                <option value="2">@L["BudgetTracker.Category.Income"]</option>
                             </select>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary" id="btnSubmitCategory">Add Category</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+                        <button type="submit" class="btn btn-primary" id="btnSubmitCategory">@L["BudgetTracker.Summary.AddCategory"]</button>
                     </div>
                 </form>
             </div>
@@ -379,29 +381,29 @@
                     <input type="hidden" id="editCategorySortOrder"/>
                     <input type="hidden" id="editCategoryKind"/>
                     <div class="modal-header">
-                        <h3 class="modal-title fs-5" id="modalEditCategoryTitle">Rename Category</h3>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h3 class="modal-title fs-5" id="modalEditCategoryTitle">@L["BudgetTracker.EditCategory.Title"]</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                     </div>
                     <div class="modal-body">
                         <div class="alert alert-danger d-none modal-error-alert mb-3" id="alertEditCategory"
                              role="alert"></div>
                         <div class="mb-3">
-                            <label for="inputEditCategoryName" class="form-label">Category Name</label>
+                            <label for="inputEditCategoryName" class="form-label">@L["BudgetTracker.Category.Name"]</label>
                             <input type="text" class="form-control" id="inputEditCategoryName" maxlength="100" required
-                                   placeholder="e.g. Groceries"/>
+                                   placeholder="@L["BudgetTracker.EditCategory.NamePlaceholder"]"/>
                         </div>
                         <div class="mb-3">
-                            <label for="selectEditCategoryKind" class="form-label">Category Type</label>
+                            <label for="selectEditCategoryKind" class="form-label">@L["BudgetTracker.Category.Type"]</label>
                             <select class="form-select" id="selectEditCategoryKind" disabled>
-                                <option value="1">Expense</option>
-                                <option value="2">Income</option>
+                                <option value="1">@L["BudgetTracker.Category.Expense"]</option>
+                                <option value="2">@L["BudgetTracker.Category.Income"]</option>
                             </select>
-                            <div class="form-text">Category type cannot be changed after creation.</div>
+                            <div class="form-text">@L["BudgetTracker.EditCategory.TypeLocked"]</div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary" id="btnSubmitEditCategory">Save Changes</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+                        <button type="submit" class="btn btn-primary" id="btnSubmitEditCategory">@L["BudgetTracker.EditCategory.Save"]</button>
                     </div>
                 </form>
             </div>
@@ -416,28 +418,28 @@
                 <form id="formActualOverride">
                     <input type="hidden" id="overrideCategoryId"/>
                     <div class="modal-header">
-                        <h3 class="modal-title fs-5" id="modalOverrideTitle">Actual Override</h3>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h3 class="modal-title fs-5" id="modalOverrideTitle">@L["BudgetTracker.Override.Title"]</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                     </div>
                     <div class="modal-body">
                         <div class="alert alert-danger d-none modal-error-alert mb-3" id="alertActualOverride"
                              role="alert"></div>
                         <p class="text-muted small">
-                            Set a manual Actual amount for <strong id="overrideCategoryName"></strong> for this month.
-                            This overrides the sum of transactions.
+                            @L.NamedHtml("BudgetTracker.Override.Description", null,
+                                ("category", new HtmlString("<strong id=\"overrideCategoryName\"></strong>")))
                         </p>
                         <div class="mb-3">
-                            <label for="inputOverrideAmount" class="form-label">Manual Actual Amount ($)</label>
+                            <label for="inputOverrideAmount" class="form-label">@L.Named("BudgetTracker.Override.Amount", ("symbol", currencySymbol))</label>
                             <input type="number" step="0.01" min="0" max="9999999999999999.99" class="form-control"
                                    id="inputOverrideAmount" required placeholder="0.00"/>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-danger me-auto d-none" id="btnModalRevertOverride">
-                            Revert to Transactions
+                            @L["BudgetTracker.Override.Revert"]
                         </button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary" id="btnSubmitOverride">Save Override</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+                        <button type="submit" class="btn btn-primary" id="btnSubmitOverride">@L["BudgetTracker.Override.Save"]</button>
                     </div>
                 </form>
             </div>
@@ -452,37 +454,36 @@
                 <form id="formTransaction">
                     <input type="hidden" id="inputTxId"/>
                     <div class="modal-header">
-                        <h3 class="modal-title fs-5" id="modalTransactionTitle">Add Transaction</h3>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h3 class="modal-title fs-5" id="modalTransactionTitle">@L["BudgetTracker.Js.AddTransaction"]</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                     </div>
                     <div class="modal-body">
                         <div class="alert alert-danger d-none modal-error-alert mb-3" id="alertTransaction"
                              role="alert"></div>
                         <div class="mb-3">
-                            <label for="selectTxCategory" class="form-label">Category</label>
+                            <label for="selectTxCategory" class="form-label">@L["BudgetTracker.Column.Category"]</label>
                             <select class="form-select" id="selectTxCategory" required>
-                                <option value="">Select a category...</option>
+                                <option value="">@L["BudgetTracker.Js.SelectCategory"]</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label for="inputTxDate" class="form-label">Date</label>
+                            <label for="inputTxDate" class="form-label">@L["BudgetTracker.Column.Date"]</label>
                             <input type="date" class="form-control" id="inputTxDate" required/>
                         </div>
                         <div class="mb-3">
-                            <label for="inputTxAmount" class="form-label">Amount ($)</label>
+                            <label for="inputTxAmount" class="form-label">@L.Named("BudgetTracker.Transaction.Amount", ("symbol", currencySymbol))</label>
                             <input type="number" step="0.01" min="0.01" max="9999999999999999.99" class="form-control"
                                    id="inputTxAmount" required placeholder="0.00"/>
                         </div>
                         <div class="mb-3">
-                            <label for="inputTxDescription" class="form-label">Description (Optional)</label>
+                            <label for="inputTxDescription" class="form-label">@L["BudgetTracker.Transaction.Description"]</label>
                             <input type="text" class="form-control" id="inputTxDescription" maxlength="200"
-                                   placeholder="e.g. Grocery shopping"/>
+                                   placeholder="@L["BudgetTracker.Transaction.DescriptionPlaceholder"]"/>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary" id="btnSubmitTransaction">Save Transaction
-                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+                        <button type="submit" class="btn btn-primary" id="btnSubmitTransaction">@L["BudgetTracker.Transaction.Save"]</button>
                     </div>
                 </form>
             </div>
@@ -495,17 +496,17 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 class="modal-title fs-5" id="modalDeleteConfirmTitle">Confirm Deletion</h3>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h3 class="modal-title fs-5" id="modalDeleteConfirmTitle">@L["BudgetTracker.Delete.Title"]</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-danger d-none modal-error-alert mb-3" id="alertDeleteConfirm"
                          role="alert"></div>
-                    <p id="deleteConfirmMessage">Are you sure you want to delete this item?</p>
+                    <p id="deleteConfirmMessage">@L["BudgetTracker.Delete.Message"]</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="btnConfirmDelete">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmDelete">@L["BudgetTracker.Js.Delete"]</button>
                 </div>
             </div>
         </div>
@@ -513,6 +514,7 @@
 </div>
 
 @section Scripts {
+    <js-strings prefix="BudgetTracker.Js." />
     <script>
         window.__initialSheetData = @Html.Raw(JsonSerializer.Serialize(Model.Sheet, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     </script>

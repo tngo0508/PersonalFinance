@@ -5,13 +5,14 @@
  * (allocations and Unallocated are computed by the Dashboard service; nothing is recalculated here).
  * Each category's colour comes from its --dash-budget-<key> token (key supplied by the service) in css/dashboard.css, so a category
  * keeps the same colour whichever categories are drawn. The legend list in _Budget.cshtml is the
- * text alternative; the chart itself is decorative to assistive technology.
+ * text alternative; the chart itself is decorative to assistive technology. Slice names are read from that legend,
+ * so they are in the page's language without a second copy of the category names.
  */
 (function () {
     'use strict';
 
     const CHART_ELEMENT_ID = 'dash-budget-chart';
-    const UNALLOCATED_LABEL = 'Unallocated';
+    const UNALLOCATED_KEY = 'unallocated';
     const FALLBACK_COLOR = '#6B7280';
 
     /**
@@ -26,6 +27,19 @@
     }
 
     /**
+     * The translated name the server-rendered legend shows for a category key.
+     * @param {string} key - Category key, or 'unallocated'.
+     * @param {string} fallback - Name to use when the legend has no entry for the key.
+     * @returns {string} The label.
+     */
+    function legendLabel (key, fallback) {
+        const items = document.querySelectorAll('.dash-budget__legend [data-budget-key]');
+        const item = Array.from(items).find((element) => element.dataset.budgetKey === key);
+        const name = item && item.querySelector('.dash-budget__name');
+        return (name && name.textContent.trim()) || fallback;
+    }
+
+    /**
      * Build the drawable slices: non-zero categories in service order, then Unallocated when present.
      * @param {Object} budget - The budget summary.
      * @returns {Array<{label: string, percent: number, slug: string}>} The slices.
@@ -34,7 +48,7 @@
         const allocations = Array.isArray(budget.allocations) ? budget.allocations : [];
         const slices = allocations
             .map((allocation) => ({
-                label: allocation.name,
+                label: legendLabel(String(allocation.key || ''), allocation.name),
                 percent: Number(allocation.percent) || 0,
                 // Category key comes from the Dashboard service, the single source for colour-token names.
                 slug: String(allocation.key || '')
@@ -44,9 +58,9 @@
         const unallocated = Number(budget.unallocatedPercent) || 0;
         if (unallocated > 0) {
             slices.push({
-                label: UNALLOCATED_LABEL,
+                label: legendLabel(UNALLOCATED_KEY, UNALLOCATED_KEY),
                 percent: unallocated,
-                slug: 'unallocated'
+                slug: UNALLOCATED_KEY
             });
         }
         return slices;
@@ -91,7 +105,7 @@
             states: { active: { filter: { type: 'none' } } },
             tooltip: {
                 y: {
-                    formatter: (value) => `${percent.format(value)}% of income`
+                    formatter: (value) => PFI18n.t('Dashboard.Js.PercentOfIncome', { percent: percent.format(value) })
                 }
             }
         });

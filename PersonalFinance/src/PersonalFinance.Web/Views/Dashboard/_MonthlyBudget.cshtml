@@ -1,59 +1,58 @@
+@using Microsoft.AspNetCore.Mvc.Razor
 @using PersonalFinance.Shared.Enums
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Provider-backed monthly budget card: planned vs actual from the active source. Never falls back to Budget Planner. *@
 @{
     var monthlyBudget = Model.MonthlyBudget;
     var isTracker = Model.ActiveSource == BudgetDataSource.BudgetTracker;
-    var sourceName = isTracker ? "Budget Tracker" : "Google Sheet";
+    string sourceName = isTracker ? L["Shell.Nav.BudgetTracker"] : "Google Sheet";
+    // The service's Period is English ("October 2026"); the label is built from Year and Month in the request culture.
+    string period = monthlyBudget is null ? string.Empty : DashboardBudgetFormat.MonthLabel(monthlyBudget.Year, monthlyBudget.Month);
 }
 <section class="dash-card dash-monthly-budget" aria-labelledby="dash-monthly-budget-title">
     <div class="dash-card__header flex-wrap gap-2">
-        <h2 id="dash-monthly-budget-title" class="dash-card__title mb-0">Monthly budget</h2>
+        <h2 id="dash-monthly-budget-title" class="dash-card__title mb-0">@L["Dashboard.MonthlyBudget.Title"]</h2>
         <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
     </div>
     @if (monthlyBudget is not null)
     {
         <p class="dash-note">
-            <span class="dash-budget__period">@monthlyBudget.Period</span>
+            <span class="dash-budget__period">@period</span>
             <text>&middot;</text>
-            <span>Source: @sourceName</span>
+            <span>@L.Named("Dashboard.Source", ("source", sourceName))</span>
         </p>
-        <dl class="dash-stats" aria-label="Planned versus actual income and expenses for @monthlyBudget.Period">
+        <dl class="dash-stats" aria-label="@L.Named("Dashboard.MonthlyBudget.StatsLabel", ("period", period))">
             <div class="dash-stats__item">
-                <dt>Planned income</dt>
+                <dt>@L["Dashboard.MonthlyBudget.PlannedIncome"]</dt>
                 <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.BudgetedIncome, SupportedCurrencies.Default.Code)</dd>
             </div>
             <div class="dash-stats__item">
-                <dt>Actual income</dt>
+                <dt>@L["Dashboard.MonthlyBudget.ActualIncome"]</dt>
                 <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.ActualIncome, SupportedCurrencies.Default.Code)</dd>
             </div>
             <div class="dash-stats__item">
-                <dt>Planned expenses</dt>
+                <dt>@L["Dashboard.MonthlyBudget.PlannedExpenses"]</dt>
                 <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.BudgetedExpenses, SupportedCurrencies.Default.Code)</dd>
             </div>
             <div class="dash-stats__item">
-                <dt>Actual expenses</dt>
+                <dt>@L["Dashboard.MonthlyBudget.ActualExpenses"]</dt>
                 <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.ActualExpenses, SupportedCurrencies.Default.Code)</dd>
             </div>
         </dl>
         <a asp-controller="@(isTracker ? "BudgetTracker" : "Analysis")" asp-action="Index" class="dash-link">
-            @(isTracker ? "Open Budget Tracker" : "Open Analysis")
+            @(isTracker ? L["Dashboard.MonthlyBudget.OpenBudgetTracker"] : L["Dashboard.MonthlyBudget.OpenAnalysis"])
         </a>
     }
     else if (isTracker)
     {
-        <p class="dash-empty">
-            No data in Budget Tracker.
-            <a asp-controller="BudgetTracker" asp-action="Index">Add a monthly budget</a>
-            or switch to Google Sheet above.
-        </p>
+        Func<object?, HelperResult> addLink =
+            @<a asp-controller="BudgetTracker" asp-action="Index">@L["Dashboard.MonthlyBudget.AddMonthlyBudget"]</a>;
+        <p class="dash-empty">@L.NamedHtml("Dashboard.MonthlyBudget.EmptyTracker", null, ("link", addLink(null)))</p>
     }
     else
     {
-        <p class="dash-empty">
-            No data in Google Sheet.
-            <a asp-controller="GoogleDrive" asp-action="Index">Sync your spreadsheet</a>
-            or switch to Budget Tracker above.
-        </p>
+        Func<object?, HelperResult> syncLink =
+            @<a asp-controller="GoogleDrive" asp-action="Index">@L["Dashboard.SyncSpreadsheet"]</a>;
+        <p class="dash-empty">@L.NamedHtml("Dashboard.MonthlyBudget.EmptySheet", null, ("link", syncLink(null)))</p>
     }
 </section>

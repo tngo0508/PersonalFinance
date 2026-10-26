@@ -28,7 +28,7 @@ public class UnavailableStateTests
     public async Task BudgetIndex_WhenApiFails_RendersUnavailableStateInsteadOfDefaults()
     {
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi> _) = ApiProxy.Create<IBudgetPlannerApi>();
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 
@@ -39,7 +39,7 @@ public class UnavailableStateTests
     public async Task BudgetGetBudgetData_WhenApiFails_LetsJsonApiErrorsAnswerInsteadOfEmptyBudget()
     {
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi> _) = ApiProxy.Create<IBudgetPlannerApi>();
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => controller.GetBudgetData());
         Assert.NotNull(typeof(BudgetController).GetMethod(nameof(BudgetController.GetBudgetData))!
@@ -227,7 +227,7 @@ public class UnavailableStateTests
         await cts.CancelAsync();
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi>? proxy) = ApiProxy.Create<IBudgetPlannerApi>();
         proxy.Throws(nameof(IBudgetPlannerApi.GetBudgetAsync), new OperationCanceledException(cts.Token));
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(cts.Token));
     }

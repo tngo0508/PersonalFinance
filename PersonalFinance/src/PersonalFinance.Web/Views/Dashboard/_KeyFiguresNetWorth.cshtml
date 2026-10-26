@@ -3,24 +3,25 @@
 @{
     var netWorth = Model.NetWorth;
     var savingsRate = netWorth?.SavingsRatePercent;
-    var savingsRateCaption = netWorth is null
-        ? "Add your Net Worth settings"
-        : savingsRate is null ? "Add your annual income" : "Of annual income saved";
+    string savingsRateCaption = netWorth is null
+        ? L["Dashboard.AddNetWorthSettings"]
+        : savingsRate is null ? L["Dashboard.KeyFigures.AddAnnualIncome"] : L["Dashboard.KeyFigures.SavingsRateCaption"];
 }
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
-    Label = "Net Worth",
+    Label = L["Shell.Nav.NetWorth"],
     Value = netWorth is null ? null : MoneyFormatter.FormatWhole(netWorth.CurrentNetWorth, SupportedCurrencies.Default.Code),
-    Caption = netWorth is null ? "Add your Net Worth settings" : "From Net Worth settings",
+    Caption = netWorth is null ? L["Dashboard.AddNetWorthSettings"] : L["Dashboard.KeyFigures.NetWorthCaption"],
+    UnavailableText = L["Dashboard.KeyFigures.NotSetUp"],
     Icon = "wallet",
     Controller = "Networth"
 })"/>
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
-    Label = "Savings Rate",
+    Label = L["Dashboard.KeyFigures.SavingsRate"],
     Value = savingsRate is null ? null : $"{savingsRate.Value:F0}%",
     Caption = savingsRateCaption,
-    UnavailableText = netWorth is null ? "Not set up" : "Unavailable",
+    UnavailableText = netWorth is null ? L["Dashboard.KeyFigures.NotSetUp"] : L["Dashboard.KeyFigures.Unavailable"],
     Icon = "piggy-bank",
     Controller = "Networth"
 })"/>

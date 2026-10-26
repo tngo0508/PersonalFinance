@@ -12,9 +12,12 @@
 }
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
-    Label = "Goals funded",
+    Label = L["Dashboard.KeyFigures.GoalsFunded"],
     Value = value,
-    Caption = hasGoals ? $"{overview.CompletedCount} of {overview.TotalCount} complete" : "Add a savings goal",
+    Caption = hasGoals
+        ? L.Named("Dashboard.KeyFigures.GoalsComplete", ("completed", overview.CompletedCount), ("total", overview.TotalCount))
+        : L["Dashboard.AddSavingsGoal"],
+    UnavailableText = L["Dashboard.KeyFigures.NotSetUp"],
     Icon = "target",
     Controller = "SavingsGoals"
 })"/>

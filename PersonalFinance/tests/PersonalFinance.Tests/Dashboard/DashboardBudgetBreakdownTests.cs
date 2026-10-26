@@ -4,6 +4,7 @@ using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Dashboard;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.Dashboard;
 
 namespace PersonalFinance.Tests.Dashboard;
@@ -202,6 +203,10 @@ public class DashboardBudgetBreakdownTests
     public void PeriodLabel_FormatsStoredPeriodsAsMonthNames_AndKeepsUnrecognisedValues(string? period,
         string expected)
     {
+        // DashboardBudgetFormat follows the formatting culture; pin it, since ApiServiceCultureTests changes the
+        // process default culture while it runs.
+        using var language = LanguageScope.Use(AppLanguages.Find("en")!);
+
         Assert.Equal(expected, DashboardBudgetFormat.PeriodLabel(period));
     }
 
@@ -212,6 +217,10 @@ public class DashboardBudgetBreakdownTests
     [InlineData("0", "0%")]
     public void Percent_RoundsToOneDecimalPlaceOnlyForDisplay(string percent, string expected)
     {
+        // DashboardBudgetFormat follows the formatting culture; pin it, since ApiServiceCultureTests changes the
+        // process default culture while it runs.
+        using var language = LanguageScope.Use(AppLanguages.Find("en")!);
+
         Assert.Equal(expected, DashboardBudgetFormat.Percent(decimal.Parse(percent, CultureInfo.InvariantCulture)));
     }
 
