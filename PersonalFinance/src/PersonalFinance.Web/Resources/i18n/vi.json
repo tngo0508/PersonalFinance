@@ -726,7 +726,7 @@
   "GoogleDrive.Message.RemoveFailed": "Không thể xóa kết nối Google Drive.",
   "GoogleDrive.Message.FileIdRequired": "ID tệp là bắt buộc.",
   "GoogleDrive.Message.FolderUrlRequired": "Vui lòng nhập URL thư mục hoặc ID thư mục Google Drive hợp lệ.",
-  "GoogleDrive.Message.Connected": "Đã kết nối với '{name}' và lưu {count} mục vào bộ nhớ đệm.",
+  "GoogleDrive.Message.Connected.other": "Đã kết nối với '{name}' và lưu {count} mục vào bộ nhớ đệm.",
   "GoogleDrive.Message.ConnectFailed": "Đã xảy ra lỗi bất ngờ khi kết nối Google Drive.",
   "GoogleDrive.Js.Connecting": "Đang kết nối...",
   "GoogleDrive.Js.FolderIdCopied": "ID thư mục đã được sao chép vào clipboard.",

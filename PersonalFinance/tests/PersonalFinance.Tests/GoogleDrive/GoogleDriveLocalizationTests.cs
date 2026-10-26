@@ -20,7 +20,7 @@ public class GoogleDriveLocalizationTests
 {
     private const string English = """
         {
-          "GoogleDrive.Message.Connected": "Connected to '{name}' and cached {count} items.",
+          "GoogleDrive.Message.Connected.other": "Connected to '{name}' and cached {count} items.",
           "GoogleDrive.Message.Removed": "Google Drive connection and cached data removed successfully.",
           "GoogleDrive.Message.FolderUrlRequired": "Please enter a valid Google Drive folder URL or Folder ID.",
           "GoogleDrive.Message.FileIdRequired": "File ID is required.",
@@ -32,7 +32,7 @@ public class GoogleDriveLocalizationTests
 
     private const string Vietnamese = """
         {
-          "GoogleDrive.Message.Connected": "Đã kết nối '{name}' và lưu {count} mục.",
+          "GoogleDrive.Message.Connected.other": "Đã kết nối '{name}' và lưu {count} mục.",
           "GoogleDrive.Message.Removed": "Đã gỡ kết nối Google Drive và dữ liệu đã lưu.",
           "GoogleDrive.Message.FolderUrlRequired": "Vui lòng nhập URL hoặc ID thư mục Google Drive hợp lệ.",
           "GoogleDrive.Message.FileIdRequired": "Cần có ID tệp.",

@@ -297,8 +297,8 @@ public class GoogleDriveController : Controller
                 },
                 cancellationToken);
 
-            TempData["StatusMessage"] = _localizer.Named("GoogleDrive.Message.Connected",
-                ("name", connection.Name), ("count", connection.CachedFilesCount));
+            TempData["StatusMessage"] = _localizer.Plural("GoogleDrive.Message.Connected", connection.CachedFilesCount,
+                ("name", connection.Name));
             return RedirectToAction(nameof(Index), new { connectionId = connection.Id });
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)

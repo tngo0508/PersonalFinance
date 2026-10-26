@@ -727,7 +727,7 @@
     "GoogleDrive.Message.RemoveFailed": "ce336c76a25b47f4",
     "GoogleDrive.Message.FileIdRequired": "d4d60a8194ea77ff",
     "GoogleDrive.Message.FolderUrlRequired": "e617fb3d9d8d7398",
-    "GoogleDrive.Message.Connected": "090021133219d45d",
+    "GoogleDrive.Message.Connected.other": "090021133219d45d",
     "GoogleDrive.Message.ConnectFailed": "d35813a08fd4f095",
     "GoogleDrive.Js.Connecting": "5f04ae9ed6a865bb",
     "GoogleDrive.Js.FolderIdCopied": "3bbaf18e12e630c8",
