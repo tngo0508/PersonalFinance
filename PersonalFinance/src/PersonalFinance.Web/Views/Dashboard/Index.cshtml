@@ -2,7 +2,7 @@
 @using PersonalFinance.Shared.DTOs.Dashboard
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = L["Shell.Nav.Dashboard"].Value;
     var summary = Model ?? new DashboardSummaryDto();
     var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.Identity?.Name ?? string.Empty;
     var displayName = User.FindFirst(ClaimTypes.GivenName)?.Value
@@ -17,11 +17,11 @@
 @* Section order is agreed in the spec; each section lives in its own partial so it can evolve independently. *@
 <div class="dash">
     <header class="dash-header">
-        <p class="dash-header__eyebrow">Dashboard</p>
+        <p class="dash-header__eyebrow">@L["Shell.Nav.Dashboard"]</p>
         <h1 class="dash-header__title">
-            @(string.IsNullOrWhiteSpace(displayName) ? "Welcome back" : $"Welcome back, {displayName}")
+            @(string.IsNullOrWhiteSpace(displayName) ? L["Dashboard.Header.Welcome"] : L.Named("Dashboard.Header.WelcomeNamed", ("name", displayName)))
         </h1>
-        <p class="dash-header__lede">Here is where your finances stand today.</p>
+        <p class="dash-header__lede">@L["Dashboard.Header.Lede"]</p>
     </header>
 
     <partial name="_Summary" model="summary"/>
@@ -48,6 +48,7 @@
 
 @* Single JSON data island read by js/dashboard/dashboard-core.js (camelCase, HTML-safe encoding). *@
 <script type="application/json" id="dashboard-data">@Json.Serialize(summary)</script>
+<js-strings prefix="Dashboard.Js." />
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.min.js"></script>

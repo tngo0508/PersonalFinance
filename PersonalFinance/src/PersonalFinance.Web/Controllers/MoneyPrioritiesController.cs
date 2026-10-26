@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Web.Infrastructure;
@@ -18,15 +19,16 @@ namespace PersonalFinance.Web.Controllers;
 [Authorize]
 public class MoneyPrioritiesController : Controller
 {
-    private const string PageTitle = "Money Priorities";
-
     private readonly IMoneyPrioritiesApi _moneyPrioritiesApi;
     private readonly ILogger<MoneyPrioritiesController> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public MoneyPrioritiesController(IMoneyPrioritiesApi moneyPrioritiesApi, ILogger<MoneyPrioritiesController> logger)
+    public MoneyPrioritiesController(IMoneyPrioritiesApi moneyPrioritiesApi, ILogger<MoneyPrioritiesController> logger,
+        IStringLocalizer localizer)
     {
         _moneyPrioritiesApi = moneyPrioritiesApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -36,13 +38,18 @@ public class MoneyPrioritiesController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
-        var model = new MoneyPrioritiesViewModel();
+        var model = new MoneyPrioritiesViewModel
+        {
+            PurposeNoteDisclaimer = _localizer["MoneyPriorities.Note.Disclaimer"],
+            PurposeNoteUnavailable = _localizer["MoneyPriorities.Note.Unavailable"]
+        };
         try
         {
             PriorityTreeDiagramDto tree = await _moneyPrioritiesApi.GetTreeAsync(cancellationToken);
             model.WholeTreeDiagram = tree.WholeTreeDiagram;
             model.Thresholds = tree.Thresholds;
-            model.RecentWalks = await _moneyPrioritiesApi.GetRecentWalksAsync(cancellationToken);
+            model.RecentWalks = MoneyPrioritiesText.Localize(_localizer,
+                await _moneyPrioritiesApi.GetRecentWalksAsync(cancellationToken));
             if (model.RecentWalks.Count > 0)
             {
                 PriorityWalkResultDto latest =
@@ -53,7 +60,8 @@ public class MoneyPrioritiesController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Failed to load Money Priorities; rendering the Unavailable State instead.");
-            return this.UnavailableView(PageTitle, "We couldn't load Money Priorities", "MoneyPriorities");
+            return this.UnavailableView(_localizer["MoneyPriorities.Title"], _localizer["MoneyPriorities.Message.Unavailable"],
+                "MoneyPriorities");
         }
 
         return View(model);
@@ -73,14 +81,14 @@ public class MoneyPrioritiesController : Controller
         {
             return BadRequest(new MoneyPrioritiesValidationErrorsDto
             {
-                Errors = ["Answer the questions, then try again."]
+                Errors = [_localizer["MoneyPriorities.Message.NoAnswers"]]
             });
         }
 
         try
         {
             PriorityWalkResultDto result = await _moneyPrioritiesApi.SubmitWalkAsync(request, cancellationToken);
-            return Json(result);
+            return Json(MoneyPrioritiesText.Localize(_localizer, result));
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
         {
@@ -108,10 +116,11 @@ public class MoneyPrioritiesController : Controller
         if (errors.Errors.Count == 0)
         {
             errors.FieldErrors.Clear();
-            errors.Errors.Add("Check your answers, then try again.");
+            errors.Errors.Add(_localizer["MoneyPriorities.Message.CheckAnswers"]);
+            return errors;
         }
 
-        return errors;
+        return MoneyPrioritiesText.Localize(_localizer, errors);
     }
 
     /// <summary>Returns one earlier Priority Walk with its figures recomputed (404 when the Account has none).</summary>
@@ -120,7 +129,7 @@ public class MoneyPrioritiesController : Controller
     public async Task<IActionResult> Walk(int id, CancellationToken cancellationToken = default)
     {
         PriorityWalkResultDto walk = await _moneyPrioritiesApi.GetWalkAsync(id, cancellationToken);
-        return Json(walk);
+        return Json(MoneyPrioritiesText.Localize(_localizer, walk));
     }
 
     /// <summary>
@@ -134,7 +143,7 @@ public class MoneyPrioritiesController : Controller
     public async Task<IActionResult> Note(int id, CancellationToken cancellationToken = default)
     {
         PriorityWalkPurposeNoteDto note = await _moneyPrioritiesApi.WritePurposeNoteAsync(id, cancellationToken);
-        return Json(note);
+        return Json(MoneyPrioritiesText.Localize(_localizer, note));
     }
 
     /// <summary>Removes one earlier Priority Walk (soft delete in the ApiService).</summary>
@@ -153,6 +162,6 @@ public class MoneyPrioritiesController : Controller
     public async Task<IActionResult> Recent(CancellationToken cancellationToken = default)
     {
         List<PriorityWalkSummaryDto> walks = await _moneyPrioritiesApi.GetRecentWalksAsync(cancellationToken);
-        return Json(walks);
+        return Json(MoneyPrioritiesText.Localize(_localizer, walks));
     }
 }

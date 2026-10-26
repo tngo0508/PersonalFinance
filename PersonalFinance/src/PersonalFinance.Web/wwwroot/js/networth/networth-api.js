@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Net Worth API module.
  * Handles AJAX recalculation via fetch and debouncing.
@@ -74,7 +75,7 @@
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Failed to recalculate projection:', err);
-            NW.showValidationMessage('Failed to load projection data. Please check your connection and try again.');
+            NW.showValidationMessage(PFI18n.t('NetWorth.Js.LoadFailed'));
         }
     }
 

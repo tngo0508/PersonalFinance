@@ -20,12 +20,18 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 {
     private readonly IBudgetDataProvider _budgetDataProvider;
     private readonly AppDbContext _dbContext;
+    private readonly ILogger<SpreadsheetAnalysisService> _logger;
     private readonly INotificationService _notificationService;
     private readonly ISpreadsheetReader _spreadsheetReader;
 
+    /// <summary>The English text of <c>Notifications.SyncFailed.Message</c>, kept for clients that read the plain text.</summary>
+    private const string SyncFailedMessage = "We couldn't sync your spreadsheet. Please try again later.";
+
     public SpreadsheetAnalysisService(AppDbContext dbContext, ISpreadsheetReader spreadsheetReader,
-        INotificationService notificationService, IBudgetDataProvider budgetDataProvider)
+        INotificationService notificationService, IBudgetDataProvider budgetDataProvider,
+        ILogger<SpreadsheetAnalysisService> logger)
     {
+        _logger = logger;
         _dbContext = dbContext;
         _spreadsheetReader = spreadsheetReader;
         _notificationService = notificationService;
@@ -320,12 +326,13 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 budgetReport = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
                     userId, fileId, fileName, connectionId, cancellationToken);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
+                _logger.LogWarning(ex, "Reading spreadsheet {FileId} for sync failed", fileId);
                 return new SyncSpreadsheetBudgetResult
                 {
                     Success = false,
-                    ErrorMessage = $"Failed to read spreadsheet: {ex.Message}"
+                    ErrorMessage = "The spreadsheet could not be read. Please try again."
                 };
             }
 
@@ -500,24 +507,25 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 TransactionsCreated = transactionsCreated
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // Create failure notification
+            // The exception text never reaches the user (it can name hosts, tables or credentials); it is logged.
+            _logger.LogError(ex, "Syncing spreadsheet {FileId} from connection {ConnectionId} failed", fileId,
+                connectionId);
             await _notificationService.CreateNotificationAsync(userId, new CreateNotificationRequestDto
             {
                 Type = "SyncStatus",
                 Title = "Google Drive sync failed",
-                Message = $"Sync failed: {ex.Message}",
+                Message = SyncFailedMessage,
                 TitleKey = "Notifications.SyncFailed.Title",
                 MessageKey = "Notifications.SyncFailed.Message",
-                Arguments = new Dictionary<string, string> { ["error"] = ex.Message },
                 SourceFeature = "GoogleDrive"
             }, cancellationToken);
 
             return new SyncSpreadsheetBudgetResult
             {
                 Success = false,
-                ErrorMessage = $"Sync failed: {ex.Message}"
+                ErrorMessage = SyncFailedMessage
             };
         }
     }

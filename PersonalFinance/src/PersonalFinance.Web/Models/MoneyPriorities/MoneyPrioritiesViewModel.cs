@@ -1,4 +1,3 @@
-using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 
 namespace PersonalFinance.Web.Models.MoneyPriorities;
@@ -21,9 +20,15 @@ public class MoneyPrioritiesViewModel
     /// <summary>The latest Walk's answers, or null when the Account has none yet.</summary>
     public PriorityWalkAnswersDto? LatestAnswers { get; set; }
 
-    /// <summary>The AI disclaimer shown under a Purpose Note, including a saved one the page shows without a request.</summary>
-    public string PurposeNoteDisclaimer { get; set; } = AiAssistantMessages.Disclaimer;
+    /// <summary>
+    /// The AI disclaimer shown under a Purpose Note, including a saved one the page shows without a request, in the
+    /// request's Language.
+    /// </summary>
+    public string PurposeNoteDisclaimer { get; set; } = string.Empty;
 
-    /// <summary>The message the page shows when the Purpose Note request fails before the server can answer.</summary>
-    public string PurposeNoteUnavailable { get; set; } = AiAssistantMessages.PurposeNoteUnavailable;
+    /// <summary>
+    /// The message the page shows when the Purpose Note request fails before the server can answer, in the request's
+    /// Language.
+    /// </summary>
+    public string PurposeNoteUnavailable { get; set; } = string.Empty;
 }

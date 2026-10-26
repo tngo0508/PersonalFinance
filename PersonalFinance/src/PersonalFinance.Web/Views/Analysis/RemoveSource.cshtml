@@ -1,7 +1,12 @@
+@using Microsoft.AspNetCore.Html
+@using System.Text.Encodings.Web
 @model RemoveSourceViewModel
 
 @{
-    ViewData["Title"] = $"Remove {Model.SourceName} data";
+    var sourceName = AnalysisText.SourceName(L, Model.Source);
+    ViewData["Title"] = L.Named("Analysis.RemoveSource.PageTitle", ("source", sourceName));
+    IHtmlContent Strong(object value) =>
+        new HtmlString($"<strong>{HtmlEncoder.Default.Encode(Convert.ToString(value, System.Globalization.CultureInfo.CurrentCulture) ?? string.Empty)}</strong>");
 }
 
 <div class="analysis-page">
@@ -9,34 +14,33 @@
         <div class="col-lg-7">
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
-                    <h1 class="h4 fw-bold mb-3">Remove your @Model.SourceName data?</h1>
+                    <h1 class="h4 fw-bold mb-3">@L.Named("Analysis.RemoveSource.Heading", ("source", sourceName))</h1>
 
-                    <p>This permanently removes from this app:</p>
+                    <p>@L["Analysis.RemoveSource.Intro"]</p>
                     <ul>
-                        <li><strong>@Model.MonthCount</strong> month(s) of budget data</li>
-                        <li><strong>@Model.TransactionCount</strong> transaction(s)</li>
+                        <li>@L.NamedHtml("Analysis.RemoveSource.Months", null, ("count", Strong(Model.MonthCount)))</li>
+                        <li>@L.NamedHtml("Analysis.RemoveSource.Transactions", null, ("count", Strong(Model.TransactionCount)))</li>
                         @if (Model.RequiresTypedConfirmation)
                         {
-                            <li>your categories, which return to the defaults</li>
+                            <li>@L["Analysis.RemoveSource.Categories"]</li>
                         }
                     </ul>
 
                     @if (Model.RequiresTypedConfirmation)
                     {
                         <p class="text-danger fw-semibold">
-                            These entries exist only in this app. They cannot be recovered.
+                            @L["Analysis.RemoveSource.Unrecoverable"]
                         </p>
                     }
                     else
                     {
                         <p class="text-muted">
-                            Your spreadsheet and your Google Drive connection are not touched, so you can sync again
-                            anytime.
+                            @L["Analysis.RemoveSource.SheetUntouched"]
                         </p>
                     }
 
                     <p class="text-muted small">
-                        Analysis, the Dashboard and search then show your other data source, if it has data.
+                        @L["Analysis.RemoveSource.OtherSource"]
                     </p>
 
                     <form asp-action="RemoveSource" method="post">
@@ -45,7 +49,8 @@
                         {
                             <div class="mb-3">
                                 <label asp-for="Confirmation" class="form-label">
-                                    Type <strong>@RemoveSourceViewModel.ConfirmationWord</strong> to confirm
+                                    @L.NamedHtml("Analysis.RemoveSource.TypeToConfirm", null,
+                                        ("word", Strong(RemoveSourceViewModel.ConfirmationWord)))
                                 </label>
                                 <input asp-for="Confirmation" class="form-control" autocomplete="off"
                                        aria-describedby="confirmationError"/>
@@ -55,9 +60,9 @@
                         }
 
                         <div class="d-flex gap-2 justify-content-end">
-                            <a asp-action="Index" class="btn btn-light border">Cancel</a>
+                            <a asp-action="Index" class="btn btn-light border">@L["Common.Cancel"]</a>
                             <button type="submit" class="btn btn-danger fw-semibold">
-                                Remove @Model.SourceName data
+                                @L.Named("Analysis.RemoveSource.Submit", ("source", sourceName))
                             </button>
                         </div>
                     </form>

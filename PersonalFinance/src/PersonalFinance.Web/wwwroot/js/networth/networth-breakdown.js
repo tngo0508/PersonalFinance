@@ -1,3 +1,4 @@
+/* global PFI18n */
 (function () {
     'use strict';
 
@@ -34,7 +35,7 @@
         body.append(label, el('div', 'nw-breakdown__value', card.value));
 
         const inputs = el('div', 'nw-breakdown__inputs');
-        inputs.append(el('span', 'nw-breakdown__from', 'from'));
+        inputs.append(el('span', 'nw-breakdown__from', PFI18n.t('NetWorth.Js.Breakdown.From')));
         (card.inputs || []).forEach((input) => {
             const chip = el('span', 'nw-breakdown__chip', input.label);
             chip.title = input.value;

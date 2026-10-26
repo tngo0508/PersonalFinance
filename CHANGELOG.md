@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [7.7.0] - 2026-10-25
+## [7.13.0] - 2026-10-25
 
 ### Added
 
@@ -18,8 +18,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Finance News times**: "Last updated" shows the refresh time again, and each article's age is drawn by the page in the reader's language; the shared relative-time tag had replaced both with an English "Just now" or "2d ago".
+- **Finance News times**: "Last updated" shows the refresh time again, and each article's age is drawn by the page in the reader's language; the shared relative-time tag replaced the whole text of each, leaving only "Just now" or "2d ago" and dropping the clock icon.
   - The refresh time and each article's hover date use the culture's short date and time (`12/31/2025 at 2:05 PM`, `31/12/2025 lúc 14:05`).
+
+## [7.12.0] - 2026-10-25
+
+### Added
+
+- **Analysis and Google Drive in Vietnamese**: both pages, their dialogs and their charts are translated (slice L3 of the localization spec, #365).
+  - Analysis: summary cards, Spending Velocity, Money Flow, category and variance tables, status badges, Data Source Removal and the sync-conflict dialog.
+  - Google Drive: the drive list, connect form, file list and filters, the budget report and transactions dialogs, CSV export headers, and the help and new-budget guides.
+  - Month names, dates and percentages follow the reader's culture. File-type labels are translated; the type filter still matches the type the API sends.
+  - Names the app matches stay in English: the "Monthly budget" file name prefix, the template's Summary and Transactions tabs, and the Date and Amount columns.
+
+### Fixed
+
+- **Drive sync failures no longer show the exception text**: the sync-failed Notification and the Analysis error alert say only that the spreadsheet could not be synced or read, and the exception is logged instead.
+  - The Notification is translated; Notifications already stored show the new message too, since the message comes from its key.
+
+## [7.11.0] - 2026-10-25
+
+### Added
+
+- **Net Worth and the Investment Calculator in Vietnamese**: both pages, their charts, the FI Breakdown and the help dialog follow the UI language (slice L3 of the localization spec, #363).
+  - 160 keys under `NetWorth.` and `InvestmentCalculator.`; the pages' scripts read theirs from `<js-strings>` islands.
+  - The FI Breakdown takes its wording from the localizer, so the live cards after each recalculation match the server's.
+  - Save, clear and Unavailable State messages and the parameter validation messages are translated.
+
+### Changed
+
+- **Net Worth amounts use the shared money formatter**: the FI Target and every tile, table cell and chart label format in the reader's culture (`1.250.000 $` in Vietnamese); the hand-built `"$" + N0` is gone.
+  - The Base Final card shows the retirement age after a recalculation too, as it does on first render.
+
+### Fixed
+
+- **Net Worth reads its fields in the reader's culture**: under Vietnamese, `180.000` is read as 180,000 and `7,5` as 7.5 for the projection and its range checks, instead of 180 and 75.
+
+## [7.10.0] - 2026-10-25
+
+### Added
+
+- **Money Priorities in Vietnamese**: the page, its form, result card, Earlier results, Purpose Note area and Priority Tree controls read in the user's Language (slice L3 of the localization spec, #364).
+  - The leaf labels, the estimate and AI disclaimers, the Purpose Note messages and the submit validation messages the ApiService sends are swapped for their translation by the Web app; text it does not recognize shows as sent.
+  - Months and years use plural forms; dates, amounts and rates use the page culture.
+  - Still in English: the "Your path" sentences and the Priority Tree diagram labels (written by the ApiService), the AI quota message and the AI-written Purpose Note itself.
+
+### Changed
+
+- **Purpose Note facts use the shared money formatter**: the AI prompt's dollar figures go through `MoneyFormatter` instead of a hand-built `$` and `N0`; the prompt still reads in English.
+
+## [7.9.0] - 2026-10-25
+
+### Added
+
+- **Dashboard in Vietnamese**: every section of the Dashboard, its charts and its Unavailable State read in the chosen language (slice L3 of the localization spec, #360).
+  - Amounts, percentages (`12,5%`) and month labels (`Tháng 10 năm 2026`) follow the reader's culture.
+  - Chart series, axis, tooltips and the FI Target line come from a `Dashboard.Js.` strings island; the budget donut takes its slice names from the translated legend.
+  - Recent activity descriptions are worded in the reader's language from new raw fields on `RecentActivityDto` (`Category`, `Amount`, `TargetAmount`, `SavedAmount`); `Description` stays as the English fallback.
+  - Budget Planner category names are shared keys under `Common.BudgetCategory.`.
+
+### Changed
+
+- **Relative times are translated everywhere**: the `<time datetime>` tag helper ("5d ago", "Just now") now uses `Common.TimeAgo.` keys, and dates older than a week use the language's date format, on every page that shows them.
+
+## [7.8.0] - 2026-10-25
+
+### Added
+
+- **Budget Tracker in Vietnamese**: the page, its dialogs, its script messages and its error responses are translated (slice L3 of the localization spec, #362).
+  - 131 `BudgetTracker.*` keys; the script reads its strings from the page's `BudgetTracker.Js.` island.
+  - The monthly sheet carries `PreviousPlanYear` and `PreviousPlanMonth` in place of the English `PreviousMonthLabel`, so "Copy from September 2026" names the month in the reader's language.
+
+### Changed
+
+- **Budget Tracker dates and amounts follow the reader's culture**: transaction dates show as `10/25/2026` or `25/10/2026` instead of `2026-10-25`, and the initial `$0.00` placeholders and the `($)` field labels come from the money formatter and the currency.
+
+## [7.7.0] - 2026-10-25
+
+### Added
+
+- **Budget Planner in Vietnamese**: the Budget Planner page reads in the chosen language (slice L3 of the localization spec, #361).
+  - Headings, category labels, ARIA labels, the chart's labels and tooltip, the remaining/over-budget label, field names and validation messages.
+  - The save confirmation, the over-income warning, the save failure and the Unavailable State.
+  - Percentages use the reader's number format (`12,5%` in Vietnamese); the money symbols come from the money formatter, not from the page.
 
 ## [7.6.1] - 2026-10-26
 

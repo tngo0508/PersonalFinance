@@ -14,7 +14,7 @@
      * @returns {string} The formatted currency string.
      */
     function formatCurrency (value) {
-        return PFI18n.formatMoney(value, 'USD', { whole: true });
+        return PFI18n.formatMoney(value, null, { whole: true });
     }
 
     /**
@@ -34,8 +34,13 @@
                 valId: 'calcMonthlyValue',
                 format: v => formatCurrency(v)
             },
-            { rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => `${v }%` },
-            { rangeId: 'calcYearsRange', numId: 'calcYears', valId: 'calcYearsValue', format: v => `${v } years` }
+            { rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => `${PFI18n.formatNumber(Number(v) || 0) }%` },
+            {
+                rangeId: 'calcYearsRange',
+                numId: 'calcYears',
+                valId: 'calcYearsValue',
+                format: v => PFI18n.plural('InvestmentCalculator.Js.Years', Number(v) || 0)
+            }
         ];
 
         inputs.forEach(({ rangeId, numId, valId, format }) => {
@@ -250,7 +255,9 @@
             ctx.moveTo(x, tickY);
             ctx.lineTo(x, tickY + 4);
             ctx.stroke();
-            ctx.fillText(y === 0 ? 'Now' : `${y }y`, x, tickY + 8);
+            ctx.fillText(y === 0
+                ? PFI18n.t('InvestmentCalculator.Js.Axis.Now')
+                : PFI18n.t('InvestmentCalculator.Js.Axis.Years', { count: PFI18n.formatNumber(y) }), x, tickY + 8);
         }
 
         // Smooth curve helper
@@ -409,7 +416,7 @@
      * @returns {string} The formatted string.
      */
     function formatAxisValue (val) {
-        return PFI18n.formatCompactMoney(val, 'USD');
+        return PFI18n.formatCompactMoney(val);
     }
 
     /**
@@ -574,16 +581,18 @@
 
         // Tooltip box
         const lines = [
-            year === 0 ? 'Start' : `${year } Years`,
-            `Value: ${ formatCurrency(value)}`,
-            `Contrib: ${ formatCurrency(contribution)}`
+            year === 0 ? PFI18n.t('InvestmentCalculator.Js.Tooltip.Start') : PFI18n.plural('InvestmentCalculator.Js.Tooltip.Years', year),
+            PFI18n.t('InvestmentCalculator.Js.Tooltip.Value', { amount: formatCurrency(value) }),
+            PFI18n.t('InvestmentCalculator.Js.Tooltip.Contributions', { amount: formatCurrency(contribution) })
         ];
 
-        ctx.font = '600 12px Inter, system-ui, -apple-system, sans-serif';
+        ctx.font = '700 12px Inter, system-ui, -apple-system, sans-serif';
         const lineH = 18;
-        const boxW = 150;
-        const boxH = lines.length * lineH + 12;
         const boxPad = 10;
+        // Wide enough for the longest line: translated labels and amounts vary in length.
+        const textW = Math.max(...lines.map((line) => ctx.measureText(line).width));
+        const boxW = Math.max(150, Math.ceil(textW) + boxPad * 2);
+        const boxH = lines.length * lineH + 12;
 
         let boxX = cx + 12;
         let boxY = vy - boxH / 2;

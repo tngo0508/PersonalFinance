@@ -1,10 +1,11 @@
-using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.Analysis;
 using PersonalFinance.Web.Services;
 
@@ -19,14 +20,16 @@ public class AnalysisController : Controller
 {
     private readonly ISpreadsheetAnalysisApi _api;
     private readonly IBudgetTrackerApi _budgetTrackerApi;
+    private readonly IStringLocalizer _localizer;
     private readonly ILogger<AnalysisController> _logger;
 
     public AnalysisController(ISpreadsheetAnalysisApi api, IBudgetTrackerApi budgetTrackerApi,
-        ILogger<AnalysisController> logger)
+        ILogger<AnalysisController> logger, IStringLocalizer localizer)
     {
         _api = api;
         _budgetTrackerApi = budgetTrackerApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -40,7 +43,7 @@ public class AnalysisController : Controller
     {
         AnalysisDashboardDto result = await _api.GetAnalysisDashboardAsync(year, month, cancellationToken);
 
-        AnalysisDashboardViewModel model = MapToViewModel(result);
+        AnalysisDashboardViewModel model = MapToViewModel(result, _localizer);
         model.StatusMessage = TempData["StatusMessage"] as string;
         model.ErrorMessage = TempData["ErrorMessage"] as string;
 
@@ -86,10 +89,10 @@ public class AnalysisController : Controller
         }
 
         if (result.Success)
-            TempData["StatusMessage"] =
-                $"Successfully synced {result.SnapshotsCreated} month(s) and {result.TransactionsCreated} transactions.";
+            TempData["StatusMessage"] = _localizer.Named("Analysis.Message.Synced",
+                ("months", result.SnapshotsCreated), ("transactions", result.TransactionsCreated));
         else
-            TempData["ErrorMessage"] = result.ErrorMessage ?? "Sync failed. Please try again.";
+            TempData["ErrorMessage"] = result.ErrorMessage ?? _localizer["Analysis.Message.SyncFailed"].Value;
 
         return RedirectToAction(nameof(Index));
     }
@@ -121,10 +124,10 @@ public class AnalysisController : Controller
         SyncSpreadsheetResponseDto result = await _api.SyncSpreadsheetAsync(request, cancellationToken);
 
         if (result.Success)
-            TempData["StatusMessage"] =
-                $"Successfully synced {result.SnapshotsCreated} month(s) and {result.TransactionsCreated} transactions (overwritten existing data).";
+            TempData["StatusMessage"] = _localizer.Named("Analysis.Message.SyncedOverwritten",
+                ("months", result.SnapshotsCreated), ("transactions", result.TransactionsCreated));
         else
-            TempData["ErrorMessage"] = result.ErrorMessage ?? "Sync failed. Please try again.";
+            TempData["ErrorMessage"] = result.ErrorMessage ?? _localizer["Analysis.Message.SyncFailed"].Value;
 
         return RedirectToAction(nameof(Index));
     }
@@ -145,7 +148,8 @@ public class AnalysisController : Controller
         var model = new RemoveSourceViewModel { Source = source };
         if (!await LoadCountsAsync(model, cancellationToken))
         {
-            TempData["ErrorMessage"] = $"There is no {model.SourceName} data to remove.";
+            TempData["ErrorMessage"] = _localizer.Named("Analysis.Message.NothingToRemove",
+                ("source", AnalysisText.SourceName(_localizer, model.Source)));
             return RedirectToAction(nameof(Index));
         }
 
@@ -173,7 +177,7 @@ public class AnalysisController : Controller
             !string.Equals(input.Confirmation?.Trim(), RemoveSourceViewModel.ConfirmationWord, StringComparison.Ordinal))
         {
             ModelState.AddModelError(nameof(RemoveSourceViewModel.Confirmation),
-                $"Type {RemoveSourceViewModel.ConfirmationWord} to confirm.");
+                _localizer.Named("Analysis.Message.TypeToConfirm", ("word", RemoveSourceViewModel.ConfirmationWord)));
             if (!await LoadCountsAsync(model, cancellationToken))
             {
                 return RedirectToAction(nameof(Index));
@@ -186,8 +190,9 @@ public class AnalysisController : Controller
             ? await _budgetTrackerApi.RemoveDataAsync(cancellationToken)
             : await _api.RemoveSyncedDataAsync(cancellationToken);
 
-        TempData["StatusMessage"] =
-            $"Removed your {model.SourceName} data: {removed.MonthCount} month(s) and {removed.TransactionCount} transaction(s).";
+        TempData["StatusMessage"] = _localizer.Named("Analysis.Message.Removed",
+            ("source", AnalysisText.SourceName(_localizer, model.Source)), ("months", removed.MonthCount),
+            ("transactions", removed.TransactionCount));
         return RedirectToAction(nameof(Index));
     }
 
@@ -207,7 +212,7 @@ public class AnalysisController : Controller
         return true;
     }
 
-    private static AnalysisDashboardViewModel MapToViewModel(AnalysisDashboardDto result)
+    private static AnalysisDashboardViewModel MapToViewModel(AnalysisDashboardDto result, IStringLocalizer localizer)
     {
         var model = new AnalysisDashboardViewModel
         {
@@ -226,11 +231,11 @@ public class AnalysisController : Controller
             model.TotalExpenses = result.Summary.TotalExpenses;
             model.NetSavings = result.Summary.NetSavings;
             model.SavingsRate = result.Summary.SavingsRate;
-            model.MonthName = result.Summary.MonthName;
+            model.MonthName = AnalysisText.MonthName(result.Summary.MonthNumber);
         }
         else if (result.Month is >= 1 and <= 12)
         {
-            model.MonthName = CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(result.Month.Value);
+            model.MonthName = AnalysisText.MonthName(result.Month.Value);
         }
 
         if (result.Velocity != null)
@@ -243,10 +248,11 @@ public class AnalysisController : Controller
             model.BudgetConsumptionPercent = result.Velocity.BudgetConsumptionPercent;
             model.TimeElapsedPercent = result.Velocity.TimeElapsedPercent;
             model.VelocityStatus = result.Velocity.Status;
+            model.VelocityStatusLabel = AnalysisText.Status(localizer, result.Velocity.Status);
             model.WeeklyTrend = result.Velocity.WeeklyTrend
                 .Select(w => new WeeklySpendingViewModel
                 {
-                    WeekLabel = w.WeekLabel,
+                    WeekLabel = localizer.Named("Analysis.Velocity.Week", ("number", w.WeekNumber)),
                     TotalSpent = w.TotalSpent
                 }).ToList();
             model.CategoryVelocities = result.Velocity.CategoryVelocities
@@ -265,7 +271,7 @@ public class AnalysisController : Controller
             model.TrendPoints = result.Trends.TrendPoints
                 .Select(t => new TrendPointViewModel
                 {
-                    MonthName = t.MonthName,
+                    MonthName = AnalysisText.MonthName(t.MonthNumber),
                     Income = t.Income,
                     Expenses = t.Expenses,
                     NetSavings = t.NetSavings,
@@ -281,10 +287,11 @@ public class AnalysisController : Controller
                     ActualAmount = c.ActualAmount,
                     Variance = c.Variance,
                     PercentageUsed = c.PercentageUsed,
-                    Status = c.Status
+                    Status = c.Status,
+                    StatusLabel = AnalysisText.Status(localizer, c.Status)
                 }).ToList();
 
-        model.MoneyFlow = MoneyFlowBuilder.Build(result.Categories);
+        model.MoneyFlow = MoneyFlowBuilder.Build(result.Categories, localizer);
 
         if (result.Variance != null)
             model.VarianceRankings = result.Variance.Rankings
@@ -296,7 +303,8 @@ public class AnalysisController : Controller
                     ActualAmount = v.ActualAmount,
                     Variance = v.Variance,
                     VariancePercent = v.VariancePercent,
-                    Status = v.Status
+                    Status = v.Status,
+                    StatusLabel = AnalysisText.Status(localizer, v.Status)
                 }).ToList();
 
         return model;

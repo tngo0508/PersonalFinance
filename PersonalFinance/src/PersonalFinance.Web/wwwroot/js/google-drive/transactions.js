@@ -62,8 +62,17 @@
             return tx.type === 'Income';
         }
 
-        function plural (n, word) {
-            return `${n } ${ word }${n === 1 ? '' : 's'}`;
+        // "3 purchases", "1 deposit", ... in the page language
+        function plural (n, key) {
+            return PFI18n.plural(`GoogleDrive.Js.Tx.${ key }`, n);
+        }
+
+        function formatPercent (value) {
+            return PFI18n.t('GoogleDrive.Js.Percent', { value: PFI18n.formatNumber(value) });
+        }
+
+        function sourceLabel (data) {
+            return PFI18n.t(data.isLiveSpreadsheetData ? 'GoogleDrive.Js.Source.Live' : 'GoogleDrive.Js.Source.Sample');
         }
 
         function showTxState (state) {
@@ -87,11 +96,12 @@
 
         // ---------- Summary ----------
 
+        // Totals per category; key is the category as stored ('' when none), name is what the page shows
         function categoryTotals (expenses) {
             const map = {};
             expenses.forEach((t) => {
-                const key = t.category || 'Uncategorized';
-                if (!map[key]) { map[key] = { name: key, total: 0, count: 0 }; }
+                const key = t.category || '';
+                if (!map[key]) { map[key] = { key: key, name: key || PFI18n.t('GoogleDrive.Js.Tx.Uncategorized'), total: 0, count: 0 }; }
                 map[key].total += t.amount;
                 map[key].count += 1;
             });
@@ -109,34 +119,48 @@
 
             $('#txKpiExpenses').text(formatMoney(data.totalExpenses));
             $('#txKpiExpensesSub').text(days > 1
-                ? `${plural(expenses.length, 'purchase') } · avg ${ formatMoney(data.totalExpenses / days) }/day`
-                : plural(expenses.length, 'purchase'));
+                ? PFI18n.t('GoogleDrive.Js.Tx.PurchasesPerDay', { purchases: plural(expenses.length, 'Purchases'), amount: formatMoney(data.totalExpenses / days) })
+                : plural(expenses.length, 'Purchases'));
             $('#txKpiIncome').text(formatMoney(data.totalIncome));
-            $('#txKpiIncomeSub').text(plural(incomes.length, 'deposit'));
+            $('#txKpiIncomeSub').text(plural(incomes.length, 'Deposits'));
             $('#txKpiNet').text(formatMoney(net));
             $('#txKpiNetSub').text(data.totalIncome > 0
-                ? (net >= 0 ? `Kept ${ Math.round(net / data.totalIncome * 100) }% of income` : 'Spent more than came in')
-                : 'Income minus spending');
+                ? (net >= 0
+                    ? PFI18n.t('GoogleDrive.Js.Tx.KeptShare', { percent: formatPercent(Math.round(net / data.totalIncome * 100)) })
+                    : PFI18n.t('GoogleDrive.Js.Tx.SpentMoreThanIncome'))
+                : PFI18n.t('GoogleDrive.Js.IncomeMinusSpending'));
             $('#txKpiCount').text(PFI18n.formatNumber(txs.length));
-            $('#txKpiRange').text(first && last ? `${formatDate(data.firstDate) } – ${ formatDate(data.lastDate)}` : 'No dates recorded');
+            $('#txKpiRange').text(first && last
+                ? PFI18n.t('GoogleDrive.Js.Tx.Range', { from: formatDate(data.firstDate), to: formatDate(data.lastDate) })
+                : PFI18n.t('GoogleDrive.Js.Tx.NoDates'));
 
             // Highlights
             const facts = [];
             const largest = expenses.slice().sort((a, b) => { return b.amount - a.amount; })[0];
             if (largest) {
-                facts.push(['Largest expense', `${escapeHtml(largest.description || largest.category || 'Expense') } · ${ formatMoney(largest.amount)
-                }${largest.date ? ` on ${ formatDate(largest.date, false)}` : ''}`]);
+                const largestArgs = {
+                    name: largest.description || largest.category || PFI18n.t('GoogleDrive.Js.Tx.Expense'),
+                    amount: formatMoney(largest.amount)
+                };
+                if (largest.date) { largestArgs.date = formatDate(largest.date, false); }
+                facts.push([PFI18n.t('GoogleDrive.Js.Tx.LargestExpense'),
+                    PFI18n.t(largest.date ? 'GoogleDrive.Js.Tx.LargestValueOn' : 'GoogleDrive.Js.Tx.LargestValue', largestArgs)]);
             }
             const cats = categoryTotals(expenses);
             if (cats.length && data.totalExpenses > 0) {
-                facts.push(['Top category', `${escapeHtml(cats[0].name) } · ${ Math.round(cats[0].total / data.totalExpenses * 100) }% of spending`]);
+                facts.push([PFI18n.t('GoogleDrive.Js.Tx.TopCategory'), PFI18n.t('GoogleDrive.Js.Tx.TopCategoryValue', {
+                    name: cats[0].name,
+                    percent: formatPercent(Math.round(cats[0].total / data.totalExpenses * 100))
+                })]);
                 const frequent = cats.slice().sort((a, b) => { return b.count - a.count || b.total - a.total; })[0];
                 if (frequent.count > 1) {
-                    facts.push(['Most frequent', `${escapeHtml(frequent.name) } · ${ plural(frequent.count, 'purchase')}`]);
+                    facts.push([PFI18n.t('GoogleDrive.Js.Tx.MostFrequent'),
+                        PFI18n.t('GoogleDrive.Js.Tx.FrequentValue', { name: frequent.name, purchases: plural(frequent.count, 'Purchases') })]);
                 }
             }
+            // Facts are plain text (names are the user's own), so both parts are escaped
             $('#txInsights').html(facts.map((f) => {
-                return `<li><span class="bgt-facts-label">${ f[0] }</span><span class="bgt-facts-value">${ f[1] }</span></li>`;
+                return `<li><span class="bgt-facts-label">${ escapeHtml(f[0]) }</span><span class="bgt-facts-value">${ escapeHtml(f[1]) }</span></li>`;
             }).join('')).toggleClass('d-none', facts.length === 0);
 
             renderCategoryRank(cats, data.totalExpenses);
@@ -144,7 +168,7 @@
 
             // Category filter options
             const allCategories = Array.from(new Set(txs.map((t) => { return t.category; }).filter(Boolean))).sort();
-            const $select = $('#txCategoryFilter').empty().append('<option value="">All categories</option>');
+            const $select = $('#txCategoryFilter').empty().append($('<option value="">').text(PFI18n.t('GoogleDrive.Js.Tx.AllCategories')));
             allCategories.forEach((c) => {
                 $select.append($('<option>').val(c).text(c));
             });
@@ -154,14 +178,14 @@
         function renderCategoryRank (cats, totalExpenses) {
             const $list = $('#txCategoryBars');
             if (cats.length === 0 || !(totalExpenses > 0)) {
-                $list.html('<div class="text-muted small">No spending recorded.</div>');
+                $list.html($('<div class="text-muted small">').text(PFI18n.t('GoogleDrive.Js.Tx.NoSpending')));
                 return;
             }
             let rows = cats.slice(0, TOP_CATEGORY_COUNT);
             const rest = cats.slice(TOP_CATEGORY_COUNT);
             if (rest.length) {
                 rows = rows.concat([{
-                    name: `Other (${ rest.length })`,
+                    name: PFI18n.t('GoogleDrive.Js.Tx.OtherCount', { count: PFI18n.formatNumber(rest.length) }),
                     total: rest.reduce((s, c) => { return s + c.total; }, 0),
                     count: rest.reduce((s, c) => { return s + c.count; }, 0),
                     isOther: true
@@ -171,13 +195,13 @@
             $list.html(rows.map((c) => {
                 const share = Math.round(c.total / totalExpenses * 100);
                 const inner = `<span class="bgt-rank-head"><span class="bgt-rank-name">${ escapeHtml(c.name) }</span>` +
-                    `<span class="bgt-rank-value">${ formatMoney(c.total) } <small>${ share }%</small></span></span>` +
+                    `<span class="bgt-rank-value">${ formatMoney(c.total) } <small>${ formatPercent(share) }</small></span></span>` +
                     `<span class="bgt-rank-track"><span class="bgt-rank-fill" style="width:${ (c.total / max * 100).toFixed(1) }%"></span></span>`;
                 // "Other" groups several categories, so it isn't a filter target
                 return c.isOther
                     ? `<div class="bgt-rank-row bgt-rank-row--static">${ inner }</div>`
-                    : `<button type="button" class="bgt-rank-row" data-category="${ escapeHtml(c.name === 'Uncategorized' ? '' : c.name) }"` +
-                      ` aria-pressed="false" title="Show only ${ escapeHtml(c.name) }">${ inner }</button>`;
+                    : `<button type="button" class="bgt-rank-row" data-category="${ escapeHtml(c.key) }"` +
+                      ` aria-pressed="false" title="${ escapeHtml(PFI18n.t('GoogleDrive.Js.Tx.ShowOnly', { name: c.name })) }">${ inner }</button>`;
             }).join(''));
         }
 
@@ -188,7 +212,7 @@
             $box.find('.bgt-chart-empty').remove();
             if (dated.length === 0 || !first || !last) {
                 $('#txTimelineSub').text('');
-                $box.append('<div class="bgt-chart-empty">No dated spending to chart.</div>');
+                $box.append($('<div class="bgt-chart-empty">').text(PFI18n.t('GoogleDrive.Js.Tx.NoDatedSpending')));
                 return;
             }
 
@@ -216,14 +240,15 @@
             });
 
             const peak = buckets.reduce((a, b) => { return b.total > a.total ? b : a; });
-            $('#txTimelineSub').text(`${byDay ? 'Daily' : 'Monthly' } totals · highest: ${ peak.label } (${ formatMoney(peak.total) })`);
+            $('#txTimelineSub').text(PFI18n.t(byDay ? 'GoogleDrive.Js.Tx.TimelineDaily' : 'GoogleDrive.Js.Tx.TimelineMonthly',
+                { label: peak.label, amount: formatMoney(peak.total) }));
 
             txChart = new Chart(document.getElementById('txTimelineChart').getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: buckets.map((b) => { return b.label; }),
                     datasets: [{
-                        label: 'Spending',
+                        label: PFI18n.t('GoogleDrive.Js.Spending'),
                         data: buckets.map((b) => { return b.total; }),
                         backgroundColor: TX_COLORS.spend,
                         borderRadius: 4,
@@ -244,10 +269,10 @@
                             padding: 10,
                             cornerRadius: 8,
                             callbacks: {
-                                label: function (ctx) { return ` Spent ${ formatCurrency(ctx.parsed.y)}`; },
+                                label: function (ctx) { return ` ${ PFI18n.t('GoogleDrive.Js.Tx.TooltipSpent', { amount: formatCurrency(ctx.parsed.y) }) }`; },
                                 afterLabel: function (ctx) {
                                     const n = buckets[ctx.dataIndex].count;
-                                    return n ? ` ${ plural(n, 'purchase')}` : ' No purchases';
+                                    return ` ${ n ? plural(n, 'Purchases') : PFI18n.t('GoogleDrive.Js.Tx.NoPurchases') }`;
                                 }
                             }
                         }
@@ -301,10 +326,13 @@
             const earned = rows.filter(isIncome).reduce((s, t) => { return s + t.amount; }, 0);
             const total = currentTx.transactions.length;
             const parts = [
-                rows.length === total ? `Showing all ${ plural(total, 'transaction')}` : `Showing ${ rows.length } of ${ total}`,
-                `Spending <strong>${ formatCurrency(spent) }</strong>`
+                escapeHtml(rows.length === total
+                    ? PFI18n.plural('GoogleDrive.Js.Tx.ShowingAll', total)
+                    : PFI18n.t('GoogleDrive.Js.Tx.ShowingSome', { shown: PFI18n.formatNumber(rows.length), total: PFI18n.formatNumber(total) })),
+                // Templates are the app's own text; only the amount is markup
+                PFI18n.t('GoogleDrive.Js.Tx.SummarySpending', { amount: `<strong>${ escapeHtml(formatCurrency(spent)) }</strong>` })
             ];
-            if (earned > 0) { parts.push(`Income <strong>${ formatCurrency(earned) }</strong>`); }
+            if (earned > 0) { parts.push(PFI18n.t('GoogleDrive.Js.Tx.SummaryIncome', { amount: `<strong>${ escapeHtml(formatCurrency(earned)) }</strong>` })); }
             $('#txFilterSummary').html(parts.join('<span aria-hidden="true"> · </span>'));
         }
 
@@ -312,7 +340,7 @@
             txTable = $('#txTable').DataTable({
                 data: transactions,
                 pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, PFI18n.t('GoogleDrive.Js.Table.All')]],
                 order: [[0, 'desc']],
                 autoWidth: false,
                 columns: [
@@ -330,7 +358,7 @@
                             if (type !== 'display') { return value || ''; }
                             // Category repeats under the description on narrow screens, where its column is hidden
                             return `<div class="fw-semibold">${ escapeHtml(value || '—') }</div>` +
-                                `<div class="small text-muted d-md-none">${ escapeHtml(row.category || 'Uncategorized') }</div>`;
+                                `<div class="small text-muted d-md-none">${ escapeHtml(row.category || PFI18n.t('GoogleDrive.Js.Tx.Uncategorized')) }</div>`;
                         }
                     },
                     {
@@ -338,7 +366,7 @@
                         className: 'd-none d-md-table-cell',
                         render: function (value, type) {
                             if (type !== 'display') { return value || ''; }
-                            return `<span class="bgt-chip">${ escapeHtml(value || 'Uncategorized') }</span>`;
+                            return `<span class="bgt-chip">${ escapeHtml(value || PFI18n.t('GoogleDrive.Js.Tx.Uncategorized')) }</span>`;
                         }
                     },
                     { data: 'type', visible: false },
@@ -353,13 +381,14 @@
                         }
                     }
                 ],
+                // DataTables fills in its own _START_, _END_, _TOTAL_ and _MENU_ tokens
                 language: {
-                    emptyTable: 'No transactions found.',
-                    zeroRecords: 'No transactions match your filters.',
-                    info: '_START_–_END_ of _TOTAL_',
+                    emptyTable: PFI18n.t('GoogleDrive.Js.Tx.TableEmpty'),
+                    zeroRecords: PFI18n.t('GoogleDrive.Js.Tx.TableNoMatches'),
+                    info: PFI18n.t('GoogleDrive.Js.Tx.TableInfo', { start: '_START_', end: '_END_', total: '_TOTAL_' }),
                     infoEmpty: '',
                     infoFiltered: '',
-                    lengthMenu: 'Show _MENU_'
+                    lengthMenu: PFI18n.t('GoogleDrive.Js.Table.Show', { menu: '_MENU_' })
                 },
                 // Search and filters live in the toolbar above the table
                 dom: "<'row'<'col-12'tr>>" +
@@ -401,7 +430,7 @@
                     if (seq !== txRequestSeq) { return; } // a newer request superseded this one
 
                     if (!data || !data.transactions || data.transactions.length === 0) {
-                        const message = (data && data.errorMessage) || 'No transactions were found. Make sure the spreadsheet has a sheet named "Transactions" with Date and Amount column headers.';
+                        const message = (data && data.errorMessage) || PFI18n.t('GoogleDrive.Js.Tx.NoneFound', { sheet: 'Transactions', date: 'Date', amount: 'Amount' });
                         $('#txErrorMessage').text(message);
                         showTxState('error');
                         return;
@@ -409,8 +438,8 @@
 
                     currentTx = data;
                     const sourceClass = data.isLiveSpreadsheetData ? 'bgt-source--live' : 'bgt-source--sample';
-                    $('#txModalDataSource').html(`<span class="bgt-source ${ sourceClass }">${ escapeHtml(data.dataSource || 'Google Spreadsheet') }</span>`);
-                    $('#txSheetName').text(data.sheetName ? `Read from sheet: ${ data.sheetName}` : '');
+                    $('#txModalDataSource').html(`<span class="bgt-source ${ sourceClass }">${ escapeHtml(sourceLabel(data)) }</span>`);
+                    $('#txSheetName').text(data.sheetName ? PFI18n.t('GoogleDrive.Js.Tx.ReadFromSheet', { sheet: data.sheetName }) : '');
 
                     showTxState('content');
                     renderSummary(data);
@@ -419,13 +448,13 @@
                 },
                 error: function (xhr) {
                     if (seq !== txRequestSeq) { return; }
-                    let message = 'The spreadsheet could not be read. Please check that the shared drive is still accessible and try again.';
+                    let message = PFI18n.t('GoogleDrive.Js.Tx.ReadFailed');
                     if (xhr.responseJSON && xhr.responseJSON.error) {
                         message = xhr.responseJSON.error;
                     } else if (xhr.status === 0) {
-                        message = 'The request was interrupted. Please check your connection and try again.';
+                        message = PFI18n.t('GoogleDrive.Js.RequestInterrupted');
                     } else if (xhr.status >= 500) {
-                        message = 'The server encountered an error while reading the spreadsheet. Please try again later.';
+                        message = PFI18n.t('GoogleDrive.Js.Tx.ServerError');
                     }
                     $('#txErrorMessage').text(message);
                     showTxState('error');
@@ -483,10 +512,15 @@
         // Export the rows the current filters show
         $('#btnExportTx').on('click', () => {
             if (!txTable || !currentTx) { return; }
-            const rows = [['Date', 'Description', 'Category', 'Type', 'Amount']];
+            // Headers and type in the page language; dates and amounts stay machine-readable (ISO date, dot decimal)
+            const rows = [[
+                PFI18n.t('GoogleDrive.Js.Csv.Date'), PFI18n.t('GoogleDrive.Js.Csv.Description'), PFI18n.t('GoogleDrive.Js.Csv.Category'),
+                PFI18n.t('GoogleDrive.Js.Csv.Type'), PFI18n.t('GoogleDrive.Js.Csv.Amount')
+            ]];
             txTable.rows({ search: 'applied', order: 'applied' }).data().toArray().forEach((t) => {
                 const d = toDate(t.date);
-                rows.push([d ? dayKey(d) : (t.dateText || ''), t.description, t.category, isIncome(t) ? 'Income' : 'Spending', t.amount.toFixed(2)]);
+                rows.push([d ? dayKey(d) : (t.dateText || ''), t.description, t.category,
+                    PFI18n.t(isIncome(t) ? 'GoogleDrive.Js.Income' : 'GoogleDrive.Js.Spending'), t.amount.toFixed(2)]);
             });
             const csv = rows.map((r) => {
                 return r.map((v) => {
@@ -498,7 +532,7 @@
             const blob = new Blob([`\ufeff${ csv}`], { type: 'text/csv;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `${String(currentTx.fileName || 'transactions').replace(/\.[^.]+$/, '') } - transactions.csv`;
+            link.download = PFI18n.t('GoogleDrive.Js.Tx.CsvFileName', { name: String(currentTx.fileName || 'transactions').replace(/\.[^.]+$/, '') });
             document.body.appendChild(link);
             link.click();
             link.remove();

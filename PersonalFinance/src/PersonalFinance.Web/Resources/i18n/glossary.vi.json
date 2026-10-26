@@ -3,6 +3,8 @@
   "savings goals": "mục tiêu tiết kiệm",
   "net worth": "giá trị tài sản ròng",
   "budget": "ngân sách",
+  "budget planner": "lập kế hoạch ngân sách",
+  "debt repayment": "trả nợ",
   "reporting currency": "tiền tệ báo cáo",
   "emergency fund": "quỹ khẩn cấp",
   "financial independence": "độc lập tài chính",
@@ -12,6 +14,29 @@
   "characters": "ký tự",
   "recovery code": "mã khôi phục",
   "recovery codes": "mã khôi phục",
+
+  "budget tracker": "theo dõi ngân sách",
+  "planned amount": "số tiền dự kiến",
+  "planned amounts": "số tiền dự kiến",
+
+  "progress to fi": "Tiến độ đến FI",
+  "net worth projection": "dự báo giá trị tài sản ròng",
+
+  "money priorities": "ưu tiên tài chính",
+  "priority tree": "cây ưu tiên",
+  "purpose note": "ghi chú mục đích",
+  "employer match": "khoản đối ứng của công ty",
+
+  "starting balance": "số dư ban đầu",
+  "interest earned": "tiền lãi thu được",
+  "compound growth": "tăng trưởng lãi kép",
+
+  "spreadsheet": "bảng tính",
+  "spreadsheets": "bảng tính",
+  "Google Sheet": "Google Sheet",
+  "API key": "khóa API",
+  "shortfall": "thiếu hụt",
+
   "fund basket": "giỏ quỹ",
   "public float": "lượng cổ phiếu tự do chuyển nhượng",
   "holdings": "khoản nắm giữ",

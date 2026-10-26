@@ -1,4 +1,4 @@
-using System.Globalization;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Web.Models.Analysis;
 
@@ -29,10 +29,12 @@ public static class MoneyFlowBuilder
 
     /// <summary>
     ///     Builds the model, or returns <c>null</c> when there are no insights or the month has neither income nor
-    ///     expenses.
+    ///     expenses. The chart's own labels (Income, Saved, ...) and the month come in the request's Language and
+    ///     culture; category names are the user's and stay as written.
     /// </summary>
-    public static MoneyFlowViewModel? Build(CategoryInsightsDto? insights)
+    public static MoneyFlowViewModel? Build(CategoryInsightsDto? insights, IStringLocalizer localizer)
     {
+        ArgumentNullException.ThrowIfNull(localizer);
         if (insights is null)
         {
             return null;
@@ -63,7 +65,7 @@ public static class MoneyFlowBuilder
         var model = new MoneyFlowViewModel
         {
             MonthLabel = MonthLabel(insights),
-            MonthName = CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(insights.MonthNumber),
+            MonthName = AnalysisText.MonthName(insights.MonthNumber),
             Income = income,
             Expenses = expenses,
             Shortfall = shortfall,
@@ -73,13 +75,13 @@ public static class MoneyFlowBuilder
 
         if (income > 0m)
         {
-            model.Nodes.Add(Node(IncomeKey, "Income", income, MoneyFlowNodeKind.Income, 0, null));
+            model.Nodes.Add(Node(IncomeKey, localizer["Analysis.MoneyFlow.Income"], income, MoneyFlowNodeKind.Income, 0, null));
         }
 
         if (shortfall > 0m)
         {
-            model.Nodes.Add(Node(ShortfallKey, "Shortfall", shortfall, MoneyFlowNodeKind.Shortfall, 0, null));
-            model.Nodes.Add(Node(SpendingKey, "Spending", expenses, MoneyFlowNodeKind.Spending, 1, null));
+            model.Nodes.Add(Node(ShortfallKey, localizer["Analysis.MoneyFlow.Shortfall"], shortfall, MoneyFlowNodeKind.Shortfall, 0, null));
+            model.Nodes.Add(Node(SpendingKey, localizer["Analysis.MoneyFlow.Spending"], expenses, MoneyFlowNodeKind.Spending, 1, null));
         }
 
         var rightHand = new List<MoneyFlowNodeViewModel>();
@@ -102,18 +104,18 @@ public static class MoneyFlowBuilder
 
         if (uncategorized > 0m)
         {
-            rightHand.Add(Node(UncategorizedKey, "Uncategorized", uncategorized, MoneyFlowNodeKind.Uncategorized,
+            rightHand.Add(Node(UncategorizedKey, localizer["Analysis.MoneyFlow.Uncategorized"], uncategorized, MoneyFlowNodeKind.Uncategorized,
                 rightColumn, Share(uncategorized, shareBase)));
         }
 
         if (other > 0m)
         {
-            rightHand.Add(Node(OtherKey, "Other", other, MoneyFlowNodeKind.Other, rightColumn, Share(other, shareBase)));
+            rightHand.Add(Node(OtherKey, localizer["Analysis.MoneyFlow.Other"], other, MoneyFlowNodeKind.Other, rightColumn, Share(other, shareBase)));
         }
 
         if (saved > 0m)
         {
-            rightHand.Add(Node(SavedKey, "Saved", saved, MoneyFlowNodeKind.Saved, rightColumn, Share(saved, shareBase)));
+            rightHand.Add(Node(SavedKey, localizer["Analysis.MoneyFlow.Saved"], saved, MoneyFlowNodeKind.Saved, rightColumn, Share(saved, shareBase)));
         }
 
         model.Nodes.AddRange(rightHand);
@@ -145,12 +147,12 @@ public static class MoneyFlowBuilder
         }));
         if (uncategorized > 0m)
         {
-            model.TableRows.Add(Row("Uncategorized", uncategorized, MoneyFlowNodeKind.Uncategorized, shareBase));
+            model.TableRows.Add(Row(localizer["Analysis.MoneyFlow.Uncategorized"], uncategorized, MoneyFlowNodeKind.Uncategorized, shareBase));
         }
 
         if (saved > 0m)
         {
-            model.TableRows.Add(Row("Saved", saved, MoneyFlowNodeKind.Saved, shareBase));
+            model.TableRows.Add(Row(localizer["Analysis.MoneyFlow.Saved"], saved, MoneyFlowNodeKind.Saved, shareBase));
         }
 
         return model;
@@ -159,7 +161,7 @@ public static class MoneyFlowBuilder
     private static string MonthLabel(CategoryInsightsDto insights)
     {
         return insights.MonthNumber is >= 1 and <= 12 && insights.Year > 0
-            ? new DateTime(insights.Year, insights.MonthNumber, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture)
+            ? AnalysisText.MonthYear(insights.Year, insights.MonthNumber)
             : insights.MonthName;
     }
 

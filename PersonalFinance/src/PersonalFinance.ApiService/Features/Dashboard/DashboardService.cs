@@ -314,7 +314,9 @@ internal sealed class DashboardService : IDashboardService
                 Title = t.Description,
                 Description = $"{t.Category} - {MoneyFormatter.Format(t.Amount, SupportedCurrencies.Default.Code)}",
                 Date = t.Date,
-                Type = t.Type
+                Type = t.Type,
+                Category = t.Category,
+                Amount = t.Amount
             }
         });
 
@@ -328,7 +330,9 @@ internal sealed class DashboardService : IDashboardService
                 Title = g.Summary.Name,
                 Description = $"Target: {MoneyFormatter.Format(g.Summary.TargetAmount, SupportedCurrencies.Default.Code)} | Saved: {MoneyFormatter.Format(g.Summary.CurrentAmount, SupportedCurrencies.Default.Code)}",
                 Date = g.CreatedAt,
-                Type = "SavingsGoal"
+                Type = "SavingsGoal",
+                TargetAmount = g.Summary.TargetAmount,
+                SavedAmount = g.Summary.CurrentAmount
             }
         });
 

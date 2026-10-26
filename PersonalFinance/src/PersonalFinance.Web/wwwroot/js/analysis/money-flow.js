@@ -27,12 +27,23 @@
     }
 
     /**
-     * Format an amount as whole US dollars, e.g. "$1,800".
+     * Format an amount as whole currency units in the page culture, e.g. "$1,800".
      * @param {number} amount - The amount to format.
      * @returns {string} The formatted amount.
      */
     function formatAmount (amount) {
         return PFI18n.formatMoney(amount, 'USD', { whole: true });
+    }
+
+    /**
+     * Format a share as a percentage with one decimal in the page culture, e.g. "12.5%".
+     * @param {number} value - The percentage, 0-100.
+     * @returns {string} The formatted percentage.
+     */
+    function formatShare (value) {
+        return PFI18n.t('Analysis.Js.Percent', {
+            value: PFI18n.formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+        });
     }
 
     /**
@@ -43,7 +54,7 @@
     function nodeLabel (node) {
         const parts = [node.label, formatAmount(node.amount)];
         if (node.sharePercent !== null && node.sharePercent !== undefined) {
-            parts.push(`${node.sharePercent.toFixed(1)}%`);
+            parts.push(formatShare(node.sharePercent));
         }
         return parts.join(' · ');
     }
@@ -119,10 +130,16 @@
                         callbacks: {
                             label: function (context) {
                                 const link = context.dataset.data[context.dataIndex];
-                                const share = flow.shareBase > 0
-                                    ? ` (${(link.flow / flow.shareBase * 100).toFixed(1)}%)`
-                                    : '';
-                                return `${nodesByKey[link.from].label} → ${nodesByKey[link.to].label}: ${formatAmount(link.flow)}${share}`;
+                                const args = {
+                                    from: nodesByKey[link.from].label,
+                                    to: nodesByKey[link.to].label,
+                                    amount: formatAmount(link.flow)
+                                };
+                                if (flow.shareBase > 0) {
+                                    args.share = formatShare(link.flow / flow.shareBase * 100);
+                                    return PFI18n.t('Analysis.Js.FlowTooltipShare', args);
+                                }
+                                return PFI18n.t('Analysis.Js.FlowTooltip', args);
                             }
                         }
                     }

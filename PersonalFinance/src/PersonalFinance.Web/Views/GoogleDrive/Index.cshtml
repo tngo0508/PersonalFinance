@@ -1,11 +1,12 @@
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Html
 @using PersonalFinance.Shared.DTOs.GoogleDrive
 @using PersonalFinance.Shared.Enums
 @using PersonalFinance.Shared.Helpers
-@using PersonalFinance.Web.TagHelpers
 @model GoogleDriveViewModel
 
 @{
-    ViewData["Title"] = "Google Drive";
+    ViewData["Title"] = L["GoogleDrive.Title"].Value;
     var response = Model.Response;
     var files = response?.Files ?? new List<GoogleDriveFileDto>();
     var folderCount = files.Count(f => f.IsFolder);
@@ -24,9 +25,30 @@
     var currentConn = Model.SelectedConnection;
     var isNeedsReauth = currentConn != null && (!currentConn.IsValid || currentConn.SyncStatus == "NeedsReauth");
     var showConnectForm = Model.ShowConnectForm || !Model.Connections.Any();
+
+    // Names the app matches or that Google shows untranslated stay as written (spec §1): the "Monthly budget" file
+    // name prefix, the template's tab and column names, and product names.
+    const string monthlyBudget = "Monthly budget";
+    var googleSheetsLink = Link("https://docs.google.com/spreadsheets/", "Google Sheets");
+    var shareLabel = Strong(L["GoogleDrive.Ui.Share"]);
+    var anyoneLabel = Strong(L["GoogleDrive.Ui.AnyoneWithLink"]);
+    var syncLabel = Strong(L["GoogleDrive.Drive.Sync"]);
+    var connectedFolderName = currentConn?.Name ?? L["GoogleDrive.NewSheet.YourFolder"].Value;
 }
 
 @functions {
+    private static IHtmlContent Strong(string text) =>
+        new HtmlString($"<strong>{HtmlEncoder.Default.Encode(text)}</strong>");
+
+    private static IHtmlContent Em(string text) => new HtmlString($"<em>{HtmlEncoder.Default.Encode(text)}</em>");
+
+    private static IHtmlContent Link(string href, string text, bool strong = false)
+    {
+        string inner = strong ? $"<strong>{HtmlEncoder.Default.Encode(text)}</strong>" : HtmlEncoder.Default.Encode(text);
+        return new HtmlString(
+            $"<a href=\"{HtmlEncoder.Default.Encode(href)}\" target=\"_blank\" rel=\"noopener noreferrer\">{inner}</a>");
+    }
+
     private static bool IsMonthlyBudget(GoogleDriveFileDto file) => file.IsMonthlyBudgetSpreadsheet;
 
     private static bool IsSpreadsheet(GoogleDriveFileDto file) =>
@@ -81,7 +103,7 @@
                 <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
                 </svg>
-                Budget report
+                @L["GoogleDrive.Sheet.BudgetReport"]
             </button>
         }
         <button type="button" class="btn btn-sm btn-outline-secondary btn-sheet-transactions"
@@ -90,7 +112,7 @@
             <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
             </svg>
-            Transactions
+            @L["GoogleDrive.Sheet.Transactions"]
         </button>
         @if (connectionId.HasValue)
         {
@@ -100,12 +122,12 @@
                 <input type="hidden" name="connectionId" value="@connectionId.Value"/>
                 <input type="hidden" name="fileId" value="@file.Id"/>
                 <input type="hidden" name="fileName" value="@file.Name"/>
-                <button type="submit" class="btn btn-sm btn-outline-primary" title="Sync this spreadsheet for analysis">
+                <button type="submit" class="btn btn-sm btn-outline-primary" title="@L["GoogleDrive.Sheet.SyncForAnalysisTitle"]">
                     <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                         <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
                         <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
                     </svg>
-                    Sync for analysis
+                    @L["GoogleDrive.Sheet.SyncForAnalysis"]
                 </button>
             </form>
         }
@@ -116,7 +138,7 @@
         if (!string.IsNullOrEmpty(file.WebViewLink))
         {
             <a href="@file.WebViewLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-light gd-icon-btn"
-               title="Open in Google Drive" aria-label="Open @file.Name in Google Drive">
+               title="@L["GoogleDrive.File.OpenInDrive"]" aria-label="@L.Named("GoogleDrive.File.OpenInDriveAria", ("name", file.Name))">
                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                     <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
                     <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
@@ -138,16 +160,16 @@
                             <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31z"/>
                         </svg>
                     </span>
-                    Google Drive
+                    @L["GoogleDrive.Title"]
                 </h1>
-                <p class="gd-page-header__subtitle">Browse your shared folders and analyze your budget spreadsheets.</p>
+                <p class="gd-page-header__subtitle">@L["GoogleDrive.Header.Subtitle"]</p>
             </div>
             <button type="button" class="gd-page-header__help-btn" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                     <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
                 </svg>
-                <span>Help</span>
+                <span>@L["GoogleDrive.Header.Help"]</span>
             </button>
         </div>
     </header>
@@ -157,9 +179,9 @@
         {
             <!-- Drive navigation -->
             <aside class="col-lg-3">
-                <nav class="gd-sidebar d-none d-lg-block" aria-label="Your drives">
+                <nav class="gd-sidebar d-none d-lg-block" aria-label="@L["GoogleDrive.Sidebar.YourDrives"]">
                     <div class="gd-sidebar-card">
-                        <div class="gd-sidebar-title">Your drives</div>
+                        <div class="gd-sidebar-title">@L["GoogleDrive.Sidebar.YourDrives"]</div>
                         <ul class="list-unstyled mb-0">
                             @foreach (var conn in Model.Connections)
                             {
@@ -176,10 +198,10 @@
                                         <span class="gd-drive-link__name text-truncate" title="@conn.Name">@conn.Name</span>
                                         @if (NeedsAttention(conn))
                                         {
-                                            <span class="gd-status-dot gd-status-dot--warning" title="Needs attention"></span>
-                                            <span class="visually-hidden">(needs attention)</span>
+                                            <span class="gd-status-dot gd-status-dot--warning" title="@L["GoogleDrive.Sidebar.NeedsAttention"]"></span>
+                                            <span class="visually-hidden">@L["GoogleDrive.Sidebar.NeedsAttentionHidden"]</span>
                                         }
-                                        <span class="gd-drive-count" aria-label="@conn.CachedFilesCount files">@conn.CachedFilesCount</span>
+                                        <span class="gd-drive-count" aria-label="@L.Plural("GoogleDrive.Sidebar.FileCount", conn.CachedFilesCount)">@conn.CachedFilesCount</span>
                                     </a>
                                 </li>
                             }
@@ -189,7 +211,7 @@
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/>
                         </svg>
-                        Connect a drive
+                        @L["GoogleDrive.Sidebar.ConnectDrive"]
                     </a>
                 </nav>
 
@@ -199,7 +221,7 @@
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31z"/>
                         </svg>
-                        <span class="text-truncate">@(showConnectForm ? "Connect a drive" : currentConn?.Name ?? "Choose a drive")</span>
+                        <span class="text-truncate">@(showConnectForm ? L["GoogleDrive.Sidebar.ConnectDrive"].Value : currentConn?.Name ?? L["GoogleDrive.Sidebar.ChooseDrive"].Value)</span>
                         <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
                         </svg>
@@ -216,7 +238,7 @@
                             </li>
                         }
                         <li><hr class="dropdown-divider"></li>
-                        <li><a asp-action="Index" asp-route-addNew="true" class="dropdown-item text-primary fw-semibold">+ Connect a drive</a></li>
+                        <li><a asp-action="Index" asp-route-addNew="true" class="dropdown-item text-primary fw-semibold">+ @L["GoogleDrive.Sidebar.ConnectDrive"]</a></li>
                     </ul>
                 </div>
             </aside>
@@ -232,7 +254,7 @@
                         </svg>
                     </span>
                     <div class="flex-grow-1">@Model.ErrorMessage</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
                 </div>
             }
 
@@ -248,21 +270,22 @@
                         </div>
                         <div>
                             <h2 class="gd-connect-card__title">
-                                @(Model.Connections.Any() ? "Connect another folder" : "Connect your Google Drive")
+                                @(Model.Connections.Any() ? L["GoogleDrive.Connect.TitleAnother"] : L["GoogleDrive.Connect.TitleFirst"])
                             </h2>
                             <p class="gd-connect-card__subtitle">
-                                Link a shared folder once and it's saved here, so your files and budget reports load right away next time.
+                                @L["GoogleDrive.Connect.Subtitle"]
                             </p>
                         </div>
                     </div>
 
                     <ol class="gd-steps mb-4">
                         <li>
-                            <strong>Share the folder.</strong>
-                            <span class="text-muted">In Google Drive, open <em>Share</em> and set General access to <em>Anyone with the link</em> (Viewer).</span>
+                            <strong>@L["GoogleDrive.Connect.Step1Title"]</strong>
+                            <span class="text-muted">@L.NamedHtml("GoogleDrive.Connect.Step1Text", null,
+                                ("share", Em(L["GoogleDrive.Ui.Share"])), ("anyone", Em(L["GoogleDrive.Ui.AnyoneWithLink"])))</span>
                         </li>
                         <li>
-                            <strong>Paste the folder link below.</strong>
+                            <strong>@L["GoogleDrive.Connect.Step2Title"]</strong>
                         </li>
                     </ol>
 
@@ -274,7 +297,7 @@
                                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="me-1" style="vertical-align: -0.125em;">
                                     <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31z"/>
                                 </svg>
-                                Folder link or ID
+                                @L["GoogleDrive.Connect.FolderLabel"]
                             </label>
                             <div class="input-group gdrive-omnibox">
                                 <span class="input-group-text bg-white border-0 text-primary ps-3 pe-2" aria-hidden="true">
@@ -293,7 +316,7 @@
                                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                             <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
                                         </svg>
-                                        Paste the share link or just the folder ID
+                                        @L["GoogleDrive.Connect.FolderHint"]
                                     </span>
                                 </div>
                             </div>
@@ -304,24 +327,24 @@
                                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="me-1" style="vertical-align: -0.125em;">
                                     <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h10v2H3zm0 1h10v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"/>
                                 </svg>
-                                Name <span class="text-muted fw-normal">(optional)</span>
+                                @L["GoogleDrive.Connect.NameLabel"] <span class="text-muted fw-normal">@L["GoogleDrive.Connect.Optional"]</span>
                             </label>
-                            <input asp-for="ConnectionName" class="form-control" placeholder="e.g. Household budget" />
+                            <input asp-for="ConnectionName" class="form-control" placeholder="@L["GoogleDrive.Connect.NamePlaceholder"]" />
                         </div>
 
                         <button class="gd-advanced-toggle btn btn-link btn-sm text-decoration-none text-muted p-0 mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#advancedSettingsCollapse" aria-expanded="false" aria-controls="advancedSettingsCollapse">
                             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                 <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 8V8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.374a1 1 0 0 1 .707.293l.854.854a1 1 0 0 0 .707.293h3.346a1 1 0 0 0 .707-.293l.854-.854A1 1 0 0 1 11.626 8z"/>
                             </svg>
-                            Advanced: use my own Google API key
+                            @L["GoogleDrive.Connect.AdvancedToggle"]
                         </button>
                         <div class="collapse" id="advancedSettingsCollapse">
                             <div class="gd-advanced-panel">
-                                <label asp-for="ApiKey" class="form-label fw-semibold small">Google Cloud API key</label>
+                                <label asp-for="ApiKey" class="form-label fw-semibold small">@L["GoogleDrive.ApiKey.Label"]</label>
                                 <input asp-for="ApiKey" class="form-control form-control-sm font-monospace" placeholder="AIzaSy..." />
                                 <div class="form-text">
-                                    Only needed if the folder doesn't load without it. The key is stored encrypted.
-                                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">How do I get one?</button>
+                                    @L["GoogleDrive.Connect.ApiKeyHelp"]
+                                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">@L["GoogleDrive.ApiKey.HowToGet"]</button>
                                 </div>
                             </div>
                         </div>
@@ -329,18 +352,18 @@
                         <div class="d-flex gap-2 pt-2 flex-wrap">
                             <button type="submit" class="btn btn-primary px-4 fw-semibold d-flex align-items-center gap-2" id="btnSubmitExplore">
                                 <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                <span id="submitText">Connect folder</span>
+                                <span id="submitText">@L["GoogleDrive.Connect.Submit"]</span>
                             </button>
                             @if (Model.Connections.Any())
                             {
-                                <a asp-action="Index" class="btn btn-light border">Cancel</a>
+                                <a asp-action="Index" class="btn btn-light border">@L["Common.Cancel"]</a>
                             }
                         </div>
                         <p class="small text-muted mt-3 mb-0 text-center">
                             <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" class="me-1" style="vertical-align: -0.125em;">
                                 <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 8V8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.374a1 1 0 0 1 .707.293l.854.854a1 1 0 0 0 .707.293h3.346a1 1 0 0 0 .707-.293l.854-.854A1 1 0 0 1 11.626 8z"/>
                             </svg>
-                            Your API key is stored encrypted. We only access files you share.
+                            @L["GoogleDrive.Connect.Privacy"]
                         </p>
                     </form>
                 </div>
@@ -351,15 +374,15 @@
                 <div class="gd-drive-header mb-4">
                     <div class="gd-drive-header__top">
                         <div class="gd-min-w-0">
-                            <h2 class="gd-drive-header__title text-truncate">@(response.FolderName ?? currentConn?.Name ?? "Google Drive folder")</h2>
+                            <h2 class="gd-drive-header__title text-truncate">@(response.FolderName ?? currentConn?.Name ?? L["GoogleDrive.Drive.FallbackName"].Value)</h2>
                             <div class="gd-drive-header__meta">
-                                <span class="gd-meta-badge" title="Total items">
+                                <span class="gd-meta-badge" title="@L["GoogleDrive.Drive.TotalItems"]">
                                     <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                         <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31z"/>
                                     </svg>
-                                    @response.TotalFilesCount @(response.TotalFilesCount == 1 ? "item" : "items")
+                                    @L.Plural("GoogleDrive.Drive.Items", response.TotalFilesCount)
                                 </span>
-                                <span class="gd-meta-badge" title="Total size">
+                                <span class="gd-meta-badge" title="@L["GoogleDrive.Drive.TotalSize"]">
                                     <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                         <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
                                     </svg>
@@ -374,7 +397,7 @@
                                             <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
                                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
                                         </svg>
-                                        Synced @TimeAgoTagHelper.TimeAgoText(currentConn.LastSyncedAtUtc.Value)
+                                        @L.Named("GoogleDrive.Drive.Synced", ("ago", GoogleDriveText.TimeAgo(L, currentConn.LastSyncedAtUtc.Value, DateTime.UtcNow)))
                                     </span>
                                 }
                             </div>
@@ -387,28 +410,28 @@
                                         class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 text-nowrap"
                                         data-bs-toggle="modal"
                                         data-bs-target="#newBudgetSheetModal"
-                                        title="How to start a new Monthly budget spreadsheet">
+                                        title="@L["GoogleDrive.Drive.NewBudgetTitle"]">
                                     <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                         <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/>
                                     </svg>
-                                    <span>New budget</span>
+                                    <span>@L["GoogleDrive.Drive.NewBudget"]</span>
                                 </button>
                                 <form asp-action="Sync" method="post" id="syncForm">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@currentConn.Id" />
-                                    <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-1" id="btnSyncDrive" title="Get the latest files from Google Drive">
+                                    <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-1" id="btnSyncDrive" title="@L["GoogleDrive.Drive.SyncTitle"]">
                                         <span id="syncSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                         <svg id="syncIcon" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                             <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
                                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
                                         </svg>
-                                        <span>Sync</span>
+                                        <span>@L["GoogleDrive.Drive.Sync"]</span>
                                     </button>
                                 </form>
                                 @if (!string.IsNullOrEmpty(response.FolderId))
                                 {
                                     <a href="https://drive.google.com/drive/folders/@response.FolderId" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-light border text-nowrap">
-                                        Open in Drive
+                                        @L["GoogleDrive.Drive.OpenInDrive"]
                                         <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                             <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
                                             <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
@@ -416,23 +439,23 @@
                                     </a>
                                 }
                                 <div class="dropdown">
-                                    <button type="button" class="btn btn-sm btn-light border gd-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More options for this drive">
+                                    <button type="button" class="btn btn-sm btn-light border gd-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@L["GoogleDrive.Drive.MoreOptions"]">
                                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                             <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
                                         </svg>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                                         <li>
-                                            <button type="button" class="dropdown-item btn-copy-id" data-id="@response.FolderId">Copy folder ID</button>
+                                            <button type="button" class="dropdown-item btn-copy-id" data-id="@response.FolderId">@L["GoogleDrive.Drive.CopyFolderId"]</button>
                                         </li>
                                         <li>
                                             <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#reauthModal">
-                                                @(currentConn.HasApiKey ? "Change API key" : "Add API key")
+                                                @(currentConn.HasApiKey ? L["GoogleDrive.ApiKey.Change"] : L["GoogleDrive.ApiKey.Add"])
                                             </button>
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteDriveModal">Remove drive&hellip;</button>
+                                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteDriveModal">@L["GoogleDrive.Drive.RemoveMenu"]</button>
                                         </li>
                                     </ul>
                                 </div>
@@ -444,20 +467,20 @@
                     {
                         <div class="gd-notice gd-notice--warning mt-3" role="alert">
                             <div>
-                                <strong>This drive needs a new API key.</strong>
-                                <div class="small">@(currentConn?.ErrorMessage ?? "Your Google credentials have expired or are invalid, so files can't be synced.")</div>
+                                <strong>@L["GoogleDrive.Notice.NeedsKeyTitle"]</strong>
+                                <div class="small">@(currentConn?.ErrorMessage ?? L["GoogleDrive.Notice.NeedsKeyText"].Value)</div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-warning text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">Update key</button>
+                            <button type="button" class="btn btn-sm btn-warning text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">@L["GoogleDrive.Notice.UpdateKey"]</button>
                         </div>
                     }
                     else if (response.IsDemoData)
                     {
                         <div class="gd-notice mt-3" role="status">
                             <div>
-                                <strong>You're looking at sample files.</strong>
-                                <div class="small">@(response.WarningMessage ?? "Add a Google API key to see the real files in this folder.")</div>
+                                <strong>@L["GoogleDrive.Notice.SampleTitle"]</strong>
+                                <div class="small">@(response.WarningMessage ?? L["GoogleDrive.Notice.SampleText"].Value)</div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">Add API key</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">@L["GoogleDrive.ApiKey.Add"]</button>
                         </div>
                     }
                 </div>
@@ -473,10 +496,10 @@
                                         <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h10v2H3zm0 1h10v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"/>
                                     </svg>
                                 </span>
-                                <h3 id="sheetsHeading" class="gd-section-header__title mb-0">Spreadsheets</h3>
+                                <h3 id="sheetsHeading" class="gd-section-header__title mb-0">@L["GoogleDrive.Sheets.Title"]</h3>
                                 <span class="gd-section-header__badge">@spreadsheets.Count</span>
                             </div>
-                            <span class="gd-section-header__subtitle">See a budget report or browse the transactions in a sheet</span>
+                            <span class="gd-section-header__subtitle">@L["GoogleDrive.Sheets.Subtitle"]</span>
                         </div>
                         <div class="row g-3">
                             @foreach (var sheet in spreadsheets.Take(featuredSheetLimit))
@@ -490,15 +513,15 @@
                                                     <div class="gd-sheet-card__name text-truncate" title="@sheet.Name">@sheet.Name</div>
                                                     @if (IsMonthlyBudget(sheet))
                                                     {
-                                                        <span class="gd-budget-badge" title="Monthly budget spreadsheet">
+                                                        <span class="gd-budget-badge" title="@L["GoogleDrive.Sheets.BudgetBadgeTitle"]">
                                                             <svg width="10" height="10" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                                                 <path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
                                                             </svg>
-                                                            Budget
+                                                            @L["GoogleDrive.Sheets.BudgetBadge"]
                                                         </span>
                                                     }
                                                 </div>
-                                                <div class="gd-sheet-card__meta">Edited @(sheet.ModifiedTime?.ToString("MMM d, yyyy") ?? "—")</div>
+                                                <div class="gd-sheet-card__meta">@L.Named("GoogleDrive.Sheets.Edited", ("date", sheet.ModifiedTime is { } edited ? GoogleDriveText.ShortDate(edited) : "—"))</div>
                                             </div>
                                         </div>
                                         <div class="gd-sheet-card__actions">
@@ -512,7 +535,7 @@
                         @if (spreadsheets.Count > featuredSheetLimit)
                         {
                             <button type="button" class="gd-show-all-btn mt-2 js-show-filter" data-filter="Spreadsheet">
-                                Show all @spreadsheets.Count spreadsheets
+                                @L.Named("GoogleDrive.Sheets.ShowAll", ("count", spreadsheets.Count))
                                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
                                 </svg>
@@ -530,7 +553,7 @@
                                     <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
                                 </svg>
                             </span>
-                            <h3 id="filesHeading" class="gd-files-section__title mb-0">All files</h3>
+                            <h3 id="filesHeading" class="gd-files-section__title mb-0">@L["GoogleDrive.Files.Title"]</h3>
                             <span class="gd-files-section__count">@response.TotalFilesCount</span>
                         </div>
                         <div class="gd-files-section__toolbar">
@@ -538,16 +561,16 @@
                                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
                                 </svg>
-                                <input type="search" id="fileSearch" class="form-control form-control-sm" placeholder="Search files (Ctrl+K)" aria-label="Search files" />
+                                <input type="search" id="fileSearch" class="form-control form-control-sm" placeholder="@L["GoogleDrive.Files.SearchPlaceholder"]" aria-label="@L["GoogleDrive.Files.SearchLabel"]" />
                             </div>
                             <span id="fileResultsCount" class="gd-results-count text-muted small d-none" aria-live="polite"></span>
-                            <div class="gd-view-toggle btn-group btn-group-sm" role="group" aria-label="Layout">
-                                <button type="button" class="btn btn-light border gd-icon-btn active" id="btnViewTable" aria-pressed="true" title="List view" aria-label="List view">
+                            <div class="gd-view-toggle btn-group btn-group-sm" role="group" aria-label="@L["GoogleDrive.Files.Layout"]">
+                                <button type="button" class="btn btn-light border gd-icon-btn active" id="btnViewTable" aria-pressed="true" title="@L["GoogleDrive.Files.ListView"]" aria-label="@L["GoogleDrive.Files.ListView"]">
                                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                         <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
                                     </svg>
                                 </button>
-                                <button type="button" class="btn btn-light border gd-icon-btn" id="btnViewGrid" aria-pressed="false" title="Grid view" aria-label="Grid view">
+                                <button type="button" class="btn btn-light border gd-icon-btn" id="btnViewGrid" aria-pressed="false" title="@L["GoogleDrive.Files.GridView"]" aria-label="@L["GoogleDrive.Files.GridView"]">
                                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                         <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
                                     </svg>
@@ -557,12 +580,12 @@
                     </div>
 
                     <!-- Type filter -->
-                    <div class="gd-chip-row" id="filterChipsContainer" role="group" aria-label="Filter by type">
+                    <div class="gd-chip-row" id="filterChipsContainer" role="group" aria-label="@L["GoogleDrive.Files.FilterByType"]">
                         <button type="button" class="gdrive-filter-chip active" data-filter="all" aria-pressed="true">
                             <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                 <path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13zM1.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5h-13z"/>
                             </svg>
-                            All <span class="chip-count">@response.TotalFilesCount</span>
+                            @L["GoogleDrive.Filter.All"] <span class="chip-count">@response.TotalFilesCount</span>
                         </button>
                         @if (folderCount > 0)
                         {
@@ -570,7 +593,7 @@
                                 <svg width="12" height="12" fill="#fbbc04" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.54 3.87A2 2 0 0 1 2.5 3h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3z"/>
                                 </svg>
-                                Folders <span class="chip-count">@folderCount</span>
+                                @L["GoogleDrive.Filter.Folders"] <span class="chip-count">@folderCount</span>
                             </button>
                         }
                         @if (spreadsheetCount > 0)
@@ -579,7 +602,7 @@
                                 <svg width="12" height="12" fill="#0f9d58" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h10v2H3zm0 1h10v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"/>
                                 </svg>
-                                Sheets <span class="chip-count">@spreadsheetCount</span>
+                                @L["GoogleDrive.Filter.Sheets"] <span class="chip-count">@spreadsheetCount</span>
                             </button>
                         }
                         @if (documentCount > 0)
@@ -588,7 +611,7 @@
                                 <svg width="12" height="12" fill="#4285f4" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
                                 </svg>
-                                Docs <span class="chip-count">@documentCount</span>
+                                @L["GoogleDrive.Filter.Docs"] <span class="chip-count">@documentCount</span>
                             </button>
                         }
                         @if (pdfCount > 0)
@@ -597,7 +620,7 @@
                                 <svg width="12" height="12" fill="#ea4335" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
                                 </svg>
-                                PDFs <span class="chip-count">@pdfCount</span>
+                                @L["GoogleDrive.Filter.Pdfs"] <span class="chip-count">@pdfCount</span>
                             </button>
                         }
                         @if (imageCount > 0)
@@ -607,7 +630,7 @@
                                     <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
                                     <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
                                 </svg>
-                                Images <span class="chip-count">@imageCount</span>
+                                @L["GoogleDrive.Filter.Images"] <span class="chip-count">@imageCount</span>
                             </button>
                         }
                         @if (presentationCount > 0)
@@ -616,7 +639,7 @@
                                 <svg width="12" height="12" fill="#f4b400" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
                                 </svg>
-                                Slides <span class="chip-count">@presentationCount</span>
+                                @L["GoogleDrive.Filter.Slides"] <span class="chip-count">@presentationCount</span>
                             </button>
                         }
                         @if (otherCount > 0)
@@ -625,7 +648,7 @@
                                 <svg width="12" height="12" fill="#475569" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
                                 </svg>
-                                Other <span class="chip-count">@otherCount</span>
+                                @L["GoogleDrive.Filter.Other"] <span class="chip-count">@otherCount</span>
                             </button>
                         }
                     </div>
@@ -635,11 +658,11 @@
                         <table id="googleDriveDataTable" class="table table-hover align-middle gdrive-table w-100 mb-0">
                             <thead>
                                 <tr>
-                                    <th scope="col">Name</th>
-                                    <th scope="col">Type</th>
-                                    <th scope="col">Modified</th>
-                                    <th scope="col">Size</th>
-                                    <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+                                    <th scope="col">@L["GoogleDrive.Files.Name"]</th>
+                                    <th scope="col">@L["GoogleDrive.Files.Type"]</th>
+                                    <th scope="col">@L["GoogleDrive.Files.Modified"]</th>
+                                    <th scope="col">@L["GoogleDrive.Files.Size"]</th>
+                                    <th scope="col" class="text-end"><span class="visually-hidden">@L["GoogleDrive.Files.Actions"]</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -652,13 +675,14 @@
                                                 @{ RenderFileIcon(file, 20); }
                                                 <div class="gd-min-w-0">
                                                     <div class="fw-semibold text-truncate gd-file-name" title="@file.Name">@file.Name</div>
-                                                    <div class="small text-muted d-md-none">@file.FileType</div>
+                                                    <div class="small text-muted d-md-none">@GoogleDriveText.FileType(L, file.FileType)</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="small text-muted">@file.FileType</td>
+                                        @* The type filter searches this column by the English type, so data-search keeps it. *@
+                                        <td class="small text-muted" data-search="@file.FileType">@GoogleDriveText.FileType(L, file.FileType)</td>
                                         <td data-order="@(file.ModifiedTime?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "0001-01-01T00:00:00")" class="text-nowrap small">
-                                            @(file.ModifiedTime?.ToString("MMM d, yyyy") ?? "—")
+                                            @(file.ModifiedTime is { } modified ? GoogleDriveText.ShortDate(modified) : "—")
                                         </td>
                                         <td data-order="@(file.Size ?? -1)" class="text-nowrap small text-muted">
                                             @(file.IsFolder || !file.Size.HasValue ? "—" : file.SizeFormatted)
@@ -669,24 +693,24 @@
                                                 <div class="dropdown d-inline-block">
                                                     <button type="button" class="btn btn-sm btn-light border dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
                                                             data-bs-popper-config='{"strategy":"fixed"}'>
-                                                        View
+                                                        @L["GoogleDrive.Files.View"]
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                                                         @if (IsMonthlyBudget(file))
                                                         {
                                                             <li>
                                                                 <button type="button" class="dropdown-item btn-budget-report" data-file-id="@file.Id" data-file-name="@file.Name"
-                                                                        data-bs-toggle="modal" data-bs-target="#monthlyBudgetModal">Budget report</button>
+                                                                        data-bs-toggle="modal" data-bs-target="#monthlyBudgetModal">@L["GoogleDrive.Sheet.BudgetReport"]</button>
                                                             </li>
                                                         }
                                                         <li>
                                                             <button type="button" class="dropdown-item btn-sheet-transactions" data-file-id="@file.Id" data-file-name="@file.Name" data-is-budget="@(IsMonthlyBudget(file) ? "true" : "false")"
-                                                                    data-bs-toggle="modal" data-bs-target="#transactionsModal">Transactions</button>
+                                                                    data-bs-toggle="modal" data-bs-target="#transactionsModal">@L["GoogleDrive.Sheet.Transactions"]</button>
                                                         </li>
                                                         @if (!string.IsNullOrEmpty(file.WebViewLink))
                                                         {
                                                             <li><hr class="dropdown-divider"></li>
-                                                            <li><a class="dropdown-item" href="@file.WebViewLink" target="_blank" rel="noopener noreferrer">Open in Google Drive</a></li>
+                                                            <li><a class="dropdown-item" href="@file.WebViewLink" target="_blank" rel="noopener noreferrer">@L["GoogleDrive.File.OpenInDrive"]</a></li>
                                                         }
                                                     </ul>
                                                 </div>
@@ -721,7 +745,7 @@
                                         </div>
                                         <div class="fw-semibold text-truncate" title="@file.Name">@file.Name</div>
                                         <div class="small text-muted mb-2">
-                                            @file.FileType · @(file.ModifiedTime?.ToString("MMM d, yyyy") ?? "—")
+                                            @GoogleDriveText.FileType(L, file.FileType) · @(file.ModifiedTime is { } gridModified ? GoogleDriveText.ShortDate(gridModified) : "—")
                                         </div>
                                         <div class="d-flex flex-wrap align-items-center gap-2 mt-auto">
                                             @if (IsSpreadsheet(file))
@@ -734,7 +758,7 @@
                                 </div>
                             }
                         </div>
-                        <p class="text-muted text-center small py-4 mb-0 d-none" id="gridEmptyState">No files match your filters.</p>
+                        <p class="text-muted text-center small py-4 mb-0 d-none" id="gridEmptyState">@L["GoogleDrive.Files.NoMatches"]</p>
                     </div>
                 </section>
             }
@@ -747,12 +771,12 @@
                             <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c1.089 0 1.638-.989 1.181-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                         </svg>
                     </div>
-                    <h2 class="gd-empty-state__title">We couldn't load the files in @currentConn.Name</h2>
-                    <p class="gd-empty-state__text">This usually means the folder sharing settings changed. Try these steps:</p>
+                    <h2 class="gd-empty-state__title">@L.Named("GoogleDrive.LoadError.Title", ("name", currentConn.Name))</h2>
+                    <p class="gd-empty-state__text">@L["GoogleDrive.LoadError.Text"]</p>
                     <ul class="gd-empty-state__troubleshoot text-start mb-4">
-                        <li>Open the folder in Google Drive and confirm <strong>Share</strong> is set to <strong>"Anyone with the link"</strong> (Viewer).</li>
-                        <li>If you recently changed the API key, try syncing again.</li>
-                        <li>Check that the folder still exists and hasn't been moved or deleted.</li>
+                        <li>@L.NamedHtml("GoogleDrive.LoadError.CheckSharing", null, ("share", shareLabel), ("anyone", anyoneLabel))</li>
+                        <li>@L["GoogleDrive.LoadError.CheckKey"]</li>
+                        <li>@L["GoogleDrive.LoadError.CheckExists"]</li>
                     </ul>
                     <div class="gd-empty-state__actions">
                         <form asp-action="Sync" method="post" id="syncFormFallback">
@@ -760,11 +784,11 @@
                             <input type="hidden" name="id" value="@currentConn.Id" />
                             <button type="submit" class="btn btn-primary d-flex align-items-center gap-2" id="btnSyncDriveFallback">
                                 <span id="syncSpinnerFallback" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                Try again
+                                @L["GoogleDrive.Common.TryAgain"]
                             </button>
                         </form>
-                        <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#reauthModal">Update API key</button>
-                        <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">Help</button>
+                        <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#reauthModal">@L["GoogleDrive.ApiKey.Update"]</button>
+                        <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">@L["GoogleDrive.Header.Help"]</button>
                     </div>
                 </div>
             }
@@ -786,7 +810,7 @@
                         </svg>
                     </div>
                     <div class="overflow-hidden">
-                        <h5 class="modal-title bgt-modal-title" id="monthlyBudgetModalLabel">Budget report</h5>
+                        <h5 class="modal-title bgt-modal-title" id="monthlyBudgetModalLabel">@L["GoogleDrive.Sheet.BudgetReport"]</h5>
                         <div class="bgt-file-line">
                             <span class="text-truncate" id="budgetModalFileName" title="">-</span>
                             <span class="flex-shrink-0 d-none d-sm-inline" id="budgetModalDataSource"></span>
@@ -796,11 +820,11 @@
                 <div class="bgt-header-actions">
                     <button type="button" class="btn btn-sm btn-light border btn-sheet-transactions" id="btnBudgetToTransactions"
                             data-bs-toggle="modal" data-bs-target="#transactionsModal" disabled>
-                        Transactions
+                        @L["GoogleDrive.Sheet.Transactions"]
                     </button>
-                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnExportBudget" disabled>Export CSV</button>
-                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnPrintBudgetReport" disabled>Print</button>
-                    <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnExportBudget" disabled>@L["GoogleDrive.Report.ExportCsv"]</button>
+                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnPrintBudgetReport" disabled>@L["GoogleDrive.Report.Print"]</button>
+                    <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                 </div>
             </div>
 
@@ -808,25 +832,25 @@
                 <!-- Loading state -->
                 <div class="bgt-state" id="budgetLoadingState" role="status">
                     <div class="spinner-border text-secondary mb-3" aria-hidden="true"></div>
-                    <div class="fw-semibold">Reading your spreadsheet&hellip;</div>
-                    <div class="small text-muted">Pulling the latest numbers from Google Drive. This usually takes a few seconds.</div>
+                    <div class="fw-semibold">@L["GoogleDrive.Report.Loading"]</div>
+                    <div class="small text-muted">@L["GoogleDrive.Report.LoadingText"]</div>
                 </div>
 
                 <!-- Error state -->
                 <div class="bgt-state d-none" id="budgetErrorState" role="alert">
                     <div class="bgt-state-icon mb-3" aria-hidden="true">!</div>
-                    <div class="fw-semibold">We couldn't build a report from this spreadsheet</div>
-                    <div class="small text-muted mb-3" id="budgetErrorMessage">Check that the file is a monthly budget sheet and that the drive is still shared, then try again.</div>
-                    <button type="button" class="btn btn-sm btn-dark rounded-pill px-4" id="btnBudgetRetry">Try again</button>
+                    <div class="fw-semibold">@L["GoogleDrive.Report.ErrorTitle"]</div>
+                    <div class="small text-muted mb-3" id="budgetErrorMessage">@L["GoogleDrive.Js.Report.ErrorText"]</div>
+                    <button type="button" class="btn btn-sm btn-dark rounded-pill px-4" id="btnBudgetRetry">@L["GoogleDrive.Common.TryAgain"]</button>
                 </div>
 
                 <!-- Report -->
                 <div class="d-none" id="budgetReportContent">
                     <!-- Period selector: scopes everything below -->
                     <div class="bgt-toolbar mb-3">
-                        <button type="button" class="bgt-nav-btn" id="btnBudgetPrev" aria-label="Previous period">&lsaquo;</button>
-                        <div class="bgt-period-scroll" id="budgetMonthButtonGroup" role="tablist" aria-label="Choose a period"></div>
-                        <button type="button" class="bgt-nav-btn" id="btnBudgetNext" aria-label="Next period">&rsaquo;</button>
+                        <button type="button" class="bgt-nav-btn" id="btnBudgetPrev" aria-label="@L["GoogleDrive.Report.PreviousPeriod"]">&lsaquo;</button>
+                        <div class="bgt-period-scroll" id="budgetMonthButtonGroup" role="tablist" aria-label="@L["GoogleDrive.Report.ChoosePeriod"]"></div>
+                        <button type="button" class="bgt-nav-btn" id="btnBudgetNext" aria-label="@L["GoogleDrive.Report.NextPeriod"]">&rsaquo;</button>
                     </div>
 
                     <!-- Summary -->
@@ -843,30 +867,30 @@
                     <div class="row g-3 mb-3">
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--income" aria-hidden="true"></span>Income</div>
-                                <div class="bgt-tile-value" id="kpiTotalIncome">$0</div>
+                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--income" aria-hidden="true"></span>@L["GoogleDrive.Report.Income"]</div>
+                                <div class="bgt-tile-value" id="kpiTotalIncome">@MoneyFormatter.FormatWhole(0m, SupportedCurrencies.Default.Code)</div>
                                 <div class="bgt-tile-meter" id="kpiIncomeMeter"></div>
                                 <div class="bgt-tile-sub" id="kpiIncomeSubtext"></div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--spend" aria-hidden="true"></span>Spending</div>
-                                <div class="bgt-tile-value" id="kpiTotalExpenses">$0</div>
+                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--spend" aria-hidden="true"></span>@L["GoogleDrive.Report.Spending"]</div>
+                                <div class="bgt-tile-value" id="kpiTotalExpenses">@MoneyFormatter.FormatWhole(0m, SupportedCurrencies.Default.Code)</div>
                                 <div class="bgt-tile-meter" id="kpiExpensesMeter"></div>
                                 <div class="bgt-tile-sub" id="kpiExpensesSubtext"></div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label">Net saved</div>
-                                <div class="bgt-tile-value" id="kpiNetSavings">$0</div>
+                                <div class="bgt-tile-label">@L["GoogleDrive.Report.NetSaved"]</div>
+                                <div class="bgt-tile-value" id="kpiNetSavings">@MoneyFormatter.FormatWhole(0m, SupportedCurrencies.Default.Code)</div>
                                 <div class="bgt-tile-sub" id="kpiSavingsSubtext"></div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label">Actual savings rate</div>
+                                <div class="bgt-tile-label">@L["GoogleDrive.Report.SavingsRate"]</div>
                                 <div class="bgt-tile-value" id="kpiSavingsRate">0%</div>
                                 <div class="bgt-tile-meter" id="kpiSavingsMeter"></div>
                                 <div class="bgt-tile-sub" id="kpiSavingsRateSub"></div>
@@ -878,7 +902,7 @@
                     <div class="bgt-card mb-3">
                         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                             <div>
-                                <h6 class="bgt-card-title mb-0">Where your income went</h6>
+                                <h6 class="bgt-card-title mb-0">@L["GoogleDrive.Report.WhereIncomeWent"]</h6>
                                 <div class="bgt-card-sub" id="budgetAllocationSub"></div>
                             </div>
                             <div class="bgt-legend" id="budgetAllocationLegend"></div>
@@ -892,16 +916,16 @@
                             <div class="bgt-card h-100">
                                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                                     <div>
-                                        <h6 class="bgt-card-title mb-0">Income vs. spending by month</h6>
-                                        <div class="bgt-card-sub">Click a month to see its details</div>
+                                        <h6 class="bgt-card-title mb-0">@L["GoogleDrive.Report.IncomeVsSpending"]</h6>
+                                        <div class="bgt-card-sub">@L["GoogleDrive.Report.ClickMonth"]</div>
                                     </div>
                                     <div class="bgt-legend" aria-hidden="true">
-                                        <span><span class="bgt-swatch bgt-swatch--income"></span>Income</span>
-                                        <span><span class="bgt-swatch bgt-swatch--spend"></span>Spending</span>
+                                        <span><span class="bgt-swatch bgt-swatch--income"></span>@L["GoogleDrive.Report.Income"]</span>
+                                        <span><span class="bgt-swatch bgt-swatch--spend"></span>@L["GoogleDrive.Report.Spending"]</span>
                                     </div>
                                 </div>
                                 <div class="bgt-chart-box">
-                                    <canvas id="budgetMainChart" role="img" aria-label="Column chart of income and spending for each month. The same values are in the month-by-month table below."></canvas>
+                                    <canvas id="budgetMainChart" role="img" aria-label="@L["GoogleDrive.Report.MainChartAria"]"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -909,16 +933,16 @@
                             <div class="bgt-card h-100">
                                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                                     <div>
-                                        <h6 class="bgt-card-title mb-0">Net saved each month</h6>
-                                        <div class="bgt-card-sub">Above the line you saved, below you overspent</div>
+                                        <h6 class="bgt-card-title mb-0">@L["GoogleDrive.Report.NetSavedEachMonth"]</h6>
+                                        <div class="bgt-card-sub">@L["GoogleDrive.Report.NetSavedHint"]</div>
                                     </div>
                                     <div class="bgt-legend" aria-hidden="true">
-                                        <span><span class="bgt-swatch bgt-swatch--income"></span>Saved</span>
-                                        <span><span class="bgt-swatch bgt-swatch--neg"></span>Overspent</span>
+                                        <span><span class="bgt-swatch bgt-swatch--income"></span>@L["GoogleDrive.Report.Saved"]</span>
+                                        <span><span class="bgt-swatch bgt-swatch--neg"></span>@L["GoogleDrive.Report.Overspent"]</span>
                                     </div>
                                 </div>
                                 <div class="bgt-chart-box">
-                                    <canvas id="budgetNetChart" role="img" aria-label="Column chart of net savings for each month. The same values are in the month-by-month table below."></canvas>
+                                    <canvas id="budgetNetChart" role="img" aria-label="@L["GoogleDrive.Report.NetChartAria"]"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -928,25 +952,25 @@
                     <div class="bgt-card mb-3">
                         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
                             <div>
-                                <h6 class="bgt-card-title mb-0" id="budgetCategoryTitle">Spending by category</h6>
-                                <div class="bgt-card-sub" id="budgetCategorySubtitle">Bars show how much of each budget is used.</div>
+                                <h6 class="bgt-card-title mb-0" id="budgetCategoryTitle">@L["GoogleDrive.Js.Report.CategoryTitle"]</h6>
+                                <div class="bgt-card-sub" id="budgetCategorySubtitle">@L["GoogleDrive.Js.Report.CategorySubtitle"]</div>
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-3">
                                 <div class="form-check form-switch mb-0 small">
                                     <input class="form-check-input" type="checkbox" role="switch" id="budgetOverOnly">
-                                    <label class="form-check-label" for="budgetOverOnly">Only over budget</label>
+                                    <label class="form-check-label" for="budgetOverOnly">@L["GoogleDrive.Report.OnlyOverBudget"]</label>
                                 </div>
-                                <select class="form-select form-select-sm w-auto" id="budgetCategorySort" aria-label="Sort categories">
-                                    <option value="amount">Largest first</option>
-                                    <option value="over">Most over budget</option>
-                                    <option value="name">A–Z</option>
+                                <select class="form-select form-select-sm w-auto" id="budgetCategorySort" aria-label="@L["GoogleDrive.Report.SortCategories"]">
+                                    <option value="amount">@L["GoogleDrive.Report.SortLargest"]</option>
+                                    <option value="over">@L["GoogleDrive.Report.SortMostOver"]</option>
+                                    <option value="name">@L["GoogleDrive.Report.SortName"]</option>
                                 </select>
                             </div>
                         </div>
                         <div class="bgt-legend mb-3" aria-hidden="true">
-                            <span><span class="bgt-swatch bgt-swatch--ok"></span>Within budget</span>
-                            <span><span class="bgt-swatch bgt-swatch--warning"></span>Near limit (90–100%)</span>
-                            <span><span class="bgt-swatch bgt-swatch--critical"></span>Over budget</span>
+                            <span><span class="bgt-swatch bgt-swatch--ok"></span>@L["GoogleDrive.Js.Report.WithinBudget"]</span>
+                            <span><span class="bgt-swatch bgt-swatch--warning"></span>@L["GoogleDrive.Report.NearLimitLegend"]</span>
+                            <span><span class="bgt-swatch bgt-swatch--critical"></span>@L["GoogleDrive.Js.Report.OverBudget"]</span>
                         </div>
                         <div class="bgt-cat-grid" id="budgetCategoryList"></div>
                     </div>
@@ -954,8 +978,8 @@
                     <!-- Table view -->
                     <div class="bgt-card">
                         <div class="d-flex justify-content-between align-items-center gap-2">
-                            <h6 class="bgt-card-title mb-0" id="tableSectionTitle">Details</h6>
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" id="btnToggleBudgetTable" aria-expanded="false" aria-controls="budgetReportTableContainer">Show table</button>
+                            <h6 class="bgt-card-title mb-0" id="tableSectionTitle">@L["GoogleDrive.Report.Details"]</h6>
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" id="btnToggleBudgetTable" aria-expanded="false" aria-controls="budgetReportTableContainer">@L["GoogleDrive.Js.Report.ShowTable"]</button>
                         </div>
                         <div class="table-responsive mt-3 d-none" id="budgetReportTableContainer"></div>
                     </div>
@@ -963,8 +987,8 @@
             </div>
 
             <div class="modal-footer border-top justify-content-between">
-                <div class="small text-muted d-none d-md-block" id="budgetKeyboardHint">Tip: use the &larr; &rarr; keys to switch periods.</div>
-                <button type="button" class="btn btn-light border px-4 ms-auto" data-bs-dismiss="modal">Close</button>
+                <div class="small text-muted d-none d-md-block" id="budgetKeyboardHint">@L["GoogleDrive.Report.KeyboardHint"]</div>
+                <button type="button" class="btn btn-light border px-4 ms-auto" data-bs-dismiss="modal">@L["Common.Close"]</button>
             </div>
         </div>
     </div>
@@ -984,7 +1008,7 @@
                         </svg>
                     </div>
                     <div class="overflow-hidden">
-                        <h5 class="modal-title bgt-modal-title" id="transactionsModalLabel">Transactions</h5>
+                        <h5 class="modal-title bgt-modal-title" id="transactionsModalLabel">@L["GoogleDrive.Sheet.Transactions"]</h5>
                         <div class="bgt-file-line">
                             <span class="text-truncate" id="txModalFileName" title="">-</span>
                             <span class="flex-shrink-0 d-none d-sm-inline" id="txModalDataSource"></span>
@@ -994,10 +1018,10 @@
                 <div class="bgt-header-actions">
                     <button type="button" class="btn btn-sm btn-light border btn-budget-report d-none" id="btnTxToBudget"
                             data-bs-toggle="modal" data-bs-target="#monthlyBudgetModal">
-                        Budget report
+                        @L["GoogleDrive.Sheet.BudgetReport"]
                     </button>
-                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnExportTx" disabled>Export CSV</button>
-                    <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnExportTx" disabled>@L["GoogleDrive.Report.ExportCsv"]</button>
+                    <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                 </div>
             </div>
 
@@ -1005,16 +1029,16 @@
                 <!-- Loading state -->
                 <div class="bgt-state" id="txLoadingState" role="status">
                     <div class="spinner-border text-secondary mb-3" aria-hidden="true"></div>
-                    <div class="fw-semibold">Reading your transactions&hellip;</div>
-                    <div class="small text-muted">Pulling the Transactions sheet from Google Drive. This usually takes a few seconds.</div>
+                    <div class="fw-semibold">@L["GoogleDrive.Tx.Loading"]</div>
+                    <div class="small text-muted">@L.Named("GoogleDrive.Tx.LoadingText", ("sheet", "Transactions"))</div>
                 </div>
 
                 <!-- Error state -->
                 <div class="bgt-state d-none" id="txErrorState" role="alert">
                     <div class="bgt-state-icon mb-3" aria-hidden="true">!</div>
-                    <div class="fw-semibold">We couldn't find any transactions in this spreadsheet</div>
+                    <div class="fw-semibold">@L["GoogleDrive.Tx.ErrorTitle"]</div>
                     <div class="small text-muted mb-3" id="txErrorMessage"></div>
-                    <button type="button" class="btn btn-sm btn-dark rounded-pill px-4" id="btnTxRetry">Try again</button>
+                    <button type="button" class="btn btn-sm btn-dark rounded-pill px-4" id="btnTxRetry">@L["GoogleDrive.Common.TryAgain"]</button>
                 </div>
 
                 <!-- Transactions -->
@@ -1022,53 +1046,53 @@
                     <div class="row g-3 mb-3">
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--spend" aria-hidden="true"></span>Spending</div>
-                                <div class="bgt-tile-value" id="txKpiExpenses">$0</div>
+                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--spend" aria-hidden="true"></span>@L["GoogleDrive.Report.Spending"]</div>
+                                <div class="bgt-tile-value" id="txKpiExpenses">@MoneyFormatter.FormatWhole(0m, SupportedCurrencies.Default.Code)</div>
                                 <div class="bgt-tile-sub" id="txKpiExpensesSub"></div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--income" aria-hidden="true"></span>Income</div>
-                                <div class="bgt-tile-value" id="txKpiIncome">$0</div>
+                                <div class="bgt-tile-label"><span class="bgt-swatch bgt-swatch--income" aria-hidden="true"></span>@L["GoogleDrive.Report.Income"]</div>
+                                <div class="bgt-tile-value" id="txKpiIncome">@MoneyFormatter.FormatWhole(0m, SupportedCurrencies.Default.Code)</div>
                                 <div class="bgt-tile-sub" id="txKpiIncomeSub"></div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label">Net</div>
-                                <div class="bgt-tile-value" id="txKpiNet">$0</div>
-                                <div class="bgt-tile-sub" id="txKpiNetSub">Income minus spending</div>
+                                <div class="bgt-tile-label">@L["GoogleDrive.Tx.Net"]</div>
+                                <div class="bgt-tile-value" id="txKpiNet">@MoneyFormatter.FormatWhole(0m, SupportedCurrencies.Default.Code)</div>
+                                <div class="bgt-tile-sub" id="txKpiNetSub">@L["GoogleDrive.Js.IncomeMinusSpending"]</div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="bgt-tile h-100">
-                                <div class="bgt-tile-label">Transactions</div>
+                                <div class="bgt-tile-label">@L["GoogleDrive.Sheet.Transactions"]</div>
                                 <div class="bgt-tile-value" id="txKpiCount">0</div>
                                 <div class="bgt-tile-sub" id="txKpiRange"></div>
                             </div>
                         </div>
                     </div>
 
-                    <ul class="bgt-facts mb-3" id="txInsights" aria-label="Highlights"></ul>
+                    <ul class="bgt-facts mb-3" id="txInsights" aria-label="@L["GoogleDrive.Tx.Highlights"]"></ul>
 
                     <div class="row g-3 mb-3">
                         <div class="col-12 col-lg-7">
                             <div class="bgt-card h-100">
                                 <div class="mb-2">
-                                    <h6 class="bgt-card-title mb-0">Spending over time</h6>
+                                    <h6 class="bgt-card-title mb-0">@L["GoogleDrive.Tx.SpendingOverTime"]</h6>
                                     <div class="bgt-card-sub" id="txTimelineSub"></div>
                                 </div>
                                 <div class="bgt-chart-box bgt-chart-box--short">
-                                    <canvas id="txTimelineChart" role="img" aria-label="Column chart of spending over time. The same transactions are listed in the table below."></canvas>
+                                    <canvas id="txTimelineChart" role="img" aria-label="@L["GoogleDrive.Tx.TimelineAria"]"></canvas>
                                 </div>
                             </div>
                         </div>
                         <div class="col-12 col-lg-5">
                             <div class="bgt-card h-100">
                                 <div class="mb-3">
-                                    <h6 class="bgt-card-title mb-0">Top spending categories</h6>
-                                    <div class="bgt-card-sub">Share of total spending. Select one to filter the list.</div>
+                                    <h6 class="bgt-card-title mb-0">@L["GoogleDrive.Tx.TopCategories"]</h6>
+                                    <div class="bgt-card-sub">@L["GoogleDrive.Tx.TopCategoriesHint"]</div>
                                 </div>
                                 <div class="bgt-rank" id="txCategoryBars"></div>
                             </div>
@@ -1081,27 +1105,27 @@
                                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
                                 </svg>
-                                <input type="search" id="txSearch" class="form-control form-control-sm" placeholder="Search description or category" aria-label="Search transactions" />
+                                <input type="search" id="txSearch" class="form-control form-control-sm" placeholder="@L["GoogleDrive.Tx.SearchPlaceholder"]" aria-label="@L["GoogleDrive.Tx.SearchLabel"]" />
                             </div>
-                            <div class="btn-group btn-group-sm" role="group" aria-label="Filter by type">
-                                <button type="button" class="btn btn-light border active tx-type-filter" data-type="" aria-pressed="true">All</button>
-                                <button type="button" class="btn btn-light border tx-type-filter" data-type="Expense" aria-pressed="false">Spending</button>
-                                <button type="button" class="btn btn-light border tx-type-filter" data-type="Income" aria-pressed="false">Income</button>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="@L["GoogleDrive.Files.FilterByType"]">
+                                <button type="button" class="btn btn-light border active tx-type-filter" data-type="" aria-pressed="true">@L["GoogleDrive.Filter.All"]</button>
+                                <button type="button" class="btn btn-light border tx-type-filter" data-type="Expense" aria-pressed="false">@L["GoogleDrive.Report.Spending"]</button>
+                                <button type="button" class="btn btn-light border tx-type-filter" data-type="Income" aria-pressed="false">@L["GoogleDrive.Report.Income"]</button>
                             </div>
-                            <select class="form-select form-select-sm w-auto" id="txCategoryFilter" aria-label="Filter by category">
-                                <option value="">All categories</option>
+                            <select class="form-select form-select-sm w-auto" id="txCategoryFilter" aria-label="@L["GoogleDrive.Tx.FilterByCategory"]">
+                                <option value="">@L["GoogleDrive.Js.Tx.AllCategories"]</option>
                             </select>
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none d-none" id="txClearFilters">Clear filters</button>
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none d-none" id="txClearFilters">@L["GoogleDrive.Tx.ClearFilters"]</button>
                         </div>
                         <div class="table-responsive">
                             <table id="txTable" class="table table-hover align-middle w-100 mb-0 bgt-table">
                                 <thead>
                                     <tr>
-                                        <th scope="col">Date</th>
-                                        <th scope="col">Description</th>
-                                        <th scope="col">Category</th>
-                                        <th scope="col">Type</th>
-                                        <th scope="col" class="text-end">Amount</th>
+                                        <th scope="col">@L["GoogleDrive.Tx.Date"]</th>
+                                        <th scope="col">@L["GoogleDrive.Tx.Description"]</th>
+                                        <th scope="col">@L["GoogleDrive.Tx.Category"]</th>
+                                        <th scope="col">@L["GoogleDrive.Files.Type"]</th>
+                                        <th scope="col" class="text-end">@L["GoogleDrive.Tx.Amount"]</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -1114,7 +1138,7 @@
 
             <div class="modal-footer border-top justify-content-between">
                 <div class="small text-muted" id="txSheetName"></div>
-                <button type="button" class="btn btn-light border px-4 ms-auto" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-light border px-4 ms-auto" data-bs-dismiss="modal">@L["Common.Close"]</button>
             </div>
         </div>
     </div>
@@ -1125,8 +1149,8 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title fw-bold" id="reauthModalLabel">API key for @(currentConn?.Name ?? "this drive")</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold" id="reauthModalLabel">@L.Named("GoogleDrive.ApiKey.ModalTitle", ("name", currentConn?.Name ?? L["GoogleDrive.ApiKey.ThisDrive"].Value))</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
             </div>
             <form asp-action="Reauth" method="post">
                 @Html.AntiForgeryToken()
@@ -1134,18 +1158,19 @@
                 <div class="modal-body">
                     @if (currentConn?.HasApiKey == true)
                     {
-                        <p class="small text-muted">Current key: <code>@currentConn.MaskedApiKey</code></p>
+                        <p class="small text-muted">@L.NamedHtml("GoogleDrive.ApiKey.Current", null,
+                            ("key", new HtmlString($"<code>{HtmlEncoder.Default.Encode(currentConn.MaskedApiKey ?? string.Empty)}</code>")))</p>
                     }
-                    <label for="reauthApiKey" class="form-label fw-semibold small">Google Cloud API key</label>
+                    <label for="reauthApiKey" class="form-label fw-semibold small">@L["GoogleDrive.ApiKey.Label"]</label>
                     <input type="text" id="reauthApiKey" name="apiKey" class="form-control font-monospace" placeholder="AIzaSy..." />
                     <div class="form-text">
-                        The key needs the Google Drive API enabled. It's stored encrypted and used to sync this folder.
-                        <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">How do I get one?</button>
+                        @L["GoogleDrive.ApiKey.Help"]
+                        <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">@L["GoogleDrive.ApiKey.HowToGet"]</button>
                     </div>
                 </div>
                 <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary fw-semibold">Save and sync</button>
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">@L["GoogleDrive.ApiKey.Save"]</button>
                 </div>
             </form>
         </div>
@@ -1159,25 +1184,24 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom">
-                    <h5 class="modal-title fw-bold" id="deleteDriveModalLabel">Remove @currentConn.Name?</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title fw-bold" id="deleteDriveModalLabel">@L.Named("GoogleDrive.Remove.Title", ("name", currentConn.Name))</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                 </div>
                 <div class="modal-body">
                     <p class="mb-0">
-                        This disconnects the folder and clears its @currentConn.CachedFilesCount saved items from this app.
-                        Nothing is deleted from your Google Drive, and you can reconnect it anytime.
+                        @L.Plural("GoogleDrive.Remove.Text", currentConn.CachedFilesCount)
                     </p>
                     <p class="small text-muted mt-2 mb-0">
-                        Budget data you already synced stays in Analysis. To delete it, use
-                        <a asp-controller="Analysis" asp-action="RemoveSource" asp-route-source="@BudgetDataSource.GoogleSheet">Remove Google Sheet data</a>.
+                        @L.NamedHtml("GoogleDrive.Remove.AnalysisNote", null,
+                            ("link", new HtmlString($"<a href=\"{HtmlEncoder.Default.Encode(Url.Action("RemoveSource", "Analysis", new { source = BudgetDataSource.GoogleSheet }) ?? string.Empty)}\">{HtmlEncoder.Default.Encode(L.Named("Analysis.RemoveSource.Submit", ("source", AnalysisText.SourceName(L, BudgetDataSource.GoogleSheet))))}</a>")))
                     </p>
                 </div>
                 <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
                     <form asp-action="Delete" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="id" value="@currentConn.Id" />
-                        <button type="submit" class="btn btn-danger fw-semibold">Remove drive</button>
+                        <button type="submit" class="btn btn-danger fw-semibold">@L["GoogleDrive.Remove.Submit"]</button>
                     </form>
                 </div>
             </div>
@@ -1190,8 +1214,8 @@
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title fw-bold" id="apiKeyGuideModalLabel">Help &amp; setup</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold" id="apiKeyGuideModalLabel">@L["GoogleDrive.Help.Title"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="gd-help-section">
@@ -1199,12 +1223,11 @@
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.54 3.87A2 2 0 0 1 2.5 3h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3z"/>
                         </svg>
-                        1. Share your folder
+                        @L["GoogleDrive.Help.ShareTitle"]
                     </h6>
                     <div class="accordion-collapse collapse show" id="helpShare">
                         <p class="text-muted small mb-0">
-                            In Google Drive, right-click the folder, choose <strong>Share</strong>, and set General access to
-                            <strong>Anyone with the link</strong> (Viewer). Private folders can't be read and show up as "not found".
+                            @L.NamedHtml("GoogleDrive.Help.ShareText", null, ("share", shareLabel), ("anyone", anyoneLabel))
                         </p>
                     </div>
                 </div>
@@ -1214,12 +1237,12 @@
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V9H3V2a1 1 0 0 1 1-1h5.5v2zM3 12v-2h10v2H3zm0 1h10v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1z"/>
                         </svg>
-                        2. Name your budget spreadsheets
+                        @L["GoogleDrive.Help.NamingTitle"]
                     </h6>
                     <div class="accordion-collapse collapse" id="helpNaming">
                         <p class="text-muted small mb-0">
-                            Spreadsheets whose name starts with <strong>Monthly budget</strong> get a budget report.
-                            Any spreadsheet with a sheet that has <strong>Date</strong> and <strong>Amount</strong> columns can show its transactions.
+                            @L.NamedHtml("GoogleDrive.Help.NamingText", null,
+                                ("name", Strong(monthlyBudget)), ("date", Strong("Date")), ("amount", Strong("Amount")))
                         </p>
                     </div>
                 </div>
@@ -1229,13 +1252,14 @@
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/>
                         </svg>
-                        3. Start a new monthly budget
+                        @L["GoogleDrive.Help.NewBudgetTitle"]
                     </h6>
                     <div class="accordion-collapse collapse" id="helpNewBudget">
                         <p class="text-muted small mb-0">
-                            In <a href="https://docs.google.com/spreadsheets/" target="_blank" rel="noopener noreferrer">Google Sheets</a>, open the
-                            <strong>Template gallery</strong> and choose <strong>Monthly budget</strong>. Move the new spreadsheet into your connected
-                            folder, then click <strong>Sync now</strong>. See <strong>New budget sheet</strong> for step-by-step instructions.
+                            @L.NamedHtml("GoogleDrive.Help.NewBudgetText", null,
+                                ("sheets", googleSheetsLink), ("gallery", Strong(L["GoogleDrive.Ui.TemplateGallery"])),
+                                ("name", Strong(monthlyBudget)), ("sync", syncLabel),
+                                ("guide", Strong(L["GoogleDrive.NewSheet.Title"])))
                         </p>
                     </div>
                 </div>
@@ -1245,14 +1269,17 @@
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 8V8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.374a1 1 0 0 1 .707.293l.854.854a1 1 0 0 0 .707.293h3.346a1 1 0 0 0 .707-.293l.854-.854A1 1 0 0 1 11.626 8z"/>
                         </svg>
-                        4. Optional: add a Google API key
+                        @L["GoogleDrive.Help.ApiKeyTitle"]
                     </h6>
                     <div class="accordion-collapse collapse" id="helpApiKey">
                         <ol class="text-muted small ps-3 mb-0">
-                            <li class="mb-1">Open the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console</a> and create or pick a project.</li>
-                            <li class="mb-1">Enable the <strong>Google Drive API</strong> under APIs &amp; Services &gt; Library.</li>
-                            <li class="mb-1">Under <strong>APIs &amp; Services &gt; Credentials</strong>, choose <strong>Create credentials &gt; API key</strong>.</li>
-                            <li>Paste the key when connecting a folder, or from the drive's <strong>&#8943;</strong> menu.</li>
+                            <li class="mb-1">@L.NamedHtml("GoogleDrive.Help.ApiKeyStep1", null,
+                                ("console", Link("https://console.cloud.google.com/", "Google Cloud Console")))</li>
+                            <li class="mb-1">@L.NamedHtml("GoogleDrive.Help.ApiKeyStep2", null,
+                                ("api", Strong("Google Drive API")), ("path", new HtmlString(HtmlEncoder.Default.Encode(L["GoogleDrive.Ui.ApiLibrary"]))))</li>
+                            <li class="mb-1">@L.NamedHtml("GoogleDrive.Help.ApiKeyStep3", null,
+                                ("path", Strong(L["GoogleDrive.Ui.ApiCredentials"])), ("create", Strong(L["GoogleDrive.Ui.CreateApiKey"])))</li>
+                            <li>@L.NamedHtml("GoogleDrive.Help.ApiKeyStep4", null, ("menu", Strong("\u22EF")))</li>
                         </ol>
                     </div>
                 </div>
@@ -1263,18 +1290,17 @@
                             <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
                         </svg>
-                        How syncing works
+                        @L["GoogleDrive.Help.SyncTitle"]
                     </h6>
                     <div class="accordion-collapse collapse" id="helpSync">
                         <p class="text-muted small mb-0">
-                            The file list is saved after each sync, so the page loads quickly without contacting Google.
-                            Use <strong>Sync now</strong> to pick up changes. The first load after a quiet period can take a few extra seconds.
+                            @L.NamedHtml("GoogleDrive.Help.SyncText", null, ("sync", syncLabel))
                         </p>
                     </div>
                 </div>
             </div>
             <div class="modal-footer border-top">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">@L["GoogleDrive.Help.GotIt"]</button>
             </div>
         </div>
     </div>
@@ -1285,56 +1311,51 @@
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title fw-bold" id="newBudgetSheetModalLabel">New budget sheet</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold" id="newBudgetSheetModalLabel">@L["GoogleDrive.NewSheet.Title"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
             </div>
             <div class="modal-body p-4">
-                <p class="text-muted small">Use Google's free Monthly budget template to start a new month.</p>
+                <p class="text-muted small">@L.Named("GoogleDrive.NewSheet.Intro", ("name", monthlyBudget))</p>
 
-                <h6 class="fw-bold mb-1">1. Create it from Google's template</h6>
+                <h6 class="fw-bold mb-1">@L["GoogleDrive.NewSheet.Step1Title"]</h6>
                 <p class="text-muted small">
-                    Open <a href="https://docs.google.com/spreadsheets/" target="_blank" rel="noopener noreferrer">Google Sheets</a>
-                    (signed in to the account that owns <strong>@(currentConn?.Name ?? "your connected folder")</strong>).
-                    At the top, click <strong>Template gallery</strong>, then choose <strong>Monthly budget</strong>.
+                    @L.NamedHtml("GoogleDrive.NewSheet.Step1Text", null,
+                        ("sheets", googleSheetsLink), ("folder", Strong(connectedFolderName)),
+                        ("gallery", Strong(L["GoogleDrive.Ui.TemplateGallery"])), ("name", Strong(monthlyBudget)))
                 </p>
 
-                <h6 class="fw-bold mb-1 mt-3">2. Keep the name starting with "Monthly budget"</h6>
+                <h6 class="fw-bold mb-1 mt-3">@L.Named("GoogleDrive.NewSheet.Step2Title", ("name", monthlyBudget))</h6>
                 <p class="text-muted small">
-                    The new spreadsheet is called <em>Monthly budget</em>. You can add the month, for example
-                    <em>Monthly budget - @DateTime.UtcNow.ToString("MMMM yyyy")</em>, but keep "Monthly budget" at the start.
-                    That's how this app knows to show a budget report for it.
+                    @L.NamedHtml("GoogleDrive.NewSheet.Step2Text", null,
+                        ("name", Em(monthlyBudget)),
+                        ("example", Em($"{monthlyBudget} - {DateTime.UtcNow.ToString("Y", System.Globalization.CultureInfo.CurrentCulture)}")))
                 </p>
 
-                <h6 class="fw-bold mb-1 mt-3">3. Fill it in</h6>
+                <h6 class="fw-bold mb-1 mt-3">@L["GoogleDrive.NewSheet.Step3Title"]</h6>
                 <p class="text-muted small">
-                    On the <strong>Summary</strong> tab, enter your starting balance and planned income and expenses.
-                    Record what you actually earn and spend on the <strong>Transactions</strong> tab.
+                    @L.NamedHtml("GoogleDrive.NewSheet.Step3Text", null,
+                        ("summary", Strong("Summary")), ("transactions", Strong("Transactions")))
                 </p>
 
-                <h6 class="fw-bold mb-1 mt-3">4. Move it into your connected folder</h6>
+                <h6 class="fw-bold mb-1 mt-3">@L["GoogleDrive.NewSheet.Step4Title"]</h6>
                 <p class="text-muted small">
-                    In the spreadsheet, choose <em>File &rarr; Move</em> and pick
-                    @if (!string.IsNullOrWhiteSpace(currentConn?.FolderUrl))
-                    {
-                        <a href="@currentConn.FolderUrl" target="_blank" rel="noopener noreferrer"><strong>@currentConn.Name</strong></a>
-                    }
-                    else
-                    {
-                        <strong>@(currentConn?.Name ?? "your connected folder")</strong>
-                    }.
-                    New spreadsheets are saved to My Drive, and this app only sees files inside the connected folder.
+                    @L.NamedHtml("GoogleDrive.NewSheet.Step4Text", null,
+                        ("move", Em(L["GoogleDrive.Ui.FileMove"])),
+                        ("folder", !string.IsNullOrWhiteSpace(currentConn?.FolderUrl)
+                            ? Link(currentConn.FolderUrl, currentConn.Name, strong: true)
+                            : Strong(connectedFolderName)))
                 </p>
 
-                <h6 class="fw-bold mb-1 mt-3">5. Sync</h6>
+                <h6 class="fw-bold mb-1 mt-3">@L["GoogleDrive.NewSheet.Step5Title"]</h6>
                 <p class="text-muted small mb-0">
-                    Come back here and click <strong>Sync now</strong>. The sheet appears under <strong>Spreadsheets</strong>.
-                    Not there? Check that it's in the folder, its name starts with "Monthly budget", and the folder is still shared as
-                    <strong>Anyone with the link</strong>.
+                    @L.NamedHtml("GoogleDrive.NewSheet.Step5Text", null,
+                        ("sync", syncLabel), ("spreadsheets", Strong(L["GoogleDrive.Sheets.Title"])),
+                        ("name", Strong(monthlyBudget)), ("anyone", anyoneLabel))
                 </p>
             </div>
             <div class="modal-footer border-top">
-                <a href="https://docs.google.com/spreadsheets/" target="_blank" rel="noopener noreferrer" class="btn btn-success">Open Google Sheets &nearr;</a>
-                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Close</button>
+                <a href="https://docs.google.com/spreadsheets/" target="_blank" rel="noopener noreferrer" class="btn btn-success">@L["GoogleDrive.NewSheet.OpenSheets"]</a>
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">@L["Common.Close"]</button>
             </div>
         </div>
     </div>
@@ -1347,7 +1368,7 @@
          style="background-color: var(--app-surface); color: var(--app-text); border-color: var(--app-border); box-shadow: var(--app-shadow-8);">
         <div class="d-flex">
             <div class="toast-body small" id="pageToastMessage"></div>
-            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="@L["Common.Close"]"></button>
         </div>
     </div>
 </div>
@@ -1450,6 +1471,7 @@
     <script src="~/lib/datatables/dataTables.min.js"></script>
     <script src="~/lib/datatables-bs5/dataTables.bootstrap5.min.js"></script>
     <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <js-strings prefix="GoogleDrive.Js." />
     <script src="~/js/google-drive/explorer.js" asp-append-version="true"></script>
     <script src="~/js/google-drive/budget-report.js" asp-append-version="true"></script>
     <script src="~/js/google-drive/transactions.js" asp-append-version="true"></script>
