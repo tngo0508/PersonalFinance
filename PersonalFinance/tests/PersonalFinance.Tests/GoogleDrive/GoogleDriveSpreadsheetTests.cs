@@ -8,8 +8,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Features.GoogleDrive.Adapters;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Tests.TestSupport;
 using GoogleDriveController = PersonalFinance.Web.Controllers.GoogleDriveController;
 
 namespace PersonalFinance.Tests.GoogleDrive;
@@ -67,6 +69,9 @@ public class GoogleDriveSpreadsheetTests
     [InlineData(1073741824L, "1 GB")]
     public void FormatBytes_FormatsCorrectly(long? bytes, string expected)
     {
+        // ApiService pins its process culture at startup; the machine's locale must not leak in.
+        using var culture = new RequestCultureScope(AppCulture.DefaultCultureName);
+
         string result = GoogleDriveMetadata.FormatBytes(bytes);
         Assert.Equal(expected, result);
     }

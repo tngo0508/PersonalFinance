@@ -266,7 +266,8 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
         HttpResponseMessage response = await _client.SendAsync(request);
         string html = await response.Content.ReadAsStringAsync();
         Assert.True(response.StatusCode == HttpStatusCode.OK, $"/Dashboard returned {response.StatusCode}: {html}");
-        return WebUtility.HtmlDecode(html);
+        // A Windows checkout renders the views with CRLF; the expectations are written with LF.
+        return WebUtility.HtmlDecode(html).ReplaceLineEndings("\n");
     }
 
     private static void AssertShows(string html, IEnumerable<string> texts) =>
