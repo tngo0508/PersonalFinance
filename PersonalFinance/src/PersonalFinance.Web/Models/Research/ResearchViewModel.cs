@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
@@ -31,6 +32,14 @@ public sealed class ResearchViewModel
     /// <summary>The Companies tab's id.</summary>
     public const string CompaniesTab = "companies";
 
+    /// <summary>
+    /// The page's date format, "31 December 2025" in English; month names and order come from the request culture.
+    /// </summary>
+    public const string LongDate = "d MMMM yyyy";
+
+    /// <summary>The page's month format, the culture's year-month pattern ("December 2025").</summary>
+    public const string MonthYear = "Y";
+
     private static readonly string[] Tabs = [SectorsTab, FundsTab, PerformanceTab, RiskTab, WorldTab, CompaniesTab];
 
     /// <summary>
@@ -41,9 +50,11 @@ public sealed class ResearchViewModel
     /// <paramref name="fundReturns"/> also makes the Performance tab unavailable, and a null <paramref name="macro"/>
     /// leaves the Performance tab without its inflation adjustment. A null <paramref name="fundFacts"/> leaves the Risk vs
     /// return tab without bubble sizes and expense ratios, and a null <paramref name="fundExposure"/> leaves the World tab
-    /// with its market view only.
+    /// with its market view only. The Unavailable States' text comes from <paramref name="localizer"/>, in the request's
+    /// Language.
     /// </summary>
-    public ResearchViewModel(SectorsSnapshotDto? sectors, FundsSnapshotDto? funds, WorldSnapshotDto? world,
+    public ResearchViewModel(IStringLocalizer localizer, SectorsSnapshotDto? sectors, FundsSnapshotDto? funds,
+        WorldSnapshotDto? world,
         string? tab = null, string? ticker = null, FundOverlapSnapshotDto? fundOverlap = null,
         FundReturnsSnapshotDto? fundReturns = null, MacroSnapshotDto? macro = null, FundFactsSnapshotDto? fundFacts = null,
         FundExposureSnapshotDto? fundExposure = null)
@@ -53,9 +64,15 @@ public sealed class ResearchViewModel
         Macro = macro;
         FundOverlap = fundOverlap;
         FundReturns = fundReturns;
-        Sectors = new(sectors, "We couldn't load the Sectors data");
-        Funds = new(funds, "We couldn't load the funds data");
-        World = new(world, "We couldn't load the World data");
+        string pageTitle = localizer["Research.Title"];
+        Sectors = new(sectors, pageTitle, localizer["Research.Unavailable.Sectors"]);
+        Funds = new(funds, pageTitle, localizer["Research.Unavailable.Funds"]);
+        World = new(world, pageTitle, localizer["Research.Unavailable.World"]);
+        FundOverlapUnavailableState = Unavailable(pageTitle, localizer["Research.Unavailable.FundOverlap"], FundsTab);
+        string returnsHeading = localizer["Research.Unavailable.FundReturns"];
+        FundReturnsUnavailableState = Unavailable(pageTitle, returnsHeading, FundsTab);
+        PerformanceUnavailableState = Unavailable(pageTitle, returnsHeading, PerformanceTab);
+        RiskUnavailableState = Unavailable(pageTitle, returnsHeading, RiskTab);
         string? requested = string.Equals(tab?.Trim(), LegacyFundsTab, StringComparison.OrdinalIgnoreCase) ? FundsTab : tab?.Trim();
         SelectedTab = Tabs.FirstOrDefault(t => string.Equals(t, requested, StringComparison.OrdinalIgnoreCase))
                       ?? SectorsTab;
@@ -86,13 +103,7 @@ public sealed class ResearchViewModel
     public FundOverlapSnapshotDto? FundOverlap { get; }
 
     /// <summary>The overlap view's Unavailable State, shown on the Funds tab when <see cref="FundOverlap"/> is null.</summary>
-    public UnavailableStateViewModel FundOverlapUnavailableState { get; } = new()
-    {
-        PageTitle = "Research",
-        Heading = "We couldn't load the fund overlap data",
-        RetryController = "Research",
-        RetryRouteValues = new Dictionary<string, string> { ["tab"] = FundsTab },
-    };
+    public UnavailableStateViewModel FundOverlapUnavailableState { get; }
 
     /// <summary>
     /// Each Tracked Fund's monthly returns with per-window figures and correlations, which the Funds tab's correlation
@@ -101,13 +112,7 @@ public sealed class ResearchViewModel
     public FundReturnsSnapshotDto? FundReturns { get; }
 
     /// <summary>The correlation view's Unavailable State, shown on the Funds tab when <see cref="FundReturns"/> is null.</summary>
-    public UnavailableStateViewModel FundReturnsUnavailableState { get; } = new()
-    {
-        PageTitle = "Research",
-        Heading = "We couldn't load the fund returns data",
-        RetryController = "Research",
-        RetryRouteValues = new Dictionary<string, string> { ["tab"] = FundsTab },
-    };
+    public UnavailableStateViewModel FundReturnsUnavailableState { get; }
 
     /// <summary>
     /// Monthly CPI-U and interest rates, which the Performance tab uses to adjust returns for inflation; null when it
@@ -116,13 +121,7 @@ public sealed class ResearchViewModel
     public MacroSnapshotDto? Macro { get; }
 
     /// <summary>The Performance tab's Unavailable State, shown when <see cref="FundReturns"/> is null.</summary>
-    public UnavailableStateViewModel PerformanceUnavailableState { get; } = new()
-    {
-        PageTitle = "Research",
-        Heading = "We couldn't load the fund returns data",
-        RetryController = "Research",
-        RetryRouteValues = new Dictionary<string, string> { ["tab"] = PerformanceTab },
-    };
+    public UnavailableStateViewModel PerformanceUnavailableState { get; }
 
     /// <summary>
     /// Each Tracked Fund's net assets and expense ratio, which the Risk vs return tab sizes bubbles by and shows in its
@@ -131,13 +130,7 @@ public sealed class ResearchViewModel
     public FundFactsSnapshotDto? FundFacts { get; }
 
     /// <summary>The Risk vs return tab's Unavailable State, shown when <see cref="FundReturns"/> is null.</summary>
-    public UnavailableStateViewModel RiskUnavailableState { get; } = new()
-    {
-        PageTitle = "Research",
-        Heading = "We couldn't load the fund returns data",
-        RetryController = "Research",
-        RetryRouteValues = new Dictionary<string, string> { ["tab"] = RiskTab },
-    };
+    public UnavailableStateViewModel RiskUnavailableState { get; }
 
     /// <summary>
     /// Each Tracked Fund's share by issuer country and currency, which the World tab's basket view weights; null when
@@ -147,4 +140,12 @@ public sealed class ResearchViewModel
 
     /// <summary>The World tab, which opens on the latest year.</summary>
     public ResearchTabViewModel<WorldSnapshotDto, WorldPeriodDto> World { get; }
+
+    private static UnavailableStateViewModel Unavailable(string pageTitle, string heading, string tab) => new()
+    {
+        PageTitle = pageTitle,
+        Heading = heading,
+        RetryController = "Research",
+        RetryRouteValues = new Dictionary<string, string> { ["tab"] = tab },
+    };
 }

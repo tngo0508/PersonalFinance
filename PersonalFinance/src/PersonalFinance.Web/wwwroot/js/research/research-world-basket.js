@@ -1,4 +1,4 @@
-/* global d3, topojson */
+/* global d3, topojson, PFI18n */
 /**
  * Research page, World tab: the "World market | Your basket" switch and the basket view.
  *
@@ -61,22 +61,22 @@
         CW: [-68.99, 12.17]
     };
     const regionNames = typeof Intl !== 'undefined' && Intl.DisplayNames
-        ? new Intl.DisplayNames(['en'], { type: 'region' })
+        ? new Intl.DisplayNames([PFI18n.lang], { type: 'region' })
         : null;
 
     /**
      * A share for display: "<0.1%" under 0.05%, else one decimal.
      * @param {number} value - The share in percent.
-     * @returns {string} E.g. "12.3%" or "<0.1%".
+     * @returns {string} E.g. "12.3%" or "<0.1%", in the page culture.
      */
     function formatShare (value) {
-        return value > 0 && value < 0.05 ? '<0.1%' : `${value.toFixed(1)}%`;
+        return value > 0 && value < 0.05 ? `<${page.formatPercent(0.1, 1)}` : page.formatPercent(value, 1);
     }
 
     /**
      * A country's name from its two-letter code.
      * @param {string} code - The ISO alpha-2 code.
-     * @returns {string} The English name, or the code.
+     * @returns {string} The name in the page language, or the code.
      */
     function countryName (code) {
         try {
@@ -172,7 +172,7 @@
         const colours = readColours(host);
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, entry) => [
             line(countryName(entry.code), 'research-tooltip__name'),
-            line(`${formatShare(entry.percent)} of your basket`, 'research-tooltip__value'),
+            line(PFI18n.t('Research.Js.WorldBasket.OfBasket', { value: formatShare(entry.percent) }), 'research-tooltip__value'),
             line(entry.region, 'research-tooltip__muted')
         ]);
         let mode = 'market';
@@ -240,7 +240,10 @@
                 .attr('data-region', (f) => (byMapId.has(f.id) ? byMapId.get(f.id).region : null))
                 .attr('aria-label', (f) => {
                     const entry = byMapId.get(f.id);
-                    return entry ? `${countryName(entry.code)}: ${formatShare(entry.percent)} of your basket` : null;
+                    return entry
+                        ? PFI18n.t('Research.Js.WorldBasket.CountryLabel',
+                            { name: countryName(entry.code), value: formatShare(entry.percent) })
+                        : null;
                 })
                 .on('pointermove', (event, f) => {
                     const entry = byMapId.get(f.id);
@@ -260,7 +263,8 @@
                 .attr('data-code', (c) => c.code)
                 .attr('data-region', (c) => c.region)
                 .attr('tabindex', 0)
-                .attr('aria-label', (c) => `${countryName(c.code)}: ${formatShare(c.percent)} of your basket`)
+                .attr('aria-label', (c) => PFI18n.t('Research.Js.WorldBasket.CountryLabel',
+                    { name: countryName(c.code), value: formatShare(c.percent) }))
                 .attr('cx', (c) => projection(SMALL_PLACES[c.code])[0])
                 .attr('cy', (c) => projection(SMALL_PLACES[c.code])[1])
                 .attr('data-r', (c) => Math.min(10, radius(Math.min(c.percent, scaleMax))))
@@ -281,7 +285,7 @@
                     tooltip.hide();
                 });
             svg.call(zoom);
-            svg.attr('aria-label', `Map of your basket by issuer country. ${calloutText()}`);
+            svg.attr('aria-label', PFI18n.t('Research.Js.WorldBasket.MapLabel', { callouts: calloutText() }));
             highlight(pinnedRegion);
         }
 
@@ -335,7 +339,7 @@
                 button.type = 'button';
                 button.dataset.region = region;
                 button.setAttribute('aria-pressed', String(pinnedRegion === region));
-                button.setAttribute('aria-label', `${region}: ${formatShare(value)} of your basket. Light its countries on the map`);
+                button.setAttribute('aria-label', PFI18n.t('Research.Js.WorldBasket.RegionLabel', { region, value: formatShare(value) }));
                 button.addEventListener('pointerenter', () => highlight(region));
                 button.addEventListener('pointerleave', () => highlight(pinnedRegion));
                 button.addEventListener('focus', () => highlight(region));
@@ -358,7 +362,9 @@
             const sorted = Array.from(exposure.currencies.entries()).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
             const top = sorted.slice(0, TOP_CURRENCIES);
             const rest = sorted.slice(TOP_CURRENCIES).reduce((sum, [, v]) => sum + v, 0);
-            const rows = rest > 0 ? [...top, [`${sorted.length - TOP_CURRENCIES} others`, rest]] : top;
+            const rows = rest > 0
+                ? [...top, [PFI18n.plural('Research.Js.WorldBasket.OtherCurrencies', sorted.length - TOP_CURRENCIES), rest]]
+                : top;
             const max = Math.max(...rows.map(([, v]) => v), 0);
             currencyList.replaceChildren(...rows.map(([code, value]) => barRow(code, value, max, 'li')));
         }
@@ -372,10 +378,10 @@
             const rest = Array.from(exposure.countries.values()).filter((c) => c.code !== US).reduce((sum, c) => sum + c.percent, 0);
             const usd = exposure.currencies.get('USD') || 0;
             const other = Array.from(exposure.currencies.entries()).filter(([code]) => code !== 'USD').reduce((sum, [, v]) => sum + v, 0);
-            const meter = (title, homeLabel, home, awayLabel, away) => {
+            const meter = (key, title, homeLabel, home, awayLabel, away) => {
                 const unallocated = Math.max(0, 100 - home - away);
                 const wrap = element('div', 'research-world-basket__meter');
-                const id = `research-world-basket-meter-${homeLabel.replace(/\W+/g, '-').toLowerCase()}`;
+                const id = `research-world-basket-meter-${key}`;
                 const heading = element('p', 'research-world-basket__meter-title', title);
                 heading.id = id;
                 const bar = element('div', 'research-world-basket__meter-bar');
@@ -384,8 +390,11 @@
                 bar.setAttribute('aria-valuemin', '0');
                 bar.setAttribute('aria-valuemax', '100');
                 bar.setAttribute('aria-valuenow', (Math.round(home * 10) / 10).toString());
-                bar.setAttribute('aria-valuetext', `${homeLabel} ${formatShare(home)}, ${awayLabel} ${formatShare(away)}`
-                    + `${unallocated >= 0.05 ? `, unallocated ${formatShare(unallocated)}` : ''}`);
+                const parts = { home: homeLabel, homeValue: formatShare(home), away: awayLabel, awayValue: formatShare(away) };
+                bar.setAttribute('aria-valuetext', unallocated >= 0.05
+                    ? PFI18n.t('Research.Js.WorldBasket.MeterTextUnallocated',
+                        Object.assign(parts, { unallocated: formatShare(unallocated) }))
+                    : PFI18n.t('Research.Js.WorldBasket.MeterText', parts));
                 const homePart = element('span', 'research-world-basket__meter-home');
                 homePart.style.width = `${home}%`;
                 const awayPart = element('span', 'research-world-basket__meter-away');
@@ -393,14 +402,17 @@
                 bar.append(homePart, awayPart);
                 const legend = element('p', 'research-world-basket__meter-legend');
                 legend.setAttribute('aria-hidden', 'true');
-                legend.append(element('span', 'research-world-basket__meter-key research-world-basket__meter-key--home', `${homeLabel} ${formatShare(home)}`),
-                    element('span', 'research-world-basket__meter-key research-world-basket__meter-key--away', `${awayLabel} ${formatShare(away)}`));
+                const keyText = (label, value) => PFI18n.t('Research.Js.WorldBasket.MeterKey', { label, value: formatShare(value) });
+                legend.append(element('span', 'research-world-basket__meter-key research-world-basket__meter-key--home', keyText(homeLabel, home)),
+                    element('span', 'research-world-basket__meter-key research-world-basket__meter-key--away', keyText(awayLabel, away)));
                 wrap.append(heading, bar, legend);
                 return wrap;
             };
             meters.replaceChildren(
-                meter('US vs rest of world, by issuer country', 'US', us, 'Rest of world', rest),
-                meter('US dollar vs other currencies', 'US dollar', usd, 'Other currencies', other));
+                meter('us', PFI18n.t('Research.Js.WorldBasket.MeterCountryTitle'), PFI18n.t('Research.Js.WorldBasket.MeterUs'), us,
+                    PFI18n.t('Research.Js.WorldBasket.MeterRest'), rest),
+                meter('us-dollar', PFI18n.t('Research.Js.WorldBasket.MeterCurrencyTitle'), PFI18n.t('Research.Js.WorldBasket.MeterUsd'), usd,
+                    PFI18n.t('Research.Js.WorldBasket.MeterOtherCurrencies'), other));
         }
 
         /**
@@ -425,18 +437,28 @@
             const regions = Array.from(exposure.regions.entries()).filter(([r]) => r !== 'Other').sort((a, b) => b[1] - a[1]);
             const items = [
                 {
-                    label: 'Outside the US',
+                    label: PFI18n.t('Research.Js.WorldBasket.Outside'),
                     value: formatShare(outside),
-                    note: foreign.length ? `largest: ${countryName(foreign[0].code)}, ${formatShare(foreign[0].percent)}` : 'no holdings outside the US'
+                    note: foreign.length
+                        ? PFI18n.t('Research.Js.WorldBasket.Largest',
+                            { name: countryName(foreign[0].code), value: formatShare(foreign[0].percent) })
+                        : PFI18n.t('Research.Js.WorldBasket.OutsideNone')
                 },
                 {
-                    label: 'Not priced in US dollars',
+                    label: PFI18n.t('Research.Js.WorldBasket.NotDollars'),
                     value: formatShare(notDollars),
-                    note: others.length ? `largest: ${others[0][0]}, ${formatShare(others[0][1])}, of ${others.length} ${others.length === 1 ? 'currency' : 'currencies'}` : 'every holding is priced in US dollars'
+                    note: others.length
+                        ? PFI18n.plural('Research.Js.WorldBasket.LargestCurrency', others.length,
+                            { name: others[0][0], value: formatShare(others[0][1]) })
+                        : PFI18n.t('Research.Js.WorldBasket.NotDollarsNone')
                 }
             ];
             if (regions.length) {
-                items.push({ label: 'Largest region', value: formatShare(regions[0][1]), note: regions[0][0] });
+                items.push({
+                    label: PFI18n.t('Research.Js.WorldBasket.LargestRegion'),
+                    value: formatShare(regions[0][1]),
+                    note: regions[0][0]
+                });
             }
             calloutList.replaceChildren(...items.map((c) => {
                 const li = element('li', 'research-overlap__callout');
@@ -459,8 +481,8 @@
                 swatch.setAttribute('aria-hidden', 'true');
                 const from = i / STEPS * scaleMax;
                 const label = i === STEPS - 1
-                    ? `${formatShare(from)} and over (the US always)`
-                    : `${formatShare(from)} to ${formatShare((i + 1) / STEPS * scaleMax)}`;
+                    ? PFI18n.t('Research.Js.WorldBasket.LegendTop', { value: formatShare(from) })
+                    : PFI18n.t('Research.Js.Common.FromTo', { from: formatShare(from), to: formatShare((i + 1) / STEPS * scaleMax) });
                 li.append(swatch, element('span', null, label));
                 return li;
             });
@@ -484,7 +506,7 @@
             const foreign = Array.from(exposure.countries.values()).filter((c) => c.code !== US);
             scaleMax = Math.max(0.1, ...foreign.map((c) => c.percent));
             note.textContent = exposure.missing.length
-                ? `${exposure.missing.join(', ')} ${exposure.missing.length === 1 ? 'has' : 'have'} no holdings report yet, so the others' shares are scaled up to cover ${exposure.missing.length === 1 ? 'it' : 'them'}.`
+                ? PFI18n.plural('Research.Js.Common.MissingReport', exposure.missing.length, { funds: exposure.missing.join(', ') })
                 : '';
             drawCallouts();
             drawMeters();
@@ -519,7 +541,9 @@
             }
             setMode(button.dataset.worldView);
             if (page.announce) {
-                page.announce(mode === 'basket' ? 'Showing your basket by issuer country.' : 'Showing the world market.');
+                page.announce(PFI18n.t(mode === 'basket'
+                    ? 'Research.Js.WorldBasket.ShowingBasket'
+                    : 'Research.Js.WorldBasket.ShowingMarket'));
             }
         }));
         reset.addEventListener('click', () => {

@@ -1,4 +1,4 @@
-/* global d3 */
+/* global d3, PFI18n */
 /**
  * Research page, Performance tab: how 100 put into the Fund Basket and into each of its funds grew, month by month.
  *
@@ -36,7 +36,6 @@
     const COMPARE_ID = 'research-performance-compare';
     const TOOLTIP_ID = 'research-performance-tooltip';
     const READOUT_ID = 'research-performance-readout';
-    const BASKET_LABEL = 'Your basket';
     const DEFAULT_COMPARE = 'VT';
     const MIN_MONTHS = 3;
     const MARGIN = { right: 64, left: 48 };
@@ -49,8 +48,6 @@
     // Up and down in the difference panel: the dataviz reference blue and orange, never red and green.
     const AHEAD = '#2a78d6';
     const BEHIND = '#eb6834';
-    const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
-        'October', 'November', 'December'];
 
     /**
      * A month's key.
@@ -88,11 +85,20 @@
     /**
      * A month for display.
      * @param {string} key - The month, e.g. "2026-06".
-     * @returns {string} E.g. "June 2026".
+     * @returns {string} E.g. "June 2026", in the page culture.
      */
     function formatMonth (key) {
-        const [year, month] = key.split('-').map(Number);
-        return `${MONTH_NAMES[month - 1]} ${year}`;
+        return page.formatMonth(key);
+    }
+
+    /**
+     * The period between two months in words.
+     * @param {string} from - The first month's key.
+     * @param {string} to - The last month's key.
+     * @returns {string} E.g. "June 2021 to May 2026".
+     */
+    function formatSpan (from, to) {
+        return PFI18n.t('Research.Js.Common.FromTo', { from: formatMonth(from), to: formatMonth(to) });
     }
 
     /**
@@ -108,27 +114,38 @@
     /**
      * A signed percentage with one decimal.
      * @param {number} value - The value in percent.
-     * @returns {string} E.g. "+12.3%" or "−4.0%".
+     * @returns {string} E.g. "+12.3%" or "−4.0%", in the page culture.
      */
     function formatPercent (value) {
         const rounded = Math.round(value * 10) / 10;
         if (rounded === 0) {
-            return '0.0%';
+            return page.formatPercent(0, 1);
         }
-        return rounded < 0 ? `−${Math.abs(rounded).toFixed(1)}%` : `+${rounded.toFixed(1)}%`;
+        return rounded < 0 ? `−${page.formatPercent(Math.abs(rounded), 1)}` : `+${page.formatPercent(rounded, 1)}`;
     }
 
     /**
      * Signed points with one decimal.
      * @param {number} value - The difference in points.
-     * @returns {string} E.g. "+3.2 points".
+     * @returns {string} E.g. "+3.2 points", in the page culture.
      */
     function formatPoints (value) {
         const rounded = Math.round(value * 10) / 10;
-        if (rounded === 0) {
-            return '0.0 points';
-        }
-        return rounded < 0 ? `−${Math.abs(rounded).toFixed(1)} points` : `+${rounded.toFixed(1)} points`;
+        const number = rounded === 0
+            ? page.formatFixed(0, 1)
+            : `${rounded < 0 ? '−' : '+'}${page.formatFixed(Math.abs(rounded), 1)}`;
+        return PFI18n.t('Research.Js.Performance.Points', { value: number });
+    }
+
+    /**
+     * A time axis tick in the page culture: the year at January, else the short month name (as D3's default does).
+     * @param {Date} date - The tick's date (UTC).
+     * @returns {string} The label.
+     */
+    function formatTick (date) {
+        return date.getUTCMonth() === 0
+            ? PFI18n.formatDate(date, { year: 'numeric', timeZone: 'UTC' })
+            : PFI18n.formatDate(date, { month: 'short', timeZone: 'UTC' });
     }
 
     /**
@@ -310,7 +327,7 @@
             };
         };
         const lines = full.fundReturns.map(({ fund, returns }) => line(fund.ticker, fund.slot, slice(returns), false));
-        const basket = line(BASKET_LABEL, 0, slice(full.basketReturns), true);
+        const basket = line(PFI18n.t('Research.Js.Common.YourBasket'), 0, slice(full.basketReturns), true);
         lines.push(basket);
         let comparison = null;
         if (compare && full.series.has(compare)) {
@@ -408,17 +425,25 @@
          */
         function rowsAt (index) {
             const month = index === 0 ? current.base : current.months[index - 1];
-            const rows = [`${formatMonth(month)}${current.real ? ', adjusted for inflation' : ''}`];
+            const rows = [current.real
+                ? PFI18n.t('Research.Js.Performance.MonthReal', { month: formatMonth(month) })
+                : formatMonth(month)];
+            const valueRow = (label, value) =>
+                PFI18n.t('Research.Js.Common.LabelValue', { label, value: page.formatFixed(value, 1) });
             [...current.lines].sort((a, b) => Number(b.isBasket) - Number(a.isBasket)).forEach((l) => {
-                rows.push(`${l.label}: ${l.values[index].toFixed(1)}`);
+                rows.push(valueRow(l.label, l.values[index]));
             });
             if (current.comparison) {
-                rows.push(`${current.comparison.label}: ${current.comparison.values[index].toFixed(1)}`);
-                rows.push(`Basket minus ${current.comparison.label}: ${formatPoints(current.comparison.difference[index])}`);
+                rows.push(valueRow(current.comparison.label, current.comparison.values[index]));
+                rows.push(PFI18n.t('Research.Js.Performance.BasketMinus',
+                    { ticker: current.comparison.label, value: formatPoints(current.comparison.difference[index]) }));
             }
             const rate = current.rates[index];
-            rows.push(rate === null ? 'Federal funds rate: not available' : `Federal funds rate: ${rate.toFixed(2)}%`);
-            current.bands.filter((b) => month >= b.start && month <= b.end).forEach((b) => rows.push(`Shaded: ${b.label}`));
+            rows.push(rate === null
+                ? PFI18n.t('Research.Js.Performance.RateNone')
+                : PFI18n.t('Research.Js.Performance.Rate', { value: page.formatPercent(rate, 2) }));
+            current.bands.filter((b) => month >= b.start && month <= b.end)
+                .forEach((b) => rows.push(PFI18n.t('Research.Js.Performance.Shaded', { label: b.label })));
             return rows;
         }
 
@@ -510,7 +535,7 @@
             });
 
             // Main panel: growth of 100.
-            grid(svg, y, 5, (t) => String(t), width);
+            grid(svg, y, 5, (t) => PFI18n.formatNumber(t), width);
             svg.append('line').attr('class', 'research-performance__baseline')
                 .attr('x1', MARGIN.left).attr('x2', width - MARGIN.right).attr('y1', y(100)).attr('y2', y(100));
             const path = d3.line().x((_, i) => at(i)).y((v) => y(v));
@@ -525,7 +550,10 @@
             svg.append('g').selectAll('text').data(labels).join('text')
                 .attr('class', (d) => (d.line.isBasket ? 'research-performance__end research-performance__end--basket' : 'research-performance__end'))
                 .attr('x', width - MARGIN.right + 6).attr('y', (d) => d.labelY).attr('dy', '0.32em')
-                .text((d) => `${d.line.isBasket ? 'Basket' : d.line.label} ${Math.round(d.line.values[d.line.values.length - 1])}`);
+                .text((d) => PFI18n.t('Research.Js.Performance.EndLabel', {
+                    label: d.line.isBasket ? PFI18n.t('Research.Js.Performance.Basket') : d.line.label,
+                    value: PFI18n.formatNumber(Math.round(d.line.values[d.line.values.length - 1]))
+                }));
 
             // The basket's worst fall from a high: its high and its bottom, joined, with the fall written by the bottom.
             const basket = current.lines.find((l) => l.isBasket);
@@ -542,19 +570,21 @@
                 marker.append('text').attr('class', 'research-performance__worst-label')
                     .attr('x', Math.min(bx, width - MARGIN.right - 4)).attr('y', below)
                     .attr('text-anchor', bx > width - MARGIN.right - 90 ? 'end' : 'middle')
-                    .text(`Worst fall ${formatPercent(basket.worstFall)}`);
+                    .text(PFI18n.t('Research.Js.Performance.WorstFallLabel', { value: formatPercent(basket.worstFall) }));
             }
 
             // Rate panel: the effective federal funds rate.
-            title('Effective federal funds rate, %', RATE.top);
-            grid(svg, yRate, 3, (t) => String(t), width);
+            title(PFI18n.t('Research.Js.Performance.RateTitle'), RATE.top);
+            grid(svg, yRate, 3, (t) => PFI18n.formatNumber(t), width);
             const ratePath = d3.line().defined((r) => r !== null).x((_, i) => at(i)).y((r) => yRate(r));
             svg.append('path').attr('class', 'research-performance__rate').attr('d', ratePath(current.rates));
 
             // Difference panel: the basket minus the chosen fund, blue above zero and orange below.
-            title(current.comparison ? `Basket minus ${current.comparison.label}, points` : 'Basket minus another fund', DIFF.top);
+            title(current.comparison
+                ? PFI18n.t('Research.Js.Performance.DiffTitle', { ticker: current.comparison.label })
+                : PFI18n.t('Research.Js.Performance.DiffTitleNone'), DIFF.top);
             if (current.comparison) {
-                grid(svg, yDiff, 3, (t) => (t > 0 ? `+${t}` : String(t)), width);
+                grid(svg, yDiff, 3, (t) => (t > 0 ? `+${PFI18n.formatNumber(t)}` : PFI18n.formatNumber(t)), width);
                 const area = d3.area().x((_, i) => at(i)).y0(yDiff(0)).y1((d) => yDiff(d));
                 const defs = svg.append('defs');
                 defs.append('clipPath').attr('id', 'research-performance-clip-above').append('rect')
@@ -572,12 +602,14 @@
             } else {
                 svg.append('text').attr('class', 'research-performance__empty').attr('x', MARGIN.left)
                     .attr('y', DIFF.top + DIFF.height / 2)
-                    .text(compare ? `${compare} has no return for every month of this period.` : 'Every tracked fund is in your basket.');
+                    .text(compare
+                        ? PFI18n.t('Research.Js.Performance.NoReturns', { ticker: compare })
+                        : PFI18n.t('Research.Js.Performance.AllInBasket'));
             }
 
             svg.append('g').attr('class', 'research-performance__axis')
                 .attr('transform', `translate(0,${DIFF.top + DIFF.height})`)
-                .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(width / 110))).tickSizeOuter(0));
+                .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(width / 110))).tickFormat(formatTick).tickSizeOuter(0));
 
             // The crosshair: one line through every panel, and a dot on each series.
             const cross = svg.append('g').attr('class', 'research-performance__crosshair').attr('hidden', true);
@@ -604,15 +636,25 @@
                 })
                 .on('pointerleave', () => showCrosshair(null, false));
 
-            const words = current.lines.map((l) => `${l.label} ${Math.round(l.values[l.values.length - 1])}`).join(', ');
-            const shaded = current.bands.map((b) => `${b.label} from ${formatMonth(b.start)} to ${formatMonth(b.end)}`).join('; ');
-            const worst = basket.bottom
-                ? ` The basket's worst fall from a high was ${formatPercent(basket.worstFall)}, bottoming in ${formatMonth(basket.bottom)}.`
-                : '';
-            chartHost.setAttribute('aria-label', `Growth of 100${current.real ? ', adjusted for inflation,' : ''} from `
-                + `${formatMonth(current.start)} to ${formatMonth(current.end)}: ${words}. Below it, the federal funds rate`
-                + `${current.comparison ? ` and your basket minus ${current.comparison.label}` : ''}.`
-                + `${shaded ? ` Shaded: ${shaded}.` : ''}${worst}`);
+            const words = current.lines.map((l) => PFI18n.t('Research.Js.Performance.EndLabel',
+                { label: l.label, value: PFI18n.formatNumber(Math.round(l.values[l.values.length - 1])) })).join(', ');
+            const shaded = current.bands.map((b) => PFI18n.t('Research.Js.Performance.ShadedSpan',
+                { label: b.label, from: formatMonth(b.start), to: formatMonth(b.end) })).join('; ');
+            const sentences = [
+                PFI18n.t(current.real ? 'Research.Js.Performance.ChartLabelReal' : 'Research.Js.Performance.ChartLabel',
+                    { from: formatMonth(current.start), to: formatMonth(current.end), lines: words }),
+                current.comparison
+                    ? PFI18n.t('Research.Js.Performance.ChartBelowCompare', { ticker: current.comparison.label })
+                    : PFI18n.t('Research.Js.Performance.ChartBelow')
+            ];
+            if (shaded) {
+                sentences.push(PFI18n.t('Research.Js.Performance.ChartShaded', { shaded }));
+            }
+            if (basket.bottom) {
+                sentences.push(PFI18n.t('Research.Js.Performance.ChartWorst',
+                    { value: formatPercent(basket.worstFall), month: formatMonth(basket.bottom) }));
+            }
+            chartHost.setAttribute('aria-label', sentences.join(' '));
             if (crosshair !== null && crosshair <= current.months.length) {
                 showCrosshair(crosshair, false);
             }
@@ -651,7 +693,7 @@
                 .attr('d', d3.line().x((_, i) => brushX(monthEnd(points[i]))).y((v) => y(v))(values));
             svg.append('g').attr('class', 'research-performance__axis')
                 .attr('transform', `translate(0,${BRUSH_HEIGHT - 16})`)
-                .call(d3.axisBottom(brushX).ticks(Math.max(2, Math.floor(width / 110))).tickSizeOuter(0));
+                .call(d3.axisBottom(brushX).ticks(Math.max(2, Math.floor(width / 110))).tickFormat(formatTick).tickSizeOuter(0));
             brush = d3.brushX().extent([[MARGIN.left, 2], [width - MARGIN.right, BRUSH_HEIGHT - 16]])
                 .on('brush end', (event) => {
                     if (settingBrush) {
@@ -704,14 +746,14 @@
                 const item = element('li', 'research-performance__legend-item');
                 const swatch = element('span', `research-performance__band-swatch research-performance__band-swatch--${kind}`);
                 swatch.setAttribute('aria-hidden', 'true');
-                item.append(swatch, `${label} (shaded)`);
+                item.append(swatch, PFI18n.t('Research.Js.Performance.LegendShaded', { label }));
                 legend.append(item);
             });
             if (current.lines.find((l) => l.isBasket).bottom) {
                 const item = element('li', 'research-performance__legend-item');
                 const swatch = element('span', 'research-performance__worst-swatch');
                 swatch.setAttribute('aria-hidden', 'true');
-                item.append(swatch, "Basket's worst fall from a high");
+                item.append(swatch, PFI18n.t('Research.Js.Performance.LegendWorst'));
                 legend.append(item);
             }
         }
@@ -722,21 +764,27 @@
          */
         function drawCallouts () {
             const basket = current.lines.find((l) => l.isBasket);
-            const period = `${formatMonth(current.start)} to ${formatMonth(current.end)}`;
+            const period = formatSpan(current.start, current.end);
             const items = [
                 {
-                    label: current.real ? 'Basket growth after inflation' : 'Basket total return',
+                    label: PFI18n.t(current.real ? 'Research.Js.Performance.GrowthReal' : 'Research.Js.Performance.TotalReturnLabel'),
                     value: formatPercent(basket.total),
-                    note: `${formatPercent(basket.annualized)} a year, ${period}`
+                    note: PFI18n.t('Research.Js.Performance.PerYear', { value: formatPercent(basket.annualized), period })
                 },
                 {
-                    label: 'Worst fall from a high',
+                    label: PFI18n.t('Research.Js.Performance.WorstFall'),
                     value: formatPercent(basket.worstFall),
-                    note: basket.bottom ? `at month ends, bottoming in ${formatMonth(basket.bottom)}` : 'no fall at month ends in this period'
+                    note: basket.bottom
+                        ? PFI18n.t('Research.Js.Performance.WorstFallNote', { month: formatMonth(basket.bottom) })
+                        : PFI18n.t('Research.Js.Performance.WorstFallNone')
                 }
             ];
             if (current.inflation !== null) {
-                items.push({ label: 'Inflation over the period', value: formatPercent(current.inflation), note: 'rise in consumer prices (CPI-U)' });
+                items.push({
+                    label: PFI18n.t('Research.Js.Performance.Inflation'),
+                    value: formatPercent(current.inflation),
+                    note: PFI18n.t('Research.Js.Performance.InflationNote')
+                });
             }
             calloutList.replaceChildren(...items.map((c) => {
                 const li = element('li', 'research-overlap__callout');
@@ -753,10 +801,17 @@
          */
         function drawTable () {
             const table = element('table', 'research-overlap__duplicates-table research-performance__table');
-            table.append(element('caption', null, `Returns from ${formatMonth(current.start)} to ${formatMonth(current.end)}`));
+            table.append(element('caption', null, PFI18n.t('Research.Js.Performance.TableCaption',
+                { from: formatMonth(current.start), to: formatMonth(current.end) })));
             const head = element('thead');
             const headRow = element('tr');
-            ['', 'Annualized return', 'Total return', 'Worst fall from a high', 'Return after inflation'].forEach((text, i) => {
+            [
+                '',
+                PFI18n.t('Research.Js.Common.AnnualizedReturn'),
+                PFI18n.t('Research.Js.Performance.TotalReturn'),
+                PFI18n.t('Research.Js.Performance.WorstFall'),
+                PFI18n.t('Research.Js.Performance.AfterInflation')
+            ].forEach((text, i) => {
                 const th = element('th', i === 0 ? null : 'research-overlap__number', text);
                 th.scope = 'col';
                 headRow.append(th);
@@ -825,7 +880,7 @@
                 render();
             }
             if (final && page.announce) {
-                page.announce(`Showing ${formatMonth(current.start)} to ${formatMonth(current.end)}.`);
+                page.announce(PFI18n.t('Research.Js.Performance.ShowingPeriod', { period: formatSpan(current.start, current.end) }));
             }
         }
 
@@ -860,7 +915,7 @@
             viewButtons.forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.performanceView === 'real') === real)));
             render();
             if (page.announce) {
-                page.announce(real ? 'Showing growth adjusted for inflation.' : 'Showing nominal growth.');
+                page.announce(PFI18n.t(real ? 'Research.Js.Performance.ShowingReal' : 'Research.Js.Performance.ShowingNominal'));
             }
         }));
         rangeButtons.forEach((button) => button.addEventListener('click', () => {

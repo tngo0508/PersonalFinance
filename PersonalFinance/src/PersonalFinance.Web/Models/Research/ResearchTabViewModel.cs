@@ -15,13 +15,14 @@ public sealed class ResearchTabViewModel<TSnapshot, TPeriod>
 {
     /// <summary>A tab over <paramref name="snapshot"/>, null when it could not be loaded.</summary>
     /// <param name="snapshot">The dataset, or null.</param>
+    /// <param name="pageTitle">The Unavailable State's page title, the page's title in the request's Language.</param>
     /// <param name="unavailableHeading">The Unavailable State's heading, e.g. "We couldn't load the World data".</param>
-    public ResearchTabViewModel(TSnapshot? snapshot, string unavailableHeading)
+    public ResearchTabViewModel(TSnapshot? snapshot, string pageTitle, string unavailableHeading)
     {
         Snapshot = snapshot;
         UnavailableState = new UnavailableStateViewModel
         {
-            PageTitle = "Research",
+            PageTitle = pageTitle,
             Heading = unavailableHeading,
             RetryController = "Research",
         };

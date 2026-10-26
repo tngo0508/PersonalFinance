@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Research page, the Fund Basket bar: one to five Tracked Funds the user picks on screen, each with a weight, viewed
  * together by the tabs that use a basket. It is never saved: it lives only in the page's address as
@@ -31,8 +32,6 @@
     const MAX_FUNDS = 5;
     const SLOT_COUNT = 8;
     let trackedTickers = [];
-    const NOTICE_INVALID = 'Some funds in this link aren\'t tracked and were left out.';
-    const NOTICE_TOO_MANY = 'A Fund Basket holds up to five funds, so only the first five were kept.';
     const ENTRY = /^([A-Za-z0-9.-]{1,10})(?::(\d{1,3}))?$/;
 
     /**
@@ -113,10 +112,12 @@
     /**
      * A share for display: a whole number when it is one, else one decimal.
      * @param {number} value - The share in percent.
-     * @returns {string} E.g. "60%" or "33.3%".
+     * @returns {string} E.g. "60%" or "33.3%", in the page culture.
      */
     function percent (value) {
-        return Number.isInteger(Math.round(value * 10) / 10) ? `${Math.round(value)}%` : `${value.toFixed(1)}%`;
+        return Number.isInteger(Math.round(value * 10) / 10)
+            ? page.formatPercent(Math.round(value), 0)
+            : page.formatPercent(value, 1);
     }
 
     /**
@@ -209,13 +210,13 @@
                 input.step = '1';
                 input.inputMode = 'numeric';
                 input.value = String(weighted ? f.weight : Math.round(shares[i]));
-                input.setAttribute('aria-label', `Weight of ${f.ticker}, percent`);
+                input.setAttribute('aria-label', PFI18n.t('Research.Js.Basket.WeightLabel', { ticker: f.ticker }));
                 input.addEventListener('change', () => setWeight(f.ticker, input.value));
                 const unit = element('span', 'research-basket__unit', '%');
                 unit.setAttribute('aria-hidden', 'true');
                 const remove = element('button', 'research-basket__remove', '×');
                 remove.type = 'button';
-                remove.setAttribute('aria-label', `Remove ${f.ticker} from the basket`);
+                remove.setAttribute('aria-label', PFI18n.t('Research.Js.Basket.RemoveLabel', { ticker: f.ticker }));
                 remove.addEventListener('click', () => removeFund(f.ticker, true));
                 chip.append(swatch, label, input, unit);
                 if (weighted && total !== 100) {
@@ -226,14 +227,14 @@
             }));
             note.hidden = !(weighted && total !== 100);
             note.textContent = weighted && total !== 100
-                ? `Weights add up to ${total}%, so each is scaled to make 100%.`
+                ? PFI18n.t('Research.Js.Basket.ScaledNote', { total: page.formatPercent(total, 0) })
                 : '';
             equal.hidden = !weighted;
             const full = funds.length >= MAX_FUNDS;
             search.disabled = full;
             search.placeholder = full
-                ? 'The basket is full: remove a fund to add another'
-                : (funds.length === 0 ? 'Add a fund: type a ticker or name' : 'Add another fund');
+                ? PFI18n.t('Research.Js.Basket.PlaceholderFull')
+                : PFI18n.t(funds.length === 0 ? 'Research.Js.Basket.PlaceholderEmpty' : 'Research.Js.Basket.PlaceholderMore');
             bar.classList.toggle('research-basket--empty', funds.length === 0);
         }
 
@@ -263,7 +264,8 @@
             render();
             publish();
             if (page) {
-                page.announce(`${ticker} added to the Fund Basket: ${funds.length} of ${MAX_FUNDS} funds.`);
+                page.announce(PFI18n.t('Research.Js.Basket.Added',
+                    { ticker, count: PFI18n.formatNumber(funds.length), max: PFI18n.formatNumber(MAX_FUNDS) }));
             }
         }
 
@@ -278,7 +280,7 @@
             render();
             publish();
             if (page) {
-                page.announce(`${ticker} removed from the Fund Basket.`);
+                page.announce(PFI18n.t('Research.Js.Basket.Removed', { ticker }));
             }
             if (refocus) {
                 search.focus();
@@ -331,7 +333,7 @@
             activeIndex = visibleOptions.length > 0 ? 0 : -1;
             const groups = [];
             visibleOptions.forEach((fund, index) => {
-                const role = fund.role || 'Other funds';
+                const role = fund.role || PFI18n.t('Research.Js.Basket.OtherFunds');
                 let group = groups.find((g) => g.role === role);
                 if (!group) {
                     group = { role, items: [] };
@@ -362,8 +364,8 @@
             }));
             if (visibleOptions.length === 0) {
                 options.append(element('div', 'research-basket__empty', search.value.trim()
-                    ? 'No tracked fund matches.'
-                    : 'Every tracked fund is already in the basket.'));
+                    ? PFI18n.t('Research.Js.Basket.NoMatch')
+                    : PFI18n.t('Research.Js.Basket.AllAdded')));
             }
             options.hidden = false;
             search.setAttribute('aria-expanded', 'true');
@@ -450,7 +452,10 @@
         // Start from the address: keep what is valid and say what was left out.
         const fromLink = parse(new URL(window.location.href).searchParams.get(PARAM), tracked.map((f) => f.ticker));
         funds = fromLink.funds;
-        showNotice([fromLink.invalid ? NOTICE_INVALID : '', fromLink.tooMany ? NOTICE_TOO_MANY : ''].filter(Boolean).join(' '));
+        showNotice([
+            fromLink.invalid ? PFI18n.t('Research.Js.Basket.NoticeInvalid') : '',
+            fromLink.tooMany ? PFI18n.t('Research.Js.Basket.NoticeTooMany') : ''
+        ].filter(Boolean).join(' '));
         render();
         if (fromLink.invalid || fromLink.tooMany) {
             publish();

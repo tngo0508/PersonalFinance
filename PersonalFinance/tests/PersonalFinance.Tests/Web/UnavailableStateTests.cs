@@ -202,7 +202,7 @@ public class UnavailableStateTests
     public async Task ResearchIndex_WhenApiFails_RendersThePage_WithTheUnavailableStateOnTheSectorsTabOnly()
     {
         (IResearchApi? api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
-        ResearchController controller = WithContext(new ResearchController(api, NullLogger<ResearchController>.Instance));
+        ResearchController controller = WithContext(new ResearchController(api, NullLogger<ResearchController>.Instance, TestLocalization.Localizer));
 
         IActionResult result = await controller.Index();
 

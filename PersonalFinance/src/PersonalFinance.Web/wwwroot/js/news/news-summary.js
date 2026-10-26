@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * News Article Summary Module
  * Handles AI-powered article summarization with session caching,
@@ -24,7 +25,7 @@
      */
     function init () {
         const buttons = document.querySelectorAll('.finance-hub-summarize-btn');
-        buttons.forEach(function (btn) {
+        buttons.forEach((btn) => {
             btn.addEventListener('click', handleSummarize);
         });
     }
@@ -72,7 +73,7 @@
         // Set loading state
         btn.disabled = true;
         const originalText = btn.textContent;
-        btn.textContent = 'Loading...';
+        btn.textContent = PFI18n.t('News.Js.Summary.Loading');
         btn.setAttribute('aria-busy', 'true');
 
         if (summaryContent) {
@@ -100,7 +101,7 @@
 
             if (response.ok) {
                 const data = await response.json();
-                const summary = [data.summary || 'No summary available.', data.budgetWarning, data.disclaimer].filter(Boolean).join('\n\n');
+                const summary = [data.summary || PFI18n.t('News.Js.Summary.None'), data.budgetWarning, data.disclaimer].filter(Boolean).join('\n\n');
 
                 // Cache the result
                 summaryCache.set(articleUrl, summary);
@@ -114,20 +115,20 @@
             } else if (response.status === 429) {
                 const error = await response.json();
                 if (summaryContent) {
-                    summaryContent.textContent = error.error || 'AI usage limit reached. Please try again later.';
+                    summaryContent.textContent = error.error || PFI18n.t('News.Js.Summary.LimitReached');
                 }
-                showError(btn, 'Rate limited. Try again later.');
+                showError(btn, PFI18n.t('News.Js.Summary.RateLimited'));
             } else {
                 if (summaryContent) {
-                    summaryContent.textContent = 'Unable to generate summary. Please try again.';
+                    summaryContent.textContent = PFI18n.t('News.Js.Summary.Failed');
                 }
-                showError(btn, 'Failed to summarize. Please retry.');
+                showError(btn, PFI18n.t('News.Js.Summary.FailedTitle'));
             }
         } catch (error) {
             if (summaryContent) {
-                summaryContent.textContent = 'Network error. Please try again.';
+                summaryContent.textContent = PFI18n.t('News.Js.Summary.NetworkError');
             }
-            showError(btn, 'Network error. Please retry.');
+            showError(btn, PFI18n.t('News.Js.Summary.NetworkErrorTitle'));
         } finally {
             inFlight.delete(articleUrl);
             btn.disabled = false;
@@ -144,15 +145,15 @@
      */
     function showError (btn, message) {
         btn.disabled = false;
-        btn.textContent = 'Retry';
+        btn.textContent = PFI18n.t('News.Js.Summary.Retry');
         btn.classList.add('finance-hub-summarize-error');
         btn.title = message;
 
         // Remove error state after 3 seconds
-        setTimeout(function () {
+        setTimeout(() => {
             btn.classList.remove('finance-hub-summarize-error');
-            btn.textContent = 'Summarize';
-            btn.title = 'Summarize with AI';
+            btn.textContent = PFI18n.t('News.Js.Summary.Button');
+            btn.title = PFI18n.t('News.Js.Summary.Title');
         }, 3000);
     }
 

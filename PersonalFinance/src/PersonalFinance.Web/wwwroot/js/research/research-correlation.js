@@ -1,3 +1,4 @@
+/* global PFI18n */
 /**
  * Research page, Funds tab: how closely the funds' monthly returns moved together.
  *
@@ -29,26 +30,23 @@
     const REDS = ['#f4aca6', '#ec8079', '#df4e4c', '#c1252c', '#990618'];
     const NEUTRAL = '#f0efec';
     const FIRST_LIGHT_INK_STEP = 4;
-    const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
-        'October', 'November', 'December'];
 
     /**
      * A correlation for display, with two decimals and a true minus sign.
      * @param {number} value - The correlation, -1 to 1.
-     * @returns {string} E.g. "0.94" or "−0.12".
+     * @returns {string} E.g. "0.94" or "−0.12", in the page culture.
      */
     function formatCorrelation (value) {
-        return value < 0 ? `−${Math.abs(value).toFixed(2)}` : value.toFixed(2);
+        return value < 0 ? `−${page.formatFixed(Math.abs(value), 2)}` : page.formatFixed(value, 2);
     }
 
     /**
      * A month for display.
      * @param {string} isoDate - The month's first day, e.g. "2026-06-01".
-     * @returns {string} E.g. "June 2026".
+     * @returns {string} E.g. "June 2026", in the page culture.
      */
     function formatMonth (isoDate) {
-        const [year, month] = isoDate.split('-').map(Number);
-        return `${MONTH_NAMES[month - 1]} ${year}`;
+        return page.formatMonth(isoDate);
     }
 
     /**
@@ -124,9 +122,10 @@
             ? window.ResearchBasket.slotOf(ticker)
             : 0);
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, cell) => [
-            line(`${cell.row.ticker} and ${cell.column.ticker}`, 'research-tooltip__name'),
-            line(`${formatCorrelation(cell.value)} correlation`, 'research-tooltip__value'),
-            line(`${cell.years * 12} months to ${formatMonth(cell.end)}`, 'research-tooltip__muted')
+            line(PFI18n.t('Research.Js.Common.Pair', { a: cell.row.ticker, b: cell.column.ticker }), 'research-tooltip__name'),
+            line(PFI18n.t('Research.Js.Correlation.Value', { value: formatCorrelation(cell.value) }), 'research-tooltip__value'),
+            line(PFI18n.t('Research.Js.Correlation.Months',
+                { count: PFI18n.formatNumber(cell.years * 12), month: formatMonth(cell.end) }), 'research-tooltip__muted')
         ]);
         let years = DEFAULT_YEARS;
         let all = false;
@@ -186,8 +185,13 @@
                 td.classList.add('research-overlap__cell--light-ink');
             }
             td.tabIndex = 0;
-            td.setAttribute('aria-label', `${cell.row.ticker} and ${cell.column.ticker}: correlation `
-                + `${formatCorrelation(cell.value)} over ${cell.years * 12} months to ${formatMonth(cell.end)}`);
+            td.setAttribute('aria-label', PFI18n.t('Research.Js.Correlation.CellLabel', {
+                a: cell.row.ticker,
+                b: cell.column.ticker,
+                value: formatCorrelation(cell.value),
+                count: PFI18n.formatNumber(cell.years * 12),
+                month: formatMonth(cell.end)
+            }));
             td.addEventListener('pointermove', (event) => tooltip.show(event, cell));
             td.addEventListener('pointerleave', tooltip.hide);
             td.addEventListener('focus', () => {
@@ -207,7 +211,7 @@
         function drawMatrix (windowData, funds) {
             const table = element('table', 'research-overlap__matrix-table research-correlation__table');
             table.append(element('caption', 'visually-hidden',
-                `Correlation of monthly returns between each pair of funds over ${years} years`));
+                PFI18n.t('Research.Js.Correlation.Caption', { span: page.formatYears(years) })));
             const head = element('thead');
             const headRow = element('tr');
             headRow.append(element('td', 'research-overlap__corner'));
@@ -228,7 +232,7 @@
                 funds.forEach((column) => {
                     if (column.ticker === row.ticker) {
                         const same = element('td', 'research-overlap__cell research-overlap__cell--same');
-                        same.append(element('span', 'visually-hidden', 'Same fund'));
+                        same.append(element('span', 'visually-hidden', PFI18n.t('Research.Js.Common.SameFund')));
                         tr.append(same);
                         return;
                     }
@@ -237,7 +241,8 @@
                         tr.append(correlationCell({ row, column, value: found.value, end: found.end, years }));
                     } else {
                         const none = element('td', 'research-overlap__cell research-overlap__cell--none', '–');
-                        none.setAttribute('aria-label', `${row.ticker} and ${column.ticker}: not enough months for ${years} years`);
+                        none.setAttribute('aria-label', PFI18n.t('Research.Js.Correlation.NoneLabel',
+                            { a: row.ticker, b: column.ticker, span: page.formatYears(years) }));
                         tr.append(none);
                     }
                 });
@@ -260,7 +265,8 @@
                 swatch.style.setProperty('--research-overlap-fill', colour);
                 ramp.append(swatch);
             });
-            legend.append(element('span', null, '−1 opposite'), ramp, element('span', null, '1 in step'));
+            legend.append(element('span', null, PFI18n.t('Research.Js.Correlation.LegendOpposite', { value: formatCorrelation(-1) })),
+                ramp, element('span', null, PFI18n.t('Research.Js.Correlation.LegendInStep', { value: formatCorrelation(1) })));
             return legend;
         }
 
@@ -276,15 +282,17 @@
             const most = pairs.reduce((best, p) => (p.value > best.value ? p : best));
             const least = pairs.reduce((best, p) => (p.value < best.value ? p : best));
             const items = [{
-                label: 'Most similar pair',
+                label: PFI18n.t('Research.Js.Correlation.Most'),
                 value: formatCorrelation(most.value),
-                note: `${most.first.ticker} and ${most.second.ticker} moved most closely together in this set over ${years} years`
+                note: PFI18n.t('Research.Js.Correlation.MostNote',
+                    { a: most.first.ticker, b: most.second.ticker, span: page.formatYears(years) })
             }];
             if (pairs.length > 1) {
                 items.push({
-                    label: 'Least correlated pair',
+                    label: PFI18n.t('Research.Js.Correlation.Least'),
                     value: formatCorrelation(least.value),
-                    note: `${least.first.ticker} and ${least.second.ticker} moved least together in this set over ${years} years`
+                    note: PFI18n.t('Research.Js.Correlation.LeastNote',
+                        { a: least.first.ticker, b: least.second.ticker, span: page.formatYears(years) })
                 });
             }
             return items;
@@ -321,7 +329,7 @@
             years = Number(button.dataset.correlationYears);
             draw();
             if (page.announce) {
-                page.announce(`Correlation over ${years} ${years === 1 ? 'year' : 'years'}.`);
+                page.announce(PFI18n.t('Research.Js.Correlation.Announce', { span: page.formatYears(years) }));
             }
         }));
         allButton.addEventListener('click', () => {

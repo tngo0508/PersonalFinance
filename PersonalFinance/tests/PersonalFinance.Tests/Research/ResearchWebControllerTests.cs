@@ -46,7 +46,7 @@ public class ResearchWebControllerTests
     };
 
     private static ResearchController CreateController(IResearchApi api) =>
-        new(api, NullLogger<ResearchController>.Instance)
+        new(api, NullLogger<ResearchController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -73,7 +73,7 @@ public class ResearchWebControllerTests
             """{"reason":"The fund overlap data has not loaded yet."}"""));
         proxy.Throws(nameof(IResearchApi.GetWorldAsync), await ApiFailure(HttpStatusCode.InternalServerError, "{}"));
         var logger = new RecordingLogger<ResearchController>();
-        var controller = new ResearchController(api, logger)
+        var controller = new ResearchController(api, logger, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

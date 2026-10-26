@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Watchlist;
 using PersonalFinance.Web.Infrastructure;
@@ -19,6 +20,7 @@ public sealed class NewsController : Controller
     private readonly INewsApi _newsApi;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<NewsController> _logger;
+    private readonly IStringLocalizer _localizer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NewsController"/> class.
@@ -26,11 +28,14 @@ public sealed class NewsController : Controller
     /// <param name="newsApi">ApiService client for the finance news feed.</param>
     /// <param name="timeProvider">Clock for the page's last-refreshed time.</param>
     /// <param name="logger">Logger for this controller.</param>
-    public NewsController(INewsApi newsApi, TimeProvider timeProvider, ILogger<NewsController> logger)
+    /// <param name="localizer">The page's text, in the request's Language.</param>
+    public NewsController(INewsApi newsApi, TimeProvider timeProvider, ILogger<NewsController> logger,
+        IStringLocalizer localizer)
     {
         _newsApi = newsApi;
         _timeProvider = timeProvider;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -61,7 +66,7 @@ public sealed class NewsController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching finance news");
-            model.ErrorMessage = "Unable to load finance news at this time. Please try again later.";
+            model.ErrorMessage = _localizer["News.Message.LoadFailed"];
             model.IsLoading = false;
         }
 

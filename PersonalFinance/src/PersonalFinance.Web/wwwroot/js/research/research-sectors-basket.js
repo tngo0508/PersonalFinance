@@ -41,40 +41,61 @@
     const TOP_ISSUERS = 10;
     const TOP_COUNTRIES = 3;
     const TABLE_ROWS = 25;
-    const ROOT_NAME = 'Your basket';
-    const UNCLASSIFIED = 'Not classified by the SEC';
-    const BONDS = 'Bonds';
-    const CASH = 'Cash and other';
-    const TITLES = { market: 'Largest SEC filers by Public float', basket: 'Your basket by SEC industry' };
+    const TITLE_KEYS = { market: 'Research.Js.Sectors.Title', basket: 'Research.Js.SectorsBasket.Title' };
     const regionNames = typeof Intl !== 'undefined' && Intl.DisplayNames
-        ? new Intl.DisplayNames(['en'], { type: 'region' })
+        ? new Intl.DisplayNames([PFI18n.lang], { type: 'region' })
         : null;
+
+    /**
+     * The basket tree's own group names, in the page language: the root, the stocks SEC does not classify, bonds, and
+     * cash.
+     * @returns {{root: string, unclassified: string, bonds: string, cash: string}} The names.
+     */
+    function names () {
+        return {
+            root: PFI18n.t('Research.Js.Common.YourBasket'),
+            unclassified: PFI18n.t('Research.Js.SectorsBasket.Unclassified'),
+            bonds: PFI18n.t('Research.Js.SectorsBasket.Bonds'),
+            cash: PFI18n.t('Research.Js.SectorsBasket.Cash')
+        };
+    }
 
     /**
      * A share of the basket for display: "<0.1%" under 0.05%, else one decimal.
      * @param {number} value - The share in percent.
-     * @returns {string} E.g. "12.3%" or "<0.1%".
+     * @returns {string} E.g. "12.3%" or "<0.1%", in the page culture.
      */
     function formatShare (value) {
-        return value > 0 && value < 0.05 ? '<0.1%' : `${value.toFixed(1)}%`;
+        return value > 0 && value < 0.05 ? `<${page.formatPercent(0.1, 1)}` : page.formatPercent(value, 1);
+    }
+
+    /**
+     * A share followed by "of your basket".
+     * @param {number} value - The share in percent.
+     * @returns {string} E.g. "12.3% of your basket".
+     */
+    function ofBasket (value) {
+        return PFI18n.t('Research.Js.WorldBasket.OfBasket', { value: formatShare(value) });
     }
 
     // How the basket's figures read: every one a share of the basket.
     const MEASURE = {
         format: formatShare,
-        unit: 'of your basket',
-        describe: (value) => `${formatShare(value)} of your basket`,
+        get unit () {
+            return PFI18n.t('Research.Js.SectorsBasket.Unit');
+        },
+        describe: ofBasket,
         relative: false
     };
 
     /**
      * A country's name from its two-letter code.
      * @param {string|null} code - The ISO alpha-2 code, or null when the fund gives none.
-     * @returns {string} The English name, or the code.
+     * @returns {string} The name in the page language, or the code.
      */
     function countryName (code) {
         if (!code) {
-            return 'Country not reported';
+            return PFI18n.t('Research.Js.SectorsBasket.CountryNotReported');
         }
         try {
             return (regionNames && regionNames.of(code)) || code;
@@ -113,7 +134,7 @@
      *     hold at most, and the members listed ({ name, ticker?, value } by key).
      * @param {number} top - How many members to keep.
      * @param {function(Object, *): Object} leaf - Makes a member's node data.
-     * @param {Object} other - The "Other" node's key, note, noun and flags.
+     * @param {Object} other - The "Other" node's key, note and flags.
      * @returns {Object[]} The children.
      */
     function leavesOf (group, top, leaf, other) {
@@ -126,10 +147,11 @@
         // How many more the funds hold: a fund lists only its own largest, so this counts at least that many.
         const more = Math.max(group.count, members.length) - kept.length;
         if (rest > 0.00005) {
-            const noun = more === 1 ? other.noun : `${other.noun.replace(/y$/, 'ie')}s`;
             children.push({
                 key: other.key,
-                name: more > 0 ? `Other (${PFI18n.formatNumber(more)} ${noun})` : `Other ${other.noun.replace(/y$/, 'ie')}s`,
+                name: more > 0
+                    ? PFI18n.plural('Research.Js.SectorsBasket.OtherCompanies', more)
+                    : PFI18n.t('Research.Js.SectorsBasket.OtherCompaniesNone'),
                 note: other.note,
                 office: other.office,
                 technology: other.technology,
@@ -194,6 +216,7 @@
      * @returns {Object} The root node data.
      */
     function buildTree (data, totals) {
+        const groups = names();
         const offices = new Map();
         totals.industries.forEach((group, index) => {
             const industry = data.industries[index];
@@ -217,7 +240,10 @@
                     technology,
                     value: company.value
                 }), {
-                    key: `bx${index}`, noun: 'company', note: `Smaller holdings in ${industry.name}`, office: officeName, technology
+                    key: `bx${index}`,
+                    note: PFI18n.t('Research.Js.SectorsBasket.SmallerIn', { name: industry.name }),
+                    office: officeName,
+                    technology
                 })
             });
         });
@@ -226,8 +252,8 @@
         if (totals.countries.size > 0) {
             children.push({
                 key: 'bu',
-                name: UNCLASSIFIED,
-                office: UNCLASSIFIED,
+                name: groups.unclassified,
+                office: groups.unclassified,
                 kind: 'unclassified',
                 hatched: true,
                 children: Array.from(totals.countries.values()).map((country) => {
@@ -235,13 +261,16 @@
                     return {
                         key: `bu-${code}`,
                         name: countryName(country.code),
-                        office: UNCLASSIFIED,
+                        office: groups.unclassified,
                         kind: 'country',
                         hatched: true,
                         children: leavesOf(country, TOP_ISSUERS, (issuer, key) => ({
-                            key: `bu-${code}-${key}`, name: issuer.name, office: UNCLASSIFIED, kind: 'issuer', hatched: true, value: issuer.value
+                            key: `bu-${code}-${key}`, name: issuer.name, office: groups.unclassified, kind: 'issuer', hatched: true, value: issuer.value
                         }), {
-                            key: `bu-${code}-x`, noun: 'company', note: `Smaller holdings in ${countryName(country.code)}`, office: UNCLASSIFIED, hatched: true
+                            key: `bu-${code}-x`,
+                            note: PFI18n.t('Research.Js.SectorsBasket.SmallerIn', { name: countryName(country.code) }),
+                            office: groups.unclassified,
+                            hatched: true
                         })
                     };
                 })
@@ -250,18 +279,18 @@
         if (totals.bonds.size > 0) {
             children.push({
                 key: 'bb',
-                name: BONDS,
-                office: BONDS,
+                name: groups.bonds,
+                office: groups.bonds,
                 kind: 'bonds',
                 children: Array.from(totals.bonds.entries()).map(([name, value], index) => ({
-                    key: `bb${index}`, name, office: BONDS, kind: 'bondType', value
+                    key: `bb${index}`, name, office: groups.bonds, kind: 'bondType', value
                 }))
             });
         }
         if (totals.cash > 0) {
-            children.push({ key: 'bcash', name: CASH, office: CASH, kind: 'cash', value: totals.cash });
+            children.push({ key: 'bcash', name: groups.cash, office: groups.cash, kind: 'cash', value: totals.cash });
         }
-        return { key: 'broot', name: ROOT_NAME, kind: 'root', children };
+        return { key: 'broot', name: groups.root, kind: 'root', children };
     }
 
     /**
@@ -273,7 +302,8 @@
         const countries = (node && node.children ? node.children : []).slice().sort((a, b) => b.value - a.value)
             .slice(0, TOP_COUNTRIES);
         return countries.length
-            ? `Largest countries: ${countries.map((c) => `${c.data.name} ${formatShare(c.value)}`).join(', ')}.`
+            ? PFI18n.t('Research.Js.SectorsBasket.TopCountries',
+                { countries: countries.map((c) => `${c.data.name} ${formatShare(c.value)}`).join(', ') })
             : '';
     }
 
@@ -290,32 +320,41 @@
         const unclassified = (root.children || []).find((d) => d.data.kind === 'unclassified');
         const unclassifiedCard = unclassified
             ? {
-                label: UNCLASSIFIED,
+                label: names().unclassified,
                 value: formatShare(unclassified.value),
-                note: `of your basket has no SEC industry: mostly foreign companies that file no reports with the SEC, and a few not matched to an SEC filer by name. ${topCountriesText(unclassified)}`
+                note: `${PFI18n.t('Research.Js.SectorsBasket.UnclassifiedNote')} ${topCountriesText(unclassified)}`
             }
             : null;
+        const ofBasketNote = (name) => PFI18n.t('Research.Js.SectorsBasket.OfBasketNote', { name });
         const largestCompany = (node) => node.leaves().filter((d) => d.data.kind === 'company')
             .sort((a, b) => b.value - a.value)[0];
 
         if (focus.depth === 0) {
             const classified = (root.children || []).filter((d) => d.data.kind === 'office').reduce((s, d) => s + d.value, 0);
             const cards = [{
-                label: 'Classified by the SEC',
+                label: PFI18n.t('Research.Js.SectorsBasket.Classified'),
                 value: formatShare(classified),
-                note: 'of your basket is in companies with an SEC industry office and SIC industry.'
+                note: PFI18n.t('Research.Js.SectorsBasket.ClassifiedNote')
             }];
             if (unclassifiedCard) {
                 cards.push(unclassifiedCard);
             }
             const office = (root.children || []).filter((d) => d.data.kind === 'office').sort((a, b) => b.value - a.value)[0];
             if (office) {
-                cards.push({ label: 'Largest SEC industry office', value: formatShare(office.value), note: `of your basket: ${office.data.name}` });
+                cards.push({
+                    label: PFI18n.t('Research.Js.SectorsBasket.LargestOffice'),
+                    value: formatShare(office.value),
+                    note: ofBasketNote(office.data.name)
+                });
             }
             const company = largestCompany(root);
             if (company) {
                 const ticker = company.data.ticker ? ` (${company.data.ticker})` : '';
-                cards.push({ label: 'Largest company', value: formatShare(company.value), note: `of your basket: ${company.data.name}${ticker}` });
+                cards.push({
+                    label: PFI18n.t('Research.Js.SectorsBasket.LargestCompany'),
+                    value: formatShare(company.value),
+                    note: ofBasketNote(`${company.data.name}${ticker}`)
+                });
             }
             return cards;
         }
@@ -323,14 +362,22 @@
         // Zoomed into the unclassified stocks themselves, their card gives the share, so it leads in place of the share.
         const cards = focus === unclassified
             ? [unclassifiedCard]
-            : [{ label: 'Share of your basket', value: formatShare(focus.value || 0), note: focus.data.name }];
+            : [{ label: PFI18n.t('Research.Js.Common.ShareOfBasket'), value: formatShare(focus.value || 0), note: focus.data.name }];
         const part = (focus.children || []).filter((d) => d.data.kind !== 'other').sort((a, b) => b.value - a.value)[0];
         if (part) {
-            cards.push({ label: 'Largest part', value: formatShare(part.value), note: `of your basket: ${part.data.name}` });
+            cards.push({
+                label: PFI18n.t('Research.Js.Sectors.LargestPart'),
+                value: formatShare(part.value),
+                note: ofBasketNote(part.data.name)
+            });
         }
         const company = largestCompany(focus);
         if (company && company !== part) {
-            cards.push({ label: 'Largest company', value: formatShare(company.value), note: `of your basket: ${company.data.name}` });
+            cards.push({
+                label: PFI18n.t('Research.Js.SectorsBasket.LargestCompany'),
+                value: formatShare(company.value),
+                note: ofBasketNote(company.data.name)
+            });
         }
         if (unclassifiedCard && focus !== unclassified && focus.ancestors().includes(unclassified)) {
             cards.push(unclassifiedCard);
@@ -351,21 +398,21 @@
             .map((d, rank) => {
                 const issuer = d.data.kind === 'issuer';
                 return [
-                    String(rank + 1),
+                    PFI18n.formatNumber(rank + 1),
                     d.data.ticker ? `${d.data.name} (${d.data.ticker})` : d.data.name,
-                    issuer ? UNCLASSIFIED : d.parent.data.name,
+                    issuer ? names().unclassified : d.parent.data.name,
                     issuer ? d.parent.data.name : d.data.office,
                     formatShare(d.value)
                 ];
             });
         return {
-            caption: `The ${rows.length} largest companies in your basket`,
+            caption: PFI18n.plural('Research.Js.SectorsBasket.TableCaption', rows.length),
             columns: [
-                { label: 'Rank', numeric: true },
-                { label: 'Company' },
-                { label: 'SIC industry' },
-                { label: 'SEC industry office or country' },
-                { label: 'Share of your basket', numeric: true }
+                { label: PFI18n.t('Research.Js.Sectors.Rank'), numeric: true },
+                { label: PFI18n.t('Research.Js.Sectors.Company') },
+                { label: PFI18n.t('Research.Js.Sectors.Industry') },
+                { label: PFI18n.t('Research.Js.SectorsBasket.OfficeOrCountry') },
+                { label: PFI18n.t('Research.Js.Common.ShareOfBasket'), numeric: true }
             ],
             rows
         };
@@ -383,14 +430,20 @@
         const offices = (root.children || []).filter((d) => d.data.kind === 'office');
         const classified = offices.reduce((sum, d) => sum + d.value, 0);
         const unclassified = (root.children || []).find((d) => d.data.kind === 'unclassified');
-        const rest = unclassified ? `; ${formatShare(unclassified.value)} is not classified by the SEC` : '';
-        const where = focus.depth > 0 ? ` Showing ${trail}: ${formatShare(focus.value || 0)} of your basket.` : '';
-        const summary = `Your basket: ${formatShare(classified)} in ${offices.length} SEC industry offices${rest}.${where}`;
-        const asOf = PFI18n.formatDate(new Date(`${data.asOf}T00:00:00`), { day: 'numeric', month: 'long', year: 'numeric' });
+        const figures = {
+            value: formatShare(classified),
+            offices: PFI18n.plural('Research.Js.SectorsBasket.Offices', offices.length),
+            rest: unclassified ? formatShare(unclassified.value) : ''
+        };
+        const sentences = [PFI18n.t(unclassified ? 'Research.Js.SectorsBasket.SummaryWithRest' : 'Research.Js.SectorsBasket.Summary',
+            figures)];
+        if (focus.depth > 0) {
+            sentences.push(PFI18n.t('Research.Js.SectorsBasket.SummaryWhere', { trail, value: formatShare(focus.value || 0) }));
+        }
+        const summary = sentences.join(' ');
         return {
-            aria: `Sunburst of your basket by SEC industry office and SIC industry. ${summary}`,
-            subtitle: `Your basket by SEC industry office, SIC industry and company, from each fund's holdings as of ${asOf} ` +
-                'or earlier. Every percent is of your basket. Companies with no SEC industry are grouped by country.',
+            aria: PFI18n.t('Research.Js.SectorsBasket.ChartLabel', { summary }),
+            subtitle: PFI18n.t('Research.Js.SectorsBasket.Subtitle', { date: page.formatDay(data.asOf) }),
             summary
         };
     }
@@ -401,10 +454,10 @@
      * @returns {string} The difference.
      */
     function formatPoints (points) {
-        if (Math.abs(points) < LEVEL_POINTS) {
-            return '0.0 pts';
-        }
-        return `${points > 0 ? '+' : '−'}${Math.abs(points).toFixed(1)} pts`;
+        const value = Math.abs(points) < LEVEL_POINTS
+            ? page.formatFixed(0, 1)
+            : `${points > 0 ? '+' : '−'}${page.formatFixed(Math.abs(points), 1)}`;
+        return PFI18n.t('Research.Js.SectorsBasket.Points', { value });
     }
 
     /**
@@ -465,17 +518,17 @@
      */
     function renderLean (elements, lean, year, onPick) {
         const { title, note, list } = elements;
-        title.textContent = `Lean vs the market, ${year}`;
+        title.textContent = PFI18n.t('Research.Js.SectorsBasket.LeanTitle', { year });
         if (lean.classified <= 0) {
-            note.textContent = 'Your basket holds no stocks the SEC classifies, so there is nothing to compare.';
+            note.textContent = PFI18n.t('Research.Js.SectorsBasket.LeanNone');
             list.replaceChildren();
             return '';
         }
-        const foreign = lean.rows.some((r) => r.office === INTERNATIONAL_OFFICE && r.basket > 0)
-            ? ` Foreign companies under ${INTERNATIONAL_OFFICE} report no Public float, so the market has none there.`
-            : '';
-        note.textContent = `Compares the SEC-classified part of your basket (${formatShare(lean.classified)} of it) with ` +
-            `every SEC filer's Public float in ${year}, office by office. It describes your basket; it is not a target.${foreign}`;
+        const sentences = [PFI18n.t('Research.Js.SectorsBasket.LeanNote', { value: formatShare(lean.classified), year })];
+        if (lean.rows.some((r) => r.office === INTERNATIONAL_OFFICE && r.basket > 0)) {
+            sentences.push(PFI18n.t('Research.Js.SectorsBasket.LeanForeign', { office: INTERNATIONAL_OFFICE }));
+        }
+        note.textContent = sentences.join(' ');
         const widest = Math.max(...lean.rows.map((r) => Math.abs(r.difference)), LEVEL_POINTS);
         list.replaceChildren(...lean.rows.map((row) => {
             const item = document.createElement('li');
@@ -484,12 +537,22 @@
             const line = document.createElement(zoomable ? 'button' : 'div');
             line.className = 'research-lean__row';
             const direction = Math.abs(row.difference) < LEVEL_POINTS ? 'level' : (row.difference > 0 ? 'more' : 'less');
-            const words = { more: 'more than the market', less: 'less than the market', level: 'level with the market' }[direction];
-            const label = `${row.office}: ${formatShare(row.basket)} of the SEC-classified part of your basket, ` +
-                `${formatShare(row.market)} of the market's Public float in ${year}, ${formatPoints(row.difference)} ${words}.`;
+            const words = PFI18n.t({
+                more: 'Research.Js.SectorsBasket.LeanMore',
+                less: 'Research.Js.SectorsBasket.LeanLess',
+                level: 'Research.Js.SectorsBasket.LeanLevel'
+            }[direction]);
+            const label = PFI18n.t('Research.Js.SectorsBasket.LeanRowLabel', {
+                office: row.office,
+                basket: formatShare(row.basket),
+                market: formatShare(row.market),
+                year,
+                points: formatPoints(row.difference),
+                words
+            });
             if (zoomable) {
                 line.type = 'button';
-                line.setAttribute('aria-label', `${label} Zoom the chart into ${row.office}.`);
+                line.setAttribute('aria-label', PFI18n.t('Research.Js.SectorsBasket.LeanZoom', { label, office: row.office }));
                 line.addEventListener('click', () => onPick(`bo${row.officeIndex}`));
             } else {
                 // Not a button, but still reachable by keyboard so its figures can be read.
@@ -531,7 +594,9 @@
         const least = sorted[sorted.length - 1];
         const parts = [most, least].filter((r, i, all) => r && Math.abs(r.difference) >= LEVEL_POINTS && all.indexOf(r) === i)
             .map((r) => `${r.office} ${formatPoints(r.difference)}`);
-        return parts.length ? `Lean vs the market in ${year}: ${parts.join(', ')}.` : `Your basket is level with the market in ${year}.`;
+        return parts.length
+            ? PFI18n.t('Research.Js.SectorsBasket.LeanSummary', { year, parts: parts.join(', ') })
+            : PFI18n.t('Research.Js.SectorsBasket.LeanLevelSummary', { year });
     }
 
     /**
@@ -622,12 +687,12 @@
             basketButton.removeAttribute('aria-busy');
             loading = null;
             if (!snapshot || !Array.isArray(snapshot.funds) || snapshot.funds.length === 0) {
-                showNote('Your basket\'s holdings could not be loaded. Please try again later.');
+                showNote(PFI18n.t('Research.Js.SectorsBasket.LoadFailed'));
                 return false;
             }
             data = snapshot;
             if (asOfElement) {
-                asOfElement.textContent = `Fund holdings as of ${holdingsDates(data)}`;
+                asOfElement.textContent = PFI18n.t('Research.Js.SectorsBasket.HoldingsAsOf', { dates: holdingsDates(data) });
             }
             readBasket();
             return true;
@@ -647,7 +712,7 @@
             totals = basketTotals(data, basket);
             basketButton.disabled = totals.count === 0;
             showNote(totals.missing.length && totals.count > 0
-                ? `${totals.missing.join(', ')} ${totals.missing.length === 1 ? 'has' : 'have'} no holdings report yet, so the others' shares are scaled up to cover ${totals.missing.length === 1 ? 'it' : 'them'}.`
+                ? PFI18n.plural('Research.Js.Common.MissingReport', totals.missing.length, { funds: totals.missing.join(', ') })
                 : '');
         }
 
@@ -663,7 +728,7 @@
                 part.hidden = part.dataset.sectorsViewPart !== mode;
             });
             if (title) {
-                title.textContent = TITLES[mode];
+                title.textContent = PFI18n.t(TITLE_KEYS[mode]);
             }
             chart.setSource(mode, provider);
             if (page.refreshTable) {
@@ -682,9 +747,9 @@
             }
             setMode('basket');
             if (announce && page.announce) {
-                page.announce(mode === 'basket'
-                    ? 'Showing your basket by SEC industry. Every percent is of your basket.'
-                    : 'None of your basket\'s funds has a holdings report yet.');
+                page.announce(PFI18n.t(mode === 'basket'
+                    ? 'Research.Js.SectorsBasket.ShowingBasket'
+                    : 'Research.Js.SectorsBasket.NoReports'));
             }
         }
 
@@ -698,7 +763,7 @@
             }
             setMode('market');
             if (page.announce) {
-                page.announce('Showing the largest SEC filers by Public float.');
+                page.announce(PFI18n.t('Research.Js.SectorsBasket.ShowingMarket'));
             }
         }));
         document.addEventListener('research:basketchange', () => {
@@ -722,12 +787,14 @@
     /**
      * The fund holdings' report dates for display: one date, or the earliest to the latest.
      * @param {Object} data - The fund industries snapshot.
-     * @returns {string} E.g. "30 June 2026" or "31 May 2026 to 31 August 2026".
+     * @returns {string} E.g. "30 June 2026" or "31 May 2026 to 31 August 2026", in the page culture.
      */
     function holdingsDates (data) {
-        const format = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        const format = page.formatDay;
         const earliest = data.funds.map((f) => f.reportDate).sort()[0];
-        return earliest === data.asOf ? format(data.asOf) : `${format(earliest)} to ${format(data.asOf)}`;
+        return earliest === data.asOf
+            ? format(data.asOf)
+            : PFI18n.t('Research.Js.Common.FromTo', { from: format(earliest), to: format(data.asOf) });
     }
 
     /**

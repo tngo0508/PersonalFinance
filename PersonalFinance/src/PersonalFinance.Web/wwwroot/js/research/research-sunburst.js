@@ -71,8 +71,10 @@
     // How the market's figures read: US$ of Public float, with shares of the group and of every filer.
     const MARKET_MEASURE = {
         format: formatMoney,
-        unit: 'Public float',
-        describe: (value) => `${formatMoney(value)} Public float`,
+        get unit () {
+            return PFI18n.t('Research.Js.Sectors.PublicFloat');
+        },
+        describe: (value) => PFI18n.t('Research.Js.Sectors.PublicFloatValue', { value: formatMoney(value) }),
         relative: true
     };
 
@@ -93,16 +95,19 @@
     // Dimmed by the Technology highlight: the fill keeps its office colour, only fainter.
     const DIMMED_OPACITY = 0.15;
     const KIND_LABELS = {
-        office: () => 'SEC industry office',
-        industry: () => 'SIC industry',
-        company: (node) => (node.data.ticker ? `Ticker ${node.data.ticker}` : 'No ticker'),
-        other: (node) => node.data.note || `Smaller filers in ${node.parent ? node.parent.data.name : 'this industry'}`,
-        unclassified: () => 'Companies with no SEC industry, mostly foreign ones that file no reports with the SEC',
-        country: () => 'Issuer country, not classified by the SEC',
-        issuer: () => 'Company not classified by the SEC',
-        bonds: () => 'Bonds and other debt',
-        bondType: () => 'Bond issuer type',
-        cash: () => 'Money-market funds, derivatives, cash and other'
+        office: () => PFI18n.t('Research.Js.Sectors.Office'),
+        industry: () => PFI18n.t('Research.Js.Sectors.Industry'),
+        company: (node) => (node.data.ticker
+            ? PFI18n.t('Research.Js.Sectors.Ticker', { ticker: node.data.ticker })
+            : PFI18n.t('Research.Js.Sectors.NoTicker')),
+        other: (node) => node.data.note || PFI18n.t('Research.Js.Sectors.SmallerFilers',
+            { name: node.parent ? node.parent.data.name : PFI18n.t('Research.Js.Sectors.ThisIndustry') }),
+        unclassified: () => PFI18n.t('Research.Js.Sectors.Kind.Unclassified'),
+        country: () => PFI18n.t('Research.Js.Sectors.Kind.Country'),
+        issuer: () => PFI18n.t('Research.Js.Sectors.Kind.Issuer'),
+        bonds: () => PFI18n.t('Research.Js.Sectors.Kind.Bonds'),
+        bondType: () => PFI18n.t('Research.Js.Sectors.Kind.BondType'),
+        cash: () => PFI18n.t('Research.Js.Sectors.Kind.Cash')
     };
 
     /**
@@ -187,10 +192,9 @@
         });
         (period.other || []).forEach((row) => {
             const node = industryNode(row.industry);
-            const filers = `${PFI18n.formatNumber(row.count)} ${row.count === 1 ? 'filer' : 'filers'}`;
             node.children.push({
                 key: `x${row.industry}`,
-                name: `Other (${filers})`,
+                name: PFI18n.plural('Research.Js.Sectors.OtherFilers', row.count),
                 office: node.office,
                 kind: 'other',
                 technology: node.technology,
@@ -205,7 +209,7 @@
                 const office = offices.get(index);
                 return { ...office, children: Array.from(office.children.values()) };
             });
-        return { key: ROOT_KEY, name: 'All filers', kind: 'root', children };
+        return { key: ROOT_KEY, name: PFI18n.t('Research.Js.Sectors.AllFilers'), kind: 'root', children };
     }
 
     /**
@@ -227,10 +231,10 @@
      * A share as a percentage with one decimal, e.g. "12.3%".
      * @param {number} part - The part.
      * @param {number} whole - The whole.
-     * @returns {string} The percentage, or "0.0%" when the whole is empty.
+     * @returns {string} The percentage in the page culture, or "0.0%" when the whole is empty.
      */
     function percentOf (part, whole) {
-        return `${(whole > 0 ? part / whole * 100 : 0).toFixed(1)}%`;
+        return page.formatPercent(whole > 0 ? part / whole * 100 : 0, 1);
     }
 
     /**
@@ -268,15 +272,18 @@
                 valueLine
             ];
             if (measure.relative && node.parent && node.parent !== root) {
-                parts.push(line(`${percentOf(node.value, node.parent.value)} of ${node.parent.data.name}`,
-                    'research-tooltip__muted'));
+                parts.push(line(PFI18n.t('Research.Js.Sectors.OfGroup',
+                    { value: percentOf(node.value, node.parent.value), name: node.parent.data.name }), 'research-tooltip__muted'));
             }
             if (measure.relative) {
-                parts.push(line(`${percentOf(node.value, root.value)} of all filers`, 'research-tooltip__muted'));
+                parts.push(line(PFI18n.t('Research.Js.Sectors.OfAllFilers', { value: percentOf(node.value, root.value) }),
+                    'research-tooltip__muted'));
             }
             const rank = rankAmongSiblings(node);
             if (rank) {
-                parts.push(line(`#${rank.rank} of ${rank.of} in ${node.parent.data.name}`, 'research-tooltip__muted'));
+                parts.push(line(PFI18n.t('Research.Js.Sectors.RankOf', {
+                    rank: PFI18n.formatNumber(rank.rank), of: PFI18n.formatNumber(rank.of), name: node.parent.data.name
+                }), 'research-tooltip__muted'));
             }
             return parts;
         });
@@ -438,40 +445,49 @@
      */
     function takeaways (root, focus, previous, periodLabel) {
         const cards = [{
-            label: 'Total',
+            label: PFI18n.t('Research.Js.Sectors.Total'),
             value: formatMoney(focus.value || 0),
             note: focus.depth > 0
-                ? `${focus.data.name}, ${periodLabel}: ${percentOf(focus.value, root.value)} of all filers`
-                : `All filers, ${periodLabel}`
+                ? PFI18n.t('Research.Js.Sectors.TotalNote',
+                    { name: focus.data.name, period: periodLabel, value: percentOf(focus.value, root.value) })
+                : PFI18n.t('Research.Js.Sectors.TotalNoteAll', { period: periodLabel })
         }];
 
         const parts = (focus.children || []).filter((d) => d.data.kind !== 'other').sort((a, b) => b.value - a.value);
         if (parts.length > 0) {
-            cards.push({ label: 'Largest part', value: percentOf(parts[0].value, focus.value), note: parts[0].data.name });
+            cards.push({
+                label: PFI18n.t('Research.Js.Sectors.LargestPart'),
+                value: percentOf(parts[0].value, focus.value),
+                note: parts[0].data.name
+            });
         }
 
         const companies = focus.leaves().filter((d) => d.data.kind === 'company').sort((a, b) => b.value - a.value);
         if (companies.length > TOP_COMPANIES) {
             const top = d3.sum(companies.slice(0, TOP_COMPANIES), (d) => d.value);
             cards.push({
-                label: `Top ${TOP_COMPANIES} companies`,
+                label: PFI18n.t('Research.Js.Sectors.TopCompanies', { count: PFI18n.formatNumber(TOP_COMPANIES) }),
                 value: percentOf(top, focus.value),
-                note: `of the ${companies.length} companies shown`
+                note: PFI18n.t('Research.Js.Sectors.TopCompaniesNote', { count: PFI18n.formatNumber(companies.length) })
             });
         }
 
         const lit = d3.sum(focus.leaves().filter((d) => d.technology), (d) => d.value);
         if (lit > 0 && lit < focus.value) {
-            cards.push({ label: 'Technology (incl. chip makers)', value: percentOf(lit, focus.value), note: formatMoney(lit) });
+            cards.push({
+                label: PFI18n.t('Research.Js.Sectors.Technology'),
+                value: percentOf(lit, focus.value),
+                note: formatMoney(lit)
+            });
         }
 
         const before = previous ? previous.descendants().find((d) => d.data.key === focus.data.key) : null;
         if (before && before.value > 0) {
             const change = (focus.value / before.value - 1) * 100;
             cards.push({
-                label: 'Change on the year before',
-                value: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
-                note: `Same group, Public float (${formatMoney(before.value)} before)`
+                label: PFI18n.t('Research.Js.Sectors.Change'),
+                value: `${change >= 0 ? '+' : ''}${page.formatPercent(change, 1)}`,
+                note: PFI18n.t('Research.Js.Sectors.ChangeNote', { value: formatMoney(before.value) })
             });
         }
         return cards;
@@ -535,8 +551,14 @@
             if (node.children) {
                 row.type = 'button';
                 row.dataset.key = node.data.key;
-                const share = measure.relative ? `, ${percentOf(node.value, focus.value)} of ${focus.data.name}` : '';
-                row.setAttribute('aria-label', `${node.data.name}: ${measure.describe(node.value)}${share}. Zoom in.`);
+                row.setAttribute('aria-label', measure.relative
+                    ? PFI18n.t('Research.Js.Sectors.RankedLabelShare', {
+                        name: node.data.name,
+                        value: measure.describe(node.value),
+                        share: percentOf(node.value, focus.value),
+                        group: focus.data.name
+                    })
+                    : PFI18n.t('Research.Js.Sectors.RankedLabel', { name: node.data.name, value: measure.describe(node.value) }));
                 row.addEventListener('click', () => handlers.onPick(node.data.key));
                 row.addEventListener('focus', () => handlers.onHighlight(node.data.key));
                 row.addEventListener('blur', () => handlers.onHighlight(null));
@@ -546,7 +568,7 @@
 
             const rank = document.createElement('span');
             rank.className = 'research-ranked__rank';
-            rank.textContent = node.data.kind === 'other' ? '' : String(index + 1);
+            rank.textContent = node.data.kind === 'other' ? '' : PFI18n.formatNumber(index + 1);
             const name = document.createElement('span');
             name.className = 'research-ranked__name';
             name.textContent = node.data.kind === 'company' && node.data.ticker
@@ -574,7 +596,7 @@
         if (parts.length > shown.length) {
             const more = document.createElement('li');
             more.className = 'research-ranked__more';
-            more.textContent = `and ${parts.length - shown.length} more (see "Show as table")`;
+            more.textContent = PFI18n.t('Research.Js.Sectors.RankedMore', { count: PFI18n.formatNumber(parts.length - shown.length) });
             rows.push(more);
         }
         list.replaceChildren(...rows);
@@ -635,6 +657,20 @@
             .sort(compareNodes);
         markTechnology(root);
         return root;
+    }
+
+    /**
+     * The accessible name of an arc or tile: its name and figure, its share of its group when given, and the zoom
+     * hint when it has parts.
+     * @param {{name: string, value: string, share?: string, group?: string}} values - The placeholders.
+     * @param {boolean} withShare - Whether values carries the share and group.
+     * @param {boolean} zoomable - Whether the part has parts of its own.
+     * @returns {string} The label.
+     */
+    function partLabel (values, withShare, zoomable) {
+        const key = withShare ? 'Research.Js.Sectors.PartLabelShare' : 'Research.Js.Sectors.PartLabel';
+        const label = PFI18n.t(key, values);
+        return zoomable ? `${label} ${PFI18n.t('Research.Js.Sectors.ZoomHint')}` : label;
     }
 
     /**
@@ -1007,9 +1043,11 @@
             const all = entering.merge(joined)
                 .attr('role', (t) => (t.node.children ? 'button' : 'img'))
                 .attr('aria-label', (t) => {
-                    const share = figures.relative ? `, ${percentOf(t.node.value, focus.value)} of ${focus.data.name}` : '';
-                    const hint = t.node.children ? '. Press Enter to zoom in, Escape to zoom out.' : '.';
-                    return `${t.node.data.name}: ${figures.describe(t.node.value)}${share}${hint}`;
+                    const values = { name: t.node.data.name, value: figures.describe(t.node.value) };
+                    if (figures.relative) {
+                        Object.assign(values, { share: percentOf(t.node.value, focus.value), group: focus.data.name });
+                    }
+                    return partLabel(values, figures.relative, Boolean(t.node.children));
                 })
                 .classed('research-treemap__tile--zoomable', (t) => Boolean(t.node.children));
             // Animated: tween from where the tiles are; otherwise apply at once (also under reduced motion).
@@ -1036,8 +1074,8 @@
                         ? `${formatMoney(t.node.value)} · ${percentOf(t.node.value, focus.value)}`
                         : figures.format(t.node.value);
                 });
-            treemapSvg.attr('aria-label', `Treemap of ${focus.data.name}: ${tiles.length} parts, ` +
-                `${figures.describe(focus.value || 0)} in total.`);
+            treemapSvg.attr('aria-label', PFI18n.plural('Research.Js.Sectors.TreemapLabel', tiles.length,
+                { name: focus.data.name, value: figures.describe(focus.value || 0) }));
         }
 
         /**
@@ -1073,7 +1111,9 @@
                 ], { duration: SWITCH_MS, easing: 'ease-out' });
             }
             if (live) {
-                live.textContent = mode === 'treemap' ? 'Showing the treemap.' : 'Showing the sunburst.';
+                live.textContent = PFI18n.t(mode === 'treemap'
+                    ? 'Research.Js.Sectors.ShowingTreemap'
+                    : 'Research.Js.Sectors.ShowingSunburst');
             }
         }
 
@@ -1116,9 +1156,11 @@
                 }
                 this.setAttribute('tabindex', d.data.key === activeKey ? '0' : '-1');
                 this.setAttribute('role', d.children ? 'button' : 'img');
-                const share = d.parent ? `, ${percentOf(d.value, d.parent.value)} of ${d.parent.data.name}` : '';
-                const hint = d.children ? '. Press Enter to zoom in, Escape to zoom out.' : '.';
-                this.setAttribute('aria-label', `${d.data.name}: ${formatMoney(d.value)} Public float${share}${hint}`);
+                const values = { name: d.data.name, value: MARKET_MEASURE.describe(d.value) };
+                if (d.parent) {
+                    Object.assign(values, { share: percentOf(d.value, d.parent.value), group: d.parent.data.name });
+                }
+                this.setAttribute('aria-label', partLabel(values, Boolean(d.parent), Boolean(d.children)));
             });
         }
 
@@ -1213,6 +1255,15 @@
         }
 
         /**
+         * The Technology sentence of a summary, when the Technology highlight is on.
+         * @param {string} techText - The Technology share of the focus.
+         * @returns {string} The sentence, or empty when the highlight is off.
+         */
+        function technologySentence (techText) {
+            return view.technology ? PFI18n.t('Research.Js.Sectors.TechSentence', { text: techText }) : '';
+        }
+
+        /**
          * Show the focus in the centre, in the breadcrumb and in the takeaway cards, and the state of the legend
          * buttons, the Technology toggle and its share.
          * @param {Object} root - The d3 hierarchy root of the period shown.
@@ -1227,7 +1278,7 @@
             const trail = focus.ancestors().reverse().map((d) => d.data.name).join(' › ');
             centreTitle.text(zoomed ? shorten(focus.data.name, Math.floor(unit / 3)) : (showsBasket() ? root.data.name : periodLabel));
             centreValue.text(figures.format(focus.value || 0));
-            centreHint.text(zoomed ? 'Zoom out' : figures.unit);
+            centreHint.text(zoomed ? PFI18n.t('Research.Js.Sectors.ZoomOut') : figures.unit);
             centre.classed('research-sunburst__centre--zoomed', zoomed);
             renderBreadcrumb(breadcrumb, focus, zoomTo, figures);
             renderTakeaways(takeawaysList, showsBasket()
@@ -1235,8 +1286,8 @@
                 : takeaways(root, focus, previous, periodLabel));
             if (rankedTitle) {
                 rankedTitle.textContent = showsBasket()
-                    ? `Largest parts of ${focus.data.name}`
-                    : `Largest parts of ${focus.data.name}, ${periodLabel}`;
+                    ? PFI18n.t('Research.Js.Sectors.RankedTitle', { name: focus.data.name })
+                    : PFI18n.t('Research.Js.Sectors.RankedTitlePeriod', { name: focus.data.name, period: periodLabel });
             }
             renderRanked(rankedList, focus, officeColour, {
                 onPick: (key) => {
@@ -1255,10 +1306,14 @@
                 techToggle.setAttribute('aria-pressed', String(view.technology));
             }
             const lit = d3.sum(focus.leaves().filter((d) => d.technology), (d) => d.value);
-            const share = focus.value > 0 ? (lit / focus.value * 100).toFixed(1) : '0.0';
             const techText = showsBasket()
                 ? `${figures.describe(lit)}.`
-                : `${formatMoney(lit)}, ${share}% of ${focus.data.name} in ${periodLabel}.`;
+                : PFI18n.t('Research.Js.Sectors.TechShare', {
+                    value: formatMoney(lit),
+                    share: percentOf(lit, focus.value),
+                    name: focus.data.name,
+                    period: periodLabel
+                });
             if (techShare) {
                 techShare.textContent = techText;
                 techShare.hidden = !view.technology;
@@ -1307,27 +1362,32 @@
                 if (subtitle) {
                     subtitle.textContent = described.subtitle;
                 }
-                const tech = view.technology ? ` Technology (incl. chip makers): ${techText}` : '';
                 const lean = basket.period ? basket.period(periodIndex) : '';
-                return `${described.summary}${tech}${lean ? ` ${lean}` : ''}`;
+                return [described.summary, technologySentence(techText), lean].filter(Boolean).join(' ');
             }
 
             const largest = focus.leaves()
                 .filter((d) => d.data.kind === 'company')
                 .sort((a, b) => b.value - a.value)[0];
-            const largestText = largest ? ` Largest company: ${largest.data.name}, ${formatMoney(largest.value)}.` : '';
-            const offices = (root.children || []).length;
-            const total = `${formatMoney(root.value || 0)} in total across ${offices} SEC industry offices.`;
-            const where = focus.depth > 0 ? ` Showing ${trail}: ${formatMoney(focus.value || 0)}.` : '';
-            svg.attr('aria-label',
-                `Sunburst of SEC filers by Public float in ${period.period}: ${total}${where}${largestText}`);
-            if (subtitle) {
-                const filers = PFI18n.formatNumber(period.ranked.length + (period.restCount || 0));
-                subtitle.textContent = `The ${period.ranked.length} largest of ${filers} filers in ${period.period}, ` +
-                    'by SEC industry office and SIC industry. Smaller filers are summed into "Other" per industry.';
+            const details = [PFI18n.plural('Research.Js.Sectors.TotalAcross', (root.children || []).length,
+                { value: formatMoney(root.value || 0) })];
+            if (focus.depth > 0) {
+                details.push(PFI18n.t('Research.Js.Sectors.Showing', { trail, value: formatMoney(focus.value || 0) }));
             }
-            const tech = view.technology ? ` Technology (incl. chip makers): ${techText}` : '';
-            return `${period.period}: ${total}${where}${largestText}${tech}`;
+            if (largest) {
+                details.push(PFI18n.t('Research.Js.Sectors.LargestCompany',
+                    { name: largest.data.name, value: formatMoney(largest.value) }));
+            }
+            svg.attr('aria-label', PFI18n.t('Research.Js.Sectors.ChartLabel', { period: period.period, details: details.join(' ') }));
+            if (subtitle) {
+                subtitle.textContent = PFI18n.t('Research.Js.Sectors.Subtitle', {
+                    count: PFI18n.formatNumber(period.ranked.length),
+                    total: PFI18n.formatNumber(period.ranked.length + (period.restCount || 0)),
+                    period: period.period
+                });
+            }
+            const summary = PFI18n.t('Research.Js.Sectors.Summary', { period: period.period, details: details.join(' ') });
+            return [summary, technologySentence(techText)].filter(Boolean).join(' ');
         }
 
         /**
@@ -1389,7 +1449,7 @@
                 const company = data.companies[row.company];
                 const industry = data.industries[company.industry];
                 return [
-                    String(rank + 1),
+                    PFI18n.formatNumber(rank + 1),
                     company.ticker ? `${company.name} (${company.ticker})` : company.name,
                     industry.name,
                     data.offices[industry.office],
@@ -1397,13 +1457,13 @@
                 ];
             });
             return {
-                caption: `The ${rows.length} largest SEC filers by Public float in ${period.period}`,
+                caption: PFI18n.plural('Research.Js.Sectors.TableCaption', rows.length, { period: period.period }),
                 columns: [
-                    { label: 'Rank', numeric: true },
-                    { label: 'Company' },
-                    { label: 'SIC industry' },
-                    { label: 'SEC industry office' },
-                    { label: 'Public float', numeric: true }
+                    { label: PFI18n.t('Research.Js.Sectors.Rank'), numeric: true },
+                    { label: PFI18n.t('Research.Js.Sectors.Company') },
+                    { label: PFI18n.t('Research.Js.Sectors.Industry') },
+                    { label: PFI18n.t('Research.Js.Sectors.Office') },
+                    { label: PFI18n.t('Research.Js.Sectors.PublicFloat'), numeric: true }
                 ],
                 rows
             };

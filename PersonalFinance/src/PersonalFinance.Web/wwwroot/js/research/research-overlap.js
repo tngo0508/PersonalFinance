@@ -40,10 +40,10 @@
     /**
      * A percentage with one decimal.
      * @param {number} value - The value in percent.
-     * @returns {string} E.g. "44.1%".
+     * @returns {string} E.g. "44.1%", in the page culture.
      */
     function formatPercent (value) {
-        return `${value.toFixed(1)}%`;
+        return page.formatPercent(value, 1);
     }
 
     /**
@@ -58,10 +58,10 @@
     /**
      * A list of tickers in words.
      * @param {string[]} tickers - The tickers.
-     * @returns {string} E.g. "SPY, QQQ and VTI".
+     * @returns {string} E.g. "SPY, QQQ and VTI", in the page language.
      */
     function listOf (tickers) {
-        return tickers.length < 2 ? tickers.join('') : `${tickers.slice(0, -1).join(', ')} and ${tickers[tickers.length - 1]}`;
+        return page.formatList(tickers);
     }
 
     /**
@@ -175,22 +175,25 @@
         const top = m.pairs.reduce((best, p) => (!best || p.overlap > best.overlap ? p : best), null);
         if (top) {
             items.push({
-                label: 'Most overlapping pair',
+                label: PFI18n.t('Research.Js.Overlap.Most'),
                 value: formatPercent(top.overlap),
-                note: `${top.first.ticker} and ${top.second.ticker}, the most of any pair in this set`
+                note: PFI18n.t('Research.Js.Overlap.MostNote', { a: top.first.ticker, b: top.second.ticker })
             });
         }
         items.push({
-            label: 'Held by two or more of your funds',
-            value: `${m.sharedExact ? '' : 'At least '}${formatPercent(m.sharedTotal)}`,
-            note: 'of your basket is in securities another of its funds also holds'
+            label: PFI18n.t('Research.Js.Overlap.Shared'),
+            value: m.sharedExact
+                ? formatPercent(m.sharedTotal)
+                : PFI18n.t('Research.Js.Overlap.AtLeast', { value: formatPercent(m.sharedTotal) }),
+            note: PFI18n.t('Research.Js.Overlap.SharedNote')
         });
         if (m.duplicates.length > 0) {
             const first = m.duplicates[0];
             items.push({
-                label: 'Largest duplicated holding',
+                label: PFI18n.t('Research.Js.Overlap.Largest'),
                 value: formatPercent(first.basketPercent),
-                note: `of your basket is ${first.name}, held by ${listOf(first.funds.map((f) => f.ticker))}`
+                note: PFI18n.t('Research.Js.Overlap.LargestNote',
+                    { name: first.name, funds: listOf(first.funds.map((f) => f.ticker)) })
             });
         }
         return items;
@@ -211,9 +214,9 @@
         const filterText = document.getElementById(FILTER_TEXT_ID);
         const filterClear = document.getElementById(FILTER_CLEAR_ID);
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, pair) => [
-            line(`${pair.first.ticker} and ${pair.second.ticker}`, 'research-tooltip__name'),
-            line(`${formatPercent(pair.overlap)} overlap by weight`, 'research-tooltip__value'),
-            line(`${PFI18n.formatNumber(pair.sharedCount)} securities in common`, 'research-tooltip__muted')
+            line(PFI18n.t('Research.Js.Common.Pair', { a: pair.first.ticker, b: pair.second.ticker }), 'research-tooltip__name'),
+            line(PFI18n.t('Research.Js.Overlap.Value', { value: formatPercent(pair.overlap) }), 'research-tooltip__value'),
+            line(PFI18n.plural('Research.Js.Overlap.InCommon', pair.sharedCount), 'research-tooltip__muted')
         ]);
         let current = null;
         let filterTicker = null;
@@ -230,13 +233,17 @@
                 .slice(0, TABLE_ROWS);
             filterBar.hidden = !filterTicker;
             if (filterTicker) {
-                filterText.textContent = `Showing the holdings ${filterTicker} shares with your other funds.`;
+                filterText.textContent = PFI18n.t('Research.Js.Overlap.Filter', { ticker: filterTicker });
             }
             const table = element('table', 'research-overlap__duplicates-table');
-            table.append(element('caption', null, 'Most duplicated holdings in your basket'));
+            table.append(element('caption', null, PFI18n.t('Research.Js.Overlap.TableCaption')));
             const head = element('thead');
             const headRow = element('tr');
-            ['Holding', 'Held by', 'Share of your basket'].forEach((text, i) => {
+            [
+                PFI18n.t('Research.Js.Common.Holding'),
+                PFI18n.t('Research.Js.Overlap.HeldBy'),
+                PFI18n.t('Research.Js.Common.ShareOfBasket')
+            ].forEach((text, i) => {
                 const th = element('th', i === 2 ? 'research-overlap__number' : null, text);
                 th.scope = 'col';
                 headRow.append(th);
@@ -245,7 +252,7 @@
             const body = element('tbody');
             if (rows.length === 0) {
                 const tr = element('tr');
-                const td = element('td', 'research-overlap__none', 'None of the listed shared holdings.');
+                const td = element('td', 'research-overlap__none', PFI18n.t('Research.Js.Overlap.None'));
                 td.colSpan = 3;
                 tr.append(td);
                 body.append(tr);
@@ -302,15 +309,19 @@
          * @returns {HTMLTableCellElement} The cell.
          */
         function pairCell (pair) {
-            const td = element('td', 'research-overlap__cell', `${Math.round(pair.overlap)}%`);
+            const td = element('td', 'research-overlap__cell', page.formatPercent(Math.round(pair.overlap), 0));
             const step = stepOf(pair.overlap);
             td.style.setProperty('--research-overlap-fill', BLUES[step]);
             if (step >= FIRST_LIGHT_INK_STEP) {
                 td.classList.add('research-overlap__cell--light-ink');
             }
             td.tabIndex = 0;
-            td.setAttribute('aria-label', `${pair.first.ticker} and ${pair.second.ticker}: ${formatPercent(pair.overlap)} `
-                + `overlap by weight, ${PFI18n.formatNumber(pair.sharedCount)} securities in common`);
+            td.setAttribute('aria-label', PFI18n.t('Research.Js.Overlap.CellLabel', {
+                a: pair.first.ticker,
+                b: pair.second.ticker,
+                value: formatPercent(pair.overlap),
+                common: PFI18n.plural('Research.Js.Overlap.InCommon', pair.sharedCount)
+            }));
             td.addEventListener('pointermove', (event) => {
                 tooltip.show(event, pair);
                 highlight(pair);
@@ -345,7 +356,7 @@
                 });
             });
             const table = element('table', 'research-overlap__matrix-table');
-            table.append(element('caption', 'visually-hidden', 'Overlap by weight between each pair of your funds'));
+            table.append(element('caption', 'visually-hidden', PFI18n.t('Research.Js.Overlap.MatrixCaption')));
             const head = element('thead');
             const headRow = element('tr');
             const corner = element('td', 'research-overlap__corner');
@@ -366,7 +377,7 @@
                 button.type = 'button';
                 button.dataset.filterTicker = row.ticker;
                 button.setAttribute('aria-pressed', String(row.ticker === filterTicker));
-                button.setAttribute('aria-label', `${row.ticker}: show only the holdings it shares`);
+                button.setAttribute('aria-label', PFI18n.t('Research.Js.Overlap.FilterLabel', { ticker: row.ticker }));
                 button.append(fundChip(row));
                 button.addEventListener('click', () => setFilter(row.ticker));
                 th.append(button);
@@ -374,7 +385,7 @@
                 funds.forEach((column) => {
                     if (column.ticker === row.ticker) {
                         const same = element('td', 'research-overlap__cell research-overlap__cell--same');
-                        same.append(element('span', 'visually-hidden', 'Same fund'));
+                        same.append(element('span', 'visually-hidden', PFI18n.t('Research.Js.Common.SameFund')));
                         tr.append(same);
                         return;
                     }
@@ -400,7 +411,7 @@
                 swatch.style.setProperty('--research-overlap-fill', colour);
                 ramp.append(swatch);
             });
-            legend.append(element('span', null, '0%'), ramp, element('span', null, '100%'));
+            legend.append(element('span', null, page.formatPercent(0, 0)), ramp, element('span', null, page.formatPercent(100, 0)));
             return legend;
         }
 
@@ -419,15 +430,19 @@
             prompt.hidden = enough;
             view.hidden = !enough;
             prompt.textContent = current.missing.length > 0
-                ? `There is no overlap data for ${listOf(current.missing)} yet. Add at least two other funds to see how they overlap.`
-                : 'Add at least two funds to your Fund Basket to see how much they overlap.';
+                ? PFI18n.t('Research.Js.Overlap.PromptMissing', { funds: listOf(current.missing) })
+                : PFI18n.t('Research.Js.Overlap.Prompt');
             if (!enough) {
                 lastHeadline = lastHeadline === null ? null : '';
                 return;
             }
             const items = callouts(current);
             if (current.missing.length > 0) {
-                items.push({ label: 'Left out', value: listOf(current.missing), note: 'has no overlap data yet' });
+                items.push({
+                    label: PFI18n.t('Research.Js.Overlap.LeftOut'),
+                    value: listOf(current.missing),
+                    note: PFI18n.t('Research.Js.Overlap.LeftOutNote')
+                });
             }
             calloutList.replaceChildren(...items.map((c) => {
                 const li = element('li', 'research-overlap__callout');
@@ -440,10 +455,11 @@
             drawTable();
             const top = current.pairs.reduce((best, p) => (!best || p.overlap > best.overlap ? p : best), null);
             const headline = top
-                ? `${top.first.ticker} and ${top.second.ticker} overlap ${formatPercent(top.overlap)} by weight, the most in this set.`
+                ? PFI18n.t('Research.Js.Overlap.Headline',
+                    { a: top.first.ticker, b: top.second.ticker, value: formatPercent(top.overlap) })
                 : '';
             if (headline && lastHeadline !== null && headline !== lastHeadline) {
-                page.announce(`Fund overlap: ${headline}`);
+                page.announce(PFI18n.t('Research.Js.Overlap.Announce', { headline }));
             }
             lastHeadline = headline;
         }

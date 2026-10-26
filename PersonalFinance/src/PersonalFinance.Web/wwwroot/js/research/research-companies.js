@@ -19,37 +19,75 @@
     const SUGGEST_DELAY_MS = 200;
     const TICKER_PATTERN = /^[A-Z0-9][A-Z0-9-]{0,9}$/;
     const MINUS = '−';
-    const NOT_REPORTED = 'Not reported';
-    const NOT_SHOWN = 'Not shown';
     /** What separates an 8-K's events in words, as ApiService joins them in a fallback headline. */
     const EVENT_SEPARATOR = ' · ';
 
-    /** The four charts, drawn left to right, top to bottom. */
+    /** The four charts, drawn left to right, top to bottom; titleKey is the key of the chart's title. */
     const CHARTS = [
-        { key: 'revenue', title: 'Revenue', format: 'money' },
-        { key: 'netIncome', title: 'Net income', format: 'money' },
-        { key: 'dilutedEps', title: 'Diluted EPS', format: 'eps' },
-        { key: 'operatingCashFlow', title: 'Operating cash flow', format: 'money' }
+        { key: 'revenue', titleKey: 'Research.Js.Companies.Chart.Revenue', format: 'money' },
+        { key: 'netIncome', titleKey: 'Research.Js.Companies.Chart.NetIncome', format: 'money' },
+        { key: 'dilutedEps', titleKey: 'Research.Js.Companies.Chart.DilutedEps', format: 'eps' },
+        { key: 'operatingCashFlow', titleKey: 'Research.Js.Companies.Chart.OperatingCashFlow', format: 'money' }
     ];
 
-    /** The table's rows: the reported figures, then the derived ones with their formula. */
+    /**
+     * The table's rows: the reported figures, then the derived ones with their formula; labelKey and formulaKey are
+     * the keys of the row's label and formula.
+     */
     const ROWS = [
-        { key: 'revenue', label: 'Revenue ($M)', format: 'millions' },
-        { key: 'grossProfit', label: 'Gross profit ($M)', format: 'millions' },
-        { key: 'netIncome', label: 'Net income ($M)', format: 'millions' },
-        { key: 'dilutedEps', label: 'Diluted EPS ($)', format: 'eps' },
-        { key: 'operatingCashFlow', label: 'Operating cash flow ($M)', format: 'millions' },
-        { key: 'totalAssets', label: 'Total assets ($M)', format: 'millions' },
-        { key: 'totalLiabilities', label: 'Total liabilities ($M)', format: 'millions' },
-        { key: 'equity', label: 'Shareholders\' equity ($M)', format: 'millions' },
-        { key: 'sharesOutstanding', label: 'Shares outstanding (M)', format: 'millions' },
-        { key: 'publicFloat', label: 'Public float ($M)', format: 'millions' },
-        { key: 'grossMargin', label: 'Gross margin', format: 'percent', formula: 'Gross profit ÷ revenue' },
-        { key: 'netMargin', label: 'Net margin', format: 'percent', formula: 'Net income ÷ revenue' },
-        { key: 'revenueGrowth', label: 'Revenue growth', format: 'percent', formula: 'Revenue ÷ prior year\'s revenue − 1' },
-        { key: 'epsGrowth', label: 'EPS growth', format: 'percent', formula: 'Diluted EPS ÷ prior year\'s diluted EPS − 1' },
-        { key: 'liabilitiesToEquity', label: 'Liabilities to equity', format: 'ratio', formula: 'Total liabilities ÷ shareholders\' equity' }
+        { key: 'revenue', labelKey: 'Research.Js.Companies.Row.Revenue', format: 'millions' },
+        { key: 'grossProfit', labelKey: 'Research.Js.Companies.Row.GrossProfit', format: 'millions' },
+        { key: 'netIncome', labelKey: 'Research.Js.Companies.Row.NetIncome', format: 'millions' },
+        { key: 'dilutedEps', labelKey: 'Research.Js.Companies.Row.DilutedEps', format: 'eps' },
+        { key: 'operatingCashFlow', labelKey: 'Research.Js.Companies.Row.OperatingCashFlow', format: 'millions' },
+        { key: 'totalAssets', labelKey: 'Research.Js.Companies.Row.TotalAssets', format: 'millions' },
+        { key: 'totalLiabilities', labelKey: 'Research.Js.Companies.Row.TotalLiabilities', format: 'millions' },
+        { key: 'equity', labelKey: 'Research.Js.Companies.Row.Equity', format: 'millions' },
+        { key: 'sharesOutstanding', labelKey: 'Research.Js.Companies.Row.SharesOutstanding', format: 'millions' },
+        { key: 'publicFloat', labelKey: 'Research.Js.Companies.Row.PublicFloat', format: 'millions' },
+        {
+            key: 'grossMargin',
+            labelKey: 'Research.Js.Companies.Row.GrossMargin',
+            format: 'percent',
+            formulaKey: 'Research.Js.Companies.Formula.GrossMargin'
+        },
+        {
+            key: 'netMargin',
+            labelKey: 'Research.Js.Companies.Row.NetMargin',
+            format: 'percent',
+            formulaKey: 'Research.Js.Companies.Formula.NetMargin'
+        },
+        {
+            key: 'revenueGrowth',
+            labelKey: 'Research.Js.Companies.Row.RevenueGrowth',
+            format: 'percent',
+            formulaKey: 'Research.Js.Companies.Formula.RevenueGrowth'
+        },
+        {
+            key: 'epsGrowth',
+            labelKey: 'Research.Js.Companies.Row.EpsGrowth',
+            format: 'percent',
+            formulaKey: 'Research.Js.Companies.Formula.EpsGrowth'
+        },
+        {
+            key: 'liabilitiesToEquity',
+            labelKey: 'Research.Js.Companies.Row.LiabilitiesToEquity',
+            format: 'ratio',
+            formulaKey: 'Research.Js.Companies.Formula.LiabilitiesToEquity'
+        }
     ];
+
+    /**
+     * Split a template on one placeholder, so an element can go where the translation puts it.
+     * @param {string} key - The template's key.
+     * @param {string} name - The placeholder's name, e.g. "date".
+     * @param {Node} node - What goes in the placeholder's place.
+     * @returns {Array<Node|string>} The parts, in order.
+     */
+    function around (key, name, node) {
+        const [before, after] = PFI18n.t(key).split(`{${name}}`);
+        return [before, node, after || ''].filter((part) => part !== '');
+    }
 
     /**
      * Write a number with a true minus sign.
@@ -68,7 +106,7 @@
      */
     function formatValue (value, format) {
         if (value === null || value === undefined) {
-            return NOT_REPORTED;
+            return PFI18n.t('Research.Js.Companies.NotReported');
         }
         switch (format) {
         case 'millions': {
@@ -98,17 +136,12 @@
     }
 
     /**
-     * Format an ISO date (yyyy-MM-dd) as "20 October 2026".
+     * Format an ISO date (yyyy-MM-dd) as "20 October 2026", in the page culture.
      * @param {string|null|undefined} iso - The date.
      * @returns {string} The date in words, or an empty string.
      */
     function formatDate (iso) {
-        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
-        if (!match) {
-            return '';
-        }
-        const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-        return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+        return /^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? window.ResearchPage.formatDay(iso) : '';
     }
 
     /**
@@ -199,7 +232,7 @@
                 (exit) => exit.transition().duration(duration).attr('y', y(0)).attr('height', 0).remove()
             )
             .classed('research-companies__bar--negative', (p) => p.value < 0)
-            .on('pointerenter pointermove', (event, p) => tooltip.show(event, chart.title, p, chart.format))
+            .on('pointerenter pointermove', (event, p) => tooltip.show(event, PFI18n.t(chart.titleKey), p, chart.format))
             .on('pointerleave', () => tooltip.hide())
             .transition().duration(duration)
             .attr('x', (p) => x(p.year))
@@ -215,13 +248,13 @@
      */
     function buildTable (years) {
         const table = element('table', 'research-table research-companies__figures');
-        table.append(element('caption', '', 'Annual figures by fiscal year, as reported. $M is millions of US dollars.'));
+        table.append(element('caption', '', PFI18n.t('Research.Js.Companies.TableCaption')));
         const headRow = element('tr');
-        const corner = element('th', '', 'Figure');
+        const corner = element('th', '', PFI18n.t('Research.Js.Companies.Figure'));
         corner.scope = 'col';
         headRow.append(corner);
         years.forEach((year) => {
-            const th = element('th', 'research-table__num', `FY ${year.fiscalYear}`);
+            const th = element('th', 'research-table__num', PFI18n.t('Research.Js.Companies.FiscalYear', { year: year.fiscalYear }));
             th.scope = 'col';
             headRow.append(th);
         });
@@ -230,12 +263,13 @@
         const body = element('tbody');
         ROWS.forEach((row) => {
             const tr = element('tr');
-            const th = element('th', row.formula ? 'research-companies__derived' : '', row.label);
+            const formula = row.formulaKey ? PFI18n.t(row.formulaKey) : null;
+            const th = element('th', formula ? 'research-companies__derived' : '', PFI18n.t(row.labelKey));
             th.scope = 'row';
-            if (row.formula) {
-                th.title = row.formula;
+            if (formula) {
+                th.title = formula;
                 th.tabIndex = 0;
-                th.append(element('span', 'research-companies__formula', row.formula));
+                th.append(element('span', 'research-companies__formula', formula));
             }
             tr.append(th);
             years.forEach((year) => {
@@ -243,7 +277,7 @@
                 const missing = value === null || value === undefined;
                 // A reported figure that is missing was not reported; a derived one could not be worked out.
                 tr.append(element('td', missing ? 'research-table__num research-companies__missing' : 'research-table__num',
-                    missing && row.formula ? NOT_SHOWN : formatValue(value, row.format)));
+                    missing && formula ? PFI18n.t('Research.Js.Companies.NotShown') : formatValue(value, row.format)));
             });
             body.append(tr);
         });
@@ -259,19 +293,21 @@
     function buildFiling (filing) {
         const item = element('li', 'research-companies__filing');
         const heading = element('p', 'research-companies__filing-head');
-        heading.append(element('strong', 'research-companies__form', filing.form), ` filed ${formatDate(filing.filedOn)}`);
+        heading.append(element('strong', 'research-companies__form', filing.form), ' ',
+            PFI18n.t('Research.Js.Companies.FiledOn', { date: formatDate(filing.filedOn) }));
         if (filing.reportedOn) {
-            heading.append(`, for ${formatDate(filing.reportedOn)}`);
+            heading.append(', ', PFI18n.t('Research.Js.Companies.ForDate', { date: formatDate(filing.reportedOn) }));
         }
         item.append(heading);
         if (filing.events && filing.events.length > 0) {
             item.append(element('p', 'research-companies__events', filing.events.join(EVENT_SEPARATOR)));
         }
-        const link = element('a', 'research-companies__filing-link', 'View on EDGAR');
+        const link = element('a', 'research-companies__filing-link', PFI18n.t('Research.Js.Companies.ViewOnEdgar'));
         link.href = filing.url;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.append(element('span', 'visually-hidden', ` (${filing.form} filed ${formatDate(filing.filedOn)}, opens in a new tab)`));
+        link.append(element('span', 'visually-hidden',
+            ` ${PFI18n.t('Research.Js.Companies.FilingLinkHint', { form: filing.form, date: formatDate(filing.filedOn) })}`));
         item.append(link);
         return item;
     }
@@ -289,13 +325,13 @@
         link.href = release.url;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.append(element('span', 'visually-hidden', ' (press release on sec.gov, opens in a new tab)'));
+        link.append(element('span', 'visually-hidden', ` ${PFI18n.t('Research.Js.Companies.ReleaseLinkHint')}`));
         heading.append(link);
         item.append(heading);
         const filed = element('p', 'research-companies__release-date');
         const time = element('time', '', formatDate(release.filedOn));
         time.dateTime = release.filedOn;
-        filed.append('Filed ', time);
+        filed.append(...around('Research.Js.Companies.FiledDate', 'date', time));
         item.append(filed);
         if (release.events && release.events.length > 0) {
             item.append(element('p', 'research-companies__events', release.events.join(EVENT_SEPARATOR)));
@@ -339,7 +375,7 @@
         const field = (name) => panel.querySelector(`[data-field="${name}"]`);
         const tooltip = page.createTooltip(document.getElementById('research-company-tooltip'),
             (line, title, point, format) => [
-                line(`${title}, FY ${point.year}`, 'research-tooltip__name'),
+                line(PFI18n.t('Research.Js.Companies.TooltipTitle', { title, year: point.year }), 'research-tooltip__name'),
                 line(formatChartValue(point.value, format), 'research-tooltip__value')
             ]);
 
@@ -405,7 +441,7 @@
                 option.setAttribute('aria-selected', 'false');
                 option.append(element('span', 'research-companies__option-ticker', item.ticker),
                     element('span', 'research-companies__option-name', item.name));
-                const meta = item.isFund ? 'Fund' : (item.exchange || '');
+                const meta = item.isFund ? PFI18n.t('Research.Js.Common.Fund') : (item.exchange || '');
                 if (meta) {
                     option.append(element('span', 'research-companies__option-meta', meta));
                 }
@@ -487,10 +523,9 @@
             const state = element('section', 'unavailable-state');
             state.setAttribute('role', 'status');
             const body = element('div', 'unavailable-state__body');
-            body.append(element('h4', 'unavailable-state__title', `We couldn't load ${ticker}`),
-                element('p', 'unavailable-state__text',
-                    'Your data is safe. The service is temporarily unavailable. Please try again.'));
-            const retry = element('button', 'btn btn-primary btn-sm', 'Retry');
+            body.append(element('h4', 'unavailable-state__title', PFI18n.t('Research.Js.Companies.Unavailable', { ticker })),
+                element('p', 'unavailable-state__text', PFI18n.t('Research.Js.Companies.UnavailableText')));
+            const retry = element('button', 'btn btn-primary btn-sm', PFI18n.t('Research.Js.Common.Retry'));
             retry.type = 'button';
             retry.addEventListener('click', () => lookUp(ticker, { push: false }));
             state.append(body, retry);
@@ -513,15 +548,18 @@
             };
             set('name', profile.name);
             set('ticker', profile.ticker);
-            set('exchange', profile.exchange || 'Not listed');
+            const notListed = PFI18n.t('Research.Js.Companies.NotListed');
+            set('exchange', profile.exchange || notListed);
             set('cik', String(profile.cik));
             set('industry', profile.sicDescription
-                ? `${profile.sicDescription}${profile.sicCode ? ` (SIC ${profile.sicCode})` : ''}`
-                : 'Not listed');
-            set('office', profile.industryOffice || 'Not listed');
-            set('incorporated', profile.stateOfIncorporation || 'Not listed');
-            set('fiscal-year-end', profile.fiscalYearEnd || 'Not listed');
-            set('as-of', profile.dataAsOf ? formatDate(profile.dataAsOf) : 'Not available');
+                ? `${profile.sicDescription}${profile.sicCode
+                    ? ` ${PFI18n.t('Research.Js.Companies.SicCode', { code: profile.sicCode })}`
+                    : ''}`
+                : notListed);
+            set('office', profile.industryOffice || notListed);
+            set('incorporated', profile.stateOfIncorporation || notListed);
+            set('fiscal-year-end', profile.fiscalYearEnd || notListed);
+            set('as-of', profile.dataAsOf ? formatDate(profile.dataAsOf) : PFI18n.t('Research.Js.Companies.NotAvailable'));
             const ifrsNote = field('ifrs-note');
             if (ifrsNote) {
                 ifrsNote.hidden = !profile.reportsUnderIfrs;
@@ -533,8 +571,8 @@
 
             const years = profile.fiscalYears || [];
             set('years-note', years.length > 0
-                ? `${years.length} fiscal ${years.length === 1 ? 'year' : 'years'}, oldest first, from the company's annual reports.`
-                : 'No annual figures in a form this page reads.');
+                ? PFI18n.plural('Research.Js.Companies.YearsNote', years.length)
+                : PFI18n.t('Research.Js.Companies.NoYears'));
             chartsHost.hidden = years.length === 0;
             tableHost.hidden = years.length === 0;
             if (years.length > 0) {
@@ -544,7 +582,7 @@
                     CHARTS.forEach((chart) => {
                         const figure = element('figure', 'research-companies__chart');
                         figure.dataset.chart = chart.key;
-                        figure.append(element('figcaption', 'research-companies__chart-title', chart.title));
+                        figure.append(element('figcaption', 'research-companies__chart-title', PFI18n.t(chart.titleKey)));
                         const svg = window.d3.select(figure).append('svg');
                         svg.append('g').attr('class', 'research-companies__bars');
                         svg.append('line').attr('class', 'research-companies__zero');
@@ -563,7 +601,7 @@
 
             filingsHost.replaceChildren(...(profile.filings || []).map(buildFiling));
             if (!profile.filings || profile.filings.length === 0) {
-                filingsHost.append(element('li', 'research-companies__filing', 'No recent reports.'));
+                filingsHost.append(element('li', 'research-companies__filing', PFI18n.t('Research.Js.Companies.NoFilings')));
             }
             profileHost.hidden = false;
         }
@@ -644,7 +682,7 @@
                 showReleasesState(items.length > 0 ? 'list' : 'empty');
                 if (releasesAnnouncedFor !== ticker) {
                     releasesAnnouncedFor = ticker;
-                    page.announce(`${items.length} press ${items.length === 1 ? 'release' : 'releases'} loaded for ${name}.`);
+                    page.announce(PFI18n.plural('Research.Js.Companies.ReleasesLoaded', items.length, { name }));
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -673,7 +711,7 @@
             input.value = '';
             const asOf = field('as-of');
             if (asOf) {
-                asOf.textContent = 'Look up a company to see its latest filing date.';
+                asOf.textContent = PFI18n.t('Research.Js.Companies.AsOfPrompt');
             }
         }
 
@@ -701,7 +739,7 @@
         async function lookUp (ticker, options) {
             const normalized = toTicker(ticker);
             if (!normalized) {
-                showMessage(['Enter a ticker such as MSFT, or choose a company from the list.'], 'error');
+                showMessage([PFI18n.t('Research.Js.Companies.InvalidTicker')], 'error');
                 return;
             }
             if (lookupRequest) {
@@ -723,24 +761,26 @@
                 });
                 loading.hidden = true;
                 if (response.status === 429) {
-                    showMessage(['Too many lookups. Try again shortly.'], 'error');
-                    page.announce('Too many lookups. Try again shortly.');
+                    showMessage([PFI18n.t('Research.Js.Companies.TooMany')], 'error');
+                    page.announce(PFI18n.t('Research.Js.Companies.TooMany'));
                     return;
                 }
                 if (response.status === 400) {
-                    showMessage(['Enter a ticker such as MSFT, or choose a company from the list.'], 'error');
+                    showMessage([PFI18n.t('Research.Js.Companies.InvalidTicker')], 'error');
                     return;
                 }
                 if (!response.ok) {
                     showUnavailable(normalized);
-                    page.announce(`We couldn't load ${normalized}.`);
+                    page.announce(PFI18n.t('Research.Js.Companies.UnavailableAnnounce', { ticker: normalized }));
                     return;
                 }
                 const result = await response.json();
                 if (result.kind === 'profile' && result.profile) {
                     renderProfile(result.profile);
-                    page.announce(`${result.profile.name} profile loaded${result.profile.dataAsOf
-                        ? `, data as of ${formatDate(result.profile.dataAsOf)}` : ''}.`);
+                    page.announce(result.profile.dataAsOf
+                        ? PFI18n.t('Research.Js.Companies.LoadedAsOf',
+                            { name: result.profile.name, date: formatDate(result.profile.dataAsOf) })
+                        : PFI18n.t('Research.Js.Companies.Loaded', { name: result.profile.name }));
                     if (result.pressReleasesAvailable) {
                         loadReleases(normalized, result.profile.name);
                     } else {
@@ -750,18 +790,18 @@
                 }
                 profileHost.hidden = true;
                 if (result.kind === 'fund') {
-                    const link = element('a', '', 'See funds on the Funds tab');
+                    const link = element('a', '', PFI18n.t('Research.Js.Companies.SeeFunds'));
                     link.href = '?tab=funds';
                     link.addEventListener('click', (event) => {
                         event.preventDefault();
                         page.selectTabById('funds');
                     });
-                    showMessage([`${normalized} is a fund, not a company. `, link, '.']);
-                    page.announce(`${normalized} is a fund, not a company.`);
+                    const [before, after] = PFI18n.t('Research.Js.Companies.IsFund', { ticker: normalized }).split('{link}');
+                    showMessage([before, link, after || ''].filter((part) => part !== ''));
+                    page.announce(PFI18n.t('Research.Js.Companies.IsFundAnnounce', { ticker: normalized }));
                 } else {
-                    showMessage([`${normalized} is not an SEC-registered company. Only companies that file with the ` +
-                        'SEC can be looked up.']);
-                    page.announce(`${normalized} is not an SEC-registered company.`);
+                    showMessage([PFI18n.t('Research.Js.Companies.NotSec', { ticker: normalized })]);
+                    page.announce(PFI18n.t('Research.Js.Companies.NotSecAnnounce', { ticker: normalized }));
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
