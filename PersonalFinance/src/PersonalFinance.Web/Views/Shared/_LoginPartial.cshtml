@@ -17,7 +17,7 @@
 
     <ul class="navbar-nav align-items-md-center">
         <li class="nav-item dropdown">
-            <button type="button" class="btn app-user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu for @displayName">
+            <button type="button" class="btn app-user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@L.Named("Shell.Account.MenuFor", ("name", displayName))">
                 @if (!string.IsNullOrEmpty(profilePictureUrl))
                 {
                     <img src="@profilePictureUrl" alt="" class="app-avatar" width="32" height="32" referrerpolicy="no-referrer" />
@@ -35,21 +35,21 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index">Account settings</a>
+                    <a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index">@L["Shell.Account.Settings"]</a>
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <partial name="_LanguageSwitcher" model="@("menu")"/>
                 @if (isAdmin)
                 {
                     <li>
-                        <a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Index">Admin</a>
+                        <a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Index">@L["Shell.Account.Admin"]</a>
                     </li>
                 }
                 <li><hr class="dropdown-divider"></li>
                 <li>
                     <form asp-area="Identity" asp-page="/Account/Logout"
                           asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
-                        <button type="submit" class="dropdown-item">Sign out</button>
+                        <button type="submit" class="dropdown-item">@L["Shell.Account.SignOut"]</button>
                     </form>
                 </li>
             </ul>
@@ -60,7 +60,7 @@ else
 {
     <div class="topbar-auth">
         <partial name="_LanguageSwitcher" model="@("inline")"/>
-        <a class="btn btn-sm btn-outline-primary" asp-area="Identity" asp-page="/Account/Login">Sign in</a>
-        <a class="btn btn-sm btn-primary" asp-area="Identity" asp-page="/Account/Register">Create account</a>
+        <a class="btn btn-sm btn-outline-primary" asp-area="Identity" asp-page="/Account/Login">@L["Shell.Account.SignIn"]</a>
+        <a class="btn btn-sm btn-primary" asp-area="Identity" asp-page="/Account/Register">@L["Shell.Account.CreateAccount"]</a>
     </div>
 }

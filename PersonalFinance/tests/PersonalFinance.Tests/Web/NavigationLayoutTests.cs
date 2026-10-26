@@ -70,18 +70,18 @@ public class NavigationLayoutTests
     public void Sidebar_LinksToResearch_InTheResourcesGroup()
     {
         string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
-        string resources = Between(sidebar, "Resources</div>", "<div class=\"sidebar-group\">");
+        string resources = Between(sidebar, "@L[\"Shell.Nav.Resources\"]</div>", "<div class=\"sidebar-group\">");
 
         Assert.Contains("asp-controller=\"Research\" asp-action=\"Index\"", resources);
         Assert.Contains("currentController == \"Research\" ? \"active\"", resources);
-        Assert.Contains("<span class=\"sidebar-link-text\">Research</span>", resources);
+        Assert.Contains("<span class=\"sidebar-link-text\">@L[\"Shell.Nav.Research\"]</span>", resources);
     }
 
     [Fact]
     public void Sidebar_LinksToMoneyPriorities_InMyFinances_AfterSavingsGoals()
     {
         string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
-        string myFinances = Between(sidebar, "My Finances</div>", "<div class=\"sidebar-group\">");
+        string myFinances = Between(sidebar, "@L[\"Shell.Nav.MyFinances\"]</div>", "<div class=\"sidebar-group\">");
 
         int savingsGoals = myFinances.IndexOf("asp-controller=\"SavingsGoals\"", StringComparison.Ordinal);
         int moneyPriorities = myFinances.IndexOf("asp-controller=\"MoneyPriorities\" asp-action=\"Index\"",
@@ -91,7 +91,7 @@ public class NavigationLayoutTests
             "Money Priorities should sit in My Finances between Savings Goals and Analysis.");
         Assert.Contains("currentController == \"MoneyPriorities\" ? \"active\"", myFinances);
         Assert.Contains("<i data-lucide=\"signpost\"></i>", myFinances);
-        Assert.Contains("<span class=\"sidebar-link-text\">Money Priorities</span>", myFinances);
+        Assert.Contains("<span class=\"sidebar-link-text\">@L[\"Shell.Nav.MoneyPriorities\"]</span>", myFinances);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class NavigationLayoutTests
     {
         string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");
 
-        string finances = bottomNav[..bottomNav.IndexOf("<span>Finances</span>", StringComparison.Ordinal)];
+        string finances = bottomNav[..bottomNav.IndexOf("<span>@L[\"Shell.BottomNav.Finances\"]</span>", StringComparison.Ordinal)];
         finances = finances[finances.LastIndexOf("<a ", StringComparison.Ordinal)..];
         Assert.Contains("currentController == \"MoneyPriorities\"", finances);
     }
@@ -110,7 +110,7 @@ public class NavigationLayoutTests
         string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");
 
         Assert.Equal(5, Regex.Count(bottomNav, "class=\"bottom-nav-item"));
-        string tools = bottomNav[..bottomNav.IndexOf("<span>Tools</span>", StringComparison.Ordinal)];
+        string tools = bottomNav[..bottomNav.IndexOf("<span>@L[\"Shell.BottomNav.Tools\"]</span>", StringComparison.Ordinal)];
         tools = tools[tools.LastIndexOf("<a ", StringComparison.Ordinal)..];
         Assert.Contains("currentController == \"Research\"", tools);
     }

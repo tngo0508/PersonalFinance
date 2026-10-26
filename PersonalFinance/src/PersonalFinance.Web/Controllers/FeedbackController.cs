@@ -1,7 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PersonalFinance.Shared.Constants;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Web.Infrastructure;
@@ -20,18 +20,15 @@ public class FeedbackController : Controller
     /// </summary>
     public const string SentKey = "FeedbackSent";
 
-    /// <summary>
-    /// The confirmation shown after Feedback is sent.
-    /// </summary>
-    public const string SentMessage = "Thanks! Your feedback was sent.";
-
     private readonly IFeedbackApi _feedbackApi;
     private readonly ILogger<FeedbackController> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public FeedbackController(IFeedbackApi feedbackApi, ILogger<FeedbackController> logger)
+    public FeedbackController(IFeedbackApi feedbackApi, ILogger<FeedbackController> logger, IStringLocalizer localizer)
     {
         _feedbackApi = feedbackApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -69,7 +66,7 @@ public class FeedbackController : Controller
         }
         catch (Refit.ApiException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
         {
-            ModelState.AddModelError(string.Empty, FeedbackMessages.RateLimited);
+            ModelState.AddModelError(string.Empty, _localizer["Feedback.Message.RateLimited"]);
             return View(nameof(Index), model);
         }
         catch (Exception ex) when ((ex is Refit.ApiException or HttpRequestException or TaskCanceledException)
@@ -77,11 +74,11 @@ public class FeedbackController : Controller
         {
             _logger.LogWarning(ex, "Sending feedback failed.");
             ModelState.AddModelError(string.Empty,
-                ApiErrorMessages.ForUser(ex, "Your feedback could not be sent. Please try again later."));
+                ApiErrorMessages.ForUser(ex, _localizer["Feedback.Message.SendFailed"]));
             return View(nameof(Index), model);
         }
 
-        TempData[SentKey] = SentMessage;
+        TempData[SentKey] = _localizer["Feedback.Message.Sent"].Value;
         return RedirectToAction(nameof(Index));
     }
 }

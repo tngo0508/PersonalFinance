@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using System.Security.Claims;
@@ -31,7 +32,7 @@ public class FeedbackWebControllerTests
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "feedback-user")], "TestAuthType");
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
 
-        return new FeedbackController(api, NullLogger<FeedbackController>.Instance)
+        return new FeedbackController(api, NullLogger<FeedbackController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())
@@ -89,7 +90,7 @@ public class FeedbackWebControllerTests
         Assert.Equal(FeedbackCategory.Bug, api.Submitted!.Category);
         Assert.Equal("The chart is blank.", api.Submitted.Message);
         Assert.Equal("/Dashboard", api.Submitted.PageUrl);
-        Assert.Equal(FeedbackController.SentMessage, controller.TempData[FeedbackController.SentKey]);
+        Assert.Equal("Thanks! Your feedback was sent.", controller.TempData[FeedbackController.SentKey]);
     }
 
     [Fact]
@@ -139,8 +140,32 @@ public class FeedbackWebControllerTests
         Assert.Equal(nameof(FeedbackController.Index), view.ViewName);
         Assert.Same(model, view.Model);
         ModelError error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
-        Assert.Equal(FeedbackMessages.RateLimited, error.ErrorMessage);
+        Assert.Equal("You've sent a lot of feedback recently. Please try again later.", error.ErrorMessage);
         Assert.Null(controller.TempData[FeedbackController.SentKey]);
+    }
+
+    [Fact]
+    public async Task Send_InVietnamese_ConfirmsInVietnamese()
+    {
+        using var culture = new UiCultureScope("vi");
+        FeedbackController controller = CreateController(new FakeFeedbackApi());
+
+        await controller.Send(ValidModel());
+
+        Assert.Equal(TestLocalization.Vietnamese("Feedback.Message.Sent"), controller.TempData[FeedbackController.SentKey]);
+    }
+
+    [Fact]
+    public async Task Send_InVietnamese_WhenRateLimited_ExplainsInVietnamese()
+    {
+        using var culture = new UiCultureScope("vi");
+        ApiException failure = await CreateApiExceptionAsync(HttpStatusCode.TooManyRequests, string.Empty);
+        FeedbackController controller = CreateController(new FakeFeedbackApi { Failure = failure });
+
+        await controller.Send(ValidModel());
+
+        ModelError error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
+        Assert.Equal(TestLocalization.Vietnamese("Feedback.Message.RateLimited"), error.ErrorMessage);
     }
 
     [Fact]
@@ -197,13 +222,24 @@ public class FeedbackWebControllerTests
         model.Message = new string('a', 2001);
 
         ValidationResult error = Assert.Single(Validate(model), r => r.MemberNames.Contains(nameof(FeedbackViewModel.Message)));
-        Assert.Equal("Message must be 2,000 characters or fewer.", error.ErrorMessage);
+        Assert.Equal("Feedback.Validation.MessageTooLong", error.ErrorMessage);
     }
 
     [Fact]
     public void ViewModel_AcceptsAValidForm()
     {
         Assert.Empty(Validate(ValidModel()));
+    }
+
+    [Fact]
+    public void ViewModel_TooLongMessage_IsLocalized_WithTheLimit()
+    {
+        Assert.True(TestLocalization.Catalog.TryGet("en", "Feedback.Validation.MessageTooLong", out string template));
+
+        string message = string.Format(CultureInfo.GetCultureInfo("en-US"), template,
+            nameof(FeedbackViewModel.Message), FeedbackLimits.MessageMaxLength);
+
+        Assert.Equal("Message must be 2,000 characters or fewer.", message);
     }
 
     private static List<ValidationResult> Validate(object model)

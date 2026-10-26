@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="~/css/ai-chat-widget.css" asp-append-version="true"/>
 </head>
 <body class="app-body @(isSignedIn ? "has-sidebar" : "no-sidebar")">
-<a class="visually-hidden-focusable app-skip-link" href="#main-content">Skip to main content</a>
+<a class="visually-hidden-focusable app-skip-link" href="#main-content">@L["Shell.SkipToContent"]</a>
 
 @if (isSignedIn)
 {
@@ -53,7 +53,7 @@
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+    <aside id="sidebar" class="sidebar" aria-label="@L["Shell.Nav.Label"]">
         <div class="sidebar-header">
             <a class="sidebar-brand" asp-area="" asp-controller="Home" asp-action="Index">
                 <span class="sidebar-brand-icon">
@@ -61,7 +61,7 @@
                 </span>
                 <span class="sidebar-brand-name">@AppVersion.ApplicationName</span>
             </a>
-            <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="true">
+            <button id="sidebarToggle" class="sidebar-toggle" aria-label="@L["Shell.Nav.ToggleSidebar"]" aria-expanded="true">
                 <i data-lucide="panel-left" style="width:20px;height:20px"></i>
             </button>
         </div>
@@ -69,71 +69,71 @@
         <nav class="sidebar-nav">
             <!-- Overview -->
             <div class="sidebar-group">
-                <div class="sidebar-group-label">Overview</div>
+                <div class="sidebar-group-label">@L["Shell.Nav.Overview"]</div>
                 <a class="sidebar-link @(currentController == "Dashboard" ? "active" : "")"
                    asp-area="" asp-controller="Dashboard" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="layout-dashboard"></i></span>
-                    <span class="sidebar-link-text">Dashboard</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.Dashboard"]</span>
                 </a>
             </div>
 
             <!-- My Finances -->
             <div class="sidebar-group">
-                <div class="sidebar-group-label">My Finances</div>
+                <div class="sidebar-group-label">@L["Shell.Nav.MyFinances"]</div>
                 <a class="sidebar-link @(currentController == "Networth" ? "active" : "")"
                    asp-area="" asp-controller="Networth" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="dollar-sign"></i></span>
-                    <span class="sidebar-link-text">Net Worth</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.NetWorth"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "BudgetTracker" ? "active" : "")"
                    asp-area="" asp-controller="BudgetTracker" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="receipt"></i></span>
-                    <span class="sidebar-link-text">Budget Tracker</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.BudgetTracker"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "Budget" ? "active" : "")"
                    asp-area="" asp-controller="Budget" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="pie-chart"></i></span>
-                    <span class="sidebar-link-text">Budget Planner</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.BudgetPlanner"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "SavingsGoals" ? "active" : "")"
                    asp-area="" asp-controller="SavingsGoals" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="target"></i></span>
-                    <span class="sidebar-link-text">Savings Goals</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.SavingsGoals"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "MoneyPriorities" ? "active" : "")"
                    asp-area="" asp-controller="MoneyPriorities" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="signpost"></i></span>
-                    <span class="sidebar-link-text">Money Priorities</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.MoneyPriorities"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "Analysis" ? "active" : "")"
                    asp-area="" asp-controller="Analysis" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="bar-chart-3"></i></span>
-                    <span class="sidebar-link-text">Analysis</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.Analysis"]</span>
                 </a>
             </div>
 
             <!-- Resources -->
             <div class="sidebar-group">
-                <div class="sidebar-group-label">Resources</div>
+                <div class="sidebar-group-label">@L["Shell.Nav.Resources"]</div>
                 <a class="sidebar-link @(currentController == "InvestmentCalculator" ? "active" : "")"
                    asp-area="" asp-controller="InvestmentCalculator" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="calculator"></i></span>
-                    <span class="sidebar-link-text">Investment Calculator</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.InvestmentCalculator"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "Research" ? "active" : "")"
                    asp-area="" asp-controller="Research" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="globe"></i></span>
-                    <span class="sidebar-link-text">Research</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.Research"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "News" ? "active" : "")"
                    asp-area="" asp-controller="News" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="newspaper"></i></span>
-                    <span class="sidebar-link-text">Finance News</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.FinanceNews"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "Community" ? "active" : "")"
                    asp-area="" asp-controller="Community" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="users"></i></span>
-                    <span class="sidebar-link-text">Community</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.Community"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "GoogleDrive" ? "active" : "")"
                    asp-area="" asp-controller="GoogleDrive" asp-action="Index">
@@ -143,7 +143,7 @@
                 <a class="sidebar-link @(currentController == "Feedback" ? "active" : "")"
                    asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">
                     <span class="sidebar-link-icon"><i data-lucide="message-square"></i></span>
-                    <span class="sidebar-link-text">Send feedback</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.SendFeedback"]</span>
                 </a>
             </div>
 
@@ -151,11 +151,11 @@
             {
                 <!-- Admin -->
                 <div class="sidebar-group">
-                    <div class="sidebar-group-label">Admin</div>
+                    <div class="sidebar-group-label">@L["Shell.Nav.Admin"]</div>
                     <a class="sidebar-link @(currentController == "Admin" ? "active" : "")"
                        asp-area="" asp-controller="Admin" asp-action="Index">
                         <span class="sidebar-link-icon"><i data-lucide="shield-check"></i></span>
-                        <span class="sidebar-link-text">Admin Dashboard</span>
+                        <span class="sidebar-link-text">@L["Shell.Nav.AdminDashboard"]</span>
                     </a>
                 </div>
             }
@@ -169,7 +169,7 @@
     <header class="topbar">
         @if (isSignedIn)
         {
-            <button id="mobileMenuToggle" class="topbar-btn d-md-none" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+            <button id="mobileMenuToggle" class="topbar-btn d-md-none" aria-label="@L["Shell.Topbar.OpenMenu"]" aria-expanded="false" aria-controls="sidebar">
                 <i data-lucide="menu"></i>
             </button>
 
@@ -179,14 +179,14 @@
                     <i data-lucide="search"></i>
                 </span>
                 <input type="text" id="topbarSearchInput" class="topbar-search-input"
-                       placeholder="Search transactions, categories, goals..." aria-label="Search"
+                       placeholder="@L["Shell.Search.Placeholder"]" aria-label="@L["Shell.Search.Label"]"
                        role="combobox" aria-autocomplete="list" aria-expanded="false"
                        aria-controls="searchResultsList" autocomplete="off">
                 <div id="searchResultsDropdown" class="search-results-dropdown" hidden>
-                    <div id="searchResultsList" role="listbox" aria-label="Search results"></div>
+                    <div id="searchResultsList" role="listbox" aria-label="@L["Shell.Search.ResultsLabel"]"></div>
                     <div id="searchMessage" class="search-empty" hidden>
                         <p id="searchMessageText" class="search-message-text"></p>
-                        <button type="button" id="searchRetryButton" class="btn btn-sm btn-outline-secondary" hidden>Try again</button>
+                        <button type="button" id="searchRetryButton" class="btn btn-sm btn-outline-secondary" hidden>@L["Shell.Search.TryAgain"]</button>
                     </div>
                 </div>
                 <div id="searchStatus" class="visually-hidden" role="status" aria-live="polite"></div>
@@ -195,7 +195,7 @@
             <!-- Actions -->
             <div class="topbar-actions">
                 <!-- Notification Bell -->
-                <button id="notificationBell" class="topbar-btn" aria-label="Notifications">
+                <button id="notificationBell" class="topbar-btn" aria-label="@L["Shell.Topbar.Notifications"]">
                     <i data-lucide="bell"></i>
                     <span id="notificationBadge" class="topbar-badge hidden">0</span>
                 </button>
@@ -231,19 +231,19 @@
         <div class="container-xl">
             <div class="row align-items-center">
                 <div class="col-12 col-md-6 text-center text-md-start mb-2 mb-md-0">
-                    <span>&copy; @DateTime.Now.Year @AppVersion.ApplicationName — Version @AppVersion.Current</span>
+                    <span>@L.Named("Shell.Footer.Copyright", ("year", DateTime.Now.Year), ("appName", AppVersion.ApplicationName), ("version", AppVersion.Current))</span>
                 </div>
                 <div class="col-12 col-md-6 text-center text-md-end">
                     <ul class="app-footer__links justify-content-center justify-content-md-end">
-                        <li><a asp-area="" asp-controller="Home" asp-action="About">About</a></li>
-                        <li><a asp-area="" asp-controller="Legal" asp-action="Privacy">Privacy Policy</a></li>
-                        <li><a asp-area="" asp-controller="Legal" asp-action="Terms">Terms of Service</a></li>
-                        <li><a asp-area="" asp-controller="Legal" asp-action="Disclaimer">Disclaimer</a></li>
-                        <li><a asp-area="" asp-controller="Legal" asp-action="Cookies">Cookies</a></li>
-                        <li><a asp-area="" asp-controller="Legal" asp-action="Contact">Contact</a></li>
+                        <li><a asp-area="" asp-controller="Home" asp-action="About">@L["Shell.Footer.About"]</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Privacy">@L["Shell.Footer.Privacy"]</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Terms">@L["Shell.Footer.Terms"]</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Disclaimer">@L["Shell.Footer.Disclaimer"]</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Cookies">@L["Shell.Footer.Cookies"]</a></li>
+                        <li><a asp-area="" asp-controller="Legal" asp-action="Contact">@L["Shell.Footer.Contact"]</a></li>
                         @if (isSignedIn)
                         {
-                            <li><a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">Send feedback</a></li>
+                            <li><a asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">@L["Shell.Nav.SendFeedback"]</a></li>
                         }
                     </ul>
                 </div>
@@ -258,30 +258,30 @@
 <!-- Mobile Bottom Navigation -->
 @if (isSignedIn)
 {
-    <nav class="bottom-nav" aria-label="Mobile navigation">
+    <nav class="bottom-nav" aria-label="@L["Shell.BottomNav.Label"]">
         <a class="bottom-nav-item @(currentController == "Dashboard" ? "active" : "")"
            asp-area="" asp-controller="Dashboard" asp-action="Index">
             <i data-lucide="layout-dashboard"></i>
-            <span>Home</span>
+            <span>@L["Shell.BottomNav.Home"]</span>
         </a>
         <a class="bottom-nav-item @(currentController == "Networth" || currentController == "Budget" || currentController == "SavingsGoals" || currentController == "MoneyPriorities" || currentController == "Analysis" ? "active" : "")"
            asp-area="" asp-controller="Networth" asp-action="Index">
             <i data-lucide="dollar-sign"></i>
-            <span>Finances</span>
+            <span>@L["Shell.BottomNav.Finances"]</span>
         </a>
         <a class="bottom-nav-item @(currentController == "InvestmentCalculator" || currentController == "Research" || currentController == "News" || currentController == "GoogleDrive" ? "active" : "")"
            asp-area="" asp-controller="InvestmentCalculator" asp-action="Index">
             <i data-lucide="calculator"></i>
-            <span>Tools</span>
+            <span>@L["Shell.BottomNav.Tools"]</span>
         </a>
         <a class="bottom-nav-item @(currentController == "Community" ? "active" : "")"
            asp-area="" asp-controller="Community" asp-action="Index">
             <i data-lucide="users"></i>
-            <span>Community</span>
+            <span>@L["Shell.Nav.Community"]</span>
         </a>
-        <a class="bottom-nav-item" asp-area="Identity" asp-page="/Account/Manage/Index" aria-label="Profile">
+        <a class="bottom-nav-item" asp-area="Identity" asp-page="/Account/Manage/Index" aria-label="@L["Shell.BottomNav.Profile"]">
             <i data-lucide="user"></i>
-            <span>Profile</span>
+            <span>@L["Shell.BottomNav.Profile"]</span>
         </a>
     </nav>
 }
@@ -295,6 +295,7 @@
 <script src="~/js/core/cookie-consent.js" asp-append-version="true"></script>
 @if (isSignedIn)
 {
+    <js-strings prefix="Shell.Js." />
     <script src="~/js/core/sidebar.js" asp-append-version="true"></script>
     <script src="~/js/core/search.js" asp-append-version="true"></script>
     <script src="~/js/core/notifications.js" asp-append-version="true"></script>
