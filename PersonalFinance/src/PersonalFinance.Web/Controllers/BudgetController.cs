@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.Budget;
 
 namespace PersonalFinance.Web.Controllers;
@@ -19,11 +21,14 @@ public class BudgetController : Controller
 {
     private readonly IBudgetPlannerApi _budgetPlannerApi;
     private readonly ILogger<BudgetController> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public BudgetController(IBudgetPlannerApi budgetPlannerApi, ILogger<BudgetController> logger)
+    public BudgetController(IBudgetPlannerApi budgetPlannerApi, ILogger<BudgetController> logger,
+        IStringLocalizer localizer)
     {
         _budgetPlannerApi = budgetPlannerApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -59,7 +64,8 @@ public class BudgetController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Failed to load the budget; rendering the Unavailable State instead.");
-            return this.UnavailableView("Budget Planner", "We couldn't load your budget", "Budget");
+            return this.UnavailableView(_localizer["BudgetPlanner.Title"], _localizer["BudgetPlanner.Message.Unavailable"],
+                "Budget");
         }
 
         return View(model);
@@ -81,7 +87,7 @@ public class BudgetController : Controller
         // Validate monthly income
         if (model.MonthlyIncome <= 0)
         {
-            ModelState.AddModelError("", "Monthly income must be greater than 0.");
+            ModelState.AddModelError("", _localizer["BudgetPlanner.Message.IncomeRequired"]);
             return View("Index", model);
         }
 
@@ -92,18 +98,19 @@ public class BudgetController : Controller
             await _budgetPlannerApi.SaveBudgetAsync(request, HttpContext.RequestAborted);
             if (model.TotalAllocated > model.MonthlyIncome)
             {
-                TempData["SaveWarning"] =
-                    $"Budget saved. Note: Total allocations ({MoneyFormatter.Format(model.TotalAllocated, SupportedCurrencies.Default.Code)}) exceed your monthly income of {MoneyFormatter.Format(model.MonthlyIncome, SupportedCurrencies.Default.Code)}.";
+                TempData["SaveWarning"] = _localizer.Named("BudgetPlanner.Message.SavedOverIncome",
+                    ("total", MoneyFormatter.Format(model.TotalAllocated, SupportedCurrencies.Default.Code)),
+                    ("income", MoneyFormatter.Format(model.MonthlyIncome, SupportedCurrencies.Default.Code)));
             }
             else
             {
-                TempData["SaveSuccess"] = "Budget saved successfully.";
+                TempData["SaveSuccess"] = _localizer["BudgetPlanner.Message.Saved"].Value;
             }
         }
         catch (Exception ex) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             _logger.LogError(ex, "Saving the budget failed.");
-            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, "Failed to save budget. Please try again."));
+            ModelState.AddModelError("", ApiErrorMessages.ForUser(ex, _localizer["BudgetPlanner.Message.SaveFailed"]));
             return View("Index", model);
         }
 

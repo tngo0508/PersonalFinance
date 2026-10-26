@@ -2,28 +2,46 @@
 @using System.Text.Json
 @using PersonalFinance.Shared.DTOs.NetWorth
 @using PersonalFinance.Web.Services
+@using Microsoft.AspNetCore.Html
 
 @{
     var projection = Model.Projection;
 }
 
 @functions {
+    // Whole units in the request culture. networth-ui.js rewrites the small tiles with PFI18n.formatCompactMoney after
+    // the first recalculation, which runs as soon as the page loads.
     private static string FormatCurrency(decimal value)
     {
         return MoneyFormatter.FormatWhole(value, SupportedCurrencies.Default.Code);
     }
 
-    private static string FormatCompact(decimal value)
+    private static string Rate(decimal ratePercent)
     {
-        if (value >= 1_000_000m)
-        {
-            return $"{value / 1_000_000m:F1}M";
-        }
-        if (value >= 1_000m)
-        {
-            return $"{value / 1_000m:F0}K";
-        }
-        return value.ToString("F0");
+        return ratePercent.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    private string ScenarioName(string name)
+    {
+        return L[$"NetWorth.Js.Scenario.{name}"];
+    }
+
+    // The help text's colour swatches and star, each in front of the word it marks.
+    private const string YellowSwatch = "<span style=\"display:inline-block;width:12px;height:12px;background:#fef9c3;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid rgba(0,0,0,0.1)\"></span> ";
+    private const string GreenSwatch = "<span style=\"display:inline-block;width:12px;height:12px;background:#bbf7d0;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid rgba(0,0,0,0.1)\"></span> ";
+    private const string GoldStar = "<span style=\"display:inline;font-size:1.1em;color:#f59e0b;vertical-align:middle;\">★</span> ";
+
+    /// <summary>Bold text for a placeholder of <c>L.NamedHtml</c>, after optional marker markup.</summary>
+    private static IHtmlContent Strong(string text, string markerHtml = "")
+    {
+        var content = new HtmlContentBuilder();
+        content.AppendHtml(markerHtml).AppendHtml("<strong>").Append(text).AppendHtml("</strong>");
+        return content;
+    }
+
+    private static IHtmlContent Plain(string text)
+    {
+        return new HtmlContentBuilder().Append(text);
     }
 }
 
@@ -35,18 +53,18 @@
                 <span class="nw-title__icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
                 </span>
-                Net Worth &amp; FI Projection
+                @L["NetWorth.Header.Title"]
             </h1>
-            <p class="nw-subtitle">Track your path to Financial Independence with scenario-based projections</p>
+            <p class="nw-subtitle">@L["NetWorth.Header.Subtitle"]</p>
         </div>
         <div class="nw-header__actions">
             <a class="nw-help-btn" asp-controller="Research" asp-action="Index">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                Explore market research
+                @L["NetWorth.Header.ExploreResearch"]
             </a>
             <button type="button" class="nw-help-btn" data-bs-toggle="modal" data-bs-target="#nwHelpModal">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                How it works
+                @L["NetWorth.Header.HowItWorks"]
             </button>
         </div>
     </div>
@@ -58,14 +76,14 @@
     <div class="alert alert-success alert-dismissible fade show nw-alert mt-3" role="alert">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         @TempData["SaveSuccess"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
     </div>
 }
 @if (!string.IsNullOrEmpty(TempData["SaveError"] as string))
 {
     <div class="alert alert-danger alert-dismissible fade show nw-alert mt-3" role="alert">
         @TempData["SaveError"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
     </div>
 }
 
@@ -84,37 +102,37 @@
                     <div class="nw-sidebar-card__icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 6.82 21.02 8 14.14 3 9.27 9.91 8.26 12 2"/></svg>
                     </div>
-                    <span>Quick Presets</span>
+                    <span>@L["NetWorth.Presets.Title"]</span>
                 </div>
                 <div class="nw-sidebar-card__body">
                     <div class="nw-presets nw-presets--compact">
                         <div class="nw-presets__grid nw-presets__grid--compact">
                             <button type="button" class="nw-preset-card" data-preset="fire" id="nwPresetFire">
                                 <div class="nw-preset-card__icon">🔥</div>
-                                <div class="nw-preset-card__title">FIRE</div>
+                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Fire"]</div>
                             </button>
                             <button type="button" class="nw-preset-card" data-preset="coast" id="nwPresetCoast">
                                 <div class="nw-preset-card__icon">🏖️</div>
-                                <div class="nw-preset-card__title">Coast FI</div>
+                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Coast"]</div>
                             </button>
                             <button type="button" class="nw-preset-card" data-preset="traditional" id="nwPresetTraditional">
                                 <div class="nw-preset-card__icon">🏠</div>
-                                <div class="nw-preset-card__title">Traditional</div>
+                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Traditional"]</div>
                             </button>
                             <button type="button" class="nw-preset-card" data-preset="ultra" id="nwPresetUltra">
                                 <div class="nw-preset-card__icon">🚀</div>
-                                <div class="nw-preset-card__title">Ultra</div>
+                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Ultra"]</div>
                             </button>
                             <button type="button" class="nw-preset-card" data-preset="conservative" id="nwPresetConservative">
                                 <div class="nw-preset-card__icon">🛡️</div>
-                                <div class="nw-preset-card__title">Safe</div>
+                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Safe"]</div>
                             </button>
                         </div>
                     </div>
                     <!-- Savings Rate Indicator -->
                     <div class="nw-savings-indicator" id="nwSavingsIndicator">
                         <div class="nw-savings-indicator__header">
-                            <span>Savings Rate</span>
+                            <span>@L["NetWorth.Field.SavingsRate"]</span>
                             <span class="nw-savings-indicator__value" id="nwSavingsRateValue">@($"{Model.SavingsRatePercent:F1}%")</span>
                         </div>
                         <div class="nw-savings-indicator__bar">
@@ -134,16 +152,16 @@
                     <div class="nw-sidebar-card__icon nw-sidebar-card__icon--green">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/><path d="M17 13a1 1 0 0 0 1 1v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-1a1 1 0 0 0 1-1"/><path d="M15 21V13h-6v8"/></svg>
                     </div>
-                    <span>Financial Overview</span>
+                    <span>@L["NetWorth.Section.FinancialOverview"]</span>
                 </div>
                 <div class="nw-sidebar-card__body">
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Starting Balance
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="Your current total investable assets"></i>
+                            @L["NetWorth.Field.StartingBalance"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.StartingBalanceHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">$</span>
+                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
                             <input asp-for="StartingBalance" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwStartingBalance" />
                         </div>
@@ -151,11 +169,11 @@
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Annual Savings
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="How much you save and invest each year"></i>
+                            @L["NetWorth.Field.AnnualSavings"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AnnualSavingsHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">$</span>
+                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
                             <input asp-for="AnnualSavings" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualSavings" />
                         </div>
@@ -163,11 +181,11 @@
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Annual Income
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="Your total yearly gross income"></i>
+                            @L["NetWorth.Field.AnnualIncome"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AnnualIncomeHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">$</span>
+                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
                             <input asp-for="AnnualIncome" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualIncome" />
                         </div>
@@ -175,11 +193,11 @@
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Annual Spending
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="Annual spending — used to calculate FI Target"></i>
+                            @L["NetWorth.Field.AnnualSpending"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AnnualSpendingHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">$</span>
+                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
                             <input asp-for="AnnualSpending" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualSpending" />
                         </div>
@@ -194,30 +212,30 @@
                     <div class="nw-sidebar-card__icon nw-sidebar-card__icon--blue">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                     </div>
-                    <span>Timeline</span>
+                    <span>@L["NetWorth.Section.Timeline"]</span>
                 </div>
                 <div class="nw-sidebar-card__body">
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Current Age
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="Your current age in years"></i>
+                            @L["NetWorth.Field.CurrentAge"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.CurrentAgeHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
                             <input asp-for="CurrentAge" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwCurrentAge" />
-                            <span class="nw-slider-field__suffix">years</span>
+                            <span class="nw-slider-field__suffix">@L["NetWorth.Field.YearsSuffix"]</span>
                         </div>
                         <input type="range" class="nw-range" id="nwCurrentAgeRange" min="18" max="80" step="1" value="@Model.CurrentAge.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Retirement Age
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="The age you plan to retire"></i>
+                            @L["NetWorth.Field.RetirementAge"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.RetirementAgeHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
                             <input asp-for="RetirementAge" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwRetirementAge" />
-                            <span class="nw-slider-field__suffix">years</span>
+                            <span class="nw-slider-field__suffix">@L["NetWorth.Field.YearsSuffix"]</span>
                         </div>
                         <input type="range" class="nw-range" id="nwRetirementAgeRange" min="30" max="100" step="1" value="@Model.RetirementAge.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
@@ -230,13 +248,13 @@
                     <div class="nw-sidebar-card__icon nw-sidebar-card__icon--orange">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 12-3.5-3.5"/><path d="M4 16V10a2 2 0 0 1 2-2h3.5"/><path d="M20 8V4a2 2 0 0 0-2-2h-3.5"/><path d="M2 18v-4a2 2 0 0 1 2-2h3.5"/><path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/></svg>
                     </div>
-                    <span>Return Assumptions</span>
+                    <span>@L["NetWorth.Section.ReturnAssumptions"]</span>
                 </div>
                 <div class="nw-sidebar-card__body">
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Base ROI
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="Expected annual return for base scenario"></i>
+                            @L["NetWorth.Field.BaseRoi"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.BaseRoiHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
                             <input asp-for="BaseRoi" type="text" inputmode="decimal" required
@@ -247,8 +265,8 @@
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Conservative ROI
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="Lower return for cautious portfolio"></i>
+                            @L["NetWorth.Field.ConservativeRoi"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.ConservativeRoiHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
                             <input asp-for="ConservativeRoi" type="text" inputmode="decimal" required
@@ -259,8 +277,8 @@
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Aggressive ROI
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="Higher return for growth portfolio"></i>
+                            @L["NetWorth.Field.AggressiveRoi"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AggressiveRoiHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
                             <input asp-for="AggressiveRoi" type="text" inputmode="decimal" required
@@ -271,11 +289,11 @@
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
-                            Aggressive Savings
-                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="Higher savings for aggressive scenario"></i>
+                            @L["NetWorth.Field.AggressiveSavings"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AggressiveSavingsHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">$</span>
+                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
                             <input asp-for="AggressiveSavings" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAggressiveSavings" />
                         </div>
@@ -302,33 +320,33 @@
                     <input type="hidden" asp-for="AggressiveSavings" id="nwSaveAggressiveSavings" />
                     <button type="submit" class="btn nw-btn-save">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                        Save
+                        @L["NetWorth.Actions.Save"]
                     </button>
                 </form>
                 <button type="button" class="btn nw-btn-random" id="nwRandomBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l5 5"/><path d="M4 4l5 5"/></svg>
-                    Randomize
+                    @L["NetWorth.Actions.Randomize"]
                 </button>
                 <div class="btn-group" role="group">
                     <button type="button" class="btn nw-btn-reset" id="nwResetBtn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
-                        Reset
+                        @L["NetWorth.Actions.Reset"]
                     </button>
                     <button type="button" class="btn nw-btn-reset dropdown-toggle dropdown-toggle-split" id="nwResetDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="visually-hidden">Open reset options</span>
+                        <span class="visually-hidden">@L["NetWorth.Actions.ResetOptions"]</span>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="nwResetDropdownBtn">
                         <li>
                             <button type="button" class="dropdown-item" id="nwResetToSaved">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
-                                Reset to saved
+                                @L["NetWorth.Actions.ResetToSaved"]
                             </button>
                         </li>
                         <li><hr class="dropdown-divider" /></li>
                         <li>
                             <button type="button" class="dropdown-item text-danger" id="nwClearSaved">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                Clear saved parameters
+                                @L["NetWorth.Actions.ClearSaved"]
                             </button>
                         </li>
                     </ul>
@@ -352,11 +370,11 @@
                         <div class="nw-metric-card__icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                         </div>
-                        <div class="nw-metric-label">FI Target (4% Rule)</div>
+                        <div class="nw-metric-label">@L["NetWorth.Metric.FiTargetRule"]</div>
                         <div class="nw-metric-value nw-metric-fi-value">
-                            <span class="nw-currency-symbol">$</span><span class="nw-currency-amount">@projection!.FiTarget.ToString("N0")</span>
+                            @FormatCurrency(projection!.FiTarget)
                         </div>
-                        <div class="nw-metric-sub nw-metric-fi-sub">Based on <span class="nw-currency-symbol">$</span>@FormatCompact(projection.AnnualSpending)/yr spending</div>
+                        <div class="nw-metric-sub nw-metric-fi-sub">@L.Named("NetWorth.Js.Metric.FiSub", ("amount", FormatCurrency(projection.AnnualSpending)))</div>
                     </div>
                 </div>
             </div>
@@ -366,11 +384,11 @@
                         <div class="nw-metric-card__icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
                         </div>
-                        <div class="nw-metric-label">Current Net Worth</div>
+                        <div class="nw-metric-label">@L["NetWorth.Metric.CurrentNetWorth"]</div>
                         <div class="nw-metric-value nw-metric-current-value">
                             @FormatCurrency(projection.Base.StartingBalance)
                         </div>
-                        <div class="nw-metric-sub nw-metric-current-sub">Age @projection.CurrentAge, Year @projection.CurrentYear</div>
+                        <div class="nw-metric-sub nw-metric-current-sub">@L.Named("NetWorth.Js.Metric.CurrentSub", ("age", projection.CurrentAge), ("year", projection.CurrentYear))</div>
                     </div>
                 </div>
             </div>
@@ -380,11 +398,11 @@
                         <div class="nw-metric-card__icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                         </div>
-                        <div class="nw-metric-label">Base Final Net Worth</div>
+                        <div class="nw-metric-label">@L["NetWorth.Metric.BaseFinal"]</div>
                         <div class="nw-metric-value nw-metric-base-value">
                             @FormatCurrency(projection.Base.FinalNetWorth)
                         </div>
-                        <div class="nw-metric-sub nw-metric-base-sub">@projection.Base.RoiPercent% ROI · Age @Model.RetirementAge</div>
+                        <div class="nw-metric-sub nw-metric-base-sub">@L.Named("NetWorth.Js.Metric.BaseSub", ("rate", Rate(projection.Base.RoiPercent)), ("age", projection.RetirementAge))</div>
                     </div>
                 </div>
             </div>
@@ -394,18 +412,18 @@
                         <div class="nw-metric-card__icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                         </div>
-                        <div class="nw-metric-label">Aggressive Final</div>
+                        <div class="nw-metric-label">@L["NetWorth.Metric.AggressiveFinal"]</div>
                         <div class="nw-metric-value nw-metric-aggressive-value">
                             @FormatCurrency(projection.Aggressive.FinalNetWorth)
                         </div>
-                        <div class="nw-metric-sub nw-metric-aggressive-sub">@projection.Aggressive.RoiPercent% ROI · <span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.AnnualSavings)/yr savings</div>
+                        <div class="nw-metric-sub nw-metric-aggressive-sub">@L.Named("NetWorth.Js.Metric.AggressiveSub", ("rate", Rate(projection.Aggressive.RoiPercent)), ("amount", FormatCurrency(projection.Aggressive.AnnualSavings)))</div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- FI Breakdown: how the calculated figures come from the inputs -->
-        <partial name="_FiBreakdown" model="FiBreakdownBuilder.Build(projection!)" />
+        <partial name="_FiBreakdown" model="FiBreakdownBuilder.Build(projection!, L)" />
 
         <!-- Charts Section -->
         <div class="row g-3 mb-4">
@@ -417,8 +435,8 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                             </div>
                             <div>
-                                <h5 class="nw-section-title mb-1">Net Worth Growth Over Time</h5>
-                                <p class="nw-card__subtitle mb-0">Compare how your net worth grows under different investment scenarios</p>
+                                <h5 class="nw-section-title mb-1">@L["NetWorth.Chart.GrowthTitle"]</h5>
+                                <p class="nw-card__subtitle mb-0">@L["NetWorth.Chart.GrowthSubtitle"]</p>
                             </div>
                         </div>
                         <div class="nw-chart-container">
@@ -426,16 +444,16 @@
                         </div>
                         <div class="nw-legend mt-3" id="nwLegend">
                             <span class="nw-legend-item" id="nwLegendBase">
-                                <span class="nw-legend-dot nw-dot-base"></span> Base (@projection.Base.RoiPercent%)
+                                <span class="nw-legend-dot nw-dot-base"></span> @L.Named("NetWorth.Js.Legend.Scenario", ("name", ScenarioName("Base")), ("rate", Rate(projection.Base.RoiPercent)))
                             </span>
                             <span class="nw-legend-item" id="nwLegendConservative">
-                                <span class="nw-legend-dot nw-dot-conservative"></span> Conservative (@projection.Conservative.RoiPercent%)
+                                <span class="nw-legend-dot nw-dot-conservative"></span> @L.Named("NetWorth.Js.Legend.Scenario", ("name", ScenarioName("Conservative")), ("rate", Rate(projection.Conservative.RoiPercent)))
                             </span>
                             <span class="nw-legend-item" id="nwLegendAggressive">
-                                <span class="nw-legend-dot nw-dot-aggressive"></span> Aggressive (@projection.Aggressive.RoiPercent%)
+                                <span class="nw-legend-dot nw-dot-aggressive"></span> @L.Named("NetWorth.Js.Legend.Scenario", ("name", ScenarioName("Aggressive")), ("rate", Rate(projection.Aggressive.RoiPercent)))
                             </span>
                             <span class="nw-legend-item">
-                                <span class="nw-legend-dot nw-dot-fi"></span> FI Target
+                                <span class="nw-legend-dot nw-dot-fi"></span> @L["NetWorth.Js.FiTarget"]
                             </span>
                         </div>
                     </div>
@@ -448,7 +466,7 @@
                             <div class="nw-card__icon nw-card__icon--purple">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
                             </div>
-                            <h5 class="nw-section-title mb-0">Final Net Worth Comparison</h5>
+                            <h5 class="nw-section-title mb-0">@L["NetWorth.Chart.ComparisonTitle"]</h5>
                         </div>
                         <div class="nw-chart-container nw-chart-sm">
                             <canvas id="nwComparisonChart"></canvas>
@@ -468,26 +486,26 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                             </div>
                             <div>
-                                <h6 class="nw-scenario-title mb-0">Base Scenario</h6>
-                                <span class="nw-scenario-badge nw-scenario-badge--base">@projection.Base.RoiPercent% ROI</span>
+                                <h6 class="nw-scenario-title mb-0">@L.Named("NetWorth.Js.ScenarioTitle", ("name", ScenarioName("Base")))</h6>
+                                <span class="nw-scenario-badge nw-scenario-badge--base">@L.Named("NetWorth.Js.RoiBadge", ("rate", Rate(projection.Base.RoiPercent)))</span>
                             </div>
                         </div>
                         <div class="nw-scenario-divider"></div>
                         <div class="nw-scenario-row">
-                            <span>Annual Savings</span>
-                            <strong class="nw-sc-base-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.AnnualSavings)</strong>
+                            <span>@L["NetWorth.Field.AnnualSavings"]</span>
+                            <strong class="nw-sc-base-savings">@FormatCurrency(projection.Base.AnnualSavings)</strong>
                         </div>
                         <div class="nw-scenario-row">
-                            <span>Final Net Worth</span>
-                            <strong class="nw-sc-base-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.FinalNetWorth)</strong>
+                            <span>@L["NetWorth.Js.FinalNetWorth"]</span>
+                            <strong class="nw-sc-base-final">@FormatCurrency(projection.Base.FinalNetWorth)</strong>
                         </div>
                         <div class="nw-scenario-row">
-                            <span>Total Contributions</span>
-                            <strong class="nw-sc-base-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.TotalContributions)</strong>
+                            <span>@L["NetWorth.Scenario.TotalContributions"]</span>
+                            <strong class="nw-sc-base-contrib">@FormatCurrency(projection.Base.TotalContributions)</strong>
                         </div>
                         <div class="nw-scenario-row nw-scenario-row--highlight">
-                            <span>Interest Earned</span>
-                            <strong class="nw-sc-base-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Base.TotalInterestEarned)</strong>
+                            <span>@L["NetWorth.Scenario.InterestEarned"]</span>
+                            <strong class="nw-sc-base-interest">@FormatCurrency(projection.Base.TotalInterestEarned)</strong>
                         </div>
                     </div>
                 </div>
@@ -500,26 +518,26 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
                             </div>
                             <div>
-                                <h6 class="nw-scenario-title mb-0">Conservative Scenario</h6>
-                                <span class="nw-scenario-badge nw-scenario-badge--conservative">@projection.Conservative.RoiPercent% ROI</span>
+                                <h6 class="nw-scenario-title mb-0">@L.Named("NetWorth.Js.ScenarioTitle", ("name", ScenarioName("Conservative")))</h6>
+                                <span class="nw-scenario-badge nw-scenario-badge--conservative">@L.Named("NetWorth.Js.RoiBadge", ("rate", Rate(projection.Conservative.RoiPercent)))</span>
                             </div>
                         </div>
                         <div class="nw-scenario-divider"></div>
                         <div class="nw-scenario-row">
-                            <span>Annual Savings</span>
-                            <strong class="nw-sc-cons-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.AnnualSavings)</strong>
+                            <span>@L["NetWorth.Field.AnnualSavings"]</span>
+                            <strong class="nw-sc-cons-savings">@FormatCurrency(projection.Conservative.AnnualSavings)</strong>
                         </div>
                         <div class="nw-scenario-row">
-                            <span>Final Net Worth</span>
-                            <strong class="nw-sc-cons-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.FinalNetWorth)</strong>
+                            <span>@L["NetWorth.Js.FinalNetWorth"]</span>
+                            <strong class="nw-sc-cons-final">@FormatCurrency(projection.Conservative.FinalNetWorth)</strong>
                         </div>
                         <div class="nw-scenario-row">
-                            <span>Total Contributions</span>
-                            <strong class="nw-sc-cons-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.TotalContributions)</strong>
+                            <span>@L["NetWorth.Scenario.TotalContributions"]</span>
+                            <strong class="nw-sc-cons-contrib">@FormatCurrency(projection.Conservative.TotalContributions)</strong>
                         </div>
                         <div class="nw-scenario-row nw-scenario-row--highlight">
-                            <span>Interest Earned</span>
-                            <strong class="nw-sc-cons-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Conservative.TotalInterestEarned)</strong>
+                            <span>@L["NetWorth.Scenario.InterestEarned"]</span>
+                            <strong class="nw-sc-cons-interest">@FormatCurrency(projection.Conservative.TotalInterestEarned)</strong>
                         </div>
                     </div>
                 </div>
@@ -532,26 +550,26 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                             </div>
                             <div>
-                                <h6 class="nw-scenario-title mb-0">Aggressive Scenario</h6>
-                                <span class="nw-scenario-badge nw-scenario-badge--aggressive">@projection.Aggressive.RoiPercent% ROI</span>
+                                <h6 class="nw-scenario-title mb-0">@L.Named("NetWorth.Js.ScenarioTitle", ("name", ScenarioName("Aggressive")))</h6>
+                                <span class="nw-scenario-badge nw-scenario-badge--aggressive">@L.Named("NetWorth.Js.RoiBadge", ("rate", Rate(projection.Aggressive.RoiPercent)))</span>
                             </div>
                         </div>
                         <div class="nw-scenario-divider"></div>
                         <div class="nw-scenario-row">
-                            <span>Annual Savings</span>
-                            <strong class="nw-sc-agg-savings"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.AnnualSavings)</strong>
+                            <span>@L["NetWorth.Field.AnnualSavings"]</span>
+                            <strong class="nw-sc-agg-savings">@FormatCurrency(projection.Aggressive.AnnualSavings)</strong>
                         </div>
                         <div class="nw-scenario-row">
-                            <span>Final Net Worth</span>
-                            <strong class="nw-sc-agg-final"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.FinalNetWorth)</strong>
+                            <span>@L["NetWorth.Js.FinalNetWorth"]</span>
+                            <strong class="nw-sc-agg-final">@FormatCurrency(projection.Aggressive.FinalNetWorth)</strong>
                         </div>
                         <div class="nw-scenario-row">
-                            <span>Total Contributions</span>
-                            <strong class="nw-sc-agg-contrib"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.TotalContributions)</strong>
+                            <span>@L["NetWorth.Scenario.TotalContributions"]</span>
+                            <strong class="nw-sc-agg-contrib">@FormatCurrency(projection.Aggressive.TotalContributions)</strong>
                         </div>
                         <div class="nw-scenario-row nw-scenario-row--highlight">
-                            <span>Interest Earned</span>
-                            <strong class="nw-sc-agg-interest"><span class="nw-currency-symbol">$</span>@FormatCompact(projection.Aggressive.TotalInterestEarned)</strong>
+                            <span>@L["NetWorth.Scenario.InterestEarned"]</span>
+                            <strong class="nw-sc-agg-interest">@FormatCurrency(projection.Aggressive.TotalInterestEarned)</strong>
                         </div>
                     </div>
                 </div>
@@ -567,47 +585,47 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M12 17V5"/><path d="M17 17v-5"/><path d="M7 17V9"/></svg>
                         </div>
                         <div>
-                            <h5 class="nw-section-title mb-1">Year-by-Year Projection</h5>
-                            <p class="nw-card__subtitle mb-0">Detailed annual breakdown of your projected net worth growth</p>
+                            <h5 class="nw-section-title mb-1">@L["NetWorth.Table.Title"]</h5>
+                            <p class="nw-card__subtitle mb-0">@L["NetWorth.Table.Subtitle"]</p>
                         </div>
                     </div>
-                    <div class="nw-scenario-tabs" role="group" aria-label="Scenario selection">
+                    <div class="nw-scenario-tabs" role="group" aria-label="@L["NetWorth.Table.ScenarioSelection"]">
                         <button type="button" class="btn nw-tab-btn active" data-scenario="Base">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                            Base
+                            @ScenarioName("Base")
                         </button>
                         <button type="button" class="btn nw-tab-btn" data-scenario="Conservative">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-                            Conservative
+                            @ScenarioName("Conservative")
                         </button>
                         <button type="button" class="btn nw-tab-btn" data-scenario="Aggressive">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-                            Aggressive
+                            @ScenarioName("Aggressive")
                         </button>
                     </div>
                 </div>
                 <!-- Row Highlight Legend -->
                 <div class="nw-legend mb-3">
                     <span class="nw-legend-item">
-                        <span class="nw-legend-swatch nw-swatch-fi"></span> FI Target reached — Your net worth covers your annual spending
+                        <span class="nw-legend-swatch nw-swatch-fi"></span> @L["NetWorth.Table.LegendFi"]
                     </span>
                     <span class="nw-legend-item">
-                        <span class="nw-legend-swatch nw-swatch-5m"></span> $5M milestone — You've reached a $5 million net worth
+                        <span class="nw-legend-swatch nw-swatch-5m"></span> @L.Named("NetWorth.Table.LegendMilestone", ("amount", FormatCurrency(5_000_000m)))
                     </span>
                     <span class="nw-legend-item">
-                        <span style="display:inline;font-size:1.1em;color:#f59e0b;vertical-align:middle;margin-right:4px;">★</span> ROI Earned ≥ Annual Income — Your investments outpaced your yearly income
+                        <span style="display:inline;font-size:1.1em;color:#f59e0b;vertical-align:middle;margin-right:4px;">★</span> @L["NetWorth.Table.LegendRoi"]
                     </span>
                 </div>
                 <div class="table-responsive nw-table-responsive">
                     <table class="table nw-table" id="nwProjectionTable">
                         <thead>
                             <tr>
-                                <th>Year</th>
-                                <th>Age</th>
-                                <th class="text-end">Starting Balance</th>
-                                <th class="text-end">Savings</th>
-                                <th class="text-end">ROI Earned</th>
-                                <th class="text-end">Ending Balance</th>
+                                <th>@L["NetWorth.Table.Year"]</th>
+                                <th>@L["NetWorth.Table.Age"]</th>
+                                <th class="text-end">@L["NetWorth.Field.StartingBalance"]</th>
+                                <th class="text-end">@L["NetWorth.Table.Savings"]</th>
+                                <th class="text-end">@L["NetWorth.Table.RoiEarned"]</th>
+                                <th class="text-end">@L["NetWorth.Table.EndingBalance"]</th>
                             </tr>
                         </thead>
                         @* Rows are rendered by networth-ui.js (updateTable) from window.nwProjectionData. *@
@@ -620,6 +638,8 @@
     </main>
 </div>
 
+<js-strings prefix="NetWorth.Js." />
+
 <!-- Help Modal -->
 <div class="modal fade nw-modal" id="nwHelpModal" tabindex="-1" aria-labelledby="nwHelpModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -629,52 +649,52 @@
                     <div class="nw-modal-header__icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     </div>
-                    <h5 class="modal-title" id="nwHelpModalLabel">How Net Worth Projection Works</h5>
+                    <h5 class="modal-title" id="nwHelpModalLabel">@L["NetWorth.Help.Title"]</h5>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
             </div>
             <div class="modal-body nw-modal-body">
                 <div class="nw-help-section">
                     <div class="nw-help-section__header">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                        <h6>Financial Independence Target</h6>
+                        <h6>@L["NetWorth.Help.FiTitle"]</h6>
                     </div>
-                    <p class="nw-text mb-0">Your FI Target is calculated using the <strong>4% Rule</strong>: multiply your annual spending by 25. This represents the portfolio size needed to sustain your lifestyle through withdrawals alone. For example, if you spend $50,000/year, your FI target is $1,250,000.</p>
+                    <p class="nw-text mb-0">@L.NamedHtml("NetWorth.Help.FiText", null, ("rule", Strong(L["NetWorth.Help.FourPercentRule"])), ("spending", Plain(FormatCurrency(50_000m))), ("target", Plain(FormatCurrency(1_250_000m))))</p>
                     <div class="nw-help-note mt-3">
                         <div class="nw-help-note__icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         </div>
                         <div class="nw-help-note__content">
-                            <p class="nw-help-note__title mb-1">What is the 4% Rule?</p>
-                            <p class="nw-text mb-1">The <strong>4% Rule</strong> is a widely accepted guideline for financial independence. It states that you can safely withdraw 4% of your investment portfolio each year without running out of money over a 30-year retirement.</p>
-                            <p class="nw-text mb-0">Your <strong>FI Target</strong> equals <strong>Annual Spending × 25</strong> (the inverse of 4%). Once your net worth reaches this number, your investments can cover your yearly expenses through withdrawals alone.</p>
+                            <p class="nw-help-note__title mb-1">@L["NetWorth.Help.RuleTitle"]</p>
+                            <p class="nw-text mb-1">@L.NamedHtml("NetWorth.Help.RuleText", null, ("rule", Strong(L["NetWorth.Help.FourPercentRule"])))</p>
+                            <p class="nw-text mb-0">@L.NamedHtml("NetWorth.Help.RuleFormula", null, ("fiTarget", Strong(L["NetWorth.Js.FiTarget"])), ("formula", Strong(L["NetWorth.Help.FormulaText"])))</p>
                         </div>
                     </div>
                 </div>
                 <div class="nw-help-section">
                     <div class="nw-help-section__header">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 12-3.5-3.5"/><path d="M4 16V10a2 2 0 0 1 2-2h3.5"/><path d="M20 8V4a2 2 0 0 0-2-2h-3.5"/><path d="M2 18v-4a2 2 0 0 1 2-2h3.5"/><path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/></svg>
-                        <h6>Three Scenarios</h6>
+                        <h6>@L["NetWorth.Help.ScenariosTitle"]</h6>
                     </div>
-                    <p class="nw-text mb-0"><strong>Base</strong> — Your expected return and savings rate. <strong>Conservative</strong> — Lower returns for a cautious, bond-heavy portfolio. <strong>Aggressive</strong> — Higher returns and savings for a growth-oriented strategy. Comparing all three helps you understand the range of possible outcomes.</p>
+                    <p class="nw-text mb-0">@L.NamedHtml("NetWorth.Help.ScenariosText", null, ("base", Strong(ScenarioName("Base"))), ("conservative", Strong(ScenarioName("Conservative"))), ("aggressive", Strong(ScenarioName("Aggressive"))))</p>
                 </div>
                 <div class="nw-help-section">
                     <div class="nw-help-section__header">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                        <h6>Reading the Charts</h6>
+                        <h6>@L["NetWorth.Help.ChartsTitle"]</h6>
                     </div>
-                    <p class="nw-text mb-0">The <strong>growth chart</strong> shows how your net worth compounds over time for each scenario. The dashed line marks your FI Target — when a scenario line crosses it, you've reached financial independence. The <strong>comparison chart</strong> shows the final net worth at retirement age side by side.</p>
+                    <p class="nw-text mb-0">@L.NamedHtml("NetWorth.Help.ChartsText", null, ("growthChart", Strong(L["NetWorth.Help.GrowthChart"])), ("comparisonChart", Strong(L["NetWorth.Help.ComparisonChart"])))</p>
                 </div>
                 <div class="nw-help-section">
                     <div class="nw-help-section__header">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                        <h6>Row Highlights in the Table</h6>
+                        <h6>@L["NetWorth.Help.HighlightsTitle"]</h6>
                     </div>
-                    <p class="nw-text mb-0">Rows turn <span style="display:inline-block;width:12px;height:12px;background:#fef9c3;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid rgba(0,0,0,0.1)"></span> <strong>yellow</strong> when your net worth reaches the FI Target, and <span style="display:inline-block;width:12px;height:12px;background:#bbf7d0;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid rgba(0,0,0,0.1)"></span> <strong>green</strong> when it exceeds $5 million. A <span style="display:inline;font-size:1.1em;color:#f59e0b;vertical-align:middle;">★</span> <strong>gold star</strong> appears next to the ROI Earned value when your investment returns equal or exceed your annual income — helping you quickly spot milestone years.</p>
+                    <p class="nw-text mb-0">@L.NamedHtml("NetWorth.Help.HighlightsText", null, ("yellow", Strong(L["NetWorth.Help.Yellow"], YellowSwatch)), ("green", Strong(L["NetWorth.Help.Green"], GreenSwatch)), ("amount", Plain(FormatCurrency(5_000_000m))), ("goldStar", Strong(L["NetWorth.Help.GoldStar"], GoldStar)))</p>
                 </div>
             </div>
             <div class="modal-footer nw-modal-footer">
-                <button type="button" class="btn nw-btn-close" data-bs-dismiss="modal">Got it</button>
+                <button type="button" class="btn nw-btn-close" data-bs-dismiss="modal">@L["NetWorth.Help.GotIt"]</button>
             </div>
         </div>
     </div>

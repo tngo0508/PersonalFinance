@@ -1,4 +1,4 @@
-/* global mermaid */
+/* global mermaid, PFI18n */
 /**
  * Money Priorities: draws the Priority Tree with Mermaid (ADR 0014).
  *
@@ -17,9 +17,6 @@
 
     /** Smallest readable label size, as a share of the body font size (spec: 80%). */
     const MIN_LABEL_SCALE = 0.8;
-    const FAILURE_MESSAGE = 'The Priority Tree could not be drawn right now. Your path is listed in words with your result.';
-    const SHOW_LABEL = 'Show the whole tree';
-    const HIDE_LABEL = 'Hide the whole tree';
 
     let initialised = false;
     let idCount = 0;
@@ -160,7 +157,7 @@
         const opened = mode === 'scroll' && Boolean(state.path);
         state.toggle.hidden = fits || !state.path;
         state.toggle.setAttribute('aria-expanded', String(opened));
-        state.toggle.textContent = opened ? HIDE_LABEL : SHOW_LABEL;
+        state.toggle.textContent = PFI18n.t(opened ? 'MoneyPriorities.Js.Diagram.Hide' : 'MoneyPriorities.Js.Diagram.Show');
 
         if (mode === state.mode) {
             return;
@@ -215,7 +212,7 @@
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.className = 'btn btn-sm btn-outline-secondary mp-diagram__toggle';
-        toggle.textContent = SHOW_LABEL;
+        toggle.textContent = PFI18n.t('MoneyPriorities.Js.Diagram.Show');
         toggle.setAttribute('aria-expanded', 'false');
         toggle.setAttribute('aria-controls', scrollId);
         toggle.hidden = true;
@@ -224,7 +221,7 @@
         scroll.id = scrollId;
         scroll.className = 'mp-diagram__scroll';
         scroll.setAttribute('role', 'region');
-        scroll.setAttribute('aria-label', 'Whole Priority Tree, scrolls sideways');
+        scroll.setAttribute('aria-label', PFI18n.t('MoneyPriorities.Js.Diagram.ScrollAria'));
         scroll.tabIndex = 0;
         scroll.hidden = true;
 
@@ -285,7 +282,7 @@
         state.scroll.replaceChildren();
         state.scroll.hidden = true;
         state.toggle.hidden = true;
-        state.message.textContent = FAILURE_MESSAGE;
+        state.message.textContent = PFI18n.t('MoneyPriorities.Js.Diagram.Failure');
         state.message.hidden = false;
     }
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.Networth;
 using PersonalFinance.Web.Services;
 
@@ -14,11 +16,36 @@ namespace PersonalFinance.Tests.NetWorth;
 
 /// <summary>
 /// The FI Breakdown (GLOSSARY: FI Breakdown): the "How this is calculated" cards on the Net Worth page, one per
-/// calculated figure, with its value, the inputs it comes from and its formula in the user's own numbers.
+/// calculated figure, with its value, the inputs it comes from and its formula in the user's own numbers. The wording
+/// follows the UI language and the amounts the request culture (localization spec §2.1, §2.2).
 /// </summary>
-public class FiBreakdownBuilderTests
+public sealed class FiBreakdownBuilderTests : IDisposable
 {
+    private const char Nbsp = '\u00A0';
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+
+    private readonly CultureInfo _originalCulture = CultureInfo.CurrentCulture;
+    private readonly CultureInfo _originalUiCulture = CultureInfo.CurrentUICulture;
+
+    public FiBreakdownBuilderTests() => UseCulture("en-US", "en");
+
+    public void Dispose()
+    {
+        CultureInfo.CurrentCulture = _originalCulture;
+        CultureInfo.CurrentUICulture = _originalUiCulture;
+    }
+
+    private static void UseCulture(string culture, string uiCulture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(uiCulture);
+    }
+
+    private static FiBreakdownViewModel Breakdown(NetWorthProjectionDto projection) =>
+        FiBreakdownBuilder.Build(projection, TestLocalization.Localizer);
+
+    private static string Vi(string key, params (string Name, object? Value)[] args) =>
+        LocalizerExtensions.FormatNamed(TestLocalization.Vietnamese(key), args.ToDictionary(a => a.Name, a => a.Value));
 
     private static NetWorthProjectionDto Project(decimal balance = 180_000m, decimal savings = 22_000m,
         decimal income = 85_000m, decimal spending = 48_000m, int currentAge = 34, int retirementAge = 65,
@@ -49,7 +76,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void Build_HasTheFourCardsInOrder()
     {
-        FiBreakdownViewModel breakdown = FiBreakdownBuilder.Build(Project());
+        FiBreakdownViewModel breakdown = Breakdown(Project());
 
         Assert.Equal(["savings-rate", "fi-target", "progress", "fi-age"], breakdown.Cards.Select(c => c.Key));
     }
@@ -57,7 +84,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void SavingsRate_ShowsValueInputsAndFormula()
     {
-        FiBreakdownCardViewModel card = Card(FiBreakdownBuilder.Build(Project()), "savings-rate");
+        FiBreakdownCardViewModel card = Card(Breakdown(Project()), "savings-rate");
 
         Assert.Equal("Savings Rate", card.Label);
         Assert.Equal("25.9%", card.Value);
@@ -69,7 +96,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void FiTarget_IsSpendingTimesTwentyFive()
     {
-        FiBreakdownCardViewModel card = Card(FiBreakdownBuilder.Build(Project()), "fi-target");
+        FiBreakdownCardViewModel card = Card(Breakdown(Project()), "fi-target");
 
         Assert.Equal("$1,200,000", card.Value);
         Assert.Equal(["Annual Spending"], card.Inputs.Select(i => i.Label));
@@ -79,7 +106,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void ProgressToFi_IsStartingBalanceOverTarget()
     {
-        FiBreakdownCardViewModel card = Card(FiBreakdownBuilder.Build(Project()), "progress");
+        FiBreakdownCardViewModel card = Card(Breakdown(Project()), "progress");
 
         Assert.Equal("15.0%", card.Value);
         Assert.Equal(["Starting Balance", "FI Target"], card.Inputs.Select(i => i.Label));
@@ -89,7 +116,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void FiAge_ShowsBaseAgeGrowthSentenceAndEveryScenario()
     {
-        FiBreakdownCardViewModel card = Card(FiBreakdownBuilder.Build(ZeroReturn()), "fi-age");
+        FiBreakdownCardViewModel card = Card(Breakdown(ZeroReturn()), "fi-age");
 
         Assert.Equal("FI age", card.Label);
         Assert.Equal("43 (in 8 years)", card.Value);
@@ -105,7 +132,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void FiAge_WhenNotReachedByRetirement_SaysSo()
     {
-        FiBreakdownCardViewModel card = Card(FiBreakdownBuilder.Build(ZeroReturn(retirementAge: 40)), "fi-age");
+        FiBreakdownCardViewModel card = Card(Breakdown(ZeroReturn(retirementAge: 40)), "fi-age");
 
         Assert.Equal("Not reached by age 40", card.Value);
         Assert.Equal("Base (0%): not reached by age 40", card.Scenarios[0]);
@@ -117,7 +144,7 @@ public class FiBreakdownBuilderTests
     [InlineData(800_000, "36 (in 1 year)")]
     public void FiAge_UsesTheRightWordingForNowAndOneYear(int balance, string expected)
     {
-        FiBreakdownCardViewModel card = Card(FiBreakdownBuilder.Build(ZeroReturn(balance: balance)), "fi-age");
+        FiBreakdownCardViewModel card = Card(Breakdown(ZeroReturn(balance: balance)), "fi-age");
 
         Assert.Equal(expected, card.Value);
     }
@@ -125,7 +152,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void ReturnRates_KeepTheirDecimals()
     {
-        FiBreakdownCardViewModel card = Card(FiBreakdownBuilder.Build(Project(baseRoi: 6.5m)), "fi-age");
+        FiBreakdownCardViewModel card = Card(Breakdown(Project(baseRoi: 6.5m)), "fi-age");
 
         Assert.StartsWith("Base (6.5%)", card.Scenarios[0]);
         Assert.Equal("6.5%", card.Inputs.Single(i => i.Label == "Base return").Value);
@@ -134,7 +161,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void WithNoSpending_ProgressAndFiAgeAskForSpending()
     {
-        FiBreakdownViewModel breakdown = FiBreakdownBuilder.Build(Project(spending: 0m));
+        FiBreakdownViewModel breakdown = Breakdown(Project(spending: 0m));
 
         foreach (string key in new[] { "progress", "fi-age" })
         {
@@ -149,7 +176,7 @@ public class FiBreakdownBuilderTests
     [Fact]
     public void WithNoIncome_SavingsRateAsksForIncome()
     {
-        FiBreakdownCardViewModel card = Card(FiBreakdownBuilder.Build(Project(income: 0m)), "savings-rate");
+        FiBreakdownCardViewModel card = Card(Breakdown(Project(income: 0m)), "savings-rate");
 
         Assert.Equal("—", card.Value);
         Assert.Equal("Add your annual income to see this.", card.Note);
@@ -161,7 +188,7 @@ public class FiBreakdownBuilderTests
     {
         (INetWorthApi api, ApiProxy<INetWorthApi> proxy) = ApiProxy.Create<INetWorthApi>();
         proxy.Returns(nameof(INetWorthApi.CalculateProjectionAsync), Project());
-        var controller = new NetworthController(api, NullLogger<NetworthController>.Instance)
+        var controller = new NetworthController(api, NullLogger<NetworthController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -178,5 +205,50 @@ public class FiBreakdownBuilderTests
         JsonElement cards = root.GetProperty("breakdown").GetProperty("cards");
         Assert.Equal("savings-rate", cards[0].GetProperty("key").GetString());
         Assert.Equal("25.9%", cards[0].GetProperty("value").GetString());
+    }
+
+    [Fact]
+    public void InVietnamese_LabelsAreTranslatedAndAmountsUseTheVietnameseCulture()
+    {
+        UseCulture("vi-VN", "vi");
+
+        FiBreakdownCardViewModel card = Card(Breakdown(Project()), "savings-rate");
+
+        Assert.Equal(TestLocalization.Vietnamese("NetWorth.Field.SavingsRate"), card.Label);
+        Assert.Equal("25,9%", card.Value);
+        Assert.Equal(
+            [TestLocalization.Vietnamese("NetWorth.Field.AnnualSavings"), TestLocalization.Vietnamese("NetWorth.Field.AnnualIncome")],
+            card.Inputs.Select(i => i.Label));
+        Assert.Equal($"22.000{Nbsp}$", card.Inputs[0].Value);
+        Assert.Equal($"22.000{Nbsp}$ ÷ 85.000{Nbsp}$ = 25,9%", card.Formula);
+    }
+
+    [Fact]
+    public void InVietnamese_FiAgeSentencesAreTranslated()
+    {
+        UseCulture("vi-VN", "vi");
+
+        FiBreakdownCardViewModel card = Card(Breakdown(ZeroReturn()), "fi-age");
+
+        Assert.Equal(TestLocalization.Vietnamese("NetWorth.Breakdown.FiAge"), card.Label);
+        Assert.Equal(Vi("NetWorth.Breakdown.AgeWhen", ("age", 43), ("when", Vi("NetWorth.Breakdown.InYears.other", ("count", 8)))),
+            card.Value);
+        Assert.Equal(Vi("NetWorth.Breakdown.FiAgeFormula", ("balance", $"100.000{Nbsp}$"), ("rate", "0%"),
+            ("savings", $"100.000{Nbsp}$"), ("target", $"1.000.000{Nbsp}$")), card.Formula);
+        Assert.Equal(Vi("NetWorth.Breakdown.Scenario", ("name", TestLocalization.Vietnamese("NetWorth.Js.Scenario.Aggressive")),
+                ("assumptions", Vi("NetWorth.Breakdown.RateAndSavings", ("rate", "0%"), ("savings", $"200.000{Nbsp}$"))),
+                ("outcome", Vi("NetWorth.Breakdown.ReachedAge", ("age", 39)))),
+            card.Scenarios[2]);
+        Assert.DoesNotContain(card.Scenarios, line => line.Contains("age", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void InVietnamese_ReturnRatesUseTheDecimalComma()
+    {
+        UseCulture("vi-VN", "vi");
+
+        FiBreakdownCardViewModel card = Card(Breakdown(Project(baseRoi: 6.5m)), "fi-age");
+
+        Assert.Equal("6,5%", card.Inputs[2].Value);
     }
 }

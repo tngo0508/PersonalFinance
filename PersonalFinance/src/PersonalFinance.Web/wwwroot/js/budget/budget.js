@@ -15,11 +15,8 @@
         'healthcare', 'savings', 'debtRepayment', 'entertainment', 'miscellaneous'
     ];
 
-    // Display labels derived from the keys ("debtRepayment" -> "Debt Repayment"), matching BudgetPlannerCategories.
-    const categoryLabels = Object.fromEntries(categories.map((key) => {
-        const spaced = key.replace(/([A-Z])/g, ' $1');
-        return [key, spaced.charAt(0).toUpperCase() + spaced.slice(1)];
-    }));
+    // Display labels, filled by init from the page's translated category labels (<label for="DebtRepayment">).
+    const categoryLabels = {};
 
     const categoryColors = [
         '#1D6A50', '#2F6690', '#8A6A1E', '#B4532A', '#6B4C8A',
@@ -34,6 +31,8 @@
      * Initialize the budget planner.
      */
     BudgetPlanner.init = function () {
+        readCategoryLabels();
+
         const initialData = window.budgetInitialData;
         if (initialData) {
             incomeCents = Math.round(parseFloat(initialData.monthlyIncome) * 100) || 0;
@@ -57,6 +56,16 @@
         // Initial update
         updateAll();
     };
+
+    /**
+     * Read each category's display label from its form label, which the server rendered in the page language.
+     */
+    function readCategoryLabels () {
+        categories.forEach((cat) => {
+            const label = document.querySelector(`.budget-category__label[for="${ capitalize(cat) }"]`);
+            categoryLabels[cat] = label ? label.textContent.trim() : capitalize(cat);
+        });
+    }
 
     /**
      * Set background colors on category color boxes to match chart slice colors.
@@ -275,7 +284,7 @@
 
             const amountEl = document.querySelector(`.budget-category__amount[data-amount-for="${ capitalized }"] span`);
             if (amountEl) {
-                amountEl.textContent = formatCurrency(amount);
+                amountEl.textContent = formatDollars(amount);
             }
 
             // Sync the editable amount input (only if not currently focused)
@@ -300,7 +309,7 @@
         const remainingLabelEl = document.querySelector('.budget-remaining__label');
 
         if (remainingEl) {
-            remainingEl.textContent = `${ formatDollars(Math.abs(remainingAmount)) } (${ PFI18n.formatNumber(Math.abs(remainingPct), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }%)`;
+            remainingEl.textContent = `${ formatDollars(Math.abs(remainingAmount)) } (${ formatPercent(Math.abs(remainingPct)) })`;
         }
 
         if (remainingContainer) {
@@ -309,14 +318,14 @@
             if (totalCents > incomeCents) {
                 remainingContainer.classList.add('budget-remaining--over');
                 if (remainingLabelEl) {
-                    remainingLabelEl.textContent = 'Over budget by:';
+                    remainingLabelEl.textContent = PFI18n.t('BudgetPlanner.Js.OverBudgetLabel');
                 }
             } else {
                 if (remainingCents === 0) {
                     remainingContainer.classList.add('budget-remaining--exact');
                 }
                 if (remainingLabelEl) {
-                    remainingLabelEl.textContent = 'Remaining to allocate:';
+                    remainingLabelEl.textContent = PFI18n.t('BudgetPlanner.Js.RemainingLabel');
                 }
             }
         }
@@ -413,7 +422,7 @@
 
             const percentSpan = document.createElement('span');
             percentSpan.className = 'budget-summary-item__percent';
-            percentSpan.textContent = `${percent.toFixed(1) }%`;
+            percentSpan.textContent = formatPercent(percent);
 
             const amountSpan = document.createElement('span');
             amountSpan.className = 'budget-summary-item__amount';
@@ -438,7 +447,7 @@
         const totalAmountEl = document.getElementById('budgetSummaryTotalAmount');
 
         if (totalPercentEl) {
-            totalPercentEl.textContent = `${totalPercent.toFixed(1) }%`;
+            totalPercentEl.textContent = formatPercent(totalPercent);
         }
         if (totalAmountEl) {
             totalAmountEl.textContent = formatDollars(totalAmount);
@@ -577,8 +586,7 @@
                 ctx.fill();
 
                 // Draw label text — percentage only
-                const percent = `${((value / total) * 100).toFixed(1) }%`;
-                const displayText = percent;
+                const displayText = formatPercent((value / total) * 100);
 
                 // Determine text alignment based on angle
                 let textX = labelX;
@@ -652,7 +660,11 @@
                                 const value = context.parsed || 0;
                                 const income = incomeCents / 100;
                                 const amount = (income * value) / 100;
-                                return `${label }: ${ PFI18n.formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }% (${ formatDollars(amount) })`;
+                                return PFI18n.t('BudgetPlanner.Js.ChartTooltip', {
+                                    category: label,
+                                    percent: formatPercent(value),
+                                    amount: formatDollars(amount)
+                                });
                             }
                         }
                     }
@@ -689,17 +701,16 @@
     }
 
     /**
-     * Format a number as currency (no $ sign, grouped in the page culture, no decimals for whole numbers).
-     * @param {number} value - The amount to format
-     * @returns {string} Formatted currency string
+     * Format a percentage with one decimal in the page culture (12.5% in en-US, 12,5% in vi-VN).
+     * @param {number} value - The percentage, 0-100
+     * @returns {string} Formatted percentage
      */
-    function formatCurrency (value) {
-        const decimals = value === Math.floor(value) ? 0 : 2;
-        return PFI18n.formatNumber(value, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    function formatPercent (value) {
+        return `${ PFI18n.formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }%`;
     }
 
     /**
-     * Format US dollars with the symbol in the page culture, no decimals for whole numbers ($1,500; $1,500.50).
+     * Format US dollars with the symbol in the page culture, no decimals for whole numbers (1,500 or 1,500.50 with the dollar sign in en-US).
      * @param {number} value - The amount to format
      * @returns {string} Formatted amount
      */

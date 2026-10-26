@@ -1,5 +1,13 @@
 @{
-    ViewData["Title"] = "Investment Calculator";
+    ViewData["Title"] = L["InvestmentCalculator.Title"].Value;
+}
+
+@functions {
+    // calculator.js rewrites these on load; the server renders the same starting values so nothing jumps.
+    private static string Money(decimal amount)
+    {
+        return MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code);
+    }
 }
 
 @section Styles {
@@ -17,9 +25,9 @@
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
                                     d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                     </span>
-                    Compound Growth Calculator
+                    @L["InvestmentCalculator.Header.Title"]
                 </h1>
-                <p class="calculator-subtitle">See how your investments can grow over time with compound interest.</p>
+                <p class="calculator-subtitle">@L["InvestmentCalculator.Header.Subtitle"]</p>
             </div>
         </div>
     </div>
@@ -40,28 +48,28 @@
                                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                             </svg>
                         </div>
-                        <h2 class="calculator-card__title">Investment Amount</h2>
+                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Amount.Title"]</h2>
                     </div>
                 </div>
                 <div class="calculator-card__body">
                     <div class="calculator-input-group">
-                        <label for="calcInitial" class="form-label">Initial Investment</label>
-                        <div class="calculator-value-display" id="calcInitialValue">$10,000</div>
+                        <label for="calcInitial" class="form-label">@L["InvestmentCalculator.Field.Initial"]</label>
+                        <div class="calculator-value-display" id="calcInitialValue">@Money(10_000m)</div>
                         <input type="range" class="form-range" id="calcInitialRange" min="0" max="500000" step="1000"
                                value="10000"
-                               aria-label="Initial investment amount"/>
+                               aria-label="@L["InvestmentCalculator.Field.InitialAria"]"/>
                         <input type="number" class="form-control" id="calcInitial" value="10000" min="0" step="1000"
-                               aria-label="Initial investment amount"/>
+                               aria-label="@L["InvestmentCalculator.Field.InitialAria"]"/>
                     </div>
 
                     <div class="calculator-input-group">
-                        <label for="calcMonthly" class="form-label">Monthly Contribution</label>
-                        <div class="calculator-value-display" id="calcMonthlyValue">$500</div>
+                        <label for="calcMonthly" class="form-label">@L["InvestmentCalculator.Field.Monthly"]</label>
+                        <div class="calculator-value-display" id="calcMonthlyValue">@Money(500m)</div>
                         <input type="range" class="form-range" id="calcMonthlyRange" min="0" max="10000" step="50"
                                value="500"
-                               aria-label="Monthly contribution amount"/>
+                               aria-label="@L["InvestmentCalculator.Field.MonthlyAria"]"/>
                         <input type="number" class="form-control" id="calcMonthly" value="500" min="0" step="50"
-                               aria-label="Monthly contribution amount"/>
+                               aria-label="@L["InvestmentCalculator.Field.MonthlyAria"]"/>
                     </div>
                 </div>
             </div>
@@ -81,26 +89,26 @@
                                 <path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/>
                             </svg>
                         </div>
-                        <h2 class="calculator-card__title">Growth Parameters</h2>
+                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Growth.Title"]</h2>
                     </div>
                 </div>
                 <div class="calculator-card__body">
                     <div class="calculator-input-group">
-                        <label for="calcRate" class="form-label">Annual Return Rate</label>
+                        <label for="calcRate" class="form-label">@L["InvestmentCalculator.Field.Rate"]</label>
                         <div class="calculator-value-display" id="calcRateValue">7%</div>
                         <input type="range" class="form-range" id="calcRateRange" min="1" max="15" step="0.5" value="7"
-                               aria-label="Annual return rate"/>
+                               aria-label="@L["InvestmentCalculator.Field.RateAria"]"/>
                         <input type="number" class="form-control" id="calcRate" value="7" min="1" max="15" step="0.5"
-                               aria-label="Annual return rate"/>
+                               aria-label="@L["InvestmentCalculator.Field.RateAria"]"/>
                     </div>
 
                     <div class="calculator-input-group">
-                        <label for="calcYears" class="form-label">Time Period</label>
-                        <div class="calculator-value-display" id="calcYearsValue">20 years</div>
+                        <label for="calcYears" class="form-label">@L["InvestmentCalculator.Field.Years"]</label>
+                        <div class="calculator-value-display" id="calcYearsValue">@L.Plural("InvestmentCalculator.Js.Years", 20)</div>
                         <input type="range" class="form-range" id="calcYearsRange" min="1" max="50" step="1" value="20"
-                               aria-label="Investment time period"/>
+                               aria-label="@L["InvestmentCalculator.Field.YearsAria"]"/>
                         <input type="number" class="form-control" id="calcYears" value="20" min="1" max="50" step="1"
-                               aria-label="Investment time period"/>
+                               aria-label="@L["InvestmentCalculator.Field.YearsAria"]"/>
                     </div>
                 </div>
             </div>
@@ -121,8 +129,8 @@
                                     <path d="m19 9-5 5-4-4-3 3"/>
                                 </svg>
                             </div>
-                            <div class="calculator-result-label">Future Value</div>
-                            <div class="calculator-result-value" id="calcFutureValue">$0</div>
+                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.FutureValue"]</div>
+                            <div class="calculator-result-value" id="calcFutureValue">@Money(0m)</div>
                         </div>
                     </div>
                 </div>
@@ -137,8 +145,8 @@
                                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                                 </svg>
                             </div>
-                            <div class="calculator-result-label">Total Contributions</div>
-                            <div class="calculator-result-value" id="calcTotalContributions">$0</div>
+                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.TotalContributions"]</div>
+                            <div class="calculator-result-value" id="calcTotalContributions">@Money(0m)</div>
                         </div>
                     </div>
                 </div>
@@ -153,8 +161,8 @@
                                     <polyline points="16 7 22 7 22 13"/>
                                 </svg>
                             </div>
-                            <div class="calculator-result-label">Interest Earned</div>
-                            <div class="calculator-result-value" id="calcTotalInterest">$0</div>
+                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.InterestEarned"]</div>
+                            <div class="calculator-result-value" id="calcTotalInterest">@Money(0m)</div>
                         </div>
                     </div>
                 </div>
@@ -172,28 +180,28 @@
                                 <path d="m19 9-5 5-4-4-3 3"/>
                             </svg>
                         </div>
-                        <h2 class="calculator-card__title">Growth Over Time</h2>
+                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Chart.Title"]</h2>
                     </div>
                 </div>
                 <div class="calculator-card__body">
                     <div class="calculator-chart-container">
-                        <canvas id="calcChart" aria-label="Investment growth chart" role="img"></canvas>
+                        <canvas id="calcChart" aria-label="@L["InvestmentCalculator.Chart.Aria"]" role="img"></canvas>
                     </div>
                     <div class="calculator-chart-legend">
                         <div class="calculator-chart-legend__item">
                             <span class="calculator-chart-legend__dot calculator-chart-legend__dot--value"></span>
-                            <span class="calculator-chart-legend__label">Total Value</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendValue">$0</span>
+                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Legend.TotalValue"]</span>
+                            <span class="calculator-chart-legend__value" id="calcLegendValue">@Money(0m)</span>
                         </div>
                         <div class="calculator-chart-legend__item">
                             <span class="calculator-chart-legend__dot calculator-chart-legend__dot--contrib"></span>
-                            <span class="calculator-chart-legend__label">Contributions</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendContrib">$0</span>
+                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Legend.Contributions"]</span>
+                            <span class="calculator-chart-legend__value" id="calcLegendContrib">@Money(0m)</span>
                         </div>
                         <div class="calculator-chart-legend__item">
                             <span class="calculator-chart-legend__dot calculator-chart-legend__dot--interest"></span>
-                            <span class="calculator-chart-legend__label">Interest Earned</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendInterest">$0</span>
+                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Result.InterestEarned"]</span>
+                            <span class="calculator-chart-legend__value" id="calcLegendInterest">@Money(0m)</span>
                         </div>
                     </div>
                 </div>
@@ -201,6 +209,8 @@
         </div>
     </div>
 </div>
+
+<js-strings prefix="InvestmentCalculator.Js." />
 
 @section Scripts {
     <script src="~/js/investment-calculator/calculator.js" asp-append-version="true"></script>

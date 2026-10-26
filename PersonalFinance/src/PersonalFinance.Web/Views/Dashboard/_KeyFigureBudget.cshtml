@@ -4,15 +4,18 @@
     var plannerBudget = Model.Budget;
     decimal? income = plannerBudget?.MonthlyIncome;
     var periodLabel = DashboardBudgetFormat.PeriodLabel(plannerBudget?.Period);
-    var caption = plannerBudget is not null
-            ? (string.IsNullOrEmpty(periodLabel) ? "Per month (Budget Planner)" : $"Per month · {periodLabel} (Budget Planner)")
-            : "Create a budget";
+    string caption = plannerBudget is not null
+            ? (string.IsNullOrEmpty(periodLabel)
+                ? L["Dashboard.KeyFigures.BudgetedIncomeCaption"]
+                : L.Named("Dashboard.KeyFigures.BudgetedIncomeCaptionPeriod", ("period", periodLabel)))
+            : L["Dashboard.CreateBudget"];
 }
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
-    Label = "Budgeted income",
+    Label = L["Dashboard.KeyFigures.BudgetedIncome"],
     Value = income is { } amount ? MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code) : null,
     Caption = caption,
+    UnavailableText = L["Dashboard.KeyFigures.NotSetUp"],
     Icon = "pie-chart",
     Controller = "Budget",
     Action = "Index"

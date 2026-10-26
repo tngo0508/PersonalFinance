@@ -9,50 +9,52 @@
     string? summarySentence = null;
     if (netWorth is not null && last is not null)
     {
-        summarySentence = $"Base scenario reaches {MoneyFormatter.FormatWhole(last.Base, SupportedCurrencies.Default.Code)} by age {last.Age}";
-        if (netWorth.FiTarget > 0m)
-        {
-            summarySentence += netWorth.FiReachedAge is not null
-                ? $"; FI target {MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code)} reached at age {netWorth.FiReachedAge}."
-                : $"; FI target {MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code)} not reached by age {last.Age}.";
-        }
-        else
-        {
-            summarySentence += ".";
-        }
-        summarySentence += $" Conservative scenario reaches {MoneyFormatter.FormatWhole(last.Conservative, SupportedCurrencies.Default.Code)}; Aggressive scenario reaches {MoneyFormatter.FormatWhole(last.Aggressive, SupportedCurrencies.Default.Code)}.";
+        string currency = SupportedCurrencies.Default.Code;
+        string baseAmount = MoneyFormatter.FormatWhole(last.Base, currency);
+        string fiTarget = MoneyFormatter.FormatWhole(netWorth.FiTarget, currency);
+        string baseSentence = netWorth.FiTarget <= 0m
+            ? L.Named("Dashboard.Projection.SummaryBase", ("amount", baseAmount), ("age", last.Age))
+            : netWorth.FiReachedAge is { } fiAge
+                ? L.Named("Dashboard.Projection.SummaryFiReached", ("amount", baseAmount), ("age", last.Age),
+                    ("target", fiTarget), ("fiAge", fiAge))
+                : L.Named("Dashboard.Projection.SummaryFiNotReached", ("amount", baseAmount), ("age", last.Age),
+                    ("target", fiTarget));
+        string scenarios = L.Named("Dashboard.Projection.SummaryScenarios",
+            ("conservative", MoneyFormatter.FormatWhole(last.Conservative, currency)),
+            ("aggressive", MoneyFormatter.FormatWhole(last.Aggressive, currency)));
+        summarySentence = $"{baseSentence} {scenarios}";
     }
 }
 <section class="dash-card dash-projection" aria-labelledby="dash-projection-title">
     <div class="dash-card__header">
-        <h2 id="dash-projection-title" class="dash-card__title">Net worth projection</h2>
-        <a asp-controller="Networth" asp-action="Index" class="dash-link">View details<span class="visually-hidden"> of your net worth projection</span></a>
+        <h2 id="dash-projection-title" class="dash-card__title">@L["Dashboard.Projection.Title"]</h2>
+        <a asp-controller="Networth" asp-action="Index" class="dash-link">@L["Dashboard.Projection.ViewDetails"]<span class="visually-hidden"> @L["Dashboard.Projection.ViewDetailsHidden"]</span></a>
     </div>
     @if (netWorth is null)
     {
-        <p class="dash-empty">Add your Net Worth settings to see where your plan leads.</p>
+        <p class="dash-empty">@L["Dashboard.Projection.Empty"]</p>
     }
     else if (last is null)
     {
         <div class="dash-empty dash-projection__prompt">
-            <p class="dash-projection__prompt-text">Set your retirement age to see your projection.</p>
-            <a asp-controller="Networth" asp-action="Index" class="dash-link">Set retirement age</a>
+            <p class="dash-projection__prompt-text">@L["Dashboard.Projection.RetirementPrompt"]</p>
+            <a asp-controller="Networth" asp-action="Index" class="dash-link">@L["Dashboard.Projection.SetRetirementAge"]</a>
         </div>
     }
     else
     {
         <p class="dash-note">
-            From age @netWorth.CurrentAge to @netWorth.RetirementAge, using your Net Worth settings.
+            @L.Named("Dashboard.Projection.AgeRange", ("currentAge", netWorth.CurrentAge), ("retirementAge", netWorth.RetirementAge))
         </p>
         <p id="dash-projection-summary" class="visually-hidden">@summarySentence</p>
         <div id="dash-projection-chart" class="dash-chart dash-projection__chart" aria-hidden="true"></div>
         <dl class="dash-stats">
             <div class="dash-stats__item">
-                <dt>Base at @last.Age</dt>
+                <dt>@L.Named("Dashboard.Projection.BaseAt", ("age", last.Age))</dt>
                 <dd class="dash-money">@MoneyFormatter.FormatWhole(last.Base, SupportedCurrencies.Default.Code)</dd>
             </div>
             <div class="dash-stats__item">
-                <dt>FI Target</dt>
+                <dt>@L["Dashboard.FiTarget"]</dt>
                 <dd class="dash-money">@(netWorth.FiTarget > 0m ? MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code) : "—")</dd>
             </div>
         </dl>

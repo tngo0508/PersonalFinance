@@ -1,26 +1,32 @@
+@using Microsoft.AspNetCore.Mvc.Razor
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Budget Planner breakdown section. Allocations, totals, and Unallocated come from the Budget Planner (UserBudgetAllocations). *@
 @{
     var budget = Model.Budget;
     var periodLabel = DashboardBudgetFormat.PeriodLabel(budget?.Period);
     var overAllocatedPercent = budget is null ? 0m : budget.TotalAllocatedPercent - 100m;
+    string legendLabel = string.IsNullOrEmpty(periodLabel)
+        ? L["Dashboard.Budget.LegendLabel"]
+        : L.Named("Dashboard.Budget.LegendLabelPeriod", ("period", periodLabel));
 }
 <section class="dash-card dash-budget" aria-labelledby="dash-budget-title">
     <div class="dash-card__header flex-wrap gap-2">
-        <h2 id="dash-budget-title" class="dash-card__title mb-0">Budget Planner</h2>
+        <h2 id="dash-budget-title" class="dash-card__title mb-0">@L["Shell.Nav.BudgetPlanner"]</h2>
         <a asp-controller="Budget" asp-action="Index" class="dash-link">
-            @(budget is null ? "Create a budget" : "Edit budget")
+            @(budget is null ? L["Dashboard.CreateBudget"] : L["Dashboard.Budget.Edit"])
         </a>
     </div>
     @if (budget is not null)
     {
+        Func<object?, HelperResult> incomeAmount =
+            @<span class="dash-money">@MoneyFormatter.FormatWhole(budget.MonthlyIncome, SupportedCurrencies.Default.Code)</span>;
         <p class="dash-note">
             @if (!string.IsNullOrEmpty(periodLabel))
             {
                 <span class="dash-budget__period">@periodLabel</span>
                 <text>&middot;</text>
             }
-            <span class="dash-money">@MoneyFormatter.FormatWhole(budget.MonthlyIncome, SupportedCurrencies.Default.Code)</span> monthly income
+            @L.NamedHtml("Dashboard.Budget.MonthlyIncome", null, ("amount", incomeAmount(null)))
         </p>
 
         @if (budget.TotalAllocatedPercent > 0m)
@@ -28,22 +34,22 @@
             <div id="dash-budget-chart" class="dash-chart dash-budget__chart" aria-hidden="true"></div>
         }
 
-        <ul class="dash-budget__legend" aria-label="Planned split of monthly income@(string.IsNullOrEmpty(periodLabel) ? null : $" for {periodLabel}")">
+        <ul class="dash-budget__legend" aria-label="@legendLabel">
             @foreach (var allocation in budget.Allocations)
             {
-                <li class="dash-budget__item @(allocation.Percent > 0m ? null : "dash-budget__item--empty")">
+                <li class="dash-budget__item @(allocation.Percent > 0m ? null : "dash-budget__item--empty")" data-budget-key="@allocation.Key">
                     <span class="dash-budget__swatch dash-budget__swatch--@allocation.Key"
                           aria-hidden="true"></span>
-                    <span class="dash-budget__name">@allocation.Name</span>
+                    <span class="dash-budget__name">@DashboardText.CategoryName(L, allocation)</span>
                     <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(allocation.Percent)</span>
                     <span class="dash-budget__amount dash-money">@MoneyFormatter.FormatWhole(allocation.Amount, SupportedCurrencies.Default.Code)</span>
                 </li>
             }
             @if (budget.UnallocatedPercent is { } unallocatedPercent)
             {
-                <li class="dash-budget__item dash-budget__item--unallocated">
+                <li class="dash-budget__item dash-budget__item--unallocated" data-budget-key="unallocated">
                     <span class="dash-budget__swatch dash-budget__swatch--unallocated" aria-hidden="true"></span>
-                    <span class="dash-budget__name">Unallocated</span>
+                    <span class="dash-budget__name">@L["Dashboard.Budget.Unallocated"]</span>
                     <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(unallocatedPercent)</span>
                     <span class="dash-budget__amount dash-money">@MoneyFormatter.FormatWhole(budget.UnallocatedAmount ?? 0m, SupportedCurrencies.Default.Code)</span>
                 </li>
@@ -53,16 +59,16 @@
         @if (overAllocatedPercent > 0m)
         {
             <p class="dash-note dash-budget__warning">
-                Allocations total @DashboardBudgetFormat.Percent(budget.TotalAllocatedPercent) of income,
-                @DashboardBudgetFormat.Percent(overAllocatedPercent) more than you earn.
+                @L.Named("Dashboard.Budget.OverAllocated",
+                    ("total", DashboardBudgetFormat.Percent(budget.TotalAllocatedPercent)),
+                    ("over", DashboardBudgetFormat.Percent(overAllocatedPercent)))
             </p>
         }
     }
     else
     {
-        <p class="dash-empty">
-            No budget plan set up yet.
-            <a asp-controller="Budget" asp-action="Index">Create a budget plan</a> to plan your income allocation.
-        </p>
+        Func<object?, HelperResult> createLink =
+            @<a asp-controller="Budget" asp-action="Index">@L["Dashboard.Budget.CreatePlan"]</a>;
+        <p class="dash-empty">@L.NamedHtml("Dashboard.Budget.Empty", null, ("link", createLink(null)))</p>
     }
 </section>

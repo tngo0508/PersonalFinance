@@ -139,9 +139,23 @@ public class GoalsOverviewDto
 public class RecentActivityDto
 {
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>English description, kept for clients that do not compose their own from the fields below.</summary>
     public string Description { get; set; } = string.Empty;
     public DateTime Date { get; set; }
     public string Type { get; set; } = string.Empty;
+
+    /// <summary>A transaction's category as stored (user data, never translated); null for a savings goal.</summary>
+    public string? Category { get; set; }
+
+    /// <summary>A transaction's amount; null for a savings goal.</summary>
+    public decimal? Amount { get; set; }
+
+    /// <summary>A savings goal's target amount; null for a transaction.</summary>
+    public decimal? TargetAmount { get; set; }
+
+    /// <summary>A savings goal's saved amount; null for a transaction.</summary>
+    public decimal? SavedAmount { get; set; }
 }
 
 /// <summary>

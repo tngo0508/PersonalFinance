@@ -1,26 +1,27 @@
+@using Microsoft.AspNetCore.Mvc.Razor
 @using System.Globalization
 @using PersonalFinance.Shared.Enums
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Recent activity section: type icon, title, description and date, newest first. Displays active budget data source. *@
 @{
-    static (string Icon, string Modifier, string Label) ActivityStyle(string type) => type switch
+    static (string Icon, string Modifier) ActivityStyle(string type) => type switch
     {
-        "Income" => ("arrow-down-left", "income", "Income"),
-        "Expense" => ("arrow-up-right", "expense", "Expense"),
-        "SavingsGoal" => ("target", "goal", "Savings goal"),
-        _ => ("circle", "other", "Activity")
+        "Income" => ("arrow-down-left", "income"),
+        "Expense" => ("arrow-up-right", "expense"),
+        "SavingsGoal" => ("target", "goal"),
+        _ => ("circle", "other")
     };
 
     var items = Model.RecentActivity;
-    var sourceName = Model.ActiveSource == BudgetDataSource.BudgetTracker ? "Budget Tracker" : "Google Sheet";
+    string sourceName = Model.ActiveSource == BudgetDataSource.BudgetTracker ? L["Shell.Nav.BudgetTracker"] : "Google Sheet";
 }
 <section class="dash-card dash-activity" aria-labelledby="dash-activity-title">
     <div class="dash-card__header flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3">
-            <h2 id="dash-activity-title" class="dash-card__title mb-0">Recent activity</h2>
+            <h2 id="dash-activity-title" class="dash-card__title mb-0">@L["Dashboard.Activity.Title"]</h2>
             <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
         </div>
-        <span class="badge bg-light text-secondary border">Source: @sourceName</span>
+        <span class="badge bg-light text-secondary border">@L.Named("Dashboard.Source", ("source", sourceName))</span>
     </div>
     @if (items.Count > 0)
     {
@@ -31,14 +32,15 @@
                 <li class="dash-activity__item">
                     <span class="dash-activity__icon dash-activity__icon--@style.Modifier">
                         <i data-lucide="@style.Icon" aria-hidden="true"></i>
-                        <span class="visually-hidden">@style.Label</span>
+                        <span class="visually-hidden">@DashboardText.ActivityType(L, activity.Type)</span>
                     </span>
                     <div class="dash-activity__body">
                         <div class="dash-activity__row">
                             <span class="dash-activity__title">@activity.Title</span>
-                            <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@activity.Date.ToString("MMM d, yyyy")</time>
+                            @* TimeAgoTagHelper writes the text ("5d ago", or the date in the reader's format) from the datetime attribute. *@
+                            <time class="dash-activity__date" datetime="@activity.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"></time>
                         </div>
-                        <span class="dash-activity__description">@activity.Description</span>
+                        <span class="dash-activity__description">@DashboardText.ActivityDescription(L, activity)</span>
                     </div>
                 </li>
             }
@@ -48,19 +50,15 @@
     {
         @if (Model.ActiveSource == BudgetDataSource.GoogleSheet)
         {
-            <p class="dash-empty">
-                No recent activity from Google Sheet.
-                <a asp-controller="GoogleDrive" asp-action="Index">Sync your spreadsheet</a> or switch to Budget Tracker
-                above.
-            </p>
+            Func<object?, HelperResult> syncLink =
+                @<a asp-controller="GoogleDrive" asp-action="Index">@L["Dashboard.SyncSpreadsheet"]</a>;
+            <p class="dash-empty">@L.NamedHtml("Dashboard.Activity.EmptySheet", null, ("link", syncLink(null)))</p>
         }
         else
         {
-            <p class="dash-empty">
-                No recent activity in Budget Tracker.
-                <a asp-controller="BudgetTracker" asp-action="Index">Add transactions</a> or switch to Google Sheet
-                above.
-            </p>
+            Func<object?, HelperResult> addLink =
+                @<a asp-controller="BudgetTracker" asp-action="Index">@L["Dashboard.Activity.AddTransactions"]</a>;
+            <p class="dash-empty">@L.NamedHtml("Dashboard.Activity.EmptyTracker", null, ("link", addLink(null)))</p>
         }
     }
 </section>
