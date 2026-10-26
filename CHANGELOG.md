@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [7.9.0] - 2026-10-25
+
+### Added
+
+- **Dashboard in Vietnamese**: every section of the Dashboard, its charts and its Unavailable State read in the chosen language (slice L3 of the localization spec, #360).
+  - Amounts, percentages (`12,5%`) and month labels (`Tháng 10 năm 2026`) follow the reader's culture.
+  - Chart series, axis, tooltips and the FI Target line come from a `Dashboard.Js.` strings island; the budget donut takes its slice names from the translated legend.
+  - Recent activity descriptions are worded in the reader's language from new raw fields on `RecentActivityDto` (`Category`, `Amount`, `TargetAmount`, `SavedAmount`); `Description` stays as the English fallback.
+  - Budget Planner category names are shared keys under `Common.BudgetCategory.`.
+
+### Changed
+
+- **Relative times are translated everywhere**: the `<time datetime>` tag helper ("5d ago", "Just now") now uses `Common.TimeAgo.` keys, and dates older than a week use the language's date format, on every page that shows them.
+
 ## [7.8.0] - 2026-10-25
 
 ### Added

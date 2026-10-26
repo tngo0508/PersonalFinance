@@ -3,16 +3,16 @@
 @{
     var actions = new[]
     {
-        (Controller: "Networth", Icon: "wallet", Label: "Net Worth", Hint: "Update balances and your FI projection"),
-        (Controller: "Budget", Icon: "pie-chart", Label: "Budget", Hint: "Plan this month's spending split"),
-        (Controller: "SavingsGoals", Icon: "target", Label: "Savings Goals", Hint: "Track progress toward a goal"),
-        (Controller: "Analysis", Icon: "bar-chart-3", Label: "Analysis", Hint: "Review trends in your spending"),
-        (Controller: "InvestmentCalculator", Icon: "calculator", Label: "Investment Calculator", Hint: "Model growth from regular contributions")
+        (Controller: "Networth", Icon: "wallet", Label: L["Shell.Nav.NetWorth"].Value, Hint: L["Dashboard.QuickActions.NetWorthHint"].Value),
+        (Controller: "Budget", Icon: "pie-chart", Label: L["Dashboard.QuickActions.Budget"].Value, Hint: L["Dashboard.QuickActions.BudgetHint"].Value),
+        (Controller: "SavingsGoals", Icon: "target", Label: L["Shell.Nav.SavingsGoals"].Value, Hint: L["Dashboard.QuickActions.SavingsGoalsHint"].Value),
+        (Controller: "Analysis", Icon: "bar-chart-3", Label: L["Shell.Nav.Analysis"].Value, Hint: L["Dashboard.QuickActions.AnalysisHint"].Value),
+        (Controller: "InvestmentCalculator", Icon: "calculator", Label: L["Shell.Nav.InvestmentCalculator"].Value, Hint: L["Dashboard.QuickActions.InvestmentCalculatorHint"].Value)
     };
 }
 <section class="dash-card dash-actions" aria-labelledby="dash-actions-title">
     <div class="dash-card__header">
-        <h2 id="dash-actions-title" class="dash-card__title">Quick actions</h2>
+        <h2 id="dash-actions-title" class="dash-card__title">@L["Dashboard.QuickActions.Title"]</h2>
     </div>
     <ul class="dash-actions__list">
         @foreach (var action in actions)

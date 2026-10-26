@@ -9,8 +9,9 @@ namespace PersonalFinance.Web.Models.Dashboard;
 public static class DashboardBudgetFormat
 {
     /// <summary>
-    /// Formats a stored budget period ("yyyy-MM") as a month label such as "October 2026".
-    /// Unrecognised values are returned unchanged so the card never hides what was stored.
+    /// Formats a stored budget period ("yyyy-MM") as a month label in the request culture, such as "October 2026"
+    /// (en-US) or "Tháng 10 năm 2026" (vi-VN). Unrecognised values are returned unchanged so the card never hides
+    /// what was stored.
     /// </summary>
     public static string PeriodLabel(string? period)
     {
@@ -21,11 +22,18 @@ public static class DashboardBudgetFormat
 
         return DateTime.TryParseExact(period, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None,
             out DateTime month)
-            ? month.ToString("MMMM yyyy", CultureInfo.InvariantCulture)
+            ? MonthLabel(month.Year, month.Month)
             : period;
     }
 
-    /// <summary>Formats a percentage with at most one decimal place, e.g. "12.5%" or "30%".</summary>
+    /// <summary>A calendar month as a label in the request culture, such as "October 2026".</summary>
+    public static string MonthLabel(int year, int month) =>
+        new DateTime(year, month, 1).ToString("Y", CultureInfo.CurrentCulture);
+
+    /// <summary>
+    /// Formats a percentage with at most one decimal place and the request culture's decimal separator, e.g. "12.5%"
+    /// (en-US) or "12,5%" (vi-VN).
+    /// </summary>
     public static string Percent(decimal percent) =>
-        $"{Math.Round(percent, 1, MidpointRounding.AwayFromZero).ToString("0.#", CultureInfo.InvariantCulture)}%";
+        $"{Math.Round(percent, 1, MidpointRounding.AwayFromZero).ToString("0.#", CultureInfo.CurrentCulture)}%";
 }

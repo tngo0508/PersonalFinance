@@ -8,9 +8,9 @@
     {
         cards.Add(new DashboardSetupCardViewModel
         {
-            Title = "Set up net worth",
-            Description = "Enter your balance, income, and spending to see your Net Worth and Progress to FI.",
-            ActionText = "Set up net worth",
+            Title = L["Dashboard.Setup.NetWorth"],
+            Description = L["Dashboard.Setup.NetWorthDescription"],
+            ActionText = L["Dashboard.Setup.NetWorth"],
             Icon = "wallet",
             Controller = "Networth"
         });
@@ -20,9 +20,9 @@
     {
         cards.Add(new DashboardSetupCardViewModel
         {
-            Title = "Create a budget",
-            Description = "Plan how your monthly income is split across your spending categories.",
-            ActionText = "Create a budget",
+            Title = L["Dashboard.CreateBudget"],
+            Description = L["Dashboard.Setup.BudgetDescription"],
+            ActionText = L["Dashboard.CreateBudget"],
             Icon = "pie-chart",
             Controller = "Budget"
         });
@@ -32,9 +32,9 @@
     {
         cards.Add(new DashboardSetupCardViewModel
         {
-            Title = "Add a goal",
-            Description = "Track progress toward something you are saving for.",
-            ActionText = "Add a goal",
+            Title = L["Dashboard.Setup.Goal"],
+            Description = L["Dashboard.Setup.GoalDescription"],
+            ActionText = L["Dashboard.Setup.Goal"],
             Icon = "target",
             Controller = "SavingsGoals"
         });
@@ -44,9 +44,9 @@
     {
         cards.Add(new DashboardSetupCardViewModel
         {
-            Title = "Connect Google Drive",
-            Description = "Link a Drive folder to import budget and transaction spreadsheets automatically.",
-            ActionText = "Connect Google Drive",
+            Title = L["Dashboard.Setup.GoogleDrive"],
+            Description = L["Dashboard.Setup.GoogleDriveDescription"],
+            ActionText = L["Dashboard.Setup.GoogleDrive"],
             Icon = "hard-drive",
             Controller = "GoogleDrive"
         });
@@ -55,7 +55,7 @@
 @if (cards.Count > 0)
 {
     <section class="dash-setup" aria-labelledby="dash-setup-title">
-        <h2 id="dash-setup-title" class="dash-section-title">Finish setting up</h2>
+        <h2 id="dash-setup-title" class="dash-section-title">@L["Dashboard.Setup.Title"]</h2>
         <div class="dash-setup__grid">
             @foreach (var card in cards)
             {

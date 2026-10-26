@@ -23,9 +23,9 @@
     };
 
     const SERIES = [
-        { key: 'base', name: 'Base', color: COLORS.base, width: 3 },
-        { key: 'conservative', name: 'Conservative', color: COLORS.conservative, width: 2 },
-        { key: 'aggressive', name: 'Aggressive', color: COLORS.aggressive, width: 2 }
+        { key: 'base', nameKey: 'Dashboard.Js.Scenario.Base', color: COLORS.base, width: 3 },
+        { key: 'conservative', nameKey: 'Dashboard.Js.Scenario.Conservative', color: COLORS.conservative, width: 2 },
+        { key: 'aggressive', nameKey: 'Dashboard.Js.Scenario.Aggressive', color: COLORS.aggressive, width: 2 }
     ];
 
     // Separators from the page culture, symbol from the currency (PFI18n, spec §2.2).
@@ -55,7 +55,7 @@
             borderColor: COLORS.fiTarget,
             strokeDashArray: 6,
             label: {
-                text: `FI Target ${compactFormatter.format(fiTarget)}`,
+                text: PFI18n.t('Dashboard.Js.FiTargetLine', { amount: compactFormatter.format(fiTarget) }),
                 position: 'left',
                 textAnchor: 'start',
                 offsetX: 4,
@@ -93,7 +93,7 @@
      */
     function tooltipTitle (points, index) {
         const point = points[index];
-        return point ? `${point.year} · Age ${point.age}` : '';
+        return point ? PFI18n.t('Dashboard.Js.TooltipTitle', { year: point.year, age: point.age }) : '';
     }
 
     /**
@@ -122,7 +122,7 @@
                 animations: { enabled: animate }
             },
             series: SERIES.map((series) => ({
-                name: series.name,
+                name: PFI18n.t(series.nameKey),
                 data: points.map((point) => ({ x: point.age, y: Number(point[series.key]) || 0 }))
             })),
             colors: SERIES.map((series) => series.color),
@@ -138,7 +138,7 @@
             xaxis: {
                 type: 'numeric',
                 tickAmount: Math.min(points.length - 1, 8),
-                title: { text: 'Age', style: { color: COLORS.axis, fontWeight: 500 } },
+                title: { text: PFI18n.t('Dashboard.Js.Age'), style: { color: COLORS.axis, fontWeight: 500 } },
                 labels: {
                     style: { colors: COLORS.axis },
                     formatter: (value) => `${Math.round(value)}`
