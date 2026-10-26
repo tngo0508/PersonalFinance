@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.GoogleDrive;
 
 namespace PersonalFinance.Web.Controllers;
@@ -18,14 +20,17 @@ namespace PersonalFinance.Web.Controllers;
 public class GoogleDriveController : Controller
 {
     private readonly IGoogleDriveApi _googleDriveApi;
+    private readonly IStringLocalizer _localizer;
     private readonly ILogger<GoogleDriveController> _logger;
 
     public GoogleDriveController(
         IGoogleDriveApi googleDriveApi,
-        ILogger<GoogleDriveController> logger)
+        ILogger<GoogleDriveController> logger,
+        IStringLocalizer localizer)
     {
         _googleDriveApi = googleDriveApi;
         _logger = logger;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -91,8 +96,7 @@ public class GoogleDriveController : Controller
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Loading Google Drive connections failed for user {UserId}", userId);
-            model.ErrorMessage = ApiErrorMessages.ForUser(ex,
-                "Unable to load your Google Drive connections. Please try again in a moment.");
+            model.ErrorMessage = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.LoadFailed"]);
         }
 
         return View(model);
@@ -138,18 +142,17 @@ public class GoogleDriveController : Controller
 
             if (syncResponse.Success)
             {
-                TempData["StatusMessage"] = "Google Drive files synchronized successfully with database cache.";
+                TempData["StatusMessage"] = _localizer["GoogleDrive.Message.Synced"].Value;
             }
             else
             {
-                TempData["ErrorMessage"] = syncResponse.ErrorMessage ?? "Synchronization completed with warnings.";
+                TempData["ErrorMessage"] = syncResponse.ErrorMessage ?? _localizer["GoogleDrive.Message.SyncWarnings"].Value;
             }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error synchronizing connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex,
-                "Failed to synchronize Google Drive files. Please check your credentials.");
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.SyncFailed"]);
         }
 
         return RedirectToAction(nameof(Index), new { connectionId = id });
@@ -184,18 +187,17 @@ public class GoogleDriveController : Controller
 
             if (updated.IsValid)
             {
-                TempData["StatusMessage"] = "Credentials updated and Google Drive re-synchronized successfully.";
+                TempData["StatusMessage"] = _localizer["GoogleDrive.Message.Reauthed"].Value;
             }
             else
             {
-                TempData["ErrorMessage"] = updated.ErrorMessage ?? "Credentials could not be verified.";
+                TempData["ErrorMessage"] = updated.ErrorMessage ?? _localizer["GoogleDrive.Message.ReauthUnverified"].Value;
             }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error re-authenticating connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex,
-                "Failed to update Google Drive credentials. Please try again.");
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.ReauthFailed"]);
         }
 
         return RedirectToAction(nameof(Index), new { connectionId = id });
@@ -219,12 +221,12 @@ public class GoogleDriveController : Controller
         try
         {
             await _googleDriveApi.DeleteConnectionAsync(id, cancellationToken);
-            TempData["StatusMessage"] = "Google Drive connection and cached data removed successfully.";
+            TempData["StatusMessage"] = _localizer["GoogleDrive.Message.Removed"].Value;
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Error deleting connection {ConnectionId}", id);
-            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex, "Failed to delete Google Drive connection.");
+            TempData["ErrorMessage"] = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.RemoveFailed"]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -244,7 +246,7 @@ public class GoogleDriveController : Controller
     {
         if (string.IsNullOrWhiteSpace(fileId))
         {
-            return BadRequest(new { error = "File ID is required." });
+            return BadRequest(new { error = _localizer["GoogleDrive.Message.FileIdRequired"].Value });
         }
 
         MonthlyBudgetReportDto report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, cancellationToken);
@@ -264,7 +266,7 @@ public class GoogleDriveController : Controller
     {
         if (string.IsNullOrWhiteSpace(fileId))
         {
-            return BadRequest(new { error = "File ID is required." });
+            return BadRequest(new { error = _localizer["GoogleDrive.Message.FileIdRequired"].Value });
         }
 
         SpreadsheetTransactionsDto result = await _googleDriveApi.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, cancellationToken);
@@ -279,7 +281,7 @@ public class GoogleDriveController : Controller
 
         if (string.IsNullOrWhiteSpace(model.FolderUrl))
         {
-            model.ErrorMessage = "Please enter a valid Google Drive folder URL or Folder ID.";
+            model.ErrorMessage = _localizer["GoogleDrive.Message.FolderUrlRequired"];
             model.ShowConnectForm = true;
             return View("Index", model);
         }
@@ -295,13 +297,14 @@ public class GoogleDriveController : Controller
                 },
                 cancellationToken);
 
-            TempData["StatusMessage"] = $"Connected to '{connection.Name}' and cached {connection.CachedFilesCount} items.";
+            TempData["StatusMessage"] = _localizer.Named("GoogleDrive.Message.Connected",
+                ("name", connection.Name), ("count", connection.CachedFilesCount));
             return RedirectToAction(nameof(Index), new { connectionId = connection.Id });
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Connecting a Google Drive folder failed.");
-            model.ErrorMessage = ApiErrorMessages.ForUser(ex, "An unexpected error occurred while connecting Google Drive.");
+            model.ErrorMessage = ApiErrorMessages.ForUser(ex, _localizer["GoogleDrive.Message.ConnectFailed"]);
             model.ShowConnectForm = true;
         }
 

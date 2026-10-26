@@ -1,3 +1,4 @@
+/* global PFI18n */
 // Google Drive explorer page: connect/sync forms, toasts, file table, search, type filters and view switcher.
 (function ($) {
     'use strict';
@@ -19,7 +20,7 @@
         $('#driveExplorerForm').on('submit', function () {
             if ($(this).valid()) {
                 $('#submitSpinner').removeClass('d-none');
-                $('#submitText').text('Connecting...');
+                $('#submitText').text(PFI18n.t('GoogleDrive.Js.Connecting'));
                 $('#btnSubmitExplore').prop('disabled', true);
             }
         });
@@ -38,14 +39,15 @@
         });
 
         // Copy folder ID
-        $('.btn-copy-id').on('click', function () {
+        $('.btn-copy-id').on('click', async function () {
             const folderId = $(this).data('id');
             if (navigator.clipboard && folderId) {
-                navigator.clipboard.writeText(folderId).then(() => {
-                    showToast('Folder ID copied to clipboard.');
-                }).catch(() => {
-                    showToast('Failed to copy folder ID. Please copy it manually.');
-                });
+                try {
+                    await navigator.clipboard.writeText(folderId);
+                    showToast(PFI18n.t('GoogleDrive.Js.FolderIdCopied'));
+                } catch {
+                    showToast(PFI18n.t('GoogleDrive.Js.FolderIdCopyFailed'));
+                }
             }
         });
 
@@ -65,7 +67,7 @@
         if ($('#googleDriveDataTable').length > 0) {
             dataTable = $('#googleDriveDataTable').DataTable({
                 pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, PFI18n.t('GoogleDrive.Js.Table.All')]],
                 order: [[2, 'desc']],
                 autoWidth: false,
                 columnDefs: [
@@ -74,13 +76,14 @@
                     { targets: 3, className: 'd-none d-md-table-cell' },
                     { targets: 4, orderable: false, searchable: false }
                 ],
+                // DataTables fills in its own _START_, _END_, _TOTAL_ and _MENU_ tokens
                 language: {
-                    emptyTable: 'This folder is empty.',
-                    zeroRecords: 'No files match your filters.',
-                    info: '_START_–_END_ of _TOTAL_ files',
-                    infoEmpty: 'No files',
+                    emptyTable: PFI18n.t('GoogleDrive.Js.Files.Empty'),
+                    zeroRecords: PFI18n.t('GoogleDrive.Js.Files.NoMatches'),
+                    info: PFI18n.t('GoogleDrive.Js.Files.Info', { start: '_START_', end: '_END_', total: '_TOTAL_' }),
+                    infoEmpty: PFI18n.t('GoogleDrive.Js.Files.InfoEmpty'),
                     infoFiltered: '',
-                    lengthMenu: 'Show _MENU_'
+                    lengthMenu: PFI18n.t('GoogleDrive.Js.Table.Show', { menu: '_MENU_' })
                 },
                 // Search lives in the shared toolbar above, so only table, info, length and paging here
                 dom: "<'row'<'col-12'tr>>" +
@@ -110,7 +113,7 @@
 
             const count = tableCount !== undefined ? tableCount : gridCount;
             if (count !== undefined && count >= 0) {
-                $count.removeClass('d-none').text(`${count} file${count !== 1 ? 's' : ''} found`);
+                $count.removeClass('d-none').text(PFI18n.plural('GoogleDrive.Js.Files.Found', count));
             } else {
                 $count.addClass('d-none').text('');
             }

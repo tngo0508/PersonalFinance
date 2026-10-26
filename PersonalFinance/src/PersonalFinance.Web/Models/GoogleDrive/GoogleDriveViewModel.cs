@@ -11,19 +11,19 @@ public class GoogleDriveViewModel
     /// <summary>
     /// Google Drive folder URL or ID entered by the user.
     /// </summary>
-    [Display(Name = "Google Drive Folder URL / ID")]
+    [Display(Name = "GoogleDrive.Connect.FolderLabel")]
     public string FolderUrl { get; set; } = string.Empty;
 
     /// <summary>
     /// Optional friendly name for the connection (e.g., 'Work Invoices', 'Tax Receipts').
     /// </summary>
-    [Display(Name = "Drive / Folder Name (Optional)")]
+    [Display(Name = "GoogleDrive.Connect.NameLabel")]
     public string? ConnectionName { get; set; }
 
     /// <summary>
     /// Optional Google Cloud API Key with Google Drive API enabled.
     /// </summary>
-    [Display(Name = "Google Cloud API Key (Optional)")]
+    [Display(Name = "GoogleDrive.ApiKey.Label")]
     public string? ApiKey { get; set; }
 
     /// <summary>
