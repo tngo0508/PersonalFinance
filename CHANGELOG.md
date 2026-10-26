@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Budget Tracker in Vietnamese**: the page, its dialogs, its script messages and its error responses are translated (slice L3 of the localization spec, #362).
   - 131 `BudgetTracker.*` keys; the script reads its strings from the page's `BudgetTracker.Js.` island.
-  - The monthly sheet now carries `PreviousPlanYear` and `PreviousPlanMonth`, so "Copy from September 2026" names the month in the reader's language.
+  - The monthly sheet carries `PreviousPlanYear` and `PreviousPlanMonth` in place of the English `PreviousMonthLabel`, so "Copy from September 2026" names the month in the reader's language.
 
 ### Changed
 

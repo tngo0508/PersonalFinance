@@ -152,7 +152,6 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         bool isInitialized = plan != null;
         bool canCopyFromPrevious = false;
-        string? previousMonthLabel = null;
         int? earlierPlanYear = null;
         int? earlierPlanMonth = null;
 
@@ -169,9 +168,6 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
                 canCopyFromPrevious = true;
                 earlierPlanYear = earlierPlan.Year;
                 earlierPlanMonth = earlierPlan.Month;
-                previousMonthLabel =
-                    new DateTime(earlierPlan.Year, earlierPlan.Month, 1).ToString("MMMM yyyy",
-                        CultureInfo.InvariantCulture);
             }
         }
 
@@ -236,7 +232,6 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
             MonthName = new DateTime(year, month, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture),
             IsInitialized = isInitialized,
             CanCopyFromPrevious = canCopyFromPrevious,
-            PreviousMonthLabel = previousMonthLabel,
             PreviousPlanYear = earlierPlanYear,
             PreviousPlanMonth = earlierPlanMonth,
             Expenses = new SheetSectionDto

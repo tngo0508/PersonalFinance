@@ -32,7 +32,8 @@ public class MonthlyBudgetInitializationTests
 
         Assert.False(sheet.IsInitialized);
         Assert.False(sheet.CanCopyFromPrevious);
-        Assert.Null(sheet.PreviousMonthLabel);
+        Assert.Null(sheet.PreviousPlanYear);
+        Assert.Null(sheet.PreviousPlanMonth);
     }
 
     [Fact]
@@ -50,7 +51,8 @@ public class MonthlyBudgetInitializationTests
 
         Assert.False(octSheet.IsInitialized);
         Assert.True(octSheet.CanCopyFromPrevious);
-        Assert.Equal("September 2026", octSheet.PreviousMonthLabel);
+        Assert.Equal(2026, octSheet.PreviousPlanYear);
+        Assert.Equal(9, octSheet.PreviousPlanMonth);
     }
 
     [Fact]
@@ -160,7 +162,8 @@ public class MonthlyBudgetInitializationTests
         MonthlyBudgetSheetDto febBefore = await service.GetSheetAsync(UserId, 2026, 2);
         Assert.False(febBefore.IsInitialized);
         Assert.True(febBefore.CanCopyFromPrevious);
-        Assert.Equal("November 2025", febBefore.PreviousMonthLabel);
+        Assert.Equal(2025, febBefore.PreviousPlanYear);
+        Assert.Equal(11, febBefore.PreviousPlanMonth);
 
         // Initialize February 2026 copying from previous
         MonthlyBudgetSheetDto febSheet = await service.InitializeMonthAsync(UserId, new InitializeMonthRequest
