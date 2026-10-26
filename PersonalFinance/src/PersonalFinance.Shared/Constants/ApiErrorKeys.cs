@@ -72,5 +72,49 @@ public static class ApiErrorKeys
     /// <summary>The keys of the Community Feature's rejections.</summary>
     public static class Community
     {
+        /// <summary>A vote named no poll.</summary>
+        public const string PollCodeRequired = "Community.Validation.PollCodeRequired";
+
+        /// <summary>A vote named no option.</summary>
+        public const string OptionIdRequired = "Community.Validation.OptionIdRequired";
+
+        /// <summary>The poll does not exist or is no longer active.</summary>
+        public const string PollNotFound = "Community.Error.PollNotFound";
+
+        /// <summary>The voted option does not belong to the poll.</summary>
+        public const string InvalidOption = "Community.Error.InvalidOption";
+
+        /// <summary>A comment's text was empty.</summary>
+        public const string CommentEmpty = "Community.Validation.CommentEmpty";
+
+        /// <summary>A comment's text was longer than the limit, given as the <c>max</c> argument.</summary>
+        public const string CommentTooLong = "Community.Validation.CommentTooLong";
+
+        /// <summary>A comment named a poll that does not exist.</summary>
+        public const string InvalidPoll = "Community.Error.InvalidPoll";
+
+        /// <summary>A comment named a story that does not exist or is hidden.</summary>
+        public const string InvalidStory = "Community.Error.InvalidStory";
+
+        /// <summary>The liked comment does not exist or is hidden.</summary>
+        public const string CommentNotFound = "Community.Error.CommentNotFound";
+
+        /// <summary>The liked story does not exist or is hidden.</summary>
+        public const string StoryNotFound = "Community.Error.StoryNotFound";
+
+        /// <summary>A story's title was empty or longer than the <c>max</c> argument.</summary>
+        public const string StoryTitle = "Community.Validation.StoryTitle";
+
+        /// <summary>A story's summary was empty or longer than the <c>max</c> argument.</summary>
+        public const string StorySummary = "Community.Validation.StorySummary";
+
+        /// <summary>A story's body was shorter than the <c>min</c> argument.</summary>
+        public const string StoryBodyMin = "Community.Validation.StoryBodyMin";
+
+        /// <summary>A story's body was longer than the <c>max</c> argument.</summary>
+        public const string StoryBodyMax = "Community.Validation.StoryBodyMax";
+
+        /// <summary>A story's category was empty or longer than the <c>max</c> argument.</summary>
+        public const string StoryCategory = "Community.Validation.StoryCategory";
     }
 }

@@ -1,16 +1,23 @@
+using System.Globalization;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Community;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Community;
 using PersonalFinance.Tests.TestSupport;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Tests.Community;
 
 /// <summary>
 /// Characterization of <see cref="ICommunityService"/>: how a submitted Community Story's read time is derived and
-/// how an active poll is reported to the Account viewing it. Runs against an in-memory database.
+/// how an active poll is reported to the Account viewing it, and the keyed <see cref="ApiErrorException"/> each
+/// rejection throws. Runs against an in-memory database.
 /// </summary>
 public class CommunityServiceTests
 {
@@ -95,5 +102,140 @@ public class CommunityServiceTests
             Assert.Contains($"Community.Stats.{stat.Key}.Title", english);
             Assert.Contains($"Community.Stats.{stat.Key}.Description", english);
         });
+    }
+
+    [Fact]
+    public async Task VoteAsync_WithUnknownPoll_ThrowsPollNotFound()
+    {
+        await using AppDbContext db = CreateContext();
+        var request = new CommunityVoteRequestDto { PollCode = "no-such-poll", OptionId = 1 };
+
+        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
+            () => CreateService(db).VoteAsync(UserId, request));
+
+        Assert.Equal(ApiErrorKeys.Community.PollNotFound, ex.Key);
+        Assert.Equal(400, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddCommentAsync_WithLongText_ThrowsCommentTooLong_WithMaxArg()
+    {
+        await using AppDbContext db = CreateContext();
+        var request = new CommunityCommentRequestDto { Text = new string('a', 2001), Topic = "General" };
+
+        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
+            () => CreateService(db).AddCommentAsync(UserId, request, "Alex"));
+
+        Assert.Equal(ApiErrorKeys.Community.CommentTooLong, ex.Key);
+        Assert.Equal("Text", ex.Field);
+        Assert.NotNull(ex.Args);
+        Assert.Equal("2000", ex.Args["max"].Value);
+        Assert.Equal(ApiErrorArgKind.Number, ex.Args["max"].Kind);
+        Assert.Equal("Comment text is too long (max 2000 characters).", ex.Message);
+        Assert.Equal(400, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task SubmitStoryAsync_WithShortBody_ThrowsStoryBodyMin()
+    {
+        await using AppDbContext db = CreateContext();
+        var request = new CommunityStoryRequestDto
+        {
+            Title = "Paying off my car loan",
+            Summary = "How I did it.",
+            Body = "Too short.",
+            Category = "Debt",
+        };
+
+        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
+            () => CreateService(db).SubmitStoryAsync(UserId, request, "Alex"));
+
+        Assert.Equal(ApiErrorKeys.Community.StoryBodyMin, ex.Key);
+        Assert.Equal("Body", ex.Field);
+        Assert.NotNull(ex.Args);
+        Assert.Equal("100", ex.Args["min"].Value);
+        Assert.Equal(400, ex.StatusCode);
+        Assert.Empty(db.CommunityStories);
+    }
+
+    [Fact]
+    public async Task ToggleCommentLikeAsync_Unknown_Throws404()
+    {
+        await using AppDbContext db = CreateContext();
+
+        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
+            () => CreateService(db).ToggleCommentLikeAsync(UserId, 999));
+
+        Assert.Equal(ApiErrorKeys.Community.CommentNotFound, ex.Key);
+        Assert.Equal(404, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task ToggleStoryLikeAsync_Unknown_Throws404()
+    {
+        await using AppDbContext db = CreateContext();
+
+        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
+            () => CreateService(db).ToggleStoryLikeAsync(UserId, 999));
+
+        Assert.Equal(ApiErrorKeys.Community.StoryNotFound, ex.Key);
+        Assert.Equal(404, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPollCommentsAsync_WithUnknownPoll_ThrowsPollNotFound404()
+    {
+        await using AppDbContext db = CreateContext();
+
+        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
+            () => CreateService(db).GetPollCommentsAsync("no-such-poll"));
+
+        Assert.Equal(ApiErrorKeys.Community.PollNotFound, ex.Key);
+        Assert.Equal(404, ex.StatusCode);
+    }
+
+    [Fact]
+    public void EveryCommunityKey_ResolvesInEnglish_WithoutPlaceholder()
+    {
+        using var uiCulture = new UiCultureScope("en");
+        CultureInfo formatting = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+        try
+        {
+            List<string> keys = typeof(ApiErrorKeys.Community)
+                .GetFields(BindingFlags.Public | BindingFlags.Static)
+                .Where(f => f.IsLiteral)
+                .Select(f => (string)f.GetRawConstantValue()!)
+                .ToList();
+
+            Assert.Equal(15, keys.Count);
+            foreach (string key in keys)
+            {
+                var entry = new ApiErrorEntryDto { Key = key, Message = key, Args = ArgsOf(key) };
+                Assert.False(TestLocalization.Localizer[key].ResourceNotFound, key);
+                string text = ApiErrorMessages.Resolve(TestLocalization.Localizer, entry);
+                Assert.DoesNotContain("{", text);
+                Assert.DoesNotContain("}", text);
+            }
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = formatting;
+        }
+    }
+
+    private static Dictionary<string, ApiErrorArgDto>? ArgsOf(string key)
+    {
+        IReadOnlyDictionary<string, ApiErrorArgDto>? args = key switch
+        {
+            ApiErrorKeys.Community.CommentTooLong => ErrorArgs.Number("max", 2000),
+            ApiErrorKeys.Community.StoryTitle => ErrorArgs.Number("max", 500),
+            ApiErrorKeys.Community.StorySummary => ErrorArgs.Number("max", 2000),
+            ApiErrorKeys.Community.StoryBodyMin => ErrorArgs.Number("min", 100),
+            ApiErrorKeys.Community.StoryBodyMax => ErrorArgs.Number("max", 10000),
+            ApiErrorKeys.Community.StoryCategory => ErrorArgs.Number("max", 50),
+            _ => null,
+        };
+        return args?.ToDictionary(pair => pair.Key, pair => pair.Value);
     }
 }
