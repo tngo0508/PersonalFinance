@@ -1,3 +1,4 @@
+using PersonalFinance.Tests.TestSupport;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.BudgetTracker;
@@ -58,7 +59,7 @@ public class BudgetCategoryTests
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         // "Food" already exists in Expense
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.DuplicateCategory, () =>
             service.CreateCategoryAsync(UserId, new SaveCategoryRequest
             {
                 Name = "food",
@@ -66,7 +67,7 @@ public class BudgetCategoryTests
                 SortOrder = 1
             }));
 
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.DuplicateCategory, () =>
             service.CreateCategoryAsync(UserId, new SaveCategoryRequest
             {
                 Name = "FOOD",
@@ -128,7 +129,7 @@ public class BudgetCategoryTests
         });
 
         // Attempting to change kind from Income to Expense is rejected (CategoryKindImmutable)
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryKindImmutable, () =>
             service.UpdateCategoryAsync(UserId, customCat.Id, new SaveCategoryRequest
             {
                 Name = "Side Business",
@@ -152,7 +153,7 @@ public class BudgetCategoryTests
         });
 
         // "Paycheck" already exists in Income
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.DuplicateCategory, () =>
             service.UpdateCategoryAsync(UserId, customCat.Id, new SaveCategoryRequest
             {
                 Name = "paycheck",
@@ -178,7 +179,7 @@ public class BudgetCategoryTests
         await service.DeleteCategoryAsync(UserId, customCat.Id); // archive
 
         // Updating archived category is rejected as not found
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryNotFound, () =>
             service.UpdateCategoryAsync(UserId, customCat.Id, new SaveCategoryRequest
             {
                 Name = "Renamed",
@@ -187,7 +188,7 @@ public class BudgetCategoryTests
             }));
 
         // Updating non-existent category is rejected as not found
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryNotFound, () =>
             service.UpdateCategoryAsync(UserId, 99999, new SaveCategoryRequest
             {
                 Name = "NonExistent",
@@ -243,7 +244,7 @@ public class BudgetCategoryTests
         BudgetCategoryDto myFirstCategory = myCategories[0];
 
         // Other user cannot update or delete my category
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryNotFound, () =>
             service.UpdateCategoryAsync(OtherUserId, myFirstCategory.Id, new SaveCategoryRequest
             {
                 Name = "Renamed",
@@ -251,7 +252,7 @@ public class BudgetCategoryTests
                 SortOrder = 1
             }));
 
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryNotFound, () =>
             service.DeleteCategoryAsync(OtherUserId, myFirstCategory.Id));
     }
 
