@@ -5,6 +5,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.SavingsGoals;
 
@@ -356,11 +357,6 @@ public sealed class SavingsGoalServiceTests : IDisposable
 
     private async Task<SavingsGoalResponseDto> GoalAsync(int goalId) =>
         (await Service().GetSavingsGoalsAsync(UserId)).Single(g => g.Id == goalId);
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 
     private sealed class RecordingNotificationService : INotificationService
     {

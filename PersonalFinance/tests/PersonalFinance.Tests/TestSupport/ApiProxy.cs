@@ -27,6 +27,9 @@ public class ApiProxy<TContract> : DispatchProxy where TContract : class
     /// <summary>Names of the contract methods called, in order.</summary>
     public List<string> Calls { get; } = new();
 
+    /// <summary>The arguments of each call in <see cref="Calls"/>, in the same order.</summary>
+    public List<object?[]> Arguments { get; } = new();
+
     /// <summary>Makes <paramref name="methodName"/> succeed with <paramref name="result"/>.</summary>
     public ApiProxy<TContract> Returns(string methodName, object? result)
     {
@@ -46,6 +49,7 @@ public class ApiProxy<TContract> : DispatchProxy where TContract : class
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
         Calls.Add(targetMethod.Name);
+        Arguments.Add(args ?? []);
         Type returnType = targetMethod.ReturnType;
 
         if (!_results.TryGetValue(targetMethod.Name, out Func<object?>? result))

@@ -10,6 +10,7 @@ using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Research;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Research;
 
@@ -465,10 +466,5 @@ public class ResearchServiceTests
         public void Dispose()
         {
         }
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

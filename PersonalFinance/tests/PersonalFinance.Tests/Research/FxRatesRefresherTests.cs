@@ -260,9 +260,4 @@ public class FxRatesRefresherTests
             return Failure is null ? Task.FromResult(Latest) : Task.FromException<DailyRate>(Failure);
         }
     }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 }

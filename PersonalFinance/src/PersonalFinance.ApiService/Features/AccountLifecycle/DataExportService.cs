@@ -309,23 +309,6 @@ internal sealed class DataExportService : IDataExportService
         };
 
     /// <summary>
-    /// Stories the Account liked, with the story's title while the story is still live.
-    /// Internal so tests can check it translates to Azure SQL.
-    /// </summary>
-    internal IQueryable<DataExportStoryLikeDto> StoryLikesQuery(string userId) =>
-        from like in _db.CommunityStoryLikes.AsNoTracking()
-        where like.UserId == userId
-        join story in _db.CommunityStories.AsNoTracking() on like.StoryId equals story.Id into stories
-        from story in stories.DefaultIfEmpty()
-        orderby like.CreatedAtUtc, like.Id
-        select new DataExportStoryLikeDto
-        {
-            StoryId = like.StoryId,
-            StoryTitle = story == null ? null : story.Title,
-            CreatedAtUtc = like.CreatedAtUtc
-        };
-
-    /// <summary>
     /// The Account's poll votes with the poll's question and the chosen option's text.
     /// Internal so tests can check it translates to Azure SQL.
     /// </summary>
@@ -385,32 +368,37 @@ internal sealed class DataExportService : IDataExportService
     {
         return new DataExportCommunityDto
         {
-            Stories = await _db.CommunityStories.AsNoTracking()
-                .Where(s => s.UserId == userId)
-                .OrderBy(s => s.PublishedAtUtc).ThenBy(s => s.Id)
-                .Select(s => new DataExportStoryDto
+            Pseudonym = await _db.CommunityPseudonyms.AsNoTracking()
+                .Where(p => p.UserId == userId)
+                .Select(p => p.Name)
+                .FirstOrDefaultAsync(cancellationToken),
+            Strategies = (await _db.CommunityStrategies.AsNoTracking()
+                    .Where(s => s.UserId == userId)
+                    .OrderBy(s => s.CreatedAt).ThenBy(s => s.Id)
+                    .Select(s => new { s.Category, s.Title, s.Tried, s.Happened, s.Keeping, s.Status, s.CreatedAt })
+                    .ToListAsync(cancellationToken))
+                .Select(s => new DataExportStrategyDto
                 {
-                    AuthorName = s.AuthorName,
-                    Title = s.Title,
-                    Summary = s.Summary,
-                    Body = s.Body,
                     Category = s.Category,
-                    PublishedAtUtc = s.PublishedAtUtc
+                    Title = s.Title,
+                    Tried = s.Tried,
+                    Happened = s.Happened,
+                    Keeping = s.Keeping,
+                    Status = s.Status.ToString(),
+                    CreatedAtUtc = s.CreatedAt
                 })
-                .ToListAsync(cancellationToken),
+                .ToList(),
             Comments = await _db.CommunityComments.AsNoTracking()
                 .Where(c => c.UserId == userId)
                 .OrderBy(c => c.CreatedAtUtc).ThenBy(c => c.Id)
                 .Select(c => new DataExportCommentDto
                 {
-                    AuthorName = c.AuthorName,
                     Text = c.Text,
                     PollId = c.PollId,
-                    StoryId = c.StoryId,
+                    StrategyId = c.StrategyId,
                     CreatedAtUtc = c.CreatedAtUtc
                 })
                 .ToListAsync(cancellationToken),
-            StoryLikes = await StoryLikesQuery(userId).ToListAsync(cancellationToken),
             CommentLikes = await _db.CommunityCommentLikes.AsNoTracking()
                 .Where(l => l.UserId == userId)
                 .OrderBy(l => l.CreatedAtUtc).ThenBy(l => l.Id)

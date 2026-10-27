@@ -101,6 +101,38 @@
   --input-stroke-focus: var(--app-brand);
 }
 
+/* Dark theme (ledger.css swaps the --lp-* tokens; these are the literals above). data-bs-theme="dark" turns on
+   Bootstrap's own dark mode; its surfaces are pointed back at the Ledger tokens. */
+:root[data-theme="dark"] {
+    --app-brand-pressed: #1B6B4C;
+    --app-brand-bg-hover: #1D3D33;
+    --app-accent-negative: #F0796B;
+    --app-accent-negative-soft: #3A1E1E;
+    --app-accent-warning: #E0B24A;
+    --app-accent-warning-soft: #33290F;
+    --app-surface: #121E28;
+    --app-surface-soft: #121E28;
+    --app-border: #24333F;
+    --app-text-faint: #7A8A96;
+    --app-text-disabled: #4A5966;
+
+    --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.35);
+    --app-shadow-8: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --app-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.45);
+    --app-shadow-32: 0 16px 32px rgba(0, 0, 0, 0.5);
+
+    --bs-primary-rgb: 44, 145, 104;
+    --bs-link-color-rgb: 44, 145, 104;
+    --bs-link-hover-color-rgb: 35, 122, 87;
+    --bs-body-bg: var(--app-bg);
+    --bs-body-bg-rgb: 14, 24, 33;
+    --bs-secondary-bg: var(--app-surface-secondary);
+    --bs-tertiary-bg: var(--app-surface);
+    --bs-secondary-color: var(--app-text-muted);
+    --bs-emphasis-color: var(--app-text);
+}
+
 html {
   font-size: 15px;
   font-family: var(--app-font-family);
@@ -951,7 +983,7 @@ hr {
   --gdrive-primary-glow: rgba(29, 106, 80, 0.15);
   --gdrive-secondary: #5c2d91;
   --gdrive-accent: var(--app-brand);
-  --gdrive-surface: #ffffff;
+  --gdrive-surface: var(--app-bg);
   --gdrive-surface-soft: var(--app-surface);
   --gdrive-bg: var(--app-surface-secondary);
   --gdrive-border: var(--app-border);
@@ -1253,7 +1285,7 @@ hr {
 
 /* --- Omnibox --- */
 .gdrive-omnibox {
-  background: #ffffff;
+  background: var(--app-bg);
   border: 1px solid var(--gdrive-border);
   border-radius: var(--app-radius-m);
   transition: border-color 0.1s ease;

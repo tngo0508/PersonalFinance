@@ -1,19 +1,31 @@
+using PersonalFinance.Shared.Enums;
+
 namespace PersonalFinance.Web.Models.Community;
 
 /// <summary>
-/// View model for the Community page that displays polls, stories, and comments.
+/// View model for the Guild Hall page: the viewer's Pseudonym, polls, the board of Strategies and comments.
 /// </summary>
 public sealed class CommunityViewModel
 {
+    /// <summary>
+    /// Gets or sets the viewer's Pseudonym, the name it appears under everywhere on the page.
+    /// </summary>
+    public string Pseudonym { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets the list of active polls for community engagement.
     /// </summary>
     public List<CommunityPoll> ActivePolls { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the list of community stories shared by users.
+    /// Gets or sets the Strategies on the board: the viewer's own Pending and Rejected ones first, then Approved ones.
     /// </summary>
-    public List<CommunityStory> Stories { get; set; } = new();
+    public List<CommunityStrategy> Strategies { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the category the board is filtered to, or null for every category.
+    /// </summary>
+    public string? Category { get; set; }
 
     /// <summary>
     /// Gets or sets the list of recent community comments.
@@ -99,9 +111,9 @@ public sealed class PollOption
 }
 
 /// <summary>
-/// Represents a community story shared by a user.
+/// A Strategy pinned on the board.
 /// </summary>
-public sealed class CommunityStory
+public sealed class CommunityStrategy
 {
     /// <summary>
     /// Gets or sets the unique identifier.
@@ -109,63 +121,53 @@ public sealed class CommunityStory
     public int Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the title of the story.
-    /// </summary>
-    public string Title { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets a brief summary of the story.
-    /// </summary>
-    public string Summary { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the full body text of the story.
-    /// </summary>
-    public string Body { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the author name.
-    /// </summary>
-    public string Author { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the date the story was published.
-    /// </summary>
-    public DateTime PublishedDate { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of comments on this story.
-    /// </summary>
-    public int CommentCount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the category tag.
+    /// Gets or sets the category, as stored (English).
     /// </summary>
     public string Category { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the estimated reading time in minutes.
+    /// Gets or sets the practice's name.
     /// </summary>
-    public int ReadTimeMinutes { get; set; }
+    public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the number of likes.
+    /// Gets or sets what the author tried.
     /// </summary>
-    public int Likes { get; set; }
+    public string Tried { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets whether the story is featured/pinned.
+    /// Gets or sets what happened.
     /// </summary>
-    public bool IsFeatured { get; set; }
+    public string Happened { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets whether the current user has liked this story.
+    /// Gets or sets what the author keeps doing.
     /// </summary>
-    public bool IsLikedByUser { get; set; }
+    public string Keeping { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the author's Pseudonym, or null when the author is a Former member (purged).
+    /// </summary>
+    public string? AuthorPseudonym { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer wrote this Strategy, so a re-rolled Pseudonym is shown on it at once.
+    /// </summary>
+    public bool IsOwn { get; set; }
+
+    /// <summary>
+    /// Gets or sets where it is in the Admin's review; only the viewer's own can be Pending or Rejected.
+    /// </summary>
+    public CommunityStrategyStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was pinned.
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>
-/// Represents a community comment on a poll or story.
+/// Represents a community comment on a poll or Strategy.
 /// </summary>
 public sealed class CommunityComment
 {
@@ -175,9 +177,14 @@ public sealed class CommunityComment
     public int Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the author's display name.
+    /// Gets or sets the author's Pseudonym, or null when the author is a Former member (purged).
     /// </summary>
-    public string Author { get; set; } = string.Empty;
+    public string? AuthorPseudonym { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer wrote this comment, so a re-rolled Pseudonym is shown on it at once.
+    /// </summary>
+    public bool IsOwn { get; set; }
 
     /// <summary>
     /// Gets or sets the comment text.
@@ -205,7 +212,7 @@ public sealed class CommunityComment
     public int? PollId { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional story ID if this comment is on a story.
+    /// Gets or sets the optional Strategy ID if this comment is on a Strategy.
     /// </summary>
-    public int? StoryId { get; set; }
+    public int? StrategyId { get; set; }
 }

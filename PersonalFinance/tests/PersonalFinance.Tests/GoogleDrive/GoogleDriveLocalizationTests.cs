@@ -121,7 +121,7 @@ public class GoogleDriveLocalizationTests
         return new GoogleDriveController(api, NullLogger<GoogleDriveController>.Instance, Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
-            TempData = new TempDataDictionary(httpContext, new FakeTempDataProvider())
+            TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())
         };
     }
 }

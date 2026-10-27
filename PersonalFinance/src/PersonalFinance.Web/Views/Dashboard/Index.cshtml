@@ -23,6 +23,7 @@
                 @(string.IsNullOrWhiteSpace(displayName) ? L["Dashboard.Header.Welcome"] : L.Named("Dashboard.Header.WelcomeNamed", ("name", displayName)))
             </h1>
             <p class="dash-header__lede">@L["Dashboard.Header.Lede"]</p>
+            <partial name="_DayLedger"/>
         </div>
         <partial name="_Today"/>
     </header>

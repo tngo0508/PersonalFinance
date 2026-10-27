@@ -414,11 +414,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AuthorName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -437,7 +432,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<int?>("PollId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("StoryId")
+                    b.Property<int?>("StrategyId")
                         .HasColumnType("int");
 
                     b.Property<string>("Text")
@@ -459,7 +454,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasIndex("PollId");
 
-                    b.HasIndex("StoryId");
+                    b.HasIndex("StrategyId");
 
                     b.ToTable("CommunityComments");
                 });
@@ -621,7 +616,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.ToTable("CommunityPollVotes");
                 });
 
-            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStory", b =>
+            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPseudonym", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -629,15 +624,46 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AuthorName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("Body")
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(10000)
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("CommunityPseudonyms");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStrategy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -650,30 +676,34 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Happened")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsFeatured")
-                        .HasColumnType("bit");
+                    b.Property<string>("Keeping")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
-                    b.Property<bool>("IsVisible")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("PublishedAtUtc")
+                    b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ReadTimeMinutes")
+                    b.Property<int>("Status")
                         .HasColumnType("int");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Tried")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -685,54 +715,11 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Category");
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("IsFeatured");
+                    b.HasIndex("Status", "Category", "CreatedAt");
 
-                    b.HasIndex("PublishedAtUtc");
-
-                    b.ToTable("CommunityStories");
-                });
-
-            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStoryLike", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("StoryId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StoryId");
-
-                    b.HasIndex("UserId", "StoryId")
-                        .IsUnique();
-
-                    b.ToTable("CommunityStoryLikes");
+                    b.ToTable("CommunityStrategies");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.Contribution", b =>
@@ -2097,14 +2084,14 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasForeignKey("PollId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("PersonalFinance.Data.Entities.CommunityStory", "Story")
-                        .WithMany("Comments")
-                        .HasForeignKey("StoryId")
+                    b.HasOne("PersonalFinance.Data.Entities.CommunityStrategy", "Strategy")
+                        .WithMany()
+                        .HasForeignKey("StrategyId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Poll");
 
-                    b.Navigation("Story");
+                    b.Navigation("Strategy");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityCommentLike", b =>
@@ -2143,17 +2130,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Navigation("Option");
 
                     b.Navigation("Poll");
-                });
-
-            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStoryLike", b =>
-                {
-                    b.HasOne("PersonalFinance.Data.Entities.CommunityStory", "Story")
-                        .WithMany("LikesList")
-                        .HasForeignKey("StoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Story");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.Contribution", b =>
@@ -2248,13 +2224,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPollOption", b =>
                 {
                     b.Navigation("Votes");
-                });
-
-            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStory", b =>
-                {
-                    b.Navigation("Comments");
-
-                    b.Navigation("LikesList");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveConnection", b =>

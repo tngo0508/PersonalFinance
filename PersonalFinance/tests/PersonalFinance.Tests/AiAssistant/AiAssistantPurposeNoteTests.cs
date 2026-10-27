@@ -231,7 +231,7 @@ public class AiAssistantPurposeNoteTests
     public async Task WritePurposeNote_WhenTheCallFails_IsNotAvailableRightNow_AndRecordsNoUsage()
     {
         await using AppDbContext db = CreateContext();
-        var fake = new FakeChatClient((_, _) => throw new HttpRequestException("OpenAI is down"));
+        FakeChatClient fake = FakeChatClient.Throwing(new HttpRequestException("OpenAI is down"));
 
         PurposeNoteResponseDto result = await CreateService(db, fake).WritePurposeNoteAsync(UserId, Request());
 

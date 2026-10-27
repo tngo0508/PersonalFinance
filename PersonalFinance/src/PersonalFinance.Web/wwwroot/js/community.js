@@ -1,8 +1,8 @@
 /* global PFI18n */
 /**
- * Community page — poll voting, comment toggling, story expand/collapse, likes, and story submission.
- * Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n; user content
- * (comments, author names) is set as text and never translated.
+ * Guild Hall page — the Pseudonym re-roll, poll voting, comment toggling, comment likes, and pinning a Strategy with
+ * the no-amounts nudge. Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n;
+ * user content (Strategies, comments, Pseudonyms) is set as text and never translated.
  */
 (function () {
     'use strict';
@@ -42,6 +42,51 @@
             body: JSON.stringify(payload)
         });
         return response.json();
+    }
+
+    /**
+     * The avatar letters of an author label: the first letter of up to count words, upper-cased.
+     * @param {string} name - The author label.
+     * @param {number} count - How many words to take.
+     * @returns {string} The letters.
+     */
+    function initials (name, count) {
+        return name.split(' ').filter(Boolean).slice(0, count).map((word) => word.charAt(0).toUpperCase()).join('');
+    }
+
+    /**
+     * Shows a re-rolled Pseudonym everywhere the viewer's own name is on the page: the badge, and the author of the
+     * viewer's own Strategies and comments, so nothing on the page still shows the old one.
+     * @param {string} name - The new Pseudonym.
+     */
+    function applyPseudonym (name) {
+        document.querySelectorAll('[data-pseudonym-self]').forEach((el) => {
+            el.textContent = name;
+        });
+        document.querySelectorAll('[data-pseudonym-self-initials]').forEach((el) => {
+            el.textContent = initials(name, parseInt(el.dataset.pseudonymSelfInitials, 10) || 1);
+        });
+    }
+
+    // --- Pseudonym re-roll ---
+    const rerollBtn = document.getElementById('rerollPseudonymBtn');
+    if (rerollBtn) {
+        rerollBtn.addEventListener('click', async () => {
+            rerollBtn.disabled = true;
+            try {
+                const data = await postJson('/Community/RerollPseudonym', {});
+                if (data.success && data.pseudonym) {
+                    applyPseudonym(data.pseudonym);
+                    showToast(PFI18n.t('Community.Js.PseudonymRerolled', { name: data.pseudonym }));
+                } else {
+                    showToast(data.error || PFI18n.t('Community.Js.RerollFailed'));
+                }
+            } catch {
+                showToast(PFI18n.t('Community.Js.RerollFailedRetry'));
+            } finally {
+                rerollBtn.disabled = false;
+            }
+        });
     }
 
     /**
@@ -123,7 +168,7 @@
     /**
      * Posts a comment from a form, prepends it to Recent Community Activity, and closes the form.
      * @param {HTMLElement} form - The comment form.
-     * @param {object} target - { pollCode } or { storyId }.
+     * @param {object} target - { pollCode } or { strategyId }.
      * @returns {Promise<boolean>} Whether the comment was posted.
      */
     async function postComment (form, target) {
@@ -245,31 +290,12 @@
         }
     }
 
-    // --- Comment form toggles (polls and stories) ---
+    // --- Comment form toggles (polls) ---
     document.addEventListener('click', (e) => {
-        const toggle = e.target.closest('.community-poll-comment-toggle, .community-story-comment-toggle');
+        const toggle = e.target.closest('.community-poll-comment-toggle');
         if (toggle) {
             toggleCommentForm(toggle);
         }
-    });
-
-    // --- Story Expand/Collapse ---
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.community-story-toggle-btn');
-        if (!btn) {
-            return;
-        }
-
-        const card = btn.closest('.community-story-card');
-        const body = card ? card.querySelector('.community-story-body') : null;
-        if (!body) {
-            return;
-        }
-
-        const isExpanded = btn.getAttribute('aria-expanded') === 'true';
-        btn.setAttribute('aria-expanded', String(!isExpanded));
-        btn.textContent = PFI18n.t(isExpanded ? 'Community.Js.ReadMore' : 'Community.Js.ShowLess');
-        body.classList.toggle('expanded', !isExpanded);
     });
 
     // --- Comment Like Buttons ---
@@ -278,15 +304,6 @@
         const commentId = likeBtn ? parseInt(likeBtn.dataset.commentId, 10) : 0;
         if (commentId) {
             toggleLike(likeBtn, '.community-comment-like-count', '/Community/ToggleLike', { commentId: commentId });
-        }
-    });
-
-    // --- Story Like Buttons ---
-    document.addEventListener('click', (e) => {
-        const likeBtn = e.target.closest('.community-story-like');
-        const storyId = likeBtn ? parseInt(likeBtn.dataset.storyId, 10) : 0;
-        if (storyId) {
-            toggleLike(likeBtn, '.community-story-like-count', '/Community/ToggleStoryLike', { storyId: storyId });
         }
     });
 
@@ -300,24 +317,6 @@
 
         const pollCard = submitBtn.closest('.community-poll-card');
         postComment(form, { pollCode: pollCard ? pollCard.dataset.pollId : '' });
-    });
-
-    // --- Story Comment Submit ---
-    document.addEventListener('click', async (e) => {
-        const submitBtn = e.target.closest('.community-story-comment-submit');
-        const form = submitBtn ? submitBtn.closest('.community-story-comment-form') : null;
-        if (!form) {
-            return;
-        }
-
-        const card = submitBtn.closest('.community-story-card');
-        const storyId = card ? parseInt(card.dataset.storyId, 10) : 0;
-        const posted = await postComment(form, { storyId: storyId });
-
-        const countEl = posted && card ? card.querySelector('.community-story-comments-number') : null;
-        if (countEl) {
-            countEl.textContent = (parseInt(countEl.textContent.trim(), 10) || 0) + 1;
-        }
     });
 
     /**
@@ -371,14 +370,18 @@
         const card = el('div', 'community-comment-card');
         card.dataset.commentId = comment.id;
 
+        const author = comment.author || '';
         const header = el('div', 'community-comment-header');
-        const avatar = el('div', 'community-comment-avatar', (comment.author || '?').charAt(0).toUpperCase());
+        const avatar = el('div', 'community-comment-avatar', initials(author, 1) || '?');
         avatar.setAttribute('aria-hidden', 'true');
+        const authorEl = el('strong', 'community-comment-author', author);
+        if (comment.isOwn) {
+            avatar.dataset.pseudonymSelfInitials = '1';
+            authorEl.dataset.pseudonymSelf = '';
+        }
 
         const info = el('div', 'community-comment-info');
-        info.append(
-            el('strong', 'community-comment-author', comment.author || ''), ' ',
-            el('time', 'community-comment-time', PFI18n.t('Community.Js.JustNow')));
+        info.append(authorEl, ' ', el('time', 'community-comment-time', PFI18n.t('Community.Js.JustNow')));
 
         const like = el('button', 'community-comment-like');
         like.type = 'button';
@@ -391,70 +394,117 @@
         list.prepend(card);
     }
 
-    // --- Story Submission Form ---
-    const submitStoryBtn = document.getElementById('submitStoryBtn');
+    // --- Pin a Strategy ---
+    const pinForm = document.getElementById('pinStrategyForm');
+    const pinBtn = document.getElementById('pinStrategyBtn');
+    const nudge = document.getElementById('strategyAmountNudge');
 
     /**
-     * Disables the submit button and shows "Submitting..." while a story is sent, then restores it.
-     * @param {boolean} submitting - Whether a submission is in flight.
+     * The no-amounts rule the server flags Strategies with (MoneyAmountRule), read from the form so both agree.
+     * @param {HTMLElement} form - The pin form.
+     * @returns {RegExp|null} The rule, or null when the page carries none.
      */
-    function setSubmitting (submitting) {
-        submitStoryBtn.disabled = submitting;
-        const label = submitStoryBtn.querySelector('.community-submit-story-label');
-        if (label) {
-            label.textContent = PFI18n.t(submitting ? 'Community.Js.Submitting' : 'Community.Js.SubmitStory');
+    function amountRule (form) {
+        try {
+            return form.dataset.amountPattern ? new RegExp(form.dataset.amountPattern, 'iu') : null;
+        } catch {
+            return null;
         }
     }
 
-    if (submitStoryBtn) {
-        submitStoryBtn.addEventListener('click', async () => {
-            const form = document.getElementById('submitStoryForm');
-            const title = document.getElementById('storyTitle');
-            const category = document.getElementById('storyCategory');
-            const summary = document.getElementById('storySummary');
-            const body = document.getElementById('storyBody');
-            if (!form || !title || !category || !summary || !body) {
-                return;
-            }
+    /**
+     * Shows the nudge while any watched field names a money amount. It never blocks sending: an Admin reviews the
+     * Strategy either way.
+     * @param {HTMLElement} form - The pin form.
+     * @param {RegExp|null} rule - The no-amounts rule.
+     */
+    function updateNudge (form, rule) {
+        if (!nudge || !rule) {
+            return;
+        }
 
-            const fields = [title, category, summary, body];
+        const fields = form.querySelectorAll('[data-amount-watch]');
+        nudge.hidden = !Array.prototype.some.call(fields, (field) => rule.test(field.value));
+    }
+
+    /**
+     * Disables the send button and shows "Sending..." while a Strategy is sent, then restores it.
+     * @param {boolean} sending - Whether a submission is in flight.
+     */
+    function setSending (sending) {
+        pinBtn.disabled = sending;
+        const label = pinBtn.querySelector('.community-pin-label');
+        if (label) {
+            label.textContent = PFI18n.t(sending ? 'Community.Js.Sending' : 'Community.Js.SendForReview');
+        }
+    }
+
+    /**
+     * Pins the viewer's waiting note at the top of the board, from the page's template.
+     * @param {object} strategy - The sent Strategy, with its category label and author.
+     */
+    function pinPendingNote (strategy) {
+        const board = document.getElementById('communityBoard');
+        const template = document.getElementById('pendingNoteTemplate');
+        if (!board || !template || !strategy) {
+            return;
+        }
+
+        const note = template.content.firstElementChild.cloneNode(true);
+        note.dataset.strategyId = strategy.id;
+        note.querySelectorAll('[data-note]').forEach((slot) => {
+            slot.textContent = strategy[slot.dataset.note] || '';
+        });
+        const empty = board.querySelector('[data-board-empty]');
+        if (empty) {
+            empty.remove();
+        }
+        board.prepend(note);
+    }
+
+    if (pinForm && pinBtn) {
+        const rule = amountRule(pinForm);
+        pinForm.addEventListener('input', () => updateNudge(pinForm, rule));
+
+        pinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fields = Array.prototype.slice.call(pinForm.querySelectorAll('[name]'));
             let isValid = true;
             fields.forEach((field) => {
-                const value = field.value.trim();
-                const invalid = !value || (field === body && value.length < 100);
+                const invalid = !field.value.trim();
                 field.classList.toggle('is-invalid', invalid);
                 isValid = isValid && !invalid;
             });
 
             if (!isValid) {
+                const firstInvalid = pinForm.querySelector('.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                }
                 return;
             }
 
-            setSubmitting(true);
+            const payload = {};
+            fields.forEach((field) => {
+                payload[field.name] = field.value.trim();
+            });
+            setSending(true);
 
             try {
-                const data = await postJson('/Community/SubmitStory', {
-                    title: title.value.trim(),
-                    category: category.value.trim(),
-                    summary: summary.value.trim(),
-                    body: body.value.trim()
-                });
+                const data = await postJson('/Community/SubmitStrategy', payload);
                 if (data.success) {
-                    showToast(PFI18n.t('Community.Js.StorySubmitted'));
-                    form.reset();
+                    showToast(PFI18n.t('Community.Js.StrategySent'));
+                    pinPendingNote(data.strategy);
+                    pinForm.reset();
                     fields.forEach((field) => field.classList.remove('is-invalid'));
-                    const modalEl = document.getElementById('submitStoryModal');
-                    const modal = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
-                    if (modal) {
-                        modal.hide();
-                    }
+                    updateNudge(pinForm, rule);
                 } else {
-                    showToast(data.error || PFI18n.t('Community.Js.StoryFailed'));
+                    showToast(data.error || PFI18n.t('Community.Js.StrategyFailed'));
                 }
             } catch {
-                showToast(PFI18n.t('Community.Js.StoryFailedRetry'));
+                showToast(PFI18n.t('Community.Js.StrategyFailedRetry'));
             } finally {
-                setSubmitting(false);
+                setSending(false);
             }
         });
     }

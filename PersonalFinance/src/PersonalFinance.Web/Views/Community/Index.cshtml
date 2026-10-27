@@ -1,7 +1,8 @@
+@using PersonalFinance.Shared.Enums
 @model CommunityViewModel
 
 @{
-    ViewData["Title"] = L["Community.Title"];
+    ViewData["Title"] = L["Community.Title"].Value;
 }
 
 @section Styles {
@@ -9,23 +10,20 @@
 }
 
 <div class="community-page">
-    <!-- Page Header -->
-    <div class="community-header">
-        <div class="community-header-content">
-            <div class="community-header-icon" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-            </div>
-            <div>
-                <h1 class="community-title">@L["Community.Header.Title"]</h1>
-                <p class="community-subtitle">@L["Community.Header.Subtitle"]</p>
-            </div>
+    <!-- Header: the plaque, with who the viewer is in the hall -->
+    <header class="community-plaque">
+        <div class="community-plaque-text">
+            <p class="community-eyebrow">@L["Community.Header.Eyebrow"]</p>
+            <h1 class="community-title">@L["Community.Header.Title"]</h1>
+            <p class="community-subtitle">@L["Community.Header.Subtitle"]</p>
         </div>
-    </div>
+        <div class="community-pseudonym-badge">
+            <span class="community-pseudonym-label">@L["Community.Pseudonym.YouAppearAs"]</span>
+            <strong class="community-pseudonym-name" data-pseudonym-self>@Model.Pseudonym</strong>
+            <button type="button" class="community-link-btn" id="rerollPseudonymBtn" aria-describedby="rerollPseudonymHelp">@L["Community.Pseudonym.Reroll"]</button>
+            <span class="visually-hidden" id="rerollPseudonymHelp">@L["Community.Pseudonym.RerollHelp"]</span>
+        </div>
+    </header>
 
     <!-- Polls Section -->
     <section class="community-section" aria-labelledby="polls-heading">
@@ -89,120 +87,152 @@
         </div>
     </section>
 
-    <!-- Community Stories Section -->
-    <section class="community-section" aria-labelledby="stories-heading">
-        <div class="community-section-header">
-            <h2 class="community-section-title" id="stories-heading">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-                </svg>
-                @L["Community.Stories.Heading"]
-            </h2>
-            <button type="button" class="community-submit-story-btn" data-bs-toggle="modal" data-bs-target="#submitStoryModal">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                @L["Community.Stories.Share"]
-            </button>
-        </div>
-        @if (Model.Stories.Count == 0)
-        {
-            <div class="community-empty-state">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-                </svg>
-                <h3>@L["Community.Stories.Empty.Title"]</h3>
-                <p>@L["Community.Stories.Empty.Text"]</p>
-                <button type="button" class="btn community-submit-story-btn-inline" data-bs-toggle="modal" data-bs-target="#submitStoryModal">
-                    @L["Community.Stories.Share"]
-                </button>
-            </div>
-        }
-        else
-        {
-            <div class="community-stories-grid">
-                @foreach (var story in Model.Stories)
-                {
-                    <article class="community-story-card @(story.IsFeatured ? "featured" : "")" data-story-id="@story.Id">
-                        @if (story.IsFeatured)
+    <!-- The hall: the corkboard of Strategies, and the rail with the pin form -->
+    <div class="community-hall">
+        <section class="community-section community-board-section" id="strategies" aria-labelledby="strategies-heading">
+            <div class="community-section-header">
+                <h2 class="community-section-title" id="strategies-heading">@L["Community.Strategies.Heading"]</h2>
+                <nav aria-label="@L["Community.Strategies.FilterAria"]">
+                    <ul class="community-chips">
+                        <li>
+                            <a class="community-chip@(Model.Category is null ? " is-active" : "")"
+                               aria-current="@(Model.Category is null ? "page" : null)"
+                               href="@(Url.Action("Index", "Community"))#strategies">@L["Community.Strategies.AllCategories"]</a>
+                        </li>
+                        @foreach (string category in CommunityText.StrategyCategories)
                         {
-                            <div class="community-story-featured-badge" aria-label="@L["Community.Stories.FeaturedAria"]">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                </svg>
-                                @L["Community.Stories.Featured"]
-                            </div>
+                            bool active = category == Model.Category;
+                            <li>
+                                <a class="community-chip@(active ? " is-active" : "")"
+                                   aria-current="@(active ? "page" : null)"
+                                   href="@(Url.Action("Index", "Community", new { category }))#strategies">@CommunityText.Category(L, category)</a>
+                            </li>
                         }
-                        <div class="community-story-meta">
-                            <span class="community-story-category">@CommunityText.Category(L, story.Category)</span>
-                            <span class="community-story-readtime">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                                </svg>
-                                @L.Named("Community.Stories.ReadTime", ("minutes", story.ReadTimeMinutes))
-                            </span>
-                        </div>
-                        <h3 class="community-story-title">@story.Title</h3>
-                        <p class="community-story-summary">@story.Summary</p>
-                        <div class="community-story-author">
-                            <span class="community-story-author-avatar" aria-hidden="true">
-                                @string.Concat(story.Author.Split(' ').Select(n => n.FirstOrDefault()).Take(2))
-                            </span>
-                            <span>
-                                <strong>@story.Author</strong>
-                                <time datetime="@story.PublishedDate.ToString("o")">
-                                    @CommunityText.TimeAgo(L, story.PublishedDate, DateTime.UtcNow)
-                                </time>
-                            </span>
-                        </div>
-                        <div class="community-story-body" id="story-body-@story.Id">
-                            @foreach (var paragraph in story.Body.Split(new[] { "\n\n" }, StringSplitOptions.None))
-                            {
-                                <p>@paragraph.Replace("**", "")</p>
-                            }
-                        </div>
-                        <div class="community-story-footer">
-                            <button type="button" class="community-story-toggle-btn"
-                                    aria-expanded="false"
-                                    aria-controls="story-body-@story.Id">
-                                @L["Community.Js.ReadMore"]
-                            </button>
-                            <div class="community-story-actions">
-                                <button type="button" class="community-story-like @(story.IsLikedByUser ? "liked" : "")"
-                                        data-story-id="@story.Id"
-                                        aria-label="@L["Community.Stories.LikeAria"]">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                    </svg>
-                                    <span class="community-story-like-count">@story.Likes</span>
-                                </button>
-                                <span class="community-story-comments-count">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                                    </svg>
-                                    <span class="community-story-comments-number">@story.CommentCount</span>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="community-story-comment-section">
-                            <button type="button" class="community-story-comment-toggle" aria-expanded="false">
-                                💬 @L["Community.Stories.AddComment"]
-                            </button>
-                            <div class="community-story-comment-form" style="display:none;">
-                                <textarea class="form-control community-story-comment-input"
-                                          placeholder="@L["Community.Stories.CommentPlaceholder"]"
-                                          rows="3"
-                                          aria-label="@L["Community.Stories.CommentAria"]"></textarea>
-                                <div class="community-story-comment-actions">
-                                    <button type="button" class="btn community-story-comment-submit">@L["Community.PostComment"]</button>
-                                </div>
-                            </div>
-                        </div>
+                    </ul>
+                </nav>
+            </div>
+            <div class="community-board" id="communityBoard">
+                @if (Model.Strategies.Count == 0)
+                {
+                    <p class="community-board-empty" data-board-empty>
+                        @(Model.Category is null
+                            ? L["Community.Strategies.Empty"]
+                            : L.Named("Community.Strategies.EmptyCategory", ("category", CommunityText.Category(L, Model.Category))))
+                    </p>
+                }
+                @foreach (var strategy in Model.Strategies)
+                {
+                    string strategyAuthor = CommunityText.Author(L, strategy.AuthorPseudonym);
+                    string statusClass = strategy.Status switch
+                    {
+                        CommunityStrategyStatus.Pending => " community-note--pending",
+                        CommunityStrategyStatus.Rejected => " community-note--rejected",
+                        _ => "",
+                    };
+                    <article class="community-note@(statusClass)" data-strategy-id="@strategy.Id" aria-labelledby="strategy-title-@strategy.Id">
+                        <span class="community-pin" aria-hidden="true"></span>
+                        @if (strategy.Status == CommunityStrategyStatus.Pending)
+                        {
+                            <p class="community-note-status">@L["Community.Strategies.Pending"]</p>
+                        }
+                        else if (strategy.Status == CommunityStrategyStatus.Rejected)
+                        {
+                            <p class="community-note-status">@L["Community.Strategies.Rejected"]</p>
+                        }
+                        <p class="community-note-tag">@CommunityText.Category(L, strategy.Category)</p>
+                        <h3 class="community-note-title" id="strategy-title-@strategy.Id">@strategy.Title</h3>
+                        <dl class="community-note-steps">
+                            <dt>@L["Community.Strategies.Tried"]</dt>
+                            <dd>@strategy.Tried</dd>
+                            <dt>@L["Community.Strategies.Happened"]</dt>
+                            <dd>@strategy.Happened</dd>
+                            <dt>@L["Community.Strategies.Keeping"]</dt>
+                            <dd>@strategy.Keeping</dd>
+                        </dl>
+                        <p class="community-note-byline">
+                            <strong data-pseudonym-self="@(strategy.IsOwn ? "" : null)">@strategyAuthor</strong>
+                            · <time datetime="@strategy.CreatedAt.ToString("o")">@CommunityText.TimeAgo(L, strategy.CreatedAt, DateTime.UtcNow)</time>
+                        </p>
                     </article>
                 }
             </div>
-        }
-    </section>
+        </section>
+
+        <aside class="community-rail" aria-label="@L["Community.Rail.Aria"]">
+            <section class="community-rail-card" aria-labelledby="pin-heading">
+                <p class="community-eyebrow">@L["Community.Pin.Eyebrow"]</p>
+                <h2 class="community-rail-title" id="pin-heading">@L["Community.Pin.Heading"]</h2>
+                <form class="community-pin-form" id="pinStrategyForm" novalidate data-amount-pattern="@MoneyAmountRule.Pattern">
+                    <div>
+                        <label for="strategyCategory" class="form-label">@L["Community.Pin.Category"]</label>
+                        <select class="form-select" id="strategyCategory" name="category" required>
+                            <option value="">@L["Community.Pin.CategoryPlaceholder"]</option>
+                            @foreach (string category in CommunityText.StrategyCategories)
+                            {
+                                <option value="@category" selected="@(category == Model.Category)">@CommunityText.Category(L, category)</option>
+                            }
+                        </select>
+                        <div class="invalid-feedback">@L["Community.Pin.CategoryRequired"]</div>
+                    </div>
+                    <div>
+                        <label for="strategyTitle" class="form-label">@L["Community.Pin.Title"]</label>
+                        <input type="text" class="form-control" id="strategyTitle" name="title" required
+                               maxlength="@CommunityStrategyLimits.TitleMaxLength" data-amount-watch
+                               placeholder="@L["Community.Pin.TitlePlaceholder"]" />
+                        <div class="invalid-feedback">@L["Community.Pin.Required"]</div>
+                    </div>
+                    <div>
+                        <label for="strategyTried" class="form-label">@L["Community.Pin.Tried"]</label>
+                        <textarea class="form-control" id="strategyTried" name="tried" rows="2" required
+                                  maxlength="@CommunityStrategyLimits.TextMaxLength" data-amount-watch
+                                  placeholder="@L["Community.Pin.TriedPlaceholder"]"></textarea>
+                        <div class="invalid-feedback">@L["Community.Pin.Required"]</div>
+                    </div>
+                    <div>
+                        <label for="strategyHappened" class="form-label">@L["Community.Pin.Happened"]</label>
+                        <textarea class="form-control" id="strategyHappened" name="happened" rows="2" required
+                                  maxlength="@CommunityStrategyLimits.TextMaxLength" data-amount-watch
+                                  placeholder="@L["Community.Pin.HappenedPlaceholder"]"></textarea>
+                        <div class="invalid-feedback">@L["Community.Pin.Required"]</div>
+                    </div>
+                    <div>
+                        <label for="strategyKeeping" class="form-label">@L["Community.Pin.Keeping"]</label>
+                        <textarea class="form-control" id="strategyKeeping" name="keeping" rows="2" required
+                                  maxlength="@CommunityStrategyLimits.TextMaxLength" data-amount-watch
+                                  placeholder="@L["Community.Pin.KeepingPlaceholder"]"></textarea>
+                        <div class="invalid-feedback">@L["Community.Pin.Required"]</div>
+                    </div>
+                    <p class="community-nudge" id="strategyAmountNudge" role="status" hidden>@L["Community.Pin.AmountNudge"]</p>
+                    <p class="community-pin-guidance">@L["Community.Pin.Guidance"]</p>
+                    <button type="submit" class="community-btn" id="pinStrategyBtn">
+                        <span class="community-pin-label">@L["Community.Js.SendForReview"]</span>
+                    </button>
+                </form>
+            </section>
+        </aside>
+    </div>
+
+    <!-- The viewer's own note, pinned at once when a Strategy is sent for review -->
+    <template id="pendingNoteTemplate">
+        <article class="community-note community-note--pending">
+            <span class="community-pin" aria-hidden="true"></span>
+            <p class="community-note-status">@L["Community.Strategies.Pending"]</p>
+            <p class="community-note-tag" data-note="category"></p>
+            <h3 class="community-note-title" data-note="title"></h3>
+            <dl class="community-note-steps">
+                <dt>@L["Community.Strategies.Tried"]</dt>
+                <dd data-note="tried"></dd>
+                <dt>@L["Community.Strategies.Happened"]</dt>
+                <dd data-note="happened"></dd>
+                <dt>@L["Community.Strategies.Keeping"]</dt>
+                <dd data-note="keeping"></dd>
+            </dl>
+            <p class="community-note-byline">
+                <strong data-pseudonym-self data-note="author"></strong>
+                · <time>@L["Community.Js.JustNow"]</time>
+            </p>
+        </article>
+    </template>
 
     <!-- Recent Comments Section -->
     <section class="community-section" aria-labelledby="comments-heading">
@@ -221,13 +251,14 @@
             }
             @foreach (var comment in Model.RecentComments)
             {
+                string commentAuthor = CommunityText.Author(L, comment.AuthorPseudonym);
                 <div class="community-comment-card" data-comment-id="@comment.Id">
                     <div class="community-comment-header">
-                        <div class="community-comment-avatar" aria-hidden="true">
-                            @string.Concat(comment.Author.Split(' ').Select(n => n.FirstOrDefault()).Take(1))
+                        <div class="community-comment-avatar" aria-hidden="true" data-pseudonym-self-initials="@(comment.IsOwn ? "1" : null)">
+                            @CommunityText.Initials(commentAuthor, 1)
                         </div>
                         <div class="community-comment-info">
-                            <strong class="community-comment-author">@comment.Author</strong>
+                            <strong class="community-comment-author" data-pseudonym-self="@(comment.IsOwn ? "" : null)">@commentAuthor</strong>
                             <time class="community-comment-time" datetime="@comment.CreatedAt.ToString("o")">
                                 @CommunityText.TimeAgo(L, comment.CreatedAt, DateTime.UtcNow)
                             </time>
@@ -247,81 +278,6 @@
         </div>
     </section>
 
-    <!-- Call to Action -->
-    <section class="community-cta">
-        <div class="community-cta-content">
-            <h2>@L["Community.Cta.Title"]</h2>
-            <p>@L["Community.Cta.Text"]</p>
-            <button type="button" class="btn community-cta-btn" data-bs-toggle="modal" data-bs-target="#submitStoryModal">
-                @L["Community.Stories.Share"]
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                </svg>
-            </button>
-        </div>
-    </section>
-</div>
-
-<!-- Submit Story Modal -->
-<div class="modal fade" id="submitStoryModal" tabindex="-1" aria-labelledby="submitStoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="submitStoryModalLabel">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.5rem;">
-                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-                    </svg>
-                    @L["Community.Modal.Title"]
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
-            </div>
-            <div class="modal-body">
-                <form id="submitStoryForm" novalidate>
-                    <div class="mb-3">
-                        <label for="storyTitle" class="form-label">@L["Community.Modal.TitleLabel"] <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="storyTitle" name="title" required maxlength="500"
-                               placeholder="@L["Community.Modal.TitlePlaceholder"]" />
-                        <div class="form-text">@L.Named("Community.Modal.TitleHelp", ("max", 500))</div>
-                        <div class="invalid-feedback">@L["Community.Modal.TitleRequired"]</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="storyCategory" class="form-label">@L["Community.Modal.Category"] <span class="text-danger">*</span></label>
-                        <select class="form-select" id="storyCategory" name="category" required>
-                            <option value="">@L["Community.Modal.CategoryPlaceholder"]</option>
-                            @foreach (string category in CommunityText.StoryCategories)
-                            {
-                                <option value="@category">@CommunityText.Category(L, category)</option>
-                            }
-                        </select>
-                        <div class="invalid-feedback">@L["Community.Modal.CategoryRequired"]</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="storySummary" class="form-label">@L["Community.Modal.Summary"] <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="storySummary" name="summary" required maxlength="2000" rows="3"
-                                  placeholder="@L["Community.Modal.SummaryPlaceholder"]"></textarea>
-                        <div class="form-text">@L.Named("Community.Modal.SummaryHelp", ("max", 2000))</div>
-                        <div class="invalid-feedback">@L["Community.Modal.SummaryRequired"]</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="storyBody" class="form-label">@L["Community.Modal.Body"] <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="storyBody" name="body" required maxlength="10000" rows="10"
-                                  placeholder="@L["Community.Modal.BodyPlaceholder"]"></textarea>
-                        <div class="form-text">@L.Named("Community.Modal.BodyHelp", ("min", 100), ("max", 10000))</div>
-                        <div class="invalid-feedback">@L.Named("Community.Modal.BodyRequired", ("min", 100))</div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Common.Cancel"]</button>
-                <button type="button" class="btn btn-primary" id="submitStoryBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;">
-                        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                    </svg>
-                    <span class="community-submit-story-label">@L["Community.Js.SubmitStory"]</span>
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
 @section Scripts {

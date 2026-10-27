@@ -4,44 +4,81 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Shared.Enums;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// Service implementation for managing community features: polls, comments, stories, and likes.
+/// Service implementation of the Guild Hall (the Community Feature): Pseudonyms, polls, comments, Strategies and likes.
+/// An author is shown by its Pseudonym, resolved from the Account at read time, so a re-roll shows on every past post
+/// and no DTO carries a display name or email (ADR 0018). A post whose author has no Pseudonym any more (a Former
+/// member, ADR 0005) is returned with a null author.
 /// </summary>
 internal sealed class CommunityService : ICommunityService
 {
+    /// <summary>
+    /// Saves of a Pseudonym retried when a unique index rejects a row another request wrote at the same time: the
+    /// same Account's first visit twice, or two Accounts drawing the same name.
+    /// </summary>
+    private const int PseudonymSaveAttempts = 3;
+
     private readonly AppDbContext _dbContext;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<CommunityService> _logger;
 
     public CommunityService(
         AppDbContext dbContext,
+        TimeProvider timeProvider,
         ILogger<CommunityService> logger)
     {
         _dbContext = dbContext;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
-    public async Task<CommunityResponseDto> GetCommunityAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<CommunityResponseDto> GetCommunityAsync(string userId, string? category = null,
+        CancellationToken cancellationToken = default)
     {
-        var response = new CommunityResponseDto();
+        CommunityPseudonym pseudonym = await GetOrCreatePseudonymAsync(userId, cancellationToken);
+        List<CommunityPoll> polls = await ActivePollsAsync(cancellationToken);
 
-        // Fetch active polls with options and vote counts
-        List<CommunityPoll> polls = await _dbContext.CommunityPolls
-            .AsNoTracking()
-            .Include(p => p.Options)
-                .ThenInclude(o => o.Votes)
-            .Include(p => p.Votes)
-            .Where(p => p.IsActive)
-            .OrderByDescending(p => p.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+        return new CommunityResponseDto
+        {
+            Pseudonym = pseudonym.Name,
+            ActivePolls = polls.Select(p => MapPollToDto(p, userId)).ToList(),
+            Strategies = await BoardStrategiesQuery(userId, category)
+                .Take(CommunityStrategyLimits.BoardSize)
+                .ToListAsync(cancellationToken),
+            RecentComments = await VisibleCommentsQuery(userId).Take(10).ToListAsync(cancellationToken),
+        };
+    }
 
-        response.ActivePolls = polls.Select(p => MapPollToDto(p, userId)).ToList();
-        response.Stories = await GetStoriesAsync(userId, cancellationToken);
-        response.RecentComments = await GetRecentCommentsAsync(10, cancellationToken);
+    public async Task<CommunityPseudonymDto> RerollPseudonymAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        CommunityPseudonym pseudonym = await GetOrCreatePseudonymAsync(userId, cancellationToken);
 
-        return response;
+        for (int attempt = 1; ; attempt++)
+        {
+            pseudonym.Name = await PickUnusedNameAsync(pseudonym.Name, cancellationToken);
+            pseudonym.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                break;
+            }
+            catch (DbUpdateException) when (attempt < PseudonymSaveAttempts)
+            {
+                // Another Account drew the same name first; draw again.
+            }
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Pseudonym re-rolled: UserId={UserId}", userId);
+        }
+
+        return new CommunityPseudonymDto { Name = pseudonym.Name };
     }
 
     public async Task<CommunityResponseDto> VoteAsync(string userId, CommunityVoteRequestDto request, CancellationToken cancellationToken = default)
@@ -81,11 +118,7 @@ internal sealed class CommunityService : ICommunityService
 
         if (existingVote != null)
         {
-            if (existingVote.OptionId == request.OptionId)
-            {
-                // Same option — no-op
-            }
-            else
+            if (existingVote.OptionId != request.OptionId)
             {
                 existingVote.OptionId = request.OptionId;
                 if (_logger.IsEnabled(LogLevel.Information))
@@ -111,23 +144,15 @@ internal sealed class CommunityService : ICommunityService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        // Return updated community data
-        var response = new CommunityResponseDto();
-        List<CommunityPoll> updatedPolls = await _dbContext.CommunityPolls
-            .AsNoTracking()
-            .Include(p => p.Options)
-                .ThenInclude(o => o.Votes)
-            .Include(p => p.Votes)
-            .Where(p => p.IsActive)
-            .OrderByDescending(p => p.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
-
-        response.ActivePolls = updatedPolls.Select(p => MapPollToDto(p, userId)).ToList();
-
-        return response;
+        // Return the updated polls only; the page re-reads the rest when it reloads.
+        List<CommunityPoll> updatedPolls = await ActivePollsAsync(cancellationToken);
+        return new CommunityResponseDto
+        {
+            ActivePolls = updatedPolls.Select(p => MapPollToDto(p, userId)).ToList(),
+        };
     }
 
-    public async Task<CommunityCommentDto> AddCommentAsync(string userId, CommunityCommentRequestDto request, string authorName, CancellationToken cancellationToken = default)
+    public async Task<CommunityCommentDto> AddCommentAsync(string userId, CommunityCommentRequestDto request, CancellationToken cancellationToken = default)
     {
         string trimmedText = request.Text.Trim();
         if (string.IsNullOrEmpty(trimmedText))
@@ -154,25 +179,26 @@ internal sealed class CommunityService : ICommunityService
             pollId = poll.Id;
         }
 
-        int? storyId = null;
-        if (request.StoryId.HasValue && request.StoryId.Value > 0)
+        int? strategyId = null;
+        if (request.StrategyId.HasValue && request.StrategyId.Value > 0)
         {
-            CommunityStory? story = await _dbContext.CommunityStories
-                .FindAsync([request.StoryId.Value], cancellationToken);
-            if (story == null || !story.IsVisible)
+            bool approved = await _dbContext.CommunityStrategies.AnyAsync(
+                s => s.Id == request.StrategyId.Value && s.Status == CommunityStrategyStatus.Approved,
+                cancellationToken);
+            if (!approved)
             {
-                throw new ApiErrorException(ApiErrorKeys.Community.InvalidStory, "Invalid story.");
+                throw new ApiErrorException(ApiErrorKeys.Community.InvalidStrategy, "No approved Strategy matches this id.");
             }
-            storyId = story.Id;
+            strategyId = request.StrategyId.Value;
         }
 
-        var comment = new PersonalFinance.Data.Entities.CommunityComment
+        CommunityPseudonym author = await GetOrCreatePseudonymAsync(userId, cancellationToken);
+        var comment = new CommunityComment
         {
             UserId = userId,
-            AuthorName = authorName.Trim(),
             Text = trimmedText,
             PollId = pollId,
-            StoryId = storyId,
+            StrategyId = strategyId,
             IsVisible = true,
         };
 
@@ -187,11 +213,12 @@ internal sealed class CommunityService : ICommunityService
         return new CommunityCommentDto
         {
             Id = comment.Id,
-            AuthorName = comment.AuthorName,
+            AuthorPseudonym = author.Name,
+            IsOwn = true,
             Text = comment.Text,
             CreatedAtUtc = comment.CreatedAt,
             PollId = comment.PollId,
-            StoryId = comment.StoryId,
+            StrategyId = comment.StrategyId,
         };
     }
 
@@ -232,7 +259,7 @@ internal sealed class CommunityService : ICommunityService
         };
     }
 
-    public async Task<List<CommunityCommentDto>> GetPollCommentsAsync(string pollCode, CancellationToken cancellationToken = default)
+    public async Task<List<CommunityCommentDto>> GetPollCommentsAsync(string userId, string pollCode, CancellationToken cancellationToken = default)
     {
         CommunityPoll? poll = await _dbContext.CommunityPolls
             .AsNoTracking()
@@ -244,163 +271,253 @@ internal sealed class CommunityService : ICommunityService
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        List<CommunityCommentDto> comments = await _dbContext.CommunityComments
-            .AsNoTracking()
-            .Where(c => c.IsVisible && c.PollId == poll.Id)
-            .OrderByDescending(c => c.CreatedAt)
-            .Select(c => new CommunityCommentDto
-            {
-                Id = c.Id,
-                AuthorName = c.AuthorName,
-                Text = c.Text,
-                CreatedAtUtc = c.CreatedAt,
-                Likes = c.LikesList.Count,
-                PollId = c.PollId,
-            })
+        return await VisibleCommentsQuery(userId)
+            .Where(c => c.PollId == poll.Id)
             .ToListAsync(cancellationToken);
-
-        return comments;
     }
 
-    public async Task<CommunityStoryDto> SubmitStoryAsync(string userId, CommunityStoryRequestDto request, string authorName, CancellationToken cancellationToken = default)
+    public async Task<CommunityStrategyDto> SubmitStrategyAsync(string userId, CommunityStrategyRequestDto request,
+        CancellationToken cancellationToken = default)
     {
-        string trimmedTitle = request.Title.Trim();
-        string trimmedSummary = request.Summary.Trim();
-        string trimmedBody = request.Body.Trim();
-        string trimmedCategory = request.Category.Trim();
-
-        if (string.IsNullOrEmpty(trimmedTitle) || trimmedTitle.Length > 500)
-        {
-            throw new ApiErrorException(ApiErrorKeys.Community.StoryTitle, "A title is required and must be under 500 characters.", "Title",
-                ErrorArgs.Number("max", 500));
-        }
-
-        if (string.IsNullOrEmpty(trimmedSummary) || trimmedSummary.Length > 2000)
-        {
-            throw new ApiErrorException(ApiErrorKeys.Community.StorySummary, "Summary is required and must be under 2000 characters.",
-                "Summary", ErrorArgs.Number("max", 2000));
-        }
-
-        if (string.IsNullOrEmpty(trimmedBody) || trimmedBody.Length < 100)
-        {
-            throw new ApiErrorException(ApiErrorKeys.Community.StoryBodyMin, "Story body must have at least 100 characters.", "Body",
-                ErrorArgs.Number("min", 100));
-        }
-
-        if (trimmedBody.Length > 10000)
-        {
-            throw new ApiErrorException(ApiErrorKeys.Community.StoryBodyMax, "Story body must be shorter than 10000 characters.", "Body",
-                ErrorArgs.Number("max", 10000));
-        }
-
-        if (string.IsNullOrEmpty(trimmedCategory) || trimmedCategory.Length > 50)
-        {
-            throw new ApiErrorException(ApiErrorKeys.Community.StoryCategory, "Category is required and must be under 50 characters.",
-                "Category", ErrorArgs.Number("max", 50));
-        }
-
-        int wordCount = trimmedBody.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        int readTimeMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
-
-        var story = new PersonalFinance.Data.Entities.CommunityStory
+        CommunityPseudonym author = await GetOrCreatePseudonymAsync(userId, cancellationToken);
+        var strategy = new CommunityStrategy
         {
             UserId = userId,
-            AuthorName = authorName.Trim(),
-            Title = trimmedTitle,
-            Summary = trimmedSummary,
-            Body = trimmedBody,
-            Category = trimmedCategory,
-            IsVisible = true,
-            IsFeatured = false,
-            PublishedAtUtc = DateTime.UtcNow,
-            ReadTimeMinutes = readTimeMinutes,
+            Category = request.Category.Trim(),
+            Title = request.Title.Trim(),
+            Tried = request.Tried.Trim(),
+            Happened = request.Happened.Trim(),
+            Keeping = request.Keeping.Trim(),
+            Status = CommunityStrategyStatus.Pending,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
         };
 
-        await _dbContext.CommunityStories.AddAsync(story, cancellationToken);
+        _dbContext.CommunityStrategies.Add(strategy);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("New story submitted: StoryId={StoryId}, UserId={UserId}", story.Id, userId);
+            _logger.LogInformation("Strategy submitted for review: StrategyId={StrategyId}, UserId={UserId}", strategy.Id, userId);
         }
 
-        return new CommunityStoryDto
+        return new CommunityStrategyDto
         {
-            Id = story.Id,
-            AuthorName = story.AuthorName,
-            Title = story.Title,
-            Summary = story.Summary,
-            Body = story.Body,
-            Category = story.Category,
-            IsFeatured = story.IsFeatured,
-            PublishedAtUtc = story.PublishedAtUtc,
-            ReadTimeMinutes = story.ReadTimeMinutes,
+            Id = strategy.Id,
+            AuthorPseudonym = author.Name,
+            IsOwn = true,
+            Category = strategy.Category,
+            Title = strategy.Title,
+            Tried = strategy.Tried,
+            Happened = strategy.Happened,
+            Keeping = strategy.Keeping,
+            Status = strategy.Status,
+            CreatedAtUtc = strategy.CreatedAt,
         };
     }
 
-    public async Task<StoryLikeResult> ToggleStoryLikeAsync(string userId, int storyId, CancellationToken cancellationToken = default)
+    public async Task<List<CommunityStrategyReviewItemDto>> ListStrategiesForReviewAsync(CommunityStrategyStatus status,
+        CancellationToken cancellationToken = default)
     {
-        CommunityStory? story = await _dbContext.CommunityStories
-            .FirstOrDefaultAsync(s => s.Id == storyId && s.IsVisible, cancellationToken);
-
-        if (story == null)
+        List<CommunityStrategyReviewItemDto> items = await ReviewQueueQuery(status).ToListAsync(cancellationToken);
+        foreach (CommunityStrategyReviewItemDto item in items)
         {
-            throw new ApiErrorException(ApiErrorKeys.Community.StoryNotFound, "Story not found.", statusCode: StatusCodes.Status404NotFound);
+            item.HasAmount = MoneyAmountRule.ContainsAmount(item.Title, item.Tried, item.Happened, item.Keeping);
         }
 
-        CommunityStoryLike? existingLike = await _dbContext.CommunityStoryLikes
-            .FirstOrDefaultAsync(l => l.UserId == userId && l.StoryId == storyId, cancellationToken);
+        return items;
+    }
 
-        if (existingLike != null)
+    public async Task<bool> ReviewStrategyAsync(int strategyId, CommunityStrategyStatus status,
+        CancellationToken cancellationToken = default)
+    {
+        CommunityStrategy? strategy = await _dbContext.CommunityStrategies
+            .FirstOrDefaultAsync(s => s.Id == strategyId, cancellationToken);
+        if (strategy is null)
         {
-            existingLike.SoftDelete();
-        }
-        else
-        {
-            var like = new CommunityStoryLike
-            {
-                UserId = userId,
-                StoryId = storyId,
-            };
-            await _dbContext.CommunityStoryLikes.AddAsync(like, cancellationToken);
+            return false;
         }
 
+        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+        strategy.Status = status;
+        strategy.ReviewedAt = now;
+        strategy.UpdatedAt = now;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new StoryLikeResult
+        if (_logger.IsEnabled(LogLevel.Information))
         {
-            Success = true,
-            NewLikeCount = await _dbContext.CommunityStoryLikes.CountAsync(l => l.StoryId == storyId, cancellationToken),
-            IsLiked = existingLike == null,
-        };
+            _logger.LogInformation("Strategy reviewed: StrategyId={StrategyId}, Status={Status}", strategyId, status);
+        }
+
+        return true;
     }
 
-    public async Task<CommunityStoryDto?> GetStoryByIdAsync(string userId, int storyId, CancellationToken cancellationToken = default)
+    // =========================================================================
+    // Queries (internal so tests can check they translate to Azure SQL)
+    // =========================================================================
+
+    /// <summary>
+    /// The board as <paramref name="userId"/> sees it: Approved Strategies and the viewer's own in any status, only in
+    /// <paramref name="category"/> when one is given. The viewer's Pending ones come first, then their Rejected ones,
+    /// then the Approved ones, each newest first. Each carries its author's Pseudonym, null once the author is a
+    /// Former member.
+    /// </summary>
+    internal IQueryable<CommunityStrategyDto> BoardStrategiesQuery(string userId, string? category)
     {
-        return await _dbContext.CommunityStories
-            .AsNoTracking()
-            .Where(s => s.Id == storyId && s.IsVisible)
-            .Select(s => new CommunityStoryDto
-            {
-                Id = s.Id,
-                AuthorName = s.AuthorName,
-                Title = s.Title,
-                Summary = s.Summary,
-                Body = s.Body,
-                Category = s.Category,
-                Likes = s.LikesList.Count,
-                CommentCount = s.Comments.Count(c => c.IsVisible),
-                IsFeatured = s.IsFeatured,
-                PublishedAtUtc = s.PublishedAtUtc,
-                ReadTimeMinutes = s.ReadTimeMinutes,
-                IsLikedByUser = s.LikesList.Any(l => l.UserId == userId),
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+        IQueryable<CommunityStrategy> strategies = _dbContext.CommunityStrategies.AsNoTracking()
+            .Where(s => s.Status == CommunityStrategyStatus.Approved || s.UserId == userId);
+        if (!string.IsNullOrEmpty(category))
+        {
+            strategies = strategies.Where(s => s.Category == category);
+        }
+
+        return from strategy in strategies
+               join author in _dbContext.CommunityPseudonyms.AsNoTracking() on strategy.UserId equals author.UserId into authors
+               from author in authors.DefaultIfEmpty()
+               orderby strategy.Status == CommunityStrategyStatus.Approved,
+                   strategy.Status == CommunityStrategyStatus.Rejected,
+                   strategy.CreatedAt descending,
+                   strategy.Id descending
+               select new CommunityStrategyDto
+               {
+                   Id = strategy.Id,
+                   AuthorPseudonym = author == null ? null : author.Name,
+                   IsOwn = strategy.UserId == userId,
+                   Category = strategy.Category,
+                   Title = strategy.Title,
+                   Tried = strategy.Tried,
+                   Happened = strategy.Happened,
+                   Keeping = strategy.Keeping,
+                   Status = strategy.Status,
+                   CreatedAtUtc = strategy.CreatedAt,
+               };
     }
+
+    /// <summary>
+    /// The Strategies in <paramref name="status"/> for the Admin queue, oldest first, without the amount flag (it is
+    /// set in memory: the rule is a regular expression).
+    /// </summary>
+    internal IQueryable<CommunityStrategyReviewItemDto> ReviewQueueQuery(CommunityStrategyStatus status) =>
+        from strategy in _dbContext.CommunityStrategies.AsNoTracking()
+        where strategy.Status == status
+        join author in _dbContext.CommunityPseudonyms.AsNoTracking() on strategy.UserId equals author.UserId into authors
+        from author in authors.DefaultIfEmpty()
+        orderby strategy.CreatedAt, strategy.Id
+        select new CommunityStrategyReviewItemDto
+        {
+            Id = strategy.Id,
+            AuthorPseudonym = author == null ? null : author.Name,
+            Category = strategy.Category,
+            Title = strategy.Title,
+            Tried = strategy.Tried,
+            Happened = strategy.Happened,
+            Keeping = strategy.Keeping,
+            Status = strategy.Status,
+            CreatedAtUtc = strategy.CreatedAt,
+            ReviewedAtUtc = strategy.ReviewedAt,
+        };
+
+    /// <summary>
+    /// The visible comments, newest first, each with its author's Pseudonym (null for a Former member). A comment on a
+    /// Strategy an Admin has since rejected is left out with it.
+    /// </summary>
+    internal IQueryable<CommunityCommentDto> VisibleCommentsQuery(string userId) =>
+        from comment in _dbContext.CommunityComments.AsNoTracking()
+        where comment.IsVisible
+              && (comment.StrategyId == null || comment.Strategy!.Status == CommunityStrategyStatus.Approved)
+        join author in _dbContext.CommunityPseudonyms.AsNoTracking() on comment.UserId equals author.UserId into authors
+        from author in authors.DefaultIfEmpty()
+        orderby comment.CreatedAt descending, comment.Id descending
+        select new CommunityCommentDto
+        {
+            Id = comment.Id,
+            AuthorPseudonym = author == null ? null : author.Name,
+            IsOwn = comment.UserId == userId,
+            Text = comment.Text,
+            CreatedAtUtc = comment.CreatedAt,
+            Likes = comment.LikesList.Count,
+            IsLikedByUser = comment.LikesList.Any(l => l.UserId == userId),
+            PollId = comment.PollId,
+            StrategyId = comment.StrategyId,
+        };
 
     // =========================================================================
     // Private Helpers
     // =========================================================================
+
+    /// <summary>
+    /// The Account's Pseudonym, created on first use. A unique index on the Account id and one on the name guard
+    /// against two requests creating it at once; the loser re-reads the winner's row or draws another name.
+    /// </summary>
+    private async Task<CommunityPseudonym> GetOrCreatePseudonymAsync(string userId, CancellationToken cancellationToken)
+    {
+        CommunityPseudonym? existing = await _dbContext.CommunityPseudonyms
+            .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        for (int attempt = 1; ; attempt++)
+        {
+            var pseudonym = new CommunityPseudonym
+            {
+                UserId = userId,
+                Name = await PickUnusedNameAsync(null, cancellationToken),
+            };
+            _dbContext.CommunityPseudonyms.Add(pseudonym);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("Pseudonym created: UserId={UserId}", userId);
+                }
+
+                return pseudonym;
+            }
+            catch (DbUpdateException) when (attempt < PseudonymSaveAttempts)
+            {
+                _dbContext.Entry(pseudonym).State = EntityState.Detached;
+                existing = await _dbContext.CommunityPseudonyms
+                    .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+                if (existing is not null)
+                {
+                    return existing;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// A name no Account holds. Soft-deleted rows count too: an Account in its Grace Period keeps its name, so it
+    /// gets it back when it cancels. The lists make a few thousand names and this app has far fewer Accounts, so the
+    /// taken names are read in one query.
+    /// </summary>
+    private async Task<string> PickUnusedNameAsync(string? current, CancellationToken cancellationToken)
+    {
+        List<string> issued = await _dbContext.CommunityPseudonyms
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(p => p.Name)
+            .ToListAsync(cancellationToken);
+        var taken = new HashSet<string>(issued, StringComparer.OrdinalIgnoreCase);
+        if (current is not null)
+        {
+            taken.Add(current);
+        }
+
+        return PseudonymGenerator.Pick(taken, Random.Shared);
+    }
+
+    private Task<List<CommunityPoll>> ActivePollsAsync(CancellationToken cancellationToken) =>
+        _dbContext.CommunityPolls
+            .AsNoTracking()
+            .Include(p => p.Options)
+                .ThenInclude(o => o.Votes)
+            .Include(p => p.Votes)
+            .Where(p => p.IsActive)
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
 
     private static CommunityPollDto MapPollToDto(CommunityPoll p, string userId)
     {
@@ -425,52 +542,5 @@ internal sealed class CommunityService : ICommunityService
                 Percentage = totalVotes > 0 ? Math.Round((double)o.Votes.Count / totalVotes * 100, 1) : 0,
             }).ToList(),
         };
-    }
-
-    private async Task<List<CommunityStoryDto>> GetStoriesAsync(string userId, CancellationToken cancellationToken)
-    {
-        return await _dbContext.CommunityStories
-            .AsNoTracking()
-            .Where(s => s.IsVisible)
-            .OrderByDescending(s => s.IsFeatured)
-            .ThenByDescending(s => s.PublishedAtUtc)
-            .ThenByDescending(s => s.Id)
-            .Take(6)
-            .Select(s => new CommunityStoryDto
-            {
-                Id = s.Id,
-                AuthorName = s.AuthorName,
-                Title = s.Title,
-                Summary = s.Summary,
-                Body = s.Body,
-                Category = s.Category,
-                Likes = s.LikesList.Count,
-                CommentCount = s.Comments.Count(c => c.IsVisible),
-                IsFeatured = s.IsFeatured,
-                PublishedAtUtc = s.PublishedAtUtc,
-                ReadTimeMinutes = s.ReadTimeMinutes,
-                IsLikedByUser = s.LikesList.Any(l => l.UserId == userId),
-            })
-            .ToListAsync(cancellationToken);
-    }
-
-    private async Task<List<CommunityCommentDto>> GetRecentCommentsAsync(int count, CancellationToken cancellationToken)
-    {
-        return await _dbContext.CommunityComments
-            .AsNoTracking()
-            .Where(c => c.IsVisible)
-            .OrderByDescending(c => c.CreatedAt)
-            .Take(count)
-            .Select(c => new CommunityCommentDto
-            {
-                Id = c.Id,
-                AuthorName = c.AuthorName,
-                Text = c.Text,
-                CreatedAtUtc = c.CreatedAt,
-                Likes = c.LikesList.Count,
-                PollId = c.PollId,
-                StoryId = c.StoryId,
-            })
-            .ToListAsync(cancellationToken);
     }
 }

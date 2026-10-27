@@ -6,6 +6,7 @@ using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Research;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Research;
 
@@ -243,10 +244,5 @@ public class ResearchWorldServiceTests
                     Content = new StringContent(body, Encoding.UTF8, "application/json")
                 });
         }
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

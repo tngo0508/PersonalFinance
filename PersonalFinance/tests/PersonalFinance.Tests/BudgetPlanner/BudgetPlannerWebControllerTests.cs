@@ -226,18 +226,8 @@ public class BudgetPlannerWebControllerTests
     [Fact]
     public void BudgetIndexView_ContainsAspForBindingsForAllCategories()
     {
-        string viewPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/PersonalFinance.Web/Views/Budget/Index.cshtml"));
-        if (!File.Exists(viewPath))
-        {
-            string dir = AppContext.BaseDirectory;
-            while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "PersonalFinance.sln")))
-            {
-                DirectoryInfo? parent = Directory.GetParent(dir);
-                if (parent == null) break;
-                dir = parent.FullName;
-            }
-            viewPath = Path.Combine(dir, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Budget", "Index.cshtml");
-        }
+        string viewPath = Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.Web"), "Views", "Budget",
+            "Index.cshtml");
 
         Assert.True(File.Exists(viewPath), $"View file should exist at: {viewPath}");
         string content = File.ReadAllText(viewPath);

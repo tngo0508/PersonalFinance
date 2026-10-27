@@ -35,6 +35,14 @@
                     document.documentElement.classList.add('sidebar-collapsed');
                 }
             } catch (e) {}
+            // Theme before first paint (js/core/theme.js keeps it in step): the stored choice, else the device setting.
+            var theme = null;
+            try { theme = localStorage.getItem('theme'); } catch (e) {}
+            if (theme !== 'light' && theme !== 'dark') {
+                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-bs-theme', theme);
         })();
     </script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
@@ -290,6 +298,7 @@
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/lib/marked/marked.min.js"></script>
 <script src="~/js/core/utils.js" asp-append-version="true"></script>
+<script src="~/js/core/theme.js" asp-append-version="true"></script>
 <script src="~/js/core/i18n.js" asp-append-version="true"></script>
 <script src="~/js/core/currency-selector.js" asp-append-version="true"></script>
 <script src="~/js/core/site.js" asp-append-version="true"></script>

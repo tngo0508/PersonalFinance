@@ -144,8 +144,8 @@ const {execSync} = require('child_process');
     // =========================================================
     console.log('\n--- Test 4: Community API (Auth Required) ---');
     try {
-        const resp = curl({url: `${apiBase}/api/Community/Stories`, followRedirects: false});
-        console.log(`  /api/Community/Stories status: ${resp.statusCode}`);
+        const resp = curl({url: `${apiBase}/api/Community`, followRedirects: false});
+        console.log(`  /api/Community status: ${resp.statusCode}`);
         if (resp.statusCode === 401 || resp.statusCode === 403) {
             pass('Community API correctly requires authentication');
         } else if (resp.statusCode === 200) {

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Tests.TestSupport;
 using Xunit;
 
 namespace PersonalFinance.Tests.Infrastructure;
@@ -9,22 +10,8 @@ namespace PersonalFinance.Tests.Infrastructure;
 /// </summary>
 public class ReleaseAutomationTests
 {
-    private static string FindProjectRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current != null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "PersonalFinance.sln")))
-            {
-                return current.FullName;
-            }
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("Could not locate repository root directory.");
-    }
-
     private static string ReadRepoFile(params string[] path) =>
-        File.ReadAllText(Path.Combine([FindProjectRoot(), .. path]));
+        File.ReadAllText(Path.Combine([RepositoryRoot.Find(), .. path]));
 
     private static string JobBlock(string workflow, string jobId)
     {

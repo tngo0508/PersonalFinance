@@ -222,11 +222,6 @@ public class SavingsGoalsControllerTests
         return controller;
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
     private sealed class RecordingSavingsGoalsApi : ISavingsGoalsApi
     {
         public CreateSavingsGoalRequestDto? Created { get; private set; }

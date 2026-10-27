@@ -52,7 +52,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<CommunityPollVote> CommunityPollVotes => Set<CommunityPollVote>();
 
     /// <summary>
-    /// Community comments on polls or stories table set.
+    /// Community comments on polls or Strategies table set.
     /// </summary>
     public DbSet<CommunityComment> CommunityComments => Set<CommunityComment>();
 
@@ -62,14 +62,14 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<CommunityCommentLike> CommunityCommentLikes => Set<CommunityCommentLike>();
 
     /// <summary>
-    /// Community user-submitted stories table set.
+    /// Guild Hall Strategies table set: Pending until an Admin approves or rejects them.
     /// </summary>
-    public DbSet<CommunityStory> CommunityStories => Set<CommunityStory>();
+    public DbSet<CommunityStrategy> CommunityStrategies => Set<CommunityStrategy>();
 
     /// <summary>
-    /// Community story likes (user -> story) table set.
+    /// Guild Hall Pseudonyms (one per Account) table set.
     /// </summary>
-    public DbSet<CommunityStoryLike> CommunityStoryLikes => Set<CommunityStoryLike>();
+    public DbSet<CommunityPseudonym> CommunityPseudonyms => Set<CommunityPseudonym>();
 
     /// <summary>
     /// User budget allocations table set.
@@ -185,11 +185,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<GoogleDriveConnection>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<SpreadsheetBudgetSnapshot>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<SpreadsheetTransactionRecord>().HasQueryFilter(e => !e.IsDeleted);
-        builder.Entity<CommunityStory>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityStrategy>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityComment>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityCommentLike>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
-        builder.Entity<CommunityStoryLike>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityPseudonym>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<BudgetCategory>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<MonthlyBudgetPlan>().HasQueryFilter(e => !e.IsDeleted);
@@ -605,7 +605,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     }
 
     /// <summary>
-    /// The Community entities: polls, options and votes, stories, comments and likes.
+    /// The Community entities (the Guild Hall): Pseudonyms, polls, options and votes, Strategies, comments and likes.
+    /// Strategies and comments store no author name: the author is the row's <c>UserId</c>, shown by its Pseudonym.
     /// </summary>
     private static void ConfigureCommunity(ModelBuilder builder)
     {
@@ -659,10 +660,9 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Text).IsRequired().HasMaxLength(2000);
             entity.HasIndex(e => e.PollId);
-            entity.HasIndex(e => e.StoryId);
+            entity.HasIndex(e => e.StrategyId);
             entity.HasIndex(e => e.CreatedAtUtc);
 
             entity.HasOne(e => e.Poll)
@@ -670,9 +670,9 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
                 .HasForeignKey(e => e.PollId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasOne(e => e.Story)
-                .WithMany(e => e.Comments)
-                .HasForeignKey(e => e.StoryId)
+            entity.HasOne(e => e.Strategy)
+                .WithMany()
+                .HasForeignKey(e => e.StrategyId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasMany(e => e.LikesList)
@@ -690,33 +690,32 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.HasIndex(e => e.CommentId);
         });
 
-        // Configure CommunityStory entity
-        builder.Entity<CommunityStory>(entity =>
+        // Configure CommunityStrategy entity — the board reads Approved ones by category, newest first, plus the
+        // viewer's own; the Admin queue reads by status, oldest first
+        builder.Entity<CommunityStrategy>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
-            entity.Property(e => e.Summary).IsRequired().HasMaxLength(2000);
-            entity.Property(e => e.Body).IsRequired().HasMaxLength(10000);
-            entity.Property(e => e.Category).IsRequired().HasMaxLength(50);
-            entity.HasIndex(e => e.Category);
-            entity.HasIndex(e => e.PublishedAtUtc);
-            entity.HasIndex(e => e.IsFeatured);
-
-            entity.HasMany(e => e.LikesList)
-                .WithOne(e => e.Story)
-                .HasForeignKey(e => e.StoryId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(CommunityStrategyLimits.CategoryMaxLength);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(CommunityStrategyLimits.TitleMaxLength);
+            entity.Property(e => e.Tried).IsRequired().HasMaxLength(CommunityStrategyLimits.TextMaxLength);
+            entity.Property(e => e.Happened).IsRequired().HasMaxLength(CommunityStrategyLimits.TextMaxLength);
+            entity.Property(e => e.Keeping).IsRequired().HasMaxLength(CommunityStrategyLimits.TextMaxLength);
+            entity.Property(e => e.Status).IsRequired();
+            entity.HasIndex(e => new { e.Status, e.Category, e.CreatedAt });
+            entity.HasIndex(e => e.UserId);
         });
 
-        // Configure CommunityStoryLike entity — one like per user per story
-        builder.Entity<CommunityStoryLike>(entity =>
+        // Configure CommunityPseudonym entity — one row per Account, one name per row. Both indexes are unfiltered on
+        // purpose: a re-roll replaces the name in place, so an Account never has a second row, and a soft-deleted row
+        // (an Account in its Grace Period) keeps its name reserved until the Purge deletes the row.
+        builder.Entity<CommunityPseudonym>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.HasIndex(e => new { e.UserId, e.StoryId }).IsUnique();
-            entity.HasIndex(e => e.StoryId);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(60);
+            entity.HasIndex(e => e.UserId).IsUnique();
+            entity.HasIndex(e => e.Name).IsUnique();
         });
     }
 

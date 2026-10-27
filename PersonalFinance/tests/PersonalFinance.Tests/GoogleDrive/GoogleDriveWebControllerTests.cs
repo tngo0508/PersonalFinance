@@ -46,7 +46,7 @@ public class GoogleDriveWebControllerTests
         var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
-            TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
+            TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
         };
 
         // Act
@@ -91,7 +91,7 @@ public class GoogleDriveWebControllerTests
         var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
-            TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
+            TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
         };
 
         // Act
@@ -115,7 +115,7 @@ public class GoogleDriveWebControllerTests
         var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
-            TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
+            TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
         };
 
         // Act
@@ -135,7 +135,7 @@ public class GoogleDriveWebControllerTests
         var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
-            TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
+            TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
         };
 
         // Act
@@ -155,7 +155,7 @@ public class GoogleDriveWebControllerTests
         var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
-            TempData = new TempDataDictionary(new DefaultHttpContext(), new FakeTempDataProvider())
+            TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
         };
 
         // Act
@@ -291,20 +291,5 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
     {
         return Task.FromResult(TransactionsResponse
             ?? BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleTransactionsCsv(), fileName, fileId));
-    }
-}
-
-public class FakeTempDataProvider : ITempDataProvider
-{
-    private readonly Dictionary<string, object?> _data = new();
-
-    public IDictionary<string, object?> LoadTempData(HttpContext context) => _data;
-
-    public void SaveTempData(HttpContext context, IDictionary<string, object?> values)
-    {
-        foreach ((string? key, object? val) in values)
-        {
-            _data[key] = val;
-        }
     }
 }

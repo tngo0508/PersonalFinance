@@ -18,6 +18,25 @@
     }
 
     /**
+     * The chart's theme colours, read from the Ledger tokens so the canvas follows light and dark mode (issue #296).
+     * @returns {object} Colours for the chart background, grid, labels, tooltip and the value line.
+     */
+    function chartColors () {
+        const style = getComputedStyle(document.documentElement);
+        const token = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
+        return {
+            surface: token('--app-surface', '#F8FAF9'),
+            paper: token('--app-bg', '#FFFFFF'),
+            grid: token('--app-border', '#E1E7E4'),
+            tick: token('--app-border-hover', '#D6DEDB'),
+            muted: token('--app-text-muted', '#5B6B78'),
+            ink: token('--app-text', '#14283B'),
+            inkSoft: token('--app-text-soft', '#3D4F5F'),
+            value: token('--app-brand', '#1D6A50')
+        };
+    }
+
+    /**
      * Initialize the calculator inputs and event listeners.
      */
     function initCalculator () {
@@ -91,6 +110,9 @@
             });
         });
         observer.observe(container);
+
+        // The canvas reads the theme tokens when it draws (theme.js, issue #296)
+        document.addEventListener('themechange', calculateInvestment);
     }
 
     /**
@@ -215,13 +237,15 @@
             return padding.top + chartH - (val / niceMax) * chartH;
         }
 
+        const colors = chartColors();
+
         // Background
-        ctx.fillStyle = '#F8FAF9';
+        ctx.fillStyle = colors.surface;
         roundRect(ctx, 0, 0, w, h, 8);
         ctx.fill();
 
         // Grid lines
-        ctx.strokeStyle = '#E1E7E4';
+        ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         for (let i = 0; i <= gridLines; i++) {
@@ -232,7 +256,7 @@
             ctx.stroke();
 
             const val = niceMax - (niceMax / gridLines) * i;
-            ctx.fillStyle = '#5B6B78';
+            ctx.fillStyle = colors.muted;
             ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
@@ -243,14 +267,14 @@
         // X-axis labels
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillStyle = '#5B6B78';
+        ctx.fillStyle = colors.muted;
         ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
         const xStep = Math.max(1, Math.floor(years / 7));
         for (let y = 0; y <= years; y += xStep) {
             const x = toCanvasX(y);
             const tickY = padding.top + chartH;
             ctx.beginPath();
-            ctx.strokeStyle = '#D6DEDB';
+            ctx.strokeStyle = colors.tick;
             ctx.lineWidth = 1;
             ctx.moveTo(x, tickY);
             ctx.lineTo(x, tickY + 4);
@@ -320,7 +344,7 @@
         ctx.stroke();
 
         drawSmoothCurve(points);
-        ctx.strokeStyle = '#1D6A50';
+        ctx.strokeStyle = colors.value;
         ctx.lineWidth = 3;
         ctx.stroke();
 
@@ -337,13 +361,13 @@
             ctx.arc(cx, cy, 4, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
-            ctx.strokeStyle = '#fff';
+            ctx.strokeStyle = colors.paper;
             ctx.lineWidth = 2;
             ctx.stroke();
         }
 
         drawDot(contribPoints, '#2F6690');
-        drawDot(points, '#1D6A50');
+        drawDot(points, colors.value);
 
         // Update HTML legend with final values
         updateLegend(points, contribPoints);
@@ -548,6 +572,7 @@
 
         const { toCanvasY, padding, chartH } = meta;
         const { x: cx, year, value, contribution } = calcChartTooltip;
+        const colors = chartColors();
 
         // Vertical guide line
         ctx.beginPath();
@@ -563,9 +588,9 @@
         const vy = toCanvasY(value);
         ctx.beginPath();
         ctx.arc(cx, vy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#1D6A50';
+        ctx.fillStyle = colors.value;
         ctx.fill();
-        ctx.strokeStyle = '#fff';
+        ctx.strokeStyle = colors.paper;
         ctx.lineWidth = 2;
         ctx.stroke();
 
@@ -575,7 +600,7 @@
         ctx.arc(cx, cy, 5, 0, Math.PI * 2);
         ctx.fillStyle = '#2F6690';
         ctx.fill();
-        ctx.strokeStyle = '#fff';
+        ctx.strokeStyle = colors.paper;
         ctx.lineWidth = 2;
         ctx.stroke();
 
@@ -614,7 +639,7 @@
         ctx.shadowOffsetY = 4;
 
         // Background
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = colors.paper;
         roundRect(ctx, boxX, boxY, boxW, boxH, 8);
         ctx.fill();
 
@@ -624,20 +649,20 @@
         ctx.shadowOffsetY = 0;
 
         // Border
-        ctx.strokeStyle = '#E1E7E4';
+        ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1;
         roundRect(ctx, boxX, boxY, boxW, boxH, 8);
         ctx.stroke();
 
         // Text
-        ctx.fillStyle = '#3D4F5F';
+        ctx.fillStyle = colors.inkSoft;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
 
         lines.forEach((line, i) => {
             const isTitle = i === 0;
             ctx.font = isTitle ? '700 12px Inter, system-ui, -apple-system, sans-serif' : '500 12px Inter, system-ui, -apple-system, sans-serif';
-            ctx.fillStyle = isTitle ? '#14283B' : '#3D4F5F';
+            ctx.fillStyle = isTitle ? colors.ink : colors.inkSoft;
             ctx.fillText(line, boxX + boxPad, boxY + boxPad + i * lineH);
         });
     }

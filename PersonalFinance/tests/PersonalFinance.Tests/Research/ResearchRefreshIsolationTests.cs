@@ -5,6 +5,7 @@ using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.ApiService.Features.Research.Domain;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Research;
 
@@ -145,10 +146,5 @@ public class ResearchRefreshIsolationTests
             CancellationToken cancellationToken) =>
             Task.FromResult(new WorldBankIndicator(new DateOnly(2026, 10, 8),
                 [new WorldBankObservation("USA", 2025, 50_000_000_000_000m)]));
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }
