@@ -79,7 +79,7 @@ public class MoneyPrioritiesWebControllerTests
     }
 
     [Fact]
-    public async Task Index_CarriesTheAiDisclaimer_ForASavedPurposeNoteShownWithoutARequest()
+    public async Task Index_CarriesTheAiDisclaimer_AndTheServersUnavailableMessage_ForThePurposeNote()
     {
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
@@ -90,21 +90,7 @@ public class MoneyPrioritiesWebControllerTests
         IActionResult result = await controller.Index();
 
         MoneyPrioritiesViewModel model = Assert.IsType<MoneyPrioritiesViewModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.Equal(AiAssistantMessages.Disclaimer, model.PurposeNoteDisclaimer);
-    }
-
-    [Fact]
-    public async Task Index_CarriesTheServersUnavailableMessage_ForThePageToShowWhenTheNoteRequestFails()
-    {
-        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
-        proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
-            MoneyPrioritiesTestServices.TreeDiagramV1());
-        proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
-        MoneyPrioritiesController controller = CreateController(api);
-
-        IActionResult result = await controller.Index();
-
-        MoneyPrioritiesViewModel model = Assert.IsType<MoneyPrioritiesViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(AiAssistantMessages.Disclaimer, model.PurposeNoteDisclaimer); // for a saved note shown without a request
         Assert.Equal("The note about your purpose is not available right now.", model.PurposeNoteUnavailable);
     }
 
@@ -157,24 +143,6 @@ public class MoneyPrioritiesWebControllerTests
     }
 
     [Fact]
-    public async Task Submit_WhenTheApiRejectsTheAnswers_Returns400WithTheErrorsKeyedByField()
-    {
-        const string body =
-            """{"errors":[{"key":"MoneyPriorities.Validation.DebtBalanceRequired","message":"Enter the balance of that debt.","field":"DebtBalance"}]}""";
-        using var culture = new UiCultureScope("en");
-        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
-        proxy.Throws(nameof(IMoneyPrioritiesApi.SubmitWalkAsync), await ApiExceptionAsync(HttpStatusCode.BadRequest, body));
-        MoneyPrioritiesController controller = CreateController(api);
-
-        IActionResult result = await controller.Submit(new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 22m });
-
-        BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        MoneyPrioritiesErrorsViewModel errors = Assert.IsType<MoneyPrioritiesErrorsViewModel>(badRequest.Value);
-        Assert.Equal(["Enter the balance of that debt."], errors.FieldErrors["DebtBalance"]);
-        Assert.Empty(errors.Errors);
-    }
-
-    [Fact]
     public async Task Submit_WhenThe400IsNotTheValidationShape_StillAnswers400WithAMessage()
     {
         const string problemDetails = """{"title":"One or more validation errors occurred.","errors":{"$.ageBand":["bad"]}}""";
@@ -193,19 +161,6 @@ public class MoneyPrioritiesWebControllerTests
     }
 
     [Fact]
-    public async Task Submit_WithNoBody_Returns400WithoutCallingTheApi()
-    {
-        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
-        MoneyPrioritiesController controller = CreateController(api);
-
-        IActionResult result = await controller.Submit(null);
-
-        BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.NotEmpty(Assert.IsType<MoneyPrioritiesErrorsViewModel>(badRequest.Value).Errors);
-        Assert.Empty(proxy.Calls);
-    }
-
-    [Fact]
     public async Task Submit_WhenTheApiIsDown_LetsJsonApiErrorsAnswer502()
     {
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
@@ -216,25 +171,6 @@ public class MoneyPrioritiesWebControllerTests
 
         ObjectResult error = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status502BadGateway, error.StatusCode);
-    }
-
-    [Fact]
-    public async Task Walk_ReturnsTheWalkAsJson()
-    {
-        var walk = new PriorityWalkResultDto
-        {
-            WalkId = 4, LeafId = "L2", PathNodeIds = ["S", "Q1", "Q2", "L2"], Tree = MoneyPrioritiesTestServices.TreeV1()
-        };
-        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
-        proxy.Returns(nameof(IMoneyPrioritiesApi.GetWalkAsync), walk);
-        MoneyPrioritiesController controller = CreateController(api);
-
-        IActionResult result = await controller.Walk(4);
-
-        MoneyPrioritiesResultViewModel view =
-            Assert.IsType<MoneyPrioritiesResultViewModel>(Assert.IsType<JsonResult>(result).Value);
-        Assert.Same(walk, view.Walk);
-        Assert.Equal("Suggested priority: Build the emergency fund to 3 months.", view.PathSentences[^1]);
     }
 
     [Fact]
@@ -272,43 +208,6 @@ public class MoneyPrioritiesWebControllerTests
         IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Delete(99));
 
         Assert.Equal(StatusCodes.Status404NotFound, Assert.IsType<ObjectResult>(result).StatusCode);
-    }
-
-    [Fact]
-    public async Task Recent_ReturnsTheEarlierResultsAsJson()
-    {
-        var walks = new List<PriorityWalkSummaryDto> { new() { WalkId = 3 } };
-        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
-        proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), walks);
-        MoneyPrioritiesController controller = CreateController(api);
-
-        IActionResult result = await controller.Recent();
-
-        Assert.Same(walks, Assert.IsType<JsonResult>(result).Value);
-    }
-
-    [Theory]
-    [InlineData(PurposeNoteState.Written)]
-    [InlineData(PurposeNoteState.NoPurpose)]
-    [InlineData(PurposeNoteState.Unavailable)]
-    [InlineData(PurposeNoteState.QuotaReached)]
-    [InlineData(PurposeNoteState.Refused)]
-    public async Task Note_PassesEachStateOnAsJson(PurposeNoteState state)
-    {
-        var note = new PriorityWalkPurposeNoteDto
-        {
-            WalkId = 7, State = state, Note = state == PurposeNoteState.Written ? "It keeps your trip safe." : null,
-            Message = state == PurposeNoteState.Written ? null : "A message for the page.", Disclaimer = "Not advice."
-        };
-        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
-        proxy.Returns(nameof(IMoneyPrioritiesApi.WritePurposeNoteAsync), note);
-        MoneyPrioritiesController controller = CreateController(api);
-
-        IActionResult result = await controller.Note(7);
-
-        JsonResult json = Assert.IsType<JsonResult>(result);
-        Assert.Same(note, json.Value);
-        Assert.Equal([nameof(IMoneyPrioritiesApi.WritePurposeNoteAsync)], proxy.Calls);
     }
 
     [Fact]

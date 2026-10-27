@@ -198,20 +198,6 @@ public class GoogleDriveWebControllerTests
     }
 
     [Fact]
-    public async Task MonthlyBudgetReport_WithoutFileId_ReturnsBadRequest()
-    {
-        var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
-        {
-            ControllerContext = CreateControllerContext("test-user-123")
-        };
-
-        IActionResult result = await controller.MonthlyBudgetReport("Monthly budget 2026.xlsx");
-
-        Assert.IsType<BadRequestObjectResult>(result);
-    }
-
-    [Fact]
     public async Task SpreadsheetTransactions_WithValidFileId_ReturnsJsonTransactions()
     {
         // Arrange

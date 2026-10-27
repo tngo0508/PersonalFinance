@@ -224,6 +224,7 @@ public class MoneyPrioritiesLocalizationTests
             Assert.IsType<PriorityWalkPurposeNoteDto>(Assert.IsType<JsonResult>(result).Value);
         Assert.Equal("It keeps your trip safe.", note.Note);
         Assert.Null(note.Message);
+        Assert.Equal([nameof(IMoneyPrioritiesApi.WritePurposeNoteAsync)], proxy.Calls); // written once, not retried
     }
 
     [Fact]
@@ -306,12 +307,13 @@ public class MoneyPrioritiesLocalizationTests
     public async Task Submit_WithNoBody_AnswersInTheRequestLanguage()
     {
         using var culture = new UiCultureScope("vi");
-        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         MoneyPrioritiesController controller = CreateController(api);
 
         IActionResult result = await controller.Submit(null);
 
         Assert.Equal(["Hãy trả lời các câu hỏi rồi thử lại."], ErrorsOf(result).Errors);
+        Assert.Empty(proxy.Calls);
     }
 
     [Fact]

@@ -72,16 +72,6 @@ public class ResearchFundsServiceTests
     }
 
     [Fact]
-    public async Task GetFundsAsync_OnAnEmptyTable_ReturnsNeverLoaded()
-    {
-        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
-
-        ResearchSnapshotResult<FundsSnapshotDto> result = await CreateService(db, new StubNportHandler(), Spy).GetFundsAsync();
-
-        Assert.Null(result.Snapshot);
-    }
-
-    [Fact]
     public async Task RefreshAsync_KeepsTheTop25HoldingsOfACategory_AndSumsTheRestIntoOther()
     {
         await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
@@ -377,17 +367,6 @@ public class ResearchFundsServiceTests
     }
 
     [Fact]
-    public async Task GetFundOverlapAsync_OnAnEmptyTable_ReturnsNeverLoaded()
-    {
-        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
-
-        ResearchSnapshotResult<FundOverlapSnapshotDto> result =
-            await CreateService(db, OverlapHandler(), Spy, Vti).GetFundOverlapAsync();
-
-        Assert.Null(result.Snapshot);
-    }
-
-    [Fact]
     public async Task RefreshAsync_BuildsTheOverlapByWeight_TheSumOfTheSmallerWeightOfEachSharedSecurity()
     {
         await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
@@ -614,17 +593,6 @@ public class ResearchFundsServiceTests
     }
 
     private static Return[] Class(string? classId, decimal? r1, decimal? r2, decimal? r3) => [new Return(classId, r1, r2, r3)];
-
-    [Fact]
-    public async Task GetFundReturnsAsync_OnAnEmptyTable_ReturnsNeverLoaded()
-    {
-        await using AppDbContext db = CreateContext($"Funds_{Guid.NewGuid():N}");
-
-        ResearchSnapshotResult<FundReturnsSnapshotDto> result =
-            await CreateReturnsService(db, OverlapHandler(), null, Spy).GetFundReturnsAsync();
-
-        Assert.Null(result.Snapshot);
-    }
 
     [Fact]
     public async Task RefreshAsync_AssignsAFilingsThreeReturnsToItsReportMonthAndTheTwoBefore_TakingTheTickersClass()

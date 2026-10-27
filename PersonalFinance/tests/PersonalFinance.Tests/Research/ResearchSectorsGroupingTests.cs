@@ -72,6 +72,8 @@ public class ResearchSectorsGroupingTests
         SectorsPeriodDto year = Assert.Single(snapshot.Values);
 
         Assert.Equal(500, year.Ranked.Count);
+        Assert.Equal(1_000_500m, year.Ranked[0].PublicFloat); // largest first
+        Assert.Equal(1_000_001m, year.Ranked[^1].PublicFloat);
         Assert.Equal(
             [("Finance", "State Commercial Banks", 500m, 2), ("Technology", "Services-Prepackaged Software", 100m, 2)],
             year.Other.Select(o => (snapshot.Offices[snapshot.Industries[o.Industry].Office],

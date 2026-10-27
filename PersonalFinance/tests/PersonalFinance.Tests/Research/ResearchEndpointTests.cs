@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Reflection;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using PersonalFinance.ApiService.Features.Research;
@@ -73,11 +70,8 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
             throw new InvalidOperationException("The endpoint never refreshes.");
     }
 
-    [Fact]
-    public void Controller_RequiresAuthentication()
-    {
-        Assert.NotNull(typeof(ResearchController).GetCustomAttribute<AuthorizeAttribute>());
-    }
+    // Never loaded is proved once, over HTTP, through the real controller, service and store: see the theory below.
+    // These facts prove each action returns its own dataset; Assert.Same fails if an action reads another one.
 
     [Fact]
     public async Task GetSectors_WhenLoaded_ReturnsTheSnapshot()
@@ -87,16 +81,6 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         IActionResult result = await new ResearchController(new FakeResearchService(snapshot)).GetSectors();
 
         Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
-    }
-
-    [Fact]
-    public async Task GetSectors_WhenNeverLoaded_Returns503WithAReason()
-    {
-        IActionResult result = await new ResearchController(new FakeResearchService(null)).GetSectors();
-
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.False(string.IsNullOrWhiteSpace(Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason));
     }
 
     [Fact]
@@ -110,16 +94,6 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     }
 
     [Fact]
-    public async Task GetFunds_WhenNeverLoaded_Returns503WithAReason()
-    {
-        IActionResult result = await new ResearchController(new FakeResearchService(new SectorsSnapshotDto())).GetFunds();
-
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.FundsNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
-    }
-
-    [Fact]
     public async Task GetFundOverlap_WhenLoaded_ReturnsTheSnapshot()
     {
         var snapshot = new FundOverlapSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
@@ -127,18 +101,6 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         IActionResult result = await new ResearchController(new FakeResearchService(null, overlap: snapshot)).GetFundOverlap();
 
         Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
-    }
-
-    [Fact]
-    public async Task GetFundOverlap_WhenNeverLoaded_Returns503WithAReason()
-    {
-        IActionResult result = await new ResearchController(new FakeResearchService(null, funds: new FundsSnapshotDto()))
-            .GetFundOverlap();
-
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.FundOverlapNeverLoaded,
-            Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
     }
 
     [Fact]
@@ -152,18 +114,6 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     }
 
     [Fact]
-    public async Task GetFundReturns_WhenNeverLoaded_Returns503WithAReason()
-    {
-        IActionResult result = await new ResearchController(new FakeResearchService(null, funds: new FundsSnapshotDto()))
-            .GetFundReturns();
-
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.FundReturnsNeverLoaded,
-            Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
-    }
-
-    [Fact]
     public async Task GetMacro_WhenLoaded_ReturnsTheSnapshot()
     {
         var snapshot = new MacroSnapshotDto { AsOf = new DateOnly(2026, 9, 30) };
@@ -174,98 +124,33 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     }
 
     [Fact]
-    public async Task GetMacro_WhenNeverLoaded_Returns503WithAReason()
-    {
-        IActionResult result = await new ResearchController(new FakeResearchService(null)).GetMacro();
-
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.MacroNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
-    }
-
-    [Fact]
-    public async Task GetFundFacts_WhenLoaded_ReturnsTheSnapshot_AndWhenNeverLoaded_Returns503WithAReason()
+    public async Task GetFundFacts_WhenLoaded_ReturnsTheSnapshot()
     {
         var snapshot = new FundFactsSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
 
-        IActionResult loaded = await new ResearchController(new FakeResearchService(null, facts: snapshot)).GetFundFacts();
-        IActionResult never = await new ResearchController(new FakeResearchService(null)).GetFundFacts();
+        IActionResult result = await new ResearchController(new FakeResearchService(null, facts: snapshot)).GetFundFacts();
 
-        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(loaded).Value);
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(never);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.FundFactsNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
+        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
     }
 
     [Fact]
-    public async Task GetFundExposure_WhenLoaded_ReturnsTheSnapshot_AndWhenNeverLoaded_Returns503WithAReason()
+    public async Task GetFundExposure_WhenLoaded_ReturnsTheSnapshot()
     {
         var snapshot = new FundExposureSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
 
-        IActionResult loaded = await new ResearchController(new FakeResearchService(null, exposure: snapshot)).GetFundExposure();
-        IActionResult never = await new ResearchController(new FakeResearchService(null)).GetFundExposure();
+        IActionResult result = await new ResearchController(new FakeResearchService(null, exposure: snapshot)).GetFundExposure();
 
-        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(loaded).Value);
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(never);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.FundExposureNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
+        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
     }
 
     [Fact]
-    public async Task GetFundIndustries_WhenLoaded_ReturnsTheSnapshot_AndWhenNeverLoaded_Returns503WithAReason()
+    public async Task GetFundIndustries_WhenLoaded_ReturnsTheSnapshot()
     {
         var snapshot = new FundIndustriesSnapshotDto { AsOf = new DateOnly(2026, 6, 30) };
 
-        IActionResult loaded = await new ResearchController(new FakeResearchService(null, industries: snapshot)).GetFundIndustries();
-        IActionResult never = await new ResearchController(new FakeResearchService(null)).GetFundIndustries();
+        IActionResult result = await new ResearchController(new FakeResearchService(null, industries: snapshot)).GetFundIndustries();
 
-        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(loaded).Value);
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(never);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.FundIndustriesNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
-    }
-
-    [Theory]
-    [InlineData(SectorsUrl)]
-    [InlineData(FundsUrl)]
-    [InlineData(FundOverlapUrl)]
-    [InlineData(FundReturnsUrl)]
-    [InlineData(MacroUrl)]
-    [InlineData(FundFactsUrl)]
-    [InlineData(FundExposureUrl)]
-    [InlineData(FundIndustriesUrl)]
-    public async Task Get_OverHttp_WithoutTheSharedSecret_IsRejected(string url)
-    {
-        HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("X-User-Id", "account-1");
-
-        HttpResponseMessage response = await client.SendAsync(request);
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Theory]
-    [InlineData(SectorsUrl)]
-    [InlineData(FundsUrl)]
-    [InlineData(FundOverlapUrl)]
-    [InlineData(FundReturnsUrl)]
-    [InlineData(MacroUrl)]
-    [InlineData(FundFactsUrl)]
-    [InlineData(FundExposureUrl)]
-    [InlineData(FundIndustriesUrl)]
-    public async Task Get_OverHttp_SignedIn_OnAnEmptyDatabase_Returns503WithAReason(string url)
-    {
-        HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("X-User-Id", "account-1");
-        request.Headers.Add("X-Internal-Key", InternalKey);
-
-        HttpResponseMessage response = await client.SendAsync(request);
-
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        ResearchUnavailableDto? body = await response.Content.ReadFromJsonAsync<ResearchUnavailableDto>();
-        Assert.False(string.IsNullOrWhiteSpace(body?.Reason));
+        Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
     }
 
     [Fact]
@@ -278,21 +163,22 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         Assert.Same(snapshot, Assert.IsType<OkObjectResult>(result).Value);
     }
 
-    [Fact]
-    public async Task GetWorld_WhenNeverLoaded_Returns503WithAReason()
-    {
-        IActionResult result = await new ResearchController(new FakeResearchService(null)).GetWorld();
-
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-        Assert.Equal(ResearchController.WorldNeverLoaded, Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
-    }
-
-    [Fact]
-    public async Task GetWorld_OverHttp_WithoutTheSharedSecret_IsRejected()
+    // A 401 here also proves the controller requires sign-in: ApiService has no fallback policy, so an
+    // [AllowAnonymous] action would answer without the shared secret.
+    [Theory]
+    [InlineData(SectorsUrl)]
+    [InlineData(FundsUrl)]
+    [InlineData(FundOverlapUrl)]
+    [InlineData(FundReturnsUrl)]
+    [InlineData(MacroUrl)]
+    [InlineData(FundFactsUrl)]
+    [InlineData(FundExposureUrl)]
+    [InlineData(FundIndustriesUrl)]
+    [InlineData(WorldUrl)]
+    public async Task Get_OverHttp_WithoutTheSharedSecret_IsRejected(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var request = new HttpRequestMessage(HttpMethod.Get, WorldUrl);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("X-User-Id", "account-1");
 
         HttpResponseMessage response = await client.SendAsync(request);
@@ -300,11 +186,20 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    [Fact]
-    public async Task GetWorld_OverHttp_SignedIn_OnAnEmptyDatabase_Returns503WithAReason()
+    [Theory]
+    [InlineData(SectorsUrl, ResearchController.SectorsNeverLoaded)]
+    [InlineData(FundsUrl, ResearchController.FundsNeverLoaded)]
+    [InlineData(FundOverlapUrl, ResearchController.FundOverlapNeverLoaded)]
+    [InlineData(FundReturnsUrl, ResearchController.FundReturnsNeverLoaded)]
+    [InlineData(MacroUrl, ResearchController.MacroNeverLoaded)]
+    [InlineData(FundFactsUrl, ResearchController.FundFactsNeverLoaded)]
+    [InlineData(FundExposureUrl, ResearchController.FundExposureNeverLoaded)]
+    [InlineData(FundIndustriesUrl, ResearchController.FundIndustriesNeverLoaded)]
+    [InlineData(WorldUrl, ResearchController.WorldNeverLoaded)]
+    public async Task Get_OverHttp_SignedIn_OnAnEmptyDatabase_Returns503WithItsReason(string url, string reason)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var request = new HttpRequestMessage(HttpMethod.Get, WorldUrl);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("X-User-Id", "account-1");
         request.Headers.Add("X-Internal-Key", InternalKey);
 
@@ -312,6 +207,6 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         ResearchUnavailableDto? body = await response.Content.ReadFromJsonAsync<ResearchUnavailableDto>();
-        Assert.Equal(ResearchController.WorldNeverLoaded, body?.Reason);
+        Assert.Equal(reason, body?.Reason);
     }
 }

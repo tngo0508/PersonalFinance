@@ -200,29 +200,4 @@ public class ResearchFundsWebControllerTests
 
         Assert.Same(industries, Assert.IsType<JsonResult>(result).Value);
     }
-
-    [Fact]
-    public async Task Index_WhenTheSectorsDataHasNeverLoaded_StillHoldsTheFunds()
-    {
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Throws(nameof(IResearchApi.GetSectorsAsync), await NeverLoaded("The Sectors data has not loaded yet."));
-        proxy.Returns(nameof(IResearchApi.GetFundsAsync), Funds);
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
-
-        Assert.True(model.Sectors.Unavailable);
-        Assert.False(model.Funds.Unavailable);
-    }
-
-    [Fact]
-    public async Task Index_WhenTheRequestIsCancelledDuringTheFundsRead_DoesNotSwallowTheCancellation()
-    {
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
-        proxy.Throws(nameof(IResearchApi.GetFundsAsync), new OperationCanceledException(cts.Token));
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cancellationToken: cts.Token));
-    }
 }

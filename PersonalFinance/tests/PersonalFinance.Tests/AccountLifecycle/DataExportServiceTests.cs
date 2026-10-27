@@ -74,23 +74,11 @@ public class DataExportServiceTests
 
         // Exactly one record per section, so a section without a text field cannot leak the other Account's row.
         AssertOneOfEverything(export);
+        Assert.Equal((await db.CommunityStories.SingleAsync(s => s.UserId == UserId)).Id,
+            Assert.Single(export.Community.Comments).StoryId);
         string json = JsonSerializer.Serialize(export);
         Assert.Contains("mine", json);
         Assert.DoesNotContain("theirs", json);
-    }
-
-    [Fact]
-    public async Task Export_CoversEverySection()
-    {
-        await using AppDbContext db = CreateContext();
-        UserDataSeed.OneOfEverything(db, UserId, "mine");
-        await db.SaveChangesAsync();
-
-        DataExportDto export = await CreateService(db).ExportAsync(UserId);
-
-        AssertOneOfEverything(export);
-        DataExportCommentDto comment = Assert.Single(export.Community.Comments);
-        Assert.Equal((await db.CommunityStories.SingleAsync()).Id, comment.StoryId);
     }
 
     [Fact]

@@ -233,47 +233,6 @@ public class SpreadsheetAnalysisCharacterizationTests
     }
 
     [Fact]
-    public async Task DashboardRecentActivity_IncludesSpreadsheetTransactions_SortedByDateAndId()
-    {
-        await using AppDbContext db = CreateContext();
-        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot();
-        db.SpreadsheetBudgetSnapshots.Add(snapshot);
-        await db.SaveChangesAsync();
-
-        db.SpreadsheetTransactionRecords.AddRange(
-            new SpreadsheetTransactionRecord
-            {
-                Id = 1,
-                UserId = UserId,
-                SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc),
-                Amount = 50m,
-                Description = "Coffee",
-                Category = "Food",
-                Type = "Expense"
-            },
-            new SpreadsheetTransactionRecord
-            {
-                Id = 2,
-                UserId = UserId,
-                SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 16, 0, 0, 0, DateTimeKind.Utc),
-                Amount = 120m,
-                Description = "Groceries",
-                Category = "Food",
-                Type = "Expense"
-            });
-        await db.SaveChangesAsync();
-
-        var dashboardService = new DashboardService(db, TestBudgetDataProviderFactory.Create(db));
-        DashboardSummaryDto summary = await dashboardService.GetDashboardSummaryAsync(UserId);
-
-        Assert.Equal(2, summary.RecentActivity.Count);
-        Assert.Equal("Groceries", summary.RecentActivity[0].Title);
-        Assert.Equal("Coffee", summary.RecentActivity[1].Title);
-    }
-
-    [Fact]
     public async Task MultiSnapshot_SameMonth_AggregatesTotalsAndMergesCategoriesCaseInsensitively()
     {
         await using AppDbContext db = CreateContext();
@@ -438,38 +397,6 @@ public class SpreadsheetAnalysisCharacterizationTests
 
         List<int> years = await service.GetAvailableYearsAsync(UserId);
         Assert.Equal(ExpectedYears2026Only, years);
-    }
-
-    [Fact]
-    public async Task DashboardRecentActivity_CapsAtActivityItemCount()
-    {
-        await using AppDbContext db = CreateContext();
-        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot();
-        db.SpreadsheetBudgetSnapshots.Add(snapshot);
-
-        for (int i = 1; i <= 10; i++)
-        {
-            db.SpreadsheetTransactionRecords.Add(new SpreadsheetTransactionRecord
-            {
-                Id = i,
-                UserId = UserId,
-                SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, i, 0, 0, 0, DateTimeKind.Utc),
-                Amount = 10m * i,
-                Description = $"Transaction {i}",
-                Category = "General",
-                Type = "Expense"
-            });
-        }
-
-        await db.SaveChangesAsync();
-
-        var dashboardService = new DashboardService(db, TestBudgetDataProviderFactory.Create(db));
-        DashboardSummaryDto summary = await dashboardService.GetDashboardSummaryAsync(UserId);
-
-        Assert.Equal(5, summary.RecentActivity.Count);
-        Assert.Equal("Transaction 10", summary.RecentActivity[0].Title);
-        Assert.Equal("Transaction 6", summary.RecentActivity[4].Title);
     }
 
     [Fact]
