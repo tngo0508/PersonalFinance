@@ -111,16 +111,4 @@ public class LanguageControllerTests
         controller.Url = new UrlHelper(new ActionContext(context, new RouteData(), new ActionDescriptor()));
         return (controller, context, preferences);
     }
-
-    private sealed class FixedTimeProvider : TimeProvider
-    {
-        private readonly DateTimeOffset _now;
-
-        public FixedTimeProvider(DateTimeOffset now)
-        {
-            _now = now;
-        }
-
-        public override DateTimeOffset GetUtcNow() => _now;
-    }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Watchlist;
 using PersonalFinance.ApiService.Features.Watchlist.Adapters;
 using PersonalFinance.Shared.DTOs.Watchlist;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Watchlist;
 
@@ -247,10 +248,5 @@ public class NewsServiceTests
                 : new HttpResponseMessage(HttpStatusCode.NotFound);
             return Task.FromResult(response);
         }
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

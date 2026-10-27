@@ -1,19 +1,9 @@
 using System.Reflection;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
-using PersonalFinance.Data;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
 
@@ -28,6 +18,7 @@ namespace PersonalFinance.Tests.Security;
 public class IdentityPagesScaffoldingTests
 {
     private const string AccountNamespace = "PersonalFinance.Web.Areas.Identity.Pages.Account";
+    private const string Email = "someone@example.com";
 
     /// <summary>The Account and Manage pages of Identity UI 10 (Pages/V5), all of which the project now owns.</summary>
     public static readonly TheoryData<string> LibraryPages =
@@ -83,11 +74,11 @@ public class IdentityPagesScaffoldingTests
     [Fact]
     public async Task RegisterConfirmation_WithARealEmailSender_NeverShowsTheConfirmLink()
     {
-        await using Harness harness = await Harness.CreateAsync();
+        await using IdentityHarness harness = await IdentityWithAccountAsync();
         var page = new RegisterConfirmationModel(harness.UserManager, new RecordingEmailSender());
         harness.Attach(page);
 
-        IActionResult result = await page.OnGetAsync(Harness.Email);
+        IActionResult result = await page.OnGetAsync(Email);
 
         Assert.IsType<PageResult>(result);
         Assert.False(page.DisplayConfirmAccountLink);
@@ -97,11 +88,11 @@ public class IdentityPagesScaffoldingTests
     [Fact]
     public async Task RegisterConfirmation_WithoutAnEmailSender_ShowsTheConfirmLink()
     {
-        await using Harness harness = await Harness.CreateAsync();
+        await using IdentityHarness harness = await IdentityWithAccountAsync();
         var page = new RegisterConfirmationModel(harness.UserManager, new NoOpEmailSender());
         harness.Attach(page);
 
-        await page.OnGetAsync(Harness.Email);
+        await page.OnGetAsync(Email);
 
         Assert.True(page.DisplayConfirmAccountLink);
         Assert.Contains("/Account/ConfirmEmail", page.EmailConfirmationUrl);
@@ -110,11 +101,11 @@ public class IdentityPagesScaffoldingTests
     [Fact]
     public async Task ForgotPassword_ForAConfirmedAccount_SendsTheResetLinkThroughIdentitysSender()
     {
-        await using Harness harness = await Harness.CreateAsync(emailConfirmed: true);
+        await using IdentityHarness harness = await IdentityWithAccountAsync(emailConfirmed: true);
         var sender = new RecordingIdentityEmailSender();
         var page = new ForgotPasswordModel(harness.UserManager, sender)
         {
-            Input = new ForgotPasswordModel.InputModel { Email = Harness.Email }
+            Input = new ForgotPasswordModel.InputModel { Email = Email }
         };
         harness.Attach(page);
 
@@ -122,17 +113,17 @@ public class IdentityPagesScaffoldingTests
 
         Assert.Equal("./ForgotPasswordConfirmation", Assert.IsType<RedirectToPageResult>(result).PageName);
         (string to, string link) = Assert.Single(sender.ResetLinks);
-        Assert.Equal(Harness.Email, to);
+        Assert.Equal(Email, to);
         Assert.Contains("/Account/ResetPassword", link);
     }
 
     [Theory]
     [InlineData("nobody@example.com", true)]
-    [InlineData(Harness.Email, false)]
+    [InlineData(Email, false)]
     public async Task ForgotPassword_ForAnUnknownOrUnconfirmedAccount_SendsNothing_AndLooksTheSame(string email,
         bool emailConfirmed)
     {
-        await using Harness harness = await Harness.CreateAsync(emailConfirmed);
+        await using IdentityHarness harness = await IdentityWithAccountAsync(emailConfirmed);
         var sender = new RecordingIdentityEmailSender();
         var page = new ForgotPasswordModel(harness.UserManager, sender)
         {
@@ -153,53 +144,14 @@ public class IdentityPagesScaffoldingTests
         return typeof(LoginModel).Assembly.GetType(typeName + "Model") ?? typeof(LoginModel).Assembly.GetType(typeName);
     }
 
-    private sealed class Harness : IAsyncDisposable
+    /// <summary>Identity on InMemory holding one Account for <see cref="Email"/>.</summary>
+    private static async Task<IdentityHarness> IdentityWithAccountAsync(bool emailConfirmed = false)
     {
-        public const string Email = "someone@example.com";
-
-        private readonly ServiceProvider _provider;
-        private readonly AsyncServiceScope _scope;
-
-        private Harness(ServiceProvider provider, AsyncServiceScope scope, UserManager<IdentityUser> userManager)
-        {
-            _provider = provider;
-            _scope = scope;
-            UserManager = userManager;
-        }
-
-        public UserManager<IdentityUser> UserManager { get; }
-
-        public static async Task<Harness> CreateAsync(bool emailConfirmed = false)
-        {
-            var services = new ServiceCollection();
-            services.AddLogging();
-            services.AddSingleton<IWebHostEnvironment, TestWebHostEnvironment>();
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase($"IdentityScaffolding_{Guid.NewGuid():N}"));
-            services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<AppDbContext>();
-            ServiceProvider provider = services.BuildServiceProvider();
-            AsyncServiceScope scope = provider.CreateAsyncScope();
-
-            UserManager<IdentityUser> userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-            IdentityResult created = await userManager.CreateAsync(
-                new IdentityUser { UserName = Email, Email = Email, EmailConfirmed = emailConfirmed }, "Passw0rd!x");
-            Assert.True(created.Succeeded);
-            return new Harness(provider, scope, userManager);
-        }
-
-        public void Attach(Microsoft.AspNetCore.Mvc.RazorPages.PageModel page)
-        {
-            var httpContext = new DefaultHttpContext { RequestServices = _scope.ServiceProvider };
-            httpContext.Request.Scheme = "https";
-            page.PageContext = new PageContext { HttpContext = httpContext };
-            page.Url = new FakeUrlHelper(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()));
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _scope.DisposeAsync();
-            await _provider.DisposeAsync();
-        }
+        var identity = IdentityHarness.Create("IdentityScaffolding");
+        IdentityResult created = await identity.UserManager.CreateAsync(
+            new IdentityUser { UserName = Email, Email = Email, EmailConfirmed = emailConfirmed }, "Passw0rd!x");
+        Assert.True(created.Succeeded);
+        return identity;
     }
 
     private sealed class RecordingEmailSender : IEmailSender
@@ -221,40 +173,5 @@ public class IdentityPagesScaffoldingTests
         }
 
         public Task SendPasswordResetCodeAsync(IdentityUser user, string email, string resetCode) => Task.CompletedTask;
-    }
-
-    /// <summary>Builds page links as <c>https://app.test/{area}{page}</c>.</summary>
-    private sealed class FakeUrlHelper(ActionContext actionContext) : IUrlHelper
-    {
-        public ActionContext ActionContext { get; } = actionContext;
-
-        public string? Action(UrlActionContext actionContext) => throw new NotSupportedException();
-
-        public string? Content(string? contentPath) => contentPath;
-
-        public bool IsLocalUrl(string? url) => true;
-
-        public string? Link(string? routeName, object? values) => throw new NotSupportedException();
-
-        public string? RouteUrl(UrlRouteContext routeContext)
-        {
-            var values = new RouteValueDictionary(routeContext.Values);
-            return $"{routeContext.Protocol}://app.test/{values["area"]}{values["page"]}";
-        }
-    }
-
-    private sealed class TestWebHostEnvironment : IWebHostEnvironment
-    {
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string WebRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string ApplicationName { get; set; } = "PersonalFinance.Web";
-
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string EnvironmentName { get; set; } = "Development";
     }
 }

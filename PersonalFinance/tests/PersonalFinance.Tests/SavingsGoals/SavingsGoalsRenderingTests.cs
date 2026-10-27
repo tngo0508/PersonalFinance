@@ -438,11 +438,6 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
         }
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
     /// <summary>Returns the goals a test sets up; the page only reads them.</summary>
     private sealed class GoalsApi : ISavingsGoalsApi
     {

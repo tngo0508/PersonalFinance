@@ -1,3 +1,5 @@
+using PersonalFinance.Tests.TestSupport;
+
 namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
@@ -6,18 +8,9 @@ namespace PersonalFinance.Tests.AccountLifecycle;
 /// </summary>
 public class LegalPagesDeletionTextTests
 {
-    private static string ReadLegalView(string name)
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "PersonalFinance.sln")))
-        {
-            dir = dir.Parent;
-        }
-
-        Assert.NotNull(dir);
-        return File.ReadAllText(Path.Combine(dir.FullName, "PersonalFinance", "src", "PersonalFinance.Web", "Views",
-            "Legal", $"{name}.cshtml"));
-    }
+    private static string ReadLegalView(string name) =>
+        File.ReadAllText(Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.Web"), "Views", "Legal",
+            $"{name}.cshtml"));
 
     [Theory]
     [InlineData("Privacy")]

@@ -1,23 +1,15 @@
 using System.Net;
 using System.Reflection;
-using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
@@ -240,14 +232,12 @@ public class DeletionPagesTests
     /// <summary>A signed-in Account on real Identity services (InMemory), with the Delete your account page.</summary>
     private sealed class Harness : IAsyncDisposable
     {
-        private readonly ServiceProvider _provider;
-        private readonly AsyncServiceScope _scope;
+        private readonly IdentityHarness _identity;
 
-        private Harness(ServiceProvider provider, AsyncServiceScope scope, DeletePersonalDataModel page,
-            FakeAccountDeletionApi api, FakeEmailSender email)
+        private Harness(IdentityHarness identity, DeletePersonalDataModel page, FakeAccountDeletionApi api,
+            FakeEmailSender email)
         {
-            _provider = provider;
-            _scope = scope;
+            _identity = identity;
             Page = page;
             Api = api;
             Email = email;
@@ -261,31 +251,17 @@ public class DeletionPagesTests
 
         public static async Task<Harness> CreateAsync(bool withPassword, Exception? failure = null)
         {
-            var services = new ServiceCollection();
-            services.AddLogging();
-            services.AddSingleton<IWebHostEnvironment, TestWebHostEnvironment>();
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase($"DeletionPages_{Guid.NewGuid():N}"));
-            services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<AppDbContext>();
-            ServiceProvider provider = services.BuildServiceProvider();
-            AsyncServiceScope scope = provider.CreateAsyncScope();
-
-            UserManager<IdentityUser> userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            var identity = IdentityHarness.Create("DeletionPages");
+            UserManager<IdentityUser> userManager = identity.UserManager;
             var user = new IdentityUser { UserName = "leaving@example.com", Email = "leaving@example.com" };
             IdentityResult created = withPassword
                 ? await userManager.CreateAsync(user, Password)
                 : await userManager.CreateAsync(user);
             Assert.True(created.Succeeded);
 
-            var httpContext = new DefaultHttpContext
-            {
-                RequestServices = scope.ServiceProvider,
-                User = new ClaimsPrincipal(new ClaimsIdentity(
-                    [new Claim(ClaimTypes.NameIdentifier, user.Id)], IdentityConstants.ApplicationScheme))
-            };
-            httpContext.Request.Scheme = "https";
+            DefaultHttpContext httpContext = identity.NewHttpContext(user);
             // An AsyncLocal accessor value would not flow out of this async method, so set the context directly.
-            SignInManager<IdentityUser> signInManager = scope.ServiceProvider.GetRequiredService<SignInManager<IdentityUser>>();
+            SignInManager<IdentityUser> signInManager = identity.Services.GetRequiredService<SignInManager<IdentityUser>>();
             signInManager.Context = httpContext;
 
             var api = new FakeAccountDeletionApi { RequestFailure = failure };
@@ -295,19 +271,12 @@ public class DeletionPagesTests
                 TestLocalization.Localizer, Options.Create(new BrevoOptions()));
             var page = new DeletePersonalDataModel(userManager,
                 signInManager, api, accountEmails,
-                NullLogger<DeletePersonalDataModel>.Instance, TestLocalization.Localizer)
-            {
-                PageContext = new PageContext { HttpContext = httpContext },
-                Url = new FakeUrlHelper(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()))
-            };
-            return new Harness(provider, scope, page, api, email);
+                NullLogger<DeletePersonalDataModel>.Instance, TestLocalization.Localizer);
+            IdentityHarness.Attach(page, httpContext);
+            return new Harness(identity, page, api, email);
         }
 
-        public async ValueTask DisposeAsync()
-        {
-            await _scope.DisposeAsync();
-            await _provider.DisposeAsync();
-        }
+        public ValueTask DisposeAsync() => _identity.DisposeAsync();
     }
 
     private sealed class FakeAccountDeletionApi : IAccountDeletionApi
@@ -348,40 +317,5 @@ public class DeletionPagesTests
             Sent.Add((email, subject, htmlMessage));
             return Task.CompletedTask;
         }
-    }
-
-    /// <summary>Builds page links as <c>https://app.test/Identity{page}?token=...</c>.</summary>
-    private sealed class FakeUrlHelper(ActionContext actionContext) : IUrlHelper
-    {
-        public ActionContext ActionContext { get; } = actionContext;
-
-        public string? Action(UrlActionContext actionContext) => throw new NotSupportedException();
-
-        public string? Content(string? contentPath) => contentPath;
-
-        public bool IsLocalUrl(string? url) => true;
-
-        public string? Link(string? routeName, object? values) => throw new NotSupportedException();
-
-        public string? RouteUrl(UrlRouteContext routeContext)
-        {
-            var values = new RouteValueDictionary(routeContext.Values);
-            return $"{routeContext.Protocol}://app.test/{values["area"]}{values["page"]}?token={values["token"]}";
-        }
-    }
-
-    private sealed class TestWebHostEnvironment : IWebHostEnvironment
-    {
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string WebRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string ApplicationName { get; set; } = "PersonalFinance.Web";
-
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string EnvironmentName { get; set; } = "Development";
     }
 }

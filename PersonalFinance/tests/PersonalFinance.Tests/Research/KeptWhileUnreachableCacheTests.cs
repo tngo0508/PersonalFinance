@@ -1,5 +1,6 @@
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.Shared.DTOs.Research;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Research;
 
@@ -11,17 +12,10 @@ public class KeptWhileUnreachableCacheTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 24, 12, 0, 0, TimeSpan.Zero);
 
-    private sealed class MovableTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public DateTimeOffset Now { get; set; } = now;
-
-        public override DateTimeOffset GetUtcNow() => Now;
-    }
-
     [Fact]
     public void AValue_IsFreshForADay_ThenKeptForAWeek_ThenGone()
     {
-        var time = new MovableTimeProvider(Now);
+        var time = new FixedTimeProvider(Now);
         using var cache = new KeptWhileUnreachableCache<CompanyProfileDto>(time);
         var profile = new CompanyProfileDto { Ticker = "SWI" };
         cache.Set("SWI", profile);
@@ -39,7 +33,7 @@ public class KeptWhileUnreachableCacheTests
     [Fact]
     public void ATickerNeverKept_IsNull()
     {
-        using var cache = new KeptWhileUnreachableCache<List<CompanyPressReleaseDto>>(new MovableTimeProvider(Now));
+        using var cache = new KeptWhileUnreachableCache<List<CompanyPressReleaseDto>>(new FixedTimeProvider(Now));
 
         Assert.Null(cache.Get("SWI"));
     }
