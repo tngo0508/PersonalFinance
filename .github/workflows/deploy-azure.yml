@@ -524,8 +524,10 @@ jobs:
             type=sha,format=short,prefix=
 
       # Each image has its own cache scope so the two builds don't overwrite each other.
-      # PRs only read the cache: exporting it (mode=max includes the SDK layers) costs
-      # ~50s per image and a PR's cache can't be reused by other branches anyway.
+      # PRs only read the cache: exporting it costs ~50s per image and a PR's cache can't be
+      # reused by other branches anyway. mode=min caches only the final image's layers: mode=max
+      # also stored every SDK and build-stage layer, which filled most of the repo's 10 GB
+      # Actions cache. cache-cleanup.yml prunes the blobs that later builds stop using.
       - name: Build and push ${{ matrix.service }} container
         uses: docker/build-push-action@v6
         with:
@@ -537,7 +539,7 @@ jobs:
           build-args: |
             APP_VERSION=${{ steps.tags.outputs.app_version }}
           cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: ${{ env.PUSH_IMAGE == 'true' && format('type=gha,scope={0},mode=max,ignore-error=true', matrix.service) || '' }}
+          cache-to: ${{ env.PUSH_IMAGE == 'true' && format('type=gha,scope={0},mode=min,ignore-error=true', matrix.service) || '' }}
 
   # ============================================================================
   # 3. DEPLOY INFRASTRUCTURE & CONTAINER APPS (Bicep + Azure OIDC)
