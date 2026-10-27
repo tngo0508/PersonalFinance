@@ -56,7 +56,7 @@ public class GoogleDriveController : Controller
         {
             // 1. Load all saved connections for this user from database
             List<GoogleDriveConnectionDto> connections = await _googleDriveApi.GetUserConnectionsAsync(cancellationToken);
-            model.Connections = connections ?? new List<GoogleDriveConnectionDto>();
+            model.Connections = Localize(connections);
 
             // 2. Handle explicit "Add New Drive" request
             if (addNew || (model.Connections.Count == 0 && string.IsNullOrWhiteSpace(folderUrl)))
@@ -83,7 +83,8 @@ public class GoogleDriveController : Controller
                 model.SelectedConnectionId = selectedId;
 
                 // Load cached files from database (zero external API requests if fresh)
-                GoogleDriveFolderResponseDto cachedResponse = await _googleDriveApi.GetConnectionFilesAsync(selectedId, forceRefresh: false, cancellationToken);
+                GoogleDriveFolderResponseDto cachedResponse = GoogleDriveText.Localize(_localizer,
+                    await _googleDriveApi.GetConnectionFilesAsync(selectedId, forceRefresh: false, cancellationToken));
                 model.Response = cachedResponse;
                 model.HasQueried = true;
 
@@ -131,14 +132,15 @@ public class GoogleDriveController : Controller
 
         try
         {
-            GoogleDriveFolderResponseDto syncResponse = await _googleDriveApi.SyncConnectionAsync(
-                id,
-                new SyncGoogleDriveRequestDto
-                {
-                    ConnectionId = id,
-                    ForceRefresh = true
-                },
-                cancellationToken);
+            GoogleDriveFolderResponseDto syncResponse = GoogleDriveText.Localize(_localizer,
+                await _googleDriveApi.SyncConnectionAsync(
+                    id,
+                    new SyncGoogleDriveRequestDto
+                    {
+                        ConnectionId = id,
+                        ForceRefresh = true
+                    },
+                    cancellationToken));
 
             if (syncResponse.Success)
             {
@@ -176,14 +178,15 @@ public class GoogleDriveController : Controller
 
         try
         {
-            GoogleDriveConnectionDto updated = await _googleDriveApi.ReauthConnectionAsync(
-                id,
-                new ReauthGoogleDriveRequestDto
-                {
-                    ConnectionId = id,
-                    ApiKey = apiKey
-                },
-                cancellationToken);
+            GoogleDriveConnectionDto updated = GoogleDriveText.Localize(_localizer,
+                await _googleDriveApi.ReauthConnectionAsync(
+                    id,
+                    new ReauthGoogleDriveRequestDto
+                    {
+                        ConnectionId = id,
+                        ApiKey = apiKey
+                    },
+                    cancellationToken));
 
             if (updated.IsValid)
             {
@@ -250,7 +253,7 @@ public class GoogleDriveController : Controller
         }
 
         MonthlyBudgetReportDto report = await _googleDriveApi.GetSpreadsheetBudgetReportAsync(fileId, fileName, connectionId, cancellationToken);
-        return Json(report);
+        return Json(GoogleDriveText.Localize(_localizer, report));
     }
 
     /// <summary>
@@ -270,7 +273,7 @@ public class GoogleDriveController : Controller
         }
 
         SpreadsheetTransactionsDto result = await _googleDriveApi.GetSpreadsheetTransactionsAsync(fileId, fileName, connectionId, cancellationToken);
-        return Json(result);
+        return Json(GoogleDriveText.Localize(_localizer, result));
     }
 
     private async Task<IActionResult> ConnectAndExploreAsync(
@@ -311,7 +314,7 @@ public class GoogleDriveController : Controller
         // Re-load existing connections for display on error; the connect error is already shown.
         try
         {
-            model.Connections = await _googleDriveApi.GetUserConnectionsAsync(cancellationToken) ?? new List<GoogleDriveConnectionDto>();
+            model.Connections = Localize(await _googleDriveApi.GetUserConnectionsAsync(cancellationToken));
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
@@ -320,4 +323,8 @@ public class GoogleDriveController : Controller
 
         return View("Index", model);
     }
+
+    /// <summary>The connections with each error in the reader's language; empty when there are none.</summary>
+    private List<GoogleDriveConnectionDto> Localize(List<GoogleDriveConnectionDto>? connections) =>
+        (connections ?? []).Select(connection => GoogleDriveText.Localize(_localizer, connection)).ToList();
 }

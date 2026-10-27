@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Contracts;
+
 namespace PersonalFinance.Shared.DTOs.GoogleDrive;
 
 /// <summary>
@@ -24,6 +26,12 @@ public class GoogleDriveConnectionDto
     public string SyncStatus { get; set; } = "Pending";
 
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// <see cref="ErrorMessage"/> keyed, so the Web app can show it in the reader's language (#405). Null when
+    /// <see cref="ErrorMessage"/> is null or has no key.
+    /// </summary>
+    public ApiErrorEntryDto? Error { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [8.6.0] - 2026-10-26
+
+### Added
+
+- **Google Drive and Analysis messages in Vietnamese**: the error and warning text that Google Drive and Analysis send inside a successful result is keyed, so it shows in the reader's language (#405).
+  - Google Drive: the expired-credentials error, every sample-files warning (no API key, timeout, HTTP 400, 403, 404 and other statuses, unreadable answer, cannot connect, unreachable), the empty-folder warning, and why a budget report or transaction log could not be read. The HTTP status, and the sheet and column names the parser looks for (Summary, Transactions, Date, Amount), are arguments, so they stay as the spreadsheet must spell them.
+  - Analysis: why a spreadsheet sync failed (connection not found, could not be read, no budget data, months already saved, sync failed), or the sheet's own reason when it gave one.
+  - The English fields stay: each DTO gets an `Error` (and, for folder results, a `Warning`) entry beside them, with keys in the new `ResultMessageKeys`. Web resolves the entry before a page, a redirect message or the page's JavaScript sees the text.
+  - The stored credentials message needs no schema change: its key comes from the connection's `NeedsReauth` status.
+- **Key coverage test for result messages**: every `ResultMessageKeys` key has an English and a Vietnamese entry, follows the `<Feature>.Result.<Rule>` naming rule, and is declared once.
+
 ## [8.5.0] - 2026-10-26
 
 ### Added

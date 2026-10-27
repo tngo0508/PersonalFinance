@@ -122,6 +122,13 @@ public static class ApiErrorMessages
         return LocalizerExtensions.FormatNamed(template.Value, formatted);
     }
 
+    /// <summary>
+    /// The text of an error or warning a successful result carries (#405): <paramref name="entry"/> in the current UI
+    /// culture when the result keyed it, otherwise <paramref name="english"/> as sent.
+    /// </summary>
+    public static string? Resolve(IStringLocalizer localizer, ApiErrorEntryDto? entry, string? english) =>
+        entry is null ? english : Resolve(localizer, entry);
+
     /// <summary>The generic message for <paramref name="statusCode"/>, for bodies whose own text is not shown.</summary>
     private static string StatusMessage(IStringLocalizer localizer, HttpStatusCode statusCode) =>
         localizer[statusCode switch

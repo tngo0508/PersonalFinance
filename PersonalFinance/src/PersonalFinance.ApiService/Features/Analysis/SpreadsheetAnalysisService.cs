@@ -6,6 +6,8 @@ using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
+using ApiErrorEntryDto = PersonalFinance.Shared.Contracts.ApiErrorEntryDto;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
@@ -26,6 +28,21 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
 
     /// <summary>The English text of <c>Notifications.SyncFailed.Message</c>, kept for clients that read the plain text.</summary>
     private const string SyncFailedMessage = "We couldn't sync your spreadsheet. Please try again later.";
+
+    private static ApiErrorEntryDto ConnectionNotFound => ResultMessage.Entry(ResultMessageKeys.Analysis.ConnectionNotFound,
+        "Google Drive connection not found or access denied.");
+
+    private static ApiErrorEntryDto ReadFailed => ResultMessage.Entry(ResultMessageKeys.Analysis.ReadFailed,
+        "The spreadsheet could not be read. Please try again.");
+
+    private static ApiErrorEntryDto NoBudgetData => ResultMessage.Entry(ResultMessageKeys.Analysis.NoBudgetData,
+        "No budget data could be read from the spreadsheet.");
+
+    private static ApiErrorEntryDto MonthsExist => ResultMessage.Entry(ResultMessageKeys.Analysis.MonthsExist,
+        "Some months already exist in the database. Confirm overwrite to proceed.");
+
+    private static ApiErrorEntryDto SyncFailed => ResultMessage.Entry(ResultMessageKeys.Analysis.SyncFailed,
+        SyncFailedMessage);
 
     public SpreadsheetAnalysisService(AppDbContext dbContext, ISpreadsheetReader spreadsheetReader,
         INotificationService notificationService, IBudgetDataProvider budgetDataProvider,
@@ -314,11 +331,7 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 .FirstOrDefaultAsync(c => c.Id == connectionId && c.UserId == userId, cancellationToken);
 
             if (connection == null)
-                return new SyncSpreadsheetBudgetResult
-                {
-                    Success = false,
-                    ErrorMessage = "Google Drive connection not found or access denied."
-                };
+                return SyncSpreadsheetBudgetResult.Failed(ConnectionNotFound);
 
             MonthlyBudgetReportDto budgetReport;
             try
@@ -329,21 +342,21 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
                 _logger.LogWarning(ex, "Reading spreadsheet {FileId} for sync failed", fileId);
-                return new SyncSpreadsheetBudgetResult
-                {
-                    Success = false,
-                    ErrorMessage = "The spreadsheet could not be read. Please try again."
-                };
+                return SyncSpreadsheetBudgetResult.Failed(ReadFailed);
             }
 
             // Only months actually read from the sheet are ever saved as snapshots.
             if (budgetReport.Months.Count == 0)
             {
-                return new SyncSpreadsheetBudgetResult
-                {
-                    Success = false,
-                    ErrorMessage = budgetReport.ErrorMessage ?? "No budget data could be read from the spreadsheet."
-                };
+                // The report's own reason (keyed when the reader gave one) says more than "no budget data".
+                return budgetReport.ErrorMessage is null
+                    ? SyncSpreadsheetBudgetResult.Failed(NoBudgetData)
+                    : new SyncSpreadsheetBudgetResult
+                    {
+                        Success = false,
+                        ErrorMessage = budgetReport.ErrorMessage,
+                        Error = budgetReport.Error
+                    };
             }
 
             var conflicts = new List<MonthConflictInfo>();
@@ -379,7 +392,8 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                     Success = false,
                     HasConflict = true,
                     Conflicts = conflicts,
-                    ErrorMessage = "Some months already exist in the database. Confirm overwrite to proceed."
+                    ErrorMessage = MonthsExist.Message,
+                    Error = MonthsExist
                 };
 
             if (overwrite)
@@ -522,11 +536,7 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 SourceFeature = "GoogleDrive"
             }, cancellationToken);
 
-            return new SyncSpreadsheetBudgetResult
-            {
-                Success = false,
-                ErrorMessage = SyncFailedMessage
-            };
+            return SyncSpreadsheetBudgetResult.Failed(SyncFailed);
         }
     }
 

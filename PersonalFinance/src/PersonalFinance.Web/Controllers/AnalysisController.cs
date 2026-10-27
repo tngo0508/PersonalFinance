@@ -5,6 +5,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.Analysis;
 using PersonalFinance.Web.Services;
@@ -92,7 +93,7 @@ public class AnalysisController : Controller
             TempData["StatusMessage"] = _localizer.Named("Analysis.Message.Synced",
                 ("months", result.SnapshotsCreated), ("transactions", result.TransactionsCreated));
         else
-            TempData["ErrorMessage"] = result.ErrorMessage ?? _localizer["Analysis.Message.SyncFailed"].Value;
+            TempData["ErrorMessage"] = SyncError(result);
 
         return RedirectToAction(nameof(Index));
     }
@@ -127,7 +128,7 @@ public class AnalysisController : Controller
             TempData["StatusMessage"] = _localizer.Named("Analysis.Message.SyncedOverwritten",
                 ("months", result.SnapshotsCreated), ("transactions", result.TransactionsCreated));
         else
-            TempData["ErrorMessage"] = result.ErrorMessage ?? _localizer["Analysis.Message.SyncFailed"].Value;
+            TempData["ErrorMessage"] = SyncError(result);
 
         return RedirectToAction(nameof(Index));
     }
@@ -195,6 +196,11 @@ public class AnalysisController : Controller
             ("transactions", removed.TransactionCount));
         return RedirectToAction(nameof(Index));
     }
+
+    /// <summary>Why a sync failed, in the reader's language (#405).</summary>
+    private string SyncError(SyncSpreadsheetResponseDto result) =>
+        ApiErrorMessages.Resolve(_localizer, result.Error, result.ErrorMessage)
+        ?? _localizer["Analysis.Message.SyncFailed"].Value;
 
     /// <summary>Fills in the source's current counts; false when it holds no data.</summary>
     private async Task<bool> LoadCountsAsync(RemoveSourceViewModel model, CancellationToken cancellationToken)

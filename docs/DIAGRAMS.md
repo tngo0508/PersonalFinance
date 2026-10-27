@@ -1300,6 +1300,10 @@ Web resolves each entry through the localizer and formats the arguments in the r
 `message` is only a fallback for a key missing from `en.json`. Web's own fallbacks are `Errors.*` keys. Every Feature
 but Admin answers this way; any other body (ASP.NET's `ProblemDetails`, a bare `NotFound()`) shows its status code's
 `Errors.*` message, and the Admin controller reads its own English `AdminErrorDto`.
+An error or warning inside a successful (200) result (Google Drive, Analysis) works the same way without the filter:
+the DTO carries an `ApiErrorEntryDto` (`Error`, `Warning`) built with `ResultMessage.Entry` and a `ResultMessageKeys`
+key beside its English text, and the Web controller swaps the text for `ApiErrorMessages.Resolve` before the page
+sees it (#405).
 
 ```mermaid
 flowchart LR
@@ -1315,7 +1319,7 @@ Drawn from `Web/Infrastructure/Localization/`, `Shared/Helpers/MoneyFormatter.cs
 `Web/Services/UserPreferenceService.cs`, `AccountEmailService.cs`,
 `Web/TagHelpers/JsStringsTagHelper.cs`, `Web/Controllers/LanguageController.cs`, `Web/Views/Shared/_LanguageSwitcher.cshtml`, `Web/wwwroot/js/core/i18n.js`,
 `Web/tools/i18n-translate.js`, `Web/tools/i18n-report.js`, `ApiService/Infrastructure/ApiErrorException*.cs`,
-`ErrorArgs.cs`, `ValidationResultExtensions.cs`, `Web/Infrastructure/ApiErrorMessages.cs`, `ApiErrorArgFormat.cs` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
+`ErrorArgs.cs`, `ResultMessage.cs`, `ValidationResultExtensions.cs`, `Web/Infrastructure/ApiErrorMessages.cs`, `ApiErrorArgFormat.cs` and the `lint-js` job of `.github/workflows/deploy-azure.yml`.
 A string that is not shaped like a key (English still on attributes of pages not yet translated) is shown as written,
 without the 3402 warning.
 

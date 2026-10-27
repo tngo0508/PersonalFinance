@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Data.Helpers;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using Xunit;
 
@@ -310,6 +311,7 @@ public class GoogleDrivePersistenceTests
         Assert.False(dbConn.IsValid);
         Assert.Equal("NeedsReauth", dbConn.SyncStatus);
         Assert.NotNull(dbConn.ErrorMessage);
+        Assert.Equal(ResultMessageKeys.GoogleDrive.CredentialsInvalid, conn.Error?.Key);
 
         // Act - User provides valid credentials via Reauth
         returnUnauthorized = false;
@@ -319,6 +321,7 @@ public class GoogleDrivePersistenceTests
         Assert.True(reauthResult.IsValid);
         Assert.Equal("Synced", reauthResult.SyncStatus);
         Assert.Null(reauthResult.ErrorMessage);
+        Assert.Null(reauthResult.Error);
 
         GoogleDriveConnection dbConnAfter = await dbContext.GoogleDriveConnections.Include(c => c.CachedFiles).FirstAsync(c => c.Id == conn.Id);
         Assert.True(dbConnAfter.IsValid);

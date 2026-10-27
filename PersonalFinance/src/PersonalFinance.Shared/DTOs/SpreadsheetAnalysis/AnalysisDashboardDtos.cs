@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
 
@@ -141,6 +142,13 @@ public class SyncSpreadsheetResponseDto
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// <see cref="ErrorMessage"/> keyed, so the Web app can show it in the reader's language (#405). Null when
+    /// <see cref="ErrorMessage"/> is null or has no key.
+    /// </summary>
+    public ApiErrorEntryDto? Error { get; set; }
+
     public bool HasConflict { get; set; }
     public List<MonthConflictDto> Conflicts { get; set; } = new();
     public int SnapshotsCreated { get; set; }

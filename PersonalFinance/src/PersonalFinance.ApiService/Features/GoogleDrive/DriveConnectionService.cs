@@ -8,6 +8,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Data.Helpers;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.Helpers;
 
@@ -82,71 +83,43 @@ internal sealed class DriveConnectionService : IDriveConnectionService
                     Success = false,
                     FolderId = folderId,
                     FolderUrl = rawInput,
-                    ErrorMessage = "The request was canceled."
+                    ErrorMessage = DriveResultMessages.Canceled.Message,
+                    Error = DriveResultMessages.Canceled
                 };
             }
             catch (OperationCanceledException)
             {
                 _logger.LogWarning("Google Drive API request timed out for folder '{FolderId}'. Falling back to preview mode.", folderId);
-                return GeneratePreviewResponse(
-                    folderId,
-                    rawInput,
-                    "The request to Google Drive API timed out. Verify your network connectivity and Google Cloud status. Showing preview demo data.");
+                return GeneratePreviewResponse(folderId, rawInput, DriveResultMessages.Timeout);
             }
             catch (TimeoutException timeoutEx)
             {
                 _logger.LogWarning(timeoutEx, "Google Drive API request timed out for folder '{FolderId}'. Falling back to preview mode.", folderId);
-                return GeneratePreviewResponse(
-                    folderId,
-                    rawInput,
-                    "The request to Google Drive API timed out. Verify your network connectivity and Google Cloud status. Showing preview demo data.");
+                return GeneratePreviewResponse(folderId, rawInput, DriveResultMessages.Timeout);
             }
             catch (HttpRequestException httpEx)
             {
                 int statusCode = httpEx.StatusCode.HasValue ? (int)httpEx.StatusCode.Value : 0;
-                string detailedGuidance;
-
-                if (statusCode == 404)
+                ApiErrorEntryDto detailedGuidance = statusCode switch
                 {
-                    detailedGuidance = "Google Drive API returned HTTP 404 Not Found. This occurs when the folder ID is incorrect OR when folder permissions are set to 'Restricted' (Google masks private folders as 404). To resolve: open your folder in Google Drive, click 'Share', and change General access from 'Restricted' to 'Anyone with the link' (Viewer). Showing preview demo data.";
-                }
-                else if (statusCode == 403)
-                {
-                    detailedGuidance = "Google Drive API returned HTTP 403 Forbidden. This occurs when 'Google Drive API' is not enabled in your Google Cloud project, API key restrictions prevent access, or folder access is denied. To resolve: enable the Google Drive API in Google Cloud Console and ensure folder sharing is set to 'Anyone with the link'. Showing preview demo data.";
-                }
-                else if (statusCode == 400)
-                {
-                    detailedGuidance = "Google Drive API returned HTTP 400 Bad Request. Please verify that your API key is valid and formatted correctly. Showing preview demo data.";
-                }
-                else
-                {
-                    string statusCodeInfo = httpEx.StatusCode.HasValue
-                        ? $"HTTP {(int)httpEx.StatusCode.Value} ({httpEx.StatusCode})"
-                        : "an HTTP error";
-                    detailedGuidance = $"Google Drive API returned {statusCodeInfo} (Verify that your API key is valid, Google Drive API is enabled, and folder access is set to 'Anyone with the link'). Showing preview demo data.";
-                }
+                    404 => DriveResultMessages.FolderNotFound,
+                    403 => DriveResultMessages.AccessDenied,
+                    400 => DriveResultMessages.BadRequest,
+                    _ => DriveResultMessages.HttpFailure(httpEx.StatusCode)
+                };
 
                 _logger.LogWarning(httpEx, "Google Drive API request failed with HTTP {StatusCode}. Falling back to preview mode.", statusCode);
-                return GeneratePreviewResponse(
-                    folderId,
-                    rawInput,
-                    detailedGuidance);
+                return GeneratePreviewResponse(folderId, rawInput, detailedGuidance);
             }
             catch (JsonException jsonEx)
             {
                 _logger.LogWarning(jsonEx, "Google Drive API returned unexpected response format for folder '{FolderId}'. Falling back to preview mode.", folderId);
-                return GeneratePreviewResponse(
-                    folderId,
-                    rawInput,
-                    "Google Drive API returned an unexpected response format. Showing preview demo data.");
+                return GeneratePreviewResponse(folderId, rawInput, DriveResultMessages.UnexpectedResponse);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error fetching from Google Drive API for folder '{FolderId}'.", folderId);
-                return GeneratePreviewResponse(
-                    folderId,
-                    rawInput,
-                    "An error occurred while connecting to Google Drive API. Showing preview demo data.");
+                return GeneratePreviewResponse(folderId, rawInput, DriveResultMessages.ConnectFailed);
             }
         }
 
@@ -155,10 +128,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
         {
             _logger.LogInformation("No Google Drive API key provided. Returning preview data for folder '{FolderId}'.", folderId);
         }
-        return GeneratePreviewResponse(
-            folderId,
-            rawInput,
-            "No Google Drive API Key was provided. Showing preview files for this folder. To query live Google Drive folders, provide a Google Cloud API Key with Google Drive API enabled.");
+        return GeneratePreviewResponse(folderId, rawInput, DriveResultMessages.NoApiKey);
     }
 
     /// <inheritdoc />
@@ -386,30 +356,27 @@ internal sealed class DriveConnectionService : IDriveConnectionService
                 _logger.LogWarning(httpEx, "Google Drive API returned credential error HTTP {StatusCode} for connection {ConnectionId}.", httpEx.StatusCode, connection.Id);
 
                 connection.IsValid = false;
-                connection.SyncStatus = "NeedsReauth";
-                connection.ErrorMessage = "Google credentials are invalid or expired. Please re-authenticate or update your API key.";
+                connection.SyncStatus = DriveResultMessages.NeedsReauthStatus;
+                connection.ErrorMessage = DriveResultMessages.CredentialsInvalidText;
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
                 GoogleDriveFolderResponseDto cachedFallback = MapConnectionToFolderResponse(connection);
                 cachedFallback.Success = false;
                 cachedFallback.ErrorMessage = connection.ErrorMessage;
+                cachedFallback.Error = DriveResultMessages.CredentialsInvalid;
                 return cachedFallback;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error synchronizing live files from Google Drive API for connection {ConnectionId}. Falling back to preview/cache.", connection.Id);
-                liveResponse = GeneratePreviewResponse(
-                    connection.FolderId,
-                    connection.FolderUrl,
-                    "Unable to reach Google Drive API. Showing preview/cached data.");
+                liveResponse = GeneratePreviewResponse(connection.FolderId, connection.FolderUrl,
+                    DriveResultMessages.Unreachable);
             }
         }
         else
         {
-            liveResponse = GeneratePreviewResponse(
-                connection.FolderId,
-                connection.FolderUrl,
-                "No Google Drive API Key was provided. Showing preview files for this folder.");
+            liveResponse = GeneratePreviewResponse(connection.FolderId, connection.FolderUrl,
+                DriveResultMessages.NoApiKeySample);
         }
 
         if (liveResponse.Success)
@@ -490,7 +457,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        return MapConnectionToFolderResponse(connection, liveResponse.WarningMessage, liveResponse.IsDemoData);
+        return MapConnectionToFolderResponse(connection, liveResponse.Warning, liveResponse.IsDemoData);
     }
 
     private static GoogleDriveConnectionDto MapToDto(GoogleDriveConnection connection)
@@ -509,6 +476,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
             IsValid = connection.IsValid,
             SyncStatus = connection.SyncStatus,
             ErrorMessage = connection.ErrorMessage,
+            Error = DriveResultMessages.ForStoredError(connection.ErrorMessage, connection.SyncStatus),
             CreatedAtUtc = connection.CreatedAt,
             LastSyncedAtUtc = connection.LastSyncedAtUtc,
             CachedFilesCount = activeFiles.Count,
@@ -519,7 +487,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
 
     private static GoogleDriveFolderResponseDto MapConnectionToFolderResponse(
         GoogleDriveConnection connection,
-        string? warningMessage = null,
+        ApiErrorEntryDto? warning = null,
         bool? isDemoData = null)
     {
         var activeFiles = connection.CachedFiles
@@ -557,7 +525,9 @@ internal sealed class DriveConnectionService : IDriveConnectionService
             TotalSizeBytes = totalBytes,
             TotalSizeFormatted = GoogleDriveMetadata.FormatBytes(totalBytes),
             ErrorMessage = connection.ErrorMessage,
-            WarningMessage = warningMessage,
+            Error = DriveResultMessages.ForStoredError(connection.ErrorMessage, connection.SyncStatus),
+            WarningMessage = warning?.Message,
+            Warning = warning,
             IsDemoData = isDemoData ?? string.IsNullOrEmpty(connection.EncryptedApiKey)
         };
     }
@@ -676,11 +646,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
 
         long totalBytes = files.Where(f => f.Size.HasValue).Sum(f => f.Size!.Value);
 
-        string? emptyWarning = null;
-        if (files.Count == 0)
-        {
-            emptyWarning = "No files were returned by the Google Drive API for this folder. Verify that the folder contains files, that General access is set to 'Anyone with the link' (Viewer), and that files are not restricted.";
-        }
+        ApiErrorEntryDto? emptyWarning = files.Count == 0 ? DriveResultMessages.EmptyFolder : null;
 
         return new GoogleDriveFolderResponseDto
         {
@@ -692,14 +658,15 @@ internal sealed class DriveConnectionService : IDriveConnectionService
             TotalSizeBytes = totalBytes,
             TotalSizeFormatted = GoogleDriveMetadata.FormatBytes(totalBytes),
             IsDemoData = false,
-            WarningMessage = emptyWarning
+            WarningMessage = emptyWarning?.Message,
+            Warning = emptyWarning
         };
     }
 
     private static GoogleDriveFolderResponseDto GeneratePreviewResponse(
         string folderId,
         string rawInput,
-        string warningMessage)
+        ApiErrorEntryDto warning)
     {
         var sampleFiles = new List<GoogleDriveFileDto>
         {
@@ -821,7 +788,8 @@ internal sealed class DriveConnectionService : IDriveConnectionService
             TotalSizeBytes = totalBytes,
             TotalSizeFormatted = GoogleDriveMetadata.FormatBytes(totalBytes),
             IsDemoData = true,
-            WarningMessage = warningMessage
+            WarningMessage = warning.Message,
+            Warning = warning
         };
     }
 }

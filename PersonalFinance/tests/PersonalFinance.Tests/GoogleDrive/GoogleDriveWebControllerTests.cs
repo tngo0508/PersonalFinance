@@ -255,6 +255,9 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
     public GoogleDriveFolderResponseDto ConnectionFilesResponse { get; set; } = new() { Success = true };
     public MonthlyBudgetReportDto BudgetReport { get; set; } = new();
     public Exception? BudgetReportFailure { get; set; }
+    public GoogleDriveFolderResponseDto SyncResponse { get; set; } = new() { Success = true };
+    public GoogleDriveConnectionDto? ReauthResponse { get; set; }
+    public SpreadsheetTransactionsDto? TransactionsResponse { get; set; }
 
     public Task<GoogleDriveFolderResponseDto> ExploreFolderAsync(GoogleDriveRequestDto request, CancellationToken cancellationToken = default)
     {
@@ -278,12 +281,12 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
 
     public Task<GoogleDriveFolderResponseDto> SyncConnectionAsync(int connectionId, SyncGoogleDriveRequestDto request, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new GoogleDriveFolderResponseDto { Success = true });
+        return Task.FromResult(SyncResponse);
     }
 
     public Task<GoogleDriveConnectionDto> ReauthConnectionAsync(int connectionId, ReauthGoogleDriveRequestDto request, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new GoogleDriveConnectionDto { Id = connectionId, IsValid = true });
+        return Task.FromResult(ReauthResponse ?? new GoogleDriveConnectionDto { Id = connectionId, IsValid = true });
     }
 
     public Task<bool> DeleteConnectionAsync(int connectionId, CancellationToken cancellationToken = default)
@@ -300,7 +303,8 @@ public class FakeGoogleDriveApi : IGoogleDriveApi
 
     public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string fileId, string? fileName = null, int? connectionId = null, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleTransactionsCsv(), fileName, fileId));
+        return Task.FromResult(TransactionsResponse
+            ?? BudgetSpreadsheetParser.ParseCsvTransactions(SampleSpreadsheets.GetSampleTransactionsCsv(), fileName, fileId));
     }
 }
 

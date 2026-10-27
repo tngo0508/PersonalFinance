@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 namespace PersonalFinance.ApiService.Features.GoogleDrive;
@@ -32,7 +33,7 @@ internal static class BudgetSpreadsheetParser
     /// <summary>
     /// A report for a spreadsheet that could not be read: no months, not live data, and the reason.
     /// </summary>
-    public static MonthlyBudgetReportDto Unavailable(string? fileName, string? fileId, string reason)
+    public static MonthlyBudgetReportDto Unavailable(string? fileName, string? fileId, ApiErrorEntryDto reason)
     {
         return new MonthlyBudgetReportDto
         {
@@ -41,7 +42,8 @@ internal static class BudgetSpreadsheetParser
             Title = "Budget report unavailable",
             DataSource = "Unavailable",
             IsLiveSpreadsheetData = false,
-            ErrorMessage = reason
+            ErrorMessage = reason.Message,
+            Error = reason
         };
     }
 
@@ -56,13 +58,13 @@ internal static class BudgetSpreadsheetParser
     {
         if (string.IsNullOrWhiteSpace(contentOrCsv))
         {
-            return Unavailable(fileName, fileId, "The spreadsheet is empty.");
+            return Unavailable(fileName, fileId, DriveResultMessages.SpreadsheetEmpty);
         }
 
         List<List<string>> rows = ParseCsvTable(contentOrCsv);
         if (rows.Count == 0)
         {
-            return Unavailable(fileName, fileId, "The spreadsheet has no rows.");
+            return Unavailable(fileName, fileId, DriveResultMessages.SpreadsheetNoRows);
         }
 
         return ParseSpreadsheetRows(rows, fileName, fileId, dataSource);
@@ -89,7 +91,7 @@ internal static class BudgetSpreadsheetParser
             List<(string SheetName, ZipArchiveEntry Entry)> sheetEntries = GetWorksheetEntriesWithNames(archive);
             if (sheetEntries.Count == 0)
             {
-                return Unavailable(fileName, fileId, "The workbook has no worksheets.");
+                return Unavailable(fileName, fileId, DriveResultMessages.WorkbookNoSheets);
             }
 
             (string SheetName, ZipArchiveEntry Entry) summarySheet = sheetEntries.FirstOrDefault(s => IsSummarySheetName(s.SheetName));
@@ -121,14 +123,14 @@ internal static class BudgetSpreadsheetParser
 
             if (allRows.Count == 0)
             {
-                return Unavailable(fileName, fileId, "The workbook's sheets are empty.");
+                return Unavailable(fileName, fileId, DriveResultMessages.WorkbookSheetsEmpty);
             }
 
             return ParseSpreadsheetRows(allRows, fileName, fileId, dataSource);
         }
         catch (Exception ex) when (IsUnreadableWorkbook(ex))
         {
-            return Unavailable(fileName, fileId, "The file is not a readable Excel workbook.");
+            return Unavailable(fileName, fileId, DriveResultMessages.WorkbookUnreadable);
         }
     }
 
@@ -177,14 +179,21 @@ internal static class BudgetSpreadsheetParser
                 }
             }
 
-            result.ErrorMessage = "No transactions table was found. Add a sheet with Date and Amount column headers.";
+            SetError(result, DriveResultMessages.NoTransactionsTable);
         }
         catch (Exception ex) when (IsUnreadableWorkbook(ex))
         {
-            result.ErrorMessage = "The spreadsheet could not be read as an Excel workbook.";
+            SetError(result, DriveResultMessages.WorkbookUnreadable);
         }
 
         return result;
+    }
+
+    /// <summary>Sets why no transactions could be read, in English and keyed.</summary>
+    public static void SetError(SpreadsheetTransactionsDto result, ApiErrorEntryDto error)
+    {
+        result.ErrorMessage = error.Message;
+        result.Error = error;
     }
 
     /// <summary>
@@ -210,7 +219,7 @@ internal static class BudgetSpreadsheetParser
 
         if (result.Transactions.Count == 0)
         {
-            result.ErrorMessage = "No transactions table was found. Add a sheet with Date and Amount column headers.";
+            SetError(result, DriveResultMessages.NoTransactionsTable);
         }
 
         return result;
@@ -783,7 +792,7 @@ internal static class BudgetSpreadsheetParser
 
         if (!hasAnyParsedData)
         {
-            return Unavailable(fileName, fileId, "No monthly budget table was found. The sheet needs income and expense rows with month columns, or a Summary sheet.");
+            return Unavailable(fileName, fileId, DriveResultMessages.NoBudgetTable);
         }
 
         var monthsList = new List<MonthlyBudgetMonthSummaryDto>();

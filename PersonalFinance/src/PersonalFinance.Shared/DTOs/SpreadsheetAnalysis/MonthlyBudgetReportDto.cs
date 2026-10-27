@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
@@ -28,6 +29,12 @@ public class MonthlyBudgetReportDto
     /// Why the report could not be produced (file unreachable, no budget table, ...). Set only when <see cref="Months"/> is empty.
     /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// <see cref="ErrorMessage"/> keyed, so the Web app can show it in the reader's language (#405). Null when
+    /// <see cref="ErrorMessage"/> is null or has no key.
+    /// </summary>
+    public ApiErrorEntryDto? Error { get; set; }
 
     public int ParsedRowCount { get; set; }
     public bool IsSingleMonth => Months.Count == 1;
