@@ -411,8 +411,6 @@ erDiagram
         string Summary
         string Body "max 10000"
         string Category "indexed"
-        int Likes "denormalised counter"
-        int CommentCount "counter only, no FK from comments"
         bool IsVisible
         bool IsFeatured "indexed"
         DateTime PublishedAtUtc "indexed"
@@ -429,10 +427,8 @@ erDiagram
         string UserId
         string AuthorName
         string Text
-        string Topic
         int PollId FK "nullable"
-        string CaseStudyTitle "nullable"
-        int Likes "denormalised counter"
+        int StoryId FK "nullable, indexed"
         bool IsVisible
         DateTime CreatedAtUtc "indexed"
     }
@@ -466,6 +462,7 @@ erDiagram
     }
 
     CommunityStory ||--o{ CommunityStoryLike : "StoryId, Cascade"
+    CommunityStory ||--o{ CommunityComment : "StoryId, SetNull"
     CommunityComment ||--o{ CommunityCommentLike : "CommentId, Cascade"
     CommunityPoll ||--o{ CommunityPollOption : "PollId, SetNull"
     CommunityPoll ||--o{ CommunityPollVote : "PollId, SetNull"
@@ -473,8 +470,9 @@ erDiagram
     CommunityPollOption ||--o{ CommunityPollVote : "OptionId, SetNull"
 ```
 
-`CommunityPoll` and `CommunityPollOption` are seeded reference data (`SeedCommunityDataAsync`): no `UserId`, no soft
-delete, untouched by the Purge. Stories and comments survive the Purge anonymised ([ADR
+`CommunityPoll` and `CommunityPollOption` are shared data with no `UserId`, no soft delete, untouched by the Purge.
+Nothing is seeded: the Community starts empty (#422). Like and comment counts are counted from the like and comment
+rows; no table stores them. Stories and comments survive the Purge anonymised ([ADR
 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)).
 
 ### 4.4 Account, consent and cross-cutting records
@@ -1197,7 +1195,7 @@ flowchart TB
     mode -- "--purge-only<br/>PURGE_ONLY=true" --> purge["AccountPurgeJob.RunAsync<br/>migrate + seed, PurgeDueAsync, exit code"]
     mode -- "--refresh-research<br/>REFRESH_RESEARCH=true" --> research["ResearchRefreshJob.RunAsync<br/>migrate + seed, RefreshAsync, exit code"]
     mode -- "--migrate-only<br/>MIGRATE_ONLY=true" --> migrate["MigrateAndSeedDatabaseAsync, then exit<br/>(CI runs this before each deploy)"]
-    mode -- "otherwise" --> run["ResearchFixtureSeeder (E2E only), then MigrateAndRunAsync:<br/>Migrate, SeedCommunityData, RbacSeeder, RunAsync"]
+    mode -- "otherwise" --> run["ResearchFixtureSeeder (E2E only), then MigrateAndRunAsync:<br/>Migrate, RbacSeeder, RunAsync"]
 ```
 
 ```mermaid

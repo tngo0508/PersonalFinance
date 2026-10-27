@@ -108,7 +108,6 @@ internal sealed class AccountPurgeService : IAccountPurgeService
         }
 
         string userId = request.UserId;
-        await UncountLikesAsync(userId, request.RequestedAt, cancellationToken);
         await AnonymizeCommunityContentAsync(userId, request.RequestedAt, cancellationToken);
         await RemoveCachedDriveFilesAsync(userId, cancellationToken);
         foreach (Type type in DeletedEntityTypes())
@@ -123,41 +122,6 @@ internal sealed class AccountPurgeService : IAccountPurgeService
         request.UserId = DeletedAccount.UserId;
         await _db.SaveChangesAsync(cancellationToken);
         return true;
-    }
-
-    /// <summary>
-    /// Stories and comments store their like count. Takes back the Account's likes that are still counted: the live
-    /// ones, and the ones the Deletion Request hid (an unlike already took its own back).
-    /// </summary>
-    private async Task UncountLikesAsync(string userId, DateTime requestedAt, CancellationToken cancellationToken)
-    {
-        Dictionary<int, int> storyLikes = await _db.CommunityStoryLikes.IgnoreQueryFilters()
-            .Where(l => l.UserId == userId && (!l.IsDeleted || l.DeletedAt == requestedAt))
-            .GroupBy(l => l.StoryId)
-            .Select(g => new { Id = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(l => l.Id, l => l.Count, cancellationToken);
-        var storyIds = storyLikes.Keys.ToList();
-        List<CommunityStory> stories = await _db.CommunityStories.IgnoreQueryFilters()
-            .Where(s => storyIds.Contains(s.Id))
-            .ToListAsync(cancellationToken);
-        foreach (CommunityStory? story in stories)
-        {
-            story.Likes = Math.Max(0, story.Likes - storyLikes[story.Id]);
-        }
-
-        Dictionary<int, int> commentLikes = await _db.CommunityCommentLikes.IgnoreQueryFilters()
-            .Where(l => l.UserId == userId && (!l.IsDeleted || l.DeletedAt == requestedAt))
-            .GroupBy(l => l.CommentId)
-            .Select(g => new { Id = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(l => l.Id, l => l.Count, cancellationToken);
-        var commentIds = commentLikes.Keys.ToList();
-        List<CommunityComment> comments = await _db.CommunityComments.IgnoreQueryFilters()
-            .Where(c => commentIds.Contains(c.Id))
-            .ToListAsync(cancellationToken);
-        foreach (CommunityComment? comment in comments)
-        {
-            comment.Likes = Math.Max(0, comment.Likes - commentLikes[comment.Id]);
-        }
     }
 
     /// <summary>

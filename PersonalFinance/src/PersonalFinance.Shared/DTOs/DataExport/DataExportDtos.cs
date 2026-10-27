@@ -359,13 +359,11 @@ public class DataExportCommentDto
 
     public string Text { get; set; } = string.Empty;
 
-    public string Topic { get; set; } = string.Empty;
-
     /// <summary>The poll the comment was posted on, if any.</summary>
     public int? PollId { get; set; }
 
-    /// <summary>The case study the comment was posted on, if any.</summary>
-    public string? CaseStudyTitle { get; set; }
+    /// <summary>The story the comment was posted on, if any.</summary>
+    public int? StoryId { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
 }

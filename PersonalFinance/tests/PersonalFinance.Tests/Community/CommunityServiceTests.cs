@@ -89,19 +89,31 @@ public class CommunityServiceTests
     }
 
     [Fact]
-    public async Task GetCommunity_QuickStatsCarryAStableKey_ThePageTranslatesThemBy()
+    public async Task GetCommunity_StoryCountsComeFromLiveLikesAndVisibleComments()
     {
         await using AppDbContext db = CreateContext();
+        CommunityService service = CreateService(db);
+        var story = new CommunityStory { UserId = "author", AuthorName = "Sam", Title = "Meal plans" };
+        db.CommunityStories.Add(story);
+        db.CommunityComments.Add(new CommunityComment
+            { UserId = "author", AuthorName = "Sam", Text = "hidden", Story = story, IsVisible = false });
+        await db.SaveChangesAsync();
 
-        CommunityResponseDto response = await CreateService(db).GetCommunityAsync(UserId);
+        await service.ToggleStoryLikeAsync(UserId, story.Id);
+        await service.ToggleStoryLikeAsync("other", story.Id);
+        StoryLikeResult unliked = await service.ToggleStoryLikeAsync("other", story.Id);
+        CommunityCommentDto comment = await service.AddCommentAsync(UserId,
+            new CommunityCommentRequestDto { Text = "Trying this", StoryId = story.Id }, "Alex");
 
-        Assert.Equal(["ActivePolls", "TotalVotes", "Stories", "Comments"], response.QuickStats.Select(s => s.Key));
-        IReadOnlyCollection<string> english = TestLocalization.Catalog.Keys("en");
-        Assert.All(response.QuickStats, stat =>
-        {
-            Assert.Contains($"Community.Stats.{stat.Key}.Title", english);
-            Assert.Contains($"Community.Stats.{stat.Key}.Description", english);
-        });
+        CommunityResponseDto response = await service.GetCommunityAsync(UserId);
+
+        Assert.Equal(1, unliked.NewLikeCount);
+        CommunityStoryDto dto = Assert.Single(response.Stories);
+        Assert.Equal(1, dto.Likes);
+        Assert.Equal(1, dto.CommentCount);
+        Assert.True(dto.IsLikedByUser);
+        Assert.Equal(story.Id, comment.StoryId);
+        Assert.Equal(story.Id, Assert.Single(response.RecentComments).StoryId);
     }
 
     [Fact]
@@ -121,7 +133,7 @@ public class CommunityServiceTests
     public async Task AddCommentAsync_WithLongText_ThrowsCommentTooLong_WithMaxArg()
     {
         await using AppDbContext db = CreateContext();
-        var request = new CommunityCommentRequestDto { Text = new string('a', 2001), Topic = "General" };
+        var request = new CommunityCommentRequestDto { Text = new string('a', 2001) };
 
         ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
             () => CreateService(db).AddCommentAsync(UserId, request, "Alex"));

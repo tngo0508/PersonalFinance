@@ -51,7 +51,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<CommunityPollVote> CommunityPollVotes => Set<CommunityPollVote>();
 
     /// <summary>
-    /// Community comments on polls or case studies table set.
+    /// Community comments on polls or stories table set.
     /// </summary>
     public DbSet<CommunityComment> CommunityComments => Set<CommunityComment>();
 
@@ -635,14 +635,18 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
             entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Text).IsRequired().HasMaxLength(2000);
-            entity.Property(e => e.Topic).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.CaseStudyTitle).HasMaxLength(500);
             entity.HasIndex(e => e.PollId);
+            entity.HasIndex(e => e.StoryId);
             entity.HasIndex(e => e.CreatedAtUtc);
 
             entity.HasOne(e => e.Poll)
                 .WithMany()
                 .HasForeignKey(e => e.PollId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Story)
+                .WithMany(e => e.Comments)
+                .HasForeignKey(e => e.StoryId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasMany(e => e.LikesList)
