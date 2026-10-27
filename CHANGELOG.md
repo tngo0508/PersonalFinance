@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [8.7.0] - 2026-10-26
+
+### Added
+
+- **AI Assistant text in the user's Language**: everything the AI Assistant shows around a chat reply now follows the stored Language, not only the reply itself (#381).
+  - Chat widget: the launcher, header, buttons, placeholder, input hint, greetings, quick-action chips (and the message each sends), status lines and footer disclaimer.
+  - Fixed replies: the no-API-key, failed-call, empty-reply, off-topic, greeting and too-long chat replies, and the no-key and failed News summary messages, carry a keyed `FixedText` entry (`ResultMessageKeys.AiAssistant`) that Web resolves. Web also translates the disclaimer and the monthly budget warning.
+  - News summaries are written in the user's Language, whatever language the article is in. The headline and link stay as sourced.
+  - New Purpose Notes are written in the user's Language. A saved note keeps the language it was written in and is not rewritten when the Language changes.
+- **Glossary terms**: "AI assistant" for the Vietnamese translation.
+
+### Fixed
+
+- **Vietnamese chat messages refused as off-topic**: the AI scope filter knew only English finance and greeting words, so a message typed in Vietnamese, and now the translated quick actions, got the off-topic refusal without reaching the model. It now also matches Vietnamese finance terms and greetings, on Unicode-normalized (NFC) input.
+
+### Changed
+
+- **Chat widget DOM**: the widget builds its elements with `textContent` instead of `innerHTML`.
+
 ## [8.6.0] - 2026-10-26
 
 ### Added

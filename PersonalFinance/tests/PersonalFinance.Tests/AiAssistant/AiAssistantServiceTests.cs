@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Features.AiAssistant;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
 using PersonalFinance.Shared.Enums;
@@ -533,6 +534,83 @@ public class AiAssistantServiceTests
         string system = fake.LastMessages.First(m => m.Role == ChatRole.System).Text;
         Assert.Contains("Always reply in English", system);
         Assert.DoesNotContain("Vietnamese", system);
+    }
+
+    [Fact]
+    public async Task SendChatMessageAsync_ModelReply_HasNoFixedText()
+    {
+        await using AppDbContext db = CreateContext();
+        AiAssistantService service = CreateService(db, new FakeChatClient((_, _) => Reply("ok")));
+
+        AiChatResponseDto response = await service.SendChatMessageAsync(UserId, Request("Budget?"));
+
+        Assert.Equal("ok", response.Response);
+        Assert.Null(response.FixedText);
+    }
+
+    [Fact]
+    public async Task SendChatMessageAsync_FixedReplies_CarryTheirKeys()
+    {
+        await using AppDbContext db = CreateContext();
+
+        AiChatResponseDto noKey = await CreateService(db, chatClient: null).SendChatMessageAsync(UserId, Request("Budget?"));
+        AiChatResponseDto failed = await CreateService(db,
+                new FakeChatClient((_, _) =>
+                    Task.FromException<ChatResponse>(new HttpRequestException("OpenAI is down"))))
+            .SendChatMessageAsync(UserId, Request("Budget?"));
+        AiChatResponseDto empty = await CreateService(db, new FakeChatClient((_, _) => Reply("  ")))
+            .SendChatMessageAsync(UserId, Request("Budget?"));
+
+        Assert.Equal(ResultMessageKeys.AiAssistant.Unavailable, noKey.FixedText?.Key);
+        Assert.Equal(ResultMessageKeys.AiAssistant.Failed, failed.FixedText?.Key);
+        Assert.Equal(ResultMessageKeys.AiAssistant.EmptyReply, empty.FixedText?.Key);
+        Assert.Equal(empty.Response, empty.FixedText?.Message);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_WhenUserChoseVietnamese_AsksForAVietnameseSummary()
+    {
+        await using AppDbContext db = CreateContext();
+        db.UserPreferences.Add(new UserPreference { UserId = UserId, Language = "vi" });
+        await db.SaveChangesAsync();
+        var fake = new FakeChatClient((_, _) => Reply("Tóm tắt"));
+
+        NewsArticleSummaryResponseDto response = await CreateService(db, fake).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Fed holds rates", Description = "The Fed held rates." });
+
+        string system = fake.LastMessages.Single(m => m.Role == ChatRole.System).Text;
+        Assert.Contains("in plain Vietnamese", system);
+        Assert.DoesNotContain("English", system);
+        Assert.Null(response.FixedText);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_WithoutALanguage_AsksForAnEnglishSummary()
+    {
+        await using AppDbContext db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply("Summary"));
+
+        await CreateService(db, fake).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Fed holds rates", Description = "The Fed held rates." });
+
+        Assert.Contains("in plain English", fake.LastMessages.Single(m => m.Role == ChatRole.System).Text);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_FixedMessages_CarryTheirKeys()
+    {
+        await using AppDbContext db = CreateContext();
+        var request = new NewsArticleSummaryRequestDto { Title = "Fed holds rates" };
+
+        NewsArticleSummaryResponseDto noKey = await CreateService(db, chatClient: null)
+            .SummarizeArticleAsync(UserId, request);
+        NewsArticleSummaryResponseDto failed = await CreateService(db,
+                new FakeChatClient((_, _) =>
+                    Task.FromException<ChatResponse>(new HttpRequestException("OpenAI is down"))))
+            .SummarizeArticleAsync(UserId, request);
+
+        Assert.Equal(ResultMessageKeys.AiAssistant.SummaryUnavailable, noKey.FixedText?.Key);
+        Assert.Equal(ResultMessageKeys.AiAssistant.SummaryFailed, failed.FixedText?.Key);
     }
 
     private static BudgetTransactionData Tx(string date, decimal amount, string description, string category)

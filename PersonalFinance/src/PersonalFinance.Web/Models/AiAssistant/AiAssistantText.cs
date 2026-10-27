@@ -44,8 +44,8 @@ public static class AiAssistantText
     }
 
     private static string? Disclaimer(IStringLocalizer localizer, string? sent) =>
-        sent is null ? null : localizer["AiAssistant.Disclaimer"];
+        sent is null ? null : localizer["AiAssistant.Disclaimer"].Value;
 
     private static string? BudgetWarning(IStringLocalizer localizer, string? sent) =>
-        sent is null ? null : localizer["AiAssistant.BudgetWarning"];
+        sent is null ? null : localizer["AiAssistant.BudgetWarning"].Value;
 }

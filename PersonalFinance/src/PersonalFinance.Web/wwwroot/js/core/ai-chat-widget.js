@@ -78,17 +78,6 @@
     }
 
     /**
-     * Escape HTML special characters for safe insertion.
-     * @param {string} text
-     * @returns {string}
-     */
-    function escapeHtml (text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    /**
      * Convert markdown text to safe HTML for assistant messages.
      * @param {string} markdown
      * @returns {DocumentFragment}
@@ -126,49 +115,92 @@
     }
 
     /**
+     * Create an element with attributes and children. All text goes in through text nodes, never as HTML.
+     * @param {string} tag - The tag name.
+     * @param {Object<string, string|boolean>} [attrs] - Attributes; true sets an empty attribute, false skips it.
+     * @param {Array<Node|string>} [children] - Child nodes; strings become text nodes.
+     * @returns {HTMLElement}
+     */
+    function el (tag, attrs, children) {
+        const element = document.createElement(tag);
+        Object.entries(attrs || {}).forEach(([name, value]) => {
+            if (value === true) {
+                element.setAttribute(name, '');
+            } else if (value !== false) {
+                element.setAttribute(name, value);
+            }
+        });
+        element.append(...(children || []));
+        return element;
+    }
+
+    /**
      * Build the complete widget DOM and append it to the body.
      */
     function createWidget () {
         // Floating action button
-        const button = document.createElement('button');
-        button.id = 'ai-chat-button';
-        button.className = 'ai-chat-button';
-        button.setAttribute('aria-label', t('Open'));
-        button.setAttribute('title', t('Title'));
-        button.type = 'button';
-        button.setAttribute('aria-controls', 'ai-chat-panel');
-        button.setAttribute('aria-expanded', 'false');
-        button.innerHTML = `<span class="ai-chat-spark" aria-hidden="true">&#10022;</span><span class="ai-chat-launcher-label">${ escapeHtml(t('Launcher')) }</span>`;
+        const button = el('button', {
+            id: 'ai-chat-button',
+            class: 'ai-chat-button',
+            'aria-label': t('Open'),
+            title: t('Title'),
+            type: 'button',
+            'aria-controls': 'ai-chat-panel',
+            'aria-expanded': 'false'
+        }, [
+            el('span', { class: 'ai-chat-spark', 'aria-hidden': 'true' }, ['✦']),
+            el('span', { class: 'ai-chat-launcher-label' }, [t('Launcher')])
+        ]);
 
-        const panel = document.createElement('section');
-        panel.id = 'ai-chat-panel';
-        panel.className = 'ai-chat-panel';
-        panel.hidden = true;
-        panel.setAttribute('role', 'dialog');
-        panel.setAttribute('aria-labelledby', 'ai-chat-title');
-        panel.innerHTML = `
-            <div class="ai-chat-header">
-                <div class="ai-chat-header-info">
-                    <span class="ai-chat-mark" aria-hidden="true">&#10022;</span>
-                    <div><h2 id="ai-chat-title">${escapeHtml(t('Title'))}</h2><p>${escapeHtml(t('Subtitle'))}</p></div>
-                </div>
-                <div class="ai-chat-header-actions">
-                    <button type="button" class="ai-chat-btn-icon" id="ai-chat-reset" title="${escapeHtml(t('NewChat'))}" aria-label="${escapeHtml(t('NewChatLabel'))}">+</button>
-                    <button type="button" class="ai-chat-btn-icon" id="ai-chat-close" title="${escapeHtml(t('Close'))}" aria-label="${escapeHtml(t('CloseLabel'))}">&times;</button>
-                </div>
-            </div>
-            <div class="ai-chat-body" id="ai-chat-messages" role="log" aria-label="${escapeHtml(t('Conversation'))}" aria-live="polite" aria-relevant="additions"></div>
-            <p class="ai-chat-status" id="ai-chat-status" role="status"></p>
-            <div class="ai-chat-footer">
-                <form id="ai-chat-form" class="ai-chat-form">
-                    <textarea class="ai-chat-input" id="ai-chat-input" rows="2" maxlength="2000" placeholder="${escapeHtml(t('Placeholder'))}" aria-label="${escapeHtml(t('InputLabel'))}" aria-describedby="ai-chat-input-hint"></textarea>
-                    <div class="ai-chat-composer-actions">
-                        <span id="ai-chat-input-hint">${escapeHtml(t('InputHint'))}</span>
-                        <button type="submit" class="ai-chat-send-btn" id="ai-chat-send" disabled aria-label="${escapeHtml(t('Send'))}">&uarr;</button>
-                    </div>
-                </form>
-                <p class="ai-chat-disclaimer">${escapeHtml(t('Disclaimer'))}</p>
-            </div>`;
+        const header = el('div', { class: 'ai-chat-header' }, [
+            el('div', { class: 'ai-chat-header-info' }, [
+                el('span', { class: 'ai-chat-mark', 'aria-hidden': 'true' }, ['✦']),
+                el('div', {}, [el('h2', { id: 'ai-chat-title' }, [t('Title')]), el('p', {}, [t('Subtitle')])])
+            ]),
+            el('div', { class: 'ai-chat-header-actions' }, [
+                el('button', { type: 'button', class: 'ai-chat-btn-icon', id: 'ai-chat-reset', title: t('NewChat'), 'aria-label': t('NewChatLabel') }, ['+']),
+                el('button', { type: 'button', class: 'ai-chat-btn-icon', id: 'ai-chat-close', title: t('Close'), 'aria-label': t('CloseLabel') }, ['×'])
+            ])
+        ]);
+
+        const footer = el('div', { class: 'ai-chat-footer' }, [
+            el('form', { id: 'ai-chat-form', class: 'ai-chat-form' }, [
+                el('textarea', {
+                    class: 'ai-chat-input',
+                    id: 'ai-chat-input',
+                    rows: '2',
+                    maxlength: '2000',
+                    placeholder: t('Placeholder'),
+                    'aria-label': t('InputLabel'),
+                    'aria-describedby': 'ai-chat-input-hint'
+                }),
+                el('div', { class: 'ai-chat-composer-actions' }, [
+                    el('span', { id: 'ai-chat-input-hint' }, [t('InputHint')]),
+                    el('button', { type: 'submit', class: 'ai-chat-send-btn', id: 'ai-chat-send', disabled: true, 'aria-label': t('Send') }, ['↑'])
+                ])
+            ]),
+            el('p', { class: 'ai-chat-disclaimer' }, [t('Disclaimer')])
+        ]);
+
+        const panel = el('section', {
+            id: 'ai-chat-panel',
+            class: 'ai-chat-panel',
+            hidden: true,
+            role: 'dialog',
+            'aria-labelledby': 'ai-chat-title'
+        }, [
+            header,
+            el('div', {
+                class: 'ai-chat-body',
+                id: 'ai-chat-messages',
+                role: 'log',
+                'aria-label': t('Conversation'),
+                'aria-live': 'polite',
+                'aria-relevant': 'additions'
+            }),
+            el('p', { class: 'ai-chat-status', id: 'ai-chat-status', role: 'status' }),
+            footer
+        ]);
 
         document.body.appendChild(button);
         document.body.appendChild(panel);
@@ -183,26 +215,21 @@
             return;
         }
 
-        const greeting = getGreeting();
-        let html =
-            '<div class="ai-chat-welcome">'
-            + '  <div class="ai-chat-welcome-icon" aria-hidden="true">&#10022;</div>'
-            + `  <p class="ai-chat-eyebrow">${ escapeHtml(t('Welcome.Eyebrow')) }</p>`
-            + `  <h3>${ escapeHtml(t('Welcome.Heading')) }</h3>`
-            + `  <p class="ai-chat-welcome-text">${ escapeHtml(greeting) }</p>`
-            + `  <p class="ai-chat-welcome-hint">${ escapeHtml(t('Welcome.Hint')) }</p>`
-            + '</div>';
+        const welcome = el('div', { class: 'ai-chat-welcome' }, [
+            el('div', { class: 'ai-chat-welcome-icon', 'aria-hidden': 'true' }, ['✦']),
+            el('p', { class: 'ai-chat-eyebrow' }, [t('Welcome.Eyebrow')]),
+            el('h3', {}, [t('Welcome.Heading')]),
+            el('p', { class: 'ai-chat-welcome-text' }, [getGreeting()]),
+            el('p', { class: 'ai-chat-welcome-hint' }, [t('Welcome.Hint')])
+        ]);
 
-        html += '<div class="ai-chat-quick-actions">';
-        QUICK_ACTIONS.forEach((action, index) => {
-            html += `<button type="button" class="ai-chat-chip" data-index="${ index }">`
-                + `<span class="ai-chat-chip-icon" aria-hidden="true">${ action.icon }</span>`
-                + `<span>${ escapeHtml(t(`QuickAction.${ action.key }.Label`)) }</span>`
-                + '</button>';
-        });
-        html += '</div>';
+        const chips = el('div', { class: 'ai-chat-quick-actions' }, QUICK_ACTIONS.map((action, index) =>
+            el('button', { type: 'button', class: 'ai-chat-chip', 'data-index': String(index) }, [
+                el('span', { class: 'ai-chat-chip-icon', 'aria-hidden': 'true' }, [action.icon]),
+                el('span', {}, [t(`QuickAction.${ action.key }.Label`)])
+            ])));
 
-        container.innerHTML = html;
+        container.replaceChildren(welcome, chips);
         container.scrollTop = 0;
     }
 
@@ -253,12 +280,12 @@
             return;
         }
 
-        const el = document.createElement('div');
-        el.className = 'ai-chat-message ai-chat-message-assistant';
-        el.id = 'ai-chat-typing';
-        el.setAttribute('aria-label', t('Thinking'));
-        el.innerHTML = '<div class="ai-chat-bubble ai-chat-typing"><span></span><span></span><span></span></div>';
-        container.appendChild(el);
+        const typing = el('div', {
+            class: 'ai-chat-message ai-chat-message-assistant',
+            id: 'ai-chat-typing',
+            'aria-label': t('Thinking')
+        }, [el('div', { class: 'ai-chat-bubble ai-chat-typing' }, [el('span'), el('span'), el('span')])]);
+        container.appendChild(typing);
         container.scrollTop = container.scrollHeight;
     }
 
@@ -297,7 +324,7 @@
         // Clear welcome and show conversation
         const container = document.getElementById('ai-chat-messages');
         if (container && !state.hasInteracted) {
-            container.innerHTML = '';
+            container.replaceChildren();
         }
         state.hasInteracted = true;
 
