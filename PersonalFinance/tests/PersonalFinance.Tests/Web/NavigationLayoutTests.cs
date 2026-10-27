@@ -17,26 +17,7 @@ namespace PersonalFinance.Tests.Web;
 
 public class NavigationLayoutTests
 {
-    private static readonly string SolutionRoot = FindSolutionRoot();
-
-    private static string FindSolutionRoot()
-    {
-        string current = AppDomain.CurrentDomain.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "PersonalFinance.sln")) ||
-                File.Exists(Path.Combine(current, "CHANGELOG.md")))
-            {
-                return current;
-            }
-
-            DirectoryInfo? parent = Directory.GetParent(current);
-            if (parent == null) break;
-            current = parent.FullName;
-        }
-
-        return AppDomain.CurrentDomain.BaseDirectory;
-    }
+    private static readonly string SolutionRoot = RepositoryRoot.Find();
 
     [Fact]
     public void AllRequiredControllers_ExistAndInheritFromController()
