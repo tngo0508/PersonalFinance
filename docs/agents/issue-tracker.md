@@ -74,3 +74,20 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
 - **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer
   (gist + link) to the map's Decisions-so-far.
+
+## Scheduled ticket agent
+
+`.github/workflows/claude-ticket-agent.yml` works the `ready-for-agent` queue unattended: nightly (03:17 Pacific) and
+weekday midday (12:17 Pacific), one issue per run. Trigger it by hand with
+`gh workflow run claude-ticket-agent.yml -f issue=<n>`.
+
+- **Picks** the oldest open `ready-for-agent` issue with no assignee, no `agent:in-progress` or `wayfinder:map` label,
+  no sub-issues, no open blockers and no open PR that closes it. It pauses while 2 PRs from `agent/issue-*` branches
+  are open (drafts included).
+- **Claims** it with `agent:in-progress`, then runs `/implement` (tdd, code-review), `dotnet test` and `npm run lint`,
+  and opens a PR from `agent/issue-<n>` that requests the owner's review. It never merges.
+- **Hands back** unclear tickets as `needs-info`, and ones needing a schema migration as `ready-for-human`, unless the
+  issue carries `agent:migration-ok`. Unresolved review findings make the PR a draft. A failed or timed-out run moves
+  the ticket to `ready-for-human`.
+- Only label an issue `ready-for-agent` if you would hand it to a contractor as-is. Split large Specs into tickets
+  first.
