@@ -150,7 +150,7 @@
                 <a class="sidebar-link @(currentController == "GoogleDrive" ? "active" : "")"
                    asp-area="" asp-controller="GoogleDrive" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="folder-open"></i></span>
-                    <span class="sidebar-link-text">Google Drive</span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.GoogleDrive"]</span>
                 </a>
                 <a class="sidebar-link @(currentController == "Feedback" ? "active" : "")"
                    asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">

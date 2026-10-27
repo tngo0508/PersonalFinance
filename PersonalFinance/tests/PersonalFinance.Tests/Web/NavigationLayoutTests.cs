@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
+using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.Feedback;
 using BudgetController = PersonalFinance.Web.Controllers.BudgetController;
 using BudgetTrackerController = PersonalFinance.Web.Controllers.BudgetTrackerController;
@@ -73,6 +74,25 @@ public class NavigationLayoutTests
         Assert.Contains("currentController == \"MoneyPriorities\" ? \"active\"", myFinances);
         Assert.Contains("<i data-lucide=\"signpost\"></i>", myFinances);
         Assert.Contains("<span class=\"sidebar-link-text\">@L[\"Shell.Nav.MoneyPriorities\"]</span>", myFinances);
+    }
+
+    [Fact]
+    public void SidebarLinkLabels_AreLocalizedInEveryLanguage()
+    {
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        MatchCollection labels = Regex.Matches(sidebar, "<span class=\"sidebar-link-text\">(.*?)</span>");
+        Assert.NotEmpty(labels);
+
+        foreach (Match label in labels)
+        {
+            Match key = Regex.Match(label.Groups[1].Value, "^@L\\[\"(Shell\\.Nav\\.[A-Za-z]+)\"\\]$");
+            Assert.True(key.Success, $"Sidebar label {label.Groups[1].Value} should be a Shell.Nav.* resource.");
+            foreach (string language in AppLanguages.All.Select(l => l.Code))
+            {
+                Assert.True(TestLocalization.Catalog.TryGet(language, key.Groups[1].Value, out _),
+                    $"{language}.json has no {key.Groups[1].Value}.");
+            }
+        }
     }
 
     [Fact]
