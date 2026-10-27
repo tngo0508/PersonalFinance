@@ -28,7 +28,7 @@ public class BudgetTrackerControllerTests
             .UseInMemoryDatabase($"BudgetTrackerController_{Guid.NewGuid():N}")
             .Options;
         var db = new AppDbContext(options);
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         var dataSourceService = new BudgetDataSourceService(db);
 
         var controller = new BudgetTrackerController(

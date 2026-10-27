@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
@@ -228,7 +229,9 @@ public class AnalysisController : Controller
             AvailableYears = result.AvailableYears,
             AvailableMonths = result.AvailableMonths,
             ActiveSource = result.ActiveSource,
-            RemovableSources = result.SourceSummaries.Where(s => s.HasData).Select(s => s.Source).ToList()
+            RemovableSources = result.SourceSummaries.Where(s => s.HasData).Select(s => s.Source).ToList(),
+            ReportingCurrency = SupportedCurrencies.CodeOrDefault(result.ReportingCurrency),
+            Conversion = result.Conversion
         };
 
         if (result.Summary != null)

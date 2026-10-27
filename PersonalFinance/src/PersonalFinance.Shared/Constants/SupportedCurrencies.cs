@@ -38,6 +38,12 @@ public static class SupportedCurrencies
     public static bool IsSupported(string? code) => Find(code) is not null;
 
     /// <summary>
+    /// <paramref name="code"/> when it is supported, else <see cref="DefaultCode"/>: how a page reads a DTO's currency,
+    /// so a row from before amounts carried a currency, or an empty code, still renders.
+    /// </summary>
+    public static string CodeOrDefault(string? code) => IsSupported(code) ? code! : DefaultCode;
+
+    /// <summary>
     /// <paramref name="amount"/> rounded to the minor units of the supported currency <paramref name="code"/>; throws for
     /// a code that is not supported, which a validator has already rejected.
     /// </summary>

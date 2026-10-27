@@ -1,7 +1,9 @@
 @model PersonalFinance.Web.Models.MoneyPriorities.MoneyPrioritiesViewModel
 @{
     ViewData["Title"] = L["MoneyPriorities.Title"].Value;
-    string symbol = SupportedCurrencies.Default.Symbol;
+    // The Walk is one document in one currency (ADR 0016): the selector under the amount sets it for every answer.
+    string inputCurrency = SupportedCurrencies.CodeOrDefault(Model.CurrencyCode);
+    string symbol = SupportedCurrencies.Find(inputCurrency)!.Symbol;
 }
 
 @section Styles {
@@ -29,11 +31,22 @@
                         <div class="alert alert-danger mp-form-error" id="mpFormError" role="alert" hidden></div>
 
                         <div class="mp-field">
-                            <label for="mpMonthlyAmount" class="form-label">@L.Named("MoneyPriorities.Form.MonthlyAmount", ("symbol", symbol))</label>
+                            <label for="mpMonthlyAmount" class="form-label">@L.NamedHtml("MoneyPriorities.Form.MonthlyAmount", null, ("symbol", new Microsoft.AspNetCore.Html.HtmlString($"<span id=\"mpCurrencySymbol\">{symbol}</span>")))</label>
                             <input type="number" class="form-control" id="mpMonthlyAmount" name="MonthlyAmount"
                                    min="0.01" max="1000000" step="0.01" inputmode="decimal" required
                                    aria-describedby="mpErrMonthlyAmount"/>
                             <div class="mp-field-error" id="mpErrMonthlyAmount" data-mp-error="MonthlyAmount" hidden></div>
+                        </div>
+
+                        <div class="mp-field">
+                            <label for="mpCurrency" class="form-label">@L["MoneyPriorities.Form.Currency"]</label>
+                            <select class="form-select" id="mpCurrency" name="CurrencyCode" data-currency-selector data-currency-symbols="#mpCurrencySymbol">
+                                @foreach (var currency in SupportedCurrencies.All)
+                                {
+                                    <option value="@currency.Code" selected="@(currency.Code == inputCurrency)">@currency.Code · @currency.DisplayName</option>
+                                }
+                            </select>
+                            <div class="mp-field-error" id="mpErrCurrencyCode" data-mp-error="CurrencyCode" hidden></div>
                         </div>
 
                         <div class="mp-field">

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Tests.TestSupport;
@@ -113,6 +114,22 @@ public class FxRatesRefresherTests
     }
 
     [Fact]
+    public async Task ARefresh_EvictsTheCachedRates_SoAConversionSeesTheNewDay()
+    {
+        await using AppDbContext db = CreateContext();
+        db.ExchangeRates.Add(Rate(new DateOnly(2026, 10, 23), 25_500m, FxRatesRefresher.FrankfurterSource));
+        await db.SaveChangesAsync();
+        ExchangeRateCache cache = TestCurrencyConverter.NewCache();
+        ICurrencyConverter converter = TestCurrencyConverter.Create(db, cache, new FixedTimeProvider(Now));
+        Assert.Equal(25_500m, (await converter.PrepareAsync("VND", [new MoneyAt("USD", null)])).Convert(1m, "USD", null));
+
+        await Refresher(db, new FakeFrankfurter(), new FakeCurrencyApi(), cache).RefreshAsync(CancellationToken.None);
+
+        decimal todaysRate = (await db.ExchangeRates.SingleAsync(r => r.Date == Today)).Rate;
+        Assert.Equal(todaysRate, (await converter.PrepareAsync("VND", [new MoneyAt("USD", null)])).Convert(1m, "USD", null));
+    }
+
+    [Fact]
     public async Task WhenBothSourcesFail_TheRefreshThrows_AndStoresNothing()
     {
         await using AppDbContext db = CreateContext();
@@ -190,8 +207,9 @@ public class FxRatesRefresherTests
     }
 
     private static FxRatesRefresher Refresher(AppDbContext db, IFrankfurterClient frankfurter,
-        ICurrencyApiClient currencyApi) =>
-        new(db, frankfurter, currencyApi, new FixedTimeProvider(Now), NullLogger<FxRatesRefresher>.Instance);
+        ICurrencyApiClient currencyApi, ExchangeRateCache? cache = null) =>
+        new(db, frankfurter, currencyApi, cache ?? TestCurrencyConverter.NewCache(), new FixedTimeProvider(Now),
+            NullLogger<FxRatesRefresher>.Instance);
 
     private static ExchangeRate Rate(DateOnly date, decimal rate, string source) =>
         new() { BaseCurrency = "USD", QuoteCurrency = "VND", Date = date, Rate = rate, Source = source };

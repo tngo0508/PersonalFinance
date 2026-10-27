@@ -1,10 +1,13 @@
 using System.Net;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.MoneyPriorities;
+using PersonalFinance.Web.Services;
 using Refit;
 using AuthorizeAttribute = Microsoft.AspNetCore.Authorization.AuthorizeAttribute;
 
@@ -21,13 +24,15 @@ public class MoneyPrioritiesController : Controller
     private readonly IMoneyPrioritiesApi _moneyPrioritiesApi;
     private readonly ILogger<MoneyPrioritiesController> _logger;
     private readonly IStringLocalizer _localizer;
+    private readonly IUserPreferenceService _preferences;
 
     public MoneyPrioritiesController(IMoneyPrioritiesApi moneyPrioritiesApi, ILogger<MoneyPrioritiesController> logger,
-        IStringLocalizer localizer)
+        IStringLocalizer localizer, IUserPreferenceService preferences)
     {
         _moneyPrioritiesApi = moneyPrioritiesApi;
         _logger = logger;
         _localizer = localizer;
+        _preferences = preferences;
     }
 
     /// <summary>
@@ -44,6 +49,10 @@ public class MoneyPrioritiesController : Controller
         };
         try
         {
+            string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            model.CurrencyCode = userId is null
+                ? SupportedCurrencies.DefaultCode
+                : await _preferences.GetReportingCurrencyAsync(userId, cancellationToken);
             PriorityTreeDiagramDto tree = await _moneyPrioritiesApi.GetTreeAsync(cancellationToken);
             model.WholeTreeDiagram = MoneyPrioritiesText.WholeTreeDiagram(_localizer, tree.Tree);
             model.Thresholds = tree.Thresholds;
@@ -54,6 +63,7 @@ public class MoneyPrioritiesController : Controller
                 PriorityWalkResultDto latest =
                     await _moneyPrioritiesApi.GetWalkAsync(model.RecentWalks[0].WalkId, cancellationToken);
                 model.LatestAnswers = latest.Answers;
+                model.CurrencyCode = SupportedCurrencies.CodeOrDefault(latest.CurrencyCode);
             }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)

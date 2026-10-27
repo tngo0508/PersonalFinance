@@ -366,7 +366,7 @@ public class KeyedRejectionCoverageTests
     private static AiAssistantController AiController() => new(null!, null!, null!);
 
     private static SpreadsheetAnalysisController AnalysisController() =>
-        new(null!, null!, NullLogger<SpreadsheetAnalysisController>.Instance, null!, null!);
+        new(null!, null!, NullLogger<SpreadsheetAnalysisController>.Instance, null!, null!, null!);
 
     private static GoogleDriveController DriveController() =>
         new(null!, null!, NullLogger<GoogleDriveController>.Instance);

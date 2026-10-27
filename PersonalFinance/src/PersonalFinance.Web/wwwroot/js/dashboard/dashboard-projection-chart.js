@@ -28,10 +28,12 @@
         { key: 'aggressive', nameKey: 'Dashboard.Js.Scenario.Aggressive', color: COLORS.aggressive, width: 2 }
     ];
 
-    // Separators from the page culture, symbol from the currency (PFI18n, spec §2.2).
-    const currencyFormatter = { format: (value) => PFI18n.formatMoney(value, 'USD', { whole: true }) };
+    // Separators from the page culture, symbol from the currency (PFI18n, spec §2.2). The amounts are in the
+    // projection's currency: the Reporting Currency (ADR 0016), read from the data island.
+    let currentCurrency = 'USD';
+    const currencyFormatter = { format: (value) => PFI18n.formatMoney(value, currentCurrency, { whole: true }) };
 
-    const compactFormatter = { format: (value) => PFI18n.formatCompactMoney(value, 'USD') };
+    const compactFormatter = { format: (value) => PFI18n.formatCompactMoney(value, currentCurrency) };
 
     /**
      * Chart height that scales with the viewport so the plot stays legible on phones and desktops.
@@ -104,6 +106,7 @@
     function init (data) {
         const element = document.getElementById(CHART_ELEMENT_ID);
         const netWorth = data && data.netWorth;
+        currentCurrency = (netWorth && netWorth.currencyCode) || 'USD';
         const points = (netWorth && Array.isArray(netWorth.projectionPoints)) ? netWorth.projectionPoints : [];
         if (!element || points.length === 0 || typeof window.ApexCharts !== 'function') {
             return;

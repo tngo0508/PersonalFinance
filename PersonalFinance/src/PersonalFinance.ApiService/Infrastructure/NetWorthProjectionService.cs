@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
 
@@ -33,6 +34,7 @@ public static class NetWorthProjectionService
             StartingBalance = request.StartingBalance,
             AnnualSavings = request.AnnualSavings,
             RetirementAge = request.RetirementAge,
+            CurrencyCode = SupportedCurrencies.CodeOrDefault(request.CurrencyCode),
             SavingsRatePercent = FinanceMetrics.SavingsRatePercent(request.AnnualSavings, request.AnnualIncome),
             ProgressToFiPercent = fiTarget != 0m ? request.StartingBalance / fiTarget * 100m : null
         };
@@ -60,6 +62,50 @@ public static class NetWorthProjectionService
                 : null;
         }
 
+        return projection;
+    }
+
+    /// <summary>
+    /// The projection in <paramref name="conversion"/>'s Reporting Currency (ADR 0016): the five money inputs are
+    /// converted once at the latest rate, then projected. Inputs already in the Reporting Currency are projected as
+    /// they are, with no caption; when there is no rate at all the projection stays in the inputs' own currency and
+    /// its caption says the conversion is unavailable.
+    /// </summary>
+    public static NetWorthProjectionDto ComputeProjection(NetWorthProjectionRequestDto request, ReportingConversion conversion)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(conversion);
+        string inputCurrency = SupportedCurrencies.CodeOrDefault(request.CurrencyCode);
+        if (conversion.IsReporting(inputCurrency))
+        {
+            return ComputeProjection(request);
+        }
+
+        decimal? startingBalance = conversion.Convert(request.StartingBalance, inputCurrency, null);
+        decimal? annualSavings = conversion.Convert(request.AnnualSavings, inputCurrency, null);
+        decimal? annualIncome = conversion.Convert(request.AnnualIncome, inputCurrency, null);
+        decimal? annualSpending = conversion.Convert(request.AnnualSpending, inputCurrency, null);
+        decimal? aggressiveSavings = conversion.Convert(request.AggressiveSavings, inputCurrency, null);
+        bool converted = startingBalance is not null && annualSavings is not null && annualIncome is not null
+                         && annualSpending is not null && aggressiveSavings is not null;
+
+        NetWorthProjectionDto projection = converted
+            ? ComputeProjection(new NetWorthProjectionRequestDto
+            {
+                CurrencyCode = conversion.ReportingCurrency,
+                StartingBalance = startingBalance!.Value,
+                AnnualSavings = annualSavings!.Value,
+                AnnualIncome = annualIncome!.Value,
+                AnnualSpending = annualSpending!.Value,
+                CurrentAge = request.CurrentAge,
+                RetirementAge = request.RetirementAge,
+                BaseRoi = request.BaseRoi,
+                ConservativeRoi = request.ConservativeRoi,
+                AggressiveRoi = request.AggressiveRoi,
+                AggressiveSavings = aggressiveSavings!.Value
+            })
+            : ComputeProjection(request);
+        projection.Conversion = conversion.ToDto();
         return projection;
     }
 

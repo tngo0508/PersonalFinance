@@ -10,6 +10,8 @@ namespace PersonalFinance.ApiService.Infrastructure;
 
 /// <summary>
 /// Budget month reader implementation that reads synced Google Drive spreadsheet snapshots and transaction records.
+/// Every figure it returns is in the Account's Reporting Currency: a snapshot converted at its month's rate, a
+/// transaction at its own day's (ADR 0016).
 /// </summary>
 public class SheetBudgetMonthReader : IBudgetMonthReader
 {
@@ -19,10 +21,12 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
     };
 
     private readonly AppDbContext _dbContext;
+    private readonly ICurrencyConverter _currencyConverter;
 
-    public SheetBudgetMonthReader(AppDbContext dbContext)
+    public SheetBudgetMonthReader(AppDbContext dbContext, ICurrencyConverter currencyConverter)
     {
         _dbContext = dbContext;
+        _currencyConverter = currencyConverter;
     }
 
     /// <inheritdoc />
@@ -45,7 +49,7 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
 
         foreach (IGrouping<int, SpreadsheetBudgetSnapshot>? group in grouped)
         {
-            BudgetMonthData aggregated = AggregateSnapshotsToMonthData(year, group.Key, group.ToList());
+            BudgetMonthData aggregated = await AggregateAsync(userId, year, group.Key, group.ToList(), ct);
             result.Add(aggregated);
         }
 
@@ -67,26 +71,32 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
             return null;
         }
 
-        return AggregateSnapshotsToMonthData(year, month, snapshots);
+        return await AggregateAsync(userId, year, month, snapshots, ct);
     }
 
     /// <inheritdoc />
     public async Task<List<BudgetTrendRecordData>> GetTrendRecordsAsync(string userId, int year,
         CancellationToken ct = default)
     {
-        return await _dbContext.SpreadsheetBudgetSnapshots
+        var snapshots = await _dbContext.SpreadsheetBudgetSnapshots
             .AsNoTracking()
             .Where(s => s.UserId == userId && s.Year == year)
             .OrderBy(s => s.MonthNumber)
             .ThenBy(s => s.Id)
+            .Select(s => new { s.MonthNumber, s.MonthName, s.ActualIncome, s.ActualExpenses, s.CurrencyCode })
+            .ToListAsync(ct);
+        ReportingConversion conversion = await ConversionAsync(userId,
+            snapshots.Select(s => new MoneyAt(s.CurrencyCode, MonthStart(year, s.MonthNumber))), ct);
+
+        return snapshots
             .Select(s => new BudgetTrendRecordData
             {
                 MonthNumber = s.MonthNumber,
                 MonthName = s.MonthName,
-                Income = s.ActualIncome,
-                Expenses = s.ActualExpenses
+                Income = conversion.ConvertOrOriginal(s.ActualIncome, s.CurrencyCode, MonthStart(year, s.MonthNumber)),
+                Expenses = conversion.ConvertOrOriginal(s.ActualExpenses, s.CurrencyCode, MonthStart(year, s.MonthNumber))
             })
-            .ToListAsync(ct);
+            .ToList();
     }
 
     /// <inheritdoc />
@@ -115,6 +125,8 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
         }
 
         List<SpreadsheetTransactionRecord> records = await query.ToListAsync(ct);
+        ReportingConversion conversion = await ConversionAsync(userId,
+            records.Select(t => new MoneyAt(t.CurrencyCode, DateOnly.FromDateTime(t.Date))), ct);
 
         return records.Select(t => new BudgetTransactionData
         {
@@ -122,6 +134,8 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
             Description = t.Description,
             Category = t.Category,
             Amount = t.Amount,
+            CurrencyCode = t.CurrencyCode,
+            ReportingAmount = conversion.Convert(t.Amount, t.CurrencyCode, DateOnly.FromDateTime(t.Date)),
             Date = t.Date,
             Type = t.Type
         }).ToList();
@@ -139,9 +153,26 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
             .ToListAsync(ct);
     }
 
-    private static BudgetMonthData AggregateSnapshotsToMonthData(int year, int month,
-        List<SpreadsheetBudgetSnapshot> snapshots)
+    /// <summary>A conversion into the Account's Reporting Currency, prepared for <paramref name="amounts"/>.</summary>
+    private async Task<ReportingConversion> ConversionAsync(string userId, IEnumerable<MoneyAt> amounts, CancellationToken ct)
     {
+        string reportingCurrency = await _currencyConverter.GetReportingCurrencyAsync(userId, ct);
+        return await _currencyConverter.PrepareAsync(reportingCurrency, amounts, ct);
+    }
+
+    /// <summary>The first day of a snapshot's month: the day its figures convert at (a month number outside 1-12 reads as January).</summary>
+    private static DateOnly MonthStart(int year, int month) => new(year, Math.Clamp(month, 1, 12), 1);
+
+    private async Task<BudgetMonthData> AggregateAsync(string userId, int year, int month,
+        List<SpreadsheetBudgetSnapshot> snapshots, CancellationToken ct)
+    {
+        // Each snapshot converts at the month's rate; a month synced from two spreadsheets in different currencies adds up.
+        DateOnly monthStart = MonthStart(year, month);
+        ReportingConversion conversion = await ConversionAsync(userId,
+            snapshots.Select(s => new MoneyAt(s.CurrencyCode, monthStart)), ct);
+        decimal Money(SpreadsheetBudgetSnapshot snapshot, decimal amount) =>
+            conversion.ConvertOrOriginal(amount, snapshot.CurrencyCode, monthStart);
+
         string? monthName = snapshots.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s.MonthName))?.MonthName;
         if (string.IsNullOrWhiteSpace(monthName))
         {
@@ -160,16 +191,16 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
             {
                 if (categoryMap.TryGetValue(cat.Name, out BudgetMonthCategoryData? existing))
                 {
-                    existing.Budgeted += cat.Budgeted;
-                    existing.Actual += cat.Actual;
+                    existing.Budgeted += Money(snapshot, cat.Budgeted);
+                    existing.Actual += Money(snapshot, cat.Actual);
                 }
                 else
                 {
                     var newCat = new BudgetMonthCategoryData
                     {
                         Name = cat.Name,
-                        Budgeted = cat.Budgeted,
-                        Actual = cat.Actual
+                        Budgeted = Money(snapshot, cat.Budgeted),
+                        Actual = Money(snapshot, cat.Actual)
                     };
                     categoryMap[cat.Name] = newCat;
                     categoryList.Add(newCat);
@@ -185,13 +216,15 @@ public class SheetBudgetMonthReader : IBudgetMonthReader
             Year = year,
             Month = month,
             MonthName = monthName,
+            CurrencyCode = conversion.ReportingCurrency,
+            Conversion = conversion.ToDto(),
             SourceRecordCount = snapshots.Count,
-            BudgetedIncome = snapshots.Sum(s => s.BudgetedIncome),
-            ActualIncome = snapshots.Sum(s => s.ActualIncome),
-            BudgetedExpenses = snapshots.Sum(s => s.BudgetedExpenses),
-            ActualExpenses = snapshots.Sum(s => s.ActualExpenses),
-            StartingBalance = hasStartingBalance ? snapshots.Sum(s => s.StartingBalance ?? 0m) : null,
-            EndingBalance = hasEndingBalance ? snapshots.Sum(s => s.EndingBalance ?? 0m) : null,
+            BudgetedIncome = conversion.Total(snapshots.Select(s => Money(s, s.BudgetedIncome))),
+            ActualIncome = conversion.Total(snapshots.Select(s => Money(s, s.ActualIncome))),
+            BudgetedExpenses = conversion.Total(snapshots.Select(s => Money(s, s.BudgetedExpenses))),
+            ActualExpenses = conversion.Total(snapshots.Select(s => Money(s, s.ActualExpenses))),
+            StartingBalance = hasStartingBalance ? conversion.Total(snapshots.Select(s => Money(s, s.StartingBalance ?? 0m))) : null,
+            EndingBalance = hasEndingBalance ? conversion.Total(snapshots.Select(s => Money(s, s.EndingBalance ?? 0m))) : null,
             Categories = categoryList
         };
     }

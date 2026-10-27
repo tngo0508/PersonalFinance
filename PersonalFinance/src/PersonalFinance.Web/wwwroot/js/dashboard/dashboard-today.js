@@ -9,7 +9,8 @@
 (function () {
     'use strict';
 
-    const CURRENCY = 'USD';
+    // The Reporting Currency (ADR 0016), read from the dashboard data; every figure here is in it.
+    let reportingCurrency = 'USD';
     const HOURS_IN_DAY = 24;
 
     /**
@@ -299,7 +300,7 @@
             return;
         }
         root.querySelector('[data-dash-today-earned]').textContent =
-            `+${i18n.formatMoney(perDay * dayFraction(now), CURRENCY)}`;
+            `+${i18n.formatMoney(perDay * dayFraction(now), reportingCurrency)}`;
     }
 
     /**
@@ -330,8 +331,8 @@
         bar.dataset.status = pace.status;
         root.querySelector('[data-dash-today-pace-mark]').style.left = `${(pace.monthShare * 100).toFixed(1)}%`;
         root.querySelector('[data-dash-today-spend-value]').textContent = i18n.t('Dashboard.Js.Today.SpendValue', {
-            spent: i18n.formatMoney(budget.actualExpenses, CURRENCY, { whole: true }),
-            budget: i18n.formatMoney(budget.budgetedExpenses, CURRENCY, { whole: true })
+            spent: i18n.formatMoney(budget.actualExpenses, reportingCurrency, { whole: true }),
+            budget: i18n.formatMoney(budget.budgetedExpenses, reportingCurrency, { whole: true })
         });
 
         const statusKeys = { onPace: 'OnPace', ahead: 'AheadOfPace', over: 'OverBudget' };
@@ -339,10 +340,10 @@
         status.textContent = i18n.t(`Dashboard.Js.Today.${statusKeys[pace.status]}`);
         paceLine.dataset.status = pace.status;
         root.querySelector('[data-dash-today-pace-text]').textContent = pace.status === 'over'
-            ? i18n.t('Dashboard.Js.Today.Over', { amount: i18n.formatMoney(-pace.remaining, CURRENCY, { whole: true }) })
+            ? i18n.t('Dashboard.Js.Today.Over', { amount: i18n.formatMoney(-pace.remaining, reportingCurrency, { whole: true }) })
             : i18n.plural('Dashboard.Js.Today.Remaining', pace.daysLeft, {
-                amount: i18n.formatMoney(pace.remaining, CURRENCY, { whole: true }),
-                perDay: i18n.formatMoney(pace.perDay, CURRENCY, { whole: true })
+                amount: i18n.formatMoney(pace.remaining, reportingCurrency, { whole: true }),
+                perDay: i18n.formatMoney(pace.perDay, reportingCurrency, { whole: true })
             });
     }
 
@@ -453,12 +454,12 @@
         worth.hidden = perDay === null;
         if (perDay !== null) {
             root.querySelector('[data-dash-today-per-day]').textContent = i18n.t('Dashboard.Js.Today.PerDay', {
-                amount: i18n.formatMoney(perDay, CURRENCY),
-                hourly: i18n.formatMoney(perDay / HOURS_IN_DAY, CURRENCY)
+                amount: i18n.formatMoney(perDay, reportingCurrency),
+                hourly: i18n.formatMoney(perDay / HOURS_IN_DAY, reportingCurrency)
             });
             root.querySelector('[data-dash-today-basis]').textContent = i18n.t('Dashboard.Js.Today.Basis', {
                 rate: i18n.formatNumber(netWorth.baseRoi / 100, { style: 'percent', maximumFractionDigits: 2 }),
-                netWorth: i18n.formatMoney(netWorth.currentNetWorth, CURRENCY, { whole: true })
+                netWorth: i18n.formatMoney(netWorth.currentNetWorth, reportingCurrency, { whole: true })
             });
         }
 
@@ -484,6 +485,7 @@
             return;
         }
         const clock = root.querySelector('[data-dash-today-clock]');
+        reportingCurrency = data.reportingCurrency || (data.netWorth && data.netWorth.currencyCode) || 'USD';
         const activity = activityDays(data.recentActivity);
         const netWorth = data.netWorth || null;
         const budget = data.monthlyBudget || null;

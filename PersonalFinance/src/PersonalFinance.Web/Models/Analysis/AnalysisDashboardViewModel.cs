@@ -11,6 +11,12 @@ namespace PersonalFinance.Web.Models.Analysis;
 /// </summary>
 public class AnalysisDashboardViewModel
 {
+    /// <summary>The ISO 4217 code every amount on the page is in: the Account's Reporting Currency (ADR 0016).</summary>
+    public string ReportingCurrency { get; set; } = "USD";
+
+    /// <summary>The rates that brought the period's months into the Reporting Currency; null when none was needed.</summary>
+    public PersonalFinance.Shared.DTOs.Currency.ConversionDto? Conversion { get; set; }
+
     public bool HasData { get; set; }
     public int SelectedYear { get; set; }
     public int? SelectedMonth { get; set; }

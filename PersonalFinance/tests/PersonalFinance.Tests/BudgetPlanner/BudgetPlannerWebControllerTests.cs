@@ -29,7 +29,7 @@ public class BudgetPlannerWebControllerTests
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
         var tempData = new TempDataDictionary(httpContext, new TestTempDataProvider());
 
-        return new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer)
+        return new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = tempData

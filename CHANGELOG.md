@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [10.1.0] - 2026-10-26
+
+### Added
+
+- **Totals in your Reporting Currency**: every page brings amounts saved in another currency into the currency chosen in Account settings › Currency, server-side, at the daily exchange rates (slice C2 of the localization and multi-currency spec, #411, ADR 0016).
+  - Dated amounts (Budget Tracker transactions and monthly lines, synced spreadsheet months) use their own day's rate; balances (Savings Goals, the Budget Planner, Net Worth settings, the Dashboard's figures) use the latest. The Net Worth projection converts its inputs once, then projects in the Reporting Currency.
+  - A day without a rate uses the nearest earlier one; when that is more than three days older the page says "rate as of {date}". With no rate at all the amounts stay in their own currency under "conversion unavailable", never as zero. Each total is rounded once.
+  - Each amount keeps its own currency beside the converted figure, and a converted total carries the caption "converted at {rate} on {date}".
+- **Reporting Currency setting**: Account settings › Currency chooses the currency totals are shown in, independent of the language. Changing it never rewrites a saved amount.
+- **Per-amount currency selectors**: a new Savings Goal, a Budget Tracker transaction or override picks USD or VND per row; the Budget Planner, Net Worth settings and a Money Priorities walk pick it once; connecting a Google Drive folder asks for its spreadsheets' currency. Every selector defaults to the Reporting Currency.
+- **Playwright smoke test**: a đồng goal inside a dollar total with its conversion caption, then the Reporting Currency switched to đồng (Test 9f). The E2E fixtures seed one exchange rate so the caption shows a rate.
+
+### Changed
+
+- **Rates are cached**: the ApiService keeps the exchange rates it has used in memory for an hour, keyed by currency and day, and the daily rate refresh drops them as soon as it writes new rows. A cold read is one query per currency and date range.
+- **Search results, Dashboard activity, Purpose Note facts and milestone Notifications** name an amount in its own currency instead of always in US dollars.
+
 ## [10.0.0] - 2026-10-27
 
 ### Removed

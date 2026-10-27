@@ -1,0 +1,40 @@
+@page
+@using PersonalFinance.Shared.Constants
+@using PersonalFinance.Shared.Helpers
+@model CurrencyModel
+@{
+    ViewData["Title"] = L["Account.Currency.Title"].Value;
+    ViewData["ActivePage"] = ManageNavPages.Currency;
+}
+
+<h3>@ViewData["Title"]</h3>
+@if (Model.Saved)
+{
+    <div class="alert alert-success alert-dismissible" role="alert">
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
+        @L["Account.Currency.Saved"]
+    </div>
+}
+<div class="row">
+    <div class="col-xl-6">
+        <form id="currency-form" method="post">
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+            <p class="text-muted">@L["Account.Currency.Intro"]</p>
+            <p class="text-muted">@L["Account.Currency.Note"]</p>
+            <fieldset class="mb-3">
+                <legend class="visually-hidden">@L["Account.Currency.Title"]</legend>
+                @foreach (var currency in SupportedCurrencies.All)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="ReportingCurrency" id="currency-@currency.Code"
+                               value="@currency.Code" checked="@(currency.Code == Model.ReportingCurrency)"/>
+                        <label class="form-check-label" for="currency-@currency.Code">
+                            @currency.Code <span class="text-muted">· @currency.DisplayName · @MoneyFormatter.Format(1234.5m, currency.Code)</span>
+                        </label>
+                    </div>
+                }
+            </fieldset>
+            <button id="save-currency" type="submit" class="w-100 btn btn-lg btn-primary">@L["Account.Currency.Save"]</button>
+        </form>
+    </div>
+</div>

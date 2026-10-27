@@ -29,7 +29,7 @@ public class DashboardProjectionTests
         db.NetWorthParameters.Add(row);
         await db.SaveChangesAsync();
         DashboardSummaryDto summary =
-            await new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(UserId);
+            await new DashboardService(db, TestBudgetDataProviderFactory.Create(db), TestCurrencyConverter.Create(db)).GetDashboardSummaryAsync(UserId);
         return summary.NetWorth;
     }
 

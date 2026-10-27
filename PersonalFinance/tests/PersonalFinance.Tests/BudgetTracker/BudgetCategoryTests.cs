@@ -32,7 +32,7 @@ public class BudgetCategoryTests
     public async Task EnsureDefaultCategories_IsIdempotent_AndCreatesAllExpectedDefaults()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
 
         // Run once
         await service.EnsureDefaultCategoriesAsync(UserId);
@@ -55,7 +55,7 @@ public class BudgetCategoryTests
     public async Task CreateCategory_RejectsDuplicateName_CaseInsensitivelyWithinKind()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         // "Food" already exists in Expense
@@ -89,7 +89,7 @@ public class BudgetCategoryTests
     public async Task UpdateCategory_AllowsRenameAndReorder()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
@@ -118,7 +118,7 @@ public class BudgetCategoryTests
     public async Task UpdateCategory_RejectsDuplicateName()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
@@ -142,7 +142,7 @@ public class BudgetCategoryTests
     public async Task UpdateCategory_ArchivedOrNotFound_IsRejectedAsNotFound()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
@@ -177,7 +177,7 @@ public class BudgetCategoryTests
     public async Task DeleteCategory_SoftDeletesCategory_HidingItFromActiveList()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
@@ -212,7 +212,7 @@ public class BudgetCategoryTests
     public async Task Category_OwnershipIsolation_PreventsCrossUserMutation()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
         await service.EnsureDefaultCategoriesAsync(OtherUserId);
 
@@ -251,7 +251,7 @@ public class BudgetCategoryTests
     public async Task CreateCategory_Duplicate_IsRejectedWithTheDuplicateKeyAnd409()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
@@ -274,7 +274,7 @@ public class BudgetCategoryTests
     public async Task UpdateCategory_KindChange_IsRejectedWithTheImmutableKindKey()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         BudgetCategoryDto created = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Side Business",
@@ -299,7 +299,7 @@ public class BudgetCategoryTests
     public async Task DeleteCategory_Unknown_IsRejectedWithTheNotFoundKeyAnd404()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
 
         ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.DeleteCategoryAsync(UserId, 99999));

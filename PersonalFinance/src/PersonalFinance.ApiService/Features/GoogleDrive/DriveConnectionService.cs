@@ -492,6 +492,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
             Name = connection.Name,
             FolderId = connection.FolderId,
             FolderUrl = connection.FolderUrl,
+            CurrencyCode = connection.CurrencyCode,
             MaskedApiKey = connection.MaskedApiKey,
             IsValid = connection.IsValid,
             SyncStatus = connection.SyncStatus,

@@ -51,6 +51,7 @@ internal sealed class SpreadsheetReaderService : ISpreadsheetReader
                     fileId, download.DataSource)
                 : BudgetSpreadsheetParser.ParseSpreadsheetBudgetReport(ReadText(download.Content), download.FileName,
                     fileId, download.DataSource);
+            report.CurrencyCode = download.CurrencyCode;
 
             if (report.Months.Count > 0)
             {
@@ -90,6 +91,7 @@ internal sealed class SpreadsheetReaderService : ISpreadsheetReader
                     fileId, download.DataSource)
                 : BudgetSpreadsheetParser.ParseCsvTransactions(ReadText(download.Content), download.FileName, fileId,
                     download.DataSource);
+            result.CurrencyCode = download.CurrencyCode;
 
             if (result.Transactions.Count > 0)
             {

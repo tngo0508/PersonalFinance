@@ -2,6 +2,7 @@ const {chromium} = require('playwright');
 const {runResearchWalkthrough} = require('./research-walkthrough');
 const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough');
 const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
+const {runReportingCurrencySmoke} = require('./reporting-currency-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -916,6 +917,16 @@ const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
             await runLanguageSwitchSmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Language switch smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9f: Reporting Currency smoke (localization spec, slice C2): a đồng goal inside a dollar total, with its caption
+        // =========================================================
+        console.log('\n--- Test 9f: Reporting Currency Smoke ---');
+        try {
+            await runReportingCurrencySmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Reporting currency smoke failed: ${error.message}`);
         }
 
         // =========================================================

@@ -5,6 +5,8 @@
     var budget = Model.Budget;
     var periodLabel = DashboardBudgetFormat.PeriodLabel(budget?.Period);
     var overAllocatedPercent = budget is null ? 0m : budget.TotalAllocatedPercent - 100m;
+    // The Reporting Currency, or the budget's own when no rate exists (ADR 0016).
+    var budgetCurrency = SupportedCurrencies.CodeOrDefault(budget?.CurrencyCode);
     string legendLabel = string.IsNullOrEmpty(periodLabel)
         ? L["Dashboard.Budget.LegendLabel"]
         : L.Named("Dashboard.Budget.LegendLabelPeriod", ("period", periodLabel));
@@ -19,7 +21,7 @@
     @if (budget is not null)
     {
         Func<object?, HelperResult> incomeAmount =
-            @<span class="dash-money">@MoneyFormatter.FormatWhole(budget.MonthlyIncome, SupportedCurrencies.Default.Code)</span>;
+            @<span class="dash-money">@MoneyFormatter.FormatWhole(budget.MonthlyIncome, budgetCurrency)</span>;
         <p class="dash-note">
             @if (!string.IsNullOrEmpty(periodLabel))
             {
@@ -42,7 +44,7 @@
                           aria-hidden="true"></span>
                     <span class="dash-budget__name">@DashboardText.CategoryName(L, allocation)</span>
                     <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(allocation.Percent)</span>
-                    <span class="dash-budget__amount dash-money">@MoneyFormatter.FormatWhole(allocation.Amount, SupportedCurrencies.Default.Code)</span>
+                    <span class="dash-budget__amount dash-money">@MoneyFormatter.FormatWhole(allocation.Amount, budgetCurrency)</span>
                 </li>
             }
             @if (budget.UnallocatedPercent is { } unallocatedPercent)
@@ -51,7 +53,7 @@
                     <span class="dash-budget__swatch dash-budget__swatch--unallocated" aria-hidden="true"></span>
                     <span class="dash-budget__name">@L["Dashboard.Budget.Unallocated"]</span>
                     <span class="dash-budget__percent dash-money">@DashboardBudgetFormat.Percent(unallocatedPercent)</span>
-                    <span class="dash-budget__amount dash-money">@MoneyFormatter.FormatWhole(budget.UnallocatedAmount ?? 0m, SupportedCurrencies.Default.Code)</span>
+                    <span class="dash-budget__amount dash-money">@MoneyFormatter.FormatWhole(budget.UnallocatedAmount ?? 0m, budgetCurrency)</span>
                 </li>
             }
         </ul>

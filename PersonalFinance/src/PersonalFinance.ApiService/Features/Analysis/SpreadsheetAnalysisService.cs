@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.DTOs.Currency;
 using ApiErrorEntryDto = PersonalFinance.Shared.Contracts.ApiErrorEntryDto;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
@@ -77,7 +78,9 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 TotalExpenses = totalExpenses,
                 NetSavings = netSavings,
                 SavingsRate = savingsRate,
-                SnapshotCount = monthData.SourceRecordCount
+                SnapshotCount = monthData.SourceRecordCount,
+                ReportingCurrency = monthData.CurrencyCode,
+                Conversion = monthData.Conversion
             };
         }
         else
@@ -101,7 +104,9 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                 TotalExpenses = totalExpenses,
                 NetSavings = netSavings,
                 SavingsRate = savingsRate,
-                SnapshotCount = snapshotCount
+                SnapshotCount = snapshotCount,
+                ReportingCurrency = months[0].CurrencyCode,
+                Conversion = ConversionDto.Combine(months.Select(m => m.Conversion))
             };
         }
     }
@@ -239,7 +244,9 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             TotalSpent = totalSpent,
             TotalBudgeted = totalBudgeted,
             ActualIncome = monthData.ActualIncome,
-            ActualExpenses = monthData.ActualExpenses
+            ActualExpenses = monthData.ActualExpenses,
+            ReportingCurrency = monthData.CurrencyCode,
+            Conversion = monthData.Conversion
         };
     }
 
@@ -589,7 +596,8 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             int endDay = Math.Min(week * 7, daysInMonth);
 
             IEnumerable<BudgetTransactionData> weekTransactions = expenseTransactions.Where(t => t.Date.Day >= startDay && t.Date.Day <= endDay);
-            decimal totalSpent = weekTransactions.Sum(t => t.Amount);
+            // Each transaction in the Reporting Currency at its own day's rate; its own amount when there is no rate.
+            decimal totalSpent = weekTransactions.Sum(t => t.ReportingAmount ?? t.Amount);
 
             weeklyData.Add(new WeeklySpendingDto
             {

@@ -57,8 +57,9 @@ public class BudgetDataProviderTests
         sheetReader, TrackerBudgetMonthReader trackerReader) CreateServices(AppDbContext db)
     {
         var sourceService = new BudgetDataSourceService(db);
-        var sheetReader = new SheetBudgetMonthReader(db);
-        var trackerReader = new TrackerBudgetMonthReader(db);
+        ICurrencyConverter converter = TestCurrencyConverter.Create(db);
+        var sheetReader = new SheetBudgetMonthReader(db, converter);
+        var trackerReader = new TrackerBudgetMonthReader(db, converter);
         var provider = new BudgetDataProvider(sourceService, sheetReader, trackerReader);
         return (provider, sourceService, sheetReader, trackerReader);
     }
@@ -1020,7 +1021,7 @@ public class BudgetDataProviderTests
     public async Task MonthlyBudgetService_And_TrackerBudgetMonthReader_ParityTest()
     {
         await using AppDbContext db = CreateContext();
-        var monthlyBudgetService = new MonthlyBudgetService(db);
+        var monthlyBudgetService = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
 
         await monthlyBudgetService.EnsureDefaultCategoriesAsync(UserId);

@@ -19,21 +19,23 @@
         let lastTxRequest = null;
         let txRequestSeq = 0;
         const filters = { type: '', category: '', search: '' };
+        // The spreadsheet's currency, chosen when its folder was connected (ADR 0016); read from each result.
+        let currentCurrency = 'USD';
 
         // Reference to shared utilities
         const PF = window.PFUtils;
 
         function formatCurrency (num) {
-            return PF.formatCurrencyCents(num);
+            return PFI18n.formatMoney(Number(num) || 0, currentCurrency);
         }
 
-        // Whole dollars for tiles and prose where cents are noise
+        // Whole units for tiles and prose where minor units are noise
         function formatMoney (num) {
-            return PFI18n.formatMoney(Number(num) || 0, 'USD', { whole: true });
+            return PFI18n.formatMoney(Number(num) || 0, currentCurrency, { whole: true });
         }
 
         function formatCompactCurrency (val) {
-            return PF.formatCompactCurrencySigned(val);
+            return PFI18n.formatCompactMoney(val, currentCurrency);
         }
 
         function escapeHtml (value) {
@@ -437,6 +439,7 @@
                     }
 
                     currentTx = data;
+                    currentCurrency = data.currencyCode || 'USD';
                     const sourceClass = data.isLiveSpreadsheetData ? 'bgt-source--live' : 'bgt-source--sample';
                     $('#txModalDataSource').html(`<span class="bgt-source ${ sourceClass }">${ escapeHtml(sourceLabel(data)) }</span>`);
                     $('#txSheetName').text(data.sheetName ? PFI18n.t('GoogleDrive.Js.Tx.ReadFromSheet', { sheet: data.sheetName }) : '');

@@ -13,23 +13,23 @@ namespace PersonalFinance.ApiService.Features.MoneyPriorities;
 /// </summary>
 internal static class PurposeNoteFacts
 {
-    public static PurposeNoteRequestDto For(string purpose, PriorityAnswers answers, IReadOnlyList<string> pathSentences,
-        string leafLabel, PriorityLeafFigures figures) => new()
+    public static PurposeNoteRequestDto For(string purpose, string currencyCode, PriorityAnswers answers,
+        IReadOnlyList<string> pathSentences, string leafLabel, PriorityLeafFigures figures) => new()
     {
         Purpose = purpose,
-        Answers = AnswerFacts(answers).ToList(),
+        Answers = AnswerFacts(answers, currencyCode).ToList(),
         PathLabels = pathSentences.ToList(),
         LeafLabel = leafLabel,
-        Figures = FigureFacts(figures).ToList()
+        Figures = FigureFacts(figures, currencyCode).ToList()
     };
 
-    private static IEnumerable<PurposeNoteFactDto> AnswerFacts(PriorityAnswers answers)
+    private static IEnumerable<PurposeNoteFactDto> AnswerFacts(PriorityAnswers answers, string currencyCode)
     {
-        yield return Fact("Extra money each month", Dollars(answers.MonthlyAmount));
+        yield return Fact("Extra money each month", Money(answers.MonthlyAmount, currencyCode));
         yield return Fact("Highest debt APR", Percent(answers.DebtApr));
         if (answers.DebtBalance is { } balance)
         {
-            yield return Fact("Debt balance", Dollars(balance));
+            yield return Fact("Debt balance", Money(balance, currencyCode));
         }
 
         if (answers.EmergencyFundMonths is { } months)
@@ -39,7 +39,7 @@ internal static class PurposeNoteFacts
 
         if (answers.MonthlyExpenses is { } expenses)
         {
-            yield return Fact("Monthly expenses", Dollars(expenses));
+            yield return Fact("Monthly expenses", Money(expenses, currencyCode));
         }
 
         if (answers.HasFullEmployerMatch is { } fullMatch)
@@ -68,17 +68,17 @@ internal static class PurposeNoteFacts
         }
     }
 
-    private static IEnumerable<PurposeNoteFactDto> FigureFacts(PriorityLeafFigures figures)
+    private static IEnumerable<PurposeNoteFactDto> FigureFacts(PriorityLeafFigures figures, string currencyCode)
     {
         if (figures.Debt is { } debt)
         {
             yield return Fact("Assumed investment return the APR is compared against", Percent(debt.AssumedReturnPercent));
-            yield return Fact("Interest in the first month", Dollars(debt.Payoff.FirstMonthInterest));
+            yield return Fact("Interest in the first month", Money(debt.Payoff.FirstMonthInterest, currencyCode));
             switch (debt.Payoff.Outcome)
             {
                 case DebtPayoffOutcome.PaidOff:
                     yield return Fact("Months to pay it off", Number(debt.Payoff.Months ?? 0));
-                    yield return Fact("Total interest", Dollars(debt.Payoff.TotalInterest ?? 0m));
+                    yield return Fact("Total interest", Money(debt.Payoff.TotalInterest ?? 0m, currencyCode));
                     break;
                 case DebtPayoffOutcome.AmountDoesNotCoverInterest:
                     yield return Fact("Payoff", "the monthly amount does not cover the monthly interest");
@@ -91,23 +91,23 @@ internal static class PurposeNoteFacts
 
         if (figures.EmergencyFund is { } fund)
         {
-            yield return Fact($"Emergency fund target ({Number(fund.TargetMonths)} months)", Dollars(fund.TargetAmount));
-            yield return Fact("Gap to the target", Dollars(fund.Gap));
+            yield return Fact($"Emergency fund target ({Number(fund.TargetMonths)} months)", Money(fund.TargetAmount, currencyCode));
+            yield return Fact("Gap to the target", Money(fund.Gap, currencyCode));
             yield return Fact("Months to close the gap", Number(fund.MonthsToClose));
         }
 
         if (figures.EmployerMatch is { } match)
         {
             yield return Fact("Employer match", Percent(match.MatchPercent));
-            yield return Fact("Up to this much match a year", Dollars(match.YearlyMatch));
+            yield return Fact("Up to this much match a year", Money(match.YearlyMatch, currencyCode));
         }
 
         if (figures.RetirementSplit is { } split)
         {
-            yield return Fact("Yearly amount", Dollars(split.YearlyAmount));
-            yield return Fact($"To the IRA (limit {Dollars(split.IraLimit)})", Dollars(split.ToIra));
-            yield return Fact($"To the 401(k) (limit {Dollars(split.EmployeeDeferralLimit)})", Dollars(split.ToEmployeePlan));
-            yield return Fact("To a taxable account", Dollars(split.ToTaxable));
+            yield return Fact("Yearly amount", Money(split.YearlyAmount, currencyCode));
+            yield return Fact($"To the IRA (limit {Money(split.IraLimit, currencyCode)})", Money(split.ToIra, currencyCode));
+            yield return Fact($"To the 401(k) (limit {Money(split.EmployeeDeferralLimit, currencyCode)})", Money(split.ToEmployeePlan, currencyCode));
+            yield return Fact("To a taxable account", Money(split.ToTaxable, currencyCode));
             yield return Fact("IRS limits tax year", Number(split.TaxYear));
         }
 
@@ -115,23 +115,24 @@ internal static class PurposeNoteFacts
         {
             yield return Fact(
                 $"{scenario.Scenario} balance after {Number(figures.HorizonYears ?? 0)} years at {Percent(scenario.RatePercent)} a year",
-                Dollars(scenario.Balance));
+                Money(scenario.Balance, currencyCode));
         }
 
         if (figures.TotalContributed is { } contributed)
         {
-            yield return Fact("Total contributed", Dollars(contributed));
+            yield return Fact("Total contributed", Money(contributed, currencyCode));
         }
     }
 
     private static PurposeNoteFactDto Fact(string label, string value) => new() { Label = label, Value = value };
 
     /// <summary>
-    /// Whole dollars through the shared money formatter, in the app's default culture: the prompt is written in
-    /// English, so its figures read the English way whatever the user's Language.
+    /// Whole units of the Walk's currency through the shared money formatter, in the app's default culture: the prompt
+    /// is written in English, so its figures read the English way whatever the user's Language.
     /// </summary>
-    private static string Dollars(decimal amount) =>
-        MoneyFormatter.FormatWhole(DisplayRounding.WholeDollars(amount), SupportedCurrencies.Default.Code, AppCulture.Default);
+    private static string Money(decimal amount, string currencyCode) =>
+        MoneyFormatter.FormatWhole(DisplayRounding.WholeDollars(amount), SupportedCurrencies.CodeOrDefault(currencyCode),
+            AppCulture.Default);
 
     private static string Percent(decimal percent) => percent.ToString("0.##", AppCulture.Default) + "%";
 

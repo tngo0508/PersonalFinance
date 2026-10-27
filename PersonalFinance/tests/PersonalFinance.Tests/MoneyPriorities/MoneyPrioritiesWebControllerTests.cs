@@ -274,7 +274,7 @@ public class MoneyPrioritiesWebControllerTests
     private static MoneyPrioritiesController CreateController(IMoneyPrioritiesApi api)
     {
         var controller = new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
-            TestLocalization.Localizer);
+            TestLocalization.Localizer, new InMemoryUserPreferenceService());
         var httpContext = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(

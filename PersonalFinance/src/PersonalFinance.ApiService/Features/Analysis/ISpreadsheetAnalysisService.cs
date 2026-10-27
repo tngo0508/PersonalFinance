@@ -1,4 +1,5 @@
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.DTOs.Currency;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
 
@@ -17,6 +18,12 @@ public sealed class SummaryStatisticsDto
     public decimal NetSavings { get; set; }
     public decimal SavingsRate { get; set; }
     public int SnapshotCount { get; set; }
+
+    /// <summary>The ISO 4217 code the totals are in: the Reporting Currency (ADR 0016).</summary>
+    public string ReportingCurrency { get; set; } = string.Empty;
+
+    /// <summary>The rates that brought the months' figures into the Reporting Currency; null when none was needed.</summary>
+    public ConversionDto? Conversion { get; set; }
 }
 
 /// <summary>
@@ -101,6 +108,12 @@ public sealed class CategoryInsightsDto
 
     /// <summary>The month's actual expenses, from the same month as <see cref="Categories"/>.</summary>
     public decimal ActualExpenses { get; set; }
+
+    /// <summary>The ISO 4217 code every amount is in: the Reporting Currency (ADR 0016).</summary>
+    public string ReportingCurrency { get; set; } = string.Empty;
+
+    /// <summary>The rates that brought the month's figures into the Reporting Currency; null when none was needed.</summary>
+    public ConversionDto? Conversion { get; set; }
 }
 
 /// <summary>

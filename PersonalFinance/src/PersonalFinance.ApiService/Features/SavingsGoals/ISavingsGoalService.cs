@@ -67,8 +67,24 @@ public sealed class SavingsGoalResponseDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>The ISO 4217 currency of the goal's target, saved amount and Contributions (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    /// <summary>The Account's Reporting Currency, which the reporting amounts below are in.</summary>
+    public string ReportingCurrency { get; set; } = string.Empty;
+
     public decimal TargetAmount { get; set; }
     public decimal CurrentAmount { get; set; }
+
+    /// <summary><see cref="TargetAmount"/> in the Reporting Currency at the latest rate; null when no rate exists.</summary>
+    public decimal? ReportingTargetAmount { get; set; }
+
+    /// <summary><see cref="CurrentAmount"/> in the Reporting Currency at the latest rate; null when no rate exists.</summary>
+    public decimal? ReportingCurrentAmount { get; set; }
+
+    /// <summary>How the reporting amounts were converted, for the page's caption; null when none was needed.</summary>
+    public PersonalFinance.Shared.DTOs.Currency.ConversionDto? Conversion { get; set; }
     public string? Description { get; set; }
     public DateTime? TargetDate { get; set; }
     public bool IsCompleted { get; set; }
@@ -77,5 +93,9 @@ public sealed class SavingsGoalResponseDto
     public double ProgressPercent { get; set; }
     public List<ContributionDto> Contributions { get; set; } = [];
     public decimal SavedThisMonth { get; set; }
+
+    /// <summary><see cref="SavedThisMonth"/> in the Reporting Currency at the latest rate; null when no rate exists.</summary>
+    public decimal? ReportingSavedThisMonth { get; set; }
+
     public SavingsGoalPaceDto Pace { get; set; } = new();
 }

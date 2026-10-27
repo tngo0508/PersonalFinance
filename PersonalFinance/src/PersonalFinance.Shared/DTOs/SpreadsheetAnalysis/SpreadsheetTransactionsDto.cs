@@ -10,6 +10,9 @@ public class SpreadsheetTransactionsDto
     public string FileName { get; set; } = string.Empty;
     public string? FileId { get; set; }
     public string? SheetName { get; set; }
+
+    /// <summary>The ISO 4217 currency of every amount: the connection's, chosen when the folder was connected (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = "USD";
     public string DataSource { get; set; } = "Google Drive Spreadsheet (Actual Data)";
     public bool IsLiveSpreadsheetData { get; set; } = true;
     public string? ErrorMessage { get; set; }

@@ -49,6 +49,7 @@ public class BudgetController : ControllerBase
 
         return Ok(new
         {
+            currencyCode = budget.CurrencyCode,
             allocations = new
             {
                 housing = budget.Allocations!.Housing,
@@ -85,6 +86,7 @@ public class BudgetController : ControllerBase
 
         return Ok(new
         {
+            currencyCode = budget.CurrencyCode,
             allocations = new
             {
                 housing = budget.Allocations!.Housing,

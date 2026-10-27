@@ -2,6 +2,9 @@
 
 @{
     ViewData["Title"] = L["BudgetPlanner.Title"].Value;
+    // The budget is one document in one currency (ADR 0016): the selector beside the income sets it for every amount.
+    string budgetCurrency = SupportedCurrencies.CodeOrDefault(Model.CurrencyCode);
+    string symbol = SupportedCurrencies.Find(budgetCurrency)!.Symbol;
 }
 
 @section Styles {
@@ -74,12 +77,23 @@
                     <div class="budget-income-hero__content">
                         <label asp-for="MonthlyIncome" class="budget-income-hero__label"></label>
                         <div class="budget-income-hero__input-wrapper">
-                            <span class="budget-income-hero__prefix">@SupportedCurrencies.Default.Symbol</span>
-                            <input asp-for="MonthlyIncome" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                            <span class="budget-income-hero__prefix" data-budget-currency-symbol>@symbol</span>
+                            <input asp-for="MonthlyIncome" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency"
                                    class="form-control budget-income-input" aria-describedby="incomeHelp"/>
                             <span class="budget-income-hero__suffix" id="incomeHelp">@L["BudgetPlanner.Income.PerMonth"]</span>
                         </div>
                         <span asp-validation-for="MonthlyIncome" class="invalid-feedback"></span>
+                        <div class="budget-income-hero__currency">
+                            <label asp-for="CurrencyCode" class="form-label small mb-1"></label>
+                            <select asp-for="CurrencyCode" class="form-select form-select-sm" data-currency-selector
+                                    data-currency-targets=".budget-income-input, .budget-amount-input"
+                                    data-currency-symbols="[data-budget-currency-symbol]">
+                                @foreach (var currency in SupportedCurrencies.All)
+                                {
+                                    <option value="@currency.Code" selected="@(currency.Code == budgetCurrency)">@currency.Code · @currency.DisplayName</option>
+                                }
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -105,7 +119,7 @@
                             <h2 class="budget-card__title">@L["BudgetPlanner.Allocations.Title"]</h2>
                         </div>
                         <span class="budget-total-badge" id="budgetTotalBadge">
-                            <span id="budgetTotalAmount">@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span> / <span id="budgetIncomeAmount">@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                            <span id="budgetTotalAmount">@MoneyFormatter.FormatWhole(0, budgetCurrency)</span> / <span id="budgetIncomeAmount">@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                         </span>
                     </div>
                     <div class="budget-card__body">
@@ -122,7 +136,7 @@
                                         <label class="budget-category__label" for="Housing">@L["BudgetPlanner.Category.Housing"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Housing">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -137,8 +151,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Housing" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Housing" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Housing"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Housing"].Value))"/>
                                     </div>
@@ -157,7 +171,7 @@
                                         <label class="budget-category__label" for="Food">@L["BudgetPlanner.Category.Food"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Food">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -172,8 +186,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Food" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Food" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Food"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Food"].Value))"/>
                                     </div>
@@ -193,7 +207,7 @@
                                                for="Transportation">@L["BudgetPlanner.Category.Transportation"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Transportation">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -208,8 +222,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Transportation" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Transportation" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Transportation"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Transportation"].Value))"/>
                                     </div>
@@ -228,7 +242,7 @@
                                         <label class="budget-category__label" for="Utilities">@L["BudgetPlanner.Category.Utilities"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Utilities">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -244,8 +258,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Utilities" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Utilities" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Utilities"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Utilities"].Value))"/>
                                     </div>
@@ -264,7 +278,7 @@
                                         <label class="budget-category__label" for="Insurance">@L["BudgetPlanner.Category.Insurance"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Insurance">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -280,8 +294,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Insurance" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Insurance" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Insurance"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Insurance"].Value))"/>
                                     </div>
@@ -300,7 +314,7 @@
                                         <label class="budget-category__label" for="Healthcare">@L["BudgetPlanner.Category.Healthcare"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Healthcare">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -316,8 +330,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Healthcare" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Healthcare" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Healthcare"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Healthcare"].Value))"/>
                                     </div>
@@ -336,7 +350,7 @@
                                         <label class="budget-category__label" for="Savings">@L["BudgetPlanner.Category.Savings"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Savings">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -351,8 +365,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Savings" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Savings" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Savings"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Savings"].Value))"/>
                                     </div>
@@ -371,7 +385,7 @@
                                         <label class="budget-category__label" for="DebtRepayment">@L["BudgetPlanner.Category.DebtRepayment"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="DebtRepayment">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -387,8 +401,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="DebtRepayment" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="DebtRepayment" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="DebtRepayment"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.DebtRepayment"].Value))"/>
                                     </div>
@@ -407,7 +421,7 @@
                                         <label class="budget-category__label" for="Entertainment">@L["BudgetPlanner.Category.Entertainment"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Entertainment">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -423,8 +437,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Entertainment" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Entertainment" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Entertainment"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Entertainment"].Value))"/>
                                     </div>
@@ -443,7 +457,7 @@
                                         <label class="budget-category__label" for="Miscellaneous">@L["BudgetPlanner.Category.Miscellaneous"]</label>
                                     </div>
                                     <div class="budget-category__amount" data-amount-for="Miscellaneous">
-                                        <span>@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code)</span>
+                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
                                     </div>
                                 </div>
                                 <div class="budget-category-card__controls">
@@ -459,8 +473,8 @@
                                         <span class="budget-percent-input__suffix">%</span>
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix">@SupportedCurrencies.Default.Symbol</span>
-                                        <input asp-for="Miscellaneous" type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code" class="form-control budget-amount-input"
+                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
+                                        <input asp-for="Miscellaneous" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
                                                data-category="Miscellaneous"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Miscellaneous"].Value))"/>
                                     </div>
@@ -471,7 +485,7 @@
                         <!-- Remaining Allocation Indicator -->
                         <div class="budget-remaining" id="budgetRemaining">
                             <span class="budget-remaining__label">@L["BudgetPlanner.Js.RemainingLabel"]</span>
-                            <span class="budget-remaining__value" id="budgetRemainingValue">@MoneyFormatter.FormatWhole(0, SupportedCurrencies.Default.Code) (@(0m.ToString("N1", System.Globalization.CultureInfo.CurrentCulture))%)</span>
+                            <span class="budget-remaining__value" id="budgetRemainingValue">@MoneyFormatter.FormatWhole(0, budgetCurrency) (@(0m.ToString("N1", System.Globalization.CultureInfo.CurrentCulture))%)</span>
                         </div>
                     </div>
                     <div class="budget-card__footer">

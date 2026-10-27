@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Services;
 
@@ -8,6 +9,18 @@ namespace PersonalFinance.Tests.TestSupport;
 internal sealed class InMemoryUserPreferenceService : IUserPreferenceService
 {
     public Dictionary<string, string> Languages { get; } = new(StringComparer.Ordinal);
+
+    public Dictionary<string, string> ReportingCurrencies { get; } = new(StringComparer.Ordinal);
+
+    public Task<string> GetReportingCurrencyAsync(string userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(ReportingCurrencies.TryGetValue(userId, out string? code) ? code : SupportedCurrencies.DefaultCode);
+
+    public Task SetReportingCurrencyAsync(string userId, string currencyCode, CancellationToken cancellationToken = default)
+    {
+        ReportingCurrencies[userId] = SupportedCurrencies.Find(currencyCode)?.Code
+                                      ?? throw new ArgumentException($"Unsupported currency '{currencyCode}'.", nameof(currencyCode));
+        return Task.CompletedTask;
+    }
 
     public Task<string?> GetLanguageAsync(string userId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Languages.TryGetValue(userId, out string? language) ? language : null);

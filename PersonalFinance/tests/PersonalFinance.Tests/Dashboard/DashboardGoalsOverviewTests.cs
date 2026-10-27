@@ -30,7 +30,7 @@ public class DashboardGoalsOverviewTests
 
     private static Task<DashboardSummaryDto> GetSummaryAsync(AppDbContext db, string userId = UserId)
     {
-        return new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(userId);
+        return new DashboardService(db, TestBudgetDataProviderFactory.Create(db), TestCurrencyConverter.Create(db)).GetDashboardSummaryAsync(userId);
     }
 
     private static SavingsGoal Goal(int id, decimal target, decimal current, bool completed = false,

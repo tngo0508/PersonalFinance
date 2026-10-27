@@ -31,7 +31,7 @@ public class MonthlyBudgetTransactionTests
     public async Task Transactions_ArePartitionedStrictlyByCalendarMonth()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -101,7 +101,7 @@ public class MonthlyBudgetTransactionTests
     public async Task Transaction_TypeFollowsCategoryKind()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -134,7 +134,7 @@ public class MonthlyBudgetTransactionTests
     public async Task EditingTransactionDate_MovesItToNewMonthAutomatically()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -172,7 +172,7 @@ public class MonthlyBudgetTransactionTests
     public async Task CannotCreateOrAssignTransaction_ToArchivedCategory()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -216,7 +216,7 @@ public class MonthlyBudgetTransactionTests
     public async Task Transaction_OwnershipIsolation_PreventsCrossUserAccess()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
         await service.EnsureDefaultCategoriesAsync(OtherUserId);
 
@@ -260,7 +260,7 @@ public class MonthlyBudgetTransactionTests
     public async Task UpdateTransaction_SetsUpdatedAt_AndDeleteSoftDeletes()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -297,7 +297,7 @@ public class MonthlyBudgetTransactionTests
     public async Task CreateTransaction_InArchivedCategory_IsRejectedWithTheArchivedCategoryKey()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         BudgetCategoryDto category = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
         {
             Name = "Gym",
@@ -323,7 +323,7 @@ public class MonthlyBudgetTransactionTests
     public async Task DeleteTransaction_Unknown_IsRejectedWithTheNotFoundKeyAnd404()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
 
         ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(() =>
             service.DeleteTransactionAsync(UserId, 99999));

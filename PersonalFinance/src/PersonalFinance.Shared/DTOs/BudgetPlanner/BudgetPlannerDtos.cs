@@ -2,6 +2,9 @@ namespace PersonalFinance.Shared.DTOs.BudgetPlanner;
 
 public class BudgetResponseDto
 {
+    /// <summary>The ISO 4217 currency of the income and every Allocation Amount (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
     public BudgetAllocationsDto? Allocations { get; set; }
     public decimal MonthlyIncome { get; set; }
 }

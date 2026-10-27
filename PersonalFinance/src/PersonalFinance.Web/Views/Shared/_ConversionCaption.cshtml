@@ -1,0 +1,30 @@
+@using PersonalFinance.Shared.DTOs.Currency
+@model ConversionDto?
+@* The caption under a total in the Reporting Currency (ADR 0016, localization spec §2.6): which rate converted the
+   amounts in other currencies and on what day; "rate as of" when that rate is more than three days older than the day
+   it stood in for; "conversion unavailable" when there was no rate and the amounts show in their original currency.
+   Nothing is rendered when every amount was already in the Reporting Currency. *@
+@if (Model is { } conversion && (conversion.Converted || conversion.Unavailable))
+{
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    <p class="conversion-caption" data-conversion-caption>
+        @if (conversion.Unavailable)
+        {
+            <span class="conversion-caption__unavailable">@L["Common.Conversion.Unavailable"]</span>
+        }
+        @foreach (var rate in conversion.Rates)
+        {
+            var rateText = L.Named("Common.Conversion.RateText", ("base", rate.BaseCurrency),
+                ("quote", MoneyFormatter.Format(rate.Rate, rate.QuoteCurrency)));
+            var dateText = rate.Date.ToString("d", culture);
+            <span class="conversion-caption__rate">
+                @L.Named(rate.IsDated ? "Common.Conversion.ConvertedAtDated" : "Common.Conversion.ConvertedAt",
+                    ("rate", rateText), ("date", dateText))
+            </span>
+            @if (rate.IsStale)
+            {
+                <span class="conversion-caption__stale">@L.Named("Common.Conversion.RateAsOf", ("date", dateText))</span>
+            }
+        }
+    </p>
+}

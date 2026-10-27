@@ -101,14 +101,14 @@
                 percentInput.value = percent > 0 ? percent.toFixed(2) : '';
             }
             if (amountInput) {
-                amountInput.value = amount > 0 ? PFI18n.formatAmount(amount, 'USD') : '';
+                amountInput.value = amount > 0 ? PFI18n.formatAmount(amount, currency()) : '';
             }
         });
 
         // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput && incomeCents > 0) {
-            incomeInput.value = PFI18n.formatAmount(incomeCents / 100, 'USD');
+            incomeInput.value = PFI18n.formatAmount(incomeCents / 100, currency());
         }
     }
 
@@ -245,7 +245,7 @@
         // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
-            incomeInput.value = PFI18n.formatAmount(incomeCents / 100, 'USD');
+            incomeInput.value = PFI18n.formatAmount(incomeCents / 100, currency());
         }
 
         // Sync each category amount input (the asp-for bound field)
@@ -257,7 +257,7 @@
             // The asp-for input ID matches the PascalCase property name (e.g. "Housing")
             const input = document.getElementById(capitalized);
             if (input) {
-                input.value = PFI18n.formatAmount(amount, 'USD');
+                input.value = PFI18n.formatAmount(amount, currency());
             }
         });
     }
@@ -290,7 +290,7 @@
             // Sync the editable amount input (only if not currently focused)
             const amountInput = document.querySelector(`.budget-amount-input[data-category="${ capitalized }"]`);
             if (amountInput && document.activeElement !== amountInput) {
-                amountInput.value = amount > 0 ? PFI18n.formatAmount(amount, 'USD') : '';
+                amountInput.value = amount > 0 ? PFI18n.formatAmount(amount, currency()) : '';
             }
         });
     }
@@ -710,12 +710,21 @@
     }
 
     /**
-     * Format US dollars with the symbol in the page culture, no decimals for whole numbers (1,500 or 1,500.50 with the dollar sign in en-US).
+     * The currency of the budget's amounts (ADR 0016): the document's one selector, read from the income input it governs.
+     * @returns {string} ISO 4217 code
+     */
+    function currency () {
+        const incomeInput = document.querySelector('.budget-income-input');
+        return (incomeInput && incomeInput.dataset.currency) || 'USD';
+    }
+
+    /**
+     * Format an amount with its symbol in the page culture, no decimals for whole numbers (1,500 or 1,500.50 in en-US).
      * @param {number} value - The amount to format
      * @returns {string} Formatted amount
      */
     function formatDollars (value) {
-        return PFI18n.formatMoney(value, 'USD', { whole: value === Math.floor(value) });
+        return PFI18n.formatMoney(value, currency(), { whole: value === Math.floor(value) });
     }
 
     /**

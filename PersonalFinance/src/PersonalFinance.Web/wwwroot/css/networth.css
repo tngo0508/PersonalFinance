@@ -2328,3 +2328,12 @@ a.nw-help-btn {
   padding-left: 1.1rem;
   margin: 0.25rem 0 0;
 }
+
+/* The currency of the inputs (ADR 0016); the results follow the Reporting Currency. */
+.nw-currency-field .form-select {
+    max-width: 14rem;
+}
+
+.nw-conversion-caption[hidden] {
+    display: none;
+}

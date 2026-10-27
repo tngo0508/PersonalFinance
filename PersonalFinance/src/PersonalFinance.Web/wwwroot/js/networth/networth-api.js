@@ -42,7 +42,8 @@
             baseRoi: NW.getSliderValue('nwBaseRoi') || 7,
             conservativeRoi: NW.getSliderValue('nwConservativeRoi') || 6,
             aggressiveRoi: NW.getSliderValue('nwAggressiveRoi') || 10,
-            aggressiveSavings: NW.getSliderValue('nwAggressiveSavings') || 45000
+            aggressiveSavings: NW.getSliderValue('nwAggressiveSavings') || 45000,
+            currencyCode: NW.inputCurrency()
         };
 
         // Build query string using URLSearchParams for safety
@@ -61,6 +62,8 @@
 
             NW.clearValidationMessage();
             window.nwProjectionData = data;
+            NW.setResultCurrency(data.currencyCode);
+            NW.updateConversionCaption(data.conversion);
             NW.renderGrowthChart(data);
             NW.renderComparisonChart(data);
             NW.updateMetrics(data);

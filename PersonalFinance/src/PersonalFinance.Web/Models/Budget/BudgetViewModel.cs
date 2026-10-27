@@ -1,13 +1,21 @@
 using System.ComponentModel.DataAnnotations;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.Web.Models.Budget;
 
 /// <summary>
 /// View model for the Budget Planner page.
-/// Represents monthly income and dollar amount allocations across 10 spending categories.
+/// Represents monthly income and amount allocations across 10 spending categories, all in one currency.
 /// </summary>
 public class BudgetViewModel
 {
+    /// <summary>
+    /// The ISO 4217 currency of the income and every allocation (ADR 0016): the saved budget's, or the Reporting
+    /// Currency for a new one.
+    /// </summary>
+    [Display(Name = "BudgetPlanner.Field.Currency")]
+    public string CurrencyCode { get; set; } = SupportedCurrencies.DefaultCode;
+
     /// <summary>
     /// Total monthly income before allocations.
     /// </summary>

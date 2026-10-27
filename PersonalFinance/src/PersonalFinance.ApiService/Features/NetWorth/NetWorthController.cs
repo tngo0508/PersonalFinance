@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.NetWorth.Validators;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
@@ -20,10 +21,12 @@ namespace PersonalFinance.ApiService.Features.NetWorth;
 public class NetWorthController : ControllerBase
 {
     private readonly INetWorthParametersService _parametersService;
+    private readonly ICurrencyConverter _currencyConverter;
 
-    public NetWorthController(INetWorthParametersService parametersService)
+    public NetWorthController(INetWorthParametersService parametersService, ICurrencyConverter currencyConverter)
     {
         _parametersService = parametersService;
+        _currencyConverter = currencyConverter;
     }
 
     /// <summary>
@@ -32,7 +35,7 @@ public class NetWorthController : ControllerBase
     [HttpPost("calculate")]
     [ProducesResponseType(typeof(NetWorthProjectionDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult CalculateProjection([FromBody] NetWorthProjectionRequestDto request)
+    public async Task<IActionResult> CalculateProjection([FromBody] NetWorthProjectionRequestDto request)
     {
         ApiErrorEntryDto? error = NetWorthProjectionValidator.Validate(request);
         if (error != null)
@@ -40,7 +43,11 @@ public class NetWorthController : ControllerBase
             return BadRequest(new ApiErrorDto { Errors = [error] });
         }
 
-        NetWorthProjectionDto projection = NetWorthProjectionService.ComputeProjection(request);
+        // The inputs are converted once at the latest rate and projected in the Reporting Currency (ADR 0016).
+        string reportingCurrency = await _currencyConverter.GetReportingCurrencyAsync(User.GetUserId(), HttpContext.RequestAborted);
+        ReportingConversion conversion = await _currencyConverter.PrepareAsync(reportingCurrency,
+            [new MoneyAt(SupportedCurrencies.CodeOrDefault(request.CurrencyCode), null)], HttpContext.RequestAborted);
+        NetWorthProjectionDto projection = NetWorthProjectionService.ComputeProjection(request, conversion);
         return Ok(projection);
     }
 

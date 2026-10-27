@@ -30,7 +30,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task GetSheet_SeedsDefaultCategories_WhenUserHasNone()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
 
         MonthlyBudgetSheetDto sheet = await service.GetSheetAsync(UserId, 2026, 10);
 
@@ -50,7 +50,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task GetSheet_ComputesActualAsSumOfTransactions()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -108,7 +108,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task GetSheet_CalculatesTotalsAndDiffRulesCorrectly()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -198,7 +198,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task ActualOverride_ReplacesTransactionSum_AndCanBeReverted()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -238,7 +238,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task ActualOverride_ZeroOverride_SetsActualToZeroUnlikeNoOverride()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -270,7 +270,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task ArchivedCategory_AppearsInMonthsWithData_AndIsHiddenFromEmptyMonths()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         // Add custom category and record data in October 2026
@@ -299,7 +299,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task ArchivedCategory_AppearsWhenItHasTransactionsOnly_EvenWithoutPlanned()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId,
@@ -332,7 +332,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task UserIsolation_OtherUsersDataDoesNotAffectSheet()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
         await service.EnsureDefaultCategoriesAsync(OtherUserId);
 
@@ -364,7 +364,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task SetPlanned_And_SetActualOverride_WithOtherUserCategory_IsRejectedAsNotFound()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
         await service.EnsureDefaultCategoriesAsync(OtherUserId);
 
@@ -382,7 +382,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task SetPlanned_OnArchivedCategory_RejectsInFreshMonth_AllowsInHistoricalMonthWithData()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
@@ -425,7 +425,7 @@ public class MonthlyBudgetSheetCalculationTests
     public async Task Updates_SetUpdatedAt_OnLinesAndPreference()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");

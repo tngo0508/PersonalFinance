@@ -37,6 +37,18 @@
      * Update summary metric cards and legend.
      * @param {Object} data - The projection data object.
      */
+    /**
+     * The caption under the metrics: which rate converted the inputs into the Reporting Currency, or that none could.
+     * @param {Object|null|undefined} conversion - The projection's conversion.
+     */
+    function updateConversionCaption (conversion) {
+        const box = document.querySelector('[data-nw-conversion-caption]');
+        if (!box) { return; }
+        const text = window.PFCurrency ? window.PFCurrency.captionText(conversion) : '';
+        box.textContent = text;
+        box.hidden = text === '';
+    }
+
     function updateMetrics (data) {
 
         // FI Target card
@@ -214,6 +226,7 @@
     // Expose UI functions
     window.NW = Object.assign(window.NW || {}, {
         updateMetrics: updateMetrics,
+        updateConversionCaption: updateConversionCaption,
         updateScenarioCards: updateScenarioCards,
         updateScenarioBadges: updateScenarioBadges,
         updateTable: updateTable,

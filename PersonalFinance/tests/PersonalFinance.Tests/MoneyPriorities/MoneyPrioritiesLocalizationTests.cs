@@ -405,7 +405,7 @@ public class MoneyPrioritiesLocalizationTests
     private static MoneyPrioritiesController CreateController(IMoneyPrioritiesApi api)
     {
         var controller = new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
-            LocalizationTestCatalog.Localizer(English, Vietnamese));
+            LocalizationTestCatalog.Localizer(English, Vietnamese), new InMemoryUserPreferenceService());
         var httpContext = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(

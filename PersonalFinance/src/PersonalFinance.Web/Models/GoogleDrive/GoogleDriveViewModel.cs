@@ -27,6 +27,13 @@ public class GoogleDriveViewModel
     public string? ApiKey { get; set; }
 
     /// <summary>
+    /// The ISO 4217 currency of the folder's spreadsheets (ADR 0016), chosen when connecting; the Reporting Currency
+    /// by default. Every imported row inherits it.
+    /// </summary>
+    [Display(Name = "GoogleDrive.Connect.CurrencyLabel")]
+    public string? CurrencyCode { get; set; }
+
+    /// <summary>
     /// List of all saved Google Drive connections for the authenticated user.
     /// </summary>
     public List<GoogleDriveConnectionDto> Connections { get; set; } = new();

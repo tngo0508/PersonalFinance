@@ -1,12 +1,18 @@
+using PersonalFinance.Shared.DTOs.Currency;
 using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Shared.DTOs.Dashboard;
 
 /// <summary>
-/// Summary of net worth data for the Dashboard.
+/// Summary of net worth data for the Dashboard. Every amount is in <see cref="CurrencyCode"/>: the Reporting Currency,
+/// the saved parameters converted once at the latest rate (ADR 0016), or the parameters' own currency when no rate
+/// exists.
 /// </summary>
 public class NetWorthSummaryDto
 {
+    /// <summary>The ISO 4217 currency of every amount here.</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
     public decimal CurrentNetWorth { get; set; }
     public decimal AnnualSavings { get; set; }
     public decimal AnnualIncome { get; set; }
@@ -59,6 +65,9 @@ public class ProjectionPointDto
 /// </summary>
 public class BudgetSummaryDto
 {
+    /// <summary>The ISO 4217 currency of every amount here: the Reporting Currency, or the budget's own when no rate exists.</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
     public decimal MonthlyIncome { get; set; }
     public decimal? HousingPercent { get; set; }
     public decimal? FoodPercent { get; set; }
@@ -109,14 +118,26 @@ public class SavingsGoalSummaryDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>The ISO 4217 currency of the goal's amounts.</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
     public decimal TargetAmount { get; set; }
     public decimal CurrentAmount { get; set; }
+
+    /// <summary><see cref="TargetAmount"/> in the Reporting Currency at the latest rate; null when no rate exists.</summary>
+    public decimal? ReportingTargetAmount { get; set; }
+
+    /// <summary><see cref="CurrentAmount"/> in the Reporting Currency at the latest rate; null when no rate exists.</summary>
+    public decimal? ReportingCurrentAmount { get; set; }
+
     public double ProgressPercent { get; set; }
     public bool IsCompleted { get; set; }
 }
 
 /// <summary>
-/// Savings goals totals aggregated across all of the user's goals (not just the five listed).
+/// Savings goals totals aggregated across all of the user's goals (not just the five listed), in the Reporting
+/// Currency: each goal converted at the latest rate, the sum rounded once (ADR 0016).
 /// </summary>
 public class GoalsOverviewDto
 {
@@ -148,8 +169,11 @@ public class RecentActivityDto
     /// <summary>A transaction's category as stored (user data, never translated); null for a savings goal.</summary>
     public string? Category { get; set; }
 
-    /// <summary>A transaction's amount; null for a savings goal.</summary>
+    /// <summary>A transaction's amount, in <see cref="CurrencyCode"/>; null for a savings goal.</summary>
     public decimal? Amount { get; set; }
+
+    /// <summary>The ISO 4217 currency of the item's amounts (the transaction's, or the goal's).</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>A savings goal's target amount; null for a transaction.</summary>
     public decimal? TargetAmount { get; set; }
@@ -163,6 +187,12 @@ public class RecentActivityDto
 /// </summary>
 public class DashboardMonthlyBudgetDto
 {
+    /// <summary>The ISO 4217 currency of the figures: the Reporting Currency (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    /// <summary>The rates that brought the month's lines and transactions into the Reporting Currency.</summary>
+    public ConversionDto? Conversion { get; set; }
+
     public int Year { get; set; }
     public int Month { get; set; }
     public string Period { get; set; } = string.Empty;
@@ -189,4 +219,10 @@ public class DashboardSummaryDto
 
     /// <summary>True when the user has a non-deleted Google Drive connection (valid or awaiting re-authentication).</summary>
     public bool HasGoogleDriveConnection { get; set; }
+
+    /// <summary>The Account's Reporting Currency, which every total on the Dashboard is in (ADR 0016).</summary>
+    public string ReportingCurrency { get; set; } = string.Empty;
+
+    /// <summary>The latest rates that brought the Dashboard's "now" figures into the Reporting Currency.</summary>
+    public ConversionDto? Conversion { get; set; }
 }

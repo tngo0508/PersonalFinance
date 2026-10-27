@@ -3,6 +3,15 @@
     'use strict';
 
     /**
+     * The currency of every amount on the page: the Account's Reporting Currency (ADR 0016), from the page root.
+     * @returns {string} ISO 4217 code.
+     */
+    function pageCurrency () {
+        const page = document.querySelector('.analysis-page');
+        return (page && page.dataset.currency) || 'USD';
+    }
+
+    /**
      * Initialize the analysis dashboard charts.
      * @returns {void}
      */
@@ -53,7 +62,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return PFI18n.formatMoney(context.parsed.y, 'USD');
+                                return PFI18n.formatMoney(context.parsed.y, pageCurrency());
                             }
                         }
                     }
@@ -63,7 +72,7 @@
                         beginAtZero: true,
                         ticks: {
                             callback: function (value) {
-                                return PFI18n.formatMoney(value, 'USD', { whole: true });
+                                return PFI18n.formatMoney(value, pageCurrency(), { whole: true });
                             }
                         }
                     }
@@ -131,7 +140,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: PFI18n.formatMoney(context.parsed.y, 'USD', { whole: true }) });
+                                return PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: PFI18n.formatMoney(context.parsed.y, pageCurrency(), { whole: true }) });
                             }
                         }
                     }
@@ -140,7 +149,7 @@
                     y: {
                         ticks: {
                             callback: function (value) {
-                                return PFI18n.formatMoney(value, 'USD', { whole: true });
+                                return PFI18n.formatMoney(value, pageCurrency(), { whole: true });
                             }
                         }
                     }
@@ -211,7 +220,7 @@
                                     return a + b;
                                 }, 0);
                                 const percentage = PFI18n.formatNumber(value / total * 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-                                return PFI18n.t('Analysis.Js.ShareTooltip', { label: label, amount: PFI18n.formatMoney(value, 'USD', { whole: true }), percent: percentage });
+                                return PFI18n.t('Analysis.Js.ShareTooltip', { label: label, amount: PFI18n.formatMoney(value, pageCurrency(), { whole: true }), percent: percentage });
                             }
                         }
                     }
@@ -267,7 +276,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: PFI18n.formatMoney(context.parsed.x, 'USD', { whole: true }) });
+                                return PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: PFI18n.formatMoney(context.parsed.x, pageCurrency(), { whole: true }) });
                             }
                         }
                     }
@@ -276,7 +285,7 @@
                     x: {
                         ticks: {
                             callback: function (value) {
-                                return PFI18n.formatMoney(value, 'USD', { whole: true });
+                                return PFI18n.formatMoney(value, pageCurrency(), { whole: true });
                             }
                         }
                     }

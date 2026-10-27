@@ -2,6 +2,15 @@
 (function () {
     'use strict';
 
+    /**
+     * The currency of every amount on the page: the Account's Reporting Currency (ADR 0016), from the page root.
+     * @returns {string} ISO 4217 code.
+     */
+    function pageCurrency () {
+        const page = document.querySelector('.analysis-page');
+        return (page && page.dataset.currency) || 'USD';
+    }
+
     // Fallbacks if the card's CSS variables are missing; the view defines the real values (see Index.cshtml).
     const FALLBACK_COLOR = '#9CA3AF';
 
@@ -32,7 +41,7 @@
      * @returns {string} The formatted amount.
      */
     function formatAmount (amount) {
-        return PFI18n.formatMoney(amount, 'USD', { whole: true });
+        return PFI18n.formatMoney(amount, pageCurrency(), { whole: true });
     }
 
     /**

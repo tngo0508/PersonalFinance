@@ -5,6 +5,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
+using PersonalFinance.Shared.DTOs.Currency;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
@@ -24,19 +25,22 @@ public class SpreadsheetAnalysisController : ControllerBase
     private readonly IGoogleSheetRemovalService _removalService;
     private readonly ILogger<SpreadsheetAnalysisController> _logger;
     private readonly ISpreadsheetReader _spreadsheetReader;
+    private readonly ICurrencyConverter _currencyConverter;
 
     public SpreadsheetAnalysisController(
         ISpreadsheetAnalysisService analysisService,
         ISpreadsheetReader spreadsheetReader,
         ILogger<SpreadsheetAnalysisController> logger,
         IBudgetDataSourceService dataSourceService,
-        IGoogleSheetRemovalService removalService)
+        IGoogleSheetRemovalService removalService,
+        ICurrencyConverter currencyConverter)
     {
         _analysisService = analysisService;
         _dataSourceService = dataSourceService;
         _removalService = removalService;
         _spreadsheetReader = spreadsheetReader;
         _logger = logger;
+        _currencyConverter = currencyConverter;
     }
 
     /// <summary>
@@ -53,11 +57,13 @@ public class SpreadsheetAnalysisController : ControllerBase
         BudgetDataSource activeSource = await _analysisService.GetActiveSourceAsync(userId, cancellationToken);
         List<BudgetDataSourceSummaryDto> sourceSummaries =
             await _dataSourceService.GetDataSummariesAsync(userId, cancellationToken);
+        string reportingCurrency = await _currencyConverter.GetReportingCurrencyAsync(userId, cancellationToken);
 
         if (availableYears.Count == 0)
         {
             return Ok(new AnalysisDashboardResult
             {
+                ReportingCurrency = reportingCurrency,
                 HasData = false,
                 Year = year ?? 0,
                 Month = month,
@@ -79,6 +85,8 @@ public class SpreadsheetAnalysisController : ControllerBase
 
         return Ok(new AnalysisDashboardResult
         {
+            ReportingCurrency = reportingCurrency,
+            Conversion = ConversionDto.Combine([summary?.Conversion, categories?.Conversion]),
             HasData = summary != null,
             Year = selectedYear,
             Month = month,

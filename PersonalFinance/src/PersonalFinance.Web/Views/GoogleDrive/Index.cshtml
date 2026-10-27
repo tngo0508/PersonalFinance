@@ -332,6 +332,17 @@
                             <input asp-for="ConnectionName" class="form-control" placeholder="@L["GoogleDrive.Connect.NamePlaceholder"]" />
                         </div>
 
+                        <div class="mb-3">
+                            <label asp-for="CurrencyCode" class="form-label fw-semibold small">@L["GoogleDrive.Connect.CurrencyLabel"]</label>
+                            <select asp-for="CurrencyCode" class="form-select">
+                                @foreach (var currency in SupportedCurrencies.All)
+                                {
+                                    <option value="@currency.Code">@currency.Code · @currency.DisplayName</option>
+                                }
+                            </select>
+                            <div class="form-text">@L["GoogleDrive.Connect.CurrencyHelp"]</div>
+                        </div>
+
                         <button class="gd-advanced-toggle btn btn-link btn-sm text-decoration-none text-muted p-0 mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#advancedSettingsCollapse" aria-expanded="false" aria-controls="advancedSettingsCollapse">
                             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                 <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 8V8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.374a1 1 0 0 1 .707.293l.854.854a1 1 0 0 0 .707.293h3.346a1 1 0 0 0 .707-.293l.854-.854A1 1 0 0 1 11.626 8z"/>

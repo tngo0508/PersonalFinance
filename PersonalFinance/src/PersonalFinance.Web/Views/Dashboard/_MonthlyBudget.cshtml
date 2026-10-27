@@ -8,6 +8,8 @@
     string sourceName = isTracker ? L["Shell.Nav.BudgetTracker"] : "Google Sheet";
     // The service's Period is English ("October 2026"); the label is built from Year and Month in the request culture.
     string period = monthlyBudget is null ? string.Empty : DashboardBudgetFormat.MonthLabel(monthlyBudget.Year, monthlyBudget.Month);
+    // The month's figures are in the Reporting Currency (ADR 0016); the caption says which rate got them there.
+    string monthlyCurrency = SupportedCurrencies.CodeOrDefault(monthlyBudget?.CurrencyCode);
 }
 <section class="dash-card dash-monthly-budget" aria-labelledby="dash-monthly-budget-title">
     <div class="dash-card__header flex-wrap gap-2">
@@ -24,21 +26,22 @@
         <dl class="dash-stats" aria-label="@L.Named("Dashboard.MonthlyBudget.StatsLabel", ("period", period))">
             <div class="dash-stats__item">
                 <dt>@L["Dashboard.MonthlyBudget.PlannedIncome"]</dt>
-                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.BudgetedIncome, SupportedCurrencies.Default.Code)</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.BudgetedIncome, monthlyCurrency)</dd>
             </div>
             <div class="dash-stats__item">
                 <dt>@L["Dashboard.MonthlyBudget.ActualIncome"]</dt>
-                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.ActualIncome, SupportedCurrencies.Default.Code)</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.ActualIncome, monthlyCurrency)</dd>
             </div>
             <div class="dash-stats__item">
                 <dt>@L["Dashboard.MonthlyBudget.PlannedExpenses"]</dt>
-                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.BudgetedExpenses, SupportedCurrencies.Default.Code)</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.BudgetedExpenses, monthlyCurrency)</dd>
             </div>
             <div class="dash-stats__item">
                 <dt>@L["Dashboard.MonthlyBudget.ActualExpenses"]</dt>
-                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.ActualExpenses, SupportedCurrencies.Default.Code)</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(monthlyBudget.ActualExpenses, monthlyCurrency)</dd>
             </div>
         </dl>
+        <partial name="_ConversionCaption" model="monthlyBudget.Conversion"/>
         <a asp-controller="@(isTracker ? "BudgetTracker" : "Analysis")" asp-action="Index" class="dash-link">
             @(isTracker ? L["Dashboard.MonthlyBudget.OpenBudgetTracker"] : L["Dashboard.MonthlyBudget.OpenAnalysis"])
         </a>
