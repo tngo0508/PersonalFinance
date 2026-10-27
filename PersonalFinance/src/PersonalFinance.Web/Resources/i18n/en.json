@@ -2314,7 +2314,7 @@
   "Research.Js.Sectors.TableCaption.one": "The {count} largest SEC filer by Public float in {period}",
   "Research.Js.Sectors.TableCaption.other": "The {count} largest SEC filers by Public float in {period}",
   "Research.Js.Sectors.Rank": "Rank",
-  "Research.Validation.QueryInvalid": "Enter {min} to {max} characters.",
+  "Research.Validation.QueryInvalid": "Enter at least {min} and at most {max} characters.",
   "Research.Validation.TickerInvalid": "Enter a ticker of up to {max} letters, digits, dots or dashes.",
   "Research.Error.TooManyLookups": "Too many lookups. Try again shortly.",
   "News.Title": "Finance News",
@@ -2392,7 +2392,7 @@
   "AiAssistant.Validation.MessageTooLong": "The message can contain up to {max} characters.",
   "AiAssistant.Validation.TitleRequired": "The article needs a title to summarize.",
   "AiAssistant.Error.SignInRequired": "Sign in to use the AI assistant.",
-  "AiAssistant.Error.DailyLimitReached": "You have used today's {max} AI requests. Try again tomorrow.",
+  "AiAssistant.Error.DailyLimitReached": "You have reached the daily limit of {max} AI requests. Try again tomorrow.",
   "AiAssistant.Error.MonthlyBudgetReached": "The AI assistant has used its budget for this month. It will be available again next month.",
   "AiAssistant.Error.RateLimited": "Too many requests in a short time. Try again in a minute."
 }
