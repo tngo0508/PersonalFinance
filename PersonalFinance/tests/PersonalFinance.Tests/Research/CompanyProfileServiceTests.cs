@@ -76,17 +76,10 @@ public class CompanyProfileServiceTests
         }
     }
 
-    private sealed class MovableTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public DateTimeOffset Now { get; set; } = now;
-
-        public override DateTimeOffset GetUtcNow() => Now;
-    }
-
     private static CompanyProfileService CreateService(StubSec sec, TimeProvider? timeProvider = null,
         IRateLimiterService? rateLimiter = null, ResearchSettings? research = null)
     {
-        timeProvider ??= new MovableTimeProvider(Now);
+        timeProvider ??= new FixedTimeProvider(Now);
         var settings = new SecEdgarSettings
             { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
         SecEdgarClient client = ResearchServiceFactory.SecClient(sec, settings);
@@ -328,7 +321,7 @@ public class CompanyProfileServiceTests
     public async Task LookUp_AfterADay_ReadsSecAgain()
     {
         var sec = new StubSec();
-        var time = new MovableTimeProvider(Now);
+        var time = new FixedTimeProvider(Now);
         CompanyProfileService service = CreateService(sec, time);
 
         await ProfileOf(service);
@@ -342,7 +335,7 @@ public class CompanyProfileServiceTests
     public async Task LookUp_WhenSecFails_ServesTheKeptProfile()
     {
         var sec = new StubSec();
-        var time = new MovableTimeProvider(Now);
+        var time = new FixedTimeProvider(Now);
         CompanyProfileService service = CreateService(sec, time);
         CompanyProfileDto first = await ProfileOf(service);
 
@@ -379,7 +372,7 @@ public class CompanyProfileServiceTests
     [Fact]
     public async Task LookUp_WhenReadingSecThrowsAnythingElse_ServesNoErrorButUnavailable()
     {
-        var timeProvider = new MovableTimeProvider(Now);
+        var timeProvider = new FixedTimeProvider(Now);
         var service = new CompanyProfileService(new ThrowingFactsClient(),
             new CompanyTickerIndexCache(new ResearchSettings(), timeProvider,
                 NullLogger<CompanyTickerIndexCache>.Instance),
@@ -510,7 +503,7 @@ public class CompanyProfileServiceTests
     public async Task Suggest_WhenARereadFails_KeepsServingThePreviousList()
     {
         var sec = new StubSec();
-        var time = new MovableTimeProvider(Now);
+        var time = new FixedTimeProvider(Now);
         CompanyProfileService service = CreateService(sec, time);
         await service.SuggestAsync("swi");
 

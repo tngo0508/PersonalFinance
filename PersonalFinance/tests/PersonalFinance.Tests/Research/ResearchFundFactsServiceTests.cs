@@ -224,9 +224,4 @@ public class ResearchFundFactsServiceTests
         private static HttpResponseMessage Ok(string body, string mediaType) =>
             new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, mediaType) };
     }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 }

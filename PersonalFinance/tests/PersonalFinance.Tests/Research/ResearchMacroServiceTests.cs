@@ -266,9 +266,4 @@ public class ResearchMacroServiceTests
             return buffer.ToArray();
         }
     }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 }

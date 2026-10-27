@@ -143,17 +143,10 @@ public class CompanyPressReleasesServiceTests
         }
     }
 
-    private sealed class MovableTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public DateTimeOffset Now { get; set; } = now;
-
-        public override DateTimeOffset GetUtcNow() => Now;
-    }
-
     private static CompanyProfileService CreateService(StubSec sec, TimeProvider? timeProvider = null,
         IRateLimiterService? rateLimiter = null, ResearchSettings? research = null)
     {
-        timeProvider ??= new MovableTimeProvider(Now);
+        timeProvider ??= new FixedTimeProvider(Now);
         var settings = new SecEdgarSettings
             { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
         SecEdgarClient client = ResearchServiceFactory.SecClient(sec, settings);
@@ -313,7 +306,7 @@ public class CompanyPressReleasesServiceTests
     public async Task Releases_AfterADay_ReadSecAgain()
     {
         var sec = new StubSec();
-        var time = new MovableTimeProvider(Now);
+        var time = new FixedTimeProvider(Now);
         CompanyProfileService service = CreateService(sec, time);
 
         await ReleasesOf(service);
@@ -328,7 +321,7 @@ public class CompanyPressReleasesServiceTests
     public async Task Releases_WhenSecFails_ServeTheKeptList()
     {
         var sec = new StubSec();
-        var time = new MovableTimeProvider(Now);
+        var time = new FixedTimeProvider(Now);
         CompanyProfileService service = CreateService(sec, time);
         List<CompanyPressReleaseDto> first = await ReleasesOf(service);
 

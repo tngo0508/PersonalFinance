@@ -6,6 +6,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Infrastructure;
 
@@ -285,10 +286,5 @@ public class DataSourceRemovalTests
 
         AzureSqlTranslation.AssertTranslates(sources.SheetMonthsQuery(UserId));
         AzureSqlTranslation.AssertTranslates(sources.TrackerMonthsQuery(UserId));
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

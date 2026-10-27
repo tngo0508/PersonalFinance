@@ -5,6 +5,7 @@ using PersonalFinance.ApiService.Features.AccountLifecycle;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.AccountLifecycle;
 
@@ -315,10 +316,5 @@ public class AccountDeletionServiceTests
                                       && m.GetParameters().Length == 1)
             .MakeGenericMethod(entityType);
         return ((IQueryable)ignore.Invoke(null, [set])!).Cast<AuditableEntity>();
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

@@ -5,6 +5,7 @@ using PersonalFinance.ApiService.Features.Watchlist;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.Watchlist;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Watchlist;
 
@@ -19,7 +20,7 @@ public class WatchlistServiceTests
     private const string OtherUserId = "other-user";
     private const string Url = "https://example.test/rates-fall";
 
-    private readonly MutableTimeProvider _clock = new(new DateTimeOffset(2026, 10, 23, 12, 0, 0, TimeSpan.Zero));
+    private readonly FixedTimeProvider _clock = new(new DateTimeOffset(2026, 10, 23, 12, 0, 0, TimeSpan.Zero));
 
     private static AppDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<AppDbContext>()
@@ -168,14 +169,5 @@ public class WatchlistServiceTests
         await service.RemoveArticleAsync(UserId, saved.Id);
 
         Assert.False(await service.IsArticleSavedAsync(UserId, Url));
-    }
-
-    private sealed class MutableTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        private DateTimeOffset _now = now;
-
-        public override DateTimeOffset GetUtcNow() => _now;
-
-        public void Advance(TimeSpan by) => _now += by;
     }
 }
