@@ -86,7 +86,8 @@ Two paths, both in `PersonalFinance.ApiService/Infrastructure/`; no controller b
   (2) `title` plus `errors` as an object, or a `type` URL → ASP.NET `ProblemDetails`, shown as the status code's key
   (`Errors.InvalidRequest` for 400, `Errors.NotFound` for 404, `Errors.Conflict` for 409, otherwise `Errors.Generic`)
   with no text taken from the body; (3) anything else → today's best-effort parsing, kept until the last Feature is
-  converted, then deleted (slice 3).
+  converted, then deleted (slice 3). *Done in E3b:* (2) and (3) are now one rule, any unkeyed body shows its status
+  code's key; Web's `AdminController` reads the Admin area's English `AdminErrorDto` itself.
 - **Web's own messages become keys** in `en.json` / `vi.json` under `Errors.`: `Errors.Unavailable` ("The service is
   temporarily unavailable. Please try again."), `Errors.Unexpected`, `Errors.Server`, `Errors.NotFound`,
   `Errors.Conflict`, `Errors.InvalidRequest`, `Errors.Generic`. The `const string`s on `JsonApiErrorsFilter` go; the
@@ -142,7 +143,7 @@ Each PR is a release (ADR 0006), **minor** bump, with its `i18n: translate` comm
 | **E1** | ADR 0017; `ApiErrorDto`, `ApiErrorArgDto`, `ApiErrorKeys`; `ApiErrorException`, `ApiErrorExceptionFilter`, `ToApiError()`, `ErrorArgs`; `ApiErrorMessages` with the localizer, three-shape detection, `Fields`; `Errors.*` keys and the end of the `JsonApiErrorsFilter` constants; **Money Priorities** and **Community** converted (validator, `CommunityService` throws, the vote result's `ErrorMessage`), `MoneyPrioritiesValidationErrorsDto` and the `MoneyPrioritiesText.Messages` table removed; both tests with the converted list `[MoneyPriorities, Community]`; `DIAGRAMS.md` §16 and the `ARCHITECTURE.md` add-a-feature checklist updated. |
 | **E2** | **Budget Tracker** and **Budget Planner**: seven validators, `MonthlyBudgetService` throws (`DuplicateCategoryException`, `KeyNotFoundException`, `ArgumentException`), the `"Invalid year or month."` checks, `BudgetController`'s `{ ErrorCode, ErrorMessage }` shape. Web's `BudgetController` and the budget JS keep working unchanged apart from fallback keys. |
 | **E3a** | **Feedback, Account Lifecycle, Savings Goals, Watchlist, Net Worth** (E3 split in two releases for size; Savings Goals is a Feature added after this spec). The news feed's filter errors stay English: they ride inside `NewsFeedDto.Errors` and are never shown. |
-| **E3b** | **AI Assistant, Research, Analysis, Google Drive**: remaining validators and rejections. Google Drive and AI provider text that is passed through from a third party is wrapped in one key with the text as a `Text` arg (`GoogleDrive.Error.Provider`: "Google Drive said: {detail}"). Delete the legacy parsing branch of `ApiErrorMessages`; the architecture test switches to "every Feature except Admin"; close #385. |
+| **E3b** | **AI Assistant, Research, Analysis, Google Drive**: remaining validators and rejections. Google Drive and AI provider text that is passed through from a third party is wrapped in one key with the text as a `Text` arg (`GoogleDrive.Error.Provider`: "Google Drive said: {detail}"). Delete the legacy parsing branch of `ApiErrorMessages`; the architecture test switches to "every Feature except Admin"; close #385. *As built:* no 4xx passed third-party text through, so `GoogleDrive.Error.Provider` was not needed; the `ErrorMessage` that Google Drive and Analysis put in successful (200) results is not a rejection and stays English (follow-up). The Purpose Note's quota refusal carries the quota's keyed reason, so it names the daily limit or the monthly budget. |
 
 Slices are independent of each other after E1; E2 and E3 may run in parallel worktrees (`AGENTS.md`), renumbering on
 rebase.

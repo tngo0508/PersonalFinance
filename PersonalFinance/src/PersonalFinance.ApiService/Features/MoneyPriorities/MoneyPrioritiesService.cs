@@ -4,6 +4,7 @@ using PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Enums;
@@ -168,7 +169,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
 
         return written.State == PurposeNoteState.NoPurpose
             ? PurposeNote(walk, PurposeNoteState.NoPurpose, note: null, MoneyPrioritiesMessages.PurposeNoteInvite)
-            : PurposeNote(walk, written.State, note: null, written.Message);
+            : PurposeNote(walk, written.State, note: null, written.Message, written.Reason);
     }
 
     /// <summary>
@@ -197,12 +198,13 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
     }
 
     private static PriorityWalkPurposeNoteDto PurposeNote(PriorityWalk walk, PurposeNoteState state, string? note,
-        string? message) => new()
+        string? message, ApiErrorEntryDto? reason = null) => new()
     {
         WalkId = walk.Id,
         State = state,
         Note = note,
         Message = message,
+        Reason = reason,
         Disclaimer = AiAssistantMessages.Disclaimer
     };
 

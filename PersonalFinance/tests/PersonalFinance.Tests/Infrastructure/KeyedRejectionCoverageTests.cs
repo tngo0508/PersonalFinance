@@ -2,17 +2,29 @@ using System.Globalization;
 using System.Reflection;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.AccountLifecycle.Validators;
+using PersonalFinance.ApiService.Features.AiAssistant;
+using PersonalFinance.ApiService.Features.Analysis;
 using PersonalFinance.ApiService.Features.Feedback.Validators;
+using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Features.NetWorth.Validators;
+using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.SavingsGoals.Validators;
 using PersonalFinance.ApiService.Features.Watchlist.Validators;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AccountDeletion;
+using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.Feedback;
+using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Shared.DTOs.News;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.DTOs.Watchlist;
 using PersonalFinance.Shared.Enums;
@@ -22,9 +34,9 @@ using PersonalFinance.Web.Infrastructure;
 namespace PersonalFinance.Tests.Infrastructure;
 
 /// <summary>
-/// For the Features converted in slice E3a of the localized API errors spec (Feedback, Account Lifecycle, Savings
-/// Goals, Watchlist, Net Worth): every <see cref="ApiErrorKeys"/> key of the Feature is produced by some real
-/// rejection, and every rejection resolves in English with each placeholder filled by its arguments (spec §2.4).
+/// For the Features converted in slices E3a and E3b of the localized API errors spec: every <see cref="ApiErrorKeys"/>
+/// key of the Feature is produced by some real rejection, and every rejection resolves in English with each placeholder
+/// filled by its arguments (spec §2.4).
 /// </summary>
 public class KeyedRejectionCoverageTests
 {
@@ -36,14 +48,18 @@ public class KeyedRejectionCoverageTests
         nameof(ApiErrorKeys.AccountLifecycle),
         nameof(ApiErrorKeys.SavingsGoals),
         nameof(ApiErrorKeys.Watchlist),
-        nameof(ApiErrorKeys.NetWorth)
+        nameof(ApiErrorKeys.NetWorth),
+        nameof(ApiErrorKeys.AiAssistant),
+        nameof(ApiErrorKeys.Research),
+        nameof(ApiErrorKeys.Analysis),
+        nameof(ApiErrorKeys.GoogleDrive)
     };
 
     [Theory]
     [MemberData(nameof(Features))]
-    public void EveryKeyOfTheFeature_IsProducedByARealRejection(string feature)
+    public async Task EveryKeyOfTheFeature_IsProducedByARealRejection(string feature)
     {
-        HashSet<string> produced = Rejections(feature).Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
+        HashSet<string> produced = (await RejectionsAsync(feature)).Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
 
         List<string> unreached = KeysOf(feature).Where(key => !produced.Contains(key)).ToList();
         List<string> foreign = produced.Where(key => !KeysOf(feature).Contains(key)).ToList();
@@ -54,14 +70,15 @@ public class KeyedRejectionCoverageTests
 
     [Theory]
     [MemberData(nameof(Features))]
-    public void ResolvingEveryRejectionInEnglish_LeavesNoPlaceholder(string feature)
+    public async Task ResolvingEveryRejectionInEnglish_LeavesNoPlaceholder(string feature)
     {
+        List<ApiErrorEntryDto> rejections = await RejectionsAsync(feature);
         using var uiCulture = new UiCultureScope("en");
         CultureInfo formatting = CultureInfo.CurrentCulture;
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
         try
         {
-            foreach (ApiErrorEntryDto entry in Rejections(feature))
+            foreach (ApiErrorEntryDto entry in rejections)
             {
                 Assert.False(TestLocalization.Localizer[entry.Key].ResourceNotFound, entry.Key);
                 string text = ApiErrorMessages.Resolve(TestLocalization.Localizer, entry);
@@ -97,7 +114,55 @@ public class KeyedRejectionCoverageTests
         Assert.Equal(ApiErrorKeys.AccountLifecycle.InvalidCancelLink, entry.Key);
     }
 
+    [Fact]
+    public async Task TheDailyAiLimit_NamesItsLimitAsANumberArgument()
+    {
+        ApiErrorEntryDto entry = await QuotaDenialAsync("user-1", dailyLimit: 0, monthlyBudgetUsd: 10m);
+
+        Assert.Equal(ApiErrorKeys.AiAssistant.DailyLimitReached, entry.Key);
+        Assert.Equal(ApiErrorArgKind.Number, entry.Args!["max"].Kind);
+        Assert.Equal("0", entry.Args["max"].Value);
+    }
+
     /// <summary>Every rejection the Feature can return: each validator failure plus each service or controller rejection.</summary>
+    private static async Task<List<ApiErrorEntryDto>> RejectionsAsync(string feature) => feature switch
+    {
+        nameof(ApiErrorKeys.AiAssistant) =>
+        [
+            await Caught(() => AiController().Chat(new AiChatRequestDto { Message = " " })),
+            await Caught(() => AiController().Chat(new AiChatRequestDto
+                { Message = new string('m', AiAssistantMessages.MaxMessageLength + 1) })),
+            await Caught(() => AiController().Summarize(new NewsArticleSummaryRequestDto { Title = "" })),
+            await QuotaDenialAsync("anonymous", dailyLimit: 10, monthlyBudgetUsd: 10m),
+            await QuotaDenialAsync("user-1", dailyLimit: 0, monthlyBudgetUsd: 10m),
+            await QuotaDenialAsync("user-1", dailyLimit: 10, monthlyBudgetUsd: 0m),
+            Thrown(ApiErrorKeys.AiAssistant.RateLimited)
+        ],
+        nameof(ApiErrorKeys.Research) =>
+        [
+            await Caught(() => new CompaniesController(null!).Suggest("")),
+            await Caught(() => new CompaniesController(null!).Get("TOOLONGTICKER")),
+            Thrown(ApiErrorKeys.Research.TooManyLookups)
+        ],
+        nameof(ApiErrorKeys.Analysis) =>
+        [
+            await Caught(() => AnalysisController().GetSpreadsheetBudgetReport("", fileName: null)),
+            await Caught(() => AnalysisController().GetSpreadsheetTransactions(""))
+        ],
+        nameof(ApiErrorKeys.GoogleDrive) =>
+        [
+            await Caught(() => DriveController().Explore(new GoogleDriveRequestDto { FolderUrl = "" })),
+            await Caught(() => DriveController().Connect(new ConnectGoogleDriveRequestDto { FolderUrl = "" })),
+            await Caught(() => DriveController().GetSpreadsheetBudgetReport("", fileName: null)),
+            await Caught(() => DriveController().GetSpreadsheetTransactions("")),
+            await Caught(() => new DriveConnectionService(new HttpClient(), new ConfigurationBuilder().Build(), null!,
+                NullLogger<DriveConnectionService>.Instance).GetFolderFilesAsync(
+                new GoogleDriveRequestDto { FolderUrl = "invalid-link" })),
+            DriveConnectionService.ConnectionNotFound().ToDto().Errors[0]
+        ],
+        _ => Rejections(feature)
+    };
+
     private static List<ApiErrorEntryDto> Rejections(string feature) => feature switch
     {
         nameof(ApiErrorKeys.Feedback) =>
@@ -187,7 +252,7 @@ public class KeyedRejectionCoverageTests
     private static List<ApiErrorEntryDto> Failures<T>(IValidator<T> validator, params T[] requests) =>
         new ValidationResult(requests.SelectMany(request => validator.Validate(request).Errors)).ToApiError().Errors;
 
-    /// <summary>A rejection a controller throws; none of this slice's carries arguments.</summary>
+    /// <summary>A rejection thrown deep in a service or controller; none of these carries arguments.</summary>
     private static ApiErrorEntryDto Thrown(string key) => new ApiErrorException(key, "English").ToDto().Errors[0];
 
     private static HashSet<string> KeysOf(string feature) =>
@@ -196,6 +261,37 @@ public class KeyedRejectionCoverageTests
             .Where(field => field.IsLiteral && field.FieldType == typeof(string))
             .Select(field => (string)field.GetRawConstantValue()!)
             .ToHashSet(StringComparer.Ordinal);
+
+    private static async Task<ApiErrorEntryDto> Caught(Func<Task> call) =>
+        (await Assert.ThrowsAsync<ApiErrorException>(call)).ToDto().Errors[0];
+
+    /// <summary>The rejection the AI quota gives <paramref name="userId"/> under the given limits, on an empty usage log.</summary>
+    private static async Task<ApiErrorEntryDto> QuotaDenialAsync(string userId, int dailyLimit, decimal monthlyBudgetUsd)
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"KeyedRejectionQuota_{Guid.NewGuid():N}").Options);
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["OpenAI:DailyMessageLimit"] = dailyLimit.ToString(CultureInfo.InvariantCulture),
+                ["OpenAI:MonthlyBudgetUsd"] = monthlyBudgetUsd.ToString(CultureInfo.InvariantCulture)
+            })
+            .Build();
+
+        QuotaCheckResult quota = await new AiQuotaService(db, configuration).CheckQuotaAsync(userId, "chat");
+
+        Assert.False(quota.Allowed);
+        return quota.ToRejection(StatusCodes.Status429TooManyRequests).ToDto().Errors[0];
+    }
+
+    // The checks under test run before any dependency is used, so none is given.
+    private static AiAssistantController AiController() => new(null!, null!, null!);
+
+    private static SpreadsheetAnalysisController AnalysisController() =>
+        new(null!, null!, NullLogger<SpreadsheetAnalysisController>.Instance, null!, null!);
+
+    private static GoogleDriveController DriveController() =>
+        new(null!, null!, NullLogger<GoogleDriveController>.Instance);
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {

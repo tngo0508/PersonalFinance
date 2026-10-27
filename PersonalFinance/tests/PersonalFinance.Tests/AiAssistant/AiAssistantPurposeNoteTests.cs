@@ -220,6 +220,8 @@ public class AiAssistantPurposeNoteTests
 
         Assert.Equal(PurposeNoteState.QuotaReached, result.State);
         Assert.Equal("You have reached the daily limit of 30 messages. Please try again tomorrow.", result.Message);
+        Assert.Equal(ApiErrorKeys.AiAssistant.DailyLimitReached, result.Reason?.Key);
+        Assert.Equal("30", result.Reason!.Args!["max"].Value);
         Assert.Null(result.Note);
         Assert.Empty(fake.Calls);
         Assert.Equal(30, await db.AiUsageRecords.CountAsync());

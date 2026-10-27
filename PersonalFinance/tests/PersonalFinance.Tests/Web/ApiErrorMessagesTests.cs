@@ -159,11 +159,11 @@ public class ApiErrorMessagesTests
     }
 
     [Fact]
-    public async Task LegacyErrorBody_StillShowsItsText()
+    public async Task AnUnkeyedErrorBody_ShowsTheStatusMessageNotItsText()
     {
         ApiException ex = await CreateApiExceptionAsync(HttpStatusCode.Conflict, """{"error":"Category 'Food' already exists."}""");
 
-        Assert.Equal("Category 'Food' already exists.", ApiErrorMessages.FromApiException(L, ex));
+        Assert.Equal(L["Errors.Conflict"].Value, ApiErrorMessages.FromApiException(L, ex));
     }
 
     [Fact]

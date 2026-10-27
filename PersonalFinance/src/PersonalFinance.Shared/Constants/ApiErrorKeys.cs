@@ -373,4 +373,71 @@ public static class ApiErrorKeys
         /// <summary>The aggressive ROI was outside 0% to 50%.</summary>
         public const string AggressiveRoiRange = "NetWorth.Validation.AggressiveRoiRange";
     }
+
+    /// <summary>The keys of the AI Assistant Feature's rejections.</summary>
+    public static class AiAssistant
+    {
+        /// <summary>A chat message was empty.</summary>
+        public const string MessageRequired = "AiAssistant.Validation.MessageRequired";
+
+        /// <summary>A chat message was longer than the <c>max</c> argument.</summary>
+        public const string MessageTooLong = "AiAssistant.Validation.MessageTooLong";
+
+        /// <summary>A summary request named no article title.</summary>
+        public const string TitleRequired = "AiAssistant.Validation.TitleRequired";
+
+        /// <summary>The request came from no signed-in Account.</summary>
+        public const string SignInRequired = "AiAssistant.Error.SignInRequired";
+
+        /// <summary>The Account used its <c>max</c> AI requests for today.</summary>
+        public const string DailyLimitReached = "AiAssistant.Error.DailyLimitReached";
+
+        /// <summary>The AI Assistant's monthly budget is spent.</summary>
+        public const string MonthlyBudgetReached = "AiAssistant.Error.MonthlyBudgetReached";
+
+        /// <summary>The Account sent too many summary requests in a short time.</summary>
+        public const string RateLimited = "AiAssistant.Error.RateLimited";
+    }
+
+    /// <summary>The keys of the Research Feature's rejections.</summary>
+    public static class Research
+    {
+        /// <summary>A company search was outside the <c>min</c> to <c>max</c> character arguments.</summary>
+        public const string QueryInvalid = "Research.Validation.QueryInvalid";
+
+        /// <summary>A ticker was longer than the <c>max</c> argument or had other characters than letters, digits, dots or dashes.</summary>
+        public const string TickerInvalid = "Research.Validation.TickerInvalid";
+
+        /// <summary>The Account looked up too many companies in a short time.</summary>
+        public const string TooManyLookups = "Research.Error.TooManyLookups";
+    }
+
+    /// <summary>The keys of the Analysis Feature's rejections.</summary>
+    public static class Analysis
+    {
+        /// <summary>A spreadsheet request named neither a file id nor a file name.</summary>
+        public const string FileRequired = "Analysis.Validation.FileRequired";
+
+        /// <summary>A spreadsheet request named no file id.</summary>
+        public const string FileIdRequired = "Analysis.Validation.FileIdRequired";
+    }
+
+    /// <summary>The keys of the Google Drive Feature's rejections.</summary>
+    public static class GoogleDrive
+    {
+        /// <summary>A request named no Google Drive folder.</summary>
+        public const string FolderUrlRequired = "GoogleDrive.Validation.FolderUrlRequired";
+
+        /// <summary>The folder link or id could not be read as a Google Drive folder.</summary>
+        public const string FolderInvalid = "GoogleDrive.Validation.FolderInvalid";
+
+        /// <summary>A spreadsheet request named neither a file id nor a file name.</summary>
+        public const string FileRequired = "GoogleDrive.Validation.FileRequired";
+
+        /// <summary>A spreadsheet request named no file id.</summary>
+        public const string FileIdRequired = "GoogleDrive.Validation.FileIdRequired";
+
+        /// <summary>The connection does not exist or belongs to another user.</summary>
+        public const string ConnectionNotFound = "GoogleDrive.Error.ConnectionNotFound";
+    }
 }

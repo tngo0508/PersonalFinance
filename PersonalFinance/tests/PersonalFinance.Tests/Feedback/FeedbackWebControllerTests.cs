@@ -110,10 +110,13 @@ public class FeedbackWebControllerTests
     }
 
     [Fact]
-    public async Task Send_WhenTheApiRejectsTheRequest_ShowsItsMessageAndKeepsTheInput()
+    public async Task Send_WhenTheApiRejectsTheRequest_ShowsItsMessageInTheReadersLanguageAndKeepsTheInput()
     {
-        ApiException failure = await CreateApiExceptionAsync(HttpStatusCode.BadRequest,
-            """{"errors":["Message must be 2,000 characters or fewer."]}""");
+        using var culture = new RequestCultureScope("vi-VN");
+        ApiException failure = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, """
+            {"errors":[{"key":"KEY","message":"Message must be 2,000 characters or fewer.",
+              "field":"Message","args":{"max":{"kind":"Number","value":"2000"}}}]}
+            """.Replace("KEY", ApiErrorKeys.Feedback.MessageLength, StringComparison.Ordinal));
         FeedbackController controller = CreateController(new FakeFeedbackApi { Failure = failure });
         FeedbackViewModel model = ValidModel();
 
@@ -122,7 +125,8 @@ public class FeedbackWebControllerTests
         ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.Same(model, view.Model);
         ModelError error = Assert.Single(controller.ModelState[string.Empty]!.Errors);
-        Assert.Equal("Message must be 2,000 characters or fewer.", error.ErrorMessage);
+        Assert.Equal(TestLocalization.Vietnamese(ApiErrorKeys.Feedback.MessageLength).Replace("{max}", "2.000"),
+            error.ErrorMessage);
     }
 
     [Theory]

@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Data.Helpers;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.Helpers;
 
@@ -19,6 +20,16 @@ namespace PersonalFinance.ApiService.Features.GoogleDrive;
 /// </summary>
 internal sealed class DriveConnectionService : IDriveConnectionService
 {
+    /// <summary>The 404 for a connection that does not exist or belongs to another user (ADR 0017).</summary>
+    internal static ApiErrorException ConnectionNotFound() =>
+        new(ApiErrorKeys.GoogleDrive.ConnectionNotFound, "Google Drive connection not found.",
+            statusCode: StatusCodes.Status404NotFound);
+
+    /// <summary>The 400 for a folder link or id that names no Google Drive folder (ADR 0017).</summary>
+    private static ApiErrorException FolderInvalid() =>
+        new(ApiErrorKeys.GoogleDrive.FolderInvalid, "Invalid Google Drive folder URL or Folder ID.",
+            "FolderUrl");
+
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly AppDbContext _dbContext;
@@ -47,12 +58,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
         if (string.IsNullOrWhiteSpace(folderId))
         {
             _logger.LogWarning("Invalid Google Drive folder link or ID provided: '{Input}'", rawInput);
-            return new GoogleDriveFolderResponseDto
-            {
-                Success = false,
-                FolderUrl = rawInput,
-                ErrorMessage = "Invalid Google Drive folder URL or Folder ID. Please verify your link."
-            };
+            throw FolderInvalid();
         }
 
         string? apiKey = GoogleDriveApiKey.Resolve(request.ApiKey, _configuration);
@@ -188,11 +194,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
 
         if (connection == null)
         {
-            return new GoogleDriveFolderResponseDto
-            {
-                Success = false,
-                ErrorMessage = "Google Drive connection not found."
-            };
+            throw ConnectionNotFound();
         }
 
         // If not forced and cache exists and is fresh (within 30 minutes), return cached data from database
@@ -223,15 +225,12 @@ internal sealed class DriveConnectionService : IDriveConnectionService
         ConnectGoogleDriveRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            throw new ArgumentException("UserId is required to connect a Google Drive.", nameof(userId));
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
         string? folderId = GoogleDriveMetadata.ExtractFolderId(request.FolderUrl);
         if (string.IsNullOrWhiteSpace(folderId))
         {
-            throw new ArgumentException("Invalid Google Drive folder URL or Folder ID.", nameof(request));
+            throw FolderInvalid();
         }
 
         // Check if connection for this user and folder already exists
@@ -297,11 +296,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
 
         if (connection == null)
         {
-            return new GoogleDriveFolderResponseDto
-            {
-                Success = false,
-                ErrorMessage = "Google Drive connection not found."
-            };
+            throw ConnectionNotFound();
         }
 
         return await SyncConnectionInternalAsync(connection, forceRefresh, cancellationToken);
@@ -320,7 +315,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
 
         if (connection == null)
         {
-            throw new KeyNotFoundException($"Connection with ID {connectionId} not found for user.");
+            throw ConnectionNotFound();
         }
 
         if (!string.IsNullOrWhiteSpace(newApiKey))

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
@@ -175,9 +176,32 @@ public class AdminController : Controller
         catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException)
         {
             _logger.LogWarning(ex, "Admin role operation failed.");
-            TempData["AdminError"] = ApiErrorMessages.ForUser(_localizer, ex, "The operation failed. Try again later.");
+            TempData["AdminError"] = await AdminRejectionAsync(ex)
+                                     ?? ApiErrorMessages.ForUser(_localizer, ex, "The operation failed. Try again later.");
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// The English reason of an Admin rejection (a 4xx <see cref="AdminErrorDto"/>), or null for any other failure.
+    /// Admin is not localized (ADR 0017), so its own body is read here rather than by <see cref="ApiErrorMessages"/>.
+    /// </summary>
+    private static async Task<string?> AdminRejectionAsync(Exception ex)
+    {
+        if (ex is not ApiException { StatusCode: >= HttpStatusCode.BadRequest and < HttpStatusCode.InternalServerError } api)
+        {
+            return null;
+        }
+
+        try
+        {
+            AdminErrorDto? body = await api.GetContentAsAsync<AdminErrorDto>();
+            return string.IsNullOrWhiteSpace(body?.Error) ? null : body.Error;
+        }
+        catch (Exception parse) when (parse is JsonException or InvalidOperationException)
+        {
+            return null;
+        }
     }
 }

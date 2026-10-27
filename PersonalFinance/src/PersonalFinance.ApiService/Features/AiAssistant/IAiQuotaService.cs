@@ -1,3 +1,7 @@
+using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
+
 namespace PersonalFinance.ApiService.Features.AiAssistant;
 
 /// <summary>
@@ -14,6 +18,23 @@ public class QuotaCheckResult
     /// Reason for denial, or null if allowed.
     /// </summary>
     public string? DenialReason { get; set; }
+
+    /// <summary>
+    /// The <c>ApiErrorKeys.AiAssistant</c> key of the denial, or null if allowed (ADR 0017).
+    /// </summary>
+    public string? DenialKey { get; set; }
+
+    /// <summary>
+    /// The named arguments of <see cref="DenialKey"/>, or null when it has none.
+    /// </summary>
+    public IReadOnlyDictionary<string, ApiErrorArgDto>? DenialArgs { get; set; }
+
+    /// <summary>
+    /// The denial as the rejection the API returns, with the given status code.
+    /// </summary>
+    public ApiErrorException ToRejection(int statusCode) =>
+        new(DenialKey ?? ApiErrorKeys.AiAssistant.DailyLimitReached, DenialReason ?? string.Empty,
+            args: DenialArgs, statusCode: statusCode);
 
     /// <summary>
     /// True if the global monthly budget is approaching the warning threshold.

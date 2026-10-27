@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Shared.DTOs.MoneyPriorities;
@@ -292,6 +293,12 @@ public class PriorityWalkPurposeNoteDto
 
     /// <summary>What to show instead of a note (the invitation, "not available right now", the quota message, the refusal).</summary>
     public string? Message { get; set; }
+
+    /// <summary>
+    /// Why the quota refused the note, keyed (ADR 0017): the daily limit or the monthly budget. Set only when
+    /// <see cref="State"/> is <see cref="PurposeNoteState.QuotaReached"/>.
+    /// </summary>
+    public ApiErrorEntryDto? Reason { get; set; }
 
     /// <summary>The AI disclaimer shown under the note.</summary>
     public string Disclaimer { get; set; } = string.Empty;

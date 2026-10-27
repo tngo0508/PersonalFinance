@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Shared.Helpers;
 
@@ -51,7 +53,8 @@ public class CompaniesController : ControllerBase
     {
         if (!CompanyLookupRules.TryNormalizeQuery(q, out string? query))
         {
-            return BadRequest(new { errors = new[] { InvalidQuery } });
+            throw new ApiErrorException(ApiErrorKeys.Research.QueryInvalid, InvalidQuery, "q",
+                ErrorArgs.NumberRange(1, CompanyLookupRules.MaxQueryLength));
         }
 
         List<CompanySuggestionDto>? suggestions = await _companies.SuggestAsync(query, cancellationToken);
@@ -75,7 +78,7 @@ public class CompaniesController : ControllerBase
     {
         if (!CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized))
         {
-            return BadRequest(new { errors = new[] { InvalidTicker } });
+            throw InvalidTickerRejection();
         }
 
         return Answer(await _companies.LookUpAsync(User.GetUserId(), normalized, cancellationToken));
@@ -99,7 +102,7 @@ public class CompaniesController : ControllerBase
     {
         if (!CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized))
         {
-            return BadRequest(new { errors = new[] { InvalidTicker } });
+            throw InvalidTickerRejection();
         }
 
         return Answer(await _companies.GetPressReleasesAsync(User.GetUserId(), normalized, cancellationToken));
@@ -109,6 +112,10 @@ public class CompaniesController : ControllerBase
     /// The response to a request by ticker: 200 with the answer, 404 when switched off, 429 when the Account has made
     /// too many lookups, and 503 when SEC EDGAR cannot be reached and nothing is kept.
     /// </summary>
+    private static ApiErrorException InvalidTickerRejection() =>
+        new(ApiErrorKeys.Research.TickerInvalid, InvalidTicker, "ticker",
+            ErrorArgs.Number("max", CompanyLookupRules.MaxTickerLength));
+
     private IActionResult Answer<TResult>(CompanyLookupOutcome<TResult> outcome) where TResult : class
     {
         if (outcome.SwitchedOff)
@@ -118,7 +125,8 @@ public class CompaniesController : ControllerBase
 
         if (outcome.RateLimited)
         {
-            return StatusCode(StatusCodes.Status429TooManyRequests, new { error = TooManyLookups });
+            throw new ApiErrorException(ApiErrorKeys.Research.TooManyLookups, TooManyLookups,
+                statusCode: StatusCodes.Status429TooManyRequests);
         }
 
         return outcome.Result is { } result
