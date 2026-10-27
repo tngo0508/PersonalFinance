@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.2.3] - 2026-10-27
+
+### Fixed
+
+- **Failed Feedback saves and the submission limit**: Feedback that the database fails to save no longer uses up one of the Account's 5 submissions per hour, so the "try again" message is true (#123).
+  - The slot is still reserved before the save, under the limiter's lock, so concurrent submissions from one Account cannot get past the limit. A failed save gives back exactly that slot through the new `IRateLimiterService.TryReserve` and `Release`; a cancelled request keeps it, since the Feedback may already be stored.
+
 ## [12.2.2] - 2026-10-27
 
 ### Fixed

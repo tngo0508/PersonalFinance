@@ -667,5 +667,15 @@ public class AiAssistantServiceTests
         {
             return true;
         }
+
+        public bool TryReserve(string userId, out DateTime slot)
+        {
+            slot = default;
+            return true;
+        }
+
+        public void Release(string userId, DateTime slot)
+        {
+        }
     }
 }

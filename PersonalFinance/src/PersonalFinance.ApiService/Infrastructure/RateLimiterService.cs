@@ -11,7 +11,7 @@ public class RateLimiterService : IRateLimiterService
 {
     private readonly object _lock = new();
     private readonly int _maxRequests;
-    private readonly ConcurrentDictionary<string, Queue<DateTime>> _requestTimestamps = new();
+    private readonly ConcurrentDictionary<string, LinkedList<DateTime>> _requestTimestamps = new();
     private readonly TimeSpan _window;
 
     /// <summary>
@@ -30,27 +30,42 @@ public class RateLimiterService : IRateLimiterService
     /// </summary>
     /// <param name="userId">The user identifier.</param>
     /// <returns>True if the request is allowed within the rate limit; otherwise, false.</returns>
-    public bool TryAllow(string userId)
+    public bool TryAllow(string userId) => TryReserve(userId, out _);
+
+    /// <inheritdoc />
+    public bool TryReserve(string userId, out DateTime slot)
     {
         DateTime now = DateTime.UtcNow;
+        slot = now;
 
         lock (_lock)
         {
-            if (!_requestTimestamps.TryGetValue(userId, out Queue<DateTime>? queue))
+            if (!_requestTimestamps.TryGetValue(userId, out LinkedList<DateTime>? timestamps))
             {
-                queue = new Queue<DateTime>();
-                _requestTimestamps[userId] = queue;
+                timestamps = new LinkedList<DateTime>();
+                _requestTimestamps[userId] = timestamps;
             }
 
             // Remove expired timestamps outside the current window
-            while (queue.Count > 0 && now - queue.Peek() > _window) queue.Dequeue();
+            while (timestamps.First is not null && now - timestamps.First.Value > _window) timestamps.RemoveFirst();
 
             // Check if the user has exceeded the rate limit
-            if (queue.Count >= _maxRequests) return false;
+            if (timestamps.Count >= _maxRequests) return false;
 
             // Record this request
-            queue.Enqueue(now);
+            timestamps.AddLast(now);
             return true;
+        }
+    }
+
+    /// <inheritdoc />
+    public void Release(string userId, DateTime slot)
+    {
+        lock (_lock)
+        {
+            // Remove this exact slot, not the newest: a concurrent request may have reserved a later one
+            if (_requestTimestamps.TryGetValue(userId, out LinkedList<DateTime>? timestamps))
+                timestamps.Remove(slot);
         }
     }
 }

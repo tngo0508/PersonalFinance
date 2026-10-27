@@ -374,5 +374,15 @@ public class KeyedRejectionCoverageTests
     private sealed class DenyAllRateLimiter : IRateLimiterService
     {
         public bool TryAllow(string userId) => false;
+
+        public bool TryReserve(string userId, out DateTime slot)
+        {
+            slot = default;
+            return false;
+        }
+
+        public void Release(string userId, DateTime slot)
+        {
+        }
     }
 }
