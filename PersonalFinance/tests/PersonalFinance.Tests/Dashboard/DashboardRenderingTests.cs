@@ -61,7 +61,7 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
     [
         "Add your Net Worth settings to see your headline figure", "Add your Net Worth settings to see where your plan leads",
         "Not set up", "Add your Net Worth settings", "Create a budget", "Add a savings goal",
-        "No data in Google Sheet.", "Connect Google Drive below", "Sync your spreadsheet", "or switch to Budget Tracker above.",
+        "No data in Google Sheet.", "Connect Google Drive below", "to see your tracked transactions","or switch to Budget Tracker above.",
         "No budget plan set up yet.", "Create one below", "to plan your income allocation.",
         "Add a savings goal to track your progress here.", "No recent activity from Google Sheet.",
         "Set up net worth", "Enter your balance, income, and spending", "Plan how your monthly income is split",
@@ -305,7 +305,7 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
 
         string html = await GetAsync(vietnamese: false);
 
-        Assert.Contains("class=\"dash-card dash-actions dash-actions--mobile\"", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"dash-card dash-actions dash-actions--mobile\" aria-labelledby=", html, StringComparison.Ordinal);
     }
 
     // The hrefs of the Dashboard's action links: the sidebar, key-figure tiles (content, not buttons) and the

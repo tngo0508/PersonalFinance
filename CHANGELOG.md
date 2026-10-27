@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Quick actions show on mobile only. The bottom navigation can't reach Budget, Savings goals or Analysis in two taps; from 769px up the sidebar has every one of their links.
   - While a setup step is open, its setup card is the only link to it: the Net Worth, Budget Planner and Savings goals card headers and the Budget Planner empty state drop theirs.
   - The Net worth projection card drops "View details"; the Net Worth card's "Edit settings" opens the same page.
-  - "Sync your spreadsheet" lives only on the Monthly budget card, and only once Google Drive is connected; Recent activity no longer links it.
+  - "Sync your spreadsheet" lives only on the Monthly budget card, and only once Google Drive is connected; Recent activity's empty state no longer links it.
 
 ## [12.3.1] - 2026-10-27
 

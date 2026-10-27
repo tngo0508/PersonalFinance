@@ -1243,7 +1243,7 @@
   "Dashboard.Activity.Type.Other": "Activity",
   "Dashboard.Activity.TransactionDescription": "{category} - {amount}",
   "Dashboard.Activity.GoalDescription": "Target: {target} | Saved: {saved}",
-  "Dashboard.Activity.EmptySheetNoSync": "No recent activity from Google Sheet. Sync your spreadsheet or switch to Budget Tracker above.",
+  "Dashboard.Activity.EmptySheetPlain": "No recent activity from Google Sheet. Switch to Budget Tracker above to see your tracked transactions.",
   "Dashboard.Activity.EmptyTracker": "No recent activity in Budget Tracker. {link} or switch to Google Sheet above.",
   "Dashboard.Activity.AddTransactions": "Add transactions",
   "Dashboard.QuickActions.Title": "Quick actions",

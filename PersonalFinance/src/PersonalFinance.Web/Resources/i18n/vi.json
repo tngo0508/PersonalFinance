@@ -1221,7 +1221,7 @@
   "Dashboard.Activity.Type.Other": "Hoạt động",
   "Dashboard.Activity.TransactionDescription": "{category} - {amount}",
   "Dashboard.Activity.GoalDescription": "Mục tiêu: {target} | Đã tiết kiệm: {saved}",
-  "Dashboard.Activity.EmptySheetNoSync": "Không có hoạt động gần đây từ Google Sheet. Đồng bộ bảng tính của bạn hoặc chuyển sang Theo dõi ngân sách ở trên.",
+  "Dashboard.Activity.EmptySheetPlain": "Không có hoạt động gần đây từ Google Sheet. Chuyển sang Theo dõi ngân sách ở trên để xem các giao dịch bạn đã theo dõi.",
   "Dashboard.Activity.EmptyTracker": "Không có hoạt động gần đây trong Theo dõi ngân sách. {link} hoặc chuyển sang Google Sheet ở trên.",
   "Dashboard.Activity.AddTransactions": "Thêm giao dịch",
   "Dashboard.QuickActions.Title": "Thao tác nhanh",
