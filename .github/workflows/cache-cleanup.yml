@@ -1,0 +1,84 @@
+name: Cache Cleanup
+
+# Keeps the repo under the free 10 GB Actions cache limit without touching the caches that speed up every run.
+# Public repos pay nothing for the cache: past 10 GB GitHub evicts the least recently used entries, which can
+# evict the NuGet and Playwright caches too. This job removes the entries that are no longer worth keeping first:
+#   - Docker layer blobs (buildkit-*, index-*) that no deploy has read in the last 7 days of deploys
+#   - every cache a pull request's branch left behind, once that PR closes
+# nuget-* and playwright-* are never deleted here.
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List what would be deleted without deleting it'
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  prune-docker-cache:
+    name: Prune stale Docker layer cache
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      DRY_RUN: ${{ inputs.dry_run == true }}
+    steps:
+      - name: Delete Docker cache entries idle for 7 days of deploys
+        run: |
+          # The 7 days count back from the newest Docker cache read, not from now: after a quiet week with no
+          # deploys every blob is idle, and deleting them all would leave the next build with no cache at all.
+          gh cache list --limit 1000 --json id,key,sizeInBytes,lastAccessedAt > caches.json
+          jq -r '
+            def ts: sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601;
+            [.[] | select(.key | startswith("buildkit-") or startswith("index-"))] as $docker
+            | if ($docker | length) == 0 then empty else
+                ($docker | map(.lastAccessedAt | ts) | max) as $newest
+                | $docker[] | select((.lastAccessedAt | ts) < $newest - 7 * 86400)
+                | "\(.id) \(.sizeInBytes) \(.key)"
+              end' caches.json > stale.txt
+
+          count=$(wc -l < stale.txt | tr -d ' ')
+          bytes=$(awk '{ s += $2 } END { print s + 0 }' stale.txt)
+          echo "Stale Docker cache entries: $count ($(numfmt --to=iec "$bytes"))"
+          while read -r id size key; do
+            echo "  $key ($(numfmt --to=iec "$size"))"
+            if [ "$DRY_RUN" != "true" ]; then
+              gh cache delete "$id" < /dev/null
+            fi
+          done < stale.txt
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "::notice::Dry run: deleted nothing."
+          fi
+          gh api "repos/$GH_REPO/actions/cache/usage" --jq '"Cache usage now: \(.active_caches_size_in_bytes / 1e9 * 100 | round / 100) GB in \(.active_caches_count) entries"'
+
+  delete-pr-caches:
+    name: Delete the closed PR's caches
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      PR_REF: refs/pull/${{ github.event.pull_request.number }}/merge
+    steps:
+      - name: Delete caches scoped to the PR's merge ref
+        run: |
+          # A PR's caches are only readable from that PR, so they are dead weight once it closes.
+          gh cache list --ref "$PR_REF" --limit 1000 --json id,key --jq '.[] | "\(.id) \(.key)"' |
+            while read -r id key; do
+              echo "Deleting $key"
+              gh cache delete "$id" < /dev/null
+            done
