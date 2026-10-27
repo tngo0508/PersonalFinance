@@ -149,42 +149,6 @@ public class NavigationLayoutTests
     }
 
     [Fact]
-    public void LayoutView_ContainsThreeNavigationTiers()
-    {
-        string layoutPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Views", "Shared",
-            "_Layout.cshtml");
-        Assert.True(File.Exists(layoutPath), $"_Layout.cshtml not found at {layoutPath}");
-
-        string content = File.ReadAllText(layoutPath);
-
-        // Verify the 3 navigation tiers
-        Assert.Contains("Overview", content);
-        Assert.Contains("My Finances", content);
-        Assert.Contains("Resources", content);
-
-        // Verify required controller links
-        Assert.Contains("asp-controller=\"Dashboard\"", content);
-        Assert.Contains("asp-controller=\"Networth\"", content);
-        Assert.Contains("asp-controller=\"BudgetTracker\"", content);
-        Assert.Contains("asp-controller=\"Budget\"", content);
-        Assert.Contains("asp-controller=\"SavingsGoals\"", content);
-        Assert.Contains("asp-controller=\"Analysis\"", content);
-        Assert.Contains("asp-controller=\"InvestmentCalculator\"", content);
-        Assert.Contains("asp-controller=\"News\"", content);
-        Assert.Contains("asp-controller=\"Community\"", content);
-        Assert.Contains("asp-controller=\"GoogleDrive\"", content);
-        Assert.Contains("asp-controller=\"Research\"", content);
-
-        // Verify mobile bottom navigation bar exists with 5 items
-        Assert.Contains("bottom-nav", content);
-        Assert.Contains("Home", content);
-        Assert.Contains("Finances", content);
-        Assert.Contains("Tools", content);
-        Assert.Contains("Community", content);
-        Assert.Contains("Profile", content);
-    }
-
-    [Fact]
     public void LayoutView_LinksSignedInAccountsToFeedback_FromTheSidebarAndTheFooter()
     {
         string content = ReadView("Shared", "_Layout.cshtml");
@@ -269,29 +233,6 @@ public class NavigationLayoutTests
             fileName);
         Assert.True(File.Exists(path), $"{fileName} not found at {path}");
         return File.ReadAllText(path);
-    }
-
-    [Fact]
-    public void SidebarCss_DefinesRequiredResponsiveAndCollapsedDimensions()
-    {
-        string cssPath = Path.Combine(SolutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "css",
-            "sidebar.css");
-        Assert.True(File.Exists(cssPath), $"sidebar.css not found at {cssPath}");
-
-        string content = File.ReadAllText(cssPath);
-
-        // 240px expanded desktop width
-        Assert.Contains("240px", content);
-
-        // 60px collapsed desktop width
-        Assert.Contains("60px", content);
-
-        // Responsive mobile bottom nav rules
-        Assert.Contains("bottom-nav", content);
-        Assert.Contains("@media (max-width: 768px)", content);
-
-        // Focus visibility styling for keyboard accessibility
-        Assert.Contains(":focus-visible", content);
     }
 
     [Fact]

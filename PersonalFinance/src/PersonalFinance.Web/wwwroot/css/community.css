@@ -142,85 +142,6 @@
   font-size: var(--app-font-size-base);
 }
 
-/* --- Quick Stats Grid --- */
-.community-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
-}
-
-.community-stat-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1.25rem;
-  border-radius: var(--app-radius-m);
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  box-shadow: var(--app-shadow-2);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-}
-
-.community-stat-card:hover {
-  box-shadow: var(--app-shadow-4);
-  border-color: var(--app-border-hover);
-}
-
-.community-stat-icon {
-  font-size: 1.75rem;
-  line-height: 1;
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--app-radius-m);
-  background: var(--app-bg);
-}
-
-.community-stat-blue .community-stat-icon {
-  background: #deecf9;
-}
-
-.community-stat-green .community-stat-icon {
-  background: #dff6dd;
-}
-
-.community-stat-purple .community-stat-icon {
-  background: #e8daef;
-}
-
-.community-stat-orange .community-stat-icon {
-  background: #fde8d0;
-}
-
-.community-stat-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.community-stat-value {
-  font-size: 1.5rem;
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-text);
-  line-height: 1.2;
-  margin-bottom: 0.125rem;
-}
-
-.community-stat-title {
-  font-size: var(--app-font-size-base);
-  font-weight: var(--app-font-weight-semibold);
-  color: var(--app-text);
-  margin-bottom: 0.25rem;
-}
-
-.community-stat-description {
-  font-size: var(--app-font-size-small);
-  color: var(--app-text-muted);
-  line-height: 1.4;
-}
-
 /* --- Polls Grid --- */
 .community-polls-grid {
   display: grid;
@@ -762,16 +683,6 @@
   color: var(--app-text);
 }
 
-.community-comment-topic {
-  display: inline-block;
-  font-size: var(--app-font-size-small);
-  color: var(--app-brand);
-  background: var(--app-brand-soft);
-  padding: 0.05rem 0.4rem;
-  border-radius: var(--app-radius-s);
-  width: fit-content;
-}
-
 .community-comment-time {
   font-size: var(--app-font-size-small);
   color: var(--app-text-muted);
@@ -911,10 +822,6 @@
 
 /* --- Responsive --- */
 @media (max-width: 768px) {
-  .community-stats-grid {
-    grid-template-columns: 1fr;
-  }
-
   .community-polls-grid {
     grid-template-columns: 1fr;
   }

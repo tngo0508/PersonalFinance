@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [10.0.0] - 2026-10-27
+
+### Removed
+
+- **All Community data**: a migration hard-deletes every poll, option, vote, story, comment and like, real users' content included, so the Guild Hall starts empty (#422, authorized on #396, spec #420). This is a deliberate exception to soft deletes, and rolling the migration back does not restore the rows.
+- **Made-up Community content**: new databases are no longer seeded with three polls and three stories by invented authors with invented like and comment counts.
+- **Community Quick Stats**: the four site-wide counters (one of which counted closed polls as active), their API data and their translations.
+- **Comment topic**: comments no longer carry a free-text topic, in the API, on the page or in the Data Export.
+
+### Changed
+
+- **Community counts come from real rows**: story likes, comment likes and story comment counts are counted from the like and comment records instead of stored counters, so they can no longer drift or be set by hand. The Purge no longer adjusts counters.
+- **Comments link to their story by id**: a comment on a story stores the story's id (a nullable foreign key) instead of a copy of its title. The Data Export's comments carry `StoryId` instead of `CaseStudyTitle`.
+
+### Added
+
+- **Guild Hall vocabulary and ADR 0018**: the glossary defines Guild Hall, Pseudonym, Strategy, Poll, Comment, Reaction, Challenge and Check-in, and ADR 0018 records that the Guild Hall is pseudonymous and never shows money amounts.
+
 ## [9.1.0] - 2026-10-27
 
 ### Changed

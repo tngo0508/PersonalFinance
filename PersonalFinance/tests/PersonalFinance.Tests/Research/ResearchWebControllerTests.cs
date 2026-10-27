@@ -163,6 +163,7 @@ public class ResearchWebControllerTests
         Assert.DoesNotContain("unreachable", model.Sectors.UnavailableState.Heading, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Every dataset is read through one ReadAsync, so this proves its cancellation filter for all of them.
     [Fact]
     public async Task Index_WhenTheRequestIsCancelled_DoesNotSwallowTheCancellation()
     {
@@ -215,27 +216,23 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
-    public async Task Index_WhenOnlyTheSectorsDataFails_KeepsTheWorldTab()
+    public async Task Index_WhenOnlyTheSectorsDataFails_KeepsTheWorldAndFundsTabs()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Throws(nameof(IResearchApi.GetSectorsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"));
         proxy.Returns(nameof(IResearchApi.GetWorldAsync), World);
+        proxy.Returns(nameof(IResearchApi.GetFundsAsync), new FundsSnapshotDto
+        {
+            AsOf = new DateOnly(2026, 6, 30),
+            Periods = ["2026 Q2"],
+            Funds = [new TrackedFundDto { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust" }],
+            Values = [new FundsPeriodDto { Period = "2026 Q2", Funds = [new FundHoldingsDto { Ticker = "SPY", HoldingCount = 504 }] }],
+        });
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
         Assert.True(model.Sectors.Unavailable);
         Assert.False(model.World.Unavailable);
-    }
-
-    [Fact]
-    public async Task Index_WhenTheWorldRequestIsCancelled_DoesNotSwallowTheCancellation()
-    {
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
-        proxy.Throws(nameof(IResearchApi.GetWorldAsync), new OperationCanceledException(cts.Token));
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cancellationToken: cts.Token));
+        Assert.False(model.Funds.Unavailable);
     }
 }

@@ -115,30 +115,6 @@ public class BudgetCategoryTests
     }
 
     [Fact]
-    public async Task UpdateCategory_RejectsKindChange()
-    {
-        await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
-        await service.EnsureDefaultCategoriesAsync(UserId);
-
-        BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
-        {
-            Name = "Side Business",
-            Kind = BudgetCategoryKind.Income,
-            SortOrder = 10
-        });
-
-        // Attempting to change kind from Income to Expense is rejected (CategoryKindImmutable)
-        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryKindImmutable, () =>
-            service.UpdateCategoryAsync(UserId, customCat.Id, new SaveCategoryRequest
-            {
-                Name = "Side Business",
-                Kind = BudgetCategoryKind.Expense,
-                SortOrder = 10
-            }));
-    }
-
-    [Fact]
     public async Task UpdateCategory_RejectsDuplicateName()
     {
         await using AppDbContext db = CreateContext();

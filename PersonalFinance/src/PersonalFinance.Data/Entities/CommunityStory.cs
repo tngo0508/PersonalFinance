@@ -31,16 +31,6 @@ public class CommunityStory : AuditableEntity
     public string Category { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the number of likes on the story.
-    /// </summary>
-    public int Likes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of comments on the story.
-    /// </summary>
-    public int CommentCount { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the story is approved and publicly visible.
     /// </summary>
     public bool IsVisible { get; set; } = true;
@@ -64,4 +54,9 @@ public class CommunityStory : AuditableEntity
     /// Navigation: all likes on this story.
     /// </summary>
     public ICollection<CommunityStoryLike> LikesList { get; set; } = new List<CommunityStoryLike>();
+
+    /// <summary>
+    /// Navigation: all comments on this story.
+    /// </summary>
+    public ICollection<CommunityComment> Comments { get; set; } = new List<CommunityComment>();
 }

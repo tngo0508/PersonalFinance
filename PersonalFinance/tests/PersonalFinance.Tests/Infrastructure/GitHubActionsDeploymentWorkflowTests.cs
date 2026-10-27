@@ -30,17 +30,6 @@ public class GitHubActionsDeploymentWorkflowTests
     private static string SmokeTestAction() => ReadRepoFile(".github", "actions", "smoke-test", "action.yml");
 
     [Fact]
-    public void DeploymentWorkflow_ExistsAndIsNonEmpty()
-    {
-        string root = FindProjectRoot();
-        string workflowPath = Path.Combine(root, ".github", "workflows", "deploy-azure.yml");
-
-        Assert.True(File.Exists(workflowPath), $"Expected workflow file '{workflowPath}' does not exist.");
-        string content = File.ReadAllText(workflowPath);
-        Assert.False(string.IsNullOrWhiteSpace(content), "Workflow file is unexpectedly empty.");
-    }
-
-    [Fact]
     public void DeploymentWorkflow_ConfiguresRequiredTriggers()
     {
         string root = FindProjectRoot();
@@ -266,20 +255,21 @@ public class GitHubActionsDeploymentWorkflowTests
     }
 
     [Fact]
-    public void DeploymentWorkflow_SmokeTestBashScript_HasNoPowerShellBacktickEscapes()
+    public void WorkflowsAndActions_HaveNoPowerShellBacktickEscapes()
     {
+        // Every run: step is bash, where a PowerShell escape such as `n is a literal backtick. The smoke test's script
+        // moved into .github/actions/smoke-test, so every workflow and action is scanned, not one job of one file.
         string root = FindProjectRoot();
-        string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
+        string[] files = Directory.GetFiles(Path.Combine(root, ".github"), "*.yml", SearchOption.AllDirectories);
 
-        Match smokeTestJobMatch = Regex.Match(workflow, @"smoke-test:\s*.*", RegexOptions.Singleline);
-        Assert.True(smokeTestJobMatch.Success, "Could not find smoke-test job in workflow.");
+        List<string> offenders = files
+            .SelectMany(file => File.ReadLines(file).Select((line, index) => (file, index, line)))
+            .Where(entry => Regex.IsMatch(entry.line, "`[nrt]"))
+            .Select(entry => $"{Path.GetRelativePath(root, entry.file)}:{entry.index + 1}")
+            .ToList();
 
-        string smokeTestContent = smokeTestJobMatch.Value;
-
-        // Ensure there are no PowerShell-style backtick escapes (e.g. `n, `r, `t) in bash script blocks
-        Assert.DoesNotContain("`n", smokeTestContent);
-        Assert.DoesNotContain("`r", smokeTestContent);
-        Assert.DoesNotContain("`t", smokeTestContent);
+        Assert.Contains(files, file => file.EndsWith(Path.Combine("smoke-test", "action.yml"), StringComparison.Ordinal));
+        Assert.True(offenders.Count == 0, $"PowerShell backtick escapes in bash: {string.Join(", ", offenders)}");
     }
 
     [Fact]

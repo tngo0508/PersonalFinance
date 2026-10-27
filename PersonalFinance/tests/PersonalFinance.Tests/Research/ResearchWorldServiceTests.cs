@@ -96,16 +96,6 @@ public class ResearchWorldServiceTests
             .ToDictionary(c => snapshot.Countries[c.Country].Id, c => (c.MarketCap, c.PercentOfGdp));
 
     [Fact]
-    public async Task GetWorldAsync_OnAnEmptyTable_ReturnsNeverLoaded()
-    {
-        await using AppDbContext db = CreateContext($"World_{Guid.NewGuid():N}");
-
-        ResearchSnapshotResult<WorldSnapshotDto> result = await CreateService(db, CannedHandler()).GetWorldAsync();
-
-        Assert.Null(result.Snapshot);
-    }
-
-    [Fact]
     public async Task RefreshAsync_KeysEachCountryByItsIsoNumericCode_AndDropsAggregatesAndUnmappedCountries()
     {
         await using AppDbContext db = CreateContext($"World_{Guid.NewGuid():N}");

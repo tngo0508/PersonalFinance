@@ -46,7 +46,7 @@ public static class UserDataSeed
 
         var story = new CommunityStory { UserId = userId, AuthorName = marker, Title = $"{marker} story" };
         var comment = new CommunityComment
-        { UserId = userId, AuthorName = marker, Text = $"{marker} comment", CaseStudyTitle = $"{marker} case study" };
+        { UserId = userId, AuthorName = marker, Text = $"{marker} comment", Story = story };
         db.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = userId, Story = story });
         db.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = userId, Comment = comment });
         var poll = new CommunityPoll { PollCode = $"{marker}-poll", Question = $"{marker} question?" };

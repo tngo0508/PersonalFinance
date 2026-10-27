@@ -114,6 +114,20 @@ public sealed partial class AppShellRenderingTests : IAsyncLifetime
         AssertShows(html, SignedInEnglish.Concat(UnavailableEnglish));
     }
 
+    // The shell's navigation reaches every feature page. That each page's controller exists is NavigationLayoutTests'
+    // job: link generation here renders the href even for a controller MVC cannot route to.
+    [Fact]
+    public async Task SignedInShell_LinksToEveryFeaturePage()
+    {
+        string html = await GetAsync("/ShellPreview/Unavailable", signedIn: true, vietnamese: false);
+
+        Assert.All(
+        [
+            "/Dashboard", "/Networth", "/BudgetTracker", "/Budget", "/SavingsGoals", "/MoneyPriorities", "/Analysis",
+            "/InvestmentCalculator", "/News", "/Community", "/GoogleDrive", "/Research"
+        ], page => Assert.Contains($"href=\"{page}\"", html, StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task SignedInShell_InVietnamese_ShowsNoEnglishChrome()
     {

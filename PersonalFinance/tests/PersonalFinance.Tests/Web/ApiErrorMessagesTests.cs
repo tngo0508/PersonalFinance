@@ -158,12 +158,17 @@ public class ApiErrorMessagesTests
         Assert.Equal(string.Empty, ApiErrorMessages.Resolve(L, new ApiErrorEntryDto { Key = "Nope.Nope", Message = null! }));
     }
 
-    [Fact]
-    public async Task AnUnkeyedErrorBody_ShowsTheStatusMessageNotItsText()
+    [Theory]
+    [InlineData(HttpStatusCode.Conflict, """{"error":"Category 'Food' already exists."}""", "Errors.Conflict")]
+    [InlineData(HttpStatusCode.InternalServerError, """{"detail":"System.NullReferenceException at Service.cs:42"}""", "Errors.Server")]
+    [InlineData(HttpStatusCode.BadRequest, "plain text bad request", "Errors.InvalidRequest")]
+    [InlineData(HttpStatusCode.NotFound, "", "Errors.NotFound")]
+    [InlineData(HttpStatusCode.Forbidden, "{}", "Errors.Generic")]
+    public async Task AnUnkeyedErrorBody_ShowsTheStatusMessageNotItsText(HttpStatusCode status, string body, string key)
     {
-        ApiException ex = await CreateApiExceptionAsync(HttpStatusCode.Conflict, """{"error":"Category 'Food' already exists."}""");
+        ApiException ex = await CreateApiExceptionAsync(status, body);
 
-        Assert.Equal(L["Errors.Conflict"].Value, ApiErrorMessages.FromApiException(L, ex));
+        Assert.Equal(L[key].Value, ApiErrorMessages.FromApiException(L, ex));
     }
 
     [Fact]

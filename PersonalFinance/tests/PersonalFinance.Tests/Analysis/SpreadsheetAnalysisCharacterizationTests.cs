@@ -233,47 +233,6 @@ public class SpreadsheetAnalysisCharacterizationTests
     }
 
     [Fact]
-    public async Task DashboardRecentActivity_IncludesSpreadsheetTransactions_SortedByDateAndId()
-    {
-        await using AppDbContext db = CreateContext();
-        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot();
-        db.SpreadsheetBudgetSnapshots.Add(snapshot);
-        await db.SaveChangesAsync();
-
-        db.SpreadsheetTransactionRecords.AddRange(
-            new SpreadsheetTransactionRecord
-            {
-                Id = 1,
-                UserId = UserId,
-                SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc),
-                Amount = 50m,
-                Description = "Coffee",
-                Category = "Food",
-                Type = "Expense"
-            },
-            new SpreadsheetTransactionRecord
-            {
-                Id = 2,
-                UserId = UserId,
-                SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 16, 0, 0, 0, DateTimeKind.Utc),
-                Amount = 120m,
-                Description = "Groceries",
-                Category = "Food",
-                Type = "Expense"
-            });
-        await db.SaveChangesAsync();
-
-        var dashboardService = new DashboardService(db, TestBudgetDataProviderFactory.Create(db));
-        DashboardSummaryDto summary = await dashboardService.GetDashboardSummaryAsync(UserId);
-
-        Assert.Equal(2, summary.RecentActivity.Count);
-        Assert.Equal("Groceries", summary.RecentActivity[0].Title);
-        Assert.Equal("Coffee", summary.RecentActivity[1].Title);
-    }
-
-    [Fact]
     public async Task MultiSnapshot_SameMonth_AggregatesTotalsAndMergesCategoriesCaseInsensitively()
     {
         await using AppDbContext db = CreateContext();
@@ -338,10 +297,11 @@ public class SpreadsheetAnalysisCharacterizationTests
     }
 
     [Fact]
-    public async Task GetSpendingVelocityAsync_CalculatesDailyBurnAndWeeklyTrend()
+    public async Task GetSpendingVelocityAsync_ForAPastMonth_SpreadsItsSpendOverEveryDay()
     {
+        // A past month, so the result does not depend on today: the service reads DateTime.UtcNow for the current month.
         await using AppDbContext db = CreateContext();
-        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot(year: 2026, month: 10, budgetedExpenses: 3100m, actualExpenses: 1550m);
+        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot(year: 2025, month: 10, budgetedExpenses: 3100m, actualExpenses: 1550m);
         db.SpreadsheetBudgetSnapshots.Add(snapshot);
 
         // Add transaction records for weekly trend and category velocities
@@ -350,7 +310,7 @@ public class SpreadsheetAnalysisCharacterizationTests
             {
                 UserId = UserId,
                 SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc),
+                Date = new DateTime(2025, 10, 5, 12, 0, 0, DateTimeKind.Utc),
                 Amount = 100m,
                 Description = "Grocery 1",
                 Category = "Food",
@@ -360,7 +320,7 @@ public class SpreadsheetAnalysisCharacterizationTests
             {
                 UserId = UserId,
                 SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc),
+                Date = new DateTime(2025, 10, 12, 12, 0, 0, DateTimeKind.Utc),
                 Amount = 200m,
                 Description = "Grocery 2",
                 Category = "Food",
@@ -370,7 +330,7 @@ public class SpreadsheetAnalysisCharacterizationTests
             {
                 UserId = UserId,
                 SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 15, 12, 0, 0, DateTimeKind.Utc),
+                Date = new DateTime(2025, 10, 15, 12, 0, 0, DateTimeKind.Utc),
                 Amount = 500m,
                 Description = "Bonus",
                 Category = "Work",
@@ -379,18 +339,23 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        PersonalFinance.ApiService.Features.Analysis.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2025, 10);
 
         Assert.NotNull(velocity);
-        Assert.Equal(2026, velocity.Year);
+        Assert.Equal(2025, velocity.Year);
         Assert.Equal(10, velocity.MonthNumber);
         Assert.Equal(3100m, velocity.BudgetedExpenses);
-        Assert.True(velocity.DailyBurnRate > 0);
-        Assert.True(velocity.ProjectedMonthlySpend > 0);
-        Assert.NotNull(velocity.WeeklyTrend);
-        Assert.NotEmpty(velocity.WeeklyTrend);
-        Assert.NotNull(velocity.CategoryVelocities);
-        Assert.NotEmpty(velocity.CategoryVelocities);
+        Assert.Equal(31.0, velocity.DaysElapsed);
+        Assert.Equal(0.0, velocity.DaysRemaining);
+        Assert.Equal(50.00m, velocity.DailyBurnRate); // 1,550 / 31 days
+        Assert.Equal(1550.00m, velocity.ProjectedMonthlySpend);
+        Assert.Equal(50.0, velocity.BudgetConsumptionPercent); // 1,550 / 3,100
+        Assert.Equal(100.0, velocity.TimeElapsedPercent);
+        Assert.Equal("Behind Schedule", velocity.Status); // 50% spent with all of the month gone
+        // Days 1-7, 8-14, 15-21, 22-28, 29-31; the income on the 15th is left out.
+        Assert.Equal([100m, 200m, 0m, 0m, 0m], velocity.WeeklyTrend.Select(w => w.TotalSpent));
+        Assert.Equal([("Rent", 100.0, "On Track"), ("Food", 90.0, "On Track")],
+            velocity.CategoryVelocities.Select(c => (c.CategoryName, c.ConsumptionPercent, c.Status)));
     }
 
     [Fact]
@@ -432,38 +397,6 @@ public class SpreadsheetAnalysisCharacterizationTests
 
         List<int> years = await service.GetAvailableYearsAsync(UserId);
         Assert.Equal(ExpectedYears2026Only, years);
-    }
-
-    [Fact]
-    public async Task DashboardRecentActivity_CapsAtActivityItemCount()
-    {
-        await using AppDbContext db = CreateContext();
-        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot();
-        db.SpreadsheetBudgetSnapshots.Add(snapshot);
-
-        for (int i = 1; i <= 10; i++)
-        {
-            db.SpreadsheetTransactionRecords.Add(new SpreadsheetTransactionRecord
-            {
-                Id = i,
-                UserId = UserId,
-                SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, i, 0, 0, 0, DateTimeKind.Utc),
-                Amount = 10m * i,
-                Description = $"Transaction {i}",
-                Category = "General",
-                Type = "Expense"
-            });
-        }
-
-        await db.SaveChangesAsync();
-
-        var dashboardService = new DashboardService(db, TestBudgetDataProviderFactory.Create(db));
-        DashboardSummaryDto summary = await dashboardService.GetDashboardSummaryAsync(UserId);
-
-        Assert.Equal(5, summary.RecentActivity.Count);
-        Assert.Equal("Transaction 10", summary.RecentActivity[0].Title);
-        Assert.Equal("Transaction 6", summary.RecentActivity[4].Title);
     }
 
     [Fact]

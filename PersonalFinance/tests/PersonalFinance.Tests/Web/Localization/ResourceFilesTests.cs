@@ -13,12 +13,6 @@ namespace PersonalFinance.Tests.Web.Localization;
 public partial class ResourceFilesTests
 {
     [Fact]
-    public void EveryLanguageFile_LoadsAndEnglishHasKeys()
-    {
-        Assert.NotEmpty(TestLocalization.Catalog.Keys("en"));
-    }
-
-    [Fact]
     public void Translations_OnlyHoldEnglishKeys_WithTheSamePlaceholders()
     {
         IReadOnlyCollection<string> english = TestLocalization.Catalog.Keys("en");

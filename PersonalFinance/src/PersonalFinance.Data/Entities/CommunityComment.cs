@@ -1,7 +1,7 @@
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
-/// Database entity representing a community comment on a poll or case study.
+/// Database entity representing a community comment on a poll or story.
 /// </summary>
 public class CommunityComment : AuditableEntity
 {
@@ -16,24 +16,14 @@ public class CommunityComment : AuditableEntity
     public string Text { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the topic or subject the comment relates to.
-    /// </summary>
-    public string Topic { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the optional poll ID if this comment is on a poll.
     /// </summary>
     public int? PollId { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional case study title if this comment is on a case study.
+    /// Gets or sets the optional story ID if this comment is on a story.
     /// </summary>
-    public string? CaseStudyTitle { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of likes on the comment.
-    /// </summary>
-    public int Likes { get; set; }
+    public int? StoryId { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the comment is approved and visible.
@@ -49,6 +39,11 @@ public class CommunityComment : AuditableEntity
     /// Navigation: the poll this comment belongs to, if any.
     /// </summary>
     public CommunityPoll? Poll { get; set; }
+
+    /// <summary>
+    /// Navigation: the story this comment belongs to, if any.
+    /// </summary>
+    public CommunityStory? Story { get; set; }
 
     /// <summary>
     /// Navigation: all likes on this comment.

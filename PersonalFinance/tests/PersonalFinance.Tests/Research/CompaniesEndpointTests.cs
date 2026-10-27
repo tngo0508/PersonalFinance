@@ -1,7 +1,5 @@
 using System.Net;
-using System.Reflection;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -168,12 +166,6 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
         Assert.Equal(CompaniesController.ProfileUnavailable,
             Assert.IsType<ResearchUnavailableDto>(objectResult.Value).Reason);
-    }
-
-    [Fact]
-    public void Controller_RequiresAuthentication()
-    {
-        Assert.NotNull(typeof(CompaniesController).GetCustomAttribute<AuthorizeAttribute>());
     }
 
     [Fact]

@@ -419,10 +419,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("CaseStudyTitle")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -438,21 +434,16 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<bool>("IsVisible")
                         .HasColumnType("bit");
 
-                    b.Property<int>("Likes")
+                    b.Property<int?>("PollId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PollId")
+                    b.Property<int?>("StoryId")
                         .HasColumnType("int");
 
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("Topic")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -467,6 +458,8 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasIndex("CreatedAtUtc");
 
                     b.HasIndex("PollId");
+
+                    b.HasIndex("StoryId");
 
                     b.ToTable("CommunityComments");
                 });
@@ -651,9 +644,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int>("CommentCount")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -668,9 +658,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.Property<bool>("IsVisible")
                         .HasColumnType("bit");
-
-                    b.Property<int>("Likes")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("PublishedAtUtc")
                         .HasColumnType("datetime2");
@@ -2110,7 +2097,14 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasForeignKey("PollId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("PersonalFinance.Data.Entities.CommunityStory", "Story")
+                        .WithMany("Comments")
+                        .HasForeignKey("StoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Poll");
+
+                    b.Navigation("Story");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityCommentLike", b =>
@@ -2258,6 +2252,8 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStory", b =>
                 {
+                    b.Navigation("Comments");
+
                     b.Navigation("LikesList");
                 });
 
