@@ -1,3 +1,5 @@
+using PersonalFinance.Tests.TestSupport;
+using PersonalFinance.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.BudgetTracker;
 using PersonalFinance.ApiService.Infrastructure;
@@ -368,10 +370,10 @@ public class MonthlyBudgetSheetCalculationTests
 
         BudgetCategory otherFood = await db.BudgetCategories.FirstAsync(c => c.UserId == OtherUserId && c.Name == "Food");
 
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryNotFound, () =>
             service.SetPlannedAsync(UserId, 2026, 10, otherFood.Id, new SetPlannedRequest { Amount = 100m }));
 
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryNotFound, () =>
             service.SetActualOverrideAsync(UserId, 2026, 10, otherFood.Id,
                 new SetActualOverrideRequest { Amount = 100m }));
     }
@@ -397,10 +399,10 @@ public class MonthlyBudgetSheetCalculationTests
         await service.DeleteCategoryAsync(UserId, customCat.Id);
 
         // 1. Attempting to set planned amount or override in fresh month (December 2026) where it has no data -> CategoryNotFound
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryNotFound, () =>
             service.SetPlannedAsync(UserId, 2026, 12, customCat.Id, new SetPlannedRequest { Amount = 25m }));
 
-        await Assert.ThrowsAsync<ApiErrorException>(() =>
+        await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.CategoryNotFound, () =>
             service.SetActualOverrideAsync(UserId, 2026, 12, customCat.Id,
                 new SetActualOverrideRequest { Amount = 25m }));
 
