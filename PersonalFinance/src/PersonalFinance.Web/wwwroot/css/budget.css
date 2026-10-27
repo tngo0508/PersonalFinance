@@ -8,7 +8,7 @@
     --budget-primary-hover: var(--app-brand-hover);
     --budget-primary-light: var(--app-brand-bg);
     --budget-primary-glow: rgba(29, 106, 80, 0.15);
-    --budget-surface: #ffffff;
+    --budget-surface: var(--app-bg);
     --budget-surface-soft: var(--app-surface-soft);
     --budget-border: var(--app-border);
     --budget-border-hover: var(--app-border-hover);
@@ -165,7 +165,7 @@
 .budget-income-hero__input-wrapper:focus-within {
     border-color: var(--app-brand);
     box-shadow: 0 0 0 3px var(--app-brand-bg);
-    background: #fff;
+    background: var(--app-bg);
 }
 
 .budget-income-hero__prefix {
@@ -423,7 +423,7 @@
     box-sizing: border-box;
     border-radius: var(--app-radius-s);
     border: 1px solid var(--app-border);
-    background: #fff;
+    background: var(--app-bg);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -460,7 +460,7 @@
     height: 32px;
     border-radius: var(--app-radius-s);
     border: 1px solid var(--app-border);
-    background: #fff;
+    background: var(--app-bg);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -579,7 +579,7 @@
     overflow-y: auto;
     border-radius: var(--app-radius-s);
     border: 1px solid var(--app-border);
-    background: #fff;
+    background: var(--app-bg);
 }
 
 .budget-summary-list {

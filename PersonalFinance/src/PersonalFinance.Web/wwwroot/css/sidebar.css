@@ -13,7 +13,7 @@
    ========================================================================== */
 .sidebar {
     /* Navy ink, like the Landing Page's dark band; light green marks the active page */
-    --sidebar-bg: var(--lp-ink);
+    --sidebar-bg: var(--lp-navy);
     --sidebar-text: #D3DEE6;
     --sidebar-label: #9DB0BF;
     --sidebar-accent: #8FD3B4;
@@ -211,7 +211,7 @@ html.sidebar-collapsed .sidebar .sidebar-link-text,
     left: 240px;
     right: 0;
     height: 56px;
-    background: #fff;
+    background: var(--app-bg);
     border-bottom: 1px solid var(--app-border);
     display: flex;
     align-items: center;
@@ -251,7 +251,7 @@ body:not(:has(#sidebar)) .topbar {
     outline: none;
     border-color: var(--app-brand);
     box-shadow: 0 0 0 3px var(--app-brand-soft);
-    background: #fff;
+    background: var(--app-bg);
 }
 
 .topbar-search-icon {
@@ -300,6 +300,17 @@ body:not(:has(#sidebar)) .topbar {
     display: flex;
     align-items: center;
     margin: 0;
+}
+
+/* Theme toggle (Views/Shared/_ThemeSwitcher.cshtml): one icon button; theme.js shows the sun or the moon */
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle [hidden] {
+    display: none;
 }
 
 @media (max-width: 479.98px) {
@@ -384,7 +395,7 @@ body:not(:has(#sidebar)) .topbar {
     left: 0;
     right: 0;
     margin-top: 4px;
-    background: #fff;
+    background: var(--app-bg);
     border: 1px solid var(--app-border-hover);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(20, 40, 59, 0.12);
@@ -460,7 +471,7 @@ body:not(:has(#sidebar)) .topbar {
     right: 0;
     width: 360px;
     margin-top: 4px;
-    background: #fff;
+    background: var(--app-bg);
     border: 1px solid var(--app-border-hover);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(20, 40, 59, 0.12);
@@ -572,7 +583,7 @@ html.sidebar-collapsed .app-content {
     left: 0;
     right: 0;
     height: 56px;
-    background: #fff;
+    background: var(--app-bg);
     border-top: 1px solid var(--app-border);
     z-index: 1030;
     justify-content: space-around;

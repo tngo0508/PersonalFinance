@@ -12,9 +12,9 @@
     --nw-primary-glow: rgba(29, 106, 80, 0.15);
     --nw-secondary: #2F6690;
     --nw-accent: var(--app-brand);
-  --nw-surface: #ffffff;
+  --nw-surface: var(--app-bg);
     --nw-surface-soft: var(--app-surface);
-    --nw-bg: #FFFFFF;
+    --nw-bg: var(--app-bg);
     --nw-border: var(--app-border);
     --nw-border-hover: var(--app-border-hover);
     --nw-text-main: var(--app-text);
@@ -1170,6 +1170,27 @@ a.nw-help-btn {
   background-color: #bbf7d0;
 }
 
+/* Dark: the pale highlights would sit under light text, so tint the rows instead */
+:root[data-theme="dark"] .nw-table tbody tr.nw-row-fi,
+:root[data-theme="dark"] .nw-table tbody tr.nw-row-fi td,
+:root[data-theme="dark"] .nw-swatch-fi {
+  background-color: color-mix(in srgb, var(--app-accent-warning) 22%, var(--app-bg)) !important;
+}
+
+:root[data-theme="dark"] .nw-table tbody tr.nw-row-5m,
+:root[data-theme="dark"] .nw-table tbody tr.nw-row-5m td,
+:root[data-theme="dark"] .nw-swatch-5m {
+  background-color: color-mix(in srgb, var(--app-accent-positive) 28%, var(--app-bg)) !important;
+}
+
+:root[data-theme="dark"] .nw-table tbody tr.nw-row-fi:hover td {
+  background-color: color-mix(in srgb, var(--app-accent-warning) 30%, var(--app-bg)) !important;
+}
+
+:root[data-theme="dark"] .nw-table tbody tr.nw-row-5m:hover td {
+  background-color: color-mix(in srgb, var(--app-accent-positive) 36%, var(--app-bg)) !important;
+}
+
 .nw-swatch-roi {
   background: var(--nw-surface);
 }
@@ -1197,7 +1218,7 @@ a.nw-help-btn {
   padding: 6px 10px;
   border-radius: 6px;
   background: var(--app-text);
-  color: #fff;
+  color: var(--app-bg);
   font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;

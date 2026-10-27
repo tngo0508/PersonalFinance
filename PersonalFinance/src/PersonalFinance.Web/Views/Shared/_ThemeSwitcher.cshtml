@@ -1,0 +1,32 @@
+@*
+    The theme switcher (issue #296), driven by js/core/theme.js. The choice is per device (localStorage), so these are
+    plain buttons, not a form. Model "menu" renders Light / Dark / System items for the account dropdown in
+    _LoginPartial; anything else renders the one-button sun/moon toggle anonymous pages show in the top bar (inline SVG: Lucide waits for cookie consent).
+    theme.js marks the current choice once the page loads.
+*@
+@model string
+@if (Model == "menu")
+{
+    <li><h6 class="dropdown-header" id="themeMenuLabel">@L["Common.Theme"]</h6></li>
+    <li>
+        <div class="theme-switcher" role="group" aria-labelledby="themeMenuLabel">
+            @foreach (var (choice, key) in new[] { ("light", "Common.Theme.Light"), ("dark", "Common.Theme.Dark"), ("system", "Common.Theme.System") })
+            {
+                <button type="button" class="dropdown-item d-flex justify-content-between align-items-center"
+                        data-theme-choice="@choice" aria-current="false">
+                    @L[key]
+                    <span class="theme-switcher__check" aria-hidden="true" hidden>✓</span>
+                </button>
+            }
+        </div>
+    </li>
+}
+else
+{
+    <button type="button" class="btn btn-sm btn-outline-secondary theme-toggle" data-theme-toggle
+            aria-pressed="false" aria-label="@L["Common.Theme.SwitchToDark"]" title="@L["Common.Theme.SwitchToDark"]"
+            data-label-to-dark="@L["Common.Theme.SwitchToDark"]" data-label-to-light="@L["Common.Theme.SwitchToLight"]">
+        <span class="theme-toggle__moon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+        <span class="theme-toggle__sun" aria-hidden="true" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></span>
+    </button>
+}

@@ -21,7 +21,7 @@
             <h2 id="dash-activity-title" class="dash-card__title mb-0">@L["Dashboard.Activity.Title"]</h2>
             <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
         </div>
-        <span class="badge bg-light text-secondary border">@L.Named("Dashboard.Source", ("source", sourceName))</span>
+        <span class="badge bg-body-tertiary text-secondary border">@L.Named("Dashboard.Source", ("source", sourceName))</span>
     </div>
     @if (items.Count > 0)
     {
