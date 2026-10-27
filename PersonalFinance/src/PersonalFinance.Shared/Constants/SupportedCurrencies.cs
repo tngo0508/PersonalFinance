@@ -1,8 +1,9 @@
 namespace PersonalFinance.Shared.Constants;
 
 /// <summary>
-/// The currencies an amount may be in (ADR 0016, localization spec §2.5). Adding one is an entry here plus the rate
-/// refresher quoting it; the schema does not change. No enum and no lookup table. Every money-bearing row stores one of
+/// The currencies an amount may be in (ADR 0016, localization spec §2.5). Adding one is an entry here plus, when it is
+/// not one already, an entry in <see cref="ConvertibleCurrencies"/>, whose currencies the rate refresher quotes; the
+/// schema does not change. No enum and no lookup table. Every money-bearing row stores one of
 /// these codes in its <c>CurrencyCode</c> column (slice C1).
 /// </summary>
 public static class SupportedCurrencies
