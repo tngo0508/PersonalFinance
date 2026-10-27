@@ -156,7 +156,7 @@ public class CompanyPressReleasesServiceTests
         timeProvider ??= new MovableTimeProvider(Now);
         var settings = new SecEdgarSettings
             { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
-        var client = new SecEdgarClient(new HttpClient(sec), settings, new SecRequestGate(settings, timeProvider));
+        SecEdgarClient client = ResearchServiceFactory.SecClient(sec, settings);
         return new CompanyProfileService(client,
             new CompanyTickerIndexCache(new ResearchSettings(), timeProvider,
                 NullLogger<CompanyTickerIndexCache>.Instance),

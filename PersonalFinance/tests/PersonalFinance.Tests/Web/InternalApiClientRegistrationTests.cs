@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Http.Resilience;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Web.Infrastructure;
 using Refit;
@@ -101,6 +102,10 @@ public class InternalApiClientRegistrationTests
         services.AddSingleton<IConfiguration>(configuration);
         services.ConfigureHttpClientDefaults(http => http.AddStandardResilienceHandler());
         services.AddInternalApiClients(configuration);
+        // Retry at once: these tests check which answers are retried, not the backoff, and the standard handler's
+        // first retry otherwise waits about two seconds (#350). PostConfigure runs after the Research client's own
+        // Configure, so its ShouldHandle predicate is kept.
+        services.PostConfigureAll<HttpStandardResilienceOptions>(options => options.Retry.Delay = TimeSpan.Zero);
         services.ConfigureAll<HttpClientFactoryOptions>(options =>
             options.HttpMessageHandlerBuilderActions.Add(builder =>
                 builder.PrimaryHandler = new DelegatingTestHandler((request, _) =>

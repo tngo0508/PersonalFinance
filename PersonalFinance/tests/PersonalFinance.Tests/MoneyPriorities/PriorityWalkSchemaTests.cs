@@ -71,11 +71,17 @@ public class PriorityWalkSchemaTests
         Assert.Equal(["L1"], leaves);
     }
 
-    private static string MigrationScript()
+    /// <summary>
+    /// The full Azure SQL migration script, generated once: it takes a few hundred milliseconds, and every column row
+    /// reads the same script (#350).
+    /// </summary>
+    private static readonly Lazy<string> Script = new(() =>
     {
         using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
         return db.GetService<IMigrator>().GenerateScript();
-    }
+    });
+
+    private static string MigrationScript() => Script.Value;
 
     private static string CreateTableStatement()
     {
