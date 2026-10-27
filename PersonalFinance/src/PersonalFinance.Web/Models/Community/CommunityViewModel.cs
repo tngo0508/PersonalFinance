@@ -1,7 +1,7 @@
 namespace PersonalFinance.Web.Models.Community;
 
 /// <summary>
-/// View model for the Community page that displays polls, statistics, and stories.
+/// View model for the Community page that displays polls, stories, and comments.
 /// </summary>
 public sealed class CommunityViewModel
 {
@@ -9,11 +9,6 @@ public sealed class CommunityViewModel
     /// Gets or sets the list of active polls for community engagement.
     /// </summary>
     public List<CommunityPoll> ActivePolls { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets the list of quick community statistics.
-    /// </summary>
-    public List<CommunityStat> QuickStats { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the list of community stories shared by users.
@@ -101,42 +96,6 @@ public sealed class PollOption
     /// Gets or sets the percentage of total votes.
     /// </summary>
     public double Percentage { get; set; }
-}
-
-/// <summary>
-/// Represents a quick financial statistic or hook to spark discussion.
-/// </summary>
-public sealed class CommunityStat
-{
-    /// <summary>
-    /// Gets or sets the stable key the view translates the title and description by.
-    /// </summary>
-    public string Key { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the stat title.
-    /// </summary>
-    public string Title { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the numeric value displayed prominently.
-    /// </summary>
-    public string Value { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets a short description or context.
-    /// </summary>
-    public string Description { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the icon emoji or SVG identifier.
-    /// </summary>
-    public string Icon { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the color theme variant.
-    /// </summary>
-    public string ThemeColor { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -229,11 +188,6 @@ public sealed class CommunityComment
     /// Gets or sets the timestamp of the comment.
     /// </summary>
     public DateTime CreatedAt { get; set; }
-
-    /// <summary>
-    /// Gets or sets the topic or subject the comment relates to.
-    /// </summary>
-    public string Topic { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the number of likes on the comment.

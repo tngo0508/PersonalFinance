@@ -173,7 +173,7 @@ public class DatabasePersistenceAndMigrationTests
     }
 
     [Fact]
-    public async Task MigrateAndSeedDatabaseAsync_InMemory_SeedsCommunityPolls()
+    public async Task MigrateAndSeedDatabaseAsync_InMemory_SeedsNoCommunityContent()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -186,9 +186,8 @@ public class DatabasePersistenceAndMigrationTests
             using IServiceScope scope = sp.CreateScope();
             AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            List<CommunityPoll> polls = await db.CommunityPolls.ToListAsync();
-            Assert.True(polls.Count >= 3);
-            Assert.Contains(polls, p => p.PollCode == "poll-budget-method");
+            Assert.False(await db.CommunityPolls.AnyAsync());
+            Assert.False(await db.CommunityStories.AnyAsync());
         }
     }
 

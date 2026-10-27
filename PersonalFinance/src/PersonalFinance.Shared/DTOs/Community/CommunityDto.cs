@@ -8,7 +8,6 @@ public sealed class CommunityCommentDto
     public int Id { get; set; }
     public string AuthorName { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
-    public string Topic { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; set; }
     public int Likes { get; set; }
     public bool IsLikedByUser { get; set; }
@@ -83,26 +82,11 @@ public sealed class CommunityPollDto
 }
 
 /// <summary>
-/// DTO for a quick community statistic.
-/// </summary>
-public sealed class CommunityStatDto
-{
-    /// <summary>Stable identifier the Web page translates the title and description by, e.g. <c>ActivePolls</c>.</summary>
-    public string Key { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public string Value { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string Icon { get; set; } = string.Empty;
-    public string ThemeColor { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Full community response DTO containing polls, stats, stories, and comments.
+/// Full community response DTO containing polls, stories, and comments.
 /// </summary>
 public sealed class CommunityResponseDto
 {
     public List<CommunityPollDto> ActivePolls { get; set; } = new();
-    public List<CommunityStatDto> QuickStats { get; set; } = new();
     public List<CommunityStoryDto> Stories { get; set; } = new();
     public List<CommunityCommentDto> RecentComments { get; set; } = new();
 }
@@ -121,7 +105,6 @@ public sealed class CommunityVoteRequestDto
 /// </summary>
 public sealed class CommunityCommentRequestDto
 {
-    public string Topic { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
     public string? PollCode { get; set; }
     public int? StoryId { get; set; }

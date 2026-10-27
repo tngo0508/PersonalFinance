@@ -90,7 +90,7 @@ public class DataExportServiceTests
 
         AssertOneOfEverything(export);
         DataExportCommentDto comment = Assert.Single(export.Community.Comments);
-        Assert.Equal("mine case study", comment.CaseStudyTitle);
+        Assert.Equal((await db.CommunityStories.SingleAsync()).Id, comment.StoryId);
     }
 
     [Fact]

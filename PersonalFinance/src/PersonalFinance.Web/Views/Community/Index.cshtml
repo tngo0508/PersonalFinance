@@ -27,29 +27,6 @@
         </div>
     </div>
 
-    <!-- Quick Stats Section -->
-    <section class="community-section" aria-labelledby="stats-heading">
-        <h2 class="community-section-title" id="stats-heading">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-            </svg>
-            @L["Community.Stats.Heading"]
-        </h2>
-        <div class="community-stats-grid">
-            @foreach (var stat in Model.QuickStats)
-            {
-                <div class="community-stat-card community-stat-@stat.ThemeColor">
-                    <div class="community-stat-icon" aria-hidden="true">@stat.Icon</div>
-                    <div class="community-stat-content">
-                        <div class="community-stat-value">@stat.Value</div>
-                        <div class="community-stat-title">@CommunityText.StatTitle(L, stat)</div>
-                        <div class="community-stat-description">@CommunityText.StatDescription(L, stat)</div>
-                    </div>
-                </div>
-            }
-        </div>
-    </section>
-
     <!-- Polls Section -->
     <section class="community-section" aria-labelledby="polls-heading">
         <h2 class="community-section-title" id="polls-heading">
@@ -251,7 +228,6 @@
                         </div>
                         <div class="community-comment-info">
                             <strong class="community-comment-author">@comment.Author</strong>
-                            <span class="community-comment-topic">@comment.Topic</span>
                             <time class="community-comment-time" datetime="@comment.CreatedAt.ToString("o")">
                                 @CommunityText.TimeAgo(L, comment.CreatedAt, DateTime.UtcNow)
                             </time>

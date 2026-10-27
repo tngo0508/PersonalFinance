@@ -2,7 +2,7 @@
 /**
  * Community page — poll voting, comment toggling, story expand/collapse, likes, and story submission.
  * Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n; user content
- * (comments, author names, topics) is set as text and never translated.
+ * (comments, author names) is set as text and never translated.
  */
 (function () {
     'use strict';
@@ -378,7 +378,6 @@
         const info = el('div', 'community-comment-info');
         info.append(
             el('strong', 'community-comment-author', comment.author || ''), ' ',
-            el('span', 'community-comment-topic', comment.topic || ''), ' ',
             el('time', 'community-comment-time', PFI18n.t('Community.Js.JustNow')));
 
         const like = el('button', 'community-comment-like');

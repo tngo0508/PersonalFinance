@@ -195,32 +195,6 @@ public class AccountPurgeServiceTests
     }
 
     [Fact]
-    public async Task Purge_TakesBackOnlyTheLikesStillCounted()
-    {
-        await using (AppDbContext seed = CreateContext())
-        {
-            seed.Users.Add(new IdentityUser { Id = UserId });
-            var liveLike = new CommunityStory { UserId = OtherUserId, AuthorName = "a", Title = "live", Likes = 5 };
-            var unlikedEarlier = new CommunityStory
-            { UserId = OtherUserId, AuthorName = "a", Title = "unliked", Likes = 5 };
-            var earlierLike = new CommunityStoryLike { UserId = UserId, Story = unlikedEarlier };
-            earlierLike.SoftDelete();
-            seed.CommunityStoryLikes.AddRange(new CommunityStoryLike { UserId = UserId, Story = liveLike },
-                earlierLike);
-            await seed.SaveChangesAsync();
-            await new AccountDeletionService(seed, new FixedTimeProvider(RequestedAt)).RequestAsync(UserId);
-        }
-
-        await using AppDbContext db = CreateContext();
-        await CreatePurge(db, GraceEnds).PurgeDueAsync();
-
-        await using AppDbContext check = CreateContext();
-        Assert.Equal(4, (await check.CommunityStories.SingleAsync(s => s.Title == "live")).Likes);
-        Assert.Equal(5, (await check.CommunityStories.SingleAsync(s => s.Title == "unliked")).Likes);
-        Assert.Empty(check.CommunityStoryLikes.IgnoreQueryFilters());
-    }
-
-    [Fact]
     public async Task Purge_HardDeletesStoriesAndCommentsTheAccountDeletedItself_WithOtherPeoplesLikes()
     {
         await using (AppDbContext seed = CreateContext())

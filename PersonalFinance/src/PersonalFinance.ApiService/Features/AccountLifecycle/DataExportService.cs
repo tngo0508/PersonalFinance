@@ -405,9 +405,8 @@ internal sealed class DataExportService : IDataExportService
                 {
                     AuthorName = c.AuthorName,
                     Text = c.Text,
-                    Topic = c.Topic,
                     PollId = c.PollId,
-                    CaseStudyTitle = c.CaseStudyTitle,
+                    StoryId = c.StoryId,
                     CreatedAtUtc = c.CreatedAtUtc
                 })
                 .ToListAsync(cancellationToken),

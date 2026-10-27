@@ -106,11 +106,8 @@ public sealed class CommunityController : Controller
         }
 
         string authorName = User.Identity?.Name ?? "Anonymous";
-        string topic = request.Topic ?? "General";
-
         var commentRequest = new CommunityCommentRequestDto
         {
-            Topic = topic,
             Text = request.Text!,
             PollCode = request.PollCode,
             StoryId = request.StoryId
@@ -126,7 +123,6 @@ public sealed class CommunityController : Controller
                 id = comment.Id,
                 author = comment.AuthorName,
                 text = comment.Text,
-                topic = comment.Topic,
                 createdAt = comment.CreatedAtUtc,
                 likes = comment.Likes,
                 pollId = comment.PollId,
@@ -174,7 +170,6 @@ public sealed class CommunityController : Controller
                 id = c.Id,
                 author = c.AuthorName,
                 text = c.Text,
-                topic = c.Topic,
                 createdAt = c.CreatedAtUtc,
                 likes = c.Likes,
             }),
@@ -243,15 +238,6 @@ public sealed class CommunityController : Controller
         return new CommunityViewModel
         {
             ActivePolls = response.ActivePolls.Select(MapPollToViewModel).ToList(),
-            QuickStats = response.QuickStats.Select(s => new CommunityStat
-            {
-                Key = s.Key,
-                Title = s.Title,
-                Value = s.Value,
-                Description = s.Description,
-                Icon = s.Icon,
-                ThemeColor = s.ThemeColor,
-            }).ToList(),
             Stories = response.Stories.Select(s => new CommunityStory
             {
                 Id = s.Id,
@@ -273,7 +259,6 @@ public sealed class CommunityController : Controller
                 Author = c.AuthorName,
                 Text = c.Text,
                 CreatedAt = c.CreatedAtUtc,
-                Topic = c.Topic,
                 Likes = c.Likes,
                 IsLikedByUser = c.IsLikedByUser,
                 PollId = c.PollId,
@@ -322,7 +307,6 @@ public sealed class CommunityController : Controller
     /// </summary>
     public sealed class CommentRequest
     {
-        public string? Topic { get; set; }
         public string? Text { get; set; }
         public string? PollCode { get; set; }
         public int? StoryId { get; set; }

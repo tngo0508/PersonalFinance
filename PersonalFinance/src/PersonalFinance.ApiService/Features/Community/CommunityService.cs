@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
@@ -39,7 +38,6 @@ internal sealed class CommunityService : ICommunityService
             .ToListAsync(cancellationToken);
 
         response.ActivePolls = polls.Select(p => MapPollToDto(p, userId)).ToList();
-        response.QuickStats = await GetQuickStatsAsync(cancellationToken);
         response.Stories = await GetStoriesAsync(userId, cancellationToken);
         response.RecentComments = await GetRecentCommentsAsync(10, cancellationToken);
 
@@ -157,7 +155,6 @@ internal sealed class CommunityService : ICommunityService
         }
 
         int? storyId = null;
-        string? storyTitle = null;
         if (request.StoryId.HasValue && request.StoryId.Value > 0)
         {
             CommunityStory? story = await _dbContext.CommunityStories
@@ -167,8 +164,6 @@ internal sealed class CommunityService : ICommunityService
                 throw new ApiErrorException(ApiErrorKeys.Community.InvalidStory, "Invalid story.");
             }
             storyId = story.Id;
-            storyTitle = story.Title;
-            story.CommentCount++;
         }
 
         var comment = new PersonalFinance.Data.Entities.CommunityComment
@@ -176,10 +171,8 @@ internal sealed class CommunityService : ICommunityService
             UserId = userId,
             AuthorName = authorName.Trim(),
             Text = trimmedText,
-            Topic = request.Topic.Trim(),
             PollId = pollId,
-            CaseStudyTitle = storyTitle,
-            Likes = 0,
+            StoryId = storyId,
             IsVisible = true,
         };
 
@@ -196,11 +189,9 @@ internal sealed class CommunityService : ICommunityService
             Id = comment.Id,
             AuthorName = comment.AuthorName,
             Text = comment.Text,
-            Topic = comment.Topic,
             CreatedAtUtc = comment.CreatedAt,
-            Likes = comment.Likes,
             PollId = comment.PollId,
-            StoryId = storyId,
+            StoryId = comment.StoryId,
         };
     }
 
@@ -220,7 +211,6 @@ internal sealed class CommunityService : ICommunityService
         if (existingLike != null)
         {
             existingLike.SoftDelete();
-            comment.Likes--;
         }
         else
         {
@@ -230,7 +220,6 @@ internal sealed class CommunityService : ICommunityService
                 CommentId = commentId,
             };
             await _dbContext.CommunityCommentLikes.AddAsync(like, cancellationToken);
-            comment.Likes++;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -238,7 +227,7 @@ internal sealed class CommunityService : ICommunityService
         return new CommentLikeResult
         {
             Success = true,
-            NewLikeCount = Math.Max(0, comment.Likes),
+            NewLikeCount = await _dbContext.CommunityCommentLikes.CountAsync(l => l.CommentId == commentId, cancellationToken),
             IsLiked = existingLike == null,
         };
     }
@@ -261,13 +250,12 @@ internal sealed class CommunityService : ICommunityService
             .OrderByDescending(c => c.CreatedAt)
             .Select(c => new CommunityCommentDto
             {
+                Id = c.Id,
                 AuthorName = c.AuthorName,
                 Text = c.Text,
-                Topic = c.Topic,
                 CreatedAtUtc = c.CreatedAt,
-                Likes = c.Likes,
+                Likes = c.LikesList.Count,
                 PollId = c.PollId,
-                StoryId = null,
             })
             .ToListAsync(cancellationToken);
 
@@ -322,8 +310,6 @@ internal sealed class CommunityService : ICommunityService
             Summary = trimmedSummary,
             Body = trimmedBody,
             Category = trimmedCategory,
-            Likes = 0,
-            CommentCount = 0,
             IsVisible = true,
             IsFeatured = false,
             PublishedAtUtc = DateTime.UtcNow,
@@ -346,8 +332,6 @@ internal sealed class CommunityService : ICommunityService
             Summary = story.Summary,
             Body = story.Body,
             Category = story.Category,
-            Likes = story.Likes,
-            CommentCount = story.CommentCount,
             IsFeatured = story.IsFeatured,
             PublishedAtUtc = story.PublishedAtUtc,
             ReadTimeMinutes = story.ReadTimeMinutes,
@@ -370,7 +354,6 @@ internal sealed class CommunityService : ICommunityService
         if (existingLike != null)
         {
             existingLike.SoftDelete();
-            story.Likes--;
         }
         else
         {
@@ -380,7 +363,6 @@ internal sealed class CommunityService : ICommunityService
                 StoryId = storyId,
             };
             await _dbContext.CommunityStoryLikes.AddAsync(like, cancellationToken);
-            story.Likes++;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -388,43 +370,32 @@ internal sealed class CommunityService : ICommunityService
         return new StoryLikeResult
         {
             Success = true,
-            NewLikeCount = Math.Max(0, story.Likes),
+            NewLikeCount = await _dbContext.CommunityStoryLikes.CountAsync(l => l.StoryId == storyId, cancellationToken),
             IsLiked = existingLike == null,
         };
     }
 
     public async Task<CommunityStoryDto?> GetStoryByIdAsync(string userId, int storyId, CancellationToken cancellationToken = default)
     {
-        CommunityStory? story = await _dbContext.CommunityStories
+        return await _dbContext.CommunityStories
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == storyId && s.IsVisible, cancellationToken);
-
-        if (story == null)
-            return null;
-
-        bool isLikedByUser = false;
-        if (userId != null)
-        {
-            isLikedByUser = await _dbContext.CommunityStoryLikes
-                .AsNoTracking()
-                .AnyAsync(l => l.UserId == userId && l.StoryId == storyId, cancellationToken);
-        }
-
-        return new CommunityStoryDto
-        {
-            Id = story.Id,
-            AuthorName = story.AuthorName,
-            Title = story.Title,
-            Summary = story.Summary,
-            Body = story.Body,
-            Category = story.Category,
-            Likes = story.Likes,
-            CommentCount = story.CommentCount,
-            IsFeatured = story.IsFeatured,
-            PublishedAtUtc = story.PublishedAtUtc,
-            ReadTimeMinutes = story.ReadTimeMinutes,
-            IsLikedByUser = isLikedByUser,
-        };
+            .Where(s => s.Id == storyId && s.IsVisible)
+            .Select(s => new CommunityStoryDto
+            {
+                Id = s.Id,
+                AuthorName = s.AuthorName,
+                Title = s.Title,
+                Summary = s.Summary,
+                Body = s.Body,
+                Category = s.Category,
+                Likes = s.LikesList.Count,
+                CommentCount = s.Comments.Count(c => c.IsVisible),
+                IsFeatured = s.IsFeatured,
+                PublishedAtUtc = s.PublishedAtUtc,
+                ReadTimeMinutes = s.ReadTimeMinutes,
+                IsLikedByUser = s.LikesList.Any(l => l.UserId == userId),
+            })
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     // =========================================================================
@@ -456,66 +427,31 @@ internal sealed class CommunityService : ICommunityService
         };
     }
 
-    private async Task<List<CommunityStatDto>> GetQuickStatsAsync(CancellationToken cancellationToken)
+    private async Task<List<CommunityStoryDto>> GetStoriesAsync(string userId, CancellationToken cancellationToken)
     {
-        int totalPolls = await _dbContext.CommunityPolls.AsNoTracking().CountAsync(cancellationToken);
-        int totalVotes = await _dbContext.CommunityPollVotes.AsNoTracking().CountAsync(cancellationToken);
-        int totalComments = await _dbContext.CommunityComments
-            .AsNoTracking()
-            .Where(c => c.IsVisible)
-            .CountAsync(cancellationToken);
-        int totalStories = await _dbContext.CommunityStories
-            .AsNoTracking()
-            .Where(s => s.IsVisible)
-            .CountAsync(cancellationToken);
-
-        return new List<CommunityStatDto>
-        {
-            new() { Key = "ActivePolls", Title = "Active Polls", Value = totalPolls.ToString(CultureInfo.InvariantCulture), Description = "Community polls currently open for voting.", Icon = "📊", ThemeColor = "blue" },
-            new() { Key = "TotalVotes", Title = "Total Votes Cast", Value = totalVotes.ToString(CultureInfo.InvariantCulture), Description = "Votes cast across all community polls.", Icon = "🗳️", ThemeColor = "green" },
-            new() { Key = "Stories", Title = "Community Stories", Value = totalStories.ToString(CultureInfo.InvariantCulture), Description = "Real-life financial stories shared by the community.", Icon = "📖", ThemeColor = "purple" },
-            new() { Key = "Comments", Title = "Comments & Discussions", Value = totalComments.ToString(CultureInfo.InvariantCulture), Description = "Comments shared across polls and stories.", Icon = "💬", ThemeColor = "orange" },
-        };
-    }
-
-    private async Task<List<CommunityStoryDto>> GetStoriesAsync(string? userId, CancellationToken cancellationToken)
-    {
-        List<CommunityStory> stories = await _dbContext.CommunityStories
+        return await _dbContext.CommunityStories
             .AsNoTracking()
             .Where(s => s.IsVisible)
             .OrderByDescending(s => s.IsFeatured)
             .ThenByDescending(s => s.PublishedAtUtc)
+            .ThenByDescending(s => s.Id)
             .Take(6)
+            .Select(s => new CommunityStoryDto
+            {
+                Id = s.Id,
+                AuthorName = s.AuthorName,
+                Title = s.Title,
+                Summary = s.Summary,
+                Body = s.Body,
+                Category = s.Category,
+                Likes = s.LikesList.Count,
+                CommentCount = s.Comments.Count(c => c.IsVisible),
+                IsFeatured = s.IsFeatured,
+                PublishedAtUtc = s.PublishedAtUtc,
+                ReadTimeMinutes = s.ReadTimeMinutes,
+                IsLikedByUser = s.LikesList.Any(l => l.UserId == userId),
+            })
             .ToListAsync(cancellationToken);
-
-        // Fetch all like counts in a single query to avoid N+1
-        var storyIds = stories.Select(s => s.Id).ToList();
-        var userLikes = new HashSet<int>();
-        if (userId != null && storyIds.Count > 0)
-        {
-            List<int> likeStoryIds = await _dbContext.CommunityStoryLikes
-                .AsNoTracking()
-                .Where(l => l.UserId == userId && storyIds.Contains(l.StoryId))
-                .Select(l => l.StoryId)
-                .ToListAsync(cancellationToken);
-            userLikes = new HashSet<int>(likeStoryIds);
-        }
-
-        return stories.Select(s => new CommunityStoryDto
-        {
-            Id = s.Id,
-            AuthorName = s.AuthorName,
-            Title = s.Title,
-            Summary = s.Summary,
-            Body = s.Body,
-            Category = s.Category,
-            Likes = s.Likes,
-            CommentCount = s.CommentCount,
-            IsFeatured = s.IsFeatured,
-            PublishedAtUtc = s.PublishedAtUtc,
-            ReadTimeMinutes = s.ReadTimeMinutes,
-            IsLikedByUser = userLikes.Contains(s.Id),
-        }).ToList();
     }
 
     private async Task<List<CommunityCommentDto>> GetRecentCommentsAsync(int count, CancellationToken cancellationToken)
@@ -527,13 +463,13 @@ internal sealed class CommunityService : ICommunityService
             .Take(count)
             .Select(c => new CommunityCommentDto
             {
+                Id = c.Id,
                 AuthorName = c.AuthorName,
                 Text = c.Text,
-                Topic = c.Topic,
                 CreatedAtUtc = c.CreatedAt,
-                Likes = c.Likes,
+                Likes = c.LikesList.Count,
                 PollId = c.PollId,
-                StoryId = null,
+                StoryId = c.StoryId,
             })
             .ToListAsync(cancellationToken);
     }

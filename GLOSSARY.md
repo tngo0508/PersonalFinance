@@ -72,8 +72,8 @@ _Avoid_: Account closure, deactivation
 The 30 days after a Deletion Request during which the Account can still cancel it.
 
 ### Purge
-The permanent erasure of an Account and its data when its Grace Period ends. Its community stories and comments stay,
-shown as written by "Deleted User".
+The permanent erasure of an Account and its data when its Grace Period ends. Its Guild Hall Strategies and Comments
+stay, shown as written by "Former member".
 
 ### Data Export
 A JSON file of the data an Account currently holds in the app, which the Account downloads for itself.
@@ -220,8 +220,41 @@ The search in the top bar for signed-in users. It finds the user's own records b
 Categories from their current Data Source, and their Savings Goals. Selecting a result opens the page that holds it.
 _Avoid_: page search, navigation search (finding app pages by name is a different feature)
 
-### Community
-Social features including polls, stories, comments, and likes. System-defined polls are shared across users; user-generated content (stories, comments) is user-owned.
+### Guild Hall
+The signed-in page where users trade Strategies, answer Polls and join Challenges under their Pseudonym. It never shows
+money amounts and never ranks or compares users. In code it is the Community Feature.
+_Avoid_: Community (the code name only), forum, social feed
+
+### Pseudonym
+The generated name an Account appears under everywhere in the Guild Hall. The Account can re-roll it, and its past posts
+then show the new one. Real names and emails never appear in the Guild Hall.
+_Avoid_: alias, handle, display name, username
+
+### Strategy
+A Guild Hall post about a practice an Account tried: what they tried, what happened and what they would keep doing, with
+a category. Other users see it only after an Admin approves it.
+_Avoid_: story, case study, tip
+
+### Poll
+A question with fixed options that an Admin writes and opens or closes in the Guild Hall, and that Accounts vote on.
+_Avoid_: survey
+
+### Comment
+A short reply under a Strategy or a Poll. Other users see it at once; an Admin can hide it.
+
+### Reaction
+A supportive response to a Strategy or a Comment: Helpful or Cheering you on. There are no negative Reactions.
+_Avoid_: like, upvote
+
+### Challenge
+A time-boxed habit an Admin defines, such as "cook at home five nights", that Accounts join. It is about behavior, never
+an amount of money.
+_Avoid_: goal (that is a Savings Goal), quest
+
+### Check-in
+An Account's private record that it kept a Challenge's practice for a period. Only the Account sees its own Check-ins;
+the Guild Hall shows only how many people checked in.
+_Avoid_: log, progress entry
 
 ### Feedback
 A message a signed-in Account sends to the operator about the app, with a Feedback Category and the page it was sent
