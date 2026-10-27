@@ -16,4 +16,10 @@ public class SaveTransactionRequest
 
     /// <summary>Identifier of the category this transaction belongs to.</summary>
     public int CategoryId { get; set; }
+
+    /// <summary>
+    /// The ISO 4217 currency of the amount, one of <c>SupportedCurrencies</c>; null keeps the stored transaction's currency
+    /// (US dollars for a new one).
+    /// </summary>
+    public string? CurrencyCode { get; set; }
 }

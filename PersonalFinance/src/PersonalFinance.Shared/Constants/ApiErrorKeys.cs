@@ -67,6 +67,9 @@ public static class ApiErrorKeys
 
         /// <summary>A submitted Priority Walk broke the <c>AtContributionLimitRequired</c> rule.</summary>
         public const string AtContributionLimitRequired = "MoneyPriorities.Validation.AtContributionLimitRequired";
+
+        /// <summary>A submitted Priority Walk named a currency that is not supported.</summary>
+        public const string CurrencyUnsupported = "MoneyPriorities.Validation.CurrencyUnsupported";
     }
 
     /// <summary>The keys of the Community Feature's rejections.</summary>
@@ -186,6 +189,9 @@ public static class ApiErrorKeys
 
         /// <summary>A transaction was given to an archived category.</summary>
         public const string ArchivedCategory = "BudgetTracker.Error.ArchivedCategory";
+
+        /// <summary>A transaction or budget line named a currency that is not supported.</summary>
+        public const string CurrencyUnsupported = "BudgetTracker.Validation.CurrencyUnsupported";
     }
 
     /// <summary>The keys of the Budget Planner Feature's rejections.</summary>
@@ -199,6 +205,9 @@ public static class ApiErrorKeys
 
         /// <summary>A category's allocation had more than two decimal places.</summary>
         public const string AllocationWholeCents = "BudgetPlanner.Validation.AllocationWholeCents";
+
+        /// <summary>A budget allocation named a currency that is not supported.</summary>
+        public const string CurrencyUnsupported = "BudgetPlanner.Validation.CurrencyUnsupported";
     }
 
     /// <summary>The keys of the Feedback Feature's rejections.</summary>
@@ -298,6 +307,9 @@ public static class ApiErrorKeys
 
         /// <summary>An edit was sent for a balance Adjustment, which can only be deleted.</summary>
         public const string AdjustmentNotEditable = "SavingsGoals.Error.AdjustmentNotEditable";
+
+        /// <summary>A savings goal named a currency that is not supported.</summary>
+        public const string CurrencyUnsupported = "SavingsGoals.Validation.CurrencyUnsupported";
     }
 
     /// <summary>The keys of the Watchlist Feature's rejections.</summary>
@@ -372,6 +384,9 @@ public static class ApiErrorKeys
 
         /// <summary>The aggressive ROI was outside 0% to 50%.</summary>
         public const string AggressiveRoiRange = "NetWorth.Validation.AggressiveRoiRange";
+
+        /// <summary>The Net Worth parameters named a currency that is not supported.</summary>
+        public const string CurrencyUnsupported = "NetWorth.Validation.CurrencyUnsupported";
     }
 
     /// <summary>The keys of the AI Assistant Feature's rejections.</summary>
@@ -439,5 +454,8 @@ public static class ApiErrorKeys
 
         /// <summary>The connection does not exist or belongs to another user.</summary>
         public const string ConnectionNotFound = "GoogleDrive.Error.ConnectionNotFound";
+
+        /// <summary>A Google Drive connection named a currency that is not supported.</summary>
+        public const string CurrencyUnsupported = "GoogleDrive.Validation.CurrencyUnsupported";
     }
 }

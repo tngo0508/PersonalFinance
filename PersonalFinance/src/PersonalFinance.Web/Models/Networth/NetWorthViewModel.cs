@@ -18,6 +18,12 @@ public class NetWorthViewModel
     public decimal StartingBalance { get; set; } = NetWorthDefaults.StartingBalance;
 
     /// <summary>
+    /// The currency of the saved amounts. The form does not post it yet (slice C2 adds the selector), and the ApiService
+    /// reads null as the saved currency, or US dollars before anything is saved.
+    /// </summary>
+    public string? CurrencyCode { get; set; }
+
+    /// <summary>
     /// User-configurable annual savings amount.
     /// </summary>
     [Display(Name = "NetWorth.Field.AnnualSavings")]
@@ -113,6 +119,7 @@ public class NetWorthViewModel
     {
         return new NetWorthProjectionRequestDto
         {
+            CurrencyCode = CurrencyCode,
             StartingBalance = StartingBalance,
             AnnualSavings = AnnualSavings,
             AnnualIncome = AnnualIncome,
@@ -131,6 +138,7 @@ public class NetWorthViewModel
     /// </summary>
     public void ApplySaved(NetWorthParametersDto saved)
     {
+        CurrencyCode = saved.CurrencyCode;
         StartingBalance = saved.StartingBalance;
         AnnualSavings = saved.AnnualSavings;
         AnnualIncome = saved.AnnualIncome;

@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Constants;
+
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
@@ -5,6 +7,13 @@ namespace PersonalFinance.Data.Entities;
 /// </summary>
 public class GoogleDriveConnection : AuditableEntity
 {
+    /// <summary>
+    /// ISO 4217 code, one of <see cref="SupportedCurrencies"/> (ADR 0016). The currency of the amounts in this folder's
+    /// spreadsheets, chosen when the user connects (their Reporting Currency by default); every imported row inherits
+    /// it. Rows saved before amounts carried a currency are <c>USD</c>.
+    /// </summary>
+    public string CurrencyCode { get; set; } = SupportedCurrencies.DefaultCode;
+
     /// <summary>
     /// Friendly display name for the connected Drive/Folder.
     /// </summary>

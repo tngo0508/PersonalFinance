@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Constants;
+
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
@@ -6,6 +8,12 @@ namespace PersonalFinance.Data.Entities;
 /// </summary>
 public class UserBudgetAllocation : AuditableEntity
 {
+    /// <summary>
+    /// ISO 4217 code, one of <see cref="SupportedCurrencies"/> (ADR 0016). The income and every category amount of this
+    /// allocation are in this currency. Rows saved before amounts carried a currency are <c>USD</c>.
+    /// </summary>
+    public string CurrencyCode { get; set; } = SupportedCurrencies.DefaultCode;
+
     /// <summary>Monthly income amount in dollars.</summary>
     public decimal MonthlyIncome { get; set; }
 

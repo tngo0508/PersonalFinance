@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.AiAssistant;
 using PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
@@ -39,16 +40,19 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
             ? RetirementContributionLimits.ForYear(CurrentTaxYear()).TaxYear
             : null;
 
+        SupportedCurrency currency =
+            SupportedCurrencies.Find(CurrencyCodeRules.Resolve(request.CurrencyCode)) ?? SupportedCurrencies.Default;
         var candidate = new PriorityWalk
         {
             UserId = userId,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
-            MonthlyAmount = answers.MonthlyAmount,
+            CurrencyCode = currency.Code,
+            MonthlyAmount = currency.Round(answers.MonthlyAmount),
             Purpose = string.IsNullOrWhiteSpace(request.Purpose) ? null : request.Purpose.Trim(),
             DebtApr = answers.DebtApr,
-            DebtBalance = answers.DebtBalance,
+            DebtBalance = currency.Round(answers.DebtBalance),
             EmergencyFundMonths = answers.EmergencyFundMonths,
-            MonthlyExpenses = answers.MonthlyExpenses,
+            MonthlyExpenses = currency.Round(answers.MonthlyExpenses),
             HasFullEmployerMatch = answers.HasFullEmployerMatch,
             EmployerMatchPercent = answers.EmployerMatchPercent,
             HorizonYears = answers.HorizonYears,
@@ -174,7 +178,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
 
     /// <summary>
     /// The Account's other Walks with a saved Purpose Note that could share this Walk's: same Purpose, tree version,
-    /// leaf and amount, newest first. The rest of the answers are compared in memory with
+    /// leaf, currency and amount, newest first. The rest of the answers are compared in memory with
     /// <see cref="PriorityWalkMapping.SameAnswers"/>.
     /// </summary>
     internal IQueryable<PriorityWalk> NoteCandidatesQuery(string userId, PriorityWalk walk) =>
@@ -186,6 +190,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
                         && w.Purpose == walk.Purpose
                         && w.TreeVersion == walk.TreeVersion
                         && w.LeafId == walk.LeafId
+                        && w.CurrencyCode == walk.CurrencyCode
                         && w.MonthlyAmount == walk.MonthlyAmount)
             .OrderByDescending(w => w.CreatedAt)
             .ThenByDescending(w => w.Id);

@@ -24,6 +24,9 @@ internal static class ResearchFeature
     // The BLS CPI file is a few MB of text; a year of Treasury bill rates under one.
     private static readonly TimeSpan UsAgencyTimeout = TimeSpan.FromSeconds(60);
 
+    // Frankfurter's rates since 2015 for one currency are a few hundred kilobytes; the currency-api file one tenth of that.
+    private static readonly TimeSpan ExchangeRateTimeout = TimeSpan.FromSeconds(30);
+
     // A company's facts document can run to several megabytes; a lookup waits for it.
     private static readonly TimeSpan SecCompanyTimeout = TimeSpan.FromSeconds(30);
 
@@ -69,6 +72,8 @@ internal static class ResearchFeature
         services.AddHttpClient<IWorldBankClient, WorldBankClient>(client => client.Timeout = WorldBankTimeout);
         services.AddHttpClient<IFedRatesClient, FedRatesClient>(client => client.Timeout = FedTimeout);
         services.AddHttpClient<IUsAgencyClient, UsAgencyClient>(client => client.Timeout = UsAgencyTimeout);
+        services.AddHttpClient<IFrankfurterClient, FrankfurterClient>(client => client.Timeout = ExchangeRateTimeout);
+        services.AddHttpClient<ICurrencyApiClient, CurrencyApiClient>(client => client.Timeout = ExchangeRateTimeout);
         services.AddScoped<ResearchSnapshotStore>();
         services.AddScoped<LatestFundReports>();
         // Refreshed in this order, each on its own.
@@ -83,6 +88,8 @@ internal static class ResearchFeature
         services.AddScoped<IResearchDatasetRefresher, FundFactsRefresher>();
         services.AddScoped<IResearchDatasetRefresher, MacroRefresher>();
         services.AddScoped<IResearchDatasetRefresher, WorldRefresher>();
+        // The exchange rates (ADR 0016): rows of their own table, refreshed with the datasets.
+        services.AddScoped<IResearchDatasetRefresher, FxRatesRefresher>();
         services.AddScoped<IResearchService, ResearchService>();
 
         // Companies tab: the ticker list and built profiles are cached in memory, shared by every request.

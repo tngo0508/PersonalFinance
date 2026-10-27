@@ -15,6 +15,8 @@ internal sealed class SetPlannedRequestValidator : AbstractValidator<SetPlannedR
 
     public SetPlannedRequestValidator()
     {
+        RuleFor(x => x.CurrencyCode).SupportedCurrency(ApiErrorKeys.BudgetTracker.CurrencyUnsupported);
+
         RuleFor(x => x.Amount)
             .GreaterThanOrEqualTo(0)
                 .WithErrorCode(ApiErrorKeys.BudgetTracker.PlannedAmountRange)

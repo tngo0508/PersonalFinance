@@ -16,12 +16,14 @@ internal static class ResearchServiceFactory
 {
     /// <summary>
     /// The service with its real refreshers. <paramref name="logs"/>, when given, receives every Research log entry.
-    /// Without <paramref name="fedClient"/> or <paramref name="usAgencyClient"/> those sources cannot be reached, as
-    /// when their sites are down, so no test goes out to the network.
+    /// Without <paramref name="fedClient"/>, <paramref name="usAgencyClient"/>, <paramref name="frankfurterClient"/> or
+    /// <paramref name="currencyApiClient"/> those sources cannot be reached, as when their sites are down, so no test
+    /// goes out to the network.
     /// </summary>
     public static ResearchService Create(AppDbContext db, ISecEdgarClient secClient, IWorldBankClient worldBankClient,
         ResearchSettings settings, TimeProvider timeProvider, ILoggerProvider? logs = null,
-        IFedRatesClient? fedClient = null, IUsAgencyClient? usAgencyClient = null)
+        IFedRatesClient? fedClient = null, IUsAgencyClient? usAgencyClient = null,
+        IFrankfurterClient? frankfurterClient = null, ICurrencyApiClient? currencyApiClient = null)
     {
         IServiceCollection services = new ServiceCollection()
             .AddLogging(logging =>
@@ -37,6 +39,8 @@ internal static class ResearchServiceFactory
         services.Replace(ServiceDescriptor.Singleton(worldBankClient));
         services.Replace(ServiceDescriptor.Singleton(fedClient ?? new OfflineFedRatesClient()));
         services.Replace(ServiceDescriptor.Singleton(usAgencyClient ?? new OfflineUsAgencyClient()));
+        services.Replace(ServiceDescriptor.Singleton(frankfurterClient ?? new OfflineFrankfurterClient()));
+        services.Replace(ServiceDescriptor.Singleton(currencyApiClient ?? new OfflineCurrencyApiClient()));
         services.Replace(ServiceDescriptor.Singleton(settings));
         services.Replace(ServiceDescriptor.Singleton(timeProvider));
         return (ResearchService)services.BuildServiceProvider().GetRequiredService<IResearchService>();
@@ -81,5 +85,20 @@ internal static class ResearchServiceFactory
         public Task<IReadOnlyList<(DateOnly Month, decimal Rate)>> GetTreasuryBillRatesAsync(int year,
             CancellationToken cancellationToken) =>
             throw new HttpRequestException("The Treasury is not reachable in tests.");
+    }
+
+    /// <summary>A Frankfurter client whose site cannot be reached.</summary>
+    private sealed class OfflineFrankfurterClient : IFrankfurterClient
+    {
+        public Task<IReadOnlyList<DailyRate>> GetUsdRatesAsync(string quoteCurrency, DateOnly from, DateOnly to,
+            CancellationToken cancellationToken) =>
+            throw new HttpRequestException("Frankfurter is not reachable in tests.");
+    }
+
+    /// <summary>A currency-api client whose mirrors cannot be reached.</summary>
+    private sealed class OfflineCurrencyApiClient : ICurrencyApiClient
+    {
+        public Task<DailyRate> GetLatestUsdRateAsync(string quoteCurrency, CancellationToken cancellationToken) =>
+            throw new HttpRequestException("The currency-api is not reachable in tests.");
     }
 }

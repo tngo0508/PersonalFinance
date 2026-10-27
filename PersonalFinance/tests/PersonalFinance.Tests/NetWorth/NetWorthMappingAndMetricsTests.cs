@@ -89,8 +89,8 @@ public class NetWorthMappingAndMetricsTests
         foreach (string name in ParameterNames)
         {
             PropertyInfo property = typeof(T).GetProperty(name)!;
-            property.SetValue(target, property.PropertyType == typeof(int)
-                ? 20 + i
+            property.SetValue(target, property.PropertyType == typeof(int) ? 20 + i
+                : property.PropertyType == typeof(string) ? SupportedCurrencies.Vnd.Code
                 : Convert.ChangeType(1000m + i, property.PropertyType, CultureInfo.InvariantCulture));
             i++;
         }

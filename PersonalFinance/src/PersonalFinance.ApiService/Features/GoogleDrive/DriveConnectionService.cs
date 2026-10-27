@@ -31,6 +31,10 @@ internal sealed class DriveConnectionService : IDriveConnectionService
         new(ApiErrorKeys.GoogleDrive.FolderInvalid, "Invalid Google Drive folder URL or Folder ID.",
             "FolderUrl");
 
+    private static ApiErrorException CurrencyUnsupported() =>
+        new(ApiErrorKeys.GoogleDrive.CurrencyUnsupported, CurrencyCodeRules.UnsupportedMessage,
+            nameof(ConnectGoogleDriveRequestDto.CurrencyCode));
+
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly AppDbContext _dbContext;
@@ -203,6 +207,11 @@ internal sealed class DriveConnectionService : IDriveConnectionService
             throw FolderInvalid();
         }
 
+        if (request.CurrencyCode is not null && !SupportedCurrencies.IsSupported(request.CurrencyCode))
+        {
+            throw CurrencyUnsupported();
+        }
+
         // Check if connection for this user and folder already exists
         GoogleDriveConnection? existing = await _dbContext.GoogleDriveConnections
             .Include(c => c.CachedFiles)
@@ -224,6 +233,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
                 connection.MaskedApiKey = CredentialProtector.Mask(request.ApiKey);
             }
 
+            connection.CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode, connection.CurrencyCode);
             connection.IsValid = true;
             connection.SyncStatus = "Pending";
             connection.ErrorMessage = null;
@@ -238,6 +248,7 @@ internal sealed class DriveConnectionService : IDriveConnectionService
                 Name = !string.IsNullOrWhiteSpace(request.ConnectionName) ? request.ConnectionName.Trim() : "Google Drive Folder",
                 EncryptedApiKey = CredentialProtector.Encrypt(request.ApiKey),
                 MaskedApiKey = CredentialProtector.Mask(request.ApiKey),
+                CurrencyCode = request.CurrencyCode ?? await ReportingCurrencyAsync(userId, cancellationToken),
                 IsValid = true,
                 SyncStatus = "Pending",
             };
@@ -459,6 +470,15 @@ internal sealed class DriveConnectionService : IDriveConnectionService
 
         return MapConnectionToFolderResponse(connection, liveResponse.Warning, liveResponse.IsDemoData);
     }
+
+    /// <summary>The Account's Reporting Currency: a new connection's currency when the request names none.</summary>
+    private async Task<string> ReportingCurrencyAsync(string userId, CancellationToken cancellationToken) =>
+        await _dbContext.UserPreferences
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .Select(p => p.ReportingCurrency)
+            .FirstOrDefaultAsync(cancellationToken)
+        ?? SupportedCurrencies.DefaultCode;
 
     private static GoogleDriveConnectionDto MapToDto(GoogleDriveConnection connection)
     {
