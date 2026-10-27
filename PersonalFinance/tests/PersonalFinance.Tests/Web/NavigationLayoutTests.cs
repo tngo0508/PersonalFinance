@@ -76,6 +76,23 @@ public class NavigationLayoutTests
     }
 
     [Fact]
+    public void SidebarLinkLabels_AreShellNavResources()
+    {
+        // Only English is required: a missing translation falls back to English and never fails a build (ADR 0015).
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        MatchCollection labels = Regex.Matches(sidebar, "<span class=\"sidebar-link-text\">(.*?)</span>");
+        Assert.NotEmpty(labels);
+
+        foreach (Match label in labels)
+        {
+            Match key = Regex.Match(label.Groups[1].Value, "^@L\\[\"(Shell\\.Nav\\.[A-Za-z0-9]+)\"\\]$");
+            Assert.True(key.Success, $"Sidebar label {label.Groups[1].Value} should be a Shell.Nav.* resource.");
+            Assert.True(TestLocalization.Catalog.TryGet("en", key.Groups[1].Value, out _),
+                $"en.json has no {key.Groups[1].Value}.");
+        }
+    }
+
+    [Fact]
     public void BottomNav_LightsFinancesOnMoneyPriorities()
     {
         string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");

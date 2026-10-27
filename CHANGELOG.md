@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.3.1] - 2026-10-27
+
+### Fixed
+
+- **Google Drive sidebar label**: the sidebar's Google Drive link reads its label from the new `Shell.Nav.GoogleDrive` resource like the other sidebar links, instead of hard-coded English (#457).
+  - Vietnamese keeps the product name "Google Drive". A new test fails when any sidebar link label is not a `Shell.Nav.*` resource in `en.json`.
+
 ## [12.3.0] - 2026-10-27
 
 ### Added
