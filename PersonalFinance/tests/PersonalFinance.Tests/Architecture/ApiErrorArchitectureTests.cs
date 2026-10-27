@@ -4,19 +4,15 @@ using PersonalFinance.Tests.TestSupport;
 namespace PersonalFinance.Tests.Architecture;
 
 /// <summary>
-/// A Feature converted to keyed API errors (localized API errors spec §2.4) rejects only with an
+/// Every Feature but Admin (localized API errors spec §2.4) rejects only with an
 /// <c>ApiErrorDto</c> that carries an <c>ApiErrorKeys</c> key, which Web translates. These guards keep a converted
 /// Feature from slipping back to an English body: no literal or message-rewrapping <c>BadRequest</c>, no service
 /// throwing a framework exception for a controller to rewrap, and no validator error code that is not a key constant.
 /// </summary>
 public class ApiErrorArchitectureTests
 {
-    /// <summary>The Features under <c>Features/</c> whose rejections carry keys.</summary>
-    private static readonly string[] ConvertedFeatures =
-    [
-        "MoneyPriorities", "Community", "BudgetTracker", "BudgetPlanner", "Feedback", "AccountLifecycle", "SavingsGoals",
-        "Watchlist", "NetWorth"
-    ];
+    /// <summary>The one Feature whose rejections stay English: the Admin area is not localized (ADR 0017).</summary>
+    private const string UnlocalizedFeature = "Admin";
 
     private static readonly Regex LiteralBadRequest = new(
         @"BadRequest\(\s*""|BadRequest\(\s*\$""|BadRequest\(\s*new\s*\{|BadRequest\(\s*[a-zA-Z_.]+\.(Error)?Message\s*\)",
@@ -78,9 +74,22 @@ public class ApiErrorArchitectureTests
         Assert.DoesNotMatch(LiteralBadRequest, line);
     }
 
-    private static IEnumerable<string> ConvertedSourceFiles() =>
-        ConvertedFeatures.SelectMany(feature => SourceFiles(
-            Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.ApiService"), "Features", feature)));
+    [Fact]
+    public void TheScan_CoversEveryFeatureButAdmin()
+    {
+        List<string> features = ConvertedFeatureFolders().Select(Path.GetFileName).OfType<string>().ToList();
+
+        Assert.Contains("GoogleDrive", features);
+        Assert.Contains("MoneyPriorities", features);
+        Assert.DoesNotContain(UnlocalizedFeature, features);
+    }
+
+    /// <summary>Every folder under <c>Features/</c> except <see cref="UnlocalizedFeature"/>, so a new Feature is scanned from its first commit.</summary>
+    private static IEnumerable<string> ConvertedFeatureFolders() =>
+        Directory.EnumerateDirectories(Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.ApiService"), "Features"))
+            .Where(folder => !string.Equals(Path.GetFileName(folder), UnlocalizedFeature, StringComparison.Ordinal));
+
+    private static IEnumerable<string> ConvertedSourceFiles() => ConvertedFeatureFolders().SelectMany(SourceFiles);
 
     private static List<string> Offenders(Regex pattern, IEnumerable<string> files) =>
         files

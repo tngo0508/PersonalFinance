@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
@@ -176,7 +177,7 @@ public class SpreadsheetAnalysisController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(fileId) && string.IsNullOrWhiteSpace(fileName))
         {
-            return BadRequest("fileId or fileName is required.");
+            throw new ApiErrorException(ApiErrorKeys.Analysis.FileRequired, "fileId or fileName is required.", "fileId");
         }
 
         string userId = User.GetUserId();
@@ -199,7 +200,7 @@ public class SpreadsheetAnalysisController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(fileId))
         {
-            return BadRequest("fileId is required.");
+            throw new ApiErrorException(ApiErrorKeys.Analysis.FileIdRequired, "fileId is required.", "fileId");
         }
 
         string userId = User.GetUserId();

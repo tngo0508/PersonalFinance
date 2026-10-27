@@ -13,11 +13,14 @@ namespace PersonalFinance.Tests.Web;
 public class ApiErrorMessagesForUserTests
 {
     [Fact]
-    public async Task RejectedRequest_ShowsApiServiceMessage()
+    public async Task RejectedRequest_ShowsItsKeyedMessage()
     {
-        ApiException ex = await CreateApiExceptionAsync(HttpStatusCode.Conflict, """{"error":"Category 'Food' already exists."}""");
+        using var ui = new UiCultureScope("en");
+        ApiException ex = await CreateApiExceptionAsync(HttpStatusCode.Conflict,
+            """{"errors":[{"key":"SavingsGoals.Error.BelowZero","message":"Below zero."}]}""");
 
-        Assert.Equal("Category 'Food' already exists.", ApiErrorMessages.ForUser(TestLocalization.Localizer, ex, "fallback"));
+        Assert.Equal(TestLocalization.Localizer["SavingsGoals.Error.BelowZero"].Value,
+            ApiErrorMessages.ForUser(TestLocalization.Localizer, ex, "fallback"));
     }
 
     [Fact]

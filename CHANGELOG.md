@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [8.5.0] - 2026-10-26
+
+### Added
+
+- **AI Assistant, Research, Analysis and Google Drive errors in Vietnamese**: every rejection these Features return carries a localization key, so every Feature but Admin now answers rejected requests in the reader's language (slice E3b of the localized API errors spec, closing #385).
+  - AI Assistant: the empty and too-long chat message, the missing article title, the sign-in, daily-limit and monthly-budget quota refusals (429) and the summary rate limit are keys; the daily limit is a number argument.
+  - Research: the company search and ticker rules carry their limits as arguments; "too many lookups" (429) is a key.
+  - Analysis and Google Drive: the missing file, missing or invalid folder link and "connection not found" (404) are keys; a rejection is never sent inside a result body any more.
+- **The Purpose Note says which AI limit was reached**: its quota refusal carries the quota's keyed reason, so the note names the daily limit (with its number) or the monthly budget instead of a general "try again later".
+
+### Changed
+
+- **Unkeyed error bodies show a status message**: Web no longer reads text out of an unkeyed ApiService error body; it shows the generic message of the status code (invalid request, not found, conflict) in the reader's language.
+  - The Admin area stays English: Web's Admin controller reads its own `AdminErrorDto` reason.
+  - Web's AI endpoints answer their own "message is required" and "title is required" checks in the reader's language.
+- **Architecture guard covers every Feature but Admin**: `ApiErrorArchitectureTests` scans every folder under `Features/` except Admin, so a new Feature is checked from its first commit.
+
+### Removed
+
+- **Legacy error parsing**: the best-effort reading of `{ "error" }`, `{ "errors": [string] }`, `detail` and `title` bodies is gone from `ApiErrorMessages`.
+
 ## [8.4.0] - 2026-10-26
 
 ### Added

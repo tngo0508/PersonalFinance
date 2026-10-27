@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using PersonalFinance.ApiService.Features.Research;
+using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Tests.Security;
 using ProfileLookup = PersonalFinance.ApiService.Features.Research.CompanyLookupOutcome<PersonalFinance.Shared.DTOs.Research.CompanyLookupResultDto>;
@@ -127,9 +129,10 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     {
         var companies = new FakeCompanies(ProfileOutcome());
 
-        IActionResult result = await Controller(companies).Releases(ticker);
+        ApiErrorException error = await Assert.ThrowsAsync<ApiErrorException>(() => Controller(companies).Releases(ticker));
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(ApiErrorKeys.Research.TickerInvalid, error.Key);
+        Assert.Equal(StatusCodes.Status400BadRequest, error.StatusCode);
         Assert.Null(companies.ReleasesOf);
     }
 
@@ -148,9 +151,10 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     {
         var companies = new FakeCompanies(ProfileOutcome(), releases: new ReleasesLookup(null, RateLimited: true));
 
-        IActionResult result = await Controller(companies).Releases("MSFT");
+        ApiErrorException error = await Assert.ThrowsAsync<ApiErrorException>(() => Controller(companies).Releases("MSFT"));
 
-        Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsType<ObjectResult>(result).StatusCode);
+        Assert.Equal(ApiErrorKeys.Research.TooManyLookups, error.Key);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, error.StatusCode);
     }
 
     [Fact]
@@ -198,9 +202,10 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     [Fact]
     public async Task Get_TooManyLookups_Is429()
     {
-        IActionResult result = await Controller(new FakeCompanies(new ProfileLookup(null, RateLimited: true))).Get("MSFT");
+        ApiErrorException error = await Assert.ThrowsAsync<ApiErrorException>(() => Controller(new FakeCompanies(new ProfileLookup(null, RateLimited: true))).Get("MSFT"));
 
-        Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsType<ObjectResult>(result).StatusCode);
+        Assert.Equal(ApiErrorKeys.Research.TooManyLookups, error.Key);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, error.StatusCode);
     }
 
     [Fact]
@@ -222,9 +227,10 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     {
         var companies = new FakeCompanies(ProfileOutcome());
 
-        IActionResult result = await Controller(companies).Get(ticker);
+        ApiErrorException error = await Assert.ThrowsAsync<ApiErrorException>(() => Controller(companies).Get(ticker));
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(ApiErrorKeys.Research.TickerInvalid, error.Key);
+        Assert.Equal(StatusCodes.Status400BadRequest, error.StatusCode);
         Assert.Null(companies.LookedUp);
     }
 
@@ -255,9 +261,10 @@ public class CompaniesEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTes
     {
         var companies = new FakeCompanies(ProfileOutcome(), []);
 
-        IActionResult result = await Controller(companies).Suggest(query);
+        ApiErrorException error = await Assert.ThrowsAsync<ApiErrorException>(() => Controller(companies).Suggest(query));
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(ApiErrorKeys.Research.QueryInvalid, error.Key);
+        Assert.Equal(StatusCodes.Status400BadRequest, error.StatusCode);
         Assert.Null(companies.Suggested);
     }
 

@@ -54,6 +54,7 @@ public class MoneyPrioritiesLocalizationTests
           "MoneyPriorities.Note.Disclaimer": "Không phải lời khuyên.",
           "MoneyPriorities.Note.Unavailable": "Ghi chú hiện chưa có.",
           "MoneyPriorities.Note.QuotaReached": "Bạn đã dùng hết ghi chú hôm nay.",
+          "AiAssistant.Error.DailyLimitReached": "Bạn đã dùng hết {max} yêu cầu AI hôm nay.",
           "MoneyPriorities.Leaf.L1": "Trả nợ lãi cao trước",
           "MoneyPriorities.Result.HeadlineLeaf": "{leaf}.",
           "MoneyPriorities.Result.EstimateDisclaimer": "Chỉ là ước tính.",
@@ -174,6 +175,33 @@ public class MoneyPrioritiesLocalizationTests
             Assert.IsType<PriorityWalkPurposeNoteDto>(Assert.IsType<JsonResult>(result).Value);
         Assert.Equal(expected, note.Message);
         Assert.Equal("Không phải lời khuyên.", note.Disclaimer);
+    }
+
+    [Fact]
+    public async Task Note_QuotaReached_SaysWhichLimit_InTheRequestLanguage()
+    {
+        using var culture = new UiCultureScope("vi");
+        (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
+        proxy.Returns(nameof(IMoneyPrioritiesApi.WritePurposeNoteAsync), new PriorityWalkPurposeNoteDto
+        {
+            WalkId = 7,
+            State = PurposeNoteState.QuotaReached,
+            Message = "You have reached the daily limit of 30 messages. Please try again tomorrow.",
+            Reason = new ApiErrorEntryDto
+            {
+                Key = "AiAssistant.Error.DailyLimitReached",
+                Message = "You have reached the daily limit of 30 messages. Please try again tomorrow.",
+                Args = new Dictionary<string, ApiErrorArgDto>
+                    { ["max"] = new() { Kind = ApiErrorArgKind.Number, Value = "30" } }
+            }
+        });
+        MoneyPrioritiesController controller = CreateController(api);
+
+        IActionResult result = await controller.Note(7);
+
+        PriorityWalkPurposeNoteDto note =
+            Assert.IsType<PriorityWalkPurposeNoteDto>(Assert.IsType<JsonResult>(result).Value);
+        Assert.Equal("Bạn đã dùng hết 30 yêu cầu AI hôm nay.", note.Message);
     }
 
     [Fact]

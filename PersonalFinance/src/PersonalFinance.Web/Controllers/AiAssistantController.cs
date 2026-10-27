@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
@@ -21,10 +22,12 @@ namespace PersonalFinance.Web.Controllers;
 public class AiAssistantController : ControllerBase
 {
     private readonly IAiAssistantApi _aiAssistantApi;
+    private readonly IStringLocalizer _localizer;
 
-    public AiAssistantController(IAiAssistantApi aiAssistantApi)
+    public AiAssistantController(IAiAssistantApi aiAssistantApi, IStringLocalizer localizer)
     {
         _aiAssistantApi = aiAssistantApi;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -35,7 +38,7 @@ public class AiAssistantController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request?.Message))
         {
-            return BadRequest(new { error = "Message is required." });
+            return BadRequest(new { error = _localizer["AiAssistant.Validation.MessageRequired"].Value });
         }
 
         AiChatResponseDto response = await _aiAssistantApi.SendChatMessageAsync(request);
@@ -48,7 +51,10 @@ public class AiAssistantController : ControllerBase
     [HttpPost("summarize")]
     public async Task<IActionResult> Summarize([FromBody] NewsArticleSummaryRequestDto request)
     {
-        if (string.IsNullOrWhiteSpace(request?.Title)) return BadRequest(new { error = "Title is required." });
+        if (string.IsNullOrWhiteSpace(request?.Title))
+        {
+            return BadRequest(new { error = _localizer["AiAssistant.Validation.TitleRequired"].Value });
+        }
 
         NewsArticleSummaryResponseDto response = await _aiAssistantApi.SummarizeArticleAsync(request);
         return Ok(response);

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.ApiService.Features.AiAssistant;
 
@@ -57,7 +59,12 @@ internal sealed class AiQuotaService : IAiQuotaService
     {
         if (string.IsNullOrWhiteSpace(userId) || userId == "anonymous")
         {
-            return new QuotaCheckResult { Allowed = false, DenialReason = "Please sign in to use the AI assistant." };
+            return new QuotaCheckResult
+            {
+                Allowed = false,
+                DenialReason = "Please sign in to use the AI assistant.",
+                DenialKey = ApiErrorKeys.AiAssistant.SignInRequired
+            };
         }
         DateTime now = DateTime.UtcNow;
         DateTime todayStart = now.Date;
@@ -75,6 +82,8 @@ internal sealed class AiQuotaService : IAiQuotaService
             {
                 Allowed = false,
                 DenialReason = $"You have reached the daily limit of {MaxDailyMessagesPerUser} messages. Please try again tomorrow.",
+                DenialKey = ApiErrorKeys.AiAssistant.DailyLimitReached,
+                DenialArgs = ErrorArgs.Number("max", MaxDailyMessagesPerUser),
             };
         }
 
@@ -90,6 +99,7 @@ internal sealed class AiQuotaService : IAiQuotaService
             {
                 Allowed = false,
                 DenialReason = "The AI assistant has reached its monthly budget limit. It will be available again next month.",
+                DenialKey = ApiErrorKeys.AiAssistant.MonthlyBudgetReached,
             };
         }
 

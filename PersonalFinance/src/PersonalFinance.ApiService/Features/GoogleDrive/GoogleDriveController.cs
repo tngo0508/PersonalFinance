@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Helpers;
@@ -44,11 +45,8 @@ public class GoogleDriveController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request?.FolderUrl))
         {
-            return BadRequest(new GoogleDriveFolderResponseDto
-            {
-                Success = false,
-                ErrorMessage = "Please provide a valid Google Drive folder URL or Folder ID."
-            });
+            throw new ApiErrorException(ApiErrorKeys.GoogleDrive.FolderUrlRequired,
+                "Please provide a valid Google Drive folder URL or Folder ID.", nameof(GoogleDriveRequestDto.FolderUrl));
         }
 
         if (_logger.IsEnabled(LogLevel.Information))
@@ -57,11 +55,6 @@ public class GoogleDriveController : ControllerBase
         }
 
         GoogleDriveFolderResponseDto result = await _driveConnectionService.GetFolderFilesAsync(request, cancellationToken);
-        if (!result.Success && string.IsNullOrEmpty(result.FolderId))
-        {
-            return BadRequest(result);
-        }
-
         return Ok(result);
     }
 
@@ -91,11 +84,6 @@ public class GoogleDriveController : ControllerBase
         GoogleDriveFolderResponseDto result =
             await _driveConnectionService.GetConnectionFilesAsync(connectionId, User.GetUserId(), forceRefresh,
                 cancellationToken);
-        if (!result.Success && result.ErrorMessage == "Google Drive connection not found.")
-        {
-            return NotFound(result);
-        }
-
         return Ok(result);
     }
 
@@ -111,18 +99,12 @@ public class GoogleDriveController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request?.FolderUrl))
         {
-            return BadRequest("FolderUrl is required.");
+            throw new ApiErrorException(ApiErrorKeys.GoogleDrive.FolderUrlRequired, "FolderUrl is required.",
+                nameof(ConnectGoogleDriveRequestDto.FolderUrl));
         }
 
-        try
-        {
-            GoogleDriveConnectionDto result = await _driveConnectionService.ConnectDriveAsync(User.GetUserId(), request, cancellationToken);
-            return Ok(result);
-        }
-        catch (ArgumentException argEx)
-        {
-            return BadRequest(argEx.Message);
-        }
+        GoogleDriveConnectionDto result = await _driveConnectionService.ConnectDriveAsync(User.GetUserId(), request, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>
@@ -138,11 +120,6 @@ public class GoogleDriveController : ControllerBase
     {
         GoogleDriveFolderResponseDto result = await _driveConnectionService.SyncConnectionAsync(connectionId, User.GetUserId(),
             request?.ForceRefresh ?? true, cancellationToken);
-        if (!result.Success && result.ErrorMessage == "Google Drive connection not found.")
-        {
-            return NotFound(result);
-        }
-
         return Ok(result);
     }
 
@@ -157,16 +134,9 @@ public class GoogleDriveController : ControllerBase
         [FromBody] ReauthGoogleDriveRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            GoogleDriveConnectionDto result = await _driveConnectionService.ReauthConnectionAsync(connectionId, User.GetUserId(),
-                request?.ApiKey, cancellationToken);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound("Connection not found.");
-        }
+        GoogleDriveConnectionDto result = await _driveConnectionService.ReauthConnectionAsync(connectionId, User.GetUserId(),
+            request?.ApiKey, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>
@@ -182,7 +152,7 @@ public class GoogleDriveController : ControllerBase
         bool deleted = await _driveConnectionService.DeleteConnectionAsync(connectionId, User.GetUserId(), cancellationToken);
         if (!deleted)
         {
-            return NotFound(false);
+            throw DriveConnectionService.ConnectionNotFound();
         }
 
         return Ok(true);
@@ -202,7 +172,7 @@ public class GoogleDriveController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(fileId) && string.IsNullOrWhiteSpace(fileName))
         {
-            return BadRequest("fileId or fileName is required.");
+            throw new ApiErrorException(ApiErrorKeys.GoogleDrive.FileRequired, "fileId or fileName is required.", "fileId");
         }
 
         MonthlyBudgetReportDto report = await _spreadsheetReader.GetSpreadsheetBudgetReportAsync(
@@ -224,7 +194,7 @@ public class GoogleDriveController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(fileId))
         {
-            return BadRequest("fileId is required.");
+            throw new ApiErrorException(ApiErrorKeys.GoogleDrive.FileIdRequired, "fileId is required.", "fileId");
         }
 
         SpreadsheetTransactionsDto transactions = await _spreadsheetReader.GetSpreadsheetTransactionsAsync(

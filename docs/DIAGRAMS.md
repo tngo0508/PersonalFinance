@@ -1297,7 +1297,9 @@ ApiService is still language-free, but its rejections now carry a localization k
 ([ADR 0017](adr/0017-api-errors-carry-localization-keys.md), [spec](specs/localized-api-errors.md)): a validator rule
 sets `.WithErrorCode(ApiErrorKeys…)` and a service throws `ApiErrorException`, both rendered as one `ApiErrorDto`.
 Web resolves each entry through the localizer and formats the arguments in the request culture; the English
-`message` is only a fallback for a key missing from `en.json`. Web's own fallbacks are `Errors.*` keys.
+`message` is only a fallback for a key missing from `en.json`. Web's own fallbacks are `Errors.*` keys. Every Feature
+but Admin answers this way; any other body (ASP.NET's `ProblemDetails`, a bare `NotFound()`) shows its status code's
+`Errors.*` message, and the Admin controller reads its own English `AdminErrorDto`.
 
 ```mermaid
 flowchart LR

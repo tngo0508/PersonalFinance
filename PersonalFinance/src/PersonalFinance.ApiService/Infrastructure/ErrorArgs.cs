@@ -21,6 +21,14 @@ public static class ErrorArgs
         new Dictionary<string, ApiErrorArgDto>
             { [name] = new() { Kind = ApiErrorArgKind.Number, Value = Format(value) } };
 
+    /// <summary>The <c>min</c> and <c>max</c> number arguments of a range message.</summary>
+    public static IReadOnlyDictionary<string, ApiErrorArgDto> NumberRange(decimal min, decimal max) =>
+        new Dictionary<string, ApiErrorArgDto>
+        {
+            ["min"] = new() { Kind = ApiErrorArgKind.Number, Value = Format(min) },
+            ["max"] = new() { Kind = ApiErrorArgKind.Number, Value = Format(max) }
+        };
+
     /// <summary>One amount argument in <paramref name="currencyCode"/>.</summary>
     public static IReadOnlyDictionary<string, ApiErrorArgDto> Money(string name, decimal value, string currencyCode) =>
         new Dictionary<string, ApiErrorArgDto> { [name] = MoneyArg(value, currencyCode) };

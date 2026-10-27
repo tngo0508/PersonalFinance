@@ -258,7 +258,9 @@ internal sealed class AiAssistantService : IAiAssistantService
             DateTime to = TryParseDate(endDate) ?? DateTime.UtcNow.Date;
             if (from > to || (to - from).TotalDays > 366)
             {
-                throw new ArgumentException("Choose a date range of at most 366 days, with start before end.");
+                // A tool error the model reads and corrects, never a rejection a user sees, so it stays English.
+                throw new ArgumentOutOfRangeException(nameof(startDate), startDate,
+                    "Choose a date range of at most 366 days, with start before end.");
             }
 
             List<BudgetTransactionData> rows = await _budgetDataProvider.GetTransactionsAsync(userId,
@@ -436,7 +438,8 @@ internal sealed class AiAssistantService : IAiAssistantService
         if (!_rateLimiterService.TryAllow(userId))
         {
             _logger.LogWarning("Rate limit exceeded for user {UserId} on summarize endpoint.", userId);
-            throw new InvalidOperationException("Rate limit exceeded. Please try again later.");
+            throw new ApiErrorException(ApiErrorKeys.AiAssistant.RateLimited,
+                "Rate limit exceeded. Please try again later.", statusCode: StatusCodes.Status429TooManyRequests);
         }
 
         if (_chatClient is null)
@@ -531,7 +534,9 @@ internal sealed class AiAssistantService : IAiAssistantService
         QuotaCheckResult quota = await _quotaService.CheckQuotaAsync(userId, PurposeNoteEndpoint);
         if (!quota.Allowed)
         {
-            return PurposeNote(PurposeNoteState.QuotaReached, note: null, quota.DenialReason);
+            PurposeNoteResponseDto refused = PurposeNote(PurposeNoteState.QuotaReached, note: null, quota.DenialReason);
+            refused.Reason = quota.ToRejection(StatusCodes.Status429TooManyRequests).ToDto().Errors[0];
+            return refused;
         }
 
         ChatResponse response;

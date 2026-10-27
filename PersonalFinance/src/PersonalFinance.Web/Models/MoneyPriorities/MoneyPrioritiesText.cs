@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Web.Models.MoneyPriorities;
@@ -34,7 +35,8 @@ public static class MoneyPrioritiesText
     }
 
     /// <summary>
-    /// Translates a Purpose Note reply in place: its message by the note's state, and its disclaimer. The note itself
+    /// Translates a Purpose Note reply in place: its message by the note's state (a quota refusal by its keyed reason,
+    /// which names the daily limit or the monthly budget), and its disclaimer. The note itself
     /// is AI-written and shown as written, and so is the message of a written note.
     /// </summary>
     public static PriorityWalkPurposeNoteDto Localize(IStringLocalizer localizer, PriorityWalkPurposeNoteDto note)
@@ -49,7 +51,11 @@ public static class MoneyPrioritiesText
             PurposeNoteState.Refused => "MoneyPriorities.Note.Refused",
             _ => null
         };
-        if (key is not null)
+        if (note.State == PurposeNoteState.QuotaReached && note.Reason is not null)
+        {
+            note.Message = ApiErrorMessages.Resolve(localizer, note.Reason);
+        }
+        else if (key is not null)
         {
             note.Message = localizer[key];
         }

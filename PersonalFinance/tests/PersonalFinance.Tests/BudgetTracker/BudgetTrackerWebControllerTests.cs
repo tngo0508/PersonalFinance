@@ -78,15 +78,19 @@ public class BudgetTrackerWebControllerTests
         Assert.NotNull(methodAttr);
     }
 
-    [Fact]
-    public async Task GetApiErrorMessage_WhenArrayErrors_ExtractsAllMessages()
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest, """{"errors": ["Year must be between 1900 and 2100."]}""", "Errors.InvalidRequest")]
+    [InlineData(HttpStatusCode.Conflict, """{"error": "Category 'Dining' already exists."}""", "Errors.Conflict")]
+    [InlineData(HttpStatusCode.NotFound, """{"detail": "The specified monthly budget line was not found."}""", "Errors.NotFound")]
+    [InlineData(HttpStatusCode.BadRequest, """{"title": "Invalid Request Parameters"}""", "Errors.InvalidRequest")]
+    public async Task GetApiErrorMessage_WhenTheBodyHasNoKeys_ShowsTheStatusMessageNotItsText(HttpStatusCode status,
+        string json, string expectedKey)
     {
-        string json = """{"errors": ["Year must be between 1900 and 2100.", "Month must be between 1 and 12."]}""";
-        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
+        ApiException apiEx = await CreateApiExceptionAsync(status, json);
 
         string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
-        Assert.Equal("Year must be between 1900 and 2100.; Month must be between 1 and 12.", msg);
+        Assert.Equal(TestLocalization.Localizer[expectedKey].Value, msg);
     }
 
     [Fact]
@@ -100,39 +104,6 @@ public class BudgetTrackerWebControllerTests
 
         Assert.Equal(TestLocalization.Localizer["Errors.InvalidRequest"].Value, msg);
         Assert.DoesNotContain("Amount must be greater than 0.", msg);
-    }
-
-    [Fact]
-    public async Task GetApiErrorMessage_WhenSingleErrorProperty_ReturnsError()
-    {
-        string json = """{"error": "Category 'Dining' already exists."}""";
-        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.Conflict, json);
-
-        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
-
-        Assert.Equal("Category 'Dining' already exists.", msg);
-    }
-
-    [Fact]
-    public async Task GetApiErrorMessage_WhenDetailProperty_ReturnsDetail()
-    {
-        string json = """{"detail": "The specified monthly budget line was not found."}""";
-        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.NotFound, json);
-
-        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
-
-        Assert.Equal("The specified monthly budget line was not found.", msg);
-    }
-
-    [Fact]
-    public async Task GetApiErrorMessage_WhenTitleOnly_ReturnsTitle()
-    {
-        string json = """{"title": "Invalid Request Parameters"}""";
-        ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, json);
-
-        string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
-
-        Assert.Equal("Invalid Request Parameters", msg);
     }
 
     [Fact]
@@ -158,14 +129,14 @@ public class BudgetTrackerWebControllerTests
     }
 
     [Fact]
-    public async Task GetApiErrorMessage_WhenNonJson400_ReturnsGenericErrorMessage()
+    public async Task GetApiErrorMessage_WhenNonJson400_ReturnsTheInvalidRequestMessage()
     {
         string text = "plain text bad request";
         ApiException apiEx = await CreateApiExceptionAsync(HttpStatusCode.BadRequest, text);
 
         string msg = ApiErrorMessages.FromApiException(TestLocalization.Localizer, apiEx);
 
-        Assert.Equal(TestLocalization.Localizer["Errors.Generic"].Value, msg);
+        Assert.Equal(TestLocalization.Localizer["Errors.InvalidRequest"].Value, msg);
     }
 
     [Fact]

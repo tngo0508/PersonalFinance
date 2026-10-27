@@ -2,11 +2,13 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Features.GoogleDrive.Adapters;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
@@ -122,7 +124,7 @@ public class GoogleDriveSpreadsheetTests
     }
 
     [Fact]
-    public async Task DriveConnectionService_WithInvalidUrl_ReturnsErrorResponse()
+    public async Task DriveConnectionService_WithInvalidUrl_RejectsWithItsKey()
     {
         using AppDbContext dbContext = CreateTestDbContext();
         IConfigurationRoot configuration = new ConfigurationBuilder().Build();
@@ -135,11 +137,10 @@ public class GoogleDriveSpreadsheetTests
             FolderUrl = "invalid-link"
         };
 
-        GoogleDriveFolderResponseDto response = await service.GetFolderFilesAsync(request);
+        ApiErrorException error = await Assert.ThrowsAsync<ApiErrorException>(() => service.GetFolderFilesAsync(request));
 
-        Assert.False(response.Success);
-        Assert.True(string.IsNullOrEmpty(response.FolderId));
-        Assert.NotNull(response.ErrorMessage);
+        Assert.Equal(ApiErrorKeys.GoogleDrive.FolderInvalid, error.Key);
+        Assert.Equal(StatusCodes.Status400BadRequest, error.StatusCode);
     }
 
     [Fact]

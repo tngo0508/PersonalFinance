@@ -45,13 +45,16 @@ public class AiAssistantController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request?.Message))
         {
-            return BadRequest(new { error = "Message is required." });
+            throw new ApiErrorException(ApiErrorKeys.AiAssistant.MessageRequired, "Message is required.",
+                nameof(AiChatRequestDto.Message));
         }
 
         // Enforce message length limit
         if (request.Message.Length > AiAssistantMessages.MaxMessageLength)
         {
-            return BadRequest(new { error = $"Message must be under {AiAssistantMessages.MaxMessageLength} characters." });
+            throw new ApiErrorException(ApiErrorKeys.AiAssistant.MessageTooLong,
+                $"Message must be under {AiAssistantMessages.MaxMessageLength} characters.",
+                nameof(AiChatRequestDto.Message), ErrorArgs.Number("max", AiAssistantMessages.MaxMessageLength));
         }
 
         // Check scope before calling the LLM
@@ -67,8 +70,7 @@ public class AiAssistantController : ControllerBase
         QuotaCheckResult quotaResult = await _quotaService.CheckQuotaAsync(userId, "chat");
         if (!quotaResult.Allowed)
         {
-            return StatusCode(StatusCodes.Status429TooManyRequests,
-                new { error = quotaResult.DenialReason });
+            throw quotaResult.ToRejection(StatusCodes.Status429TooManyRequests);
         }
 
         AiChatResponseDto response = await _aiAssistantService.SendChatMessageAsync(userId, request, cancellationToken);
@@ -90,27 +92,23 @@ public class AiAssistantController : ControllerBase
     public async Task<IActionResult> Summarize([FromBody] NewsArticleSummaryRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request?.Title)) return BadRequest(new { error = "Title is required." });
+        if (string.IsNullOrWhiteSpace(request?.Title))
+        {
+            throw new ApiErrorException(ApiErrorKeys.AiAssistant.TitleRequired, "Title is required.",
+                nameof(NewsArticleSummaryRequestDto.Title));
+        }
 
         string userId = User.GetUserId();
 
         QuotaCheckResult quotaResult = await _quotaService.CheckQuotaAsync(userId, "summarize");
         if (!quotaResult.Allowed)
         {
-            return StatusCode(StatusCodes.Status429TooManyRequests, new { error = quotaResult.DenialReason });
+            throw quotaResult.ToRejection(StatusCodes.Status429TooManyRequests);
         }
 
-        try
-        {
-            NewsArticleSummaryResponseDto response = await _aiAssistantService.SummarizeArticleAsync(userId, request, cancellationToken);
-            response.Disclaimer = AiAssistantMessages.Disclaimer;
-            response.BudgetWarning = quotaResult.BudgetWarning ? AiAssistantMessages.BudgetWarning : null;
-            return Ok(response);
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))
-        {
-            return StatusCode(StatusCodes.Status429TooManyRequests,
-                new { error = "Rate limit exceeded. Please try again later." });
-        }
+        NewsArticleSummaryResponseDto response = await _aiAssistantService.SummarizeArticleAsync(userId, request, cancellationToken);
+        response.Disclaimer = AiAssistantMessages.Disclaimer;
+        response.BudgetWarning = quotaResult.BudgetWarning ? AiAssistantMessages.BudgetWarning : null;
+        return Ok(response);
     }
 }
