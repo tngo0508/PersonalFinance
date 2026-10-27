@@ -338,10 +338,11 @@ public class SpreadsheetAnalysisCharacterizationTests
     }
 
     [Fact]
-    public async Task GetSpendingVelocityAsync_CalculatesDailyBurnAndWeeklyTrend()
+    public async Task GetSpendingVelocityAsync_ForAPastMonth_SpreadsItsSpendOverEveryDay()
     {
+        // A past month, so the result does not depend on today: the service reads DateTime.UtcNow for the current month.
         await using AppDbContext db = CreateContext();
-        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot(year: 2026, month: 10, budgetedExpenses: 3100m, actualExpenses: 1550m);
+        SpreadsheetBudgetSnapshot snapshot = CreateSnapshot(year: 2025, month: 10, budgetedExpenses: 3100m, actualExpenses: 1550m);
         db.SpreadsheetBudgetSnapshots.Add(snapshot);
 
         // Add transaction records for weekly trend and category velocities
@@ -350,7 +351,7 @@ public class SpreadsheetAnalysisCharacterizationTests
             {
                 UserId = UserId,
                 SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc),
+                Date = new DateTime(2025, 10, 5, 12, 0, 0, DateTimeKind.Utc),
                 Amount = 100m,
                 Description = "Grocery 1",
                 Category = "Food",
@@ -360,7 +361,7 @@ public class SpreadsheetAnalysisCharacterizationTests
             {
                 UserId = UserId,
                 SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc),
+                Date = new DateTime(2025, 10, 12, 12, 0, 0, DateTimeKind.Utc),
                 Amount = 200m,
                 Description = "Grocery 2",
                 Category = "Food",
@@ -370,7 +371,7 @@ public class SpreadsheetAnalysisCharacterizationTests
             {
                 UserId = UserId,
                 SnapshotId = snapshot.Id,
-                Date = new DateTime(2026, 10, 15, 12, 0, 0, DateTimeKind.Utc),
+                Date = new DateTime(2025, 10, 15, 12, 0, 0, DateTimeKind.Utc),
                 Amount = 500m,
                 Description = "Bonus",
                 Category = "Work",
@@ -379,18 +380,23 @@ public class SpreadsheetAnalysisCharacterizationTests
         await db.SaveChangesAsync();
 
         SpreadsheetAnalysisService service = CreateService(db);
-        PersonalFinance.ApiService.Features.Analysis.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2026, 10);
+        PersonalFinance.ApiService.Features.Analysis.SpendingVelocityDto? velocity = await service.GetSpendingVelocityAsync(UserId, 2025, 10);
 
         Assert.NotNull(velocity);
-        Assert.Equal(2026, velocity.Year);
+        Assert.Equal(2025, velocity.Year);
         Assert.Equal(10, velocity.MonthNumber);
         Assert.Equal(3100m, velocity.BudgetedExpenses);
-        Assert.True(velocity.DailyBurnRate > 0);
-        Assert.True(velocity.ProjectedMonthlySpend > 0);
-        Assert.NotNull(velocity.WeeklyTrend);
-        Assert.NotEmpty(velocity.WeeklyTrend);
-        Assert.NotNull(velocity.CategoryVelocities);
-        Assert.NotEmpty(velocity.CategoryVelocities);
+        Assert.Equal(31.0, velocity.DaysElapsed);
+        Assert.Equal(0.0, velocity.DaysRemaining);
+        Assert.Equal(50.00m, velocity.DailyBurnRate); // 1,550 / 31 days
+        Assert.Equal(1550.00m, velocity.ProjectedMonthlySpend);
+        Assert.Equal(50.0, velocity.BudgetConsumptionPercent); // 1,550 / 3,100
+        Assert.Equal(100.0, velocity.TimeElapsedPercent);
+        Assert.Equal("Behind Schedule", velocity.Status); // 50% spent with all of the month gone
+        // Days 1-7, 8-14, 15-21, 22-28, 29-31; the income on the 15th is left out.
+        Assert.Equal([100m, 200m, 0m, 0m, 0m], velocity.WeeklyTrend.Select(w => w.TotalSpent));
+        Assert.Equal([("Rent", 100.0, "On Track"), ("Food", 90.0, "On Track")],
+            velocity.CategoryVelocities.Select(c => (c.CategoryName, c.ConsumptionPercent, c.Status)));
     }
 
     [Fact]
