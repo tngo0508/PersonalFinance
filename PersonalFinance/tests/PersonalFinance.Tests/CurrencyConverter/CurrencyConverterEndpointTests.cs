@@ -8,7 +8,7 @@ using PersonalFinance.Shared.DTOs.CurrencyConverter;
 using PersonalFinance.Tests.Security;
 using PersonalFinance.Tests.TestSupport;
 
-namespace PersonalFinance.Tests.CurrencyConversion;
+namespace PersonalFinance.Tests.CurrencyConverter;
 
 /// <summary>
 /// The Currency Converter endpoint (#446): signed-in only, and its validator rejects a code that is not a Convertible

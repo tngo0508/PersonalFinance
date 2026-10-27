@@ -1,5 +1,4 @@
 @using System.Globalization
-@using PersonalFinance.Web.Models.CurrencyConverter
 @model CurrencyConverterViewModel
 @{
     ViewData["Title"] = L["CurrencyConverter.Title"].Value;
@@ -121,7 +120,6 @@
                         }
                         else
                         {
-                            <p class="text-muted mb-1">@MoneyFormatter.FormatConvertible(result.Amount, result.From) =</p>
                             <p class="h3 mb-3" data-converter-amount>@MoneyFormatter.FormatConvertible(converted, result.To)</p>
                             <p class="mb-1" data-converter-rate>@L.Named("CurrencyConverter.Result.Rate", ("from", result.From), ("rate", CurrencyConverterViewModel.FormatRate(rate, culture)), ("to", result.To))</p>
                             @if (result.RateDate is { } rateDate)

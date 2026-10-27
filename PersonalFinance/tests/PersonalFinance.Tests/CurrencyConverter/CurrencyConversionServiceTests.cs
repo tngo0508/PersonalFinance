@@ -6,7 +6,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.CurrencyConverter;
 using PersonalFinance.Tests.TestSupport;
 
-namespace PersonalFinance.Tests.CurrencyConversion;
+namespace PersonalFinance.Tests.CurrencyConverter;
 
 /// <summary>
 /// The Currency Converter's calculation (#446) through the shared converter: the cross rate goes through USD at full

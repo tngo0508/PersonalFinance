@@ -14,7 +14,7 @@ public sealed class CurrencyConverterViewModel
     public const int RateSignificantDigits = 6;
 
     /// <summary>The earliest day the date field accepts.</summary>
-    public static readonly DateOnly MinDate = new(2015, 1, 1);
+    public static DateOnly MinDate => ConvertibleCurrencies.FirstRateDate;
 
     /// <summary>The amount to convert; empty before the first submit.</summary>
     public decimal? Amount { get; set; }
@@ -59,7 +59,21 @@ public sealed class CurrencyConverterViewModel
             exponent--;
         }
 
-        int decimals = Math.Clamp(RateSignificantDigits - 1 - exponent, 0, 20);
+        int decimals = RateSignificantDigits - 1 - exponent;
+        if (decimals < 0)
+        {
+            // A rate of a million or more: round its whole units to the significant digits too.
+            decimal unit = 1m;
+            for (int i = 0; i < -decimals; i++)
+            {
+                unit *= 10m;
+            }
+
+            decimal whole = decimal.Round(rate / unit, 0, MidpointRounding.AwayFromZero) * unit;
+            return whole.ToString("#,##0", culture);
+        }
+
+        decimals = Math.Min(decimals, 20);
         decimal rounded = decimal.Round(rate, decimals, MidpointRounding.AwayFromZero);
         return rounded.ToString("#,##0." + new string('#', decimals), culture);
     }

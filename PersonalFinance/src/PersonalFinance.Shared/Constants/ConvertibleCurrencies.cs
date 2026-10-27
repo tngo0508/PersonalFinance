@@ -7,6 +7,9 @@ namespace PersonalFinance.Shared.Constants;
 /// </summary>
 public static class ConvertibleCurrencies
 {
+    /// <summary>The first day the rate refresher stores, and the earliest day the converter may be asked for.</summary>
+    public static readonly DateOnly FirstRateDate = new(2015, 1, 1);
+
     /// <summary>Every convertible currency, in the order the converter offers them.</summary>
     public static readonly IReadOnlyList<ConvertibleCurrency> All =
     [

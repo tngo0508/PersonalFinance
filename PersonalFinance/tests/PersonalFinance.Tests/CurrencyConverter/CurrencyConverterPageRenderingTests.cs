@@ -21,7 +21,7 @@ using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Services;
 
-namespace PersonalFinance.Tests.CurrencyConversion;
+namespace PersonalFinance.Tests.CurrencyConverter;
 
 /// <summary>
 /// The Currency Converter page (#446) rendered through the real compiled Razor view: no result before the first submit;

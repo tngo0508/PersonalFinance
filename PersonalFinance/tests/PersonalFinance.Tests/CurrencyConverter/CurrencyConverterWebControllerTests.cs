@@ -15,7 +15,7 @@ using PersonalFinance.Web.Models.CurrencyConverter;
 using Refit;
 using AuthorizeAttribute = Microsoft.AspNetCore.Authorization.AuthorizeAttribute;
 
-namespace PersonalFinance.Tests.CurrencyConversion;
+namespace PersonalFinance.Tests.CurrencyConverter;
 
 /// <summary>
 /// The Web Currency Converter page (#446): signed-in only; before the first submit it shows the form with defaults from
@@ -99,7 +99,8 @@ public class CurrencyConverterWebControllerTests
     [InlineData("25500", "25,500")]
     [InlineData("170", "170")]
     [InlineData("0.006097561", "0.00609756")]
-    [InlineData("1234567.89", "1,234,568")]
+    [InlineData("1234567.89", "1,234,570")]
+    [InlineData("999999.5", "1,000,000")]
     [InlineData("0.0000123456789", "0.0000123457")]
     public void Rate_IsShownToSixSignificantDigits(string rate, string expected)
     {

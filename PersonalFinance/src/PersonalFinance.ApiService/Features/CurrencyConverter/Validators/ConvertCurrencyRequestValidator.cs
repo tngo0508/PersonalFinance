@@ -6,14 +6,11 @@ namespace PersonalFinance.ApiService.Features.CurrencyConverter.Validators;
 
 /// <summary>
 /// Validator for one conversion: an amount of zero or more, From and To among <see cref="ConvertibleCurrencies"/>, and
-/// a date (when given) from <see cref="EarliestDate"/> to today (UTC). Every rule carries its
+/// a date (when given) from <see cref="ConvertibleCurrencies.FirstRateDate"/> to today (UTC). Every rule carries its
 /// <see cref="ApiErrorKeys.CurrencyConverter"/> key (ADR 0017).
 /// </summary>
 internal sealed class ConvertCurrencyRequestValidator : AbstractValidator<ConvertCurrencyRequestDto>
 {
-    /// <summary>The earliest day a conversion may ask for.</summary>
-    public static readonly DateOnly EarliestDate = new(2015, 1, 1);
-
     public ConvertCurrencyRequestValidator(TimeProvider timeProvider)
     {
         RuleFor(x => x.Amount)
@@ -35,7 +32,7 @@ internal sealed class ConvertCurrencyRequestValidator : AbstractValidator<Conver
                 .WithMessage("Choose a currency to convert to.");
 
         RuleFor(x => x.Date)
-            .Must(date => date is null || date.Value >= EarliestDate)
+            .Must(date => date is null || date.Value >= ConvertibleCurrencies.FirstRateDate)
                 .WithErrorCode(ApiErrorKeys.CurrencyConverter.DateTooEarly)
                 .WithMessage("Choose a date on or after 1 January 2015.")
             .Must(date => date is null || date.Value <= DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime))
