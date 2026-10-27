@@ -16,13 +16,7 @@ public class FeedbackServiceTests
 {
     private const string UserId = "feedback-user";
 
-    private static AppDbContext CreateContext()
-    {
-        DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase($"Feedback_{Guid.NewGuid():N}")
-            .Options;
-        return new AppDbContext(options);
-    }
+    private static AppDbContext CreateContext() => CreateContext($"Feedback_{Guid.NewGuid():N}");
 
     private static AppDbContext CreateContext(string databaseName, params IInterceptor[] interceptors)
     {

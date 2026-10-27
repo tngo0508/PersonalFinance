@@ -30,9 +30,13 @@ public class RateLimiterService : IRateLimiterService
     /// </summary>
     /// <param name="userId">The user identifier.</param>
     /// <returns>True if the request is allowed within the rate limit; otherwise, false.</returns>
-    public bool TryAllow(string userId)
+    public bool TryAllow(string userId) => TryReserve(userId, out _);
+
+    /// <inheritdoc />
+    public bool TryReserve(string userId, out DateTime slot)
     {
         DateTime now = DateTime.UtcNow;
+        slot = now;
 
         lock (_lock)
         {
@@ -54,17 +58,14 @@ public class RateLimiterService : IRateLimiterService
         }
     }
 
-    /// <summary>
-    ///     Gives back the slot of the user's newest allowed request. With concurrent requests the newest slot may
-    ///     belong to another request; the count is the same either way, and the older slot that stays expires sooner.
-    /// </summary>
-    /// <param name="userId">The user identifier.</param>
-    public void Release(string userId)
+    /// <inheritdoc />
+    public void Release(string userId, DateTime slot)
     {
         lock (_lock)
         {
-            if (_requestTimestamps.TryGetValue(userId, out LinkedList<DateTime>? timestamps) && timestamps.Count > 0)
-                timestamps.RemoveLast();
+            // Remove this exact slot, not the newest: a concurrent request may have reserved a later one
+            if (_requestTimestamps.TryGetValue(userId, out LinkedList<DateTime>? timestamps))
+                timestamps.Remove(slot);
         }
     }
 }

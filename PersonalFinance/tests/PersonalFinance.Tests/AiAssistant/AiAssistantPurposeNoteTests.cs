@@ -278,7 +278,13 @@ public class AiAssistantPurposeNoteTests
     {
         public bool TryAllow(string userId) => true;
 
-        public void Release(string userId)
+        public bool TryReserve(string userId, out DateTime slot)
+        {
+            slot = default;
+            return true;
+        }
+
+        public void Release(string userId, DateTime slot)
         {
         }
     }

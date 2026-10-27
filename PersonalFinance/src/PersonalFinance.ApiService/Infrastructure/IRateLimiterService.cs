@@ -14,9 +14,19 @@ public interface IRateLimiterService
     bool TryAllow(string userId);
 
     /// <summary>
-    ///     Gives back the slot of the user's newest allowed request, for a request that failed after
-    ///     <see cref="TryAllow" /> reserved it, so the failure does not count toward the limit.
+    ///     Like <see cref="TryAllow" />, but returns the reserved slot so a request that fails afterwards can give it
+    ///     back with <see cref="Release" />.
     /// </summary>
     /// <param name="userId">The user identifier.</param>
-    void Release(string userId);
+    /// <param name="slot">The reserved slot; meaningful only when the method returns true.</param>
+    /// <returns>True if the request is allowed within the rate limit; otherwise, false.</returns>
+    bool TryReserve(string userId, out DateTime slot);
+
+    /// <summary>
+    ///     Gives back a slot taken by <see cref="TryReserve" />, so a request that failed does not count toward the
+    ///     limit.
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="slot">The slot <see cref="TryReserve" /> returned.</param>
+    void Release(string userId, DateTime slot);
 }
