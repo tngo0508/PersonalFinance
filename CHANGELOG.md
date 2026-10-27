@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.3.5] - 2026-10-27
+
+### Changed
+
+- **Budget Tracker actions verified**: the Budget Tracker keeps its one month navigator, at the top, and one Add Category button per section (expense, income), and a rendering test now guards both (#454).
+  - Reading the view and script, and rendering the page in a test, showed no second month navigator and no inline Add Category duplicates. The inventory in the issue came from grep matches in the script and the Add Category modal's submit button, so no control was removed.
+
 ## [12.3.3] - 2026-10-27
 
 ### Changed
