@@ -137,7 +137,7 @@ internal sealed class AiScopeFilter : IAiScopeFilter
                 Response = "Your message is too long. Please keep it under "
                           + AiAssistantMessages.MaxMessageLength + " characters.",
                 FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.TooLong,
-                    "Your message is too long. Please keep it under {max} characters.",
+                    "Your message is too long. Keep it under {max} characters.",
                     ErrorArgs.Number("max", AiAssistantMessages.MaxMessageLength)),
                 IsRefusal = true,
                 Disclaimer = null,
