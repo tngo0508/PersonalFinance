@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.Enums;
 using static PersonalFinance.ApiService.Features.MoneyPriorities.Domain.PriorityNodeIds;
 
 namespace PersonalFinance.ApiService.Features.MoneyPriorities.Domain;

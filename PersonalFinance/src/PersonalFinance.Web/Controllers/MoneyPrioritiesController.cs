@@ -45,7 +45,7 @@ public class MoneyPrioritiesController : Controller
         try
         {
             PriorityTreeDiagramDto tree = await _moneyPrioritiesApi.GetTreeAsync(cancellationToken);
-            model.WholeTreeDiagram = tree.WholeTreeDiagram;
+            model.WholeTreeDiagram = MoneyPrioritiesText.WholeTreeDiagram(_localizer, tree.Tree);
             model.Thresholds = tree.Thresholds;
             model.RecentWalks = MoneyPrioritiesText.Localize(_localizer,
                 await _moneyPrioritiesApi.GetRecentWalksAsync(cancellationToken));
@@ -87,7 +87,7 @@ public class MoneyPrioritiesController : Controller
         try
         {
             PriorityWalkResultDto result = await _moneyPrioritiesApi.SubmitWalkAsync(request, cancellationToken);
-            return Json(MoneyPrioritiesText.Localize(_localizer, result));
+            return Json(MoneyPrioritiesText.Result(_localizer, result));
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
         {
@@ -131,7 +131,7 @@ public class MoneyPrioritiesController : Controller
     public async Task<IActionResult> Walk(int id, CancellationToken cancellationToken = default)
     {
         PriorityWalkResultDto walk = await _moneyPrioritiesApi.GetWalkAsync(id, cancellationToken);
-        return Json(MoneyPrioritiesText.Localize(_localizer, walk));
+        return Json(MoneyPrioritiesText.Result(_localizer, walk));
     }
 
     /// <summary>

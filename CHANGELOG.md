@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [8.8.0] - 2026-10-26
+
+### Added
+
+- **Money Priorities path and Priority Tree in Vietnamese**: the "Your path" sentences, the diagram labels and the diagrams' accessible title and descriptions show in the reader's language (#382).
+  - Each question, answer and leaf has a resource key by its node id or edge (`MoneyPriorities.Node.Q1`, `MoneyPriorities.Edge.Q1.L1`, `MoneyPriorities.Leaf.L1`), so a saved Walk shows the current wording of its nodes; one Web has no key for shows the ApiService's English.
+  - A test checks that every node and answer of every authored tree version has an English entry matching the tree and a Vietnamese entry, so a new tree version cannot ship untranslated.
+
+### Changed
+
+- **Web builds the Priority Tree diagrams**: the ApiService sends the tree (node ids, kinds, edges, English labels) and the path's node ids instead of finished Mermaid text and English sentences; Web writes the diagram texts and the path sentences in the request's language. The ApiService stays language-free (ADR 0017).
+  - `PriorityDiagramText` and its palette moved from the ApiService to `PersonalFinance.Web/Models/MoneyPriorities/`; a translated label is kept on one line and its quotes escaped, so it cannot add a Mermaid statement.
+  - The page's result JSON now nests the Walk under `walk`, beside `pathSentences`, `wholeTreeDiagram` and `pathViewDiagram`.
+
 ## [8.7.0] - 2026-10-26
 
 ### Added

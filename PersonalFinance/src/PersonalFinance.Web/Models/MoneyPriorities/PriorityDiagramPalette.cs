@@ -1,4 +1,4 @@
-namespace PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
+namespace PersonalFinance.Web.Models.MoneyPriorities;
 
 /// <summary>
 /// The colours of a Priority Tree diagram, as <c>#RRGGBB</c> hex values. Mermaid bakes colours into the SVG it renders,

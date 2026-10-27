@@ -8,7 +8,7 @@ namespace PersonalFinance.Web.Models.MoneyPriorities;
 /// </summary>
 public class MoneyPrioritiesViewModel
 {
-    /// <summary>Mermaid text of the whole tree, nothing highlighted.</summary>
+    /// <summary>Mermaid text of the whole tree, nothing highlighted, in the request's Language.</summary>
     public string WholeTreeDiagram { get; set; } = string.Empty;
 
     /// <summary>The Priority Tree's thresholds, which decide the follow-up fields the form shows.</summary>

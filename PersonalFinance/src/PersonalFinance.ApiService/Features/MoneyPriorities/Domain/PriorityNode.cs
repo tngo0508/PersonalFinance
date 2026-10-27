@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Enums;
+
 namespace PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
 
 /// <summary>One node of the Priority Tree.</summary>

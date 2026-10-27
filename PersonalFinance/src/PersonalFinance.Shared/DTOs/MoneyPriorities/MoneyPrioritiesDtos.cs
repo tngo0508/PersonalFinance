@@ -69,8 +69,8 @@ public class PriorityWalkAnswersDto
 
 /// <summary>
 /// A Priority Walk as the result card shows it: the suggested priority, its figures recomputed from the stored answers,
-/// the path in words, both diagram texts and the stated assumptions. Every figure is full precision; the page rounds
-/// once, at display.
+/// the path's node ids with the tree they walk, and the stated assumptions. Every figure is full precision; the page
+/// rounds once, at display.
 /// </summary>
 public class PriorityWalkResultDto
 {
@@ -107,14 +107,14 @@ public class PriorityWalkResultDto
     /// <summary>The leaf's dollar figures, recomputed from the stored answers.</summary>
     public PriorityLeafFiguresDto Figures { get; set; } = new();
 
-    /// <summary>The "Your path" sentences, in path order, ending with the suggested priority.</summary>
-    public List<string> PathSentences { get; set; } = [];
+    /// <summary>
+    /// The path's node ids from the start node to the leaf, e.g. <c>S</c>, <c>Q1</c>, <c>L1</c>: a walk of
+    /// <see cref="Tree"/>. Web words the "Your path" sentences and highlights the diagrams from them.
+    /// </summary>
+    public List<string> PathNodeIds { get; set; } = [];
 
-    /// <summary>Mermaid text of the whole tree with the path highlighted (light palette).</summary>
-    public string WholeTreeDiagram { get; set; } = string.Empty;
-
-    /// <summary>Mermaid text of the path nodes only, in one column, highlighted (light palette).</summary>
-    public string PathViewDiagram { get; set; } = string.Empty;
+    /// <summary>The Priority Tree the Walk was answered against (<see cref="TreeVersion"/>).</summary>
+    public PriorityTreeDto Tree { get; set; } = new();
 
     /// <summary>The tax year of the IRS limits used, when the path reached the limit question; otherwise null.</summary>
     public int? LimitsTaxYear { get; set; }
@@ -256,11 +256,50 @@ public class PriorityTreeDiagramDto
 {
     public int TreeVersion { get; set; }
 
-    /// <summary>Mermaid text of the whole tree, unhighlighted (light palette).</summary>
-    public string WholeTreeDiagram { get; set; } = string.Empty;
+    /// <summary>The current Priority Tree, which Web draws unhighlighted.</summary>
+    public PriorityTreeDto Tree { get; set; } = new();
 
     /// <summary>The thresholds the tree decides on, so the page shows the follow-up questions they call for.</summary>
     public PriorityTreeThresholdsDto Thresholds { get; set; } = new();
+}
+
+/// <summary>
+/// An authored Priority Tree: its nodes and edges in authored order, with the English wording. Web draws the diagrams
+/// and words the path from it, translating each label by its node id or edge (ADR 0017: the ApiService stays
+/// language-free); the English is the fallback for a node Web has no key for.
+/// </summary>
+public class PriorityTreeDto
+{
+    /// <summary>The tree version stored on each Priority Walk.</summary>
+    public int Version { get; set; }
+
+    /// <summary>The start node, then the questions, then the leaves.</summary>
+    public List<PriorityTreeNodeDto> Nodes { get; set; } = [];
+
+    /// <summary>Every edge, in authored order: the diagrams style edges by their index in this list.</summary>
+    public List<PriorityTreeEdgeDto> Edges { get; set; } = [];
+}
+
+/// <summary>One node of a Priority Tree.</summary>
+public class PriorityTreeNodeDto
+{
+    /// <summary>The stable node id, e.g. <c>Q1</c> or <c>L5</c>.</summary>
+    public string Id { get; set; } = string.Empty;
+
+    public PriorityNodeKind Kind { get; set; }
+
+    /// <summary>The authored English wording.</summary>
+    public string Label { get; set; } = string.Empty;
+}
+
+/// <summary>One edge of a Priority Tree, from a question to the node an answer leads to.</summary>
+public class PriorityTreeEdgeDto
+{
+    public string From { get; set; } = string.Empty;
+    public string To { get; set; } = string.Empty;
+
+    /// <summary>The authored English answer (<c>Yes</c>, <c>Under 3 years</c>), or null for the start edge.</summary>
+    public string? Label { get; set; }
 }
 
 /// <summary>
