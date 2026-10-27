@@ -178,7 +178,8 @@
     }
 
     /**
-     * A typical day of the Net Worth settings: the year's income, spending and savings over 365 days, and the day's
+     * The Net Worth settings averaged over a day (plan figures, not transactions): the year's income, spending and
+     * savings over 365 days, and the day's
      * compounding. freedomHours is the time of living a day's saving pays for later (savings over spending, in
      * hours). Each figure is null when the settings do not have a positive value for it.
      * @param {Object|null} netWorth - The dashboard's netWorth summary.
@@ -507,15 +508,14 @@
             return;
         }
         const day = dayLedger(netWorth);
-        const signs = { earned: '+', spent: '−', saved: '', compounding: '+' };
         let any = false;
-        Object.keys(signs).forEach((name) => {
+        // Plain amounts, no +/− signs: these are plan averages, not money moving in an account.
+        ['earned', 'spent', 'saved', 'compounding'].forEach((name) => {
             const row = ledger.querySelector(`[data-dash-ledger-row="${name}"]`);
             row.hidden = day[name] === null;
             if (!row.hidden) {
                 any = true;
-                row.querySelector('[data-dash-ledger-value]').textContent =
-                    signs[name] + i18n.formatMoney(day[name], CURRENCY);
+                row.querySelector('[data-dash-ledger-value]').textContent = i18n.formatMoney(day[name], CURRENCY);
             }
         });
 
