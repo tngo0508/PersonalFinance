@@ -146,11 +146,12 @@ Persists temporary tokens, authenticator keys, and external provider tokens.
 
 `PersonalFinance.Data.AppDbContext` extends `IdentityDbContext<IdentityUser>`, so the Identity tables and the
 application tables live in one database. Every user-owned application table links to its Account through a `UserId`
-column (`nvarchar(450)`, indexed) that holds `AspNetUsers.Id`. That link is **logical, not a foreign key**: no
+column (`nvarchar(450)`, usually indexed) that holds `AspNetUsers.Id`. That link is **logical, not a foreign key**: no
 application table has a database FK to `AspNetUsers`, so removing an Identity user never cascades into application
-data. The account Purge ([ADR 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)) relies on this: the
-rows it keeps rather than deletes (Guild Hall stories and comments, the Deletion Request) get
-`UserId = "deleted-account"` (`Shared/Constants/DeletedAccount.cs`), an id that matches no Account.
+data, and an application row can hold an id that matches no Account. The Purge
+([ADR 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)) relies on this: it erases the Account's rows
+itself, and the rows it keeps (approved Guild Hall Strategies, Comments, the Deletion Request) get
+`UserId = "deleted-account"` (`Shared/Constants/DeletedAccount.cs`).
 
 For the application tables, their columns and the foreign keys between them, see the data model in
 [`DIAGRAMS.md` section 4](DIAGRAMS.md#4-data-model).
