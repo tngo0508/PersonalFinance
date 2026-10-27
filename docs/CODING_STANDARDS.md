@@ -388,9 +388,9 @@ Every user-facing feature must be complete, coherent, and consistent with the re
 - Follow the existing design system, typography, spacing, color palette, and component conventions.
 - Use clear labels, concise instructions, meaningful button text, and understandable error messages.
 - Keep actions few and in their place:
-  - A screen region (a card, panel, toolbar or modal) has at most one primary action. Style the rest as secondary.
+  - A screen region (a card, panel, toolbar or modal) has at most one primary action.
   - Rare or destructive actions go in an overflow (⋯) menu, not in plain view.
-  - Each action has one entry point per screen. An empty state replaces the main call to action; it never adds a second button for the same action.
+  - Each action has one entry point per screen. An empty state replaces the primary action; it never adds a second entry point for it.
 - Provide appropriate empty, loading, success, and failure states.
 - Disable or otherwise protect against duplicate submissions when necessary.
 - Use confirmation steps for destructive or consequential operations.
