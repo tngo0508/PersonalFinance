@@ -42,10 +42,11 @@ jobs:
     timeout-minutes: 5
     outputs:
       issue: ${{ steps.pick.outputs.issue }}
+      rebase_pr: ${{ steps.pick.outputs.rebase_pr }}
       branch: ${{ steps.pick.outputs.branch }}
       minutes: ${{ steps.pick.outputs.minutes }}
     steps:
-      - name: Choose and claim an issue
+      - name: Choose a stale PR to rebase, or claim an issue
         id: pick
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,6 +71,27 @@ jobs:
             [ "$left" -lt "$minutes" ] && minutes="$left"
           fi
           echo "minutes=$minutes" >> "$GITHUB_OUTPUT"
+
+          # A stale agent PR comes first, cap or not: once a sibling merges, the others conflict on AppVersion and
+          # CHANGELOG.md and can never merge. One rebase is the whole run. A PR whose rebase failed waits for a human.
+          if [ -z "$REQUESTED" ]; then
+            stale=$(gh pr list --state open --limit 100 --json number,headRefName,isDraft,mergeable,labels --jq "
+              [.[] | select((.headRefName | startswith(\"$BRANCH_PREFIX\")) and (.isDraft | not)
+                and .mergeable == \"CONFLICTING\"
+                and ([.labels[].name] | index(\"agent:rebase-failed\") | not))]
+              | sort_by(.number) | .[0] // empty | \"\(.number) \(.headRefName)\"")
+            if [ -n "$stale" ]; then
+              read -r stale_pr stale_branch <<< "$stale"
+              gh label create "agent:rebase-failed" --color D93F0B \
+                --description "The scheduled agent could not rebase this PR" 2>/dev/null || true
+              gh pr comment "$stale_pr" --body "🤖 The scheduled Claude agent is rebasing this PR onto main: $RUN_URL"
+              echo "rebase_pr=$stale_pr" >> "$GITHUB_OUTPUT"
+              echo "branch=$stale_branch" >> "$GITHUB_OUTPUT"
+              echo "issue=" >> "$GITHUB_OUTPUT"
+              echo "::notice::Rebasing stale PR #$stale_pr ($stale_branch)"
+              exit 0
+            fi
+          fi
 
           # Drafts count toward the cap: a stuck draft is still work waiting on a human.
           open_agent_prs=$(gh pr list --state open --limit 100 --json headRefName \
@@ -246,3 +268,91 @@ jobs:
           elif [ -n "$pr" ]; then
             echo "::notice::Opened PR #$pr for #$ISSUE"
           fi
+
+  rebase:
+    name: Rebase a stale agent PR
+    needs: pick
+    if: needs.pick.outputs.rebase_pr != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(needs.pick.outputs.minutes) }}
+    env:
+      PR: ${{ needs.pick.outputs.rebase_pr }}
+      BRANCH: ${{ needs.pick.outputs.branch }}
+    steps:
+      - name: Checkout the PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.pick.outputs.branch }}
+          fetch-depth: 0
+
+      - name: Setup .NET SDK (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install npm packages
+        run: npm ci
+
+      - name: Run Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          additional_permissions: |
+            actions: read
+          claude_args: >-
+            --model claude-opus-5-5
+            --max-turns 120
+            --allowedTools "Read,Edit,Write,Glob,Grep,TodoWrite,Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
+          prompt: |
+            You are the unattended scheduled ticket agent for ${{ github.repository }}. No human is watching this run.
+            Your only job: rebase PR #${{ env.PR }} (branch `${{ env.BRANCH }}`, already checked out) onto `origin/main`,
+            which has moved on since the PR was opened, so the PR now conflicts. Do not add features or refactor.
+
+            1. Read AGENTS.md, "Parallel worktrees" and the Done checklist, then `gh pr view ${{ env.PR }} --comments`
+               and the issue it closes.
+            2. `git fetch origin main`, then `git rebase origin/main`. Resolve each conflict by keeping both sides' intent:
+               - AppVersion.cs: re-bump to the next free version above `main` and every other open PR from an
+                 `agent/issue-*` branch (read their AppVersion.cs), with the same bump level the PR had (patch, minor or
+                 major). Update Current, Major, Minor and Patch together.
+               - CHANGELOG.md: keep main's sections intact and move this PR's section to the top, renamed to the new
+                 version and dated today.
+               - Code: keep main's changes and re-apply this PR's change on top. If a conflict needs a product or design
+                 decision, do not guess: `git rebase --abort`, explain it in a PR comment, and stop.
+            3. Run `dotnet test PersonalFinance.sln` and "npm run lint", and fix only what the rebase broke.
+            4. `git push --force-with-lease origin ${{ env.BRANCH }}`. Then comment on the PR with the new version and
+               anything you had to resolve by hand.
+
+            Hard rules: never merge, never push to `main`, never touch Azure, never apply migrations. This repository
+            and its Actions logs are public: never print secrets, tokens, connection strings or user financial data.
+
+      - name: Check the rebase landed
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          git fetch -q origin main "$BRANCH"
+          if [ "$JOB_STATUS" = "success" ] && git merge-base --is-ancestor origin/main "origin/$BRANCH"; then
+            echo "::notice::PR #$PR is rebased onto main."
+            exit 0
+          fi
+          # Not retried every 30 minutes: the label keeps the picker off this PR until a human removes it.
+          gh pr edit "$PR" --add-label "agent:rebase-failed" || true
+          gh pr comment "$PR" --body "🤖 The scheduled Claude agent could not rebase this PR onto main ($JOB_STATUS). It needs a human; remove the agent:rebase-failed label to let the agent try again. Run: $RUN_URL" || true
+          exit 1
