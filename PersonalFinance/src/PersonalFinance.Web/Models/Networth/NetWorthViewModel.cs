@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
@@ -111,9 +112,10 @@ public class NetWorthViewModel
 
     /// <summary>
     /// Whether the page shows the Account's saved parameters. Without them the preset cards show inline; with them
-    /// the presets move into the More menu. Set only by <see cref="ApplySaved"/>, so a posted form can't set it.
+    /// the presets move into the More menu. Set by <see cref="ApplySaved"/> or the controller, never by a posted form.
     /// </summary>
-    public bool HasSavedParameters { get; private set; }
+    [BindNever]
+    public bool HasSavedParameters { get; set; }
 
     /// <summary>
     /// Savings Rate shown before JavaScript updates it live (see <see cref="FinanceMetrics.SavingsRatePercent"/>).
