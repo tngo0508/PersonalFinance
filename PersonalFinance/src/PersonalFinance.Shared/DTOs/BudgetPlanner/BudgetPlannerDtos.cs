@@ -9,6 +9,13 @@ public class BudgetResponseDto
 public class SaveBudgetRequestDto
 {
     public string? Period { get; set; }
+
+    /// <summary>
+    /// The ISO 4217 currency of the income and allocations, one of <c>SupportedCurrencies</c>; null keeps the saved
+    /// allocation's currency (US dollars for a new one).
+    /// </summary>
+    public string? CurrencyCode { get; set; }
+
     public decimal MonthlyIncome { get; set; }
     public BudgetAllocationsDto Allocations { get; set; } = new();
 }

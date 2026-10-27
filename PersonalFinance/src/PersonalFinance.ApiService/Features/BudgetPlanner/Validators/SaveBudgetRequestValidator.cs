@@ -22,6 +22,8 @@ internal sealed class SaveBudgetRequestValidator : AbstractValidator<SaveBudgetR
 
     public SaveBudgetRequestValidator()
     {
+        RuleFor(x => x.CurrencyCode).SupportedCurrency(ApiErrorKeys.BudgetPlanner.CurrencyUnsupported);
+
         RuleFor(x => x.MonthlyIncome)
             .GreaterThan(0m)
                 .WithErrorCode(ApiErrorKeys.BudgetPlanner.MonthlyIncomeRange)

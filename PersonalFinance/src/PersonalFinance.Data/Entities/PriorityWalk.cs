@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Constants;
+
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
@@ -7,6 +9,12 @@ namespace PersonalFinance.Data.Entities;
 /// </summary>
 public class PriorityWalk : AuditableEntity
 {
+    /// <summary>
+    /// ISO 4217 code, one of <see cref="SupportedCurrencies"/> (ADR 0016). The monthly amount, the debt balance and the
+    /// monthly expenses of this Walk are in this currency. Rows saved before amounts carried a currency are <c>USD</c>.
+    /// </summary>
+    public string CurrencyCode { get; set; } = SupportedCurrencies.DefaultCode;
+
     /// <summary>The extra amount the user has each month, in dollars (over 0, at most 1,000,000).</summary>
     public decimal MonthlyAmount { get; set; }
 

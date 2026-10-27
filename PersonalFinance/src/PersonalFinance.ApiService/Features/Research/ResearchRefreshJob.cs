@@ -34,7 +34,7 @@ internal static class ResearchRefreshJob
     /// <summary>
     /// Rebuilds every dataset. When SEC's User-Agent contact is not configured or is still the committed placeholder,
     /// SEC's fair-access rules forbid asking it anything, so its datasets (Sectors, funds) are skipped and keep their
-    /// snapshots while the World Bank's are still rebuilt. Non-zero, so the job execution shows as failed, when SEC
+    /// snapshots while the World Bank's and the exchange rates are still refreshed. Non-zero, so the job execution shows as failed, when SEC
     /// was skipped or any dataset failed; a failed dataset keeps its previous snapshot.
     /// </summary>
     internal static async Task<int> RefreshAsync(IServiceProvider services, CancellationToken cancellationToken = default)
@@ -53,7 +53,8 @@ internal static class ResearchRefreshJob
         try
         {
             summary = await services.GetRequiredService<IResearchService>().RefreshAsync(
-                secConfigured ? ResearchSources.All : ResearchSources.WorldBank, cancellationToken);
+                secConfigured ? ResearchSources.All : ResearchSources.WorldBank | ResearchSources.CurrencyRates,
+                cancellationToken);
         }
         catch (OperationCanceledException)
         {

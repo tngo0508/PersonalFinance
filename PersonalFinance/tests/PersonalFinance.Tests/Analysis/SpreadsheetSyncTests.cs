@@ -94,6 +94,48 @@ public class SpreadsheetSyncTests
         Assert.DoesNotContain(SecretDetail, result.ErrorMessage);
     }
 
+    [Fact]
+    public async Task Sync_ImportsEveryRowInTheConnectionsCurrency_RoundedToItsMinorUnits()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"SpreadsheetSync_{Guid.NewGuid():N}")
+            .Options);
+        var connection = new GoogleDriveConnection
+        {
+            UserId = UserId, FolderId = "folder-1", FolderUrl = "folder-1", CurrencyCode = "VND"
+        };
+        db.GoogleDriveConnections.Add(connection);
+        await db.SaveChangesAsync();
+        var report = new MonthlyBudgetReportDto
+        {
+            FileName = "Ngân sách 2026.xlsx",
+            Year = 2026,
+            Months = [new MonthlyBudgetMonthSummaryDto { MonthNumber = 1, MonthName = "January", ActualIncome = 30_000_000.5m }]
+        };
+        var transactions = new SpreadsheetTransactionsDto
+        {
+            Transactions =
+            [
+                new SpreadsheetTransactionDto
+                {
+                    Date = new DateTime(2026, 1, 5), Amount = 45_000.5m, Description = "Cà phê", Category = "Food",
+                    Type = SpreadsheetTransactionDto.ExpenseType
+                }
+            ]
+        };
+        var service = new SpreadsheetAnalysisService(db, new FixedReportReader(report, transactions), new NoOpNotifications(),
+            TestBudgetDataProviderFactory.Create(db), NullLogger<SpreadsheetAnalysisService>.Instance);
+
+        SyncSpreadsheetBudgetResult result = await service.SyncSpreadsheetBudgetAsync(UserId, connection.Id, "file-1",
+            report.FileName, overwrite: true);
+
+        Assert.True(result.Success);
+        SpreadsheetBudgetSnapshot snapshot = await db.SpreadsheetBudgetSnapshots.SingleAsync();
+        SpreadsheetTransactionRecord record = await db.SpreadsheetTransactionRecords.SingleAsync();
+        Assert.Equal(("VND", 30_000_001m), (snapshot.CurrencyCode, snapshot.ActualIncome));
+        Assert.Equal(("VND", 45_001m), (record.CurrencyCode, record.Amount));
+    }
+
     private const string SecretDetail = "Server=sql-prod;Password=hunter2";
 
     private sealed class ThrowingReader(Exception exception) : ISpreadsheetReader
@@ -141,7 +183,8 @@ public class SpreadsheetSyncTests
             Task.CompletedTask;
     }
 
-    private sealed class FixedReportReader(MonthlyBudgetReportDto report) : ISpreadsheetReader
+    private sealed class FixedReportReader(MonthlyBudgetReportDto report, SpreadsheetTransactionsDto? transactions = null)
+        : ISpreadsheetReader
     {
         public Task<MonthlyBudgetReportDto> GetSpreadsheetBudgetReportAsync(string userId, string fileId,
             string? fileName = null, int? connectionId = null, CancellationToken cancellationToken = default) =>
@@ -149,7 +192,7 @@ public class SpreadsheetSyncTests
 
         public Task<SpreadsheetTransactionsDto> GetSpreadsheetTransactionsAsync(string userId, string fileId,
             string? fileName = null, int? connectionId = null, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new SpreadsheetTransactionsDto());
+            Task.FromResult(transactions ?? new SpreadsheetTransactionsDto());
     }
 
     private sealed class NoOpNotifications : INotificationService
