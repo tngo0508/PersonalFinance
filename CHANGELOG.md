@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [10.1.0] - 2026-10-27
+
+### Added
+
+- **Dark theme (#296)**: a Light / Dark / System choice in the account menu, and a sun/moon toggle in the top bar for signed-out pages.
+  - System, the default, follows the device's light or dark setting and changes with it.
+  - The choice is kept per browser in local storage and applied before the page paints, so there is no flash of the other theme.
+  - Bootstrap's own dark mode is turned on with it, so cards, forms, tables, dropdowns and modals follow.
+
+### Changed
+
+- **Theme tokens instead of fixed whites**: the top bar, dropdowns, the AI chat panel, Budget Planner, Budget Tracker, Net Worth and Google Drive surfaces read the Ledger paper and ink tokens instead of hard-coded white and Bootstrap greys. The sidebar and the Landing Page's closing band use a new `--lp-navy` token that stays navy in both themes.
+- **Landing Page skyline in dark mode**: the wash behind the hero copy is drawn from the paper token, and dark mode dims the whole city, whose colours are fixed, so the headline stays readable.
+- **Investment Calculator chart follows the theme**: the hand-drawn canvas reads its background, grid, labels and tooltip colours from the theme tokens and redraws when the theme changes.
+
 ## [10.0.0] - 2026-10-27
 
 ### Removed

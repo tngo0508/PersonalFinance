@@ -39,6 +39,8 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <partial name="_LanguageSwitcher" model="@("menu")"/>
+                <li><hr class="dropdown-divider"></li>
+                <partial name="_ThemeSwitcher" model="@("menu")"/>
                 @if (isAdmin)
                 {
                     <li>
@@ -60,6 +62,7 @@ else
 {
     <div class="topbar-auth">
         <partial name="_LanguageSwitcher" model="@("inline")"/>
+        <partial name="_ThemeSwitcher" model="@("inline")"/>
         <a class="btn btn-sm btn-outline-primary" asp-area="Identity" asp-page="/Account/Login">@L["Shell.Account.SignIn"]</a>
         <a class="btn btn-sm btn-primary" asp-area="Identity" asp-page="/Account/Register">@L["Shell.Account.CreateAccount"]</a>
     </div>

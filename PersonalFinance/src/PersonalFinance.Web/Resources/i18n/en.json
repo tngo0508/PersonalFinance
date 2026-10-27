@@ -2,6 +2,12 @@
   "Common.Cancel": "Cancel",
   "Common.Close": "Close",
   "Common.Language": "Language",
+  "Common.Theme": "Theme",
+  "Common.Theme.Light": "Light",
+  "Common.Theme.Dark": "Dark",
+  "Common.Theme.System": "System",
+  "Common.Theme.SwitchToDark": "Switch to dark theme",
+  "Common.Theme.SwitchToLight": "Switch to light theme",
 
   "Validation.Required": "The {0} field is required.",
   "Validation.EmailAddress": "The {0} field is not a valid e-mail address.",

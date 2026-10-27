@@ -543,7 +543,7 @@
 
 .community-story-like:hover {
   color: var(--app-accent-negative);
-  background: #f4e0e0;
+  background: var(--app-accent-negative-soft);
 }
 
 .community-story-like.liked {
@@ -703,7 +703,7 @@
 
 .community-comment-like:hover {
   color: var(--app-accent-negative);
-  background: #f4e0e0;
+  background: var(--app-accent-negative-soft);
 }
 
 .community-comment-like.liked {

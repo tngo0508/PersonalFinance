@@ -3,6 +3,9 @@
    Loaded on every page by _Layout. site.css maps the --app-* tokens onto
    these, so feature pages share the Landing Page palette. The scoped rules
    below add the Identity pages' (auth.css) and Account settings' form styles.
+   Dark mode: js/core/theme.js sets data-theme="dark" on <html>, and the block
+   after :root swaps these tokens. --lp-navy stays navy in both themes, for the
+   bands and the sidebar that are dark on purpose.
    ========================================================================== */
 
 :root {
@@ -16,7 +19,23 @@
     --lp-paper: #FFFFFF;
     --lp-surface: #F3F6F5;
     --lp-rule: #D6DEDB;
+    --lp-navy: #14283B;
     --lp-font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* Dark: paper becomes deep navy, ink becomes paper. Ledger green is lifted to 4.5:1 on the paper and keeps
+   3.9:1 under white button labels; brass is lifted for the same reason. */
+:root[data-theme="dark"] {
+    --lp-ink: #E6ECEF;
+    --lp-ink-soft: #BAC6CE;
+    --lp-muted: #94A4B0;
+    --lp-ledger: #2C9168;
+    --lp-ledger-deep: #237A57;
+    --lp-ledger-wash: #16302A;
+    --lp-brass: #C9A54A;
+    --lp-paper: #0E1821;
+    --lp-surface: #15222D;
+    --lp-rule: #2A3A47;
 }
 
 /* Header buttons and brand follow the ledger palette */
