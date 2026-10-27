@@ -1,0 +1,250 @@
+name: Claude Ticket Agent
+
+# Picks one ready-for-agent issue, implements it with /implement (tdd + code-review), and opens a PR for a human to
+# review and merge. Works back to back from 00:00 to 19:00 US Pacific every day and stays off 19:00-24:00, when the
+# owner reviews PRs and works locally. The rules live in docs/agents/issue-tracker.md under "Scheduled ticket agent".
+on:
+  schedule:
+    # Every 30 minutes across the UTC hours that cover 00:00-19:00 Pacific in both PDT and PST. The pick job applies
+    # the exact Pacific window, so DST needs no cron change. With the concurrency group below, a tick that lands
+    # during a run waits and starts as soon as that run ends.
+    - cron: '17,47 0-3,7-23 * * *'
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: 'Issue number to work on (optional; default: oldest eligible ready-for-agent issue)'
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: claude-ticket-agent
+  cancel-in-progress: false
+
+env:
+  # Agent branches use their own prefix so the open-PR cap never counts PRs from human claude/* sessions.
+  BRANCH_PREFIX: agent/issue-
+  MAX_OPEN_AGENT_PRS: 5
+  # Scheduled runs work only between midnight and QUIET_FROM (Pacific), and must end by QUIET_FROM.
+  QUIET_FROM: '19:00'
+  MIN_MINUTES_TO_START: 45
+  MAX_RUN_MINUTES: 90
+
+jobs:
+  pick:
+    name: Pick a ticket
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      issue: ${{ steps.pick.outputs.issue }}
+      branch: ${{ steps.pick.outputs.branch }}
+      minutes: ${{ steps.pick.outputs.minutes }}
+    steps:
+      - name: Choose and claim an issue
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REQUESTED: ${{ inputs.issue }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          # Working window. Manual runs ignore it and get the full run time.
+          minutes="$MAX_RUN_MINUTES"
+          if [ "$EVENT" = "schedule" ]; then
+            now=$(( 10#$(TZ=America/Los_Angeles date +%H) * 60 + 10#$(TZ=America/Los_Angeles date +%M) ))
+            quiet=$(( 10#${QUIET_FROM%%:*} * 60 + 10#${QUIET_FROM##*:} ))
+            left=$(( quiet - now ))
+            if [ "$left" -lt "$MIN_MINUTES_TO_START" ]; then
+              echo "::notice::Quiet window (Pacific $(TZ=America/Los_Angeles date +%H:%M)): the agent works 00:00-$QUIET_FROM only."
+              echo "issue=" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            [ "$left" -lt "$minutes" ] && minutes="$left"
+          fi
+          echo "minutes=$minutes" >> "$GITHUB_OUTPUT"
+
+          # Drafts count toward the cap: a stuck draft is still work waiting on a human.
+          open_agent_prs=$(gh pr list --state open --limit 100 --json headRefName \
+            --jq "[.[] | select(.headRefName | startswith(\"$BRANCH_PREFIX\"))] | length")
+          if [ "$open_agent_prs" -ge "$MAX_OPEN_AGENT_PRS" ]; then
+            echo "::notice::$open_agent_prs agent PRs are open (cap $MAX_OPEN_AGENT_PRS). Review or close them to resume."
+            echo "issue=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Issues an open PR already closes are taken.
+          taken=$(gh pr list --state open --limit 100 --json closingIssuesReferences \
+            --jq '[.[].closingIssuesReferences[].number] | unique | join(" ")')
+
+          eligible() {
+            local n="$1" info
+            info=$(gh api "repos/$GH_REPO/issues/$n")
+            [ "$(jq -r '.state' <<< "$info")" = "open" ] || return 1
+            jq -e '[.labels[].name] | index("ready-for-agent")' <<< "$info" > /dev/null || return 1
+            jq -e '[.labels[].name] | (index("agent:in-progress") or index("wayfinder:map")) | not' <<< "$info" > /dev/null || return 1
+            [ "$(jq '.assignees | length' <<< "$info")" = "0" ] || return 1
+            [ "$(jq '.sub_issues_summary.total // 0' <<< "$info")" = "0" ] || return 1
+            [ "$(jq '.issue_dependencies_summary.blocked_by // 0' <<< "$info")" = "0" ] || return 1
+            case " $taken " in *" $n "*) return 1 ;; esac
+            return 0
+          }
+
+          issue=""
+          if [ -n "$REQUESTED" ]; then
+            if ! [[ "$REQUESTED" =~ ^[0-9]+$ ]]; then
+              echo "::error::The issue input must be a number."
+              exit 1
+            fi
+            if eligible "$REQUESTED"; then
+              issue="$REQUESTED"
+            else
+              echo "::error::Issue #$REQUESTED is not eligible (needs ready-for-agent, open, unassigned, no sub-issues, no open blockers, no open PR)."
+              exit 1
+            fi
+          else
+            for n in $(gh issue list --state open --label ready-for-agent --limit 100 \
+                --json number,createdAt --jq 'sort_by(.createdAt) | .[].number'); do
+              if eligible "$n"; then issue="$n"; break; fi
+            done
+          fi
+
+          if [ -z "$issue" ]; then
+            echo "::notice::No eligible ready-for-agent issue."
+            echo "issue=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          gh label create "agent:in-progress" --color FBCA04 \
+            --description "The scheduled Claude agent is working on this" 2>/dev/null || true
+          gh issue edit "$issue" --add-label "agent:in-progress"
+          gh issue comment "$issue" --body "🤖 The scheduled Claude agent picked this up: $RUN_URL"
+
+          echo "issue=$issue" >> "$GITHUB_OUTPUT"
+          echo "branch=${BRANCH_PREFIX}${issue}" >> "$GITHUB_OUTPUT"
+          echo "::notice::Picked #$issue"
+
+  implement:
+    name: Implement, review, open PR
+    needs: pick
+    if: needs.pick.outputs.issue != ''
+    runs-on: ubuntu-latest
+    # Shortened near QUIET_FROM so a late scheduled run still ends before the quiet window.
+    timeout-minutes: ${{ fromJSON(needs.pick.outputs.minutes) }}
+    env:
+      ISSUE: ${{ needs.pick.outputs.issue }}
+      BRANCH: ${{ needs.pick.outputs.branch }}
+    steps:
+      # AGENT_GH_TOKEN is optional. Unset, the action uses its own GitHub App token. Set it (a fine-grained PAT) only
+      # if CI does not start on agent PRs.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.AGENT_GH_TOKEN || github.token }}
+
+      - name: Setup .NET SDK (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install npm packages
+        run: npm ci
+
+      - name: Create the agent branch
+        run: git checkout -b "$BRANCH"
+
+      - name: Run Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.AGENT_GH_TOKEN }}
+          additional_permissions: |
+            actions: read
+          claude_args: >-
+            --model claude-opus-5-5
+            --max-turns 200
+            --allowedTools "Read,Edit,Write,Glob,Grep,Agent,Skill,TodoWrite,Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
+          prompt: |
+            /implement ${{ env.ISSUE }}
+
+            You are the unattended scheduled ticket agent for ${{ github.repository }}. No human is watching this run.
+            Work on issue #${{ env.ISSUE }} only, on the already checked-out branch `${{ env.BRANCH }}`.
+            This job is killed ${{ needs.pick.outputs.minutes }} minutes after it starts (about 5 go on setup). If
+            the work will not fit, commit what you have, push it, and open a --draft PR that says what is left, rather
+            than being cut off with nothing pushed.
+
+            Before you start:
+            - Read AGENTS.md and docs/CODING_STANDARDS.md, then `gh issue view ${{ env.ISSUE }} --comments`.
+            - If the issue is ambiguous or needs a product or design decision, do not guess: comment your questions on
+              the issue, then `gh issue edit ${{ env.ISSUE }} --remove-label ready-for-agent --add-label needs-info`,
+              and stop without opening a PR.
+            - If the work needs an EF Core schema migration and the issue is not labelled `agent:migration-ok`: comment
+              why on the issue, then `gh issue edit ${{ env.ISSUE }} --remove-label ready-for-agent --add-label ready-for-human`,
+              and stop without opening a PR. With that label, generate the migration and inspect it, never apply it,
+              and flag it in bold at the top of the PR body.
+
+            Implement (pick -> implement -> code review -> open PR, in that order):
+            1. Implement with the tdd and dotnet-feature-workflow skills. Commit to `${{ env.BRANCH }}`.
+            2. Run the code-review skill against `origin/main`. Fix every finding you agree is a real defect, then re-run
+               the checks.
+            3. Checks, all must pass before the PR: `dotnet test PersonalFinance.sln` and "npm run lint". Skip E2E:
+               this runner has no database or app server. Say so in the PR.
+            4. Done checklist from AGENTS.md: bump AppVersion (Current, Major, Minor, Patch together) and add the
+               CHANGELOG.md section. Choose a version above both `main` and every open PR from an `agent/issue-*`
+               branch (`gh pr list --state open --json headRefName,number`, then read their AppVersion.cs), so
+               parallel PRs never collide. Update docs/DIAGRAMS.md if you add an Entity or Feature.
+            5. Push `${{ env.BRANCH }}` and open the PR with the pr skill: base `main`, `--reviewer tngo0508`, the body
+               starts with `Closes #${{ env.ISSUE }}`, and lists the commands you ran with their results and the
+               code-review findings with what you did about each.
+               If code-review left findings you could not resolve, open it with `--draft` instead, list those findings
+               at the top of the body, and run
+               `gh issue edit ${{ env.ISSUE }} --remove-label ready-for-agent --add-label needs-info`.
+
+            Hard rules:
+            - Never merge a PR, never push to `main`, never touch Azure, never apply migrations.
+            - This repository and its Actions logs are public: never print secrets, tokens, connection strings or user
+              financial data.
+
+      - name: Release the claim
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          gh issue edit "$ISSUE" --remove-label "agent:in-progress" || true
+
+          pr=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
+          still_ready=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name] | index("ready-for-agent") != null')
+
+          # Hand the ticket to a human when the run failed, or when it ended with no PR and without relabelling the
+          # issue itself (needs-info / ready-for-human). No automatic retry.
+          if [ "$JOB_STATUS" != "success" ] || { [ -z "$pr" ] && [ "$still_ready" = "true" ]; }; then
+            gh issue edit "$ISSUE" --remove-label ready-for-agent --add-label ready-for-human || true
+            gh issue comment "$ISSUE" --body "🤖 The scheduled Claude agent did not finish this ($JOB_STATUS, no PR). Moved to ready-for-human. Run: $RUN_URL" || true
+          elif [ -n "$pr" ]; then
+            echo "::notice::Opened PR #$pr for #$ISSUE"
+          fi

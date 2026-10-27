@@ -1,0 +1,83 @@
+name: Agent Auto-Merge
+
+# Merges a scheduled ticket agent PR (agent/issue-* branch, not a draft) as soon as every check on its head commit has
+# finished and none failed. Runs each time one of the PR workflows completes; the last one to finish does the merge.
+#
+# Needs the AGENT_GH_TOKEN secret (fine-grained PAT: contents, pull requests, issues read/write). A merge made with
+# GITHUB_TOKEN does not trigger workflows, so the push to main would never deploy or publish its Release.
+on:
+  workflow_run:
+    workflows:
+      - Build, Test, and Deploy to Azure Container Apps
+      - Release Check
+      - Claude Code Review
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: agent-auto-merge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    name: Merge when green
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      startsWith(github.event.workflow_run.head_branch, 'agent/issue-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Merge the PR if every check passed
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::AGENT_GH_TOKEN is not set. Without it a merge would not deploy or publish its Release."
+            exit 1
+          fi
+
+          pr_json=$(gh pr list --state open --head "$BRANCH" --json number,isDraft,headRefOid --jq '.[0] // empty')
+          if [ -z "$pr_json" ]; then
+            echo "::notice::No open PR for $BRANCH."
+            exit 0
+          fi
+          pr=$(jq -r '.number' <<< "$pr_json")
+
+          if [ "$(jq -r '.isDraft' <<< "$pr_json")" = "true" ]; then
+            echo "::notice::PR #$pr is a draft: it waits for a human."
+            exit 0
+          fi
+          # A newer push re-runs the checks; its own completions decide.
+          if [ "$(jq -r '.headRefOid' <<< "$pr_json")" != "$HEAD_SHA" ]; then
+            echo "::notice::PR #$pr has a newer commit than this run checked."
+            exit 0
+          fi
+
+          checks=$(gh pr checks "$pr" --json name,bucket)
+          pending=$(jq '[.[] | select(.bucket == "pending")] | length' <<< "$checks")
+          failed=$(jq -r '[.[] | select(.bucket == "fail" or .bucket == "cancel") | .name] | join(", ")' <<< "$checks")
+          if [ -n "$failed" ]; then
+            echo "::notice::PR #$pr has failing checks ($failed): it waits for a human."
+            exit 0
+          fi
+          if [ "$pending" != "0" ]; then
+            echo "::notice::PR #$pr still has $pending checks running."
+            exit 0
+          fi
+          # The build workflow skips docs-only PRs, but the release check and the review always run.
+          for required in "Check AppVersion bump and CHANGELOG" "claude-review"; do
+            if ! jq -e --arg n "$required" 'any(.[]; .name == $n and .bucket == "pass")' <<< "$checks" > /dev/null; then
+              echo "::notice::PR #$pr has no passing '$required' check yet."
+              exit 0
+            fi
+          done
+
+          gh pr merge "$pr" --merge --delete-branch --match-head-commit "$HEAD_SHA"
+          echo "::notice::Merged PR #$pr"
