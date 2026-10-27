@@ -142,13 +142,12 @@ jobs:
       ISSUE: ${{ needs.pick.outputs.issue }}
       BRANCH: ${{ needs.pick.outputs.branch }}
     steps:
-      # AGENT_GH_TOKEN is optional. Unset, the action uses its own GitHub App token. Set it (a fine-grained PAT) only
-      # if CI does not start on agent PRs.
+      # The agent pushes and opens its PR as the claude GitHub App, which triggers CI and lets it request the
+      # owner's review. AGENT_GH_TOKEN (the owner's PAT) is used only by Agent Auto-Merge.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.AGENT_GH_TOKEN || github.token }}
 
       - name: Setup .NET SDK (from global.json)
         uses: actions/setup-dotnet@v4
@@ -179,7 +178,6 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.AGENT_GH_TOKEN }}
           additional_permissions: |
             actions: read
           claude_args: >-
