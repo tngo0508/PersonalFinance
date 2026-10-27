@@ -149,6 +149,11 @@ A signed-in tool that shows how an investment grows with compound interest from 
 nothing.
 _Avoid_: Projection (that is Net Worth's), simulator
 
+### Currency Converter
+A signed-in tool that converts one amount between two Convertible Currencies at the latest stored Exchange Rate or the
+rate of a past day, and shows the rate used, its date and its source. It stores nothing.
+_Avoid_: Reporting Currency conversion (that is how totals are shown), exchange
+
 ### Dashboard
 The signed-in user's overview page, summarizing net worth, budget, savings goals, and recent activity. Signed-in visitors to `/` are redirected here.
 _Avoid_: Home page, home

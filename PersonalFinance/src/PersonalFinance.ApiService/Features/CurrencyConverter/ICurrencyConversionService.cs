@@ -9,9 +9,10 @@ namespace PersonalFinance.ApiService.Features.CurrencyConverter;
 public interface ICurrencyConversionService
 {
     /// <summary>
-    /// Converts a validated <paramref name="request"/>: the cross rate through USD at the latest rates, or each leg's
-    /// nearest prior rate to the request's date; the amount rounded once to the To currency's minor units.
+    /// Converts <paramref name="amount"/> of <paramref name="from"/> into <paramref name="to"/>, both convertible (the
+    /// validator has checked them): the cross rate through USD at the latest rates, or each leg's nearest prior rate to
+    /// <paramref name="date"/>; the amount rounded once to the To currency's minor units.
     /// </summary>
-    Task<CurrencyConversionDto> ConvertAsync(ConvertCurrencyRequestDto request,
+    Task<CurrencyConversionDto> ConvertAsync(decimal amount, string from, string to, DateOnly? date,
         CancellationToken cancellationToken = default);
 }

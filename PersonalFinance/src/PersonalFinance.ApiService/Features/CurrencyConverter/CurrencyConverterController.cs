@@ -43,7 +43,9 @@ public class CurrencyConverterController : ControllerBase
             return BadRequest(validation.ToApiError());
         }
 
-        CurrencyConversionDto result = await _conversionService.ConvertAsync(request, cancellationToken);
+        // The validator has rejected a missing amount and any code that is not convertible.
+        CurrencyConversionDto result = await _conversionService.ConvertAsync(request.Amount!.Value, request.From!,
+            request.To!, request.Date, cancellationToken);
         return Ok(result);
     }
 }

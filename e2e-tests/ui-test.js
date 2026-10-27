@@ -3,6 +3,7 @@ const {runResearchWalkthrough} = require('./research-walkthrough');
 const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough');
 const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
 const {runReportingCurrencySmoke} = require('./reporting-currency-smoke');
+const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -927,6 +928,16 @@ const {runReportingCurrencySmoke} = require('./reporting-currency-smoke');
             await runReportingCurrencySmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Reporting currency smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9g: Currency Converter smoke (#446): 1,000,000 JPY to VND at the latest rate
+        // =========================================================
+        console.log('\n--- Test 9g: Currency Converter Smoke ---');
+        try {
+            await runCurrencyConverterSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Currency converter smoke failed: ${error.message}`);
         }
 
         // =========================================================

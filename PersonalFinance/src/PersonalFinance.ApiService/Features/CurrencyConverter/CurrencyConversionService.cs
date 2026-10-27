@@ -16,13 +16,10 @@ internal sealed class CurrencyConversionService : ICurrencyConversionService
         _converter = converter;
     }
 
-    public async Task<CurrencyConversionDto> ConvertAsync(ConvertCurrencyRequestDto request,
+    public async Task<CurrencyConversionDto> ConvertAsync(decimal amount, string from, string to, DateOnly? date,
         CancellationToken cancellationToken = default)
     {
-        decimal amount = request.Amount ?? throw new ArgumentException("The amount is required.", nameof(request));
-        string from = request.From ?? throw new ArgumentException("The From code is required.", nameof(request));
-        string to = request.To ?? throw new ArgumentException("The To code is required.", nameof(request));
-        var result = new CurrencyConversionDto { Amount = amount, From = from, To = to, Date = request.Date };
+        var result = new CurrencyConversionDto { Amount = amount, From = from, To = to, Date = date };
 
         if (string.Equals(from, to, StringComparison.Ordinal))
         {
@@ -32,8 +29,8 @@ internal sealed class CurrencyConversionService : ICurrencyConversionService
         }
 
         ReportingConversion conversion =
-            await _converter.PrepareAsync(to, [new MoneyAt(from, request.Date)], cancellationToken);
-        RateQuote? quote = conversion.Quote(from, request.Date);
+            await _converter.PrepareAsync(to, [new MoneyAt(from, date)], cancellationToken);
+        RateQuote? quote = conversion.Quote(from, date);
         if (quote is null)
         {
             result.Unavailable = true;

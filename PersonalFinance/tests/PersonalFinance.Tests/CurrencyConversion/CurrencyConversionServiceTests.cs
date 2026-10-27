@@ -180,7 +180,7 @@ public class CurrencyConversionServiceTests
         DateOnly? date = null)
     {
         var service = new CurrencyConversionService(TestCurrencyConverter.Create(db, new FixedTimeProvider(Now)));
-        return service.ConvertAsync(new ConvertCurrencyRequestDto { Amount = amount, From = from, To = to, Date = date });
+        return service.ConvertAsync(amount, from, to, date);
     }
 
     private static AppDbContext CreateContext(params ExchangeRate[] rates)

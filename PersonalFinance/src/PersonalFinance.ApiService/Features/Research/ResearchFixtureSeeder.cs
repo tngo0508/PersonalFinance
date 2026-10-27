@@ -92,13 +92,16 @@ internal static class ResearchFixtureSeeder
 
         // Exchange rates (ADR 0016) for yesterday and today, so the Reporting Currency smoke test sees a converted total
         // rather than "conversion unavailable" whichever side of midnight UTC the browser's day falls; the daily rate
-        // refresh never runs against an InMemory database.
+        // refresh never runs against an InMemory database. The yen rows let the Currency Converter smoke test convert
+        // yen to đồng through USD.
         if (!await db.ExchangeRates.AnyAsync(cancellationToken))
         {
             DateOnly today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
             db.ExchangeRates.AddRange(
                 new ExchangeRate { BaseCurrency = "USD", QuoteCurrency = "VND", Date = today.AddDays(-1), Rate = 25_800m, Source = "fixture" },
-                new ExchangeRate { BaseCurrency = "USD", QuoteCurrency = "VND", Date = today, Rate = 25_800m, Source = "fixture" });
+                new ExchangeRate { BaseCurrency = "USD", QuoteCurrency = "VND", Date = today, Rate = 25_800m, Source = "fixture" },
+                new ExchangeRate { BaseCurrency = "USD", QuoteCurrency = "JPY", Date = today.AddDays(-1), Rate = 150m, Source = "fixture" },
+                new ExchangeRate { BaseCurrency = "USD", QuoteCurrency = "JPY", Date = today, Rate = 150m, Source = "fixture" });
         }
 
         await db.SaveChangesAsync(cancellationToken);
