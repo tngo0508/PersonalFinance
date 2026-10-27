@@ -144,19 +144,13 @@ Persists temporary tokens, authenticator keys, and external provider tokens.
 
 ## 4. Interaction with Application-Specific Tables
 
-In `PersonalFinance.Data.AppDbContext`, the application extends Identity with domain-specific entities:
+`PersonalFinance.Data.AppDbContext` extends `IdentityDbContext<IdentityUser>`, so the Identity tables and the
+application tables live in one database. Every user-owned application table links to its Account through a `UserId`
+column (`nvarchar(450)`, indexed) that holds `AspNetUsers.Id`. That link is **logical, not a foreign key**: no
+application table has a database FK to `AspNetUsers`, so removing an Identity user never cascades into application
+data. The account Purge ([ADR 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)) relies on this: the
+rows it keeps rather than deletes (Guild Hall stories and comments, the Deletion Request) get
+`UserId = "deleted-account"` (`Shared/Constants/DeletedAccount.cs`), an id that matches no Account.
 
-```
-┌─────────────────┐       1:N        ┌─────────────────────────┐       1:N        ┌───────────────────────────┐
-│  AspNetUsers    ├─────────────────►│  GoogleDriveConnections │─────────────────►│   GoogleDriveCachedFiles  │
-└─────────────────┘                  └─────────────────────────┘                  └───────────────────────────┘
-```
-
-1. **`GoogleDriveConnections`**:
-   - Linked to `AspNetUsers.Id` via `UserId` foreign key/index.
-   - Holds user-configured Google Drive folder connections, encrypted API keys (AES-256), and sync statuses.
-2. **`GoogleDriveCachedFiles`**:
-   - Linked to `GoogleDriveConnections.Id` via `ConnectionId` with cascade delete.
-   - Caches Google Drive file metadata, thumbnail links, MIME types, and financial spreadsheet structure.
-3. **`Items`**:
-   - Application domain items and transaction entities tracked by the system.
+For the application tables, their columns and the foreign keys between them, see the data model in
+[`DIAGRAMS.md` section 4](DIAGRAMS.md#4-data-model).
