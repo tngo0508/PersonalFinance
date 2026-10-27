@@ -177,6 +177,28 @@
         };
     }
 
+    /**
+     * A typical day of the Net Worth settings: the year's income, spending and savings over 365 days, and the day's
+     * compounding. freedomHours is the time of living a day's saving pays for later (savings over spending, in
+     * hours). Each figure is null when the settings do not have a positive value for it.
+     * @param {Object|null} netWorth - The dashboard's netWorth summary.
+     * @returns {{earned: number|null, spent: number|null, saved: number|null, compounding: number|null,
+     *     freedomHours: number|null}} The day's figures.
+     */
+    function dayLedger (netWorth) {
+        const perDay = (annual) => (Number(annual) > 0 ? Number(annual) / 365 : null);
+        const worth = netWorth || {};
+        const spent = perDay(worth.annualSpending);
+        const saved = perDay(worth.annualSavings);
+        return {
+            earned: perDay(worth.annualIncome),
+            spent: spent,
+            saved: saved,
+            compounding: dailyGrowth(worth.currentNetWorth, worth.baseRoi),
+            freedomHours: spent !== null && saved !== null ? saved / spent * 24 : null
+        };
+    }
+
     window.PFDashboardToday = {
         monthWeeks: monthWeeks,
         daysInMonth: daysInMonth,
@@ -187,7 +209,8 @@
         monthFraction: monthFraction,
         dailyGrowth: dailyGrowth,
         daysToFi: daysToFi,
-        budgetPace: budgetPace
+        budgetPace: budgetPace,
+        dayLedger: dayLedger
     };
 
     if (!window.PFDashboard || !window.PFI18n) {
@@ -474,6 +497,44 @@
     }
 
     /**
+     * Fill the day ledger under the welcome: a row for each figure the settings have, and what a day's saving buys.
+     * @param {Object|null} netWorth - The dashboard's netWorth summary.
+     * @returns {void}
+     */
+    function renderLedger (netWorth) {
+        const ledger = document.querySelector('[data-dash-ledger]');
+        if (!ledger) {
+            return;
+        }
+        const day = dayLedger(netWorth);
+        const signs = { earned: '+', spent: '−', saved: '', compounding: '+' };
+        let any = false;
+        Object.keys(signs).forEach((name) => {
+            const row = ledger.querySelector(`[data-dash-ledger-row="${name}"]`);
+            row.hidden = day[name] === null;
+            if (!row.hidden) {
+                any = true;
+                row.querySelector('[data-dash-ledger-value]').textContent =
+                    signs[name] + i18n.formatMoney(day[name], CURRENCY);
+            }
+        });
+
+        const freedom = ledger.querySelector('[data-dash-ledger-freedom]');
+        freedom.hidden = day.freedomHours === null;
+        if (!freedom.hidden) {
+            const minutes = Math.round(day.freedomHours * 60);
+            const duration = minutes < 24 * 60
+                ? i18n.t('Dashboard.Js.Today.Duration', {
+                    hours: i18n.formatNumber(Math.floor(minutes / 60)),
+                    minutes: i18n.formatNumber(minutes % 60)
+                })
+                : i18n.plural('Dashboard.Js.Today.DurationDays', Math.round(day.freedomHours / 24 * 10) / 10);
+            freedom.textContent = i18n.t('Dashboard.Js.Today.Freedom', { duration: duration });
+        }
+        ledger.hidden = !any;
+    }
+
+    /**
      * Fill the Today section and keep it current.
      * @param {Object} data - The dashboard data.
      * @returns {void}
@@ -493,6 +554,7 @@
         let timer = null;
 
         renderWorth(root, netWorth, perDay);
+        renderLedger(netWorth);
 
         const tick = function () {
             const now = new Date();
