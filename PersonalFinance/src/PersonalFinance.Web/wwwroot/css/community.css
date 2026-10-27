@@ -10,6 +10,7 @@
 .community-page {
   --gh-paper: #fbf6ec;
   --gh-linen: #f3ead8;
+  --gh-cork: #e8d9bc;
   --gh-ink: #2b2420;
   --gh-ink-soft: #5a4c42;
   --gh-clay: #a4532f;
@@ -157,70 +158,6 @@
 .community-section-title svg {
   color: var(--app-brand);
   flex-shrink: 0;
-}
-
-/* --- Submit Story Button --- */
-.community-submit-story-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 1rem;
-  font-size: var(--app-font-size-base);
-  font-weight: var(--app-font-weight-semibold);
-  border-radius: var(--app-radius-s);
-  background: var(--app-brand);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  white-space: nowrap;
-}
-
-.community-submit-story-btn:hover {
-  background: var(--app-brand-hover);
-}
-
-.community-submit-story-btn-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.5rem 1.25rem;
-  font-size: var(--app-font-size-base);
-  font-weight: var(--app-font-weight-semibold);
-  border-radius: var(--app-radius-s);
-  background: var(--app-brand);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.community-submit-story-btn-inline:hover {
-  background: var(--app-brand-hover);
-}
-
-/* --- Empty State --- */
-.community-empty-state {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--app-text-muted);
-}
-
-.community-empty-state svg {
-  margin-bottom: 1rem;
-  opacity: 0.4;
-}
-
-.community-empty-state h3 {
-  font-size: var(--app-font-size-xl);
-  font-weight: var(--app-font-weight-semibold);
-  color: var(--app-text);
-  margin: 0 0 0.5rem;
-}
-
-.community-empty-state p {
-  margin: 0 0 1.25rem;
-  font-size: var(--app-font-size-base);
 }
 
 /* --- Polls Grid --- */
@@ -430,289 +367,246 @@
   border-radius: var(--app-radius-s);
 }
 
-/* --- Community Stories Grid --- */
-.community-stories-grid {
+/* --- The hall: the corkboard of Strategies beside the rail --- */
+.community-hall {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 3rem;
 }
 
-.community-story-card {
-  position: relative;
+.community-hall .community-section {
+  margin-bottom: 0;
+}
+
+/* Category chips: links, so a filtered board can be bookmarked and works without JavaScript */
+.community-chips {
   display: flex;
-  flex-direction: column;
-  padding: 1.5rem;
-  border-radius: var(--app-radius-m);
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  box-shadow: var(--app-shadow-2);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.community-story-card:hover {
-  box-shadow: var(--app-shadow-4);
-  border-color: var(--app-border-hover);
-}
-
-.community-story-card.featured {
-  border-color: var(--app-brand);
-  border-width: 2px;
-}
-
-.community-story-featured-badge {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--app-radius-s);
-  background: #fff3cd;
-  color: #856404;
-  font-size: var(--app-font-size-small);
-  font-weight: var(--app-font-weight-semibold);
-}
-
-.community-story-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.community-story-category {
+.community-chip {
   display: inline-block;
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--app-radius-s);
-  background: var(--app-brand-soft);
-  color: var(--app-brand);
+  padding: 0.2rem 0.75rem;
+  border: 1px solid var(--gh-rule);
+  border-radius: 999px;
   font-size: var(--app-font-size-small);
-  font-weight: var(--app-font-weight-semibold);
+  color: var(--gh-ink);
+  text-decoration: none;
 }
 
-.community-story-readtime {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: var(--app-font-size-small);
-  color: var(--app-text-muted);
+.community-chip:hover {
+  border-color: var(--gh-clay);
+  color: var(--gh-ink);
 }
 
-.community-story-title {
-  font-size: 1.125rem;
-  font-weight: var(--app-font-weight-semibold);
-  color: var(--app-text);
-  margin: 0 0 0.5rem;
-  line-height: 1.35;
+.community-chip.is-active {
+  background: var(--gh-ink);
+  border-color: var(--gh-ink);
+  color: var(--gh-paper);
 }
 
-.community-story-summary {
-  font-size: var(--app-font-size-base);
-  color: var(--app-text-muted);
-  margin: 0 0 0.75rem;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+/* The board: pinned notes on cork, in two masonry columns (one on narrow screens) */
+.community-board {
+  columns: 2 16rem;
+  column-gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--app-radius-l);
+  background: var(--gh-cork);
 }
 
-.community-story-author {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0;
-  font-size: var(--app-font-size-base);
-  color: var(--app-text-muted);
+.community-board-empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--gh-ink-soft);
+  column-span: all;
 }
 
-.community-story-author-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+.community-note {
+  position: relative;
+  break-inside: avoid;
+  margin-bottom: 1rem;
+  padding: 1.15rem 1rem 0.9rem;
+  border-radius: 4px;
+  background: #fffdf7;
+  box-shadow: 0 2px 0 rgba(43, 36, 32, 0.08), 0 6px 14px rgba(43, 36, 32, 0.08);
+}
+
+.community-note:nth-child(odd) {
+  transform: rotate(-0.6deg);
+}
+
+.community-note:nth-child(even) {
+  transform: rotate(0.5deg);
+}
+
+/* The viewer's own Strategy, waiting for an Admin: striped, so it reads as not yet on the board */
+.community-note--pending {
+  background: repeating-linear-gradient(-45deg, #fffdf7, #fffdf7 10px, #f7efdf 10px, #f7efdf 20px);
+}
+
+.community-note--rejected {
+  background: var(--gh-linen);
+  box-shadow: none;
+  border: 1px dashed var(--gh-rule);
+}
+
+.community-pin {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
   border-radius: 50%;
-  background: var(--app-brand-soft);
-  color: var(--app-brand);
+  background: var(--gh-clay);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.community-note--rejected .community-pin {
+  background: var(--gh-rule);
+}
+
+.community-note-status {
+  margin: 0 0 0.35rem;
   font-size: var(--app-font-size-small);
   font-weight: var(--app-font-weight-semibold);
-  flex-shrink: 0;
+  color: var(--gh-clay);
 }
 
-.community-story-author strong {
-  color: var(--app-text);
+.community-note-tag {
+  display: inline-block;
+  margin: 0 0 0.4rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--gh-moss-wash);
+  color: var(--gh-moss);
+}
+
+.community-note-title {
+  margin: 0 0 0.4rem;
+  font-size: var(--app-font-size-large);
   font-weight: var(--app-font-weight-semibold);
+  color: var(--gh-ink);
+  overflow-wrap: anywhere;
 }
 
-.community-story-author time {
+.community-note-steps {
+  margin: 0.5rem 0;
+  font-size: var(--app-font-size-base);
+}
+
+.community-note-steps dt {
+  font-family: var(--gh-serif);
+  font-style: italic;
+  font-weight: normal;
+  color: var(--gh-brass);
+}
+
+.community-note-steps dd {
+  margin: 0 0 0.4rem;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.community-note-byline {
+  margin: 0;
   font-size: var(--app-font-size-small);
-  color: var(--app-text-muted);
+  color: var(--gh-ink-soft);
 }
 
-/* Story body — collapsed by default */
-.community-story-body {
-  display: none;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--app-border);
-  flex: 1;
-}
-
-.community-story-body.expanded {
-  display: block;
-}
-
-.community-story-body p {
-  font-size: var(--app-font-size-base);
-  color: var(--app-text);
-  line-height: 1.65;
-  margin: 0 0 1rem;
-}
-
-.community-story-body p:last-child {
-  margin-bottom: 0;
-}
-
-/* Story footer */
-.community-story-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--app-border);
-}
-
-.community-story-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: none;
-  border: none;
-  color: var(--app-brand);
-  font-size: var(--app-font-size-base);
+.community-note-byline strong {
+  color: var(--gh-ink);
   font-weight: var(--app-font-weight-semibold);
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s ease;
 }
 
-.community-story-toggle-btn:hover {
-  color: var(--app-brand-hover);
+/* --- The rail: the pin form (Challenges and the Poll of the week join it in later slices) --- */
+.community-rail {
+  display: grid;
+  gap: 1rem;
 }
 
-.community-story-actions {
-  display: flex;
-  align-items: center;
+.community-rail-card {
+  padding: 1rem;
+  border: 1px solid var(--gh-rule);
+  border-radius: var(--app-radius-l);
+  background: #fff;
+}
+
+.community-rail-title {
+  margin: 0 0 0.75rem;
+  font-size: var(--app-font-size-xl);
+  font-weight: var(--app-font-weight-semibold);
+  color: var(--gh-ink);
+}
+
+.community-pin-form {
+  display: grid;
   gap: 0.75rem;
 }
 
-.community-story-like {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: none;
-  border: none;
-  color: var(--app-text-muted);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: var(--app-radius-s);
-  transition: all 0.15s ease;
-}
-
-.community-story-like:hover {
-  color: var(--app-accent-negative);
-  background: var(--app-accent-negative-soft);
-}
-
-.community-story-like.liked {
-  color: var(--app-accent-negative);
-}
-
-.community-story-like.liked svg {
-  fill: var(--app-accent-negative);
-}
-
-.community-story-like-count {
+.community-pin-form .form-label {
+  margin-bottom: 0.2rem;
   font-size: var(--app-font-size-small);
   font-weight: var(--app-font-weight-semibold);
 }
 
-.community-story-comments-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: var(--app-font-size-small);
-  color: var(--app-text-muted);
-}
-
-.community-story-comments-count svg {
-  flex-shrink: 0;
-}
-
-/* Story comment section */
-.community-story-comment-section {
-  border-top: 1px solid var(--app-border);
-  padding-top: 0.75rem;
-  margin-top: 0.75rem;
-}
-
-.community-story-comment-toggle,
-.community-poll-comment-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: none;
-  border: none;
-  color: var(--app-brand);
-  font-size: var(--app-font-size-base);
-  font-weight: var(--app-font-weight-semibold);
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s ease;
-}
-
-.community-story-comment-toggle:hover,
-.community-poll-comment-toggle:hover {
-  color: var(--app-brand-hover);
-}
-
-.community-story-comment-form,
-.community-poll-comment-form {
-  margin-top: 0.75rem;
-}
-
-.community-story-comment-input,
-.community-poll-comment-input {
-  border-radius: var(--app-radius-s);
-  border: 1px solid var(--app-border);
-  font-size: var(--app-font-size-base);
+.community-nudge {
+  margin: 0;
   padding: 0.5rem 0.75rem;
-  resize: vertical;
-  transition: border-color 0.15s ease;
+  border-left: 3px solid var(--gh-clay);
+  border-radius: 6px;
+  background: var(--gh-clay-wash);
+  font-size: var(--app-font-size-small);
 }
 
-.community-story-comment-input:focus,
-.community-poll-comment-input:focus {
-  border-color: var(--app-brand);
-  box-shadow: 0 0 0 1px var(--app-brand);
-  outline: none;
+.community-nudge[hidden] {
+  display: none;
 }
 
-.community-story-comment-actions,
-.community-poll-comment-actions {
-  margin-top: 0.5rem;
-  display: flex;
-  justify-content: flex-end;
+.community-pin-guidance {
+  margin: 0;
+  font-size: var(--app-font-size-small);
+  color: var(--gh-ink-soft);
 }
 
-.community-story-comment-submit,
-.community-poll-comment-submit {
-  padding: 0.35rem 1rem;
-  font-size: var(--app-font-size-base);
-  border-radius: var(--app-radius-s);
+.community-btn {
+  justify-self: start;
+  padding: 0.45rem 1.15rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--app-brand);
+  color: #fff;
+  font-weight: var(--app-font-weight-semibold);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.community-btn:hover {
+  background: var(--app-brand-hover);
+}
+
+.community-btn:active {
+  background: var(--app-brand-pressed);
+}
+
+.community-btn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .community-note:nth-child(odd),
+  .community-note:nth-child(even) {
+    transform: none;
+  }
 }
 
 /* --- Comments --- */
@@ -808,56 +702,6 @@
   padding-left: calc(32px + 0.75rem);
 }
 
-/* --- Call to Action --- */
-.community-cta {
-  margin-top: 2rem;
-  padding: 2rem;
-  border-radius: var(--app-radius-l);
-  background: linear-gradient(135deg, var(--gh-clay-wash) 0%, var(--gh-moss-wash) 100%);
-  border: 1px solid var(--app-border);
-  text-align: center;
-}
-
-.community-cta-content h2 {
-  font-size: var(--app-font-size-xxl);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-text);
-  margin: 0 0 0.5rem;
-}
-
-.community-cta-content p {
-  font-size: var(--app-font-size-large);
-  color: var(--app-text-muted);
-  margin: 0 0 1.25rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.5;
-}
-
-.community-cta-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.5rem;
-  font-size: var(--app-font-size-large);
-  font-weight: var(--app-font-weight-semibold);
-  border-radius: var(--app-radius-s);
-  background: var(--app-brand);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.community-cta-btn:hover {
-  background: var(--app-brand-hover);
-}
-
-.community-cta-btn:active {
-  background: var(--app-brand-pressed);
-}
-
 /* --- Toast Notification --- */
 .community-toast {
   position: fixed;
@@ -907,7 +751,7 @@
     grid-template-columns: 1fr;
   }
 
-  .community-stories-grid {
+  .community-hall {
     grid-template-columns: 1fr;
   }
 
@@ -931,9 +775,5 @@
 
   .community-comment-header {
     flex-wrap: wrap;
-  }
-
-  .community-cta {
-    padding: 1.5rem 1rem;
   }
 }

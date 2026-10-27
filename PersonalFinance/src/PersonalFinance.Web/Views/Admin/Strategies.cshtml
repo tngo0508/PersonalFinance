@@ -1,0 +1,105 @@
+@using PersonalFinance.Shared.Enums
+@model AdminStrategyQueueViewModel
+@{
+    ViewData["Title"] = "Strategy review";
+    var emptyText = Model.Status switch
+    {
+        CommunityStrategyStatus.Pending => "No Strategies are waiting for review.",
+        _ => $"No {Model.Status} Strategies."
+    };
+}
+
+<div class="py-3">
+    <header class="mb-4">
+        <p class="text-muted text-uppercase small mb-1"><a asp-action="Index">Admin</a></p>
+        <h1 class="h3 mb-1">Strategy review</h1>
+        <p class="text-muted mb-0">
+            Guild Hall Strategies, oldest first. Only Approved ones reach other users. Reject anything that flexes
+            (amounts, totals, rankings) or could identify the author (employer, exact location, account details).
+        </p>
+    </header>
+
+    @if (TempData["AdminMessage"] is string adminMessage)
+    {
+        <div class="alert alert-success" role="status">@adminMessage</div>
+    }
+    @if (TempData["AdminError"] is string adminError)
+    {
+        <div class="alert alert-danger" role="alert">@adminError</div>
+    }
+
+    <nav aria-label="Filter Strategies by status" class="mb-3">
+        <ul class="nav nav-pills">
+            @foreach (var status in Enum.GetValues<CommunityStrategyStatus>())
+            {
+                var active = status == Model.Status;
+                <li class="nav-item">
+                    <a class="nav-link @(active ? "active" : null)" aria-current="@(active ? "page" : null)"
+                       asp-action="Strategies" asp-route-status="@status">@status</a>
+                </li>
+            }
+        </ul>
+    </nav>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-muted">@emptyText</div>
+        </div>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var item in Model.Items)
+            {
+                <li class="list-group-item py-3" data-strategy-id="@item.Id">
+                    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                        <span>
+                            <span class="badge text-bg-secondary">@item.Category</span>
+                            <span class="badge text-bg-light border ms-1">@item.Status</span>
+                            @if (item.HasAmount)
+                            {
+                                <span class="badge text-bg-warning ms-1">Mentions a money amount</span>
+                            }
+                        </span>
+                        <time class="text-muted small" datetime="@item.CreatedAtUtc.ToString("o")">
+                            @item.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                        </time>
+                    </div>
+                    <h2 class="h6 mb-2 text-break">@item.Title</h2>
+                    <dl class="row small mb-2">
+                        <dt class="col-sm-2">Tried</dt>
+                        <dd class="col-sm-10 text-break">@item.Tried</dd>
+                        <dt class="col-sm-2">Happened</dt>
+                        <dd class="col-sm-10 text-break">@item.Happened</dd>
+                        <dt class="col-sm-2">Keeping</dt>
+                        <dd class="col-sm-10 text-break">@item.Keeping</dd>
+                    </dl>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="text-muted small">
+                            by @(string.IsNullOrEmpty(item.AuthorPseudonym) ? "Former member" : item.AuthorPseudonym)
+                            @if (item.ReviewedAtUtc is DateTime reviewedAt)
+                            {
+                                <span class="ms-2">· reviewed @reviewedAt.ToString("yyyy-MM-dd HH:mm") UTC</span>
+                            }
+                        </div>
+                        <form asp-action="ReviewStrategy" method="post" class="d-flex gap-1">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <input type="hidden" name="filter" value="@Model.Status" />
+                            @if (item.Status != CommunityStrategyStatus.Approved)
+                            {
+                                <button type="submit" name="status" value="@CommunityStrategyStatus.Approved"
+                                        class="btn btn-sm btn-outline-success">Approve</button>
+                            }
+                            @if (item.Status != CommunityStrategyStatus.Rejected)
+                            {
+                                <button type="submit" name="status" value="@CommunityStrategyStatus.Rejected"
+                                        class="btn btn-sm btn-outline-danger">Reject</button>
+                            }
+                        </form>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

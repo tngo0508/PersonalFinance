@@ -4,7 +4,7 @@ using PersonalFinance.Web.Models.Community;
 namespace PersonalFinance.Tests.Community;
 
 /// <summary>
-/// The Guild Hall page's own wording around user content: how long ago something was posted, the label of a Story's
+/// The Guild Hall page's own wording around user content: how long ago something was posted, the label of a Strategy's
 /// category, and who a post is shown as written by. The content itself (titles, bodies, comments, Pseudonyms) is never
 /// translated (spec §1).
 /// </summary>
@@ -40,7 +40,7 @@ public class CommunityTextTests
     {
         using var culture = new UiCultureScope("en");
 
-        Assert.Equal("Budgeting", CommunityText.Category(TestLocalization.Localizer, "Budgeting"));
+        Assert.Equal("Groceries", CommunityText.Category(TestLocalization.Localizer, "Groceries"));
         Assert.Equal("Side hustles", CommunityText.Category(TestLocalization.Localizer, "Side hustles"));
     }
 
@@ -50,17 +50,21 @@ public class CommunityTextTests
         using var culture = new UiCultureScope("vi");
 
         Assert.NotEqual("Goals", CommunityText.Category(TestLocalization.Localizer, "Goals"));
-        Assert.NotEqual("Budgeting", CommunityText.Category(TestLocalization.Localizer, "Budgeting"));
+        Assert.NotEqual("Groceries", CommunityText.Category(TestLocalization.Localizer, "Groceries"));
     }
 
     [Fact]
-    public void StoryCategories_AreTheValuesTheSubmitFormOffers_EachWithAnEnglishLabel()
+    public void StrategyCategories_AreTheValuesTheBoardOffers_EachWithAnEnglishAndVietnameseLabel()
     {
-        Assert.Equal(["Budgeting", "Debt", "Investing", "Savings", "Experiments", "Career", "Other"],
-            CommunityText.StoryCategories);
+        Assert.Equal(["Spending", "Groceries", "Saving", "Debt", "Investing", "Income", "Habits", "Other"],
+            CommunityText.StrategyCategories);
         IReadOnlyCollection<string> english = TestLocalization.Catalog.Keys("en");
-        Assert.All(CommunityText.StoryCategories,
-            category => Assert.Contains($"Community.Category.{category}", english));
+        IReadOnlyCollection<string> vietnamese = TestLocalization.Catalog.Keys("vi");
+        Assert.All(CommunityText.StrategyCategories, category =>
+        {
+            Assert.Contains($"Community.Category.{category}", english);
+            Assert.Contains($"Community.Category.{category}", vietnamese);
+        });
     }
 
     [Fact]

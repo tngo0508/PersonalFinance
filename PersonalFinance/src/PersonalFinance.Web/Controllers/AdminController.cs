@@ -7,6 +7,7 @@ using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Admin;
+using PersonalFinance.Shared.DTOs.Community;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Web.Infrastructure;
@@ -22,6 +23,7 @@ namespace PersonalFinance.Web.Controllers;
 public class AdminController : Controller
 {
     private readonly IAdminApi _adminApi;
+    private readonly ICommunityApi _communityApi;
     private readonly IFeedbackApi _feedbackApi;
     private readonly ILogger<AdminController> _logger;
     private readonly IStringLocalizer _localizer;
@@ -29,11 +31,12 @@ public class AdminController : Controller
     /// <param name="localizer">
     /// Resolves ApiService's keyed error messages; the Admin pages themselves are not localized.
     /// </param>
-    public AdminController(IAdminApi adminApi, IFeedbackApi feedbackApi, ILogger<AdminController> logger,
-        IStringLocalizer localizer)
+    public AdminController(IAdminApi adminApi, IFeedbackApi feedbackApi, ICommunityApi communityApi,
+        ILogger<AdminController> logger, IStringLocalizer localizer)
     {
         _adminApi = adminApi;
         _feedbackApi = feedbackApi;
+        _communityApi = communityApi;
         _logger = logger;
         _localizer = localizer;
     }
@@ -116,6 +119,59 @@ public class AdminController : Controller
         }
 
         return RedirectToAction(nameof(Feedback), new { status = filter });
+    }
+
+    /// <summary>
+    /// Displays the Strategy review queue: the Guild Hall Strategies in <paramref name="status"/> (Pending by
+    /// default), oldest first, each flagged when it names a money amount. A failed load shows the Unavailable State,
+    /// never an empty queue.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Strategies(CommunityStrategyStatus status = CommunityStrategyStatus.Pending,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            List<CommunityStrategyReviewItemDto> items = await _communityApi.ListStrategiesForReviewAsync(status,
+                cancellationToken);
+            return View(new AdminStrategyQueueViewModel { Items = items, Status = status });
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load the Strategy review queue.");
+            return this.UnavailableView("Strategy review", "We couldn't load the Strategy review queue", "Admin",
+                nameof(Strategies), new Dictionary<string, string> { ["status"] = status.ToString() });
+        }
+    }
+
+    /// <summary>
+    /// Approves or rejects one Strategy, then returns to the queue with the <paramref name="filter"/> the Admin was
+    /// viewing.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReviewStrategy(int id, CommunityStrategyStatus status,
+        CommunityStrategyStatus filter = CommunityStrategyStatus.Pending, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _communityApi.ReviewStrategyAsync(id, new CommunityStrategyReviewRequestDto { Status = status },
+                cancellationToken);
+            TempData["AdminMessage"] = $"Strategy {status.ToString().ToLowerInvariant()}.";
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            TempData["AdminError"] = "That Strategy no longer exists.";
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to review a Strategy.");
+            TempData["AdminError"] = ApiErrorMessages.ForUser(_localizer, ex, "The Strategy could not be reviewed. Try again later.");
+        }
+
+        return RedirectToAction(nameof(Strategies), new { status = filter });
     }
 
     /// <summary>

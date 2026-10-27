@@ -1,7 +1,7 @@
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
-/// Database entity representing a community comment on a poll or story. The author is the Account in
+/// Database entity representing a community comment on a poll or Strategy. The author is the Account in
 /// <see cref="AuditableEntity.UserId"/>, shown by its <see cref="CommunityPseudonym"/>; no name is stored here.
 /// </summary>
 public class CommunityComment : AuditableEntity
@@ -17,9 +17,9 @@ public class CommunityComment : AuditableEntity
     public int? PollId { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional story ID if this comment is on a story.
+    /// Gets or sets the optional Strategy ID if this comment is on a Strategy.
     /// </summary>
-    public int? StoryId { get; set; }
+    public int? StrategyId { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the comment is approved and visible.
@@ -37,9 +37,9 @@ public class CommunityComment : AuditableEntity
     public CommunityPoll? Poll { get; set; }
 
     /// <summary>
-    /// Navigation: the story this comment belongs to, if any.
+    /// Navigation: the Strategy this comment belongs to, if any.
     /// </summary>
-    public CommunityStory? Story { get; set; }
+    public CommunityStrategy? Strategy { get; set; }
 
     /// <summary>
     /// Navigation: all likes on this comment.

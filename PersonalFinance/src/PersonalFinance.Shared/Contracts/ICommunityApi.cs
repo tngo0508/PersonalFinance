@@ -1,19 +1,22 @@
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Shared.Enums;
 using Refit;
 
 namespace PersonalFinance.Shared.Contracts;
 
 /// <summary>
-/// Refit API contract for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, stories and likes.
+/// Refit API contract for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, Strategies and likes.
 /// Authors are identified by the authenticated Account, never by a name the Web app passes.
 /// </summary>
 public interface ICommunityApi
 {
     /// <summary>
-    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, stories, comments).
+    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, the board's Strategies, comments), with the board
+    /// limited to <paramref name="category"/> when one is given.
     /// </summary>
     [Get("/api/community")]
-    Task<CommunityResponseDto> GetCommunityAsync(CancellationToken cancellationToken = default);
+    Task<CommunityResponseDto> GetCommunityAsync([Query] string? category = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Replaces the viewer's Pseudonym with a new one; every past post shows it.
@@ -28,7 +31,7 @@ public interface ICommunityApi
     Task<CommunityResponseDto> VoteAsync([Body] CommunityVoteRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds a comment to a poll or story.
+    /// Adds a comment to a poll or an Approved Strategy.
     /// </summary>
     [Post("/api/community/comment")]
     Task<CommunityCommentDto> AddCommentAsync([Body] CommunityCommentRequestDto request, CancellationToken cancellationToken = default);
@@ -46,20 +49,24 @@ public interface ICommunityApi
     Task<List<CommunityCommentDto>> GetPollCommentsAsync([Query] string pollCode, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Submits a new community story.
+    /// Pins a Strategy, Pending until an Admin reviews it.
     /// </summary>
-    [Post("/api/community/story")]
-    Task<CommunityStoryDto> SubmitStoryAsync([Body] CommunityStoryRequestDto request, CancellationToken cancellationToken = default);
+    [Post("/api/community/strategies")]
+    Task<CommunityStrategyDto> SubmitStrategyAsync([Body] CommunityStrategyRequestDto request,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Toggles a like on a story.
+    /// Lists the Strategies in <paramref name="status"/> for the Admin queue, oldest first. Requires the Admin Policy.
     /// </summary>
-    [Post("/api/community/story/{storyId}/like")]
-    Task<StoryLikeResult> ToggleStoryLikeAsync(int storyId, CancellationToken cancellationToken = default);
+    [Get("/api/community/strategies/review")]
+    Task<List<CommunityStrategyReviewItemDto>> ListStrategiesForReviewAsync(
+        [Query] CommunityStrategyStatus status = CommunityStrategyStatus.Pending,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets a single story by ID.
+    /// Approves or rejects a Strategy. Requires the Admin Policy; an unknown Strategy is 404.
     /// </summary>
-    [Get("/api/community/story/{storyId}")]
-    Task<CommunityStoryDto?> GetStoryByIdAsync(int storyId, CancellationToken cancellationToken = default);
+    [Put("/api/community/strategies/{strategyId}/status")]
+    Task ReviewStrategyAsync(int strategyId, [Body] CommunityStrategyReviewRequestDto request,
+        CancellationToken cancellationToken = default);
 }

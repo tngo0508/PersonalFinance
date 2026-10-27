@@ -8,6 +8,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.AccountLifecycle;
@@ -95,16 +96,28 @@ public class AccountPurgeServiceTests
     }
 
     [Fact]
-    public async Task Purge_KeepsTheAccountsStoriesAndComments_WithoutItsPseudonym_AndShowsThemAgain()
+    public async Task Purge_KeepsTheAccountsApprovedStrategiesAndComments_WithoutItsPseudonym_AndErasesItsUnapprovedOnes()
     {
         await SeedPendingRequestAsync();
+        await using (AppDbContext seed = CreateContext())
+        {
+            seed.CommunityStrategies.AddRange(
+                new CommunityStrategy { UserId = UserId, Title = "leaving pending strategy" },
+                new CommunityStrategy { UserId = UserId, Title = "leaving rejected strategy", Status = CommunityStrategyStatus.Rejected },
+                new CommunityStrategy { UserId = OtherUserId, Title = "staying pending strategy" });
+            await seed.SaveChangesAsync();
+        }
+
         await using AppDbContext db = CreateContext();
 
         await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
         await using AppDbContext check = CreateContext();
-        CommunityStory story = await check.CommunityStories.SingleAsync(s => s.Title == "leaving story");
-        Assert.Equal(DeletedAccount.UserId, story.UserId);
+        CommunityStrategy strategy = await check.CommunityStrategies.SingleAsync(s => s.Title == "leaving strategy");
+        Assert.Equal(DeletedAccount.UserId, strategy.UserId);
+        Assert.False(await check.CommunityStrategies.IgnoreQueryFilters()
+            .AnyAsync(s => s.Title == "leaving pending strategy" || s.Title == "leaving rejected strategy"));
+        Assert.True(await check.CommunityStrategies.AnyAsync(s => s.Title == "staying pending strategy"));
         CommunityComment comment = await check.CommunityComments.SingleAsync(c => c.Text == "leaving comment");
         Assert.Equal(DeletedAccount.UserId, comment.UserId);
         Assert.Equal("staying name", Assert.Single(check.CommunityPseudonyms.IgnoreQueryFilters()).Name);
@@ -196,16 +209,17 @@ public class AccountPurgeServiceTests
     }
 
     [Fact]
-    public async Task Purge_HardDeletesStoriesAndCommentsTheAccountDeletedItself_WithOtherPeoplesLikes()
+    public async Task Purge_HardDeletesStrategiesAndCommentsTheAccountDeletedItself_WithOtherPeoplesLikes()
     {
         await using (AppDbContext seed = CreateContext())
         {
             seed.Users.Add(new IdentityUser { Id = UserId });
-            var deletedStory = new CommunityStory { UserId = UserId, Title = "deleted story" };
+            var deletedStrategy = new CommunityStrategy
+            { UserId = UserId, Title = "deleted strategy", Status = CommunityStrategyStatus.Approved };
             var deletedComment = new CommunityComment { UserId = UserId, Text = "deleted comment" };
-            deletedStory.SoftDelete();
+            deletedStrategy.SoftDelete();
             deletedComment.SoftDelete();
-            seed.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = OtherUserId, Story = deletedStory });
+            seed.CommunityStrategies.Add(deletedStrategy);
             seed.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = OtherUserId, Comment = deletedComment });
             await seed.SaveChangesAsync();
             await new AccountDeletionService(seed, new FixedTimeProvider(RequestedAt)).RequestAsync(UserId);
@@ -215,9 +229,8 @@ public class AccountPurgeServiceTests
         await CreatePurge(db, GraceEnds).PurgeDueAsync();
 
         await using AppDbContext check = CreateContext();
-        Assert.Empty(check.CommunityStories.IgnoreQueryFilters());
+        Assert.Empty(check.CommunityStrategies.IgnoreQueryFilters());
         Assert.Empty(check.CommunityComments.IgnoreQueryFilters());
-        Assert.Empty(check.CommunityStoryLikes.IgnoreQueryFilters());
         Assert.Empty(check.CommunityCommentLikes.IgnoreQueryFilters());
     }
 
@@ -263,14 +276,14 @@ public class AccountPurgeServiceTests
     }
 
     [Fact]
-    public void DeletedEntityTypes_CoverEveryUserOwnedEntity_ExceptStoriesAndComments()
+    public void DeletedEntityTypes_CoverEveryUserOwnedEntity_ExceptStrategiesAndComments()
     {
         using AppDbContext db = CreateContext();
 
         IReadOnlyList<Type> deleted = CreatePurge(db, GraceEnds).DeletedEntityTypes();
 
         IOrderedEnumerable<Type> expected = UserOwnedTypes(db)
-            .Where(t => t != typeof(CommunityStory) && t != typeof(CommunityComment))
+            .Where(t => t != typeof(CommunityStrategy) && t != typeof(CommunityComment))
             .OrderBy(t => t.Name, StringComparer.Ordinal);
         Assert.Equal(expected, deleted);
         Assert.Contains(typeof(AiUsageRecord), deleted);

@@ -45,9 +45,9 @@ public static class UserDataSeed
         { UserId = userId, MonthlyAmount = 500m, Purpose = $"{marker} purpose", TreeVersion = 1, Path = "S,Q1,L1", LeafId = "L1" });
 
         db.CommunityPseudonyms.Add(new CommunityPseudonym { UserId = userId, Name = $"{marker} name" });
-        var story = new CommunityStory { UserId = userId, Title = $"{marker} story" };
-        var comment = new CommunityComment { UserId = userId, Text = $"{marker} comment", Story = story };
-        db.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = userId, Story = story });
+        var strategy = new CommunityStrategy
+        { UserId = userId, Title = $"{marker} strategy", Category = "Saving", Status = CommunityStrategyStatus.Approved };
+        var comment = new CommunityComment { UserId = userId, Text = $"{marker} comment", Strategy = strategy };
         db.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = userId, Comment = comment });
         var poll = new CommunityPoll { PollCode = $"{marker}-poll", Question = $"{marker} question?" };
         var option = new CommunityPollOption { Poll = poll, Text = "Yes" };

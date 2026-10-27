@@ -187,7 +187,7 @@ public class DatabasePersistenceAndMigrationTests
             AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             Assert.False(await db.CommunityPolls.AnyAsync());
-            Assert.False(await db.CommunityStories.AnyAsync());
+            Assert.False(await db.CommunityStrategies.AnyAsync());
         }
     }
 

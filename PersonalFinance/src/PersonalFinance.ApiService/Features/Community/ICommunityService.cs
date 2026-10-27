@@ -1,18 +1,22 @@
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// Service for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, stories and likes. Every
+/// Service for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, Strategies and likes. Every
 /// author is the Account that posted, shown by its Pseudonym; no method takes or returns a display name (ADR 0018).
 /// </summary>
 public interface ICommunityService
 {
     /// <summary>
-    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, stories, comments) for an Account, creating its
-    /// Pseudonym on the first visit.
+    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, the board's Strategies, comments) for an Account,
+    /// creating its Pseudonym on the first visit. The board holds Approved Strategies and the Account's own in any
+    /// status, only in <paramref name="category"/> when one is given; another Account's Pending or Rejected Strategy
+    /// is never in it.
     /// </summary>
-    Task<CommunityResponseDto> GetCommunityAsync(string userId, CancellationToken cancellationToken = default);
+    Task<CommunityResponseDto> GetCommunityAsync(string userId, string? category = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Replaces the Account's Pseudonym with a new one. Its past posts show the new one, since they reference the
@@ -29,7 +33,7 @@ public interface ICommunityService
     Task<CommunityResponseDto> VoteAsync(string userId, CommunityVoteRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds a comment to a poll or story under the Account's Pseudonym.
+    /// Adds a comment to a poll or an Approved Strategy under the Account's Pseudonym.
     /// </summary>
     Task<CommunityCommentDto> AddCommentAsync(string userId, CommunityCommentRequestDto request, CancellationToken cancellationToken = default);
 
@@ -44,17 +48,23 @@ public interface ICommunityService
     Task<List<CommunityCommentDto>> GetPollCommentsAsync(string userId, string pollCode, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Submits a new community story under the Account's Pseudonym.
+    /// Pins a Strategy under the Account's Pseudonym, Pending until an Admin reviews it. The request is validated by
+    /// the controller first; its texts are stored trimmed.
     /// </summary>
-    Task<CommunityStoryDto> SubmitStoryAsync(string userId, CommunityStoryRequestDto request, CancellationToken cancellationToken = default);
+    Task<CommunityStrategyDto> SubmitStrategyAsync(string userId, CommunityStrategyRequestDto request,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Toggles a like on a story.
+    /// The Admin review queue: the Strategies in <paramref name="status"/>, oldest first, each flagged when it names
+    /// a money amount.
     /// </summary>
-    Task<StoryLikeResult> ToggleStoryLikeAsync(string userId, int storyId, CancellationToken cancellationToken = default);
+    Task<List<CommunityStrategyReviewItemDto>> ListStrategiesForReviewAsync(CommunityStrategyStatus status,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets a single story by ID.
+    /// Records an Admin's decision on a Strategy (Approved or Rejected; the controller validates it). False when no
+    /// such Strategy exists.
     /// </summary>
-    Task<CommunityStoryDto?> GetStoryByIdAsync(string userId, int storyId, CancellationToken cancellationToken = default);
+    Task<bool> ReviewStrategyAsync(int strategyId, CommunityStrategyStatus status,
+        CancellationToken cancellationToken = default);
 }

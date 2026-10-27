@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.0.0] - 2026-10-27
+
+### Added
+
+- **Strategies on the Guild Hall board**: a user pins a Strategy as *What I tried / What happened / What I'd keep doing* with one of eight categories, and it appears as a note on a corkboard of two tilted masonry columns (slice 3 of #420, ADR 0018).
+  - Category chips filter the board; they are links, so a filtered board can be bookmarked.
+  - A new Strategy is Pending: only its author sees it, as a striped note labelled "Waiting for review · only you see this". A rejected one stays with its author as "Not approved · only you see this".
+  - The "Pin a strategy" form nudges while the user types a money amount (a currency symbol, code or word next to a number; percentages and counts are fine) and asks them to leave out their employer, exact location and account numbers. The nudge never blocks sending.
+- **Strategy review queue in the Admin area**: Pending, Approved and Rejected tabs, oldest first, each Strategy with Approve and Reject buttons and a "Mentions a money amount" flag from the same rule the form uses (`MoneyAmountRule`). Not localized (ADR 0017).
+
+### Changed
+
+- **The Data Export lists the Account's Strategies** in every status, in place of stories and story likes.
+- **The Purge keeps Approved Strategies** under "Former member" and erases Pending and Rejected ones, which nobody else has seen.
+- **Pinning a Strategy checks the antiforgery token**: the Guild Hall's other AJAX actions still skip it, as before.
+
+### Removed
+
+- **Community stories, story likes and the "Share your story" modal and call to action**, in a schema migration that drops `CommunityStories` and `CommunityStoryLikes` and turns a comment's story reference into a Strategy reference (hence the major bump). The Guild Hall has been empty since #422. Replies and Reactions on Strategies arrive in slice 4.
+
 ## [11.0.0] - 2026-10-27
 
 ### Added

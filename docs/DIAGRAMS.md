@@ -199,12 +199,12 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | Feature | ApiService controllers (route) | Service interfaces | Entities it owns (reads) | Refit Contract | Web controller | JavaScript | How it differs from section 2 |
 |---|---|---|---|---|---|---|---|
 | AccountLifecycle | `AccountDeletionController` (`api/account-deletion`), `DataExportController` (`api/data-export`) | `IAccountDeletionService`, `IAccountPurgeService`, `IDataExportService` | `DeletionRequest` (every user-owned Entity on purge and export) | `IAccountDeletionApi`, `IDataExportApi` | none: Identity Razor Pages under `Areas/Identity/Pages/Account/` | none | `AccountPurgeJob` runs the image with `--purge-only`; see [7](#7-account-lifecycle) |
-| Admin | `AdminController` (`api/Admin`, RequireAdmin) | `IAdminService` | none (Identity tables) | `IAdminApi` | `Admin` (also injects `IFeedbackApi`) | none | `UserManager`/`RoleManager`, `AdminRoleLock`; no Validators |
+| Admin | `AdminController` (`api/Admin`, RequireAdmin) | `IAdminService` | none (Identity tables) | `IAdminApi` | `Admin` (also injects `IFeedbackApi`, `ICommunityApi`) | none | `UserManager`/`RoleManager`, `AdminRoleLock`; no Validators |
 | AiAssistant | `AiAssistantController` (`api/AiAssistant`) | `IAiAssistantService`, `IAiQuotaService`, `IAiScopeFilter` | `AiUsageRecord` (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `UserPreference`) | `IAiAssistantApi` | `AiAssistant` (JSON only) | `core/ai-chat-widget.js`, `news/news-summary.js` | OpenAI through `IChatClient`; see [12](#12-ai-assistant) |
 | Analysis | `SpreadsheetAnalysisController` (`api/SpreadsheetAnalysis`) | `ISpreadsheetAnalysisService`, `IGoogleSheetRemovalService` | `SpreadsheetBudgetSnapshot`, `SpreadsheetTransactionRecord` | `ISpreadsheetAnalysisApi` | `Analysis` (also injects `IBudgetTrackerApi`) | `analysis/` | Depends on GoogleDrive's `ISpreadsheetReader`; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | BudgetPlanner | `BudgetController` (`api/Budget`) | `IBudgetService` | `UserBudgetAllocation` | `IBudgetPlannerApi` | `Budget` | `budget/` | Raises Notifications; reads `IBudgetDataProvider` |
 | BudgetTracker | `BudgetTrackerController` (`api/budget-tracker`) | `IMonthlyBudgetService`, `IBudgetTrackerRemovalService` | `BudgetCategory`, `BudgetTransaction`, `MonthlyBudgetPlan`, `MonthlyBudgetLine` | `IBudgetTrackerApi` | `BudgetTracker` | `budget-tracker/`, `core/data-source-toggle.js` | Six Validators; the controller also injects `IBudgetDataSourceService` |
-| Community | `CommunityController` (`api/Community`) | `ICommunityService` | `CommunityPseudonym`, `CommunityStory`, `CommunityStoryLike`, `CommunityComment`, `CommunityCommentLike`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote` | `ICommunityApi` | `Community` | `community.js` | No Validators: the Service throws `ArgumentException`, the controller returns 400 |
+| Community | `CommunityController` (`api/Community`; Strategy review RequireAdmin) | `ICommunityService` | `CommunityPseudonym`, `CommunityStrategy`, `CommunityComment`, `CommunityCommentLike`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote` | `ICommunityApi` | `Community`; Strategy review in `Admin` | `community.js` | Two Validators (pinning and reviewing a Strategy); the Service throws keyed `ApiErrorException`s for votes and comments. `MoneyAmountRule` (Shared) is the no-amounts rule both the form's nudge and the Admin queue's flag use |
 | Dashboard | `DashboardController` (`api/Dashboard`) | `IDashboardService` | none (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `GoogleDriveConnection`) | `IDashboardApi` | `Dashboard` | `dashboard/` | Read-only aggregator over four Features plus `IBudgetDataProvider` |
 | Feedback | `FeedbackController` (`api/Feedback`) | `IFeedbackService` | `Feedback` | `IFeedbackApi` | `Feedback`; inbox in `Admin` | none | The canonical example ([2](#2-anatomy-of-a-feature)) |
 | GoogleDrive | `GoogleDriveController` (`api/GoogleDrive`) | `IDriveConnectionService`, `ISpreadsheetReader`, `IGoogleDriveFileSource` (internal) | `GoogleDriveConnection`, `GoogleDriveCachedFile` | `IGoogleDriveApi` | `GoogleDrive` | `google-drive/` | Typed `HttpClient`s to Google Drive; a 1,450-line static parser; see [13](#13-google-drive-and-spreadsheet-analysis) |
@@ -420,30 +420,23 @@ erDiagram
         string UserId UK "no row after a Purge"
         string Name UK "Adjective Noun, max 60"
     }
-    CommunityStory {
+    CommunityStrategy {
         int Id PK
-        string UserId "deleted-account after a Purge"
-        string Title
-        string Summary
-        string Body "max 10000"
-        string Category "indexed"
-        bool IsVisible
-        bool IsFeatured "indexed"
-        DateTime PublishedAtUtc "indexed"
-        int ReadTimeMinutes
-    }
-    CommunityStoryLike {
-        int Id PK
-        string UserId "unique with StoryId"
-        int StoryId FK
-        DateTime CreatedAtUtc
+        string UserId "indexed; deleted-account after a Purge"
+        string Category "one of 8, max 50"
+        string Title "max 120"
+        string Tried "max 1000"
+        string Happened "max 1000"
+        string Keeping "max 1000"
+        int Status "Pending, Approved, Rejected; indexed with Category, CreatedAt"
+        DateTime ReviewedAt "nullable"
     }
     CommunityComment {
         int Id PK
         string UserId
         string Text
         int PollId FK "nullable"
-        int StoryId FK "nullable, indexed"
+        int StrategyId FK "nullable, indexed"
         bool IsVisible
         DateTime CreatedAtUtc "indexed"
     }
@@ -476,8 +469,7 @@ erDiagram
         DateTime CreatedAtUtc
     }
 
-    CommunityStory ||--o{ CommunityStoryLike : "StoryId, Cascade"
-    CommunityStory ||--o{ CommunityComment : "StoryId, SetNull"
+    CommunityStrategy ||--o{ CommunityComment : "StrategyId, SetNull"
     CommunityComment ||--o{ CommunityCommentLike : "CommentId, Cascade"
     CommunityPoll ||--o{ CommunityPollOption : "PollId, SetNull"
     CommunityPoll ||--o{ CommunityPollVote : "PollId, SetNull"
@@ -488,10 +480,14 @@ erDiagram
 `CommunityPoll` and `CommunityPollOption` are shared data with no `UserId`, no soft delete, untouched by the Purge.
 Nothing is seeded: the Community starts empty (#422). Like and comment counts are counted from the like and comment
 rows; no table stores them. `CommunityPseudonym` is one row per Account, the name it posts under ([ADR
-0018](adr/0018-guild-hall-is-pseudonymous-and-amount-free.md)); stories and comments store no author name and are joined
-to it on `UserId` when read, so a re-roll shows on every past post. Stories and comments survive the Purge under the
-placeholder id ([ADR 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)); the Pseudonym row is deleted
-with the Account's other rows, so they are shown as written by "Former member".
+0018](adr/0018-guild-hall-is-pseudonymous-and-amount-free.md)); Strategies and comments store no author name and are
+joined to it on `UserId` when read, so a re-roll shows on every past post. A `CommunityStrategy` starts Pending: the
+board shows other users only Approved ones, and its author sees their own in every status. An Admin approves or rejects
+it from the Strategy review queue, which flags money amounts by `MoneyAmountRule` but never blocks them. Approved
+Strategies and comments survive the Purge under the placeholder id ([ADR
+0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)); the Pseudonym row is deleted with the Account's other
+rows, so they are shown as written by "Former member". Pending and Rejected Strategies are erased: nobody else has seen
+them.
 
 ### 4.4 Account, consent and cross-cutting records
 
@@ -716,7 +712,8 @@ stateDiagram-v2
     note left of Purged
         DeletionRequest row stays as an audit record
         with UserId = deleted-account.
-        Stories and comments stay as "Deleted User".
+        Approved Strategies and comments stay,
+        shown as "Former member".
     end note
 ```
 
@@ -747,8 +744,8 @@ sequenceDiagram
     J->>PS: PurgeDueAsync()
     PS->>DB: Pending and PurgeAfter <= now, ordered by PurgeAfter then Id
     loop each due request, one SaveChangesAsync each
-        PS->>DB: AnonymizeCommunityContent (placeholder id, shown as Former member; self-deleted content removed)
-        PS->>DB: RemoveCachedDriveFiles, RemoveRows for every AuditableEntity except Story and Comment
+        PS->>DB: AnonymizeCommunityContent (placeholder id, shown as Former member; unapproved Strategies and self-deleted content removed)
+        PS->>DB: RemoveCachedDriveFiles, RemoveRows for every AuditableEntity except Strategy and Comment
         PS->>DB: remove AspNetUserRoles, Claims, Logins, Tokens, then the AspNetUsers row
         PS->>DB: Status = Purged, PurgedAt = now, UserId = deleted-account
     end
@@ -1000,7 +997,7 @@ flowchart TB
 
 Drawn from `Web/Infrastructure/UnavailableStateExtensions.cs`, `JsonApiErrorsAttribute.cs`, `ApiErrorMessages.cs`,
 `ApiServiceWarmer.cs`, `ApiServiceStartupWarmer.cs` and `infra/modules/api-service.bicep`. Controllers that use the
-pattern: Budget, Community, Networth, SavingsGoals, Admin (inbox), Dashboard (its own `Unavailable` view) and Research.
+pattern: Budget, Community, Networth, SavingsGoals, Admin (Feedback inbox, Strategy review), Dashboard (its own `Unavailable` view) and Research.
 
 ## 12. AI Assistant
 

@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Enums;
+
 namespace PersonalFinance.Shared.DTOs.Community;
 
 /// <summary>
@@ -19,7 +21,7 @@ public sealed class CommunityCommentDto
     public int Likes { get; set; }
     public bool IsLikedByUser { get; set; }
     public int? PollId { get; set; }
-    public int? StoryId { get; set; }
+    public int? StrategyId { get; set; }
 }
 
 /// <summary>
@@ -33,9 +35,10 @@ public sealed class CommentLikeResult
 }
 
 /// <summary>
-/// DTO for returning story data to the view/API. Authors are Pseudonyms only (ADR 0018).
+/// A Strategy on the board, as the viewing Account sees it: an Approved one, or one of the viewer's own in any status.
+/// Authors are Pseudonyms only (ADR 0018).
 /// </summary>
-public sealed class CommunityStoryDto
+public sealed class CommunityStrategyDto
 {
     public int Id { get; set; }
 
@@ -45,26 +48,40 @@ public sealed class CommunityStoryDto
     /// <summary>Whether the viewing Account wrote it, so the page can show a re-rolled Pseudonym on it at once.</summary>
     public bool IsOwn { get; set; }
 
-    public string Title { get; set; } = string.Empty;
-    public string Summary { get; set; } = string.Empty;
-    public string Body { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
-    public int Likes { get; set; }
-    public int CommentCount { get; set; }
-    public bool IsFeatured { get; set; }
-    public DateTime PublishedAtUtc { get; set; }
-    public int ReadTimeMinutes { get; set; }
-    public bool IsLikedByUser { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Tried { get; set; } = string.Empty;
+    public string Happened { get; set; } = string.Empty;
+    public string Keeping { get; set; } = string.Empty;
+
+    /// <summary>Pending or Rejected only on the viewer's own Strategies; everyone else's are Approved.</summary>
+    public CommunityStrategyStatus Status { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; }
 }
 
 /// <summary>
-/// Result of a story like toggle operation.
+/// A Strategy in the Admin review queue. <see cref="HasAmount"/> flags one that names a money amount (ADR 0018); the
+/// flag never blocks it. Authors are Pseudonyms only, here too.
 /// </summary>
-public sealed class StoryLikeResult
+public sealed class CommunityStrategyReviewItemDto
 {
-    public bool Success { get; set; }
-    public int NewLikeCount { get; set; }
-    public bool IsLiked { get; set; }
+    public int Id { get; set; }
+
+    /// <summary>The author's Pseudonym, or null once the author is a Former member.</summary>
+    public string? AuthorPseudonym { get; set; }
+
+    public string Category { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Tried { get; set; } = string.Empty;
+    public string Happened { get; set; } = string.Empty;
+    public string Keeping { get; set; } = string.Empty;
+    public CommunityStrategyStatus Status { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime? ReviewedAtUtc { get; set; }
+
+    /// <summary>Whether the title or any of the texts holds a money amount by <c>MoneyAmountRule</c>.</summary>
+    public bool HasAmount { get; set; }
 }
 
 /// <summary>
@@ -103,7 +120,7 @@ public sealed class CommunityPseudonymDto
 }
 
 /// <summary>
-/// Full Guild Hall response DTO: the viewer's Pseudonym, the polls, stories and comments.
+/// Full Guild Hall response DTO: the viewer's Pseudonym, the polls, the board's Strategies and the comments.
 /// </summary>
 public sealed class CommunityResponseDto
 {
@@ -111,7 +128,13 @@ public sealed class CommunityResponseDto
     public string Pseudonym { get; set; } = string.Empty;
 
     public List<CommunityPollDto> ActivePolls { get; set; } = new();
-    public List<CommunityStoryDto> Stories { get; set; } = new();
+
+    /// <summary>
+    /// The board: the viewer's own Pending and Rejected Strategies first, then Approved ones, newest first, in the
+    /// requested category if one was given.
+    /// </summary>
+    public List<CommunityStrategyDto> Strategies { get; set; } = new();
+
     public List<CommunityCommentDto> RecentComments { get; set; } = new();
 }
 
@@ -131,16 +154,25 @@ public sealed class CommunityCommentRequestDto
 {
     public string Text { get; set; } = string.Empty;
     public string? PollCode { get; set; }
-    public int? StoryId { get; set; }
+    public int? StrategyId { get; set; }
 }
 
 /// <summary>
-/// Request to submit a story.
+/// Request to pin a Strategy. It is stored Pending, for an Admin to review.
 /// </summary>
-public sealed class CommunityStoryRequestDto
+public sealed class CommunityStrategyRequestDto
 {
-    public string Title { get; set; } = string.Empty;
-    public string Summary { get; set; } = string.Empty;
-    public string Body { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Tried { get; set; } = string.Empty;
+    public string Happened { get; set; } = string.Empty;
+    public string Keeping { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// An Admin's decision on a Strategy: Approved or Rejected.
+/// </summary>
+public sealed class CommunityStrategyReviewRequestDto
+{
+    public CommunityStrategyStatus Status { get; set; }
 }

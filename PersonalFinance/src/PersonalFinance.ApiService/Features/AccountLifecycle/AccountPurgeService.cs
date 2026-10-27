@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.ApiService.Features.AccountLifecycle;
 
@@ -84,14 +85,14 @@ internal sealed class AccountPurgeService : IAccountPurgeService
             .Select(r => r.Id);
 
     /// <summary>
-    /// The user-owned entity types the Purge hard-deletes: every <see cref="AuditableEntity"/> except Community stories
-    /// and comments, which are anonymized instead. Internal so tests can check every new user-owned entity is covered.
+    /// The user-owned entity types the Purge hard-deletes: every <see cref="AuditableEntity"/> except Strategies and
+    /// Community comments, which are anonymized instead. Internal so tests can check every new user-owned entity is covered.
     /// </summary>
     internal IReadOnlyList<Type> DeletedEntityTypes() =>
         _db.Model.GetEntityTypes()
             .Select(t => t.ClrType)
             .Where(t => typeof(AuditableEntity).IsAssignableFrom(t)
-                        && t != typeof(CommunityStory) && t != typeof(CommunityComment))
+                        && t != typeof(CommunityStrategy) && t != typeof(CommunityComment))
             .OrderBy(t => t.Name, StringComparer.Ordinal)
             .ToList();
 
@@ -125,26 +126,25 @@ internal sealed class AccountPurgeService : IAccountPurgeService
     }
 
     /// <summary>
-    /// The Account's stories and comments stay under the placeholder id, and the ones the Deletion Request hid are
-    /// shown again. Its Pseudonym row goes with every other user-owned row, so the Guild Hall shows them as written by
-    /// "Former member" (ADR 0018). Ones the Account deleted itself are erased, with other people's likes on them:
-    /// nobody can see them, so keeping them would only keep the Account's words.
+    /// The Account's Approved Strategies and its comments stay under the placeholder id, and the ones the Deletion
+    /// Request hid are shown again. Its Pseudonym row goes with every other user-owned row, so the Guild Hall shows
+    /// them as written by "Former member" (ADR 0018). Ones the Account deleted itself are erased, with other people's
+    /// likes on them, and so are its Pending and Rejected Strategies: nobody else can see them, so keeping them would
+    /// only keep the Account's words.
     /// </summary>
     private async Task AnonymizeCommunityContentAsync(string userId, DateTime requestedAt,
         CancellationToken cancellationToken)
     {
-        foreach (CommunityStory? story in await _db.CommunityStories.IgnoreQueryFilters()
+        foreach (CommunityStrategy? strategy in await _db.CommunityStrategies.IgnoreQueryFilters()
                      .Where(s => s.UserId == userId).ToListAsync(cancellationToken))
         {
-            if (DeletedByTheAccount(story, requestedAt))
+            if (DeletedByTheAccount(strategy, requestedAt) || strategy.Status != CommunityStrategyStatus.Approved)
             {
-                _db.CommunityStoryLikes.RemoveRange(await _db.CommunityStoryLikes.IgnoreQueryFilters()
-                    .Where(l => l.StoryId == story.Id).ToListAsync(cancellationToken));
-                _db.CommunityStories.Remove(story);
+                _db.CommunityStrategies.Remove(strategy);
                 continue;
             }
 
-            Anonymize(story, requestedAt);
+            Anonymize(strategy, requestedAt);
         }
 
         foreach (CommunityComment? comment in await _db.CommunityComments.IgnoreQueryFilters()

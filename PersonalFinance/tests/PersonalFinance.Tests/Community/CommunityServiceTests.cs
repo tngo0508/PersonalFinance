@@ -10,6 +10,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure;
 
@@ -17,9 +18,10 @@ namespace PersonalFinance.Tests.Community;
 
 /// <summary>
 /// Characterization of <see cref="ICommunityService"/>: the Pseudonym an Account gets and re-rolls and how every post
-/// shows it, how a submitted Story's read time is derived, how an active poll is reported to the Account viewing it,
-/// and the keyed <see cref="ApiErrorException"/> each rejection throws. Runs against an in-memory database; the
-/// queries that join each post to its author's Pseudonym are also checked to translate to Azure SQL.
+/// shows it, how an active poll is reported to the Account viewing it, and the keyed <see cref="ApiErrorException"/>
+/// each rejection throws. Runs against an in-memory database; the queries that join each post to its author's
+/// Pseudonym are also checked to translate to Azure SQL. Strategies and their review are in
+/// <c>CommunityStrategyTests</c>.
 /// </summary>
 public partial class CommunityServiceTests
 {
@@ -36,12 +38,13 @@ public partial class CommunityServiceTests
     private static CommunityService CreateService(AppDbContext db) =>
         new(db, TimeProvider.System, NullLogger<CommunityService>.Instance);
 
-    private static CommunityStoryRequestDto ValidStory() => new()
+    internal static CommunityStrategyRequestDto ValidStrategy(string category = "Groceries") => new()
     {
-        Title = "Paying off my car loan",
-        Summary = "How I did it.",
-        Body = string.Join(' ', Enumerable.Repeat("word", 120)),
-        Category = "Debt",
+        Category = category,
+        Title = "The Sunday pantry audit",
+        Tried = "Checking the cupboard before writing the shopping list.",
+        Happened = "Far fewer duplicate buys.",
+        Keeping = "Ten minutes, coffee in hand, every Sunday.",
     };
 
     [Fact]
@@ -65,25 +68,27 @@ public partial class CommunityServiceTests
     {
         await using AppDbContext db = CreateContext();
         CommunityService service = CreateService(db);
-        CommunityStoryDto story = await service.SubmitStoryAsync(UserId, ValidStory());
+        CommunityStrategyDto strategy = await service.SubmitStrategyAsync(UserId, ValidStrategy());
+        await service.ReviewStrategyAsync(strategy.Id, CommunityStrategyStatus.Approved);
         CommunityCommentDto comment = await service.AddCommentAsync(UserId,
-            new CommunityCommentRequestDto { Text = "Trying this", StoryId = story.Id });
-        Assert.Equal(story.AuthorPseudonym, comment.AuthorPseudonym);
+            new CommunityCommentRequestDto { Text = "Trying this", StrategyId = strategy.Id });
+        Assert.Equal(strategy.AuthorPseudonym, comment.AuthorPseudonym);
 
         CommunityPseudonymDto rerolled = await service.RerollPseudonymAsync(UserId);
 
         Assert.Matches(PseudonymShape(), rerolled.Name);
-        Assert.NotEqual(story.AuthorPseudonym, rerolled.Name);
+        Assert.NotEqual(strategy.AuthorPseudonym, rerolled.Name);
         CommunityResponseDto response = await service.GetCommunityAsync(UserId);
         Assert.Equal(rerolled.Name, response.Pseudonym);
-        CommunityStoryDto shownStory = Assert.Single(response.Stories);
-        Assert.Equal(rerolled.Name, shownStory.AuthorPseudonym);
-        Assert.True(shownStory.IsOwn);
+        CommunityStrategyDto shown = Assert.Single(response.Strategies);
+        Assert.Equal(rerolled.Name, shown.AuthorPseudonym);
+        Assert.True(shown.IsOwn);
         Assert.Equal(rerolled.Name, Assert.Single(response.RecentComments).AuthorPseudonym);
-        CommunityStoryDto? seenByAnother = await service.GetStoryByIdAsync("someone-else", story.Id);
-        Assert.Equal(rerolled.Name, seenByAnother!.AuthorPseudonym);
+        CommunityStrategyDto seenByAnother = Assert.Single((await service.GetCommunityAsync("someone-else")).Strategies);
+        Assert.Equal(rerolled.Name, seenByAnother.AuthorPseudonym);
         Assert.False(seenByAnother.IsOwn);
-        Assert.Single(db.CommunityPseudonyms);
+        Assert.Equal(2, db.CommunityPseudonyms.Count());
+        Assert.Single(db.CommunityPseudonyms, p => p.UserId == UserId);
     }
 
     [Fact]
@@ -108,16 +113,21 @@ public partial class CommunityServiceTests
     public async Task GetCommunity_ShowsAFormerMembersPosts_WithoutAPseudonym()
     {
         await using AppDbContext db = CreateContext();
-        var story = new CommunityStory { UserId = DeletedAccount.UserId, Title = "Kept after the Purge" };
-        db.CommunityStories.Add(story);
-        db.CommunityComments.Add(new CommunityComment { UserId = DeletedAccount.UserId, Text = "Still here", Story = story });
+        var strategy = new CommunityStrategy
+        {
+            UserId = DeletedAccount.UserId,
+            Title = "Kept after the Purge",
+            Status = CommunityStrategyStatus.Approved,
+        };
+        db.CommunityStrategies.Add(strategy);
+        db.CommunityComments.Add(new CommunityComment { UserId = DeletedAccount.UserId, Text = "Still here", Strategy = strategy });
         await db.SaveChangesAsync();
 
         CommunityResponseDto response = await CreateService(db).GetCommunityAsync(UserId);
 
-        CommunityStoryDto shownStory = Assert.Single(response.Stories);
-        Assert.Null(shownStory.AuthorPseudonym);
-        Assert.False(shownStory.IsOwn);
+        CommunityStrategyDto shown = Assert.Single(response.Strategies);
+        Assert.Null(shown.AuthorPseudonym);
+        Assert.False(shown.IsOwn);
         Assert.Null(Assert.Single(response.RecentComments).AuthorPseudonym);
     }
 
@@ -162,13 +172,14 @@ public partial class CommunityServiceTests
     }
 
     [Fact]
-    public void StoryAndCommentQueries_TranslateToAzureSql()
+    public void StrategyAndCommentQueries_TranslateToAzureSql()
     {
         using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
         CommunityService service = CreateService(db);
 
-        AzureSqlTranslation.AssertTranslates(service.VisibleStoriesQuery(UserId).Take(6));
-        AzureSqlTranslation.AssertTranslates(service.VisibleStoriesQuery(UserId).Where(s => s.Id == 1));
+        AzureSqlTranslation.AssertTranslates(service.BoardStrategiesQuery(UserId, null).Take(CommunityStrategyLimits.BoardSize));
+        AzureSqlTranslation.AssertTranslates(service.BoardStrategiesQuery(UserId, "Debt").Take(CommunityStrategyLimits.BoardSize));
+        AzureSqlTranslation.AssertTranslates(service.ReviewQueueQuery(CommunityStrategyStatus.Pending));
         AzureSqlTranslation.AssertTranslates(service.VisibleCommentsQuery(UserId).Take(10));
         AzureSqlTranslation.AssertTranslates(service.VisibleCommentsQuery(UserId).Where(c => c.PollId == 1));
     }
@@ -207,29 +218,6 @@ public partial class CommunityServiceTests
     }
 
     [Fact]
-    public async Task SubmitStory_ReadTimeCountsWordsSeparatedByRepeatedSpaces_AndIsNotFeatured()
-    {
-        await using AppDbContext db = CreateContext();
-        CommunityService service = CreateService(db);
-
-        // 401 words, separated by double spaces: 401 / 200 rounds up to 3 minutes.
-        string body = string.Join("  ", Enumerable.Repeat("word", 401));
-        var request = new CommunityStoryRequestDto
-        {
-            Title = "Paying off my car loan",
-            Summary = "How I did it.",
-            Body = body,
-            Category = "Debt",
-        };
-
-        CommunityStoryDto story = await service.SubmitStoryAsync(UserId, request);
-
-        Assert.Equal(3, story.ReadTimeMinutes);
-        Assert.False(story.IsFeatured);
-        Assert.False((await db.CommunityStories.SingleAsync()).IsFeatured);
-    }
-
-    [Fact]
     public async Task GetCommunity_ReportsTheViewersVote_AndOptionPercentages()
     {
         await using AppDbContext db = CreateContext();
@@ -258,34 +246,6 @@ public partial class CommunityServiceTests
         Assert.Collection(dto.Options,
             o => { Assert.Equal("Under 10%", o.Text); Assert.Equal(1, o.Votes); Assert.Equal(33.3, o.Percentage); },
             o => { Assert.Equal("10% or more", o.Text); Assert.Equal(2, o.Votes); Assert.Equal(66.7, o.Percentage); });
-    }
-
-    [Fact]
-    public async Task GetCommunity_StoryCountsComeFromLiveLikesAndVisibleComments()
-    {
-        await using AppDbContext db = CreateContext();
-        CommunityService service = CreateService(db);
-        var story = new CommunityStory { UserId = "author", Title = "Meal plans" };
-        db.CommunityStories.Add(story);
-        db.CommunityComments.Add(new CommunityComment
-        { UserId = "author", Text = "hidden", Story = story, IsVisible = false });
-        await db.SaveChangesAsync();
-
-        await service.ToggleStoryLikeAsync(UserId, story.Id);
-        await service.ToggleStoryLikeAsync("other", story.Id);
-        StoryLikeResult unliked = await service.ToggleStoryLikeAsync("other", story.Id);
-        CommunityCommentDto comment = await service.AddCommentAsync(UserId,
-            new CommunityCommentRequestDto { Text = "Trying this", StoryId = story.Id });
-
-        CommunityResponseDto response = await service.GetCommunityAsync(UserId);
-
-        Assert.Equal(1, unliked.NewLikeCount);
-        CommunityStoryDto dto = Assert.Single(response.Stories);
-        Assert.Equal(1, dto.Likes);
-        Assert.Equal(1, dto.CommentCount);
-        Assert.True(dto.IsLikedByUser);
-        Assert.Equal(story.Id, comment.StoryId);
-        Assert.Equal(story.Id, Assert.Single(response.RecentComments).StoryId);
     }
 
     [Fact]
@@ -321,29 +281,6 @@ public partial class CommunityServiceTests
     }
 
     [Fact]
-    public async Task SubmitStoryAsync_WithShortBody_ThrowsStoryBodyMin()
-    {
-        await using AppDbContext db = CreateContext();
-        var request = new CommunityStoryRequestDto
-        {
-            Title = "Paying off my car loan",
-            Summary = "How I did it.",
-            Body = "Too short.",
-            Category = "Debt",
-        };
-
-        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
-            () => CreateService(db).SubmitStoryAsync(UserId, request));
-
-        Assert.Equal(ApiErrorKeys.Community.StoryBodyMin, ex.Key);
-        Assert.Equal("Body", ex.Field);
-        Assert.NotNull(ex.Args);
-        Assert.Equal("100", ex.Args["min"].Value);
-        Assert.Equal(400, ex.StatusCode);
-        Assert.Empty(db.CommunityStories);
-    }
-
-    [Fact]
     public async Task ToggleCommentLikeAsync_Unknown_Throws404()
     {
         await using AppDbContext db = CreateContext();
@@ -352,18 +289,6 @@ public partial class CommunityServiceTests
             () => CreateService(db).ToggleCommentLikeAsync(UserId, 999));
 
         Assert.Equal(ApiErrorKeys.Community.CommentNotFound, ex.Key);
-        Assert.Equal(404, ex.StatusCode);
-    }
-
-    [Fact]
-    public async Task ToggleStoryLikeAsync_Unknown_Throws404()
-    {
-        await using AppDbContext db = CreateContext();
-
-        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
-            () => CreateService(db).ToggleStoryLikeAsync(UserId, 999));
-
-        Assert.Equal(ApiErrorKeys.Community.StoryNotFound, ex.Key);
         Assert.Equal(404, ex.StatusCode);
     }
 
@@ -414,11 +339,9 @@ public partial class CommunityServiceTests
         IReadOnlyDictionary<string, ApiErrorArgDto>? args = key switch
         {
             ApiErrorKeys.Community.CommentTooLong => ErrorArgs.Number("max", 2000),
-            ApiErrorKeys.Community.StoryTitle => ErrorArgs.Number("max", 500),
-            ApiErrorKeys.Community.StorySummary => ErrorArgs.Number("max", 2000),
-            ApiErrorKeys.Community.StoryBodyMin => ErrorArgs.Number("min", 100),
-            ApiErrorKeys.Community.StoryBodyMax => ErrorArgs.Number("max", 10000),
-            ApiErrorKeys.Community.StoryCategory => ErrorArgs.Number("max", 50),
+            ApiErrorKeys.Community.StrategyTitle => ErrorArgs.Number("max", CommunityStrategyLimits.TitleMaxLength),
+            ApiErrorKeys.Community.StrategyTried or ApiErrorKeys.Community.StrategyHappened
+                or ApiErrorKeys.Community.StrategyKeeping => ErrorArgs.Number("max", CommunityStrategyLimits.TextMaxLength),
             _ => null,
         };
         return args?.ToDictionary(pair => pair.Key, pair => pair.Value);

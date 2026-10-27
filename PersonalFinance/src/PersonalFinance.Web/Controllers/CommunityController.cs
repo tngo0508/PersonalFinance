@@ -12,8 +12,8 @@ using PersonalFinance.Web.Models.Community;
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
-/// MVC Controller for the Guild Hall page (the Community Feature): the viewer's Pseudonym, polls, stories and
-/// comments. All data operations are delegated to the ApiService via the ICommunityApi Refit client, which knows the
+/// MVC Controller for the Guild Hall page (the Community Feature): the viewer's Pseudonym, polls, the board of
+/// Strategies and comments. All data operations are delegated to the ApiService via the ICommunityApi Refit client, which knows the
 /// Account from the forwarded user id; no name ever leaves this app.
 /// </summary>
 [Authorize]
@@ -36,17 +36,20 @@ public sealed class CommunityController : Controller
     }
 
     /// <summary>
-    /// Displays the Guild Hall with the viewer's Pseudonym, interactive polls, stories and recent comments.
+    /// Displays the Guild Hall with the viewer's Pseudonym, interactive polls, the board of Strategies (only
+    /// <paramref name="category"/>'s when it is one of the board's categories) and recent comments.
     /// When the ApiService is unavailable, shows the Unavailable State instead of an empty page.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Index(string? category = null, CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
+        string? filter = CommunityText.StrategyCategories.Contains(category, StringComparer.Ordinal) ? category : null;
         try
         {
-            CommunityResponseDto response = await _communityApi.GetCommunityAsync(cancellationToken);
+            CommunityResponseDto response = await _communityApi.GetCommunityAsync(filter, cancellationToken);
             CommunityViewModel model = MapToViewModel(response);
+            model.Category = filter;
             return View(model);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -126,7 +129,7 @@ public sealed class CommunityController : Controller
         {
             Text = request.Text!,
             PollCode = request.PollCode,
-            StoryId = request.StoryId
+            StrategyId = request.StrategyId
         };
 
         CommunityCommentDto comment = await _communityApi.AddCommentAsync(commentRequest, cancellationToken);
@@ -143,7 +146,7 @@ public sealed class CommunityController : Controller
                 createdAt = comment.CreatedAtUtc,
                 likes = comment.Likes,
                 pollId = comment.PollId,
-                storyId = comment.StoryId,
+                strategyId = comment.StrategyId,
             }
         });
     }
@@ -195,53 +198,38 @@ public sealed class CommunityController : Controller
     }
 
     /// <summary>
-    /// Submits a new community story via AJAX.
+    /// Pins a Strategy via AJAX. It is sent Pending: only the viewer sees it until an Admin approves it. The answer
+    /// carries what the page needs to pin the viewer's waiting note at once.
     /// </summary>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Produces("application/json")]
-    public async Task<IActionResult> SubmitStory([FromBody] StoryRequest request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> SubmitStrategy([FromBody] StrategyRequest request, CancellationToken cancellationToken = default)
     {
-        var storyRequest = new CommunityStoryRequestDto
+        var strategyRequest = new CommunityStrategyRequestDto
         {
-            Title = request.Title!,
-            Summary = request.Summary!,
-            Body = request.Body!,
-            Category = request.Category!
+            Category = request.Category ?? string.Empty,
+            Title = request.Title ?? string.Empty,
+            Tried = request.Tried ?? string.Empty,
+            Happened = request.Happened ?? string.Empty,
+            Keeping = request.Keeping ?? string.Empty,
         };
 
-        CommunityStoryDto story = await _communityApi.SubmitStoryAsync(storyRequest, cancellationToken);
+        CommunityStrategyDto strategy = await _communityApi.SubmitStrategyAsync(strategyRequest, cancellationToken);
 
         return Json(new
         {
             success = true,
-            story = new
+            strategy = new
             {
-                id = story.Id,
-                title = story.Title,
-                category = story.Category,
+                id = strategy.Id,
+                category = CommunityText.Category(_localizer, strategy.Category),
+                title = strategy.Title,
+                tried = strategy.Tried,
+                happened = strategy.Happened,
+                keeping = strategy.Keeping,
+                author = CommunityText.Author(_localizer, strategy.AuthorPseudonym),
             },
-        });
-    }
-
-    /// <summary>
-    /// Toggles a like on a story via AJAX.
-    /// </summary>
-    [HttpPost]
-    [Produces("application/json")]
-    public async Task<IActionResult> ToggleStoryLike([FromBody] StoryLikeRequest request, CancellationToken cancellationToken = default)
-    {
-        if (request.StoryId <= 0)
-        {
-            return BadRequest(new { success = false, error = _localizer["Community.Message.StoryIdRequired"].Value });
-        }
-
-        StoryLikeResult result = await _communityApi.ToggleStoryLikeAsync(request.StoryId, cancellationToken);
-
-        return Json(new
-        {
-            success = result.Success,
-            likes = result.NewLikeCount,
-            isLiked = result.IsLiked,
         });
     }
 
@@ -255,21 +243,18 @@ public sealed class CommunityController : Controller
         {
             Pseudonym = response.Pseudonym,
             ActivePolls = response.ActivePolls.Select(MapPollToViewModel).ToList(),
-            Stories = response.Stories.Select(s => new CommunityStory
+            Strategies = response.Strategies.Select(s => new CommunityStrategy
             {
                 Id = s.Id,
+                Category = s.Category,
                 Title = s.Title,
-                Summary = s.Summary,
-                Body = s.Body,
+                Tried = s.Tried,
+                Happened = s.Happened,
+                Keeping = s.Keeping,
                 AuthorPseudonym = s.AuthorPseudonym,
                 IsOwn = s.IsOwn,
-                PublishedDate = s.PublishedAtUtc,
-                CommentCount = s.CommentCount,
-                Category = s.Category,
-                ReadTimeMinutes = s.ReadTimeMinutes,
-                Likes = s.Likes,
-                IsFeatured = s.IsFeatured,
-                IsLikedByUser = s.IsLikedByUser,
+                Status = s.Status,
+                CreatedAt = s.CreatedAtUtc,
             }).ToList(),
             RecentComments = response.RecentComments.Select(c => new CommunityComment
             {
@@ -281,7 +266,7 @@ public sealed class CommunityController : Controller
                 Likes = c.Likes,
                 IsLikedByUser = c.IsLikedByUser,
                 PollId = c.PollId,
-                StoryId = c.StoryId,
+                StrategyId = c.StrategyId,
             }).ToList(),
         };
     }
@@ -328,7 +313,7 @@ public sealed class CommunityController : Controller
     {
         public string? Text { get; set; }
         public string? PollCode { get; set; }
-        public int? StoryId { get; set; }
+        public int? StrategyId { get; set; }
     }
 
     /// <summary>
@@ -340,21 +325,14 @@ public sealed class CommunityController : Controller
     }
 
     /// <summary>
-    /// Request model for submitting a story.
+    /// Request model for pinning a Strategy.
     /// </summary>
-    public sealed class StoryRequest
+    public sealed class StrategyRequest
     {
-        public string? Title { get; set; }
-        public string? Summary { get; set; }
-        public string? Body { get; set; }
         public string? Category { get; set; }
-    }
-
-    /// <summary>
-    /// Request model for toggling story likes.
-    /// </summary>
-    public sealed class StoryLikeRequest
-    {
-        public int StoryId { get; set; }
+        public string? Title { get; set; }
+        public string? Tried { get; set; }
+        public string? Happened { get; set; }
+        public string? Keeping { get; set; }
     }
 }
