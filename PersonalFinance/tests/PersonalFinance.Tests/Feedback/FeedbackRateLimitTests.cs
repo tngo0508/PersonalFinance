@@ -27,7 +27,7 @@ public class FeedbackRateLimitTests
     {
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "TestAuthType");
         return new FeedbackApiController(service, new SubmitFeedbackRequestValidator(),
-            new ChangeFeedbackStatusRequestValidator())
+            new ChangeFeedbackStatusRequestValidator(), new FeedbackListFilterValidator())
         {
             ControllerContext = new ControllerContext
             {

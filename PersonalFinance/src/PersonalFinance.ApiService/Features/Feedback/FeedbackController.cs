@@ -22,15 +22,18 @@ public class FeedbackController : ControllerBase
 {
     private readonly IValidator<ChangeFeedbackStatusRequest> _changeStatusValidator;
     private readonly IFeedbackService _feedbackService;
+    private readonly IValidator<FeedbackListFilter> _listFilterValidator;
     private readonly IValidator<SubmitFeedbackRequest> _submitValidator;
 
     public FeedbackController(IFeedbackService feedbackService,
         IValidator<SubmitFeedbackRequest> submitValidator,
-        IValidator<ChangeFeedbackStatusRequest> changeStatusValidator)
+        IValidator<ChangeFeedbackStatusRequest> changeStatusValidator,
+        IValidator<FeedbackListFilter> listFilterValidator)
     {
         _feedbackService = feedbackService;
         _submitValidator = submitValidator;
         _changeStatusValidator = changeStatusValidator;
+        _listFilterValidator = listFilterValidator;
     }
 
     /// <summary>
@@ -74,10 +77,11 @@ public class FeedbackController : ControllerBase
     public async Task<IActionResult> List([FromQuery] FeedbackStatus? status = null,
         CancellationToken cancellationToken = default)
     {
-        if (status is not null && !Enum.IsDefined(status.Value))
+        ValidationResult validation =
+            await _listFilterValidator.ValidateAsync(new FeedbackListFilter(status), cancellationToken);
+        if (!validation.IsValid)
         {
-            throw new ApiErrorException(ApiErrorKeys.Feedback.StatusUnknown, FeedbackMessages.UnknownStatus,
-                nameof(status));
+            return BadRequest(validation.ToApiError());
         }
 
         return Ok(await _feedbackService.ListAsync(status, cancellationToken));

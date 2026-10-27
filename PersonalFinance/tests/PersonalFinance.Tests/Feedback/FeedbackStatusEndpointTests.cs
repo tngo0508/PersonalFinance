@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Features.Feedback.Validators;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using FeedbackApiController = PersonalFinance.ApiService.Features.Feedback.FeedbackController;
@@ -31,7 +32,7 @@ public class FeedbackStatusEndpointTests
             new RateLimiterService(5, TimeSpan.FromHours(1)));
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "admin-user")], "TestAuthType");
         return new FeedbackApiController(service, new SubmitFeedbackRequestValidator(),
-            new ChangeFeedbackStatusRequestValidator())
+            new ChangeFeedbackStatusRequestValidator(), new FeedbackListFilterValidator())
         {
             ControllerContext = new ControllerContext
             {
@@ -91,10 +92,36 @@ public class FeedbackStatusEndpointTests
     {
         await using AppDbContext db = CreateContext();
 
-        ApiErrorException error =
-            await Assert.ThrowsAsync<ApiErrorException>(() => CreateController(db).List((FeedbackStatus)99));
+        IActionResult result = await CreateController(db).List((FeedbackStatus)99);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, error.StatusCode);
+        BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        ApiErrorEntryDto error = Assert.Single(Assert.IsType<ApiErrorDto>(badRequest.Value).Errors);
         Assert.Equal(ApiErrorKeys.Feedback.StatusUnknown, error.Key);
+        Assert.Equal(FeedbackMessages.UnknownStatus, error.Message);
+        Assert.Equal("status", error.Field);
+    }
+
+    [Fact]
+    public async Task List_NoStatus_ListsNewAndReviewedFeedback_ButNotArchived()
+    {
+        await using AppDbContext db = CreateContext();
+        db.Feedback.AddRange(
+            new FeedbackEntity { UserId = "user-1", Category = FeedbackCategory.Bug, Message = "New" },
+            new FeedbackEntity
+            {
+                UserId = "user-1", Category = FeedbackCategory.Bug, Message = "Reviewed", Status = FeedbackStatus.Reviewed
+            },
+            new FeedbackEntity
+            {
+                UserId = "user-1", Category = FeedbackCategory.Bug, Message = "Archived", Status = FeedbackStatus.Archived
+            });
+        await db.SaveChangesAsync();
+
+        IActionResult result = await CreateController(db).List();
+
+        List<FeedbackAdminItemDto> items =
+            Assert.IsType<List<FeedbackAdminItemDto>>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal([FeedbackStatus.New, FeedbackStatus.Reviewed],
+            items.Select(item => item.Status).Order().ToList());
     }
 }
