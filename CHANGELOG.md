@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [8.9.0] - 2026-10-26
+
+### Added
+
+- **Clock and calendar on the Dashboard**: the header shows the time and the current month in your own time zone and language, so you can see at a glance how much of the budget month is left (#412).
+  - Days already behind you this month are shaded, today is set in ink, and days with recent activity carry a dot; a line under the clock says how many days are left in the month.
+  - The week starts on the culture's first weekday (Sunday in English, Monday in Vietnamese). The clock updates on the minute and the month redraws when the day changes.
+
 ## [8.8.0] - 2026-10-26
 
 ### Added
