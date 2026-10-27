@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -60,32 +61,37 @@ public class DatabasePersistenceAndMigrationTests
         });
     }
 
-    [Fact]
-    public void LocalSqlServerConnectionString_SelectsSameProviderAndMigrationSetAsAzureSql()
+    private const string LocalSqlServer =
+        "Server=localhost,14333;Database=PersonalFinance;User ID=sa;Password=not-a-real-password;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False";
+    private const string AzureSql =
+        "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=PersonalFinance;User ID=admin;Password=x;Encrypt=True;TrustServerCertificate=False;";
+
+    // ParseProviderName, not DetermineProvider: with no provider configured, DetermineProvider reads DATABASE_PROVIDER,
+    // which the documented InMemory workflow sets in the developer's shell (#350).
+    [Theory]
+    [InlineData(LocalSqlServer)]
+    [InlineData(AzureSql)]
+    public void ASqlServerConnectionString_WithNoProviderNamed_SelectsAzureSql(string connectionString)
     {
-        const string localSqlServer =
-            "Server=localhost,14333;Database=PersonalFinance;User ID=sa;Password=not-a-real-password;TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=False";
-        const string azureSql =
-            "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=PersonalFinance;User ID=admin;Password=x;Encrypt=True;TrustServerCertificate=False;";
+        Assert.Equal(DatabaseProviderType.AzureSql, DatabaseProviderHelper.ParseProviderName(null, connectionString));
+    }
 
-        (DatabaseProviderType localProvider, List<string>? localMigrations) = ResolveProviderAndMigrations(localSqlServer);
-        (DatabaseProviderType azureProvider, List<string>? azureMigrations) = ResolveProviderAndMigrations(azureSql);
+    [Fact]
+    public void LocalSqlServer_AndAzureSql_RegisterTheSameMigrationSet()
+    {
+        List<string> localMigrations = RegisteredMigrations(LocalSqlServer);
+        List<string> azureMigrations = RegisteredMigrations(AzureSql);
 
-        Assert.Equal(DatabaseProviderType.AzureSql, localProvider);
-        Assert.Equal(DatabaseProviderType.AzureSql, azureProvider);
         Assert.NotEmpty(localMigrations);
         Assert.Equal(azureMigrations, localMigrations);
     }
 
-    private static (DatabaseProviderType Provider, List<string> Migrations) ResolveProviderAndMigrations(string connectionString)
-    {
-        (IConfiguration? config, List<string>? migrations) = AssertRegistersAzureSqlDbContext(new Dictionary<string, string?>
+    private static List<string> RegisteredMigrations(string connectionString) =>
+        AssertRegistersAzureSqlDbContext(new Dictionary<string, string?>
         {
-            { "ConnectionStrings:DefaultConnection", connectionString }
-        });
-
-        return (DatabaseProviderHelper.DetermineProvider(config, connectionString), migrations);
-    }
+            { "ConnectionStrings:DefaultConnection", connectionString },
+            { "Database:Provider", "AzureSql" }
+        }).Migrations;
 
     /// <summary>
     /// Registers the app DbContext from the given settings, asserts it resolves to the
@@ -256,20 +262,29 @@ public class DatabasePersistenceAndMigrationTests
 
 
     [Fact]
-    public void AzureSql_DefaultFallbackConnectionString_MatchesDefaultSqlConnectionString()
+    public void AzureSql_BlankConnectionString_FallsBackToTheDefaultSqlConnectionString()
     {
+        // Both settings are configured, so AddAppDbContext reads neither DATABASE_PROVIDER nor
+        // ConnectionStrings__DefaultConnection from the developer's environment (#350).
         var services = new ServiceCollection();
-        IConfigurationRoot config = new ConfigurationBuilder().Build();
+        IConfigurationRoot config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "ConnectionStrings:DefaultConnection", "" },
+                { "Database:Provider", "AzureSql" }
+            })
+            .Build();
         services.AddAppDbContext(config);
 
         using ServiceProvider sp = services.BuildServiceProvider();
         using IServiceScope scope = sp.CreateScope();
         AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        string? connectionString = db.Database.GetConnectionString();
-        Assert.NotNull(connectionString);
-        Assert.Contains("localhost", connectionString);
-        Assert.Contains("PersonalFinance", connectionString);
+        // Compare parsed forms: SqlClient renames the keywords (Server becomes Data Source) and EF adds an Application Name.
+        var registered = new SqlConnectionStringBuilder(db.Database.GetConnectionString());
+        registered.Remove("Application Name");
+        Assert.Equal(new SqlConnectionStringBuilder(DatabaseProviderHelper.DefaultSqlConnectionString).ConnectionString,
+            registered.ConnectionString);
     }
 
     [Fact]

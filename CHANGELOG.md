@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Guild Hall vocabulary and ADR 0018**: the glossary defines Guild Hall, Pseudonym, Strategy, Poll, Comment, Reaction, Challenge and Check-in, and ADR 0018 records that the Guild Hall is pseudonymous and never shows money amounts.
 
+## [9.1.0] - 2026-10-27
+
+### Changed
+
+- **The Dashboard clock and calendar put a value on your time**: the Today panel is now set like a cheque, with the clock as the stub and the month as a ledger page, in the app's money typeface.
+  - The clock shows the seconds and your time zone, plus a tape of the day's 24 hours that fills as the day passes.
+  - When your Net Worth settings have a positive net worth and base return, a live figure shows what compounding has earned since midnight, with the daily and hourly rate and the figures it is estimated from. When the Base projection reaches FI, a line says about how many days away it is.
+  - The calendar shows how much of the month is gone. When the monthly budget is for the current month, it also sets spending against that pace: a brass marker on the spending bar, an "On pace", "Ahead of pace" or "Over budget" label, and what is left to spend per day. Weekends are set lighter, and today is ringed in brass.
+
 ## [9.0.0] - 2026-10-27
 
 ### Added

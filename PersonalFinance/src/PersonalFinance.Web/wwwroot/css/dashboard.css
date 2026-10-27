@@ -58,12 +58,12 @@
     color: var(--app-text-muted);
 }
 
-/* The header is the welcome on the left and Today on the right; Today wraps under the welcome when they no
-   longer fit side by side. */
+/* The header is the welcome on the left and Today on the right, both from the top; Today wraps under the welcome when
+   they no longer fit side by side. */
 .dash-header {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--app-spacing-l) var(--app-spacing-xl);
 }
@@ -74,46 +74,105 @@
 }
 
 /* ==========================================================================
-   Today — the user's clock and the current month. Not a card: it belongs to
-   the header, set off by a ledger rule. Days already behind you this month
-   are a shaded run, like ticked-off ledger lines; today is set in ink.
+   Today — the user's clock and the current month, set as a cheque: the clock
+   is the stub, the month the body, a perforation between them. The stub puts
+   a value on the time (the day's hours as a tape, what compounding has earned
+   since midnight, the road to FI); the body is a ledger page whose meters set
+   the month's spending against how much of the month is gone. Money is set
+   in the money mono; brass marks the pace the user is measured against.
    ========================================================================== */
 
 .dash-today {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: var(--app-spacing-m) var(--app-spacing-xl);
-    padding-left: var(--app-spacing-l);
-    border-left: 2px solid var(--app-border-hover);
+    container: dash-today / inline-size;
+    flex: 1 1 30rem;
+    max-width: 46rem;
+    padding: var(--app-spacing-l);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-l);
+    /* A second hairline inside the edge, like the frame printed on a note. */
+    box-shadow: inset 0 0 0 4px var(--app-surface), inset 0 0 0 5px var(--app-border);
 }
 
 .dash-today[hidden] {
     display: none;
 }
 
-.dash-today__now {
-    display: flex;
-    flex-direction: column;
-    gap: var(--app-spacing-xs);
+.dash-today__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-l);
 }
 
-/* Set in the UI sans at a light weight, not the money mono: tabular figures keep the minutes from jumping as they
-   change, and the colon stays tight. */
+.dash-today__now,
+.dash-today__calendar {
+    min-width: 0;
+}
+
+.dash-today__now {
+    padding-bottom: var(--app-spacing-l);
+    border-bottom: 2px dashed var(--app-border-hover);
+}
+
+/* Side by side once the panel has room for both, and the perforation turns upright. Measured on the panel itself,
+   so it follows the space the header gives it, not the window. */
+@container dash-today (min-width: 38rem) {
+    .dash-today__layout {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+        gap: 0;
+    }
+
+    .dash-today__now {
+        padding: 0 var(--app-spacing-l) 0 0;
+        border-right: 2px dashed var(--app-border-hover);
+        border-bottom: 0;
+    }
+
+    .dash-today__calendar {
+        padding-left: var(--app-spacing-l);
+    }
+}
+
+.dash-today__eyebrow,
+.dash-today__worth-label {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: var(--app-font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.dash-today__eyebrow {
+    color: var(--app-accent-target);
+}
+
+/* The money mono with tabular figures, so the digits never shift as they change. */
 .dash-today__clock {
-    font-size: clamp(2.25rem, 1.6rem + 1.8vw, 3rem);
-    font-weight: 300;
+    display: block;
+    margin-top: var(--app-spacing-xs);
+    font-family: var(--app-font-mono);
+    font-size: clamp(2.4rem, 1.9rem + 1.6vw, 3.1rem);
+    font-weight: var(--app-font-weight-medium);
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.04em;
     color: var(--app-text);
+    white-space: nowrap;
+}
+
+.dash-today__seconds {
+    font-size: 0.42em;
+    font-weight: var(--app-font-weight-regular);
+    letter-spacing: 0;
+    color: var(--app-text-muted);
 }
 
 .dash-today__period {
     margin-left: 0.1em;
-    font-size: 0.4em;
-    font-weight: var(--app-font-weight-medium);
-    letter-spacing: 0.01em;
+    font-family: var(--app-font-family);
+    font-size: 0.32em;
+    font-weight: var(--app-font-weight-semibold);
+    letter-spacing: 0.04em;
     color: var(--app-text-muted);
 }
 
@@ -122,39 +181,266 @@
     font-weight: var(--app-font-weight-semibold);
 }
 
-.dash-today__left {
-    margin: 0;
+/* The day's 24 hours, grouped by quarter like a volume bar: hours gone are inked, the current one fills as it
+   passes. */
+.dash-today__tape {
+    display: flex;
+    gap: 2px;
+    height: 0.6rem;
+    margin-top: var(--app-spacing-m);
+}
+
+.dash-today__hour {
+    flex: 1 1 0;
+    background: var(--app-border);
+    border-radius: 1px;
+}
+
+.dash-today__hour:nth-child(6n):not(:last-child) {
+    margin-right: 3px;
+}
+
+.dash-today__hour.is-past {
+    background: var(--app-brand);
+}
+
+.dash-today__hour.is-now {
+    background: linear-gradient(to right, var(--app-brand) var(--dash-today-fill), var(--app-border) var(--dash-today-fill));
+}
+
+.dash-today__tape-label {
+    margin: var(--app-spacing-xs) 0 0;
     font-size: var(--app-font-size-small);
     color: var(--app-text-muted);
 }
 
-.dash-today__month {
+.dash-today__worth {
+    margin-top: var(--app-spacing-m);
+    padding-top: var(--app-spacing-m);
+    border-top: 1px solid var(--app-border);
+}
+
+.dash-today__worth[hidden],
+.dash-today__fi[hidden],
+.dash-today__meter[hidden],
+.dash-today__pace[hidden],
+.dash-today__legend[hidden] {
+    display: none;
+}
+
+.dash-today__worth-label {
+    color: var(--app-text-muted);
+}
+
+.dash-today__earned {
+    margin: var(--app-spacing-xs) 0 0;
+    font-family: var(--app-font-mono);
+    font-size: 1.65rem;
+    font-weight: var(--app-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--app-accent-positive);
+}
+
+.dash-today__earned-mark {
+    margin-right: 0.2em;
+    font-size: 0.45em;
+    vertical-align: 0.35em;
+}
+
+.dash-today__worth-note,
+.dash-today__worth-basis {
+    margin: var(--app-spacing-xs) 0 0;
+    font-size: var(--app-font-size-small);
+}
+
+.dash-today__worth-note {
+    color: var(--app-text-soft);
+}
+
+.dash-today__worth-basis {
+    color: var(--app-text-faint);
+}
+
+.dash-today__fi {
+    margin: var(--app-spacing-m) 0 0;
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-soft);
+    background: color-mix(in srgb, var(--app-accent-target) 9%, transparent);
+    border-left: 2px solid var(--app-accent-target);
+    border-radius: 0 var(--app-radius-s) var(--app-radius-s) 0;
+}
+
+/* The ledger page. */
+.dash-today__month-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--app-spacing-xs) var(--app-spacing-m);
+}
+
+.dash-today__month-name {
+    margin: 0;
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-bold);
+    letter-spacing: -0.01em;
+}
+
+.dash-today__month-day {
+    margin: 0;
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-small);
+    font-variant-numeric: tabular-nums;
+    color: var(--app-text-muted);
+}
+
+.dash-today__meters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-s);
+    margin: var(--app-spacing-m) 0 0;
+}
+
+.dash-today__meter {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.dash-today__meter dt {
+    font-size: 0.7rem;
+    font-weight: var(--app-font-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+}
+
+.dash-today__meter dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-xs) var(--app-spacing-s);
+    margin: 0;
+}
+
+.dash-today__bar {
+    position: relative;
+    flex: 1 1 6rem;
+    height: 0.45rem;
+    background: var(--app-border);
+    border-radius: 999px;
+}
+
+.dash-today__bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--app-text-soft);
+    border-radius: inherit;
+}
+
+.dash-today__bar-fill--spend {
+    background: var(--app-brand);
+}
+
+.dash-today__bar-fill--spend[data-status="ahead"] {
+    background: var(--app-accent-warning);
+}
+
+.dash-today__bar-fill--spend[data-status="over"] {
+    background: var(--app-accent-negative);
+}
+
+/* Where spending would be if it kept pace with the month. */
+.dash-today__bar-pace {
+    position: absolute;
+    top: -0.2rem;
+    bottom: -0.2rem;
+    width: 2px;
+    background: var(--app-accent-target);
+    border-radius: 1px;
+    transform: translateX(-1px);
+}
+
+.dash-today__meter-value {
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-small);
+    font-variant-numeric: tabular-nums;
+    color: var(--app-text-soft);
+    white-space: nowrap;
+}
+
+.dash-today__pace {
+    margin: var(--app-spacing-s) 0 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-soft);
+}
+
+.dash-today__pace-status {
+    display: inline-block;
+    margin-right: var(--app-spacing-xs);
+    padding: 1px var(--app-spacing-s);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-brand-hover);
+    background: var(--app-brand-soft);
+    border-radius: var(--app-radius-s);
+}
+
+.dash-today__pace[data-status="ahead"] .dash-today__pace-status {
+    color: var(--app-accent-warning);
+    background: var(--app-accent-warning-soft);
+}
+
+.dash-today__pace[data-status="over"] .dash-today__pace-status {
+    color: var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+}
+
+.dash-today__left {
+    margin: var(--app-spacing-xs) 0 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+.dash-today__grid {
+    width: 100%;
+    margin-top: var(--app-spacing-m);
     border-collapse: separate;
     border-spacing: 0 3px;
+    font-family: var(--app-font-mono);
     font-size: var(--app-font-size-small);
     font-variant-numeric: tabular-nums;
     text-align: center;
 }
 
-.dash-today__month th {
+.dash-today__grid th {
     padding: 0 0 var(--app-spacing-xs);
-    font-weight: var(--app-font-weight-medium);
+    font-family: var(--app-font-family);
+    font-weight: var(--app-font-weight-semibold);
     color: var(--app-text-faint);
+    border-bottom: 1px solid var(--app-border);
 }
 
-.dash-today__month td {
+.dash-today__grid td {
     padding: 0;
 }
 
 .dash-today__day {
     position: relative;
     display: block;
-    width: 2.1em;
-    padding: 0.2em 0 0.45em;
+    padding: 0.25em 0 0.5em;
     line-height: 1.5em;
     color: var(--app-text-soft);
 }
 
+.dash-today__day.is-weekend {
+    color: var(--app-text-faint);
+}
+
+/* Days already behind you this month: a shaded run, like ticked-off ledger lines. */
 .dash-today__day.is-past {
     color: var(--app-brand-hover);
     background: var(--app-brand-soft);
@@ -170,11 +456,13 @@
     border-bottom-right-radius: var(--app-radius-m);
 }
 
+/* Today in ink, ringed in brass. */
 .dash-today__day.is-today {
     font-weight: var(--app-font-weight-bold);
     color: var(--app-bg);
     background: var(--app-text);
     border-radius: var(--app-radius-m);
+    box-shadow: 0 0 0 2px var(--app-surface), 0 0 0 3px var(--app-accent-target);
 }
 
 .dash-today__day.has-activity::after {
@@ -197,10 +485,6 @@
     margin: var(--app-spacing-xs) 0 0;
     font-size: var(--app-font-size-small);
     color: var(--app-text-muted);
-}
-
-.dash-today__legend[hidden] {
-    display: none;
 }
 
 .dash-section-title {
@@ -927,6 +1211,11 @@
     .dash-action__chevron svg {
         transition: color 150ms ease;
     }
+
+    .dash-today__bar-fill,
+    .dash-today__bar-pace {
+        transition: width 600ms ease-out, left 600ms ease-out;
+    }
 }
 
 @keyframes dash-fade-up {
@@ -1008,6 +1297,20 @@
     .dash-today__day.is-today {
         color: HighlightText;
         background: Highlight;
+    }
+
+    .dash-today__hour,
+    .dash-today__bar {
+        border: 1px solid CanvasText;
+    }
+
+    .dash-today__hour.is-past,
+    .dash-today__bar-fill {
+        background: Highlight;
+    }
+
+    .dash-today__bar-pace {
+        background: CanvasText;
     }
 
     .dash-today__day.has-activity::after {
