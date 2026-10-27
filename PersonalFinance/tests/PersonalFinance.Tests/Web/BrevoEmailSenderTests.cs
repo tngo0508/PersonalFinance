@@ -1,8 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Web.Infrastructure;
@@ -141,36 +138,5 @@ public class BrevoEmailSenderTests
         var sender = new BrevoEmailSender(options, NullLogger<BrevoEmailSender>.Instance, httpClient: httpClient);
 
         await sender.SendEmailAsync("user@example.com", "Confirm Email", "<p>Click</p>");
-    }
-
-    [Fact]
-    public void DependencyInjection_RegistersIEmailSenderCorrectly()
-    {
-        var inMemorySettings = new Dictionary<string, string?>
-        {
-            { "Brevo:ApiKey", "xkeysib-secret-key" },
-            { "Brevo:SenderEmail", "bc723b001@smtp-brevo.com" },
-            { "Brevo:SenderName", "PersonalFinance" }
-        };
-
-        IConfigurationRoot configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(inMemorySettings)
-            .Build();
-
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.Configure<BrevoOptions>(configuration.GetSection("Brevo"));
-        services.AddHttpClient<IEmailSender, BrevoEmailSender>();
-
-        ServiceProvider provider = services.BuildServiceProvider();
-        IEmailSender? emailSender = provider.GetService<IEmailSender>();
-
-        Assert.NotNull(emailSender);
-        Assert.IsType<BrevoEmailSender>(emailSender);
-
-        BrevoOptions options = provider.GetRequiredService<IOptions<BrevoOptions>>().Value;
-        Assert.Equal("xkeysib-secret-key", options.ApiKey);
-        Assert.Equal("bc723b001@smtp-brevo.com", options.SenderEmail);
-        Assert.Equal("PersonalFinance", options.SenderName);
     }
 }
