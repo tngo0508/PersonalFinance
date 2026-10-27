@@ -29,7 +29,8 @@ namespace PersonalFinance.Tests.BudgetTracker;
 /// <summary>
 /// The Budget Tracker page (slice L3, #362) rendered through the real compiled Razor view: no English chrome when the
 /// UI language is Vietnamese, amounts formatted by the money formatter in the request culture, and every string the
-/// page script needs carried in its <c>BudgetTracker.Js.</c> island.
+/// page script needs carried in its <c>BudgetTracker.Js.</c> island. It also guards the page's single month navigator
+/// and single Add Category per section (Reduce Clutter, #454).
 /// </summary>
 public sealed partial class BudgetTrackerPageLanguageTests : IAsyncLifetime
 {
@@ -152,6 +153,21 @@ public sealed partial class BudgetTrackerPageLanguageTests : IAsyncLifetime
             Assert.True(strings.ContainsKey(key), $"The page's island has no {key}.");
             Assert.Equal(TestLocalization.Vietnamese(key), strings[key]);
         });
+    }
+
+    // Reduce Clutter (#454): each action has one entry point on the page.
+    [Fact]
+    public async Task Page_HasOneMonthNavigator_AndOneAddCategoryPerSection()
+    {
+        string html = NotShown().Replace(await GetAsync(vietnamese: false), string.Empty);
+
+        Assert.Equal(1, Regex.Count(html, "class=\"bt-month-nav\""));
+        Assert.Equal(1, Regex.Count(html, "id=\"btnPrevMonth\""));
+        Assert.Equal(1, Regex.Count(html, "id=\"btnNextMonth\""));
+        Assert.Equal(1, Regex.Count(html, "id=\"btnAddExpenseCategory\""));
+        Assert.Equal(1, Regex.Count(html, "id=\"btnAddIncomeCategory\""));
+        // The expense and income section headers, and the Add Category modal's submit button.
+        Assert.Equal(3, Regex.Count(html, @">\s*Add Category\s*</button>"));
     }
 
     private async Task<string> GetAsync(bool vietnamese)
