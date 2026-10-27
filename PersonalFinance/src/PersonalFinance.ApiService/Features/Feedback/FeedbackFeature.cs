@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PersonalFinance.ApiService.Infrastructure;
 
 namespace PersonalFinance.ApiService.Features.Feedback;
@@ -11,6 +12,7 @@ internal static class FeedbackFeature
     /// <summary>Feedback that Accounts send to the operator, with its own submission limit.</summary>
     public static IServiceCollection AddFeedbackFeature(this IServiceCollection services)
     {
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddKeyedSingleton<IRateLimiterService>(FeedbackRateLimit.Key, (_, _) =>
             new RateLimiterService(FeedbackRateLimit.MaxSubmissionsPerWindow, FeedbackRateLimit.Window));

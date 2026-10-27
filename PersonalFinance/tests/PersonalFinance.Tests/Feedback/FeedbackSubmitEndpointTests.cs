@@ -31,7 +31,8 @@ public class FeedbackSubmitEndpointTests
     private static FeedbackApiController CreateController(AppDbContext db)
     {
         var service = new FeedbackService(db,
-            new RateLimiterService(FeedbackRateLimit.MaxSubmissionsPerWindow, FeedbackRateLimit.Window));
+            new RateLimiterService(FeedbackRateLimit.MaxSubmissionsPerWindow, FeedbackRateLimit.Window),
+            TimeProvider.System);
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "TestAuthType");
         return new FeedbackApiController(service, new SubmitFeedbackRequestValidator(),
             new ChangeFeedbackStatusRequestValidator(), new FeedbackListFilterValidator())

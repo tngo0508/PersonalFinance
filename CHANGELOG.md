@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.2.2] - 2026-10-27
+
+### Fixed
+
+- **Feedback Status change timestamp**: when an Admin changes a piece of Feedback's status, the ApiService now sets its `UpdatedAt` to the current UTC time, so the change has an audit timestamp like other updates (#122).
+  - The Feedback service reads the clock through the injected `TimeProvider`, which the Feedback Feature now registers.
+
 ## [12.2.1] - 2026-10-27
 
 ### Changed

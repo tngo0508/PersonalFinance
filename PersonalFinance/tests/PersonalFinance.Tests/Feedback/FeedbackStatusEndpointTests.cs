@@ -29,7 +29,7 @@ public class FeedbackStatusEndpointTests
     private static FeedbackApiController CreateController(AppDbContext db)
     {
         var service = new FeedbackService(db,
-            new RateLimiterService(5, TimeSpan.FromHours(1)));
+            new RateLimiterService(5, TimeSpan.FromHours(1)), TimeProvider.System);
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "admin-user")], "TestAuthType");
         return new FeedbackApiController(service, new SubmitFeedbackRequestValidator(),
             new ChangeFeedbackStatusRequestValidator(), new FeedbackListFilterValidator())
@@ -83,7 +83,7 @@ public class FeedbackStatusEndpointTests
 
         Assert.IsType<BadRequestObjectResult>(result);
         FeedbackAdminItemDto item = Assert.Single(await new FeedbackService(db,
-            new RateLimiterService(5, TimeSpan.FromHours(1))).ListAsync(FeedbackStatus.New));
+            new RateLimiterService(5, TimeSpan.FromHours(1)), TimeProvider.System).ListAsync(FeedbackStatus.New));
         Assert.Equal(id, item.Id);
     }
 
