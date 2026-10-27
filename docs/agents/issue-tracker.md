@@ -92,6 +92,12 @@ and a late run's timeout is cut so that it ends by 19:00. Trigger it by hand at 
   as every check on its head commit has finished, none failed, and the release check and `claude-review` both passed.
   A failing check or a draft waits for a human. The merge deploys like any other. This needs the `AGENT_GH_TOKEN`
   secret, because a merge made with `GITHUB_TOKEN` would not trigger the deploy or the Release.
+- **Rebases first**: before picking a ticket, a run looks for an open, non-draft `agent/issue-*` PR that now
+  conflicts with `main`. That usually happens because a sibling merged and both PRs touched `AppVersion` and
+  `CHANGELOG.md`. Rebasing it is the whole run, even when the open-PR cap is full. The agent re-bumps to the next
+  free version, moves its CHANGELOG section to the top, re-runs the checks and force-pushes, and the new CI run lets
+  Agent Auto-Merge merge it. A PR it cannot rebase gets `agent:rebase-failed` and waits for a human. Remove that label
+  to let the agent retry.
 - **Hands back** unclear tickets as `needs-info`, and ones needing a schema migration as `ready-for-human`, unless the
   issue carries `agent:migration-ok`. Unresolved review findings make the PR a draft. A failed or timed-out run moves
   the ticket to `ready-for-human`.
