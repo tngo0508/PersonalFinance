@@ -5,6 +5,7 @@ using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 namespace PersonalFinance.Tests.Analysis;
@@ -24,7 +25,7 @@ public class SpreadsheetSyncTests
         await db.SaveChangesAsync();
 
         MonthlyBudgetReportDto unreadable = BudgetSpreadsheetParser.Unavailable("Monthly budget 2026.xlsx", "file-1",
-            "The spreadsheet could not be downloaded from Google Drive.");
+            DriveResultMessages.DownloadFailed);
         var service = new SpreadsheetAnalysisService(db, new FixedReportReader(unreadable), new NoOpNotifications(),
             TestBudgetDataProviderFactory.Create(db), NullLogger<SpreadsheetAnalysisService>.Instance);
 
@@ -32,7 +33,8 @@ public class SpreadsheetSyncTests
             "Monthly budget 2026.xlsx", overwrite: true);
 
         Assert.False(result.Success);
-        Assert.Equal("The spreadsheet could not be downloaded from Google Drive.", result.ErrorMessage);
+        Assert.Equal(DriveResultMessages.DownloadFailed.Message, result.ErrorMessage);
+        Assert.Equal(ResultMessageKeys.GoogleDrive.DownloadFailed, result.Error?.Key);
         Assert.Equal(0, result.SnapshotsCreated);
         Assert.Empty(await db.SpreadsheetBudgetSnapshots.ToListAsync());
     }

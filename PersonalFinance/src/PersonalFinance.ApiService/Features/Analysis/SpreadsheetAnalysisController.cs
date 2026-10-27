@@ -114,6 +114,7 @@ public class SpreadsheetAnalysisController : ControllerBase
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage,
+            Error = result.Error,
             HasConflict = result.HasConflict,
             Conflicts = result.Conflicts.Select(c => new MonthConflictDto
             {

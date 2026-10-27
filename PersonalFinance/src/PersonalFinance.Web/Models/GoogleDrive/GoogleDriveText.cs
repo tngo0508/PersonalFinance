@@ -1,5 +1,8 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
+using PersonalFinance.Shared.DTOs.GoogleDrive;
+using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Web.Models.GoogleDrive;
@@ -7,7 +10,8 @@ namespace PersonalFinance.Web.Models.GoogleDrive;
 /// <summary>
 /// The Google Drive page's own wording in the request's Language (spec §2.1): file-type labels and how long ago a
 /// drive was synced. The ApiService sends file types in English, and the page also filters on that English value, so
-/// only the label is translated. Drive, folder and file names are the user's own and are never translated.
+/// only the label is translated. Drive, folder and file names are the user's own and are never translated. The error
+/// and warning messages of a Google Drive result are translated by their keyed entry (#405).
 /// </summary>
 public static class GoogleDriveText
 {
@@ -34,6 +38,40 @@ public static class GoogleDriveText
         return FileTypeLabels.TryGetValue(fileType, out Func<IStringLocalizer, string>? label)
             ? label(localizer)
             : fileType;
+    }
+
+    /// <summary>Translates a folder result's error and warning in place.</summary>
+    public static GoogleDriveFolderResponseDto Localize(IStringLocalizer localizer, GoogleDriveFolderResponseDto response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        response.ErrorMessage = ApiErrorMessages.Resolve(localizer, response.Error, response.ErrorMessage);
+        response.WarningMessage = ApiErrorMessages.Resolve(localizer, response.Warning, response.WarningMessage);
+        return response;
+    }
+
+    /// <summary>Translates a connection's error in place.</summary>
+    public static GoogleDriveConnectionDto Localize(IStringLocalizer localizer, GoogleDriveConnectionDto connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        connection.ErrorMessage = ApiErrorMessages.Resolve(localizer, connection.Error, connection.ErrorMessage);
+        return connection;
+    }
+
+    /// <summary>Translates why a budget report could not be read, in place.</summary>
+    public static MonthlyBudgetReportDto Localize(IStringLocalizer localizer, MonthlyBudgetReportDto report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        report.ErrorMessage = ApiErrorMessages.Resolve(localizer, report.Error, report.ErrorMessage);
+        return report;
+    }
+
+    /// <summary>Translates why no transactions could be read, in place.</summary>
+    public static SpreadsheetTransactionsDto Localize(IStringLocalizer localizer, SpreadsheetTransactionsDto transactions)
+    {
+        ArgumentNullException.ThrowIfNull(transactions);
+        transactions.ErrorMessage =
+            ApiErrorMessages.Resolve(localizer, transactions.Error, transactions.ErrorMessage);
+        return transactions;
     }
 
     /// <summary>

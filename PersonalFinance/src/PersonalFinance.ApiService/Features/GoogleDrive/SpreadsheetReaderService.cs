@@ -13,10 +13,6 @@ internal sealed class SpreadsheetReaderService : ISpreadsheetReader
 {
     private const string SampleDataSource = "Google Drive Spreadsheet (Actual Sample Data)";
     private const string SampleFileName = "Monthly budget 2026.xlsx";
-    private const string DownloadFailedMessage =
-        "The spreadsheet could not be downloaded from Google Drive. Check that the drive is still shared and your API key is valid.";
-    private const string NoTransactionsTableMessage =
-        "No transactions table was found in any sheet. Ensure the spreadsheet has a sheet named 'Transactions' with Date and Amount column headers.";
 
     private readonly IGoogleDriveFileSource _fileSource;
     private readonly ILogger<SpreadsheetReaderService> _logger;
@@ -37,7 +33,7 @@ internal sealed class SpreadsheetReaderService : ISpreadsheetReader
     {
         if (string.IsNullOrWhiteSpace(fileId))
         {
-            return BudgetSpreadsheetParser.Unavailable(fileName, fileId, "No spreadsheet was selected.");
+            return BudgetSpreadsheetParser.Unavailable(fileName, fileId, DriveResultMessages.NoFileSelected);
         }
 
         if (IsSampleFile(fileId))
@@ -69,7 +65,7 @@ internal sealed class SpreadsheetReaderService : ISpreadsheetReader
             unreadable = report;
         }
 
-        return unreadable ?? BudgetSpreadsheetParser.Unavailable(fileName, fileId, DownloadFailedMessage);
+        return unreadable ?? BudgetSpreadsheetParser.Unavailable(fileName, fileId, DriveResultMessages.DownloadFailed);
     }
 
     /// <inheritdoc />
@@ -104,7 +100,7 @@ internal sealed class SpreadsheetReaderService : ISpreadsheetReader
             // which only contains its first sheet.
             if (download.Format == SpreadsheetFormat.Xlsx && string.IsNullOrEmpty(result.ErrorMessage))
             {
-                result.ErrorMessage = NoTransactionsTableMessage;
+                BudgetSpreadsheetParser.SetError(result, DriveResultMessages.NoTransactionsSheet);
                 return result;
             }
 
@@ -117,7 +113,8 @@ internal sealed class SpreadsheetReaderService : ISpreadsheetReader
             FileId = fileId,
             IsLiveSpreadsheetData = false,
             DataSource = "Unavailable",
-            ErrorMessage = DownloadFailedMessage
+            ErrorMessage = DriveResultMessages.DownloadFailed.Message,
+            Error = DriveResultMessages.DownloadFailed
         };
     }
 

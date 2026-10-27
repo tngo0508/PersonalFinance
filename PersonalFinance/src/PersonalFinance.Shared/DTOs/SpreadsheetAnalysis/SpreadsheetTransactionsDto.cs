@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Contracts;
+
 namespace PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
 /// <summary>
@@ -11,6 +13,13 @@ public class SpreadsheetTransactionsDto
     public string DataSource { get; set; } = "Google Drive Spreadsheet (Actual Data)";
     public bool IsLiveSpreadsheetData { get; set; } = true;
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// <see cref="ErrorMessage"/> keyed, so the Web app can show it in the reader's language (#405). Null when
+    /// <see cref="ErrorMessage"/> is null or has no key.
+    /// </summary>
+    public ApiErrorEntryDto? Error { get; set; }
+
     public List<SpreadsheetTransactionDto> Transactions { get; set; } = new();
     public decimal TotalExpenses => Transactions.Where(t => t.Type == SpreadsheetTransactionDto.ExpenseType).Sum(t => t.Amount);
     public decimal TotalIncome => Transactions.Where(t => t.Type == SpreadsheetTransactionDto.IncomeType).Sum(t => t.Amount);

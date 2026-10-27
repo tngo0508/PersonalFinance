@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Contracts;
+
 namespace PersonalFinance.Shared.DTOs.GoogleDrive;
 
 /// <summary>
@@ -51,9 +53,21 @@ public class GoogleDriveFolderResponseDto
     public string? ErrorMessage { get; set; }
 
     /// <summary>
+    /// <see cref="ErrorMessage"/> keyed, so the Web app can show it in the reader's language (#405). Null when
+    /// <see cref="ErrorMessage"/> is null or has no key.
+    /// </summary>
+    public ApiErrorEntryDto? Error { get; set; }
+
+    /// <summary>
     /// Informational or warning message (e.g. guidance when demo mode / missing API key).
     /// </summary>
     public string? WarningMessage { get; set; }
+
+    /// <summary>
+    /// <see cref="WarningMessage"/> keyed, so the Web app can show it in the reader's language (#405). Null when
+    /// <see cref="WarningMessage"/> is null or has no key.
+    /// </summary>
+    public ApiErrorEntryDto? Warning { get; set; }
 
     /// <summary>
     /// Indicates whether the response contains simulated sample/demo data.
