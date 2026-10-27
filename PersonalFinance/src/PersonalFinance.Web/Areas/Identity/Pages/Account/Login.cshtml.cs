@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Web.Areas.Identity.Pages.Account;
 
@@ -15,15 +17,18 @@ public class LoginModel : PageModel
     private readonly ILogger<LoginModel> _logger;
     private readonly IApiServiceWarmer _apiServiceWarmer;
     private readonly IStringLocalizer _localizer;
+    private readonly IdleSignOutOptions _idleSignOut;
 
     public LoginModel(SignInManager<IdentityUser> signInManager, ILogger<LoginModel> logger,
         IApiServiceWarmer apiServiceWarmer,
-        IStringLocalizer localizer)
+        IStringLocalizer localizer,
+        IOptions<IdleSignOutOptions> idleSignOut)
     {
         _signInManager = signInManager;
         _logger = logger;
         _apiServiceWarmer = apiServiceWarmer;
         _localizer = localizer;
+        _idleSignOut = idleSignOut.Value;
     }
 
     [BindProperty]
@@ -36,6 +41,9 @@ public class LoginModel : PageModel
     [TempData]
     public string? ErrorMessage { get; set; }
 
+    /// <summary>Set when Idle Sign-out sent the browser here (<c>?idle=true</c>), so the page says why.</summary>
+    public string? IdleSignOutMessage { get; set; }
+
     public class InputModel
     {
         [Required(ErrorMessage = "Validation.Required")]
@@ -47,13 +55,15 @@ public class LoginModel : PageModel
         [DataType(DataType.Password)]
         [Display(Name = "Identity.Field.Password")]
         public string Password { get; set; } = string.Empty;
-
-        [Display(Name = "Identity.Field.RememberMe")]
-        public bool RememberMe { get; set; }
     }
 
-    public async Task OnGetAsync(string? returnUrl = null)
+    public async Task OnGetAsync(string? returnUrl = null, bool idle = false)
     {
+        if (idle)
+        {
+            IdleSignOutMessage = _localizer.Named("Account.Login.IdleSignedOut", ("minutes", _idleSignOut.TimeoutMinutes));
+        }
+
         // Start ApiService while the user types, so the Dashboard after sign-in does not hit a cold container.
         _ = _apiServiceWarmer.WarmUpAsync();
 
@@ -80,7 +90,8 @@ public class LoginModel : PageModel
 
         if (ModelState.IsValid)
         {
-            Microsoft.AspNetCore.Identity.SignInResult result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+            // Never persistent: the session ends when the browser closes (Idle Sign-out, #332).
+            Microsoft.AspNetCore.Identity.SignInResult result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, isPersistent: false, lockoutOnFailure: false);
             if (result.Succeeded)
             {
                 _logger.LogInformation("User logged in.");
@@ -88,7 +99,7 @@ public class LoginModel : PageModel
             }
             if (result.RequiresTwoFactor)
             {
-                return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
+                return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl });
             }
             if (result.IsLockedOut)
             {
