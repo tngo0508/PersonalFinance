@@ -27,6 +27,9 @@ public partial class PurposeNoteEndpointTests
     private const string Purpose = "Stop paying interest so we can save for a house";
     private const string NoteText = "Paying off the card first stops the interest that slows your house fund.";
 
+    // The Walk stores the IRS limits of this year's row; a real clock would test next year's limits from 1 January.
+    private static readonly DateTimeOffset Now = new(2026, 10, 24, 15, 30, 0, TimeSpan.Zero);
+
     private static AppDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"PurposeNoteEndpoint_{Guid.NewGuid():N}")
@@ -36,7 +39,7 @@ public partial class PurposeNoteEndpointTests
         string userId = UserId)
     {
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], "TestAuthType");
-        return new MoneyPrioritiesApiController(MoneyPrioritiesTestServices.Service(db, chatClient: chatClient),
+        return new MoneyPrioritiesApiController(MoneyPrioritiesTestServices.Service(db, new FixedTimeProvider(Now), chatClient),
             new SubmitPriorityWalkRequestValidator())
         {
             ControllerContext = new ControllerContext

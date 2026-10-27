@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.Shared.DTOs.Research;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Research;
 
@@ -37,12 +38,14 @@ public class CompanyProfileFixtureTests
             .BuildServiceProvider();
     }
 
+    // The fixture dates Example Corp's recent filings back from today; on this day its latest is 4 August 2026.
+    private static readonly DateTimeOffset FixtureNow = new(2026, 10, 24, 12, 0, 0, TimeSpan.Zero);
+
     private static async Task<CompanyLookupResultDto> LookUpFixture(string ticker)
     {
-        // The fixture dates Example Corp's recent filings back from today; on this day its latest is 4 August 2026.
         await using ServiceProvider provider = new ServiceCollection()
             .AddLogging()
-            .AddSingleton<TimeProvider>(new FixedTimeProvider(new DateTimeOffset(2026, 10, 24, 12, 0, 0, TimeSpan.Zero)))
+            .AddSingleton<TimeProvider>(new FixedTimeProvider(FixtureNow))
             .AddResearchFeature(new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { [ResearchFixtureSeeder.Setting] = "true" })
                 .Build(), new Environment(Environments.Development))
@@ -100,11 +103,6 @@ public class CompanyProfileFixtureTests
         Assert.Equal(["6-K", "20-F"], profile.Filings.Select(f => f.Form));
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
     private static async Task<CompanyPressReleasesResultDto> PressReleasesOfFixture(string ticker,
         DateTimeOffset? now = null)
     {
@@ -113,7 +111,7 @@ public class CompanyProfileFixtureTests
             .Build();
         await using ServiceProvider provider = new ServiceCollection()
             .AddLogging()
-            .AddSingleton<TimeProvider>(new FixedTimeProvider(now ?? DateTimeOffset.UtcNow))
+            .AddSingleton<TimeProvider>(new FixedTimeProvider(now ?? FixtureNow))
             .AddResearchFeature(configuration, new Environment(Environments.Development))
             .BuildServiceProvider();
         using IServiceScope scope = provider.CreateScope();

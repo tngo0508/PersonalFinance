@@ -6,6 +6,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.MoneyPriorities;
 
@@ -457,9 +458,4 @@ public class MoneyPrioritiesServiceTests
         Path = "S,Q1,Q2,Q3,Q4,L5",
         LeafId = "L5"
     };
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 }
