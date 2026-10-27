@@ -1,14 +1,10 @@
 @using Microsoft.AspNetCore.Antiforgery
-@using Microsoft.AspNetCore.Authorization
 @using PersonalFinance.Shared.Constants
 @using PersonalFinance.Web.Infrastructure
 <!DOCTYPE html>
 @inject IAntiforgery Antiforgery
-@inject IAuthorizationService AuthorizationService
 @inject Microsoft.Extensions.Options.IOptions<IdleSignOutOptions> IdleSignOut
 @{
-    var isAdmin = User.Identity?.IsAuthenticated == true
-                  && (await AuthorizationService.AuthorizeAsync(User, AppPolicies.RequireAdmin)).Succeeded;
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var currentController = ViewContext.RouteData.Values["controller"] as string;
     var pageTitle = ViewData["Title"] as string;
@@ -152,25 +148,7 @@
                     <span class="sidebar-link-icon"><i data-lucide="folder-open"></i></span>
                     <span class="sidebar-link-text">@L["Shell.Nav.GoogleDrive"]</span>
                 </a>
-                <a class="sidebar-link @(currentController == "Feedback" ? "active" : "")"
-                   asp-area="" asp-controller="Feedback" asp-action="Index" asp-route-from="@FeedbackSourcePage.From(Context.Request)">
-                    <span class="sidebar-link-icon"><i data-lucide="message-square"></i></span>
-                    <span class="sidebar-link-text">@L["Shell.Nav.SendFeedback"]</span>
-                </a>
             </div>
-
-            @if (isAdmin)
-            {
-                <!-- Admin -->
-                <div class="sidebar-group">
-                    <div class="sidebar-group-label">@L["Shell.Nav.Admin"]</div>
-                    <a class="sidebar-link @(currentController == "Admin" ? "active" : "")"
-                       asp-area="" asp-controller="Admin" asp-action="Index">
-                        <span class="sidebar-link-icon"><i data-lucide="shield-check"></i></span>
-                        <span class="sidebar-link-text">@L["Shell.Nav.AdminDashboard"]</span>
-                    </a>
-                </div>
-            }
         </nav>
     </aside>
 }
