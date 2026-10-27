@@ -102,4 +102,35 @@ public static class ResultMessageKeys
         /// <summary>The sync failed.</summary>
         public const string SyncFailed = "Analysis.Result.SyncFailed";
     }
+
+    /// <summary>
+    /// The keys of the AI Assistant's fixed replies: the text the server sends in place of a model-written chat reply or
+    /// News summary (#381).
+    /// </summary>
+    public static class AiAssistant
+    {
+        /// <summary>The OpenAI API key is not configured, so the chat is unavailable.</summary>
+        public const string Unavailable = "AiAssistant.Result.Unavailable";
+
+        /// <summary>The chat call failed.</summary>
+        public const string Failed = "AiAssistant.Result.Failed";
+
+        /// <summary>The model answered with no text.</summary>
+        public const string EmptyReply = "AiAssistant.Result.EmptyReply";
+
+        /// <summary>The scope filter refused an off-topic or instruction-like message.</summary>
+        public const string OffTopic = "AiAssistant.Result.OffTopic";
+
+        /// <summary>The scope filter answered small talk with a greeting.</summary>
+        public const string Greeting = "AiAssistant.Result.Greeting";
+
+        /// <summary>The message is longer than the <c>max</c> argument allows.</summary>
+        public const string TooLong = "AiAssistant.Result.TooLong";
+
+        /// <summary>The OpenAI API key is not configured, so News summaries are unavailable.</summary>
+        public const string SummaryUnavailable = "AiAssistant.Result.SummaryUnavailable";
+
+        /// <summary>The News summary call failed.</summary>
+        public const string SummaryFailed = "AiAssistant.Result.SummaryFailed";
+    }
 }

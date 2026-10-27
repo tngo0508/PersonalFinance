@@ -1,4 +1,6 @@
+using System.Text;
 using System.Text.RegularExpressions;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 
@@ -45,6 +47,13 @@ internal sealed class AiScopeFilter : IAiScopeFilter
         "category", "categories",
         "over budget", "under budget", "overspend", "underspend",
         // Advice-seeking phrases
+        // Vietnamese, for users whose Language is vi (#381): the same topics, matched as whole words
+        "ngân sách", "chi tiêu", "chi phí", "hóa đơn", "tiền thuê", "thế chấp", "giá",
+        "tiết kiệm", "mục tiêu", "quỹ khẩn cấp",
+        "nợ", "khoản vay", "vay", "thẻ tín dụng", "lãi", "lãi suất", "trả nợ",
+        "tài sản", "tài sản ròng", "giá trị tài sản ròng", "danh mục", "hưu trí", "nghỉ hưu", "đầu tư", "phân bổ",
+        "thu nhập", "lương", "thưởng", "thuế", "bảo hiểm",
+        "tài chính", "tiền", "ngân hàng", "tài khoản", "giao dịch", "lạm phát", "độc lập tài chính",
     ];
 
     /// <summary>
@@ -93,6 +102,7 @@ internal sealed class AiScopeFilter : IAiScopeFilter
         "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
         "howdy", "greetings", "welcome", "thanks", "thank you", "thx",
         "ty", "cheers", "appreciate it", "nice to meet you",
+        "xin chào", "chào", "chào bạn", "cảm ơn", "cám ơn", "cảm ơn bạn",
     ];
 
     /// <summary>
@@ -126,7 +136,8 @@ internal sealed class AiScopeFilter : IAiScopeFilter
             return null;
         }
 
-        string lowerMessage = message.ToLowerInvariant().Trim();
+        // FormC so a decomposed Vietnamese keyboard input matches the precomposed keywords
+        string lowerMessage = message.Normalize(NormalizationForm.FormC).ToLowerInvariant().Trim();
 
         // Check message length limit
         if (message.Length > AiAssistantMessages.MaxMessageLength)
@@ -135,6 +146,9 @@ internal sealed class AiScopeFilter : IAiScopeFilter
             {
                 Response = "Your message is too long. Please keep it under "
                           + AiAssistantMessages.MaxMessageLength + " characters.",
+                FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.TooLong,
+                    "Your message is too long. Keep it under {max} characters.",
+                    ErrorArgs.Number("max", AiAssistantMessages.MaxMessageLength)),
                 IsRefusal = true,
                 Disclaimer = null,
                 TimestampUtc = DateTime.UtcNow,
@@ -232,6 +246,7 @@ internal sealed class AiScopeFilter : IAiScopeFilter
         return new AiChatResponseDto
         {
             Response = AiAssistantMessages.OffTopicRefusal,
+            FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.OffTopic, AiAssistantMessages.OffTopicRefusal),
             IsRefusal = true,
             Disclaimer = null,
             TimestampUtc = DateTime.UtcNow,
@@ -246,6 +261,8 @@ internal sealed class AiScopeFilter : IAiScopeFilter
         return new AiChatResponseDto
         {
             Response = AiAssistantMessages.GreetingAcknowledgement,
+            FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.Greeting,
+                AiAssistantMessages.GreetingAcknowledgement),
             IsRefusal = true,
             Disclaimer = null,
             TimestampUtc = DateTime.UtcNow,

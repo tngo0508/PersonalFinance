@@ -37,7 +37,7 @@ public class ResearchFundFactsServiceTests
     {
         var settings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
-        var client = new SecEdgarClient(new HttpClient(sec), settings, new SecRequestGate(settings, timeProvider));
+        SecEdgarClient client = ResearchServiceFactory.SecClient(sec, settings);
         var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
         var research = new ResearchSettings { SectorsFirstYear = 2030, Funds = [Spy, Vti, Qqq], FundsFirstQuarter = new DateOnly(2026, 1, 1) };

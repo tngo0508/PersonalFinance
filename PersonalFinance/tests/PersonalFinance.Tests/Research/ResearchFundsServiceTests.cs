@@ -42,7 +42,7 @@ public class ResearchFundsServiceTests
     {
         var settings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
-        var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
+        SecEdgarClient client = ResearchServiceFactory.SecClient(handler, settings);
         // No Public Float frames are served and the World Bank is down, so the Sectors and World datasets fail on
         // their own; these tests read only funds.
         var research = new ResearchSettings { SectorsFirstYear = 2025, Funds = funds, FundsFirstQuarter = new DateOnly(2019, 10, 1) };
@@ -599,7 +599,7 @@ public class ResearchFundsServiceTests
     {
         var settings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
-        var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
+        SecEdgarClient client = ResearchServiceFactory.SecClient(handler, settings);
         var research = new ResearchSettings { SectorsFirstYear = 2025, Funds = funds, FundsFirstQuarter = new DateOnly(2019, 10, 1) };
         var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)))));
@@ -889,7 +889,7 @@ public class ResearchFundsServiceTests
     {
         var settings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
-        var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
+        SecEdgarClient client = ResearchServiceFactory.SecClient(handler, settings);
         var research = new ResearchSettings
         {
             SectorsFirstYear = 2025,

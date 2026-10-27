@@ -5,6 +5,7 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Models.AiAssistant;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -42,7 +43,7 @@ public class AiAssistantController : ControllerBase
         }
 
         AiChatResponseDto response = await _aiAssistantApi.SendChatMessageAsync(request);
-        return Ok(response);
+        return Ok(AiAssistantText.Localize(_localizer, response));
     }
 
     /// <summary>
@@ -57,6 +58,6 @@ public class AiAssistantController : ControllerBase
         }
 
         NewsArticleSummaryResponseDto response = await _aiAssistantApi.SummarizeArticleAsync(request);
-        return Ok(response);
+        return Ok(AiAssistantText.Localize(_localizer, response));
     }
 }

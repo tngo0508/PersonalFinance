@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [8.7.0] - 2026-10-26
+## [8.8.0] - 2026-10-26
 
 ### Added
 
@@ -20,6 +20,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Web builds the Priority Tree diagrams**: the ApiService sends the tree (node ids, kinds, edges, English labels) and the path's node ids instead of finished Mermaid text and English sentences; Web writes the diagram texts and the path sentences in the request's language. The ApiService stays language-free (ADR 0017).
   - `PriorityDiagramText` and its palette moved from the ApiService to `PersonalFinance.Web/Models/MoneyPriorities/`; a translated label is kept on one line and its quotes escaped, so it cannot add a Mermaid statement.
   - The page's result JSON now nests the Walk under `walk`, beside `pathSentences`, `wholeTreeDiagram` and `pathViewDiagram`.
+
+## [8.7.0] - 2026-10-26
+
+### Added
+
+- **AI Assistant text in the user's Language**: everything the AI Assistant shows around a chat reply now follows the stored Language, not only the reply itself (#381).
+  - Chat widget: the launcher, header, buttons, placeholder, input hint, greetings, quick-action chips (and the message each sends), status lines and footer disclaimer.
+  - Fixed replies: the no-API-key, failed-call, empty-reply, off-topic, greeting and too-long chat replies, and the no-key and failed News summary messages, carry a keyed `FixedText` entry (`ResultMessageKeys.AiAssistant`) that Web resolves. Web also translates the disclaimer and the monthly budget warning.
+  - News summaries are written in the user's Language, whatever language the article is in. The headline and link stay as sourced.
+  - New Purpose Notes are written in the user's Language. A saved note keeps the language it was written in and is not rewritten when the Language changes.
+- **Glossary terms**: "AI assistant" for the Vietnamese translation.
+
+### Fixed
+
+- **Vietnamese chat messages refused as off-topic**: the AI scope filter knew only English finance and greeting words, so a message typed in Vietnamese, and now the translated quick actions, got the off-topic refusal without reaching the model. It now also matches Vietnamese finance terms and greetings, on Unicode-normalized (NFC) input.
+
+### Changed
+
+- **Chat widget DOM**: the widget builds its elements with `textContent` instead of `innerHTML`.
 
 ## [8.6.0] - 2026-10-26
 
