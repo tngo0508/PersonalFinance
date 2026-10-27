@@ -119,7 +119,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
         return new PriorityTreeDiagramDto
         {
             TreeVersion = tree.Version,
-            WholeTreeDiagram = PriorityDiagramText.WholeTree(tree, PriorityDiagramPalette.Light),
+            Tree = PriorityWalkMapping.ToDto(tree),
             Thresholds = new PriorityTreeThresholdsDto
             {
                 HighInterestAprPercent = PriorityTreeThresholds.HighInterestAprPercent,
@@ -231,7 +231,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
     private PriorityWalkResultDto BuildResult(PriorityWalk walk)
     {
         (PriorityTree tree, PriorityPath path, RetirementContributionLimits limits, PriorityLeafFigures figures,
-            string leafLabel, IReadOnlyList<string> pathSentences) = View(walk);
+            string leafLabel, IReadOnlyList<string> _) = View(walk);
         PriorityAnswers answers = path.Answers;
 
         return new PriorityWalkResultDto
@@ -246,9 +246,8 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
             Purpose = walk.Purpose,
             Answers = PriorityWalkMapping.ToAnswersDto(walk.Purpose, answers),
             Figures = PriorityWalkMapping.ToDto(figures, limits),
-            PathSentences = pathSentences.ToList(),
-            WholeTreeDiagram = PriorityDiagramText.WholeTree(tree, path.NodeIds, PriorityDiagramPalette.Light),
-            PathViewDiagram = PriorityDiagramText.PathView(tree, path.NodeIds, PriorityDiagramPalette.Light),
+            PathNodeIds = path.NodeIds.ToList(),
+            Tree = PriorityWalkMapping.ToDto(tree),
             LimitsTaxYear = walk.LimitsTaxYear,
             Assumptions = new PriorityAssumptionsDto
             {

@@ -1,22 +1,31 @@
+using Microsoft.Extensions.Localization;
 using PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
+using PersonalFinance.Shared.DTOs.MoneyPriorities;
+using PersonalFinance.Tests.TestSupport;
+using PersonalFinance.Web.Models.MoneyPriorities;
 
 namespace PersonalFinance.Tests.MoneyPriorities;
 
 /// <summary>
-/// The Mermaid texts generated from Priority Tree version 1. Expected classes and <c>linkStyle</c> indices are read off
-/// the spec's tree (#315) and its 12 edges in authored order, not derived from the generator.
+/// The Mermaid texts Web generates from Priority Tree version 1, in English. Expected classes and <c>linkStyle</c>
+/// indices are read off the spec's tree (#315) and its 12 edges in authored order, not derived from the generator.
 /// </summary>
-public class PriorityDiagramTextTests
+public sealed class PriorityDiagramTextTests : IDisposable
 {
-    private static readonly PriorityTree Tree = PriorityTreeV1.Tree;
+    private static readonly PriorityTreeDto Tree = MoneyPrioritiesTestServices.TreeV1();
     private static readonly PriorityDiagramPalette Light = PriorityDiagramPalette.Light;
+    private static readonly IStringLocalizer L = TestLocalization.Localizer;
+
+    private readonly UiCultureScope _culture = new("en");
+
+    public void Dispose() => _culture.Dispose();
 
     private static string[] Lines(string text) => text.Split('\n');
 
     [Fact]
     public void WholeTree_BeforeASubmit_ClassesEveryNodeByItsKind()
     {
-        string text = PriorityDiagramText.WholeTree(Tree, Light);
+        string text = PriorityDiagramText.WholeTree(L, Tree, Light);
 
         string[] lines = Lines(text);
         Assert.Equal("flowchart TD", lines[0]);
@@ -57,7 +66,7 @@ public class PriorityDiagramTextTests
     {
         string[] pathIds = path.Split(',');
 
-        string[] lines = Lines(PriorityDiagramText.WholeTree(Tree, pathIds, Light));
+        string[] lines = Lines(PriorityDiagramText.WholeTree(L, Tree, pathIds, Light));
 
         foreach (string id in AllNodeIds)
         {
@@ -72,7 +81,7 @@ public class PriorityDiagramTextTests
     [MemberData(nameof(EveryLeafPath))]
     public void WholeTree_WithAPath_StylesThePathsEdgesByTheirIndexInTheTree(string _, string path, string edgeIndices)
     {
-        string[] lines = Lines(PriorityDiagramText.WholeTree(Tree, path.Split(','), Light));
+        string[] lines = Lines(PriorityDiagramText.WholeTree(L, Tree, path.Split(','), Light));
 
         Assert.Contains("  linkStyle default stroke:#D6DEDB,stroke-width:1px,color:#5B6B78", lines);
         Assert.Contains($"  linkStyle {edgeIndices} stroke:#1D6A50,stroke-width:3px,color:#14283B", lines);
@@ -81,7 +90,7 @@ public class PriorityDiagramTextTests
     [Fact]
     public void WholeTree_DrawsEveryEdgeInAuthoredOrder_SoLinkStyleIndicesMatch()
     {
-        string[] edgeLines = Lines(PriorityDiagramText.WholeTree(Tree, Light))
+        string[] edgeLines = Lines(PriorityDiagramText.WholeTree(L, Tree, Light))
             .Where(line => line.Contains("-->", StringComparison.Ordinal))
             .ToArray();
 
@@ -121,7 +130,7 @@ public class PriorityDiagramTextTests
     {
         string[] pathIds = path.Split(',');
 
-        string[] lines = Lines(PriorityDiagramText.PathView(Tree, pathIds, Light));
+        string[] lines = Lines(PriorityDiagramText.PathView(L, Tree, pathIds, Light));
 
         string[] declaredIds = lines
             .Where(line => line.Contains('"') && !line.Contains("-->", StringComparison.Ordinal)
@@ -146,8 +155,8 @@ public class PriorityDiagramTextTests
     {
         string[] path = ["S", "Q1", "Q2", "Q3", "L3"];
 
-        string[] pathView = Lines(PriorityDiagramText.PathView(Tree, path, Light));
-        string[] wholeTree = Lines(PriorityDiagramText.WholeTree(Tree, path, Light));
+        string[] pathView = Lines(PriorityDiagramText.PathView(L, Tree, path, Light));
+        string[] wholeTree = Lines(PriorityDiagramText.WholeTree(L, Tree, path, Light));
 
         Assert.Contains("  S([\"Extra money each month\"])", pathView);
         Assert.Contains("  Q1(\"Debt with APR of 7% or more?\")", pathView);
@@ -161,9 +170,9 @@ public class PriorityDiagramTextTests
     {
         string[] path = ["S", "Q1", "Q2", "L2"];
 
-        string before = PriorityDiagramText.WholeTree(Tree, Light);
-        string whole = PriorityDiagramText.WholeTree(Tree, path, Light);
-        string pathView = PriorityDiagramText.PathView(Tree, path, Light);
+        string before = PriorityDiagramText.WholeTree(L, Tree, Light);
+        string whole = PriorityDiagramText.WholeTree(L, Tree, path, Light);
+        string pathView = PriorityDiagramText.PathView(L, Tree, path, Light);
 
         Assert.Equal(["flowchart TD", "  accTitle: Priority Tree", "  accDescr: The whole tree before any answers"], Lines(before)[..3]);
         Assert.Equal(["flowchart TD", "  accTitle: Priority Tree", "  accDescr: Suggested path ending at: Build the emergency fund to 3 months"], Lines(whole)[..3]);
@@ -173,25 +182,35 @@ public class PriorityDiagramTextTests
     [Fact]
     public void DimmedText_UsesTheMutedGreyThatKeepsContrast()
     {
-        string text = PriorityDiagramText.WholeTree(Tree, ["S", "Q1", "L1"], Light);
+        string text = PriorityDiagramText.WholeTree(L, Tree, ["S", "Q1", "L1"], Light);
 
         Assert.Contains("  classDef dim fill:#F8FAF9,stroke:#E1E7E4,color:#5B6B78", Lines(text));
         Assert.DoesNotContain("#8796A2", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Generators_TakeOnlyTheTreeNodeIdsAndAPalette_NeverTheAnswers()
+    public void Generators_TakeOnlyTheLocalizerTreeNodeIdsAndAPalette_NeverTheAnswers()
     {
-        Type[] allowed = [typeof(PriorityTree), typeof(IReadOnlyList<string>), typeof(PriorityDiagramPalette)];
+        Type[] webAllowed =
+            [typeof(IStringLocalizer), typeof(PriorityTreeDto), typeof(IReadOnlyList<string>), typeof(PriorityDiagramPalette)];
+        Type[] apiAllowed = [typeof(PriorityTree), typeof(IReadOnlyList<string>)];
 
-        Type[] parameterTypes = new[] { typeof(PriorityDiagramText), typeof(PriorityPathSentences) }
-            .SelectMany(type => type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+        Type[] webParameters = typeof(PriorityDiagramText)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Append(typeof(MoneyPrioritiesText).GetMethod(nameof(MoneyPrioritiesText.PathSentences))!)
+            .SelectMany(method => method.GetParameters())
+            .Select(parameter => parameter.ParameterType)
+            .ToArray();
+        Type[] apiParameters = typeof(PriorityPathSentences)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
             .SelectMany(method => method.GetParameters())
             .Select(parameter => parameter.ParameterType)
             .ToArray();
 
-        Assert.NotEmpty(parameterTypes);
-        Assert.All(parameterTypes, type => Assert.Contains(type, allowed));
+        Assert.NotEmpty(webParameters);
+        Assert.All(webParameters, type => Assert.Contains(type, webAllowed));
+        Assert.NotEmpty(apiParameters);
+        Assert.All(apiParameters, type => Assert.Contains(type, apiAllowed));
     }
 
     [Theory]
@@ -206,9 +225,10 @@ public class PriorityDiagramTextTests
     {
         string[] pathIds = path.Length == 0 ? [] : path.Split(',');
 
-        Assert.Throws<ArgumentException>(() => PriorityDiagramText.WholeTree(Tree, pathIds, Light));
-        Assert.Throws<ArgumentException>(() => PriorityDiagramText.PathView(Tree, pathIds, Light));
-        Assert.Throws<ArgumentException>(() => PriorityPathSentences.For(Tree, pathIds));
+        Assert.Throws<ArgumentException>(() => PriorityDiagramText.WholeTree(L, Tree, pathIds, Light));
+        Assert.Throws<ArgumentException>(() => PriorityDiagramText.PathView(L, Tree, pathIds, Light));
+        Assert.Throws<ArgumentException>(() => MoneyPrioritiesText.PathSentences(L, Tree, pathIds));
+        Assert.Throws<ArgumentException>(() => PriorityPathSentences.For(PriorityTreeV1.Tree, pathIds));
     }
 
     [Theory]
@@ -220,9 +240,9 @@ public class PriorityDiagramTextTests
     {
         PriorityDiagramPalette palette = Light with { Ink = colour };
 
-        Assert.Throws<ArgumentException>(() => PriorityDiagramText.WholeTree(Tree, palette));
-        Assert.Throws<ArgumentException>(() => PriorityDiagramText.WholeTree(Tree, ["S", "Q1", "L1"], palette));
-        Assert.Throws<ArgumentException>(() => PriorityDiagramText.PathView(Tree, ["S", "Q1", "L1"], palette));
+        Assert.Throws<ArgumentException>(() => PriorityDiagramText.WholeTree(L, Tree, palette));
+        Assert.Throws<ArgumentException>(() => PriorityDiagramText.WholeTree(L, Tree, ["S", "Q1", "L1"], palette));
+        Assert.Throws<ArgumentException>(() => PriorityDiagramText.PathView(L, Tree, ["S", "Q1", "L1"], palette));
     }
 
     [Fact]
@@ -242,9 +262,10 @@ public class PriorityDiagramTextTests
 
         string all = string.Join(
             Environment.NewLine,
-            PriorityDiagramText.WholeTree(Tree, path.NodeIds, Light),
-            PriorityDiagramText.PathView(Tree, path.NodeIds, Light),
-            string.Join(Environment.NewLine, PriorityPathSentences.For(Tree, path.NodeIds)));
+            PriorityDiagramText.WholeTree(L, Tree, path.NodeIds, Light),
+            PriorityDiagramText.PathView(L, Tree, path.NodeIds, Light),
+            string.Join(Environment.NewLine, MoneyPrioritiesText.PathSentences(L, Tree, path.NodeIds)),
+            string.Join(Environment.NewLine, PriorityPathSentences.For(PriorityTreeV1.Tree, path.NodeIds)));
 
         Assert.Equal("L6", path.LeafId);
         foreach (string value in new[] { "98", "765", "11.5", "37", "Age60To63", "60 to 63" })

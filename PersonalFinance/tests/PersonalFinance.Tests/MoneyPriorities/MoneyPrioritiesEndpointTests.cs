@@ -130,13 +130,13 @@ public class MoneyPrioritiesEndpointTests
     }
 
     [Fact]
-    public async Task Tree_ReturnsTheUnhighlightedWholeTree()
+    public async Task Tree_ReturnsTheWholeTree()
     {
         await using AppDbContext db = CreateContext();
 
         IActionResult result = CreateController(db).Tree();
 
         PriorityTreeDiagramDto tree = Assert.IsType<PriorityTreeDiagramDto>(Assert.IsType<OkObjectResult>(result).Value);
-        Assert.StartsWith("flowchart TD", tree.WholeTreeDiagram, StringComparison.Ordinal);
+        Assert.Equal(13, tree.Tree.Nodes.Count);
     }
 }

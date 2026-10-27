@@ -110,7 +110,8 @@ public class MoneyPrioritiesLocalizationTests
 
         IActionResult result = await controller.Submit(new SubmitPriorityWalkRequest { MonthlyAmount = 500m, DebtApr = 22m });
 
-        PriorityWalkResultDto walk = Assert.IsType<PriorityWalkResultDto>(Assert.IsType<JsonResult>(result).Value);
+        PriorityWalkResultDto walk =
+            Assert.IsType<MoneyPrioritiesResultViewModel>(Assert.IsType<JsonResult>(result).Value).Walk;
         Assert.Equal("Trả nợ lãi cao trước", walk.LeafLabel);
         Assert.Equal("Trả nợ lãi cao trước.", walk.HeadlineLeafLabel);
         Assert.Equal("Chỉ là ước tính.", walk.Disclaimer);
@@ -128,7 +129,8 @@ public class MoneyPrioritiesLocalizationTests
 
         IActionResult result = await controller.Walk(3);
 
-        PriorityWalkResultDto walk = Assert.IsType<PriorityWalkResultDto>(Assert.IsType<JsonResult>(result).Value);
+        PriorityWalkResultDto walk =
+            Assert.IsType<MoneyPrioritiesResultViewModel>(Assert.IsType<JsonResult>(result).Value).Walk;
         Assert.Equal("A leaf from a later tree", walk.LeafLabel);
         Assert.Equal("A leaf from a later tree.", walk.HeadlineLeafLabel);
         Assert.Equal("Chỉ là ước tính.", walk.Disclaimer);
@@ -378,7 +380,23 @@ public class MoneyPrioritiesLocalizationTests
             LeafId = leafId,
             LeafLabel = label,
             HeadlineLeafLabel = label + ".",
-            Disclaimer = MoneyPrioritiesMessages.EstimateDisclaimer
+            Disclaimer = MoneyPrioritiesMessages.EstimateDisclaimer,
+            PathNodeIds = ["S", "Q1", leafId],
+            Tree = new PriorityTreeDto
+            {
+                Version = 1,
+                Nodes =
+                [
+                    new PriorityTreeNodeDto { Id = "S", Kind = PriorityNodeKind.Start, Label = "Extra money each month" },
+                    new PriorityTreeNodeDto { Id = "Q1", Kind = PriorityNodeKind.Question, Label = "Debt with APR of 7% or more?" },
+                    new PriorityTreeNodeDto { Id = leafId, Kind = PriorityNodeKind.Leaf, Label = label }
+                ],
+                Edges =
+                [
+                    new PriorityTreeEdgeDto { From = "S", To = "Q1" },
+                    new PriorityTreeEdgeDto { From = "Q1", To = leafId, Label = "Yes" }
+                ]
+            }
         };
     }
 

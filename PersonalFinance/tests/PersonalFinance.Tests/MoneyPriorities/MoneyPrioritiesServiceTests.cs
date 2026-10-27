@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.MoneyPriorities;
+using PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
@@ -110,13 +111,10 @@ public class MoneyPrioritiesServiceTests
         Assert.Null(result.Figures.EmergencyFund);
         Assert.Empty(result.Figures.Scenarios);
 
-        Assert.Equal(
-            ["Debt with APR of 7% or more? Yes.", "Suggested priority: Pay down the high-interest debt first."],
-            result.PathSentences);
-        Assert.StartsWith("flowchart TD", result.WholeTreeDiagram, StringComparison.Ordinal);
-        Assert.Contains("  linkStyle 0,1 ", result.WholeTreeDiagram, StringComparison.Ordinal);
-        Assert.StartsWith("flowchart TD", result.PathViewDiagram, StringComparison.Ordinal);
-        Assert.DoesNotContain("Q2", result.PathViewDiagram, StringComparison.Ordinal);
+        Assert.Equal(["S", "Q1", "L1"], result.PathNodeIds);
+        Assert.Equal(1, result.Tree.Version);
+        Assert.Equal(13, result.Tree.Nodes.Count);
+        Assert.Equal(12, result.Tree.Edges.Count);
         Assert.Null(result.LimitsTaxYear);
         Assert.Equal(MoneyPrioritiesMessages.EstimateDisclaimer, result.Disclaimer);
         Assert.Equal(7m, result.Assumptions.BaseReturnPercent);
@@ -336,7 +334,7 @@ public class MoneyPrioritiesServiceTests
         Assert.Equal("Retire early", result.Purpose);
         Assert.Equal(86_542.40m,
             decimal.Round(result.Figures.Scenarios.Single(s => s.Scenario == PriorityGrowthScenario.Base).Balance, 2));
-        Assert.Equal(5, result.PathSentences.Count);
+        Assert.Equal(["S", "Q1", "Q2", "Q3", "Q4", "L5"], result.PathNodeIds);
         Assert.Equal(10, result.Answers.HorizonYears);
     }
 
@@ -414,18 +412,18 @@ public class MoneyPrioritiesServiceTests
     }
 
     [Fact]
-    public void GetTree_ReturnsTheWholeTree_WithNothingHighlighted()
+    public void GetTree_ReturnsTheAuthoredTree_InAuthoredOrder()
     {
         using AppDbContext db = CreateContext();
 
         PriorityTreeDiagramDto tree = CreateService(db).GetTree();
 
         Assert.Equal(1, tree.TreeVersion);
-        string[] lines = tree.WholeTreeDiagram.Split('\n');
-        Assert.Equal("flowchart TD", lines[0]);
-        Assert.Contains("  class L7 leaf", lines);
-        Assert.DoesNotContain(lines, line => line.StartsWith("  linkStyle ", StringComparison.Ordinal)
-                                             && !line.StartsWith("  linkStyle default", StringComparison.Ordinal));
+        Assert.Equal(1, tree.Tree.Version);
+        Assert.Equal(PriorityTreeV1.Tree.Nodes.Select(node => (node.Id, node.Kind, node.Label)),
+            tree.Tree.Nodes.Select(node => (node.Id, node.Kind, node.Label)));
+        Assert.Equal(PriorityTreeV1.Tree.Edges.Select(edge => (edge.From, edge.To, edge.Label)),
+            tree.Tree.Edges.Select(edge => (edge.From, edge.To, edge.Label)));
     }
 
     [Fact]

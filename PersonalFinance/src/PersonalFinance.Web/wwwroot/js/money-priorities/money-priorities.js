@@ -460,10 +460,11 @@
 
     /**
      * Shows a Walk in the result card and the Priority Tree with its path highlighted.
-     * @param {Object} result - The PriorityWalkResultDto (camelCase).
+     * @param {Object} view - The MoneyPrioritiesResultViewModel (camelCase): the Walk, its path sentences and diagrams.
      * @returns {Promise<void>} Resolves when the diagram has been drawn (or has failed quietly).
      */
-    async function showResult (result) {
+    async function showResult (view) {
+        const result = view.walk || {};
         byId('mpEmpty').hidden = true;
         byId('mpResult').hidden = false;
         const headline = byId('mpHeadline');
@@ -472,10 +473,10 @@
             leaf: result.headlineLeafLabel
         });
         byId('mpFigures').replaceChildren(...figureNodes(result));
-        byId('mpPath').replaceChildren(...(result.pathSentences || []).map((sentence) => el('li', null, sentence)));
+        byId('mpPath').replaceChildren(...(view.pathSentences || []).map((sentence) => el('li', null, sentence)));
         byId('mpAssumptions').replaceChildren(...assumptionNodes(result));
         startPurposeNote(result);
-        await showDiagram({ wholeTree: result.wholeTreeDiagram, pathView: result.pathViewDiagram });
+        await showDiagram({ wholeTree: view.wholeTreeDiagram, pathView: view.pathViewDiagram });
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -700,12 +701,12 @@
     async function viewWalk (walkId) {
         showEarlierError('');
         const outcome = await send(`/MoneyPriorities/Walk/${encodeURIComponent(walkId)}`, 'GET');
-        if (!outcome.ok || !outcome.body) {
+        if (!outcome.ok || !outcome.body || !outcome.body.walk) {
             showEarlierError(errorMessage(outcome));
             return;
         }
         clearErrors();
-        fillForm(outcome.body.answers);
+        fillForm(outcome.body.walk.answers);
         await showResult(outcome.body);
         const headline = byId('mpHeadline');
         headline.scrollIntoView({ block: 'nearest' });

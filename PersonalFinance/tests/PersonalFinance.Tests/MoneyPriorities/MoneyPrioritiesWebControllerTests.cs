@@ -28,14 +28,12 @@ namespace PersonalFinance.Tests.MoneyPriorities;
 /// </summary>
 public class MoneyPrioritiesWebControllerTests
 {
-    private const string TreeText = "flowchart TD\n  S --> Q1";
-
     [Fact]
     public async Task Index_ShowsTheUnhighlightedTree_EarlierResults_AndTheLatestAnswersForPreFill()
     {
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
-            new PriorityTreeDiagramDto { TreeVersion = 1, WholeTreeDiagram = TreeText });
+            MoneyPrioritiesTestServices.TreeDiagramV1());
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>
         {
             new() { WalkId = 9, MonthlyAmount = 500m, LeafId = "L1", LeafLabel = "Pay down the high-interest debt first" },
@@ -52,7 +50,8 @@ public class MoneyPrioritiesWebControllerTests
 
         ViewResult view = Assert.IsType<ViewResult>(result);
         MoneyPrioritiesViewModel model = Assert.IsType<MoneyPrioritiesViewModel>(view.Model);
-        Assert.Equal(TreeText, model.WholeTreeDiagram);
+        Assert.StartsWith("flowchart TD", model.WholeTreeDiagram, StringComparison.Ordinal);
+        Assert.Contains("  class L7 leaf", model.WholeTreeDiagram.Split('\n'));
         Assert.Equal([9, 4], model.RecentWalks.Select(w => w.WalkId));
         Assert.NotNull(model.LatestAnswers);
         Assert.Equal(22.99m, model.LatestAnswers.DebtApr);
@@ -84,7 +83,7 @@ public class MoneyPrioritiesWebControllerTests
     {
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
-            new PriorityTreeDiagramDto { TreeVersion = 1, WholeTreeDiagram = TreeText });
+            MoneyPrioritiesTestServices.TreeDiagramV1());
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
         MoneyPrioritiesController controller = CreateController(api);
 
@@ -99,7 +98,7 @@ public class MoneyPrioritiesWebControllerTests
     {
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
-            new PriorityTreeDiagramDto { TreeVersion = 1, WholeTreeDiagram = TreeText });
+            MoneyPrioritiesTestServices.TreeDiagramV1());
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
         MoneyPrioritiesController controller = CreateController(api);
 
@@ -114,7 +113,7 @@ public class MoneyPrioritiesWebControllerTests
     {
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync),
-            new PriorityTreeDiagramDto { TreeVersion = 1, WholeTreeDiagram = TreeText });
+            MoneyPrioritiesTestServices.TreeDiagramV1());
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetRecentWalksAsync), new List<PriorityWalkSummaryDto>());
         MoneyPrioritiesController controller = CreateController(api);
 
@@ -135,7 +134,8 @@ public class MoneyPrioritiesWebControllerTests
             LeafId = "L1",
             HeadlineLeafLabel = "Pay down the high-interest debt first.",
             MonthlyAmount = 500m,
-            PathSentences = ["Your highest debt APR is 7% or more.", "Pay down the high-interest debt first."]
+            PathNodeIds = ["S", "Q1", "L1"],
+            Tree = MoneyPrioritiesTestServices.TreeV1()
         };
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.SubmitWalkAsync), walk);
@@ -146,8 +146,14 @@ public class MoneyPrioritiesWebControllerTests
             MonthlyAmount = 500m, DebtApr = 22.99m, DebtBalance = 5000m, AgeBand = RetirementAgeBand.Under50
         });
 
-        JsonResult json = Assert.IsType<JsonResult>(result);
-        Assert.Same(walk, json.Value);
+        MoneyPrioritiesResultViewModel view =
+            Assert.IsType<MoneyPrioritiesResultViewModel>(Assert.IsType<JsonResult>(result).Value);
+        Assert.Same(walk, view.Walk);
+        Assert.Equal(
+            ["Debt with APR of 7% or more? Yes.", "Suggested priority: Pay down the high-interest debt first."],
+            view.PathSentences);
+        Assert.Contains("  class L1 chosen", view.WholeTreeDiagram.Split('\n'));
+        Assert.DoesNotContain("Q2", view.PathViewDiagram, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -215,14 +221,20 @@ public class MoneyPrioritiesWebControllerTests
     [Fact]
     public async Task Walk_ReturnsTheWalkAsJson()
     {
-        var walk = new PriorityWalkResultDto { WalkId = 4, LeafId = "L2" };
+        var walk = new PriorityWalkResultDto
+        {
+            WalkId = 4, LeafId = "L2", PathNodeIds = ["S", "Q1", "Q2", "L2"], Tree = MoneyPrioritiesTestServices.TreeV1()
+        };
         (IMoneyPrioritiesApi api, ApiProxy<IMoneyPrioritiesApi> proxy) = ApiProxy.Create<IMoneyPrioritiesApi>();
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetWalkAsync), walk);
         MoneyPrioritiesController controller = CreateController(api);
 
         IActionResult result = await controller.Walk(4);
 
-        Assert.Same(walk, Assert.IsType<JsonResult>(result).Value);
+        MoneyPrioritiesResultViewModel view =
+            Assert.IsType<MoneyPrioritiesResultViewModel>(Assert.IsType<JsonResult>(result).Value);
+        Assert.Same(walk, view.Walk);
+        Assert.Equal("Suggested priority: Build the emergency fund to 3 months.", view.PathSentences[^1]);
     }
 
     [Fact]

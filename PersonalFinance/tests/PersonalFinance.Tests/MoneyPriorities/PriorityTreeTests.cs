@@ -1,4 +1,5 @@
 using PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
+using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Tests.MoneyPriorities;
 

@@ -1,7 +1,10 @@
-namespace PersonalFinance.ApiService.Features.MoneyPriorities.Domain;
+using System.Text.Json.Serialization;
+
+namespace PersonalFinance.Shared.Enums;
 
 /// <summary>What a Priority Tree node is: the one start node, a question, or a leaf (a suggested priority).</summary>
-internal enum PriorityNodeKind
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PriorityNodeKind
 {
     Start = 1,
     Question = 2,

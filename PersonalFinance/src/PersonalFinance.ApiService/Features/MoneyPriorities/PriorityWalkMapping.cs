@@ -18,6 +18,14 @@ internal static class PriorityWalkMapping
             ? PriorityTreeV1.Tree
             : throw new InvalidOperationException($"Priority Tree version {version} is not authored.");
 
+    /// <summary>The tree as the result DTOs carry it: its nodes and edges in authored order, with their English labels.</summary>
+    public static PriorityTreeDto ToDto(PriorityTree tree) => new()
+    {
+        Version = tree.Version,
+        Nodes = tree.Nodes.Select(node => new PriorityTreeNodeDto { Id = node.Id, Kind = node.Kind, Label = node.Label }).ToList(),
+        Edges = tree.Edges.Select(edge => new PriorityTreeEdgeDto { From = edge.From, To = edge.To, Label = edge.Label }).ToList()
+    };
+
     /// <summary>The answers of a validated request (the validator guarantees the two required answers).</summary>
     public static PriorityAnswers ToAnswers(SubmitPriorityWalkRequest request) => new()
     {
