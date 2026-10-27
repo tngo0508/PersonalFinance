@@ -723,7 +723,7 @@ To check minified pages locally, run a Release build in a non-Development enviro
 ## 5. Database & Entity Framework Core Workflows
 
 ### ASP.NET Core Identity Schema Documentation
-For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetRoleClaims`, `AspNetUserLogins`, `AspNetUserTokens`), foreign key relationships, and integration with application tables (`GoogleDriveConnections`, `GoogleDriveCachedFiles`, `DataProtectionKeys`), see [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md).
+For a complete breakdown of all 7 ASP.NET Core Identity database tables (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetRoleClaims`, `AspNetUserLogins`, `AspNetUserTokens`), foreign key relationships, and how application tables link to `AspNetUsers`, see [IDENTITY_SCHEMA.md](IDENTITY_SCHEMA.md). The application tables themselves are drawn in [DIAGRAMS.md](DIAGRAMS.md#4-data-model).
 
 ### Database Providers
 `DatabaseProviderHelper` (in `PersonalFinance.Data`) supports two providers:
