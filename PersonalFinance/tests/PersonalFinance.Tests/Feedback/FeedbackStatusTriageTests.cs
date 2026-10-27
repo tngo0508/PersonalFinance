@@ -67,6 +67,35 @@ public class FeedbackStatusTriageTests
     }
 
     [Fact]
+    public async Task ChangeStatus_SetsUpdatedAtToTheCurrentUtcTime()
+    {
+        string dbName = $"FeedbackTriage_{Guid.NewGuid():N}";
+        int id;
+        await using (AppDbContext db = CreateContext(dbName))
+        {
+            FeedbackEntity feedback = Feedback("triage me");
+            db.Feedback.Add(feedback);
+            await db.SaveChangesAsync();
+            id = feedback.Id;
+        }
+
+        DateTime before = DateTime.UtcNow;
+        await using (AppDbContext db = CreateContext(dbName))
+        {
+            Assert.True(await CreateService(db).ChangeStatusAsync(id, FeedbackStatus.Reviewed));
+        }
+        DateTime after = DateTime.UtcNow;
+
+        await using (AppDbContext db = CreateContext(dbName))
+        {
+            FeedbackEntity stored = await db.Feedback.SingleAsync(f => f.Id == id);
+            Assert.NotNull(stored.UpdatedAt);
+            Assert.InRange(stored.UpdatedAt.Value, before, after);
+            Assert.Equal(DateTimeKind.Utc, stored.UpdatedAt.Value.Kind);
+        }
+    }
+
+    [Fact]
     public async Task List_WithoutAStatus_HidesArchivedFeedback()
     {
         await using AppDbContext db = CreateContext();
@@ -100,11 +129,17 @@ public class FeedbackStatusTriageTests
     }
 
     [Fact]
-    public async Task ChangeStatus_UnknownFeedback_IsNotFound()
+    public async Task ChangeStatus_UnknownFeedback_IsNotFound_AndLeavesOtherFeedbackUnchanged()
     {
         await using AppDbContext db = CreateContext();
+        FeedbackEntity other = Feedback("other");
+        db.Feedback.Add(other);
+        await db.SaveChangesAsync();
 
-        Assert.False(await CreateService(db).ChangeStatusAsync(404, FeedbackStatus.Reviewed));
+        Assert.False(await CreateService(db).ChangeStatusAsync(other.Id + 1, FeedbackStatus.Reviewed));
+
+        Assert.Equal(FeedbackStatus.New, other.Status);
+        Assert.Null(other.UpdatedAt);
     }
 
     [Fact]
@@ -130,6 +165,7 @@ public class FeedbackStatusTriageTests
         {
             FeedbackEntity stored = await db.Feedback.IgnoreQueryFilters().SingleAsync(f => f.Id == id);
             Assert.Equal(FeedbackStatus.New, stored.Status);
+            Assert.Null(stored.UpdatedAt);
         }
     }
 

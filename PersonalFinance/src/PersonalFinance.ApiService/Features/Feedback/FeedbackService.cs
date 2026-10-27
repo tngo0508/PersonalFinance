@@ -57,6 +57,7 @@ internal sealed class FeedbackService : IFeedbackService
         }
 
         feedback.Status = status;
+        feedback.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return true;
     }
