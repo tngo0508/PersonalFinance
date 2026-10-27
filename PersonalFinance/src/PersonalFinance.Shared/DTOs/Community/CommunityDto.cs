@@ -1,12 +1,19 @@
 namespace PersonalFinance.Shared.DTOs.Community;
 
 /// <summary>
-/// DTO for returning comment data to the view/API.
+/// DTO for returning comment data to the view/API. Authors are Pseudonyms only: no Community DTO carries a display
+/// name or email (ADR 0018).
 /// </summary>
 public sealed class CommunityCommentDto
 {
     public int Id { get; set; }
-    public string AuthorName { get; set; } = string.Empty;
+
+    /// <summary>The author's Pseudonym, or null once the author is a Former member (purged, ADR 0005).</summary>
+    public string? AuthorPseudonym { get; set; }
+
+    /// <summary>Whether the viewing Account wrote it, so the page can show a re-rolled Pseudonym on it at once.</summary>
+    public bool IsOwn { get; set; }
+
     public string Text { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; set; }
     public int Likes { get; set; }
@@ -26,12 +33,18 @@ public sealed class CommentLikeResult
 }
 
 /// <summary>
-/// DTO for returning story data to the view/API.
+/// DTO for returning story data to the view/API. Authors are Pseudonyms only (ADR 0018).
 /// </summary>
 public sealed class CommunityStoryDto
 {
     public int Id { get; set; }
-    public string AuthorName { get; set; } = string.Empty;
+
+    /// <summary>The author's Pseudonym, or null once the author is a Former member (purged, ADR 0005).</summary>
+    public string? AuthorPseudonym { get; set; }
+
+    /// <summary>Whether the viewing Account wrote it, so the page can show a re-rolled Pseudonym on it at once.</summary>
+    public bool IsOwn { get; set; }
+
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
@@ -82,10 +95,21 @@ public sealed class CommunityPollDto
 }
 
 /// <summary>
-/// Full community response DTO containing polls, stories, and comments.
+/// The viewing Account's Pseudonym (GLOSSARY.md).
+/// </summary>
+public sealed class CommunityPseudonymDto
+{
+    public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Full Guild Hall response DTO: the viewer's Pseudonym, the polls, stories and comments.
 /// </summary>
 public sealed class CommunityResponseDto
 {
+    /// <summary>The viewing Account's Pseudonym, created on its first visit.</summary>
+    public string Pseudonym { get; set; } = string.Empty;
+
     public List<CommunityPollDto> ActivePolls { get; set; } = new();
     public List<CommunityStoryDto> Stories { get; set; } = new();
     public List<CommunityCommentDto> RecentComments { get; set; } = new();

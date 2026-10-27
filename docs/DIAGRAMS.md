@@ -204,7 +204,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | Analysis | `SpreadsheetAnalysisController` (`api/SpreadsheetAnalysis`) | `ISpreadsheetAnalysisService`, `IGoogleSheetRemovalService` | `SpreadsheetBudgetSnapshot`, `SpreadsheetTransactionRecord` | `ISpreadsheetAnalysisApi` | `Analysis` (also injects `IBudgetTrackerApi`) | `analysis/` | Depends on GoogleDrive's `ISpreadsheetReader`; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | BudgetPlanner | `BudgetController` (`api/Budget`) | `IBudgetService` | `UserBudgetAllocation` | `IBudgetPlannerApi` | `Budget` | `budget/` | Raises Notifications; reads `IBudgetDataProvider` |
 | BudgetTracker | `BudgetTrackerController` (`api/budget-tracker`) | `IMonthlyBudgetService`, `IBudgetTrackerRemovalService` | `BudgetCategory`, `BudgetTransaction`, `MonthlyBudgetPlan`, `MonthlyBudgetLine` | `IBudgetTrackerApi` | `BudgetTracker` | `budget-tracker/`, `core/data-source-toggle.js` | Six Validators; the controller also injects `IBudgetDataSourceService` |
-| Community | `CommunityController` (`api/Community`) | `ICommunityService` | `CommunityStory`, `CommunityStoryLike`, `CommunityComment`, `CommunityCommentLike`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote` | `ICommunityApi` | `Community` | `community.js` | No Validators: the Service throws `ArgumentException`, the controller returns 400 |
+| Community | `CommunityController` (`api/Community`) | `ICommunityService` | `CommunityPseudonym`, `CommunityStory`, `CommunityStoryLike`, `CommunityComment`, `CommunityCommentLike`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote` | `ICommunityApi` | `Community` | `community.js` | No Validators: the Service throws `ArgumentException`, the controller returns 400 |
 | Dashboard | `DashboardController` (`api/Dashboard`) | `IDashboardService` | none (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `GoogleDriveConnection`) | `IDashboardApi` | `Dashboard` | `dashboard/` | Read-only aggregator over four Features plus `IBudgetDataProvider` |
 | Feedback | `FeedbackController` (`api/Feedback`) | `IFeedbackService` | `Feedback` | `IFeedbackApi` | `Feedback`; inbox in `Admin` | none | The canonical example ([2](#2-anatomy-of-a-feature)) |
 | GoogleDrive | `GoogleDriveController` (`api/GoogleDrive`) | `IDriveConnectionService`, `ISpreadsheetReader`, `IGoogleDriveFileSource` (internal) | `GoogleDriveConnection`, `GoogleDriveCachedFile` | `IGoogleDriveApi` | `GoogleDrive` | `google-drive/` | Typed `HttpClient`s to Google Drive; a 1,450-line static parser; see [13](#13-google-drive-and-spreadsheet-analysis) |
@@ -415,10 +415,14 @@ shadow FK column `GoogleDriveConnectionId` on both spreadsheet tables (visible i
 
 ```mermaid
 erDiagram
+    CommunityPseudonym {
+        int Id PK
+        string UserId UK "no row after a Purge"
+        string Name UK "Adjective Noun, max 60"
+    }
     CommunityStory {
         int Id PK
         string UserId "deleted-account after a Purge"
-        string AuthorName "Deleted User after a Purge"
         string Title
         string Summary
         string Body "max 10000"
@@ -437,7 +441,6 @@ erDiagram
     CommunityComment {
         int Id PK
         string UserId
-        string AuthorName
         string Text
         int PollId FK "nullable"
         int StoryId FK "nullable, indexed"
@@ -484,8 +487,11 @@ erDiagram
 
 `CommunityPoll` and `CommunityPollOption` are shared data with no `UserId`, no soft delete, untouched by the Purge.
 Nothing is seeded: the Community starts empty (#422). Like and comment counts are counted from the like and comment
-rows; no table stores them. Stories and comments survive the Purge anonymised ([ADR
-0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)).
+rows; no table stores them. `CommunityPseudonym` is one row per Account, the name it posts under ([ADR
+0018](adr/0018-guild-hall-is-pseudonymous-and-amount-free.md)); stories and comments store no author name and are joined
+to it on `UserId` when read, so a re-roll shows on every past post. Stories and comments survive the Purge under the
+placeholder id ([ADR 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)); the Pseudonym row is deleted
+with the Account's other rows, so they are shown as written by "Former member".
 
 ### 4.4 Account, consent and cross-cutting records
 
@@ -741,7 +747,7 @@ sequenceDiagram
     J->>PS: PurgeDueAsync()
     PS->>DB: Pending and PurgeAfter <= now, ordered by PurgeAfter then Id
     loop each due request, one SaveChangesAsync each
-        PS->>DB: UncountLikes, AnonymizeCommunityContent (Deleted User, self-deleted content removed)
+        PS->>DB: AnonymizeCommunityContent (placeholder id, shown as Former member; self-deleted content removed)
         PS->>DB: RemoveCachedDriveFiles, RemoveRows for every AuditableEntity except Story and Comment
         PS->>DB: remove AspNetUserRoles, Claims, Logins, Tokens, then the AspNetUsers row
         PS->>DB: Status = Purged, PurgedAt = now, UserId = deleted-account

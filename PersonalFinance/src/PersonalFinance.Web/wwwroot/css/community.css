@@ -1,52 +1,133 @@
 /* ==========================================================================
-   Community Page Styles
-   Fluent UI Design System tokens — Communication Blue brand
+   Guild Hall (Community) Page Styles
+   Warm, artisan palette from the #420 prototype (variant A): paper, linen and
+   cork with clay, brass and moss accents and serif headings. The page's cards
+   and controls read the app's Fluent tokens, so the palette is applied by
+   redefining those tokens on the page root.
    ========================================================================== */
 
 /* --- Page Container --- */
 .community-page {
-  padding: 2rem 0 3rem;
+  --gh-paper: #fbf6ec;
+  --gh-linen: #f3ead8;
+  --gh-ink: #2b2420;
+  --gh-ink-soft: #5a4c42;
+  --gh-clay: #a4532f;
+  --gh-clay-hover: #8a4325;
+  --gh-clay-pressed: #74381f;
+  --gh-clay-wash: #f6e3d6;
+  --gh-brass: #8a6a1e;
+  --gh-moss: #3f6145;
+  --gh-moss-wash: #e3ecdf;
+  --gh-rule: #dccdb2;
+  --gh-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+
+  --app-brand: var(--gh-clay);
+  --app-brand-hover: var(--gh-clay-hover);
+  --app-brand-pressed: var(--gh-clay-pressed);
+  --app-brand-soft: var(--gh-clay-wash);
+  --app-brand-bg-hover: var(--gh-linen);
+  --app-surface: #fffdf7;
+  --app-border: var(--gh-rule);
+  --app-border-hover: var(--gh-brass);
+  --app-text: var(--gh-ink);
+  --app-text-muted: var(--gh-ink-soft);
+
+  padding: clamp(1rem, 3vw, 2rem);
+  margin: 1.5rem 0 3rem;
   max-width: 1400px;
+  border-radius: var(--app-radius-l);
+  background: var(--gh-paper);
+  color: var(--gh-ink);
 }
 
-/* --- Header --- */
-.community-header {
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid var(--app-border);
+.community-page h1,
+.community-page h2,
+.community-page h3 {
+  font-family: var(--gh-serif);
 }
 
-.community-header-content {
+/* --- Header: the plaque --- */
+.community-plaque {
   display: flex;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
   gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 2px dashed var(--gh-rule);
 }
 
-.community-header-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--app-radius-m);
-  background: var(--app-brand-soft);
-  color: var(--app-brand);
-  flex-shrink: 0;
+.community-plaque-text {
+  max-width: 36rem;
+}
+
+.community-eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: var(--app-font-weight-semibold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gh-brass);
 }
 
 .community-title {
-  font-size: 1.75rem;
+  font-size: clamp(1.6rem, 3.2vw, 2.3rem);
   font-weight: var(--app-font-weight-bold);
-  color: var(--app-text);
-  margin: 0 0 0.25rem;
+  color: var(--gh-ink);
+  margin: 0 0 0.35rem;
   line-height: 1.2;
 }
 
 .community-subtitle {
-  color: var(--app-text-muted);
+  color: var(--gh-ink-soft);
   font-size: var(--app-font-size-large);
   margin: 0;
   line-height: 1.5;
+}
+
+/* The Pseudonym badge: who the viewer is in the hall, and the re-roll */
+.community-pseudonym-badge {
+  display: grid;
+  gap: 0.125rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gh-rule);
+  border-radius: var(--app-radius-m);
+  background: var(--gh-linen);
+  font-family: var(--gh-serif);
+}
+
+.community-pseudonym-label {
+  font-size: var(--app-font-size-small);
+  color: var(--gh-ink-soft);
+}
+
+.community-pseudonym-name {
+  font-size: 1.2rem;
+  color: var(--gh-ink);
+}
+
+.community-link-btn {
+  justify-self: start;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--app-font-size-small);
+  color: var(--gh-clay);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.community-link-btn:hover {
+  color: var(--gh-clay-hover);
+}
+
+.community-link-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 /* --- Section Titles --- */
@@ -732,7 +813,7 @@
   margin-top: 2rem;
   padding: 2rem;
   border-radius: var(--app-radius-l);
-  background: linear-gradient(135deg, var(--app-brand-soft) 0%, #e8daef 100%);
+  background: linear-gradient(135deg, var(--gh-clay-wash) 0%, var(--gh-moss-wash) 100%);
   border: 1px solid var(--app-border);
   text-align: center;
 }
@@ -830,9 +911,12 @@
     grid-template-columns: 1fr;
   }
 
-  .community-header-content {
-    flex-direction: column;
-    gap: 0.75rem;
+  .community-plaque {
+    align-items: stretch;
+  }
+
+  .community-pseudonym-badge {
+    width: 100%;
   }
 
   .community-section-header {

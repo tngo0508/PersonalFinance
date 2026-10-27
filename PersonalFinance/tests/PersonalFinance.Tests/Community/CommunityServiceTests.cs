@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.Community;
@@ -15,11 +16,12 @@ using PersonalFinance.Web.Infrastructure;
 namespace PersonalFinance.Tests.Community;
 
 /// <summary>
-/// Characterization of <see cref="ICommunityService"/>: how a submitted Community Story's read time is derived and
-/// how an active poll is reported to the Account viewing it, and the keyed <see cref="ApiErrorException"/> each
-/// rejection throws. Runs against an in-memory database.
+/// Characterization of <see cref="ICommunityService"/>: the Pseudonym an Account gets and re-rolls and how every post
+/// shows it, how a submitted Story's read time is derived, how an active poll is reported to the Account viewing it,
+/// and the keyed <see cref="ApiErrorException"/> each rejection throws. Runs against an in-memory database; the
+/// queries that join each post to its author's Pseudonym are also checked to translate to Azure SQL.
 /// </summary>
-public class CommunityServiceTests
+public partial class CommunityServiceTests
 {
     private const string UserId = "community-user";
 
@@ -32,7 +34,177 @@ public class CommunityServiceTests
     }
 
     private static CommunityService CreateService(AppDbContext db) =>
-        new(db, NullLogger<CommunityService>.Instance);
+        new(db, TimeProvider.System, NullLogger<CommunityService>.Instance);
+
+    private static CommunityStoryRequestDto ValidStory() => new()
+    {
+        Title = "Paying off my car loan",
+        Summary = "How I did it.",
+        Body = string.Join(' ', Enumerable.Repeat("word", 120)),
+        Category = "Debt",
+    };
+
+    [Fact]
+    public async Task GetCommunity_CreatesThePseudonymOnTheFirstVisit_AndKeepsItAfter()
+    {
+        await using AppDbContext db = CreateContext();
+        CommunityService service = CreateService(db);
+
+        CommunityResponseDto first = await service.GetCommunityAsync(UserId);
+        CommunityResponseDto second = await service.GetCommunityAsync(UserId);
+
+        Assert.Matches(PseudonymShape(), first.Pseudonym);
+        Assert.Equal(first.Pseudonym, second.Pseudonym);
+        CommunityPseudonym row = Assert.Single(db.CommunityPseudonyms);
+        Assert.Equal(UserId, row.UserId);
+        Assert.Equal(first.Pseudonym, row.Name);
+    }
+
+    [Fact]
+    public async Task RerollPseudonym_ChangesTheName_AndEveryPastPostShowsIt()
+    {
+        await using AppDbContext db = CreateContext();
+        CommunityService service = CreateService(db);
+        CommunityStoryDto story = await service.SubmitStoryAsync(UserId, ValidStory());
+        CommunityCommentDto comment = await service.AddCommentAsync(UserId,
+            new CommunityCommentRequestDto { Text = "Trying this", StoryId = story.Id });
+        Assert.Equal(story.AuthorPseudonym, comment.AuthorPseudonym);
+
+        CommunityPseudonymDto rerolled = await service.RerollPseudonymAsync(UserId);
+
+        Assert.Matches(PseudonymShape(), rerolled.Name);
+        Assert.NotEqual(story.AuthorPseudonym, rerolled.Name);
+        CommunityResponseDto response = await service.GetCommunityAsync(UserId);
+        Assert.Equal(rerolled.Name, response.Pseudonym);
+        CommunityStoryDto shownStory = Assert.Single(response.Stories);
+        Assert.Equal(rerolled.Name, shownStory.AuthorPseudonym);
+        Assert.True(shownStory.IsOwn);
+        Assert.Equal(rerolled.Name, Assert.Single(response.RecentComments).AuthorPseudonym);
+        CommunityStoryDto? seenByAnother = await service.GetStoryByIdAsync("someone-else", story.Id);
+        Assert.Equal(rerolled.Name, seenByAnother!.AuthorPseudonym);
+        Assert.False(seenByAnother.IsOwn);
+        Assert.Single(db.CommunityPseudonyms);
+    }
+
+    [Fact]
+    public async Task Pseudonym_IsNeverOneAnotherAccountHolds_NorOneReservedByAnAccountInItsGracePeriod()
+    {
+        await using AppDbContext db = CreateContext();
+        List<string> all = PseudonymGenerator.AllNames().ToList();
+        string free = all[0];
+        var reserved = new CommunityPseudonym { UserId = "leaving", Name = all[1] };
+        reserved.SoftDelete();
+        db.CommunityPseudonyms.Add(reserved);
+        db.CommunityPseudonyms.AddRange(all.Skip(2)
+            .Select((name, i) => new CommunityPseudonym { UserId = $"holder-{i}", Name = name }));
+        await db.SaveChangesAsync();
+
+        CommunityResponseDto response = await CreateService(db).GetCommunityAsync(UserId);
+
+        Assert.Equal(free, response.Pseudonym);
+    }
+
+    [Fact]
+    public async Task GetCommunity_ShowsAFormerMembersPosts_WithoutAPseudonym()
+    {
+        await using AppDbContext db = CreateContext();
+        var story = new CommunityStory { UserId = DeletedAccount.UserId, Title = "Kept after the Purge" };
+        db.CommunityStories.Add(story);
+        db.CommunityComments.Add(new CommunityComment { UserId = DeletedAccount.UserId, Text = "Still here", Story = story });
+        await db.SaveChangesAsync();
+
+        CommunityResponseDto response = await CreateService(db).GetCommunityAsync(UserId);
+
+        CommunityStoryDto shownStory = Assert.Single(response.Stories);
+        Assert.Null(shownStory.AuthorPseudonym);
+        Assert.False(shownStory.IsOwn);
+        Assert.Null(Assert.Single(response.RecentComments).AuthorPseudonym);
+    }
+
+    [Fact]
+    public async Task GetPollComments_AreReportedAsTheViewerSeesThem()
+    {
+        await using AppDbContext db = CreateContext();
+        db.CommunityPolls.Add(new CommunityPoll { PollCode = "habits", Question = "Which habit stuck?", Category = "Goals" });
+        await db.SaveChangesAsync();
+        CommunityService service = CreateService(db);
+        CommunityCommentDto posted = await service.AddCommentAsync(UserId,
+            new CommunityCommentRequestDto { Text = "Meal plans", PollCode = "habits" });
+        await service.ToggleCommentLikeAsync(UserId, posted.Id);
+
+        CommunityCommentDto mine = Assert.Single(await service.GetPollCommentsAsync(UserId, "habits"));
+        CommunityCommentDto theirs = Assert.Single(await service.GetPollCommentsAsync("someone-else", "habits"));
+
+        Assert.Equal(posted.AuthorPseudonym, mine.AuthorPseudonym);
+        Assert.True(mine.IsOwn);
+        Assert.True(mine.IsLikedByUser);
+        Assert.Equal(1, mine.Likes);
+        Assert.Equal(posted.AuthorPseudonym, theirs.AuthorPseudonym);
+        Assert.False(theirs.IsOwn);
+        Assert.False(theirs.IsLikedByUser);
+    }
+
+    [Fact]
+    public void NoCommunityDto_CarriesADisplayNameOrEmail()
+    {
+        List<Type> dtos = typeof(CommunityResponseDto).Assembly.GetTypes()
+            .Where(t => t.Namespace == typeof(CommunityResponseDto).Namespace)
+            .ToList();
+
+        Assert.NotEmpty(dtos);
+        foreach (PropertyInfo property in dtos.SelectMany(t => t.GetProperties()))
+        {
+            string name = $"{property.DeclaringType!.Name}.{property.Name}";
+            Assert.False(property.Name.Contains("Email", StringComparison.OrdinalIgnoreCase), name);
+            Assert.False(property.Name.Contains("UserId", StringComparison.OrdinalIgnoreCase), name);
+            Assert.False(property.Name is "Author" or "AuthorName" or "DisplayName" or "UserName", name);
+        }
+    }
+
+    [Fact]
+    public void StoryAndCommentQueries_TranslateToAzureSql()
+    {
+        using AzureSqlAppDbContext db = AzureSqlTranslation.CreateContext();
+        CommunityService service = CreateService(db);
+
+        AzureSqlTranslation.AssertTranslates(service.VisibleStoriesQuery(UserId).Take(6));
+        AzureSqlTranslation.AssertTranslates(service.VisibleStoriesQuery(UserId).Where(s => s.Id == 1));
+        AzureSqlTranslation.AssertTranslates(service.VisibleCommentsQuery(UserId).Take(10));
+        AzureSqlTranslation.AssertTranslates(service.VisibleCommentsQuery(UserId).Where(c => c.PollId == 1));
+    }
+
+    [Fact]
+    public void PseudonymGenerator_WordsAreDistinctTitleCaseWords_AndEveryNameFitsTheColumn()
+    {
+        string[] words = [.. PseudonymGenerator.Adjectives, .. PseudonymGenerator.Nouns];
+
+        Assert.Equal(words.Length, words.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.All(words, word => Assert.Matches("^[A-Z][a-z]+$", word));
+        List<string> names = PseudonymGenerator.AllNames().ToList();
+        Assert.Equal(PseudonymGenerator.Combinations, names.Count);
+        Assert.Equal(names.Count, names.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.All(names, name => Assert.InRange(name.Length, 1, 60));
+    }
+
+    [Fact]
+    public void PseudonymGenerator_Pick_NeverReturnsATakenName_AndNumbersOneOnceEveryNameIsTaken()
+    {
+        var random = new Random(7);
+        var taken = new HashSet<string>(PseudonymGenerator.AllNames().Skip(1), StringComparer.OrdinalIgnoreCase);
+
+        string onlyFree = PseudonymGenerator.Pick(taken, random);
+        taken.Add(onlyFree);
+        string numbered = PseudonymGenerator.Pick(taken, random);
+        taken.Add(numbered);
+        string numberedAgain = PseudonymGenerator.Pick(taken, random);
+
+        Assert.Equal(PseudonymGenerator.AllNames().First(), onlyFree);
+        Assert.Matches("^[A-Z][a-z]+ [A-Z][a-z]+ 2$", numbered);
+        Assert.Matches("^[A-Z][a-z]+ [A-Z][a-z]+ [23]$", numberedAgain);
+        Assert.DoesNotContain(numberedAgain, taken);
+        Assert.All(Enumerable.Range(0, 200).Select(_ => PseudonymGenerator.Pick(new HashSet<string>(), random)),
+            name => Assert.Matches(PseudonymShape(), name));
+    }
 
     [Fact]
     public async Task SubmitStory_ReadTimeCountsWordsSeparatedByRepeatedSpaces_AndIsNotFeatured()
@@ -50,7 +222,7 @@ public class CommunityServiceTests
             Category = "Debt",
         };
 
-        CommunityStoryDto story = await service.SubmitStoryAsync(UserId, request, "Alex");
+        CommunityStoryDto story = await service.SubmitStoryAsync(UserId, request);
 
         Assert.Equal(3, story.ReadTimeMinutes);
         Assert.False(story.IsFeatured);
@@ -93,17 +265,17 @@ public class CommunityServiceTests
     {
         await using AppDbContext db = CreateContext();
         CommunityService service = CreateService(db);
-        var story = new CommunityStory { UserId = "author", AuthorName = "Sam", Title = "Meal plans" };
+        var story = new CommunityStory { UserId = "author", Title = "Meal plans" };
         db.CommunityStories.Add(story);
         db.CommunityComments.Add(new CommunityComment
-            { UserId = "author", AuthorName = "Sam", Text = "hidden", Story = story, IsVisible = false });
+        { UserId = "author", Text = "hidden", Story = story, IsVisible = false });
         await db.SaveChangesAsync();
 
         await service.ToggleStoryLikeAsync(UserId, story.Id);
         await service.ToggleStoryLikeAsync("other", story.Id);
         StoryLikeResult unliked = await service.ToggleStoryLikeAsync("other", story.Id);
         CommunityCommentDto comment = await service.AddCommentAsync(UserId,
-            new CommunityCommentRequestDto { Text = "Trying this", StoryId = story.Id }, "Alex");
+            new CommunityCommentRequestDto { Text = "Trying this", StoryId = story.Id });
 
         CommunityResponseDto response = await service.GetCommunityAsync(UserId);
 
@@ -136,7 +308,7 @@ public class CommunityServiceTests
         var request = new CommunityCommentRequestDto { Text = new string('a', 2001) };
 
         ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
-            () => CreateService(db).AddCommentAsync(UserId, request, "Alex"));
+            () => CreateService(db).AddCommentAsync(UserId, request));
 
         Assert.Equal(ApiErrorKeys.Community.CommentTooLong, ex.Key);
         Assert.Equal("Text", ex.Field);
@@ -145,6 +317,7 @@ public class CommunityServiceTests
         Assert.Equal(ApiErrorArgKind.Number, ex.Args["max"].Kind);
         Assert.Equal("Comment text is too long (max 2000 characters).", ex.Message);
         Assert.Equal(400, ex.StatusCode);
+        Assert.Empty(db.CommunityPseudonyms);
     }
 
     [Fact]
@@ -160,7 +333,7 @@ public class CommunityServiceTests
         };
 
         ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
-            () => CreateService(db).SubmitStoryAsync(UserId, request, "Alex"));
+            () => CreateService(db).SubmitStoryAsync(UserId, request));
 
         Assert.Equal(ApiErrorKeys.Community.StoryBodyMin, ex.Key);
         Assert.Equal("Body", ex.Field);
@@ -200,7 +373,7 @@ public class CommunityServiceTests
         await using AppDbContext db = CreateContext();
 
         ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
-            () => CreateService(db).GetPollCommentsAsync("no-such-poll"));
+            () => CreateService(db).GetPollCommentsAsync(UserId, "no-such-poll"));
 
         Assert.Equal(ApiErrorKeys.Community.PollNotFound, ex.Key);
         Assert.Equal(404, ex.StatusCode);
@@ -250,4 +423,8 @@ public class CommunityServiceTests
         };
         return args?.ToDictionary(pair => pair.Key, pair => pair.Value);
     }
+
+    /// <summary>"Adjective Noun", each a capitalised word.</summary>
+    [GeneratedRegex("^[A-Z][a-z]+ [A-Z][a-z]+$")]
+    private static partial Regex PseudonymShape();
 }

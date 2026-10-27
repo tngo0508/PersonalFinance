@@ -1,15 +1,11 @@
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
-/// Database entity representing a community comment on a poll or story.
+/// Database entity representing a community comment on a poll or story. The author is the Account in
+/// <see cref="AuditableEntity.UserId"/>, shown by its <see cref="CommunityPseudonym"/>; no name is stored here.
 /// </summary>
 public class CommunityComment : AuditableEntity
 {
-    /// <summary>
-    /// Gets or sets the display name of the author at the time of posting.
-    /// </summary>
-    public string AuthorName { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets the comment text content.
     /// </summary>

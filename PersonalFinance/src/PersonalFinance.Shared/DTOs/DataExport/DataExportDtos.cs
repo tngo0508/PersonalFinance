@@ -324,9 +324,12 @@ public class DataExportPriorityWalkDto
     public DateTime CreatedAtUtc { get; set; }
 }
 
-/// <summary>What the Account wrote and reacted to in Community.</summary>
+/// <summary>What the Account wrote and reacted to in the Guild Hall (the Community Feature), and the name it did it under.</summary>
 public class DataExportCommunityDto
 {
+    /// <summary>The Account's Pseudonym; null if it has never opened the Guild Hall.</summary>
+    public string? Pseudonym { get; set; }
+
     public List<DataExportStoryDto> Stories { get; set; } = [];
 
     public List<DataExportCommentDto> Comments { get; set; } = [];
@@ -340,8 +343,6 @@ public class DataExportCommunityDto
 
 public class DataExportStoryDto
 {
-    public string AuthorName { get; set; } = string.Empty;
-
     public string Title { get; set; } = string.Empty;
 
     public string Summary { get; set; } = string.Empty;
@@ -355,8 +356,6 @@ public class DataExportStoryDto
 
 public class DataExportCommentDto
 {
-    public string AuthorName { get; set; } = string.Empty;
-
     public string Text { get; set; } = string.Empty;
 
     /// <summary>The poll the comment was posted on, if any.</summary>

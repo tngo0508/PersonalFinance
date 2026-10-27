@@ -7,8 +7,9 @@ using PersonalFinance.Shared.Helpers;
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// RESTful API controller for community features: polls, comments, stories, and likes.
-/// All endpoints are scoped to the current user identified by the authenticated Account (see XUserIdAuthenticationHandler).
+/// RESTful API controller for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, stories and
+/// likes. All endpoints are scoped to the current user identified by the authenticated Account (see
+/// XUserIdAuthenticationHandler); the author of a post is always that Account.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -24,7 +25,7 @@ public class CommunityController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the full community data (polls, stats, stories, comments) for a user.
+    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, stories, comments) for a user.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -34,6 +35,18 @@ public class CommunityController : ControllerBase
         string userId = User.GetUserId();
         CommunityResponseDto response = await _communityService.GetCommunityAsync(userId, cancellationToken);
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Replaces the user's Pseudonym with a new one.
+    /// </summary>
+    [HttpPost("pseudonym/reroll")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<CommunityPseudonymDto>> RerollPseudonym(
+        CancellationToken cancellationToken = default)
+    {
+        string userId = User.GetUserId();
+        return Ok(await _communityService.RerollPseudonymAsync(userId, cancellationToken));
     }
 
     /// <summary>
@@ -51,19 +64,17 @@ public class CommunityController : ControllerBase
     }
 
     /// <summary>
-    /// Adds a comment to a poll or story.
+    /// Adds a comment to a poll or story under the user's Pseudonym.
     /// </summary>
     [HttpPost("comment")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CommunityCommentDto>> AddComment(
         [FromBody] CommunityCommentRequestDto request,
-        [FromQuery] string authorName,
         CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        CommunityCommentDto comment =
-            await _communityService.AddCommentAsync(userId, request, authorName ?? string.Empty, cancellationToken);
+        CommunityCommentDto comment = await _communityService.AddCommentAsync(userId, request, cancellationToken);
         return CreatedAtAction(nameof(GetCommunity), comment);
     }
 
@@ -90,24 +101,23 @@ public class CommunityController : ControllerBase
         [FromQuery] string pollCode,
         CancellationToken cancellationToken = default)
     {
-        List<CommunityCommentDto> comments = await _communityService.GetPollCommentsAsync(pollCode, cancellationToken);
+        string userId = User.GetUserId();
+        List<CommunityCommentDto> comments = await _communityService.GetPollCommentsAsync(userId, pollCode, cancellationToken);
         return Ok(comments);
     }
 
     /// <summary>
-    /// Submits a new community story.
+    /// Submits a new community story under the user's Pseudonym.
     /// </summary>
     [HttpPost("story")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CommunityStoryDto>> SubmitStory(
         [FromBody] CommunityStoryRequestDto request,
-        [FromQuery] string authorName,
         CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        CommunityStoryDto story = await _communityService.SubmitStoryAsync(userId, request, authorName ?? string.Empty,
-            cancellationToken);
+        CommunityStoryDto story = await _communityService.SubmitStoryAsync(userId, request, cancellationToken);
         return CreatedAtAction(nameof(GetCommunity), story);
     }
 

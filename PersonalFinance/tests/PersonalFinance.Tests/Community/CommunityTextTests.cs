@@ -4,8 +4,9 @@ using PersonalFinance.Web.Models.Community;
 namespace PersonalFinance.Tests.Community;
 
 /// <summary>
-/// The Community page's own wording around user content: how long ago something was posted, and the label of a Story's
-/// category. The content itself (titles, bodies, comments, author names) is never translated (spec §1).
+/// The Guild Hall page's own wording around user content: how long ago something was posted, the label of a Story's
+/// category, and who a post is shown as written by. The content itself (titles, bodies, comments, Pseudonyms) is never
+/// translated (spec §1).
 /// </summary>
 public class CommunityTextTests
 {
@@ -60,5 +61,32 @@ public class CommunityTextTests
         IReadOnlyCollection<string> english = TestLocalization.Catalog.Keys("en");
         Assert.All(CommunityText.StoryCategories,
             category => Assert.Contains($"Community.Category.{category}", english));
+    }
+
+    [Fact]
+    public void Author_IsThePseudonymAsStored_OrFormerMemberInTheRequestLanguage()
+    {
+        using (new UiCultureScope("vi"))
+        {
+            Assert.Equal("Steady Heron", CommunityText.Author(TestLocalization.Localizer, "Steady Heron"));
+            Assert.Equal(TestLocalization.Vietnamese("Community.FormerMember"),
+                CommunityText.Author(TestLocalization.Localizer, null));
+        }
+
+        using (new UiCultureScope("en"))
+        {
+            Assert.Equal("Former member", CommunityText.Author(TestLocalization.Localizer, null));
+            Assert.Equal("Former member", CommunityText.Author(TestLocalization.Localizer, " "));
+        }
+    }
+
+    [Theory]
+    [InlineData("Steady Heron", 2, "SH")]
+    [InlineData("Steady Heron", 1, "S")]
+    [InlineData("Wren", 2, "W")]
+    [InlineData("former member", 2, "FM")]
+    public void Initials_TakeTheFirstLetterOfEachWord(string author, int count, string expected)
+    {
+        Assert.Equal(expected, CommunityText.Initials(author, count));
     }
 }

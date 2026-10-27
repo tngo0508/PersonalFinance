@@ -125,9 +125,10 @@ internal sealed class AccountPurgeService : IAccountPurgeService
     }
 
     /// <summary>
-    /// The Account's stories and comments stay, written by "Deleted User" under the placeholder id, and the ones the
-    /// Deletion Request hid are shown again. Ones the Account deleted itself are erased, with other people's likes on
-    /// them: nobody can see them, so keeping them would only keep the Account's words.
+    /// The Account's stories and comments stay under the placeholder id, and the ones the Deletion Request hid are
+    /// shown again. Its Pseudonym row goes with every other user-owned row, so the Guild Hall shows them as written by
+    /// "Former member" (ADR 0018). Ones the Account deleted itself are erased, with other people's likes on them:
+    /// nobody can see them, so keeping them would only keep the Account's words.
     /// </summary>
     private async Task AnonymizeCommunityContentAsync(string userId, DateTime requestedAt,
         CancellationToken cancellationToken)
@@ -144,7 +145,6 @@ internal sealed class AccountPurgeService : IAccountPurgeService
             }
 
             Anonymize(story, requestedAt);
-            story.AuthorName = DeletedAccount.DisplayName;
         }
 
         foreach (CommunityComment? comment in await _db.CommunityComments.IgnoreQueryFilters()
@@ -159,7 +159,6 @@ internal sealed class AccountPurgeService : IAccountPurgeService
             }
 
             Anonymize(comment, requestedAt);
-            comment.AuthorName = DeletedAccount.DisplayName;
         }
     }
 

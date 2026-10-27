@@ -75,6 +75,7 @@ public class DataExportServiceTests
 
         // Exactly one record per section, so a section without a text field cannot leak the other Account's row.
         AssertOneOfEverything(export);
+        Assert.Equal("mine name", export.Community.Pseudonym);
         Assert.Equal((await db.CommunityStories.SingleAsync(s => s.UserId == UserId)).Id,
             Assert.Single(export.Community.Comments).StoryId);
         string json = JsonSerializer.Serialize(export);

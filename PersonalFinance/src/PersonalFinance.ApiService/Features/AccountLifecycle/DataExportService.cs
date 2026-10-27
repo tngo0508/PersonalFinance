@@ -385,12 +385,15 @@ internal sealed class DataExportService : IDataExportService
     {
         return new DataExportCommunityDto
         {
+            Pseudonym = await _db.CommunityPseudonyms.AsNoTracking()
+                .Where(p => p.UserId == userId)
+                .Select(p => p.Name)
+                .FirstOrDefaultAsync(cancellationToken),
             Stories = await _db.CommunityStories.AsNoTracking()
                 .Where(s => s.UserId == userId)
                 .OrderBy(s => s.PublishedAtUtc).ThenBy(s => s.Id)
                 .Select(s => new DataExportStoryDto
                 {
-                    AuthorName = s.AuthorName,
                     Title = s.Title,
                     Summary = s.Summary,
                     Body = s.Body,
@@ -403,7 +406,6 @@ internal sealed class DataExportService : IDataExportService
                 .OrderBy(c => c.CreatedAtUtc).ThenBy(c => c.Id)
                 .Select(c => new DataExportCommentDto
                 {
-                    AuthorName = c.AuthorName,
                     Text = c.Text,
                     PollId = c.PollId,
                     StoryId = c.StoryId,
