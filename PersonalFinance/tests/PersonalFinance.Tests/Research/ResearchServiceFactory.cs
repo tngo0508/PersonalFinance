@@ -42,6 +42,24 @@ internal static class ResearchServiceFactory
         return (ResearchService)services.BuildServiceProvider().GetRequiredService<IResearchService>();
     }
 
+    /// <summary>
+    /// The SEC EDGAR client over <paramref name="handler"/>, with a request gate that never waits: the gate's clock
+    /// moves forward a second on every read, so each request finds its slot already open. Over a frozen clock the gate
+    /// sleeps for real on every request after the first (<c>Task.Delay</c> on a system timer, about 15 ms on Windows),
+    /// which turned the 500-filer tests into seconds of waiting (#350). The service keeps its own fixed clock.
+    /// </summary>
+    public static SecEdgarClient SecClient(HttpMessageHandler handler, SecEdgarSettings settings) =>
+        new(new HttpClient(handler), settings, new SecRequestGate(settings, new AdvancingTimeProvider()));
+
+    /// <summary>A clock that moves forward one second each time it is read.</summary>
+    private sealed class AdvancingTimeProvider : TimeProvider
+    {
+        private static readonly DateTimeOffset Start = new(2026, 10, 23, 12, 0, 0, TimeSpan.Zero);
+        private long _reads;
+
+        public override DateTimeOffset GetUtcNow() => Start.AddSeconds(Interlocked.Increment(ref _reads));
+    }
+
     /// <summary>A Fed client whose site cannot be reached, so no test goes out to the network.</summary>
     private sealed class OfflineFedRatesClient : IFedRatesClient
     {

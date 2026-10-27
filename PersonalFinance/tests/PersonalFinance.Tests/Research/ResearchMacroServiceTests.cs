@@ -33,7 +33,7 @@ public class ResearchMacroServiceTests
     {
         var secSettings = new SecEdgarSettings { UserAgent = UserAgent, MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
-        var secClient = new SecEdgarClient(new HttpClient(sources), secSettings, new SecRequestGate(secSettings, timeProvider));
+        SecEdgarClient secClient = ResearchServiceFactory.SecClient(sources, secSettings);
         var worldClient = new WorldBankClient(new HttpClient(sources));
         // The funds' first quarter puts the dataset's first month at January 2025.
         var research = new ResearchSettings

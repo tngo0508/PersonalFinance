@@ -27,7 +27,7 @@ public class ResearchSectorsGroupingTests
     {
         var settings = new SecEdgarSettings { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
-        var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
+        SecEdgarClient client = ResearchServiceFactory.SecClient(handler, settings);
         var research = new ResearchSettings { SectorsFirstYear = 2025, SubmissionsPerRefresh = submissionsPerRefresh };
         // The World Bank is down here: these tests are about the Sectors dataset, which is built on its own.
         var worldClient = new WorldBankClient(new HttpClient(new DelegatingTestHandler((_, _) =>

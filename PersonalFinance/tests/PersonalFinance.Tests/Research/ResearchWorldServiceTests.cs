@@ -38,9 +38,8 @@ public class ResearchWorldServiceTests
         var secSettings = new SecEdgarSettings { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
         // SEC has nothing: the Sectors dataset fails on its own and the World dataset is built regardless.
-        var secClient = new SecEdgarClient(new HttpClient(new DelegatingTestHandler((_, _) =>
-                Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)))),
-            secSettings, new SecRequestGate(secSettings, timeProvider));
+        SecEdgarClient secClient = ResearchServiceFactory.SecClient(new DelegatingTestHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound))), secSettings);
         var worldClient = new WorldBankClient(new HttpClient(handler));
         var research = new ResearchSettings { SectorsFirstYear = 2025, WorldFirstYear = 2024 };
         return ResearchServiceFactory.Create(db, secClient, worldClient, research, timeProvider);

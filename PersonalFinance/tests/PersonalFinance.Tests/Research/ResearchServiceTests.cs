@@ -31,7 +31,7 @@ public class ResearchServiceTests
     {
         var settings = new SecEdgarSettings { UserAgent = "PersonalFinance tests contact@example.com", MaxRequestsPerSecond = 1000 };
         var timeProvider = new FixedTimeProvider(Now);
-        var client = new SecEdgarClient(new HttpClient(handler), settings, new SecRequestGate(settings, timeProvider));
+        SecEdgarClient client = ResearchServiceFactory.SecClient(handler, settings);
         var research = new ResearchSettings
         {
             SectorsFirstYear = firstYear, PublicFloatExclusions = exclusions ?? [], PublicFloatKeeps = keeps ?? [],
