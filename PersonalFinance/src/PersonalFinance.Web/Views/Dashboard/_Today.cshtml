@@ -1,20 +1,72 @@
 @* Today: the user's clock and the current month, drawn by js/dashboard/dashboard-today.js in the browser's time zone
-   (the server cannot know it). Hidden until the script fills it, so it never shows the server's day instead. *@
+   (the server cannot know it). Hidden until the script fills it, so it never shows the server's day instead.
+   The clock side shows what the day is worth (compounding on the user's net worth, the road to FI); the calendar
+   side shows how far through the month and the month's budget the user is. Each money line is shown only when the
+   dashboard data has the figures behind it. *@
 <section class="dash-today" aria-labelledby="dash-today-title" data-dash-today hidden>
     <h2 id="dash-today-title" class="visually-hidden">@L["Dashboard.Today.Title"]</h2>
-    <div class="dash-today__now">
-        <time class="dash-today__clock" data-dash-today-clock></time>
-        <p class="dash-today__date" data-dash-today-date></p>
-        <p class="dash-today__left" data-dash-today-left></p>
-    </div>
-    <div class="dash-today__calendar">
-        <table class="dash-today__month">
-            <caption class="visually-hidden" data-dash-today-caption></caption>
-            <thead>
-                <tr data-dash-today-weekdays></tr>
-            </thead>
-            <tbody data-dash-today-days></tbody>
-        </table>
-        <p class="dash-today__legend" data-dash-today-legend hidden></p>
+
+    <div class="dash-today__layout">
+        <div class="dash-today__now">
+            <p class="dash-today__eyebrow" data-dash-today-eyebrow></p>
+            <time class="dash-today__clock" data-dash-today-clock></time>
+            <p class="dash-today__date" data-dash-today-date></p>
+
+            <div class="dash-today__tape" aria-hidden="true" data-dash-today-tape></div>
+            <p class="dash-today__tape-label" data-dash-today-tape-label></p>
+
+            <div class="dash-today__worth" data-dash-today-worth hidden>
+                <p class="dash-today__worth-label">@L["Dashboard.Today.Compounding"]</p>
+                <p class="dash-today__earned">
+                    <span class="dash-today__earned-mark" aria-hidden="true">&#9650;</span>
+                    <span data-dash-today-earned></span>
+                </p>
+                <p class="dash-today__worth-note" data-dash-today-per-day></p>
+                <p class="dash-today__worth-basis" data-dash-today-basis></p>
+            </div>
+
+            <p class="dash-today__fi" data-dash-today-fi hidden></p>
+        </div>
+
+        <div class="dash-today__calendar">
+            <div class="dash-today__month-head">
+                <p class="dash-today__month-name" data-dash-today-month></p>
+                <p class="dash-today__month-day" data-dash-today-day-of></p>
+            </div>
+
+            <dl class="dash-today__meters">
+                <div class="dash-today__meter">
+                    <dt>@L["Dashboard.Today.MonthGone"]</dt>
+                    <dd>
+                        <span class="dash-today__bar" aria-hidden="true"><span class="dash-today__bar-fill" data-dash-today-month-bar></span></span>
+                        <span class="dash-today__meter-value" data-dash-today-month-value></span>
+                    </dd>
+                </div>
+                <div class="dash-today__meter" data-dash-today-spend hidden>
+                    <dt>@L["Dashboard.Today.BudgetSpent"]</dt>
+                    <dd>
+                        <span class="dash-today__bar" aria-hidden="true">
+                            <span class="dash-today__bar-fill dash-today__bar-fill--spend" data-dash-today-spend-bar></span>
+                            <span class="dash-today__bar-pace" data-dash-today-pace-mark></span>
+                        </span>
+                        <span class="dash-today__meter-value" data-dash-today-spend-value></span>
+                    </dd>
+                </div>
+            </dl>
+            <p class="dash-today__pace" data-dash-today-pace hidden>
+                <span class="dash-today__pace-status" data-dash-today-pace-status></span>
+                <span data-dash-today-pace-text></span>
+            </p>
+            <p class="dash-today__left" data-dash-today-left></p>
+
+            <table class="dash-today__grid">
+                <caption class="visually-hidden" data-dash-today-caption></caption>
+                <thead>
+                    <tr data-dash-today-weekdays></tr>
+                </thead>
+                <tbody data-dash-today-days></tbody>
+            </table>
+            <p class="dash-today__legend" data-dash-today-legend hidden></p>
+        </div>
     </div>
 </section>
