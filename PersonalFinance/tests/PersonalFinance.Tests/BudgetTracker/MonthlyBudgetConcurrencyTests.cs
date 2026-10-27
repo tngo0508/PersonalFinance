@@ -1,3 +1,4 @@
+using PersonalFinance.Tests.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using PersonalFinance.ApiService.Features.BudgetTracker;
@@ -193,7 +194,7 @@ public class MonthlyBudgetConcurrencyTests
             };
 
             // Attempting to create duplicate concurrently is rejected as a duplicate
-            await Assert.ThrowsAsync<ApiErrorException>(() =>
+            await ApiErrorAssert.ThrowsAsync(ApiErrorKeys.BudgetTracker.DuplicateCategory, () =>
                 service.CreateCategoryAsync(UserId, new SaveCategoryRequest
                 {
                     Name = "Freelance Consulting",

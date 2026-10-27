@@ -1,11 +1,14 @@
 using System.Globalization;
 using System.Reflection;
+using System.Security.Claims;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using PersonalFinance.ApiService.Features.AccountLifecycle;
 using PersonalFinance.ApiService.Features.AccountLifecycle.Validators;
 using PersonalFinance.ApiService.Features.AiAssistant;
 using PersonalFinance.ApiService.Features.Analysis;
@@ -13,6 +16,7 @@ using PersonalFinance.ApiService.Features.Feedback.Validators;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Features.NetWorth.Validators;
 using PersonalFinance.ApiService.Features.Research;
+using PersonalFinance.ApiService.Features.SavingsGoals;
 using PersonalFinance.ApiService.Features.SavingsGoals.Validators;
 using PersonalFinance.ApiService.Features.Watchlist.Validators;
 using PersonalFinance.ApiService.Infrastructure;
@@ -124,6 +128,25 @@ public class KeyedRejectionCoverageTests
         Assert.Equal("0", entry.Args["max"].Value);
     }
 
+    [Fact]
+    public async Task EachServiceOrControllerRefusal_CarriesItsOwnKeyAndStatusCode()
+    {
+        // The coverage theory above sees only the set of keys, so two outcomes swapping keys would pass it.
+        Assert.Equal((ApiErrorKeys.AiAssistant.RateLimited, StatusCodes.Status429TooManyRequests),
+            KeyAndStatus(await AiRateLimitedAsync()));
+        Assert.Equal((ApiErrorKeys.AccountLifecycle.LastAdmin, StatusCodes.Status409Conflict),
+            KeyAndStatus(await DeletionRefusalAsync(DeletionRequestOutcome.LastAdmin)));
+        Assert.Equal((ApiErrorKeys.AccountLifecycle.AlreadyPending, StatusCodes.Status409Conflict),
+            KeyAndStatus(await DeletionRefusalAsync(DeletionRequestOutcome.AlreadyPending)));
+        Assert.Equal((ApiErrorKeys.SavingsGoals.BelowZero, StatusCodes.Status409Conflict),
+            KeyAndStatus(await ContributionRefusalAsync(ContributionOutcome.BelowZero)));
+        Assert.Equal((ApiErrorKeys.SavingsGoals.AdjustmentNotEditable, StatusCodes.Status400BadRequest),
+            KeyAndStatus(await ContributionRefusalAsync(ContributionOutcome.NotEditable)));
+    }
+
+    private static (string Key, int StatusCode) KeyAndStatus(ApiErrorException refusal) =>
+        (refusal.ToDto().Errors[0].Key, refusal.StatusCode);
+
     /// <summary>Every rejection the Feature can return: each validator failure plus each service or controller rejection.</summary>
     private static async Task<List<ApiErrorEntryDto>> RejectionsAsync(string feature) => feature switch
     {
@@ -136,13 +159,26 @@ public class KeyedRejectionCoverageTests
             await QuotaDenialAsync("anonymous", dailyLimit: 10, monthlyBudgetUsd: 10m),
             await QuotaDenialAsync("user-1", dailyLimit: 0, monthlyBudgetUsd: 10m),
             await QuotaDenialAsync("user-1", dailyLimit: 10, monthlyBudgetUsd: 0m),
-            Thrown(ApiErrorKeys.AiAssistant.RateLimited)
+            (await AiRateLimitedAsync()).ToDto().Errors[0]
         ],
         nameof(ApiErrorKeys.Research) =>
         [
             await Caught(() => new CompaniesController(null!).Suggest("")),
             await Caught(() => new CompaniesController(null!).Get("TOOLONGTICKER")),
-            Thrown(ApiErrorKeys.Research.TooManyLookups)
+            ProvenElsewhere(ApiErrorKeys.Research.TooManyLookups,
+                nameof(Research.CompaniesEndpointTests.Get_TooManyLookups_Is429))
+        ],
+        nameof(ApiErrorKeys.AccountLifecycle) =>
+        [
+            .. Failures(new CancelDeletionRequestValidator(), new CancelDeletionRequest { Token = "<script>" }),
+            (await DeletionRefusalAsync(DeletionRequestOutcome.LastAdmin)).ToDto().Errors[0],
+            (await DeletionRefusalAsync(DeletionRequestOutcome.AlreadyPending)).ToDto().Errors[0]
+        ],
+        nameof(ApiErrorKeys.SavingsGoals) =>
+        [
+            .. SavingsGoalsValidatorFailures(),
+            (await ContributionRefusalAsync(ContributionOutcome.BelowZero)).ToDto().Errors[0],
+            (await ContributionRefusalAsync(ContributionOutcome.NotEditable)).ToDto().Errors[0]
         ],
         nameof(ApiErrorKeys.Analysis) =>
         [
@@ -177,34 +213,8 @@ public class KeyedRejectionCoverageTests
                 }),
             .. Failures(new ChangeFeedbackStatusRequestValidator(),
                 new ChangeFeedbackStatusRequest { Status = (FeedbackStatus)99 }),
-            Thrown(ApiErrorKeys.Feedback.RateLimited)
-        ],
-        nameof(ApiErrorKeys.AccountLifecycle) =>
-        [
-            .. Failures(new CancelDeletionRequestValidator(), new CancelDeletionRequest { Token = "<script>" }),
-            Thrown(ApiErrorKeys.AccountLifecycle.LastAdmin),
-            Thrown(ApiErrorKeys.AccountLifecycle.AlreadyPending)
-        ],
-        nameof(ApiErrorKeys.SavingsGoals) =>
-        [
-            .. Failures(new CreateSavingsGoalRequestValidator(),
-                new CreateSavingsGoalRequestDto { Name = "", TargetAmount = 0m, CurrentAmount = -1m },
-                new CreateSavingsGoalRequestDto
-                {
-                    Name = new string('n', 201), TargetAmount = 10_000_000_000_000_000m,
-                    CurrentAmount = 10_000_000_000_000_000m, Description = new string('d', 1001)
-                },
-                new CreateSavingsGoalRequestDto { Name = "Trip", TargetAmount = 1m, CurrentAmount = 1.005m }),
-            .. Failures(new SaveContributionRequestValidator(new FixedTimeProvider(Now)),
-                new SaveContributionRequestDto { Amount = 0m, Date = new DateOnly(2026, 10, 26), Note = new string('n', 201) },
-                new SaveContributionRequestDto { Amount = -10_000_000_000_000_000m, Date = new DateOnly(1999, 12, 31) },
-                new SaveContributionRequestDto { Amount = 1.005m }),
-            .. Failures(new CorrectBalanceRequestValidator(),
-                new CorrectBalanceRequestDto { Balance = -1m },
-                new CorrectBalanceRequestDto { Balance = 10_000_000_000_000_000m },
-                new CorrectBalanceRequestDto { Balance = 1.005m }),
-            Thrown(ApiErrorKeys.SavingsGoals.BelowZero),
-            Thrown(ApiErrorKeys.SavingsGoals.AdjustmentNotEditable)
+            ProvenElsewhere(ApiErrorKeys.Feedback.RateLimited,
+                nameof(Feedback.FeedbackRateLimitTests.Submit_TheSixthWithinAnHour_Rejects429WithItsKey))
         ],
         nameof(ApiErrorKeys.Watchlist) =>
         [
@@ -223,6 +233,26 @@ public class KeyedRejectionCoverageTests
         nameof(ApiErrorKeys.NetWorth) => NetWorthRejections(),
         _ => throw new ArgumentOutOfRangeException(nameof(feature), feature, null)
     };
+
+    private static List<ApiErrorEntryDto> SavingsGoalsValidatorFailures() =>
+        [
+            .. Failures(new CreateSavingsGoalRequestValidator(),
+                new CreateSavingsGoalRequestDto { Name = "", TargetAmount = 0m, CurrentAmount = -1m },
+                new CreateSavingsGoalRequestDto
+                {
+                    Name = new string('n', 201), TargetAmount = 10_000_000_000_000_000m,
+                    CurrentAmount = 10_000_000_000_000_000m, Description = new string('d', 1001)
+                },
+                new CreateSavingsGoalRequestDto { Name = "Trip", TargetAmount = 1m, CurrentAmount = 1.005m }),
+            .. Failures(new SaveContributionRequestValidator(new FixedTimeProvider(Now)),
+                new SaveContributionRequestDto { Amount = 0m, Date = new DateOnly(2026, 10, 26), Note = new string('n', 201) },
+                new SaveContributionRequestDto { Amount = -10_000_000_000_000_000m, Date = new DateOnly(1999, 12, 31) },
+                new SaveContributionRequestDto { Amount = 1.005m }),
+            .. Failures(new CorrectBalanceRequestValidator(),
+                new CorrectBalanceRequestDto { Balance = -1m },
+                new CorrectBalanceRequestDto { Balance = 10_000_000_000_000_000m },
+                new CorrectBalanceRequestDto { Balance = 1.005m })
+        ];
 
     /// <summary>The Net Worth validator stops at the first broken rule, so each rule is broken on its own.</summary>
     private static List<ApiErrorEntryDto> NetWorthRejections()
@@ -252,8 +282,49 @@ public class KeyedRejectionCoverageTests
     private static List<ApiErrorEntryDto> Failures<T>(IValidator<T> validator, params T[] requests) =>
         new ValidationResult(requests.SelectMany(request => validator.Validate(request).Errors)).ToApiError().Errors;
 
-    /// <summary>A rejection thrown deep in a service or controller; none of these carries arguments.</summary>
-    private static ApiErrorEntryDto Thrown(string key) => new ApiErrorException(key, "English").ToDto().Errors[0];
+    /// <summary>
+    /// A key whose rejection another test already raises on its real path (<paramref name="provenBy"/>), built from the
+    /// key here only so this inventory stays complete. Raising it here would need that test's whole fixture (a rate
+    /// window or an HTTP host). Until #350 every service and controller rejection was built this way, so a wrong key in a
+    /// controller's outcome switch went unnoticed.
+    /// </summary>
+    private static ApiErrorEntryDto ProvenElsewhere(string key, string provenBy)
+    {
+        Assert.False(string.IsNullOrEmpty(provenBy));
+        return new ApiErrorException(key, "English").ToDto().Errors[0];
+    }
+
+    /// <summary>The AI Assistant refusing a summary because the caller's rate limit is spent.</summary>
+    private static Task<ApiErrorException> AiRateLimitedAsync() =>
+        Assert.ThrowsAsync<ApiErrorException>(() => new AiAssistantService(null!, new DenyAllRateLimiter(), null!,
+                NullLogger<AiAssistantService>.Instance, new ConfigurationBuilder().Build(), null!)
+            .SummarizeArticleAsync("user-1", new NewsArticleSummaryRequestDto { Title = "t" }));
+
+    /// <summary>The Deletion Request endpoint answering a service that refused with <paramref name="outcome"/>.</summary>
+    private static Task<ApiErrorException> DeletionRefusalAsync(DeletionRequestOutcome outcome)
+    {
+        (IAccountDeletionService service, ApiProxy<IAccountDeletionService> proxy) = ApiProxy.Create<IAccountDeletionService>();
+        proxy.Returns(nameof(IAccountDeletionService.RequestAsync), DeletionRequestResult.Refused(outcome));
+        var controller = new AccountDeletionController(service, null!) { ControllerContext = SignedIn() };
+        return Assert.ThrowsAsync<ApiErrorException>(() => controller.Create());
+    }
+
+    /// <summary>The Contribution endpoint answering a service that refused with <paramref name="outcome"/>.</summary>
+    private static Task<ApiErrorException> ContributionRefusalAsync(ContributionOutcome outcome)
+    {
+        (ISavingsGoalService service, ApiProxy<ISavingsGoalService> proxy) = ApiProxy.Create<ISavingsGoalService>();
+        proxy.Returns(nameof(ISavingsGoalService.DeleteContributionAsync), new ContributionResult(outcome));
+        var controller = new SavingsGoalsController(service, null!, null!, null!) { ControllerContext = SignedIn() };
+        return Assert.ThrowsAsync<ApiErrorException>(() => controller.DeleteContribution(1, 2));
+    }
+
+    private static ControllerContext SignedIn() => new()
+    {
+        HttpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test"))
+        }
+    };
 
     private static HashSet<string> KeysOf(string feature) =>
         typeof(ApiErrorKeys).GetNestedType(feature)!
@@ -296,5 +367,10 @@ public class KeyedRejectionCoverageTests
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class DenyAllRateLimiter : IRateLimiterService
+    {
+        public bool TryAllow(string userId) => false;
     }
 }
