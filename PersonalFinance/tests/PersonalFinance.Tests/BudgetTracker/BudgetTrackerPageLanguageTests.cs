@@ -166,8 +166,9 @@ public sealed partial class BudgetTrackerPageLanguageTests : IAsyncLifetime
         Assert.Equal(1, Regex.Count(html, "id=\"btnNextMonth\""));
         Assert.Equal(1, Regex.Count(html, "id=\"btnAddExpenseCategory\""));
         Assert.Equal(1, Regex.Count(html, "id=\"btnAddIncomeCategory\""));
-        // The expense and income section headers, and the Add Category modal's submit button.
-        Assert.Equal(3, Regex.Count(html, @">\s*Add Category\s*</button>"));
+        // Outside the modals, only the expense and income section headers offer Add Category.
+        string page = html[..html.IndexOf("class=\"modal fade\"", StringComparison.Ordinal)];
+        Assert.Equal(2, Regex.Count(page, @">\s*Add Category\s*</button>"));
     }
 
     private async Task<string> GetAsync(bool vietnamese)
