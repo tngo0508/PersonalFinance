@@ -39,8 +39,6 @@ public class LoginWith2faModel : PageModel
     [BindProperty]
     public InputModel Input { get; set; }
 
-    public bool RememberMe { get; set; }
-
     public string ReturnUrl { get; set; }
 
     public class InputModel
@@ -55,7 +53,7 @@ public class LoginWith2faModel : PageModel
         public bool RememberMachine { get; set; }
     }
 
-    public async Task<IActionResult> OnGetAsync(bool rememberMe, string returnUrl = null)
+    public async Task<IActionResult> OnGetAsync(string returnUrl = null)
     {
         // Ensure the user has gone through the username & password screen first
         IdentityUser user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
@@ -66,12 +64,11 @@ public class LoginWith2faModel : PageModel
         }
 
         ReturnUrl = returnUrl;
-        RememberMe = rememberMe;
 
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync(bool rememberMe, string returnUrl = null)
+    public async Task<IActionResult> OnPostAsync(string returnUrl = null)
     {
         if (!ModelState.IsValid)
         {
@@ -88,7 +85,8 @@ public class LoginWith2faModel : PageModel
 
         string authenticatorCode = Input.TwoFactorCode.Replace(" ", string.Empty).Replace("-", string.Empty);
 
-        Microsoft.AspNetCore.Identity.SignInResult result = await _signInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, rememberMe, Input.RememberMachine);
+        // Never persistent: the session ends when the browser closes (Idle Sign-out, #332).
+        Microsoft.AspNetCore.Identity.SignInResult result = await _signInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, isPersistent: false, Input.RememberMachine);
 
         string userId = await _userManager.GetUserIdAsync(user);
 

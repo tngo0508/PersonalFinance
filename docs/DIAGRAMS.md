@@ -660,6 +660,8 @@ flowchart TB
         wpol -- "not Admin" --> nf["AdminNotFoundAuthorizationResultHandler<br/>404, not 403"]
         wpol -- "allowed" --> wctrl["Web controller or Razor Page"]
         cookie -- "signed out, request is /api or JSON" --> ar["ApiAwareCookieRedirects<br/>401/403 instead of a login redirect"]
+        login -. "session cookie, never persistent" .-> idle["Idle Sign-out<br/>cookie lasts IdleSignOut:TimeoutMinutes, sliding;<br/>idle-sign-out.js checks in (POST /idle-sign-out/check-in renews it),<br/>warns, then signs out to Login ?idle=true"]
+        idle -.-> cookie
     end
 
     subgraph api["ApiService: XUserId scheme, per request"]
@@ -677,7 +679,9 @@ flowchart TB
 ```
 
 Drawn from `Web/Program.cs`, `Web/Infrastructure/AdminNotFoundAuthorizationResultHandler.cs`,
-`Web/Infrastructure/ApiAwareCookieRedirects.cs`, `ApiService/Infrastructure/XUserIdAuthenticationHandler.cs`,
+`Web/Infrastructure/ApiAwareCookieRedirects.cs`, `Web/Infrastructure/IdleSignOutCookie.cs`,
+`Web/Controllers/IdleSignOutController.cs`, `Web/wwwroot/js/core/idle-sign-out.js`,
+`ApiService/Infrastructure/XUserIdAuthenticationHandler.cs`,
 `Data/RbacSeeder.cs` and `Data/DefaultRoleAssignment.cs`. Rules for new code are in `ARCHITECTURE.md`, "Identity".
 
 ## 7. Account lifecycle
@@ -1237,7 +1241,7 @@ flowchart LR
 
 Drawn from `ApiService/Program.cs`, `Web/Program.cs`, `Data/DatabaseMigrationExtensions.cs` and
 `ServiceDefaults/Extensions.cs`. Web DI, in order: ServiceDefaults and Serilog, `AppDbContext` and data protection,
-Identity (cookie 14 days sliding, `ApiAwareCookieRedirects`, optional Google), the `RequireAdmin` Policy and the
+Identity (cookie `IdleSignOut:TimeoutMinutes` sliding through `AddIdleSignOut`, `ApiAwareCookieRedirects`, optional Google), the `RequireAdmin` Policy and the
 404 handler, `AddInternalApiClients`, Brevo email, `IUserConsentService`, `TimeProvider`, forwarded headers,
 `AddAppLocalization` ([16](#16-localization)), Razor Pages and MVC with a global antiforgery filter, view and
 DataAnnotations localization.

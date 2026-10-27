@@ -59,14 +59,14 @@ try
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.ExpireTimeSpan = TimeSpan.FromDays(14);
-        options.SlidingExpiration = true;
         options.LoginPath = "/Identity/Account/Login";
         options.LogoutPath = "/Identity/Account/Logout";
         options.AccessDeniedPath = "/Identity/Account/AccessDenied";
         ApiAwareCookieRedirects.Apply(options.Events); // 401/403 instead of a login redirect for fetch/XHR calls
         LanguageSignInEvents.Apply(options.Events); // the stored Language becomes the culture cookie at sign-in
     });
+    // Idle Sign-out: the cookie lasts IdleSignOut:TimeoutMinutes, slides, and the browser's check-in renews it.
+    builder.Services.AddIdleSignOut(builder.Configuration);
 
     // Google sign-in, only when its credentials are configured.
     string? googleClientId = builder.Configuration["Authentication:Google:ClientId"];

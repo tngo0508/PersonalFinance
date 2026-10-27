@@ -2631,6 +2631,28 @@ button.bgt-rank-row:hover { background: var(--bgt-hover); }
 }
 
 /* ==========================================================================
+   Idle Sign-out warning (js/core/idle-sign-out.js)
+   ========================================================================== */
+
+.idle-sign-out-dialog {
+  width: min(28rem, calc(100vw - 2rem));
+  padding: 1.5rem;
+  color: var(--bs-body-color);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.idle-sign-out-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.idle-sign-out-dialog__countdown {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
    Cookie Consent Banner
    ========================================================================== */
 
