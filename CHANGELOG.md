@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [11.0.0] - 2026-10-27
+
+### Added
+
+- **Pseudonyms**: every Account appears in the Guild Hall under a generated "Adjective Noun" name such as "Steady Heron", created on its first visit and unique across Accounts (slice 2 of #420, ADR 0018).
+  - A re-roll link in the header picks a new one, and every past story and comment shows it at once, since posts reference the Account and not a name.
+  - The Data Export includes the Pseudonym.
+
+### Changed
+
+- **The Community page is the Guild Hall**: the nav, tab title, landing and About pages say "Guild Hall" ("Hội quán" in Vietnamese), and the page opens with the prototype's plaque (the promise, the no-amounts line and the Pseudonym badge with its re-roll) on the warm paper palette.
+- **Authors are Pseudonyms only**: stories and comments no longer store or show a display name, the API no longer takes an author name, and no Community DTO carries a display name or email.
+- **"Former member" replaces "Deleted User"**: a purged Account's stories and comments are shown under that label on the page, in the Privacy Policy and in the delete-account text, and its Pseudonym is deleted with the rest of its rows (deferred from #422).
+- **Story title placeholder**: the example no longer suggests a money amount.
+
+### Removed
+
+- **`AuthorName` columns** on `CommunityStories` and `CommunityComments`, in a schema migration (hence the major bump): the Guild Hall has been empty since #422, so no data is lost.
+
 ## [10.0.0] - 2026-10-27
 
 ### Removed

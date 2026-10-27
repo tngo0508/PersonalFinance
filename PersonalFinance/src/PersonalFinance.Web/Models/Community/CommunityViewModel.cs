@@ -1,10 +1,15 @@
 namespace PersonalFinance.Web.Models.Community;
 
 /// <summary>
-/// View model for the Community page that displays polls, stories, and comments.
+/// View model for the Guild Hall page: the viewer's Pseudonym, polls, stories and comments.
 /// </summary>
 public sealed class CommunityViewModel
 {
+    /// <summary>
+    /// Gets or sets the viewer's Pseudonym, the name it appears under everywhere on the page.
+    /// </summary>
+    public string Pseudonym { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets the list of active polls for community engagement.
     /// </summary>
@@ -124,9 +129,14 @@ public sealed class CommunityStory
     public string Body { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the author name.
+    /// Gets or sets the author's Pseudonym, or null when the author is a Former member (purged).
     /// </summary>
-    public string Author { get; set; } = string.Empty;
+    public string? AuthorPseudonym { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer wrote this story, so a re-rolled Pseudonym is shown on it at once.
+    /// </summary>
+    public bool IsOwn { get; set; }
 
     /// <summary>
     /// Gets or sets the date the story was published.
@@ -175,9 +185,14 @@ public sealed class CommunityComment
     public int Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the author's display name.
+    /// Gets or sets the author's Pseudonym, or null when the author is a Former member (purged).
     /// </summary>
-    public string Author { get; set; } = string.Empty;
+    public string? AuthorPseudonym { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer wrote this comment, so a re-rolled Pseudonym is shown on it at once.
+    /// </summary>
+    public bool IsOwn { get; set; }
 
     /// <summary>
     /// Gets or sets the comment text.

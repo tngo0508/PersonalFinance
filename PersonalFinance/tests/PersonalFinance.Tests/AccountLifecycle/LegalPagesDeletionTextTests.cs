@@ -2,7 +2,7 @@ namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// The Privacy Policy and Terms must describe account deletion as it ships (ADR 0005): hidden at once, 30 days to
-/// cancel, erased within 31 days, Community content kept as "Deleted User". They must not promise the old behaviour.
+/// cancel, erased within 31 days, Guild Hall content kept as "Former member". They must not promise the old behaviour.
 /// </summary>
 public class LegalPagesDeletionTextTests
 {
@@ -39,7 +39,7 @@ public class LegalPagesDeletionTextTests
 
         Assert.Contains("30 days", privacy);
         Assert.Contains("cancel", privacy, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Deleted User", privacy);
+        Assert.Contains("Former member", privacy);
         Assert.Contains("backups", privacy, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Download my data", privacy);
     }

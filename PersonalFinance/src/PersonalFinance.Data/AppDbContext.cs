@@ -72,6 +72,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<CommunityStoryLike> CommunityStoryLikes => Set<CommunityStoryLike>();
 
     /// <summary>
+    /// Guild Hall Pseudonyms (one per Account) table set.
+    /// </summary>
+    public DbSet<CommunityPseudonym> CommunityPseudonyms => Set<CommunityPseudonym>();
+
+    /// <summary>
     /// User budget allocations table set.
     /// </summary>
     public DbSet<UserBudgetAllocation> UserBudgetAllocations => Set<UserBudgetAllocation>();
@@ -190,6 +195,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<CommunityCommentLike>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityStoryLike>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityPseudonym>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<BudgetCategory>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<MonthlyBudgetPlan>().HasQueryFilter(e => !e.IsDeleted);
@@ -605,7 +611,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     }
 
     /// <summary>
-    /// The Community entities: polls, options and votes, stories, comments and likes.
+    /// The Community entities (the Guild Hall): Pseudonyms, polls, options and votes, stories, comments and likes.
+    /// Stories and comments store no author name: the author is the row's <c>UserId</c>, shown by its Pseudonym.
     /// </summary>
     private static void ConfigureCommunity(ModelBuilder builder)
     {
@@ -659,7 +666,6 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Text).IsRequired().HasMaxLength(2000);
             entity.HasIndex(e => e.PollId);
             entity.HasIndex(e => e.StoryId);
@@ -695,7 +701,6 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(e => e.AuthorName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Summary).IsRequired().HasMaxLength(2000);
             entity.Property(e => e.Body).IsRequired().HasMaxLength(10000);
@@ -717,6 +722,18 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
             entity.HasIndex(e => new { e.UserId, e.StoryId }).IsUnique();
             entity.HasIndex(e => e.StoryId);
+        });
+
+        // Configure CommunityPseudonym entity — one row per Account, one name per row. Both indexes are unfiltered on
+        // purpose: a re-roll replaces the name in place, so an Account never has a second row, and a soft-deleted row
+        // (an Account in its Grace Period) keeps its name reserved until the Purge deletes the row.
+        builder.Entity<CommunityPseudonym>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(60);
+            entity.HasIndex(e => e.UserId).IsUnique();
+            entity.HasIndex(e => e.Name).IsUnique();
         });
     }
 

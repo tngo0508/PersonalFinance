@@ -19,7 +19,7 @@ public class HomeControllerTests
     private static readonly string[] ExpectedMoreFeatureTitles =
     [
         "Spreadsheet Analysis", "Investment Calculator", "Google Drive Integration", "AI Assistant",
-        "Finance News", "Community"
+        "Finance News", "Guild Hall"
     ];
 
     private static ControllerContext CreateAnonymousContext()

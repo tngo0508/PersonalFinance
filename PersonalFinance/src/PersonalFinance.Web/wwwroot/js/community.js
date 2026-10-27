@@ -1,8 +1,8 @@
 /* global PFI18n */
 /**
- * Community page — poll voting, comment toggling, story expand/collapse, likes, and story submission.
- * Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n; user content
- * (comments, author names) is set as text and never translated.
+ * Guild Hall page — the Pseudonym re-roll, poll voting, comment toggling, story expand/collapse, likes, and story
+ * submission. Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n; user content
+ * (comments, Pseudonyms) is set as text and never translated.
  */
 (function () {
     'use strict';
@@ -42,6 +42,51 @@
             body: JSON.stringify(payload)
         });
         return response.json();
+    }
+
+    /**
+     * The avatar letters of an author label: the first letter of up to count words, upper-cased.
+     * @param {string} name - The author label.
+     * @param {number} count - How many words to take.
+     * @returns {string} The letters.
+     */
+    function initials (name, count) {
+        return name.split(' ').filter(Boolean).slice(0, count).map((word) => word.charAt(0).toUpperCase()).join('');
+    }
+
+    /**
+     * Shows a re-rolled Pseudonym everywhere the viewer's own name is on the page: the badge, and the author of the
+     * viewer's own stories and comments, so nothing on the page still shows the old one.
+     * @param {string} name - The new Pseudonym.
+     */
+    function applyPseudonym (name) {
+        document.querySelectorAll('[data-pseudonym-self]').forEach((el) => {
+            el.textContent = name;
+        });
+        document.querySelectorAll('[data-pseudonym-self-initials]').forEach((el) => {
+            el.textContent = initials(name, parseInt(el.dataset.pseudonymSelfInitials, 10) || 1);
+        });
+    }
+
+    // --- Pseudonym re-roll ---
+    const rerollBtn = document.getElementById('rerollPseudonymBtn');
+    if (rerollBtn) {
+        rerollBtn.addEventListener('click', async () => {
+            rerollBtn.disabled = true;
+            try {
+                const data = await postJson('/Community/RerollPseudonym', {});
+                if (data.success && data.pseudonym) {
+                    applyPseudonym(data.pseudonym);
+                    showToast(PFI18n.t('Community.Js.PseudonymRerolled', { name: data.pseudonym }));
+                } else {
+                    showToast(data.error || PFI18n.t('Community.Js.RerollFailed'));
+                }
+            } catch {
+                showToast(PFI18n.t('Community.Js.RerollFailedRetry'));
+            } finally {
+                rerollBtn.disabled = false;
+            }
+        });
     }
 
     /**
@@ -371,14 +416,18 @@
         const card = el('div', 'community-comment-card');
         card.dataset.commentId = comment.id;
 
+        const author = comment.author || '';
         const header = el('div', 'community-comment-header');
-        const avatar = el('div', 'community-comment-avatar', (comment.author || '?').charAt(0).toUpperCase());
+        const avatar = el('div', 'community-comment-avatar', initials(author, 1) || '?');
         avatar.setAttribute('aria-hidden', 'true');
+        const authorEl = el('strong', 'community-comment-author', author);
+        if (comment.isOwn) {
+            avatar.dataset.pseudonymSelfInitials = '1';
+            authorEl.dataset.pseudonymSelf = '';
+        }
 
         const info = el('div', 'community-comment-info');
-        info.append(
-            el('strong', 'community-comment-author', comment.author || ''), ' ',
-            el('time', 'community-comment-time', PFI18n.t('Community.Js.JustNow')));
+        info.append(authorEl, ' ', el('time', 'community-comment-time', PFI18n.t('Community.Js.JustNow')));
 
         const like = el('button', 'community-comment-like');
         like.type = 'button';

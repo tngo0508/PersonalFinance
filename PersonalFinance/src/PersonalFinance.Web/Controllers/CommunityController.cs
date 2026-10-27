@@ -12,8 +12,9 @@ using PersonalFinance.Web.Models.Community;
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
-/// MVC Controller for the Community page featuring polls, statistics, and stories.
-/// All data operations are delegated to the ApiService via the ICommunityApi Refit client.
+/// MVC Controller for the Guild Hall page (the Community Feature): the viewer's Pseudonym, polls, stories and
+/// comments. All data operations are delegated to the ApiService via the ICommunityApi Refit client, which knows the
+/// Account from the forwarded user id; no name ever leaves this app.
 /// </summary>
 [Authorize]
 [JsonApiErrors]
@@ -35,7 +36,7 @@ public sealed class CommunityController : Controller
     }
 
     /// <summary>
-    /// Displays the Community page with interactive polls, quick stats, and relatable case studies.
+    /// Displays the Guild Hall with the viewer's Pseudonym, interactive polls, stories and recent comments.
     /// When the ApiService is unavailable, shows the Unavailable State instead of an empty page.
     /// </summary>
     [HttpGet]
@@ -53,6 +54,22 @@ public sealed class CommunityController : Controller
             _logger.LogError(ex, "Error loading community data for user {UserId}", userId);
             return this.UnavailableView(_localizer["Community.Title"], _localizer["Community.Message.Unavailable"], "Community");
         }
+    }
+
+    /// <summary>
+    /// Replaces the viewer's Pseudonym with a new one via AJAX.
+    /// </summary>
+    [HttpPost]
+    [Produces("application/json")]
+    public async Task<IActionResult> RerollPseudonym(CancellationToken cancellationToken = default)
+    {
+        CommunityPseudonymDto pseudonym = await _communityApi.RerollPseudonymAsync(cancellationToken);
+
+        return Json(new
+        {
+            success = true,
+            pseudonym = pseudonym.Name,
+        });
     }
 
     /// <summary>
@@ -105,7 +122,6 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = _localizer.Named("Community.Message.CommentTooLong", ("max", 2000)) });
         }
 
-        string authorName = User.Identity?.Name ?? "Anonymous";
         var commentRequest = new CommunityCommentRequestDto
         {
             Text = request.Text!,
@@ -113,7 +129,7 @@ public sealed class CommunityController : Controller
             StoryId = request.StoryId
         };
 
-        CommunityCommentDto comment = await _communityApi.AddCommentAsync(commentRequest, authorName, cancellationToken);
+        CommunityCommentDto comment = await _communityApi.AddCommentAsync(commentRequest, cancellationToken);
 
         return Json(new
         {
@@ -121,7 +137,8 @@ public sealed class CommunityController : Controller
             comment = new
             {
                 id = comment.Id,
-                author = comment.AuthorName,
+                author = CommunityText.Author(_localizer, comment.AuthorPseudonym),
+                isOwn = comment.IsOwn,
                 text = comment.Text,
                 createdAt = comment.CreatedAtUtc,
                 likes = comment.Likes,
@@ -168,7 +185,8 @@ public sealed class CommunityController : Controller
             comments = comments.Select(c => new
             {
                 id = c.Id,
-                author = c.AuthorName,
+                author = CommunityText.Author(_localizer, c.AuthorPseudonym),
+                isOwn = c.IsOwn,
                 text = c.Text,
                 createdAt = c.CreatedAtUtc,
                 likes = c.Likes,
@@ -183,8 +201,6 @@ public sealed class CommunityController : Controller
     [Produces("application/json")]
     public async Task<IActionResult> SubmitStory([FromBody] StoryRequest request, CancellationToken cancellationToken = default)
     {
-        string authorName = User.Identity?.Name ?? "Anonymous";
-
         var storyRequest = new CommunityStoryRequestDto
         {
             Title = request.Title!,
@@ -193,7 +209,7 @@ public sealed class CommunityController : Controller
             Category = request.Category!
         };
 
-        CommunityStoryDto story = await _communityApi.SubmitStoryAsync(storyRequest, authorName, cancellationToken);
+        CommunityStoryDto story = await _communityApi.SubmitStoryAsync(storyRequest, cancellationToken);
 
         return Json(new
         {
@@ -237,6 +253,7 @@ public sealed class CommunityController : Controller
     {
         return new CommunityViewModel
         {
+            Pseudonym = response.Pseudonym,
             ActivePolls = response.ActivePolls.Select(MapPollToViewModel).ToList(),
             Stories = response.Stories.Select(s => new CommunityStory
             {
@@ -244,7 +261,8 @@ public sealed class CommunityController : Controller
                 Title = s.Title,
                 Summary = s.Summary,
                 Body = s.Body,
-                Author = s.AuthorName,
+                AuthorPseudonym = s.AuthorPseudonym,
+                IsOwn = s.IsOwn,
                 PublishedDate = s.PublishedAtUtc,
                 CommentCount = s.CommentCount,
                 Category = s.Category,
@@ -256,7 +274,8 @@ public sealed class CommunityController : Controller
             RecentComments = response.RecentComments.Select(c => new CommunityComment
             {
                 Id = c.Id,
-                Author = c.AuthorName,
+                AuthorPseudonym = c.AuthorPseudonym,
+                IsOwn = c.IsOwn,
                 Text = c.Text,
                 CreatedAt = c.CreatedAtUtc,
                 Likes = c.Likes,

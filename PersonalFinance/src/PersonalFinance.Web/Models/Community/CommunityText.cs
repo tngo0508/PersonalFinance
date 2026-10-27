@@ -4,8 +4,8 @@ using PersonalFinance.Web.Infrastructure.Localization;
 namespace PersonalFinance.Web.Models.Community;
 
 /// <summary>
-/// The Community page's own wording around user content, in the request's Language. User content itself (titles,
-/// bodies, comments, author names, poll questions) is never translated (spec §1).
+/// The Guild Hall page's own wording around user content, in the request's Language. User content itself (titles,
+/// bodies, comments, Pseudonyms, poll questions) is never translated (spec §1).
 /// </summary>
 public static class CommunityText
 {
@@ -52,5 +52,29 @@ public static class CommunityText
         return TranslatedCategories.Contains(category)
             ? localizer[CategoryKeyPrefix + category]
             : category;
+    }
+
+    /// <summary>
+    /// Who a post is shown as written by: the author's Pseudonym, or the translated "Former member" when the author
+    /// has none any more because the Account was purged (ADR 0005, ADR 0018).
+    /// </summary>
+    public static string Author(IStringLocalizer localizer, string? pseudonym)
+    {
+        ArgumentNullException.ThrowIfNull(localizer);
+        return string.IsNullOrWhiteSpace(pseudonym) ? localizer["Community.FormerMember"] : pseudonym;
+    }
+
+    /// <summary>
+    /// The avatar letters of an author label: the first letter of up to <paramref name="count"/> words, upper-cased
+    /// ("Steady Heron" gives "SH").
+    /// </summary>
+    public static string Initials(string author, int count)
+    {
+        ArgumentNullException.ThrowIfNull(author);
+        IEnumerable<char> letters = author
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(count)
+            .Select(word => char.ToUpperInvariant(word[0]));
+        return string.Concat(letters);
     }
 }

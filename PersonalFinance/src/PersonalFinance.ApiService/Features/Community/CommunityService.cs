@@ -8,40 +8,72 @@ using PersonalFinance.Shared.DTOs.Community;
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// Service implementation for managing community features: polls, comments, stories, and likes.
+/// Service implementation of the Guild Hall (the Community Feature): Pseudonyms, polls, comments, stories and likes.
+/// An author is shown by its Pseudonym, resolved from the Account at read time, so a re-roll shows on every past post
+/// and no DTO carries a display name or email (ADR 0018). A post whose author has no Pseudonym any more (a Former
+/// member, ADR 0005) is returned with a null author.
 /// </summary>
 internal sealed class CommunityService : ICommunityService
 {
+    /// <summary>
+    /// Saves of a Pseudonym retried when a unique index rejects a row another request wrote at the same time: the
+    /// same Account's first visit twice, or two Accounts drawing the same name.
+    /// </summary>
+    private const int PseudonymSaveAttempts = 3;
+
     private readonly AppDbContext _dbContext;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<CommunityService> _logger;
 
     public CommunityService(
         AppDbContext dbContext,
+        TimeProvider timeProvider,
         ILogger<CommunityService> logger)
     {
         _dbContext = dbContext;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
     public async Task<CommunityResponseDto> GetCommunityAsync(string userId, CancellationToken cancellationToken = default)
     {
-        var response = new CommunityResponseDto();
+        CommunityPseudonym pseudonym = await GetOrCreatePseudonymAsync(userId, cancellationToken);
+        List<CommunityPoll> polls = await ActivePollsAsync(cancellationToken);
 
-        // Fetch active polls with options and vote counts
-        List<CommunityPoll> polls = await _dbContext.CommunityPolls
-            .AsNoTracking()
-            .Include(p => p.Options)
-                .ThenInclude(o => o.Votes)
-            .Include(p => p.Votes)
-            .Where(p => p.IsActive)
-            .OrderByDescending(p => p.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+        return new CommunityResponseDto
+        {
+            Pseudonym = pseudonym.Name,
+            ActivePolls = polls.Select(p => MapPollToDto(p, userId)).ToList(),
+            Stories = await VisibleStoriesQuery(userId).Take(6).ToListAsync(cancellationToken),
+            RecentComments = await VisibleCommentsQuery(userId).Take(10).ToListAsync(cancellationToken),
+        };
+    }
 
-        response.ActivePolls = polls.Select(p => MapPollToDto(p, userId)).ToList();
-        response.Stories = await GetStoriesAsync(userId, cancellationToken);
-        response.RecentComments = await GetRecentCommentsAsync(10, cancellationToken);
+    public async Task<CommunityPseudonymDto> RerollPseudonymAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        CommunityPseudonym pseudonym = await GetOrCreatePseudonymAsync(userId, cancellationToken);
 
-        return response;
+        for (int attempt = 1; ; attempt++)
+        {
+            pseudonym.Name = await PickUnusedNameAsync(pseudonym.Name, cancellationToken);
+            pseudonym.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                break;
+            }
+            catch (DbUpdateException) when (attempt < PseudonymSaveAttempts)
+            {
+                // Another Account drew the same name first; draw again.
+            }
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Pseudonym re-rolled: UserId={UserId}", userId);
+        }
+
+        return new CommunityPseudonymDto { Name = pseudonym.Name };
     }
 
     public async Task<CommunityResponseDto> VoteAsync(string userId, CommunityVoteRequestDto request, CancellationToken cancellationToken = default)
@@ -81,11 +113,7 @@ internal sealed class CommunityService : ICommunityService
 
         if (existingVote != null)
         {
-            if (existingVote.OptionId == request.OptionId)
-            {
-                // Same option — no-op
-            }
-            else
+            if (existingVote.OptionId != request.OptionId)
             {
                 existingVote.OptionId = request.OptionId;
                 if (_logger.IsEnabled(LogLevel.Information))
@@ -111,23 +139,15 @@ internal sealed class CommunityService : ICommunityService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        // Return updated community data
-        var response = new CommunityResponseDto();
-        List<CommunityPoll> updatedPolls = await _dbContext.CommunityPolls
-            .AsNoTracking()
-            .Include(p => p.Options)
-                .ThenInclude(o => o.Votes)
-            .Include(p => p.Votes)
-            .Where(p => p.IsActive)
-            .OrderByDescending(p => p.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
-
-        response.ActivePolls = updatedPolls.Select(p => MapPollToDto(p, userId)).ToList();
-
-        return response;
+        // Return the updated polls only; the page re-reads the rest when it reloads.
+        List<CommunityPoll> updatedPolls = await ActivePollsAsync(cancellationToken);
+        return new CommunityResponseDto
+        {
+            ActivePolls = updatedPolls.Select(p => MapPollToDto(p, userId)).ToList(),
+        };
     }
 
-    public async Task<CommunityCommentDto> AddCommentAsync(string userId, CommunityCommentRequestDto request, string authorName, CancellationToken cancellationToken = default)
+    public async Task<CommunityCommentDto> AddCommentAsync(string userId, CommunityCommentRequestDto request, CancellationToken cancellationToken = default)
     {
         string trimmedText = request.Text.Trim();
         if (string.IsNullOrEmpty(trimmedText))
@@ -166,10 +186,10 @@ internal sealed class CommunityService : ICommunityService
             storyId = story.Id;
         }
 
-        var comment = new PersonalFinance.Data.Entities.CommunityComment
+        CommunityPseudonym author = await GetOrCreatePseudonymAsync(userId, cancellationToken);
+        var comment = new CommunityComment
         {
             UserId = userId,
-            AuthorName = authorName.Trim(),
             Text = trimmedText,
             PollId = pollId,
             StoryId = storyId,
@@ -187,7 +207,8 @@ internal sealed class CommunityService : ICommunityService
         return new CommunityCommentDto
         {
             Id = comment.Id,
-            AuthorName = comment.AuthorName,
+            AuthorPseudonym = author.Name,
+            IsOwn = true,
             Text = comment.Text,
             CreatedAtUtc = comment.CreatedAt,
             PollId = comment.PollId,
@@ -232,7 +253,7 @@ internal sealed class CommunityService : ICommunityService
         };
     }
 
-    public async Task<List<CommunityCommentDto>> GetPollCommentsAsync(string pollCode, CancellationToken cancellationToken = default)
+    public async Task<List<CommunityCommentDto>> GetPollCommentsAsync(string userId, string pollCode, CancellationToken cancellationToken = default)
     {
         CommunityPoll? poll = await _dbContext.CommunityPolls
             .AsNoTracking()
@@ -244,25 +265,12 @@ internal sealed class CommunityService : ICommunityService
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        List<CommunityCommentDto> comments = await _dbContext.CommunityComments
-            .AsNoTracking()
-            .Where(c => c.IsVisible && c.PollId == poll.Id)
-            .OrderByDescending(c => c.CreatedAt)
-            .Select(c => new CommunityCommentDto
-            {
-                Id = c.Id,
-                AuthorName = c.AuthorName,
-                Text = c.Text,
-                CreatedAtUtc = c.CreatedAt,
-                Likes = c.LikesList.Count,
-                PollId = c.PollId,
-            })
+        return await VisibleCommentsQuery(userId)
+            .Where(c => c.PollId == poll.Id)
             .ToListAsync(cancellationToken);
-
-        return comments;
     }
 
-    public async Task<CommunityStoryDto> SubmitStoryAsync(string userId, CommunityStoryRequestDto request, string authorName, CancellationToken cancellationToken = default)
+    public async Task<CommunityStoryDto> SubmitStoryAsync(string userId, CommunityStoryRequestDto request, CancellationToken cancellationToken = default)
     {
         string trimmedTitle = request.Title.Trim();
         string trimmedSummary = request.Summary.Trim();
@@ -302,10 +310,10 @@ internal sealed class CommunityService : ICommunityService
         int wordCount = trimmedBody.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
         int readTimeMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
 
-        var story = new PersonalFinance.Data.Entities.CommunityStory
+        CommunityPseudonym author = await GetOrCreatePseudonymAsync(userId, cancellationToken);
+        var story = new CommunityStory
         {
             UserId = userId,
-            AuthorName = authorName.Trim(),
             Title = trimmedTitle,
             Summary = trimmedSummary,
             Body = trimmedBody,
@@ -327,7 +335,8 @@ internal sealed class CommunityService : ICommunityService
         return new CommunityStoryDto
         {
             Id = story.Id,
-            AuthorName = story.AuthorName,
+            AuthorPseudonym = author.Name,
+            IsOwn = true,
             Title = story.Title,
             Summary = story.Summary,
             Body = story.Body,
@@ -377,30 +386,139 @@ internal sealed class CommunityService : ICommunityService
 
     public async Task<CommunityStoryDto?> GetStoryByIdAsync(string userId, int storyId, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.CommunityStories
-            .AsNoTracking()
-            .Where(s => s.Id == storyId && s.IsVisible)
-            .Select(s => new CommunityStoryDto
-            {
-                Id = s.Id,
-                AuthorName = s.AuthorName,
-                Title = s.Title,
-                Summary = s.Summary,
-                Body = s.Body,
-                Category = s.Category,
-                Likes = s.LikesList.Count,
-                CommentCount = s.Comments.Count(c => c.IsVisible),
-                IsFeatured = s.IsFeatured,
-                PublishedAtUtc = s.PublishedAtUtc,
-                ReadTimeMinutes = s.ReadTimeMinutes,
-                IsLikedByUser = s.LikesList.Any(l => l.UserId == userId),
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+        return await VisibleStoriesQuery(userId)
+            .FirstOrDefaultAsync(s => s.Id == storyId, cancellationToken);
     }
+
+    // =========================================================================
+    // Queries (internal so tests can check they translate to Azure SQL)
+    // =========================================================================
+
+    /// <summary>
+    /// The visible stories, featured first then newest, each with its author's Pseudonym: null once the author is a
+    /// Former member, since the Purge deletes the Pseudonym and leaves the story under the placeholder id.
+    /// </summary>
+    internal IQueryable<CommunityStoryDto> VisibleStoriesQuery(string userId) =>
+        from story in _dbContext.CommunityStories.AsNoTracking()
+        where story.IsVisible
+        join author in _dbContext.CommunityPseudonyms.AsNoTracking() on story.UserId equals author.UserId into authors
+        from author in authors.DefaultIfEmpty()
+        orderby story.IsFeatured descending, story.PublishedAtUtc descending, story.Id descending
+        select new CommunityStoryDto
+        {
+            Id = story.Id,
+            AuthorPseudonym = author == null ? null : author.Name,
+            IsOwn = story.UserId == userId,
+            Title = story.Title,
+            Summary = story.Summary,
+            Body = story.Body,
+            Category = story.Category,
+            Likes = story.LikesList.Count,
+            CommentCount = story.Comments.Count(c => c.IsVisible),
+            IsFeatured = story.IsFeatured,
+            PublishedAtUtc = story.PublishedAtUtc,
+            ReadTimeMinutes = story.ReadTimeMinutes,
+            IsLikedByUser = story.LikesList.Any(l => l.UserId == userId),
+        };
+
+    /// <summary>The visible comments, newest first, each with its author's Pseudonym (null for a Former member).</summary>
+    internal IQueryable<CommunityCommentDto> VisibleCommentsQuery(string userId) =>
+        from comment in _dbContext.CommunityComments.AsNoTracking()
+        where comment.IsVisible
+        join author in _dbContext.CommunityPseudonyms.AsNoTracking() on comment.UserId equals author.UserId into authors
+        from author in authors.DefaultIfEmpty()
+        orderby comment.CreatedAt descending, comment.Id descending
+        select new CommunityCommentDto
+        {
+            Id = comment.Id,
+            AuthorPseudonym = author == null ? null : author.Name,
+            IsOwn = comment.UserId == userId,
+            Text = comment.Text,
+            CreatedAtUtc = comment.CreatedAt,
+            Likes = comment.LikesList.Count,
+            IsLikedByUser = comment.LikesList.Any(l => l.UserId == userId),
+            PollId = comment.PollId,
+            StoryId = comment.StoryId,
+        };
 
     // =========================================================================
     // Private Helpers
     // =========================================================================
+
+    /// <summary>
+    /// The Account's Pseudonym, created on first use. A unique index on the Account id and one on the name guard
+    /// against two requests creating it at once; the loser re-reads the winner's row or draws another name.
+    /// </summary>
+    private async Task<CommunityPseudonym> GetOrCreatePseudonymAsync(string userId, CancellationToken cancellationToken)
+    {
+        CommunityPseudonym? existing = await _dbContext.CommunityPseudonyms
+            .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        for (int attempt = 1; ; attempt++)
+        {
+            var pseudonym = new CommunityPseudonym
+            {
+                UserId = userId,
+                Name = await PickUnusedNameAsync(null, cancellationToken),
+            };
+            _dbContext.CommunityPseudonyms.Add(pseudonym);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("Pseudonym created: UserId={UserId}", userId);
+                }
+
+                return pseudonym;
+            }
+            catch (DbUpdateException) when (attempt < PseudonymSaveAttempts)
+            {
+                _dbContext.Entry(pseudonym).State = EntityState.Detached;
+                existing = await _dbContext.CommunityPseudonyms
+                    .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+                if (existing is not null)
+                {
+                    return existing;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// A name no Account holds. Soft-deleted rows count too: an Account in its Grace Period keeps its name, so it
+    /// gets it back when it cancels. The lists make a few thousand names and this app has far fewer Accounts, so the
+    /// taken names are read in one query.
+    /// </summary>
+    private async Task<string> PickUnusedNameAsync(string? current, CancellationToken cancellationToken)
+    {
+        List<string> issued = await _dbContext.CommunityPseudonyms
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(p => p.Name)
+            .ToListAsync(cancellationToken);
+        var taken = new HashSet<string>(issued, StringComparer.OrdinalIgnoreCase);
+        if (current is not null)
+        {
+            taken.Add(current);
+        }
+
+        return PseudonymGenerator.Pick(taken, Random.Shared);
+    }
+
+    private Task<List<CommunityPoll>> ActivePollsAsync(CancellationToken cancellationToken) =>
+        _dbContext.CommunityPolls
+            .AsNoTracking()
+            .Include(p => p.Options)
+                .ThenInclude(o => o.Votes)
+            .Include(p => p.Votes)
+            .Where(p => p.IsActive)
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
 
     private static CommunityPollDto MapPollToDto(CommunityPoll p, string userId)
     {
@@ -425,52 +543,5 @@ internal sealed class CommunityService : ICommunityService
                 Percentage = totalVotes > 0 ? Math.Round((double)o.Votes.Count / totalVotes * 100, 1) : 0,
             }).ToList(),
         };
-    }
-
-    private async Task<List<CommunityStoryDto>> GetStoriesAsync(string userId, CancellationToken cancellationToken)
-    {
-        return await _dbContext.CommunityStories
-            .AsNoTracking()
-            .Where(s => s.IsVisible)
-            .OrderByDescending(s => s.IsFeatured)
-            .ThenByDescending(s => s.PublishedAtUtc)
-            .ThenByDescending(s => s.Id)
-            .Take(6)
-            .Select(s => new CommunityStoryDto
-            {
-                Id = s.Id,
-                AuthorName = s.AuthorName,
-                Title = s.Title,
-                Summary = s.Summary,
-                Body = s.Body,
-                Category = s.Category,
-                Likes = s.LikesList.Count,
-                CommentCount = s.Comments.Count(c => c.IsVisible),
-                IsFeatured = s.IsFeatured,
-                PublishedAtUtc = s.PublishedAtUtc,
-                ReadTimeMinutes = s.ReadTimeMinutes,
-                IsLikedByUser = s.LikesList.Any(l => l.UserId == userId),
-            })
-            .ToListAsync(cancellationToken);
-    }
-
-    private async Task<List<CommunityCommentDto>> GetRecentCommentsAsync(int count, CancellationToken cancellationToken)
-    {
-        return await _dbContext.CommunityComments
-            .AsNoTracking()
-            .Where(c => c.IsVisible)
-            .OrderByDescending(c => c.CreatedAt)
-            .Take(count)
-            .Select(c => new CommunityCommentDto
-            {
-                Id = c.Id,
-                AuthorName = c.AuthorName,
-                Text = c.Text,
-                CreatedAtUtc = c.CreatedAt,
-                Likes = c.LikesList.Count,
-                PollId = c.PollId,
-                StoryId = c.StoryId,
-            })
-            .ToListAsync(cancellationToken);
     }
 }

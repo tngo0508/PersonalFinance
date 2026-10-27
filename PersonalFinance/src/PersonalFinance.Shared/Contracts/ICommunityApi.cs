@@ -4,15 +4,22 @@ using Refit;
 namespace PersonalFinance.Shared.Contracts;
 
 /// <summary>
-/// Refit API contract for community features: polls, comments, stories, and likes.
+/// Refit API contract for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, stories and likes.
+/// Authors are identified by the authenticated Account, never by a name the Web app passes.
 /// </summary>
 public interface ICommunityApi
 {
     /// <summary>
-    /// Gets the full community data (polls, stats, stories, comments) for a user.
+    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, stories, comments).
     /// </summary>
     [Get("/api/community")]
     Task<CommunityResponseDto> GetCommunityAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces the viewer's Pseudonym with a new one; every past post shows it.
+    /// </summary>
+    [Post("/api/community/pseudonym/reroll")]
+    Task<CommunityPseudonymDto> RerollPseudonymAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Votes on a poll option.
@@ -24,7 +31,7 @@ public interface ICommunityApi
     /// Adds a comment to a poll or story.
     /// </summary>
     [Post("/api/community/comment")]
-    Task<CommunityCommentDto> AddCommentAsync([Body] CommunityCommentRequestDto request, [Query] string authorName, CancellationToken cancellationToken = default);
+    Task<CommunityCommentDto> AddCommentAsync([Body] CommunityCommentRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Toggles a like on a comment.
@@ -42,7 +49,7 @@ public interface ICommunityApi
     /// Submits a new community story.
     /// </summary>
     [Post("/api/community/story")]
-    Task<CommunityStoryDto> SubmitStoryAsync([Body] CommunityStoryRequestDto request, [Query] string authorName, CancellationToken cancellationToken = default);
+    Task<CommunityStoryDto> SubmitStoryAsync([Body] CommunityStoryRequestDto request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Toggles a like on a story.

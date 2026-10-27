@@ -1,15 +1,11 @@
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
-/// Database entity representing a user-submitted community story or case study.
+/// Database entity representing a user-submitted community story or case study. The author is the Account in
+/// <see cref="AuditableEntity.UserId"/>, shown by its <see cref="CommunityPseudonym"/>; no name is stored here.
 /// </summary>
 public class CommunityStory : AuditableEntity
 {
-    /// <summary>
-    /// Gets or sets the display name of the author at the time of submission.
-    /// </summary>
-    public string AuthorName { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets the title of the story.
     /// </summary>

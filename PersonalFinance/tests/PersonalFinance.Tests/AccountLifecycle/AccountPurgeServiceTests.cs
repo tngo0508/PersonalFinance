@@ -13,7 +13,8 @@ namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// Behaviour of <see cref="IAccountPurgeService"/> against an in-memory database: when the Grace Period ends, every
-/// trace of the Account goes in one save, except its Community stories and comments, which stay anonymized.
+/// trace of the Account goes in one save, except its Guild Hall stories and comments, which stay under the placeholder
+/// id without its Pseudonym.
 /// </summary>
 public class AccountPurgeServiceTests
 {
@@ -93,7 +94,7 @@ public class AccountPurgeServiceTests
     }
 
     [Fact]
-    public async Task Purge_KeepsTheAccountsStoriesAndComments_AsDeletedUser_AndShowsThemAgain()
+    public async Task Purge_KeepsTheAccountsStoriesAndComments_WithoutItsPseudonym_AndShowsThemAgain()
     {
         await SeedPendingRequestAsync();
         await using AppDbContext db = CreateContext();
@@ -103,10 +104,9 @@ public class AccountPurgeServiceTests
         await using AppDbContext check = CreateContext();
         CommunityStory story = await check.CommunityStories.SingleAsync(s => s.Title == "leaving story");
         Assert.Equal(DeletedAccount.UserId, story.UserId);
-        Assert.Equal(DeletedAccount.DisplayName, story.AuthorName);
         CommunityComment comment = await check.CommunityComments.SingleAsync(c => c.Text == "leaving comment");
         Assert.Equal(DeletedAccount.UserId, comment.UserId);
-        Assert.Equal(DeletedAccount.DisplayName, comment.AuthorName);
+        Assert.Equal("staying name", Assert.Single(check.CommunityPseudonyms.IgnoreQueryFilters()).Name);
     }
 
     [Fact]
@@ -200,8 +200,8 @@ public class AccountPurgeServiceTests
         await using (AppDbContext seed = CreateContext())
         {
             seed.Users.Add(new IdentityUser { Id = UserId });
-            var deletedStory = new CommunityStory { UserId = UserId, AuthorName = "me@example.com", Title = "deleted story" };
-            var deletedComment = new CommunityComment { UserId = UserId, AuthorName = "me@example.com", Text = "deleted comment" };
+            var deletedStory = new CommunityStory { UserId = UserId, Title = "deleted story" };
+            var deletedComment = new CommunityComment { UserId = UserId, Text = "deleted comment" };
             deletedStory.SoftDelete();
             deletedComment.SoftDelete();
             seed.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = OtherUserId, Story = deletedStory });

@@ -44,9 +44,9 @@ public static class UserDataSeed
         db.PriorityWalks.Add(new PriorityWalk
         { UserId = userId, MonthlyAmount = 500m, Purpose = $"{marker} purpose", TreeVersion = 1, Path = "S,Q1,L1", LeafId = "L1" });
 
-        var story = new CommunityStory { UserId = userId, AuthorName = marker, Title = $"{marker} story" };
-        var comment = new CommunityComment
-        { UserId = userId, AuthorName = marker, Text = $"{marker} comment", Story = story };
+        db.CommunityPseudonyms.Add(new CommunityPseudonym { UserId = userId, Name = $"{marker} name" });
+        var story = new CommunityStory { UserId = userId, Title = $"{marker} story" };
+        var comment = new CommunityComment { UserId = userId, Text = $"{marker} comment", Story = story };
         db.CommunityStoryLikes.Add(new CommunityStoryLike { UserId = userId, Story = story });
         db.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = userId, Comment = comment });
         var poll = new CommunityPoll { PollCode = $"{marker}-poll", Question = $"{marker} question?" };

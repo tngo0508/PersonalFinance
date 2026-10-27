@@ -1,7 +1,7 @@
 @model CommunityViewModel
 
 @{
-    ViewData["Title"] = L["Community.Title"];
+    ViewData["Title"] = L["Community.Title"].Value;
 }
 
 @section Styles {
@@ -9,23 +9,20 @@
 }
 
 <div class="community-page">
-    <!-- Page Header -->
-    <div class="community-header">
-        <div class="community-header-content">
-            <div class="community-header-icon" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-            </div>
-            <div>
-                <h1 class="community-title">@L["Community.Header.Title"]</h1>
-                <p class="community-subtitle">@L["Community.Header.Subtitle"]</p>
-            </div>
+    <!-- Header: the plaque, with who the viewer is in the hall -->
+    <header class="community-plaque">
+        <div class="community-plaque-text">
+            <p class="community-eyebrow">@L["Community.Header.Eyebrow"]</p>
+            <h1 class="community-title">@L["Community.Header.Title"]</h1>
+            <p class="community-subtitle">@L["Community.Header.Subtitle"]</p>
         </div>
-    </div>
+        <div class="community-pseudonym-badge">
+            <span class="community-pseudonym-label">@L["Community.Pseudonym.YouAppearAs"]</span>
+            <strong class="community-pseudonym-name" data-pseudonym-self>@Model.Pseudonym</strong>
+            <button type="button" class="community-link-btn" id="rerollPseudonymBtn" aria-describedby="rerollPseudonymHelp">@L["Community.Pseudonym.Reroll"]</button>
+            <span class="visually-hidden" id="rerollPseudonymHelp">@L["Community.Pseudonym.RerollHelp"]</span>
+        </div>
+    </header>
 
     <!-- Polls Section -->
     <section class="community-section" aria-labelledby="polls-heading">
@@ -89,7 +86,7 @@
         </div>
     </section>
 
-    <!-- Community Stories Section -->
+    <!-- Stories Section -->
     <section class="community-section" aria-labelledby="stories-heading">
         <div class="community-section-header">
             <h2 class="community-section-title" id="stories-heading">
@@ -123,6 +120,7 @@
             <div class="community-stories-grid">
                 @foreach (var story in Model.Stories)
                 {
+                    string storyAuthor = CommunityText.Author(L, story.AuthorPseudonym);
                     <article class="community-story-card @(story.IsFeatured ? "featured" : "")" data-story-id="@story.Id">
                         @if (story.IsFeatured)
                         {
@@ -145,11 +143,9 @@
                         <h3 class="community-story-title">@story.Title</h3>
                         <p class="community-story-summary">@story.Summary</p>
                         <div class="community-story-author">
-                            <span class="community-story-author-avatar" aria-hidden="true">
-                                @string.Concat(story.Author.Split(' ').Select(n => n.FirstOrDefault()).Take(2))
-                            </span>
+                            <span class="community-story-author-avatar" aria-hidden="true" data-pseudonym-self-initials="@(story.IsOwn ? "2" : null)">@CommunityText.Initials(storyAuthor, 2)</span>
                             <span>
-                                <strong>@story.Author</strong>
+                                <strong data-pseudonym-self="@(story.IsOwn ? "" : null)">@storyAuthor</strong>
                                 <time datetime="@story.PublishedDate.ToString("o")">
                                     @CommunityText.TimeAgo(L, story.PublishedDate, DateTime.UtcNow)
                                 </time>
@@ -221,13 +217,14 @@
             }
             @foreach (var comment in Model.RecentComments)
             {
+                string commentAuthor = CommunityText.Author(L, comment.AuthorPseudonym);
                 <div class="community-comment-card" data-comment-id="@comment.Id">
                     <div class="community-comment-header">
-                        <div class="community-comment-avatar" aria-hidden="true">
-                            @string.Concat(comment.Author.Split(' ').Select(n => n.FirstOrDefault()).Take(1))
+                        <div class="community-comment-avatar" aria-hidden="true" data-pseudonym-self-initials="@(comment.IsOwn ? "1" : null)">
+                            @CommunityText.Initials(commentAuthor, 1)
                         </div>
                         <div class="community-comment-info">
-                            <strong class="community-comment-author">@comment.Author</strong>
+                            <strong class="community-comment-author" data-pseudonym-self="@(comment.IsOwn ? "" : null)">@commentAuthor</strong>
                             <time class="community-comment-time" datetime="@comment.CreatedAt.ToString("o")">
                                 @CommunityText.TimeAgo(L, comment.CreatedAt, DateTime.UtcNow)
                             </time>

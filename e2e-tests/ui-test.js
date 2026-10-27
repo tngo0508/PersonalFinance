@@ -146,7 +146,7 @@ const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
         {path: '/Networth', name: 'Net Worth', expectedTitle: 'Net Worth Projection'},
         {path: '/GoogleDrive', name: 'Google Drive', expectedTitle: null},
         {path: '/News', name: 'Finance News', expectedTitle: 'Finance News'},
-        {path: '/Community', name: 'Community', expectedTitle: 'Community'},
+        {path: '/Community', name: 'Guild Hall', expectedTitle: 'Guild Hall'},
     ];
 
     // Public pages accessible without authentication
@@ -834,7 +834,7 @@ const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
                     {path: '/MoneyPriorities', name: 'Money Priorities'},
                     {path: '/InvestmentCalculator', name: 'Investment Calculator'},
                     {path: '/News', name: 'Finance News'},
-                    {path: '/Community', name: 'Community'},
+                    {path: '/Community', name: 'Guild Hall'},
                 ];
 
                 for (const fp of featurePages) {
