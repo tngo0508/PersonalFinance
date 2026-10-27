@@ -265,7 +265,7 @@ public partial class PurposeNoteEndpointTests
     {
         await using AppDbContext db = CreateContext();
         int walkId = await SubmitAsync(db, DebtRequest());
-        var fake = new FakeChatClient((_, _) => throw new HttpRequestException("OpenAI is down"));
+        FakeChatClient fake = FakeChatClient.Throwing(new HttpRequestException("OpenAI is down"));
 
         PriorityWalkPurposeNoteDto note = await NoteAsync(db, fake, walkId);
 
