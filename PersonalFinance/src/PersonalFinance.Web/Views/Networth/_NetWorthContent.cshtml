@@ -43,6 +43,16 @@
         return content;
     }
 
+    // The presets networth-presets.js applies by key, inline as cards or in the More menu.
+    private static readonly (string Key, string Id, string Icon, string LabelKey)[] Presets =
+    [
+        ("fire", "nwPresetFire", "🔥", "NetWorth.Presets.Fire"),
+        ("coast", "nwPresetCoast", "🏖️", "NetWorth.Presets.Coast"),
+        ("traditional", "nwPresetTraditional", "🏠", "NetWorth.Presets.Traditional"),
+        ("ultra", "nwPresetUltra", "🚀", "NetWorth.Presets.Ultra"),
+        ("conservative", "nwPresetConservative", "🛡️", "NetWorth.Presets.Safe")
+    ];
+
     private static IHtmlContent Plain(string text)
     {
         return new HtmlContentBuilder().Append(text);
@@ -62,10 +72,6 @@
             <p class="nw-subtitle">@L["NetWorth.Header.Subtitle"]</p>
         </div>
         <div class="nw-header__actions">
-            <a class="nw-help-btn" asp-controller="Research" asp-action="Index">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                @L["NetWorth.Header.ExploreResearch"]
-            </a>
             <button type="button" class="nw-help-btn" data-bs-toggle="modal" data-bs-target="#nwHelpModal">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 @L["NetWorth.Header.HowItWorks"]
@@ -99,40 +105,33 @@
     <!-- LEFT PANEL: Input Controls (Sticky) -->
     <aside class="nw-split-layout__sidebar">
 
-        <!-- Card 1: Quick Presets (Sticky Top) -->
+        <!-- Card 1: Quick Presets (Sticky Top). With saved parameters the presets live in the More menu instead. -->
         <div class="nw-sidebar-section nw-sidebar-section--sticky">
             <div class="nw-sidebar-card">
-                <div class="nw-sidebar-card__header">
-                    <div class="nw-sidebar-card__icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 6.82 21.02 8 14.14 3 9.27 9.91 8.26 12 2"/></svg>
-                    </div>
-                    <span>@L["NetWorth.Presets.Title"]</span>
-                </div>
-                <div class="nw-sidebar-card__body">
-                    <div class="nw-presets nw-presets--compact">
-                        <div class="nw-presets__grid nw-presets__grid--compact">
-                            <button type="button" class="nw-preset-card" data-preset="fire" id="nwPresetFire">
-                                <div class="nw-preset-card__icon">🔥</div>
-                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Fire"]</div>
-                            </button>
-                            <button type="button" class="nw-preset-card" data-preset="coast" id="nwPresetCoast">
-                                <div class="nw-preset-card__icon">🏖️</div>
-                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Coast"]</div>
-                            </button>
-                            <button type="button" class="nw-preset-card" data-preset="traditional" id="nwPresetTraditional">
-                                <div class="nw-preset-card__icon">🏠</div>
-                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Traditional"]</div>
-                            </button>
-                            <button type="button" class="nw-preset-card" data-preset="ultra" id="nwPresetUltra">
-                                <div class="nw-preset-card__icon">🚀</div>
-                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Ultra"]</div>
-                            </button>
-                            <button type="button" class="nw-preset-card" data-preset="conservative" id="nwPresetConservative">
-                                <div class="nw-preset-card__icon">🛡️</div>
-                                <div class="nw-preset-card__title">@L["NetWorth.Presets.Safe"]</div>
-                            </button>
+                @if (!Model.HasSavedParameters)
+                {
+                    <div class="nw-sidebar-card__header">
+                        <div class="nw-sidebar-card__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 6.82 21.02 8 14.14 3 9.27 9.91 8.26 12 2"/></svg>
                         </div>
+                        <span>@L["NetWorth.Presets.Title"]</span>
                     </div>
+                }
+                <div class="nw-sidebar-card__body">
+                    @if (!Model.HasSavedParameters)
+                    {
+                        <div class="nw-presets nw-presets--compact">
+                            <div class="nw-presets__grid nw-presets__grid--compact">
+                                @foreach (var preset in Presets)
+                                {
+                                    <button type="button" class="nw-preset-card" data-preset="@preset.Key" id="@preset.Id">
+                                        <div class="nw-preset-card__icon">@preset.Icon</div>
+                                        <div class="nw-preset-card__title">@L[preset.LabelKey]</div>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
                     <!-- Savings Rate Indicator -->
                     <div class="nw-savings-indicator" id="nwSavingsIndicator">
                         <div class="nw-savings-indicator__header">
@@ -341,10 +340,6 @@
                         @L["NetWorth.Actions.Save"]
                     </button>
                 </form>
-                <button type="button" class="btn nw-btn-random" id="nwRandomBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l5 5"/><path d="M4 4l5 5"/></svg>
-                    @L["NetWorth.Actions.Randomize"]
-                </button>
                 <div class="btn-group" role="group">
                     <button type="button" class="btn nw-btn-reset" id="nwResetBtn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 14 4-4 4 4"/><path d="M7 10v4h10"/></svg>
@@ -367,6 +362,41 @@
                                 @L["NetWorth.Actions.ClearSaved"]
                             </button>
                         </li>
+                    </ul>
+                </div>
+                @* More (⋯): the rarely used actions. Bootstrap's dropdown keeps aria-expanded current, moves focus with the
+                   arrow keys and closes on Escape. *@
+                <div class="dropdown">
+                    <button type="button" class="btn nw-btn-reset" id="nwMoreBtn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@L["NetWorth.Actions.More"]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nwMoreBtn">
+                        <li>
+                            <button type="button" class="dropdown-item" id="nwRandomBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:6px;"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l5 5"/><path d="M4 4l5 5"/></svg>
+                                @L["NetWorth.Actions.Randomize"]
+                            </button>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" asp-controller="Research" asp-action="Index">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:6px;"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                @L["NetWorth.Header.ExploreResearch"]
+                            </a>
+                        </li>
+                        @if (Model.HasSavedParameters)
+                        {
+                            <li><hr class="dropdown-divider" /></li>
+                            <li><h6 class="dropdown-header">@L["NetWorth.Presets.Title"]</h6></li>
+                            @foreach (var preset in Presets)
+                            {
+                                <li>
+                                    <button type="button" class="dropdown-item" data-preset="@preset.Key">
+                                        <span aria-hidden="true" style="margin-right:6px;">@preset.Icon</span>
+                                        @L[preset.LabelKey]
+                                    </button>
+                                </li>
+                            }
+                        }
                     </ul>
                 </div>
                 <form asp-action="DeleteParameters" method="post" class="d-none" id="nwClearForm">

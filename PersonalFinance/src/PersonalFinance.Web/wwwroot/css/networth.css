@@ -383,60 +383,6 @@ a.nw-help-btn {
   box-shadow: var(--nw-shadow-sm);
 }
 
-/* Randomize button */
-.nw-btn-random {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  padding: 9px 18px;
-  color: var(--nw-success);
-  background: var(--nw-success-light);
-  border: 1px solid var(--nw-success);
-  transition: 0.25s ease;
-  box-shadow: var(--nw-shadow-sm);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-
-.nw-btn-random::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: var(--nw-surface);
-  transition: left 0.5s ease;
-}
-
-.nw-btn-random:hover::before {
-  left: 100%;
-}
-
-.nw-btn-random:hover {
-  background: var(--nw-success);
-  color: #fff;
-  /* hover effect removed */;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25), var(--nw-shadow-md);
-}
-
-.nw-btn-random:active {
-  /* hover effect removed */;
-  box-shadow: var(--nw-shadow-sm);
-}
-
-.nw-btn-random svg {
-  transition: transform 0.3s ease;
-}
-
-.nw-btn-random:hover svg {
-  transform: rotate(180deg);
-}
-
 /* Save button */
 .nw-btn-save {
   display: inline-flex;
@@ -1708,7 +1654,6 @@ a.nw-help-btn {
   }
 
   .nw-btn-save,
-  .nw-btn-random,
   .nw-btn-reset {
     justify-content: center;
     width: 100%;
@@ -2048,7 +1993,6 @@ a.nw-help-btn {
 }
 
 .nw-sidebar-section--sticky-bottom .nw-btn-save,
-.nw-sidebar-section--sticky-bottom .nw-btn-random,
 .nw-sidebar-section--sticky-bottom .nw-btn-reset {
   font-size: 0.75rem;
   padding: 6px 10px;
@@ -2191,7 +2135,6 @@ a.nw-help-btn {
   }
 
   .nw-sidebar-section--sticky-bottom .nw-btn-save,
-  .nw-sidebar-section--sticky-bottom .nw-btn-random,
   .nw-sidebar-section--sticky-bottom .nw-btn-reset {
     font-size: 0.8rem;
     padding: 8px 14px;
@@ -2223,7 +2166,6 @@ a.nw-help-btn {
   }
 
   .nw-sidebar-section--sticky-bottom .nw-btn-save,
-  .nw-sidebar-section--sticky-bottom .nw-btn-random,
   .nw-sidebar-section--sticky-bottom .nw-btn-reset {
     flex: 1 1 calc(50% - 3px);
   }
@@ -2257,7 +2199,6 @@ a.nw-help-btn {
   }
 
   .nw-sidebar-section--sticky-bottom .nw-btn-save,
-  .nw-sidebar-section--sticky-bottom .nw-btn-random,
   .nw-sidebar-section--sticky-bottom .nw-btn-reset {
     flex: 1 1 calc(33.333% - 4px);
     font-size: 0.7rem;

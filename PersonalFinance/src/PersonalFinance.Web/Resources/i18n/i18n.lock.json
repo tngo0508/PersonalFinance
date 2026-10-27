@@ -1304,6 +1304,7 @@
     "NetWorth.Actions.ResetOptions": "6dcc1ebcb6a83744",
     "NetWorth.Actions.ResetToSaved": "f6fb563b9e057bcd",
     "NetWorth.Actions.ClearSaved": "f206d5fa5d6f14c5",
+    "NetWorth.Actions.More": "f8d46c2570e70736",
     "NetWorth.Metric.FiTargetRule": "830a5ca13d6d4e5a",
     "NetWorth.Metric.CurrentNetWorth": "cabfef9b1af8fb04",
     "NetWorth.Metric.BaseFinal": "7a014219ac7d6cbd",

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.3.6] - 2026-10-27
+
+### Changed
+
+- **Net Worth actions**: Save is the Net Worth page's only primary action, and its rarer actions move into a More (⋯) menu next to Reset, so a user with saved parameters sees 8 actions instead of 14 (Reduce Clutter 5/7, #453).
+  - The More menu holds Randomize and "Explore market research", which leaves the page header; Randomize still only changes the sliders and never touches saved records (ADR 0003).
+  - The five preset cards show inline only until the user saves parameters; after that the presets are in the More menu.
+  - "How it works", Reset and its options, and the scenario tabs are unchanged.
+
 ## [12.3.5] - 2026-10-27
 
 ### Changed

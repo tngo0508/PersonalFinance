@@ -110,6 +110,12 @@ public class NetWorthViewModel
     public string? ErrorMessage { get; set; }
 
     /// <summary>
+    /// Whether the page shows the Account's saved parameters. Without them the preset cards show inline; with them
+    /// the presets move into the More menu. Set only by <see cref="ApplySaved"/>, so a posted form can't set it.
+    /// </summary>
+    public bool HasSavedParameters { get; private set; }
+
+    /// <summary>
     /// Savings Rate shown before JavaScript updates it live (see <see cref="FinanceMetrics.SavingsRatePercent"/>).
     /// </summary>
     public decimal SavingsRatePercent => FinanceMetrics.SavingsRatePercent(AnnualSavings, AnnualIncome) ?? 0m;
@@ -151,5 +157,6 @@ public class NetWorthViewModel
         ConservativeRoi = saved.ConservativeRoi;
         AggressiveRoi = saved.AggressiveRoi;
         AggressiveSavings = saved.AggressiveSavings;
+        HasSavedParameters = true;
     }
 }

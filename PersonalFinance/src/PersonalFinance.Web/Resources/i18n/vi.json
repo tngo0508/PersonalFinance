@@ -1306,6 +1306,7 @@
   "NetWorth.Actions.ResetOptions": "Mở tùy chọn đặt lại",
   "NetWorth.Actions.ResetToSaved": "Khôi phục giá trị đã lưu",
   "NetWorth.Actions.ClearSaved": "Xóa các tham số đã lưu",
+  "NetWorth.Actions.More": "Thêm thao tác",
   "NetWorth.Metric.FiTargetRule": "Mục tiêu FI (Quy tắc 4%)",
   "NetWorth.Metric.CurrentNetWorth": "Giá trị tài sản ròng hiện tại",
   "NetWorth.Metric.BaseFinal": "Giá trị tài sản ròng cuối kỳ (cơ sở)",

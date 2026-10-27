@@ -1332,6 +1332,7 @@
   "NetWorth.Actions.ResetOptions": "Open reset options",
   "NetWorth.Actions.ResetToSaved": "Reset to saved",
   "NetWorth.Actions.ClearSaved": "Clear saved parameters",
+  "NetWorth.Actions.More": "More actions",
   "NetWorth.Metric.FiTargetRule": "FI Target (4% Rule)",
   "NetWorth.Metric.CurrentNetWorth": "Current Net Worth",
   "NetWorth.Metric.BaseFinal": "Base Final Net Worth",
