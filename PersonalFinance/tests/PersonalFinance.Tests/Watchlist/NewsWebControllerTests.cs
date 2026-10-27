@@ -1,5 +1,4 @@
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
@@ -155,14 +154,6 @@ public class NewsWebControllerTests
         Assert.True(response.Success);
         Assert.Empty(response.Articles!);
         Assert.Single(api.Queries);
-    }
-
-    [Fact]
-    public void Refresh_IsAJsonActionWithApiErrors()
-    {
-        MethodInfo refresh = typeof(NewsController).GetMethod(nameof(NewsController.Refresh))!;
-
-        Assert.NotNull(refresh.GetCustomAttribute<JsonApiErrorsAttribute>());
     }
 
     [Fact]

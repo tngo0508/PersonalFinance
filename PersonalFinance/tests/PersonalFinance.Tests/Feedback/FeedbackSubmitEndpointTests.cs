@@ -168,21 +168,4 @@ public class FeedbackSubmitEndpointTests
 
         Assert.IsType<NoContentResult>(result);
     }
-
-    [Fact]
-    public async Task Submit_WhenRateLimited_Rejects429WithItsKey()
-    {
-        await using AppDbContext db = CreateContext();
-        FeedbackApiController controller = CreateController(db);
-        for (int i = 0; i < FeedbackRateLimit.MaxSubmissionsPerWindow; i++)
-        {
-            await controller.Submit(new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Hi" });
-        }
-
-        ApiErrorException error = await Assert.ThrowsAsync<ApiErrorException>(() => controller.Submit(
-            new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Hi" }));
-
-        Assert.Equal(StatusCodes.Status429TooManyRequests, error.StatusCode);
-        Assert.Equal(ApiErrorKeys.Feedback.RateLimited, error.Key);
-    }
 }

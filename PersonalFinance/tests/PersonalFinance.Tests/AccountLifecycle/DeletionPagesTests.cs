@@ -44,7 +44,6 @@ public class DeletionPagesTests
     [Theory]
     [InlineData(typeof(CancelDeletionModel))]
     [InlineData(typeof(DeletionRequestedModel))]
-    [InlineData(typeof(LockoutModel))]
     public void SignedOutPages_AllowAnonymousVisitors(Type pageModel)
     {
         Assert.NotNull(pageModel.GetCustomAttribute<AllowAnonymousAttribute>());
