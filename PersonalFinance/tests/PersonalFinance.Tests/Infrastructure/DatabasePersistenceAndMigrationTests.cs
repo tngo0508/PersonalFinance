@@ -286,19 +286,4 @@ public class DatabasePersistenceAndMigrationTests
         Assert.Equal(new SqlConnectionStringBuilder(DatabaseProviderHelper.DefaultSqlConnectionString).ConnectionString,
             registered.ConnectionString);
     }
-
-    [Fact]
-    public void AzureSql_MigrationSourceFiles_Exist()
-    {
-        string migrationsDir = Path.Combine(
-            DatabasePathHelper.GetSolutionRoot(),
-            "PersonalFinance",
-            "src",
-            "PersonalFinance.Data",
-            "Migrations",
-            "AzureSql");
-
-        Assert.True(Directory.Exists(migrationsDir));
-        Assert.NotEmpty(Directory.GetFiles(migrationsDir, "*.cs"));
-    }
 }

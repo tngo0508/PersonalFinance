@@ -1,5 +1,5 @@
 using System.IO;
-using PersonalFinance.Data;
+using PersonalFinance.Tests.TestSupport;
 using Xunit;
 
 namespace PersonalFinance.Tests.Infrastructure;
@@ -9,7 +9,7 @@ public class ContainerConfigurationTests
     [Fact]
     public void Dockerignore_ExistsAndContainsEssentialExclusions()
     {
-        string solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        string solutionRoot = RepositoryRoot.Find();
         string dockerignorePath = Path.Combine(solutionRoot, ".dockerignore");
 
         Assert.True(File.Exists(dockerignorePath), "Root .dockerignore file must exist.");
@@ -36,7 +36,7 @@ public class ContainerConfigurationTests
     {
         // TargetFramework lives in PersonalFinance/Directory.Build.props; a Docker build context without it
         // fails restore with NETSDK1013 ("The TargetFramework value '' was not recognized").
-        string solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        string solutionRoot = RepositoryRoot.Find();
         string dockerfile = File.ReadAllText(Path.Combine(solutionRoot, "PersonalFinance", "src", project, "Dockerfile"));
         int restoreAt = dockerfile.IndexOf("dotnet restore", StringComparison.Ordinal);
 
@@ -50,7 +50,7 @@ public class ContainerConfigurationTests
     [Fact]
     public void ApiService_Dockerfile_ExistsAndHasProperConfiguration()
     {
-        string solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        string solutionRoot = RepositoryRoot.Find();
         string dockerfilePath = Path.Combine(solutionRoot, "PersonalFinance", "src", "PersonalFinance.ApiService", "Dockerfile");
 
         Assert.True(File.Exists(dockerfilePath), "ApiService Dockerfile must exist.");
@@ -80,7 +80,7 @@ public class ContainerConfigurationTests
     [Fact]
     public void Web_Dockerfile_ExistsAndHasProperConfiguration()
     {
-        string solutionRoot = DatabasePathHelper.GetSolutionRoot();
+        string solutionRoot = RepositoryRoot.Find();
         string dockerfilePath = Path.Combine(solutionRoot, "PersonalFinance", "src", "PersonalFinance.Web", "Dockerfile");
 
         Assert.True(File.Exists(dockerfilePath), "Web Dockerfile must exist.");

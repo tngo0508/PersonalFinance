@@ -341,7 +341,7 @@ public class BudgetDataProviderTests
     }
 
     [Fact]
-    public async Task TrackerBudgetMonthReader_GetMonth_IncludesArchivedCategoryWithData_ExcludesEmptyArchived()
+    public async Task TrackerBudgetMonthReader_GetMonth_ShowsAnArchivedCategory_OnlyWithAPlannedAmount()
     {
         await using AppDbContext db = CreateContext();
         var catActive = new BudgetCategory
@@ -364,7 +364,16 @@ public class BudgetDataProviderTests
             SortOrder = 30,
             IsDeleted = true
         };
-        db.BudgetCategories.AddRange(catActive, catArchivedWithLine, catArchivedEmpty);
+        var catArchivedZeroLine = new BudgetCategory
+        {
+            Id = 4,
+            UserId = UserId,
+            Name = "Archived Zero Line",
+            Kind = BudgetCategoryKind.Expense,
+            SortOrder = 40,
+            IsDeleted = true
+        };
+        db.BudgetCategories.AddRange(catActive, catArchivedWithLine, catArchivedEmpty, catArchivedZeroLine);
 
         var plan = new MonthlyBudgetPlan
         {
@@ -375,7 +384,9 @@ public class BudgetDataProviderTests
             Lines = new List<MonthlyBudgetLine>
             {
                 new() { PlanId = 1, UserId = UserId, CategoryId = 1, PlannedAmount = 100m },
-                new() { PlanId = 1, UserId = UserId, CategoryId = 2, PlannedAmount = 250m }
+                new() { PlanId = 1, UserId = UserId, CategoryId = 2, PlannedAmount = 250m },
+                // The plan was set up while category 4 was active, so it has a line, planned at zero.
+                new() { PlanId = 1, UserId = UserId, CategoryId = 4, PlannedAmount = 0m }
             }
         };
         db.MonthlyBudgetPlans.Add(plan);
@@ -386,10 +397,7 @@ public class BudgetDataProviderTests
         BudgetMonthData? month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
 
         Assert.NotNull(month);
-        Assert.Equal(2, month.Categories.Count);
-        Assert.Contains(month.Categories, c => c.Name == "Active Cat");
-        Assert.Contains(month.Categories, c => c.Name == "Archived With Line");
-        Assert.DoesNotContain(month.Categories, c => c.Name == "Archived Empty");
+        Assert.Equal(["Active Cat", "Archived With Line"], month.Categories.Select(c => c.Name).Order());
     }
 
     [Fact]
@@ -952,68 +960,6 @@ public class BudgetDataProviderTests
         Assert.Single(months);
         Assert.Equal(10, months[0].Month);
         Assert.Equal(2800m, months[0].ActualExpenses);
-    }
-
-    [Fact]
-    public async Task TrackerBudgetMonthReader_ZeroLineArchivedCategory_IsHidden()
-    {
-        await using AppDbContext db = CreateContext();
-
-        var activeCat = new BudgetCategory
-        { Id = 1, UserId = UserId, Name = "Active Rent", Kind = BudgetCategoryKind.Expense, SortOrder = 10 };
-        var archivedZeroCat = new BudgetCategory
-        {
-            Id = 2,
-            UserId = UserId,
-            Name = "Archived Zero",
-            Kind = BudgetCategoryKind.Expense,
-            SortOrder = 20,
-            IsDeleted = true
-        };
-        var archivedWithDataCat = new BudgetCategory
-        {
-            Id = 3,
-            UserId = UserId,
-            Name = "Archived With Data",
-            Kind = BudgetCategoryKind.Expense,
-            SortOrder = 30,
-            IsDeleted = true
-        };
-
-        db.BudgetCategories.AddRange(activeCat, archivedZeroCat, archivedWithDataCat);
-
-        // Plan initialized when all 3 categories existed, so lines were created (archivedZeroCat has planned=0, no override)
-        db.MonthlyBudgetPlans.Add(new MonthlyBudgetPlan
-        {
-            Id = 1,
-            UserId = UserId,
-            Year = 2026,
-            Month = 10,
-            Lines = new List<MonthlyBudgetLine>
-            {
-                new() { PlanId = 1, UserId = UserId, CategoryId = 1, PlannedAmount = 1000m },
-                new()
-                {
-                    PlanId = 1, UserId = UserId, CategoryId = 2, PlannedAmount = 0m
-                }, // Zero line on archived category
-                new()
-                {
-                    PlanId = 1, UserId = UserId, CategoryId = 3, PlannedAmount = 50m
-                } // Non-zero line on archived category
-            }
-        });
-        await db.SaveChangesAsync();
-
-        (BudgetDataProvider _, BudgetDataSourceService _, SheetBudgetMonthReader _, TrackerBudgetMonthReader? trackerReader) = CreateServices(db);
-
-        BudgetMonthData? month = await trackerReader.GetMonthAsync(UserId, 2026, 10);
-        Assert.NotNull(month);
-
-        // Only Active Rent and Archived With Data should be in categories list
-        Assert.Equal(2, month.Categories.Count);
-        Assert.Contains(month.Categories, c => c.Name == "Active Rent");
-        Assert.Contains(month.Categories, c => c.Name == "Archived With Data");
-        Assert.DoesNotContain(month.Categories, c => c.Name == "Archived Zero");
     }
 
     [Fact]
