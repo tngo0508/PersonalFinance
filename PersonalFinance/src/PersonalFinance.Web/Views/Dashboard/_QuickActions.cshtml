@@ -1,5 +1,7 @@
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
-@* Quick actions: one keyboard-focusable link per common task (icon, label, one-line hint). *@
+@* Quick actions: one keyboard-focusable link per common task (icon, label, one-line hint). Mobile only
+   (css/dashboard.css): the bottom navigation cannot reach Budget, Savings goals or Analysis within two taps,
+   and from 769px up the sidebar shows every one of these links. *@
 @{
     var actions = new[]
     {
@@ -10,7 +12,7 @@
         (Controller: "InvestmentCalculator", Icon: "calculator", Label: L["Shell.Nav.InvestmentCalculator"].Value, Hint: L["Dashboard.QuickActions.InvestmentCalculatorHint"].Value)
     };
 }
-<section class="dash-card dash-actions" aria-labelledby="dash-actions-title">
+<section class="dash-card dash-actions dash-actions--mobile"aria-labelledby="dash-actions-title">
     <div class="dash-card__header">
         <h2 id="dash-actions-title" class="dash-card__title">@L["Dashboard.QuickActions.Title"]</h2>
     </div>

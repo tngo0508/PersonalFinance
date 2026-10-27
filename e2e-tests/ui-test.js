@@ -23,7 +23,7 @@ const {runIdleSignOutSmoke} = require('./idle-sign-out-smoke');
 
     /**
      * Verify the signed-in Dashboard at one viewport: greeting h1, heading order, summary card,
-     * key figure tiles, quick actions, and the mobile bottom navigation clearing the last section.
+     * key figure tiles, quick actions (mobile only), and the mobile bottom navigation clearing the last section.
      * @param {import('playwright').Page} dashPage - A page already showing /Dashboard.
      * @param {{name: string, width: number, mobile: boolean}} vp - The viewport under test.
      */
@@ -73,9 +73,17 @@ const {runIdleSignOutSmoke} = require('./idle-sign-out-smoke');
             fail(`${label}: expected 4 visible key figure tiles, found ${tileCount}`);
         }
 
+        // Quick actions stand in for the sidebar on mobile only (#451).
         const actions = dashPage.locator('section.dash-actions a.dash-action');
         const actionCount = await actions.count().catch(() => 0);
-        if (actionCount === 5 && await actions.first().isVisible({timeout: 3000}).catch(() => false)) {
+        const actionsVisible = actionCount > 0 && await actions.first().isVisible({timeout: 3000}).catch(() => false);
+        if (!vp.mobile) {
+            if (!actionsVisible) {
+                pass(`${label}: quick actions are hidden on desktop`);
+            } else {
+                fail(`${label}: quick actions should be hidden on desktop`);
+            }
+        } else if (actionCount === 5 && actionsVisible) {
             pass(`${label}: 5 quick actions are visible`);
         } else {
             fail(`${label}: expected 5 visible quick actions, found ${actionCount}`);

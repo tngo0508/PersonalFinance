@@ -1,7 +1,8 @@
 @using System.Globalization
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Summary card: headline Net Worth, FI Target, and Progress to FI (all calculated by the Dashboard service).
-   The bar is capped at 100% for display; the percentage label shows the uncapped value. *@
+   The bar is capped at 100% for display; the percentage label shows the uncapped value. The header link shows only
+   with the populated view: the "Add annual spending" prompt and the "Set up net worth" setup card replace it. *@
 @{
     var netWorth = Model.NetWorth;
     var progress = netWorth?.ProgressToFiPercent;
@@ -14,7 +15,10 @@
 <section class="dash-card dash-summary" aria-labelledby="dash-summary-title">
     <div class="dash-card__header">
         <h2 id="dash-summary-title" class="dash-card__title">@L["Shell.Nav.NetWorth"]</h2>
-        <a asp-controller="Networth" asp-action="Index" class="dash-link">@L["Dashboard.Summary.EditSettings"]<span class="visually-hidden"> @L["Dashboard.Summary.EditSettingsHidden"]</span></a>
+        @if (progress is not null)
+        {
+            <a asp-controller="Networth" asp-action="Index" class="dash-link">@L["Dashboard.Summary.EditSettings"]<span class="visually-hidden"> @L["Dashboard.Summary.EditSettingsHidden"]</span></a>
+        }
     </div>
     @if (netWorth is not null)
     {

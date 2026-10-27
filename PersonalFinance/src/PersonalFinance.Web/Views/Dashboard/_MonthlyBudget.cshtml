@@ -1,7 +1,9 @@
 @using Microsoft.AspNetCore.Mvc.Razor
 @using PersonalFinance.Shared.Enums
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
-@* Provider-backed monthly budget card: planned vs actual from the active source. Never falls back to Budget Planner. *@
+@* Provider-backed monthly budget card: planned vs actual from the active source. Never falls back to Budget Planner.
+   This card holds the Dashboard's one "Sync your spreadsheet" link (its figures are the spreadsheet's month); until
+   Google Drive is connected, the "Connect Google Drive" setup card replaces it. *@
 @{
     var monthlyBudget = Model.MonthlyBudget;
     var isTracker = Model.ActiveSource == BudgetDataSource.BudgetTracker;
@@ -52,10 +54,14 @@
             @<a asp-controller="BudgetTracker" asp-action="Index">@L["Dashboard.MonthlyBudget.AddMonthlyBudget"]</a>;
         <p class="dash-empty">@L.NamedHtml("Dashboard.MonthlyBudget.EmptyTracker", null, ("link", addLink(null)))</p>
     }
-    else
+    else if (Model.HasGoogleDriveConnection)
     {
         Func<object?, HelperResult> syncLink =
             @<a asp-controller="GoogleDrive" asp-action="Index">@L["Dashboard.SyncSpreadsheet"]</a>;
         <p class="dash-empty">@L.NamedHtml("Dashboard.MonthlyBudget.EmptySheet", null, ("link", syncLink(null)))</p>
+    }
+    else
+    {
+        <p class="dash-empty">@L["Dashboard.MonthlyBudget.EmptySheetConnect"]</p>
     }
 </section>

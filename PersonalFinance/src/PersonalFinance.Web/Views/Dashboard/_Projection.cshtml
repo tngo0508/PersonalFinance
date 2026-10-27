@@ -1,7 +1,8 @@
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
 @* Net worth projection section. Points come from the Net Worth projection calculation (Dashboard service), so this
    chart always matches the Net Worth page. The chart is drawn by js/dashboard/dashboard-projection-chart.js from the
-   data island; the sentence below is its text alternative. No historical data is stored, so none is plotted. *@
+   data island; the sentence below is its text alternative. No historical data is stored, so none is plotted.
+   No header link: the Summary card's "Edit settings" already opens the Net Worth page. *@
 @{
     var netWorth = Model.NetWorth;
     var points = netWorth?.ProjectionPoints ?? new List<PersonalFinance.Shared.DTOs.Dashboard.ProjectionPointDto>();
@@ -28,7 +29,6 @@
 <section class="dash-card dash-projection" aria-labelledby="dash-projection-title">
     <div class="dash-card__header">
         <h2 id="dash-projection-title" class="dash-card__title">@L["Dashboard.Projection.Title"]</h2>
-        <a asp-controller="Networth" asp-action="Index" class="dash-link">@L["Dashboard.Projection.ViewDetails"]<span class="visually-hidden"> @L["Dashboard.Projection.ViewDetailsHidden"]</span></a>
     </div>
     @if (netWorth is null)
     {

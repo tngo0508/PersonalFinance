@@ -2,7 +2,8 @@
 @using System.Globalization
 @using PersonalFinance.Shared.Enums
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
-@* Recent activity section: type icon, title, description and date, newest first. Displays active budget data source. *@
+@* Recent activity section: type icon, title, description and date, newest first. Displays active budget data source.
+   The Google Sheet empty state has no sync link: the Monthly budget card (or the setup card) holds it. *@
 @{
     static (string Icon, string Modifier) ActivityStyle(string type) => type switch
     {
@@ -50,9 +51,7 @@
     {
         @if (Model.ActiveSource == BudgetDataSource.GoogleSheet)
         {
-            Func<object?, HelperResult> syncLink =
-                @<a asp-controller="GoogleDrive" asp-action="Index">@L["Dashboard.SyncSpreadsheet"]</a>;
-            <p class="dash-empty">@L.NamedHtml("Dashboard.Activity.EmptySheet", null, ("link", syncLink(null)))</p>
+            <p class="dash-empty">@L["Dashboard.Activity.EmptySheetNoSync"]</p>
         }
         else
         {
