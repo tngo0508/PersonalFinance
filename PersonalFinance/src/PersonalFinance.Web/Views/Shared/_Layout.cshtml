@@ -5,6 +5,7 @@
 <!DOCTYPE html>
 @inject IAntiforgery Antiforgery
 @inject IAuthorizationService AuthorizationService
+@inject Microsoft.Extensions.Options.IOptions<IdleSignOutOptions> IdleSignOut
 @{
     var isAdmin = User.Identity?.IsAuthenticated == true
                   && (await AuthorizationService.AuthorizeAsync(User, AppPolicies.RequireAdmin)).Succeeded;
@@ -15,6 +16,9 @@
     var documentTitle = ViewData["DocumentTitle"] as string
                         ?? (string.IsNullOrEmpty(pageTitle) ? AppVersion.ApplicationName : $"{pageTitle} · {AppVersion.ApplicationName}");
     var tokens = Antiforgery.GetAndStoreTokens(Context);
+    // Idle Sign-out (#332) runs on pages for signed-in users only; the Landing Page, the legal pages and the
+    // signed-out Identity pages never load it.
+    var watchIdleSignOut = isSignedIn && currentController != "Legal";
 }
 <html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-culture="@System.Globalization.CultureInfo.CurrentCulture.Name">
 <head>
@@ -311,6 +315,26 @@
     <script src="~/js/core/notifications.js" asp-append-version="true"></script>
     <script src="~/js/core/ai-chat-widget.js" asp-append-version="true"></script>
     <script src="~/js/core/data-source-toggle.js" asp-append-version="true"></script>
+}
+@if (watchIdleSignOut)
+{
+    <dialog id="idleSignOutDialog" class="idle-sign-out-dialog" data-test-id="idle-sign-out-dialog"
+            aria-labelledby="idleSignOutTitle" aria-describedby="idleSignOutBody idleSignOutCountdown"
+            data-timeout-seconds="@(IdleSignOut.Value.TimeoutMinutes * 60)"
+            data-warning-seconds="@IdleSignOut.Value.WarningSeconds"
+            data-check-in-url="@Url.Action("CheckIn", "IdleSignOut", new { area = "" })"
+            data-logout-url="@Url.Page("/Account/Logout", new { area = "Identity" })"
+            data-login-url="@Url.Page("/Account/Login", new { area = "Identity" })">
+        <h2 id="idleSignOutTitle" class="h5 mb-2">@L["Shell.IdleSignOut.Title"]</h2>
+        <p id="idleSignOutBody" class="mb-2">@L["Shell.IdleSignOut.Body"]</p>
+        <p id="idleSignOutCountdown" class="idle-sign-out-dialog__countdown fw-semibold mb-3" aria-hidden="true"></p>
+        <div id="idleSignOutAnnouncement" class="visually-hidden" role="status" aria-live="assertive" aria-atomic="true"></div>
+        <div class="d-flex flex-wrap justify-content-end gap-2">
+            <button type="button" id="idleSignOutSignOut" class="btn btn-outline-secondary" data-test-id="idle-sign-out-now">@L["Shell.IdleSignOut.SignOutNow"]</button>
+            <button type="button" id="idleSignOutStay" class="btn btn-primary" data-test-id="idle-sign-out-stay" autofocus>@L["Shell.IdleSignOut.StaySignedIn"]</button>
+        </div>
+    </dialog>
+    <script src="~/js/core/idle-sign-out.js" asp-append-version="true"></script>
 }
 @await RenderSectionAsync("Scripts", required: false)
 <script>

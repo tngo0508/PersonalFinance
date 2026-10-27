@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.3.0] - 2026-10-27
+
+### Added
+
+- **Idle Sign-out**: The app signs an Account out after 30 minutes with no keyboard, mouse, scroll or touch input in any of its open tabs, after a two-minute warning (#332).
+  - The sign-in cookie now lasts `IdleSignOut:TimeoutMinutes` (30) with sliding expiration, instead of 14 days. While the user is active, `js/core/idle-sign-out.js` posts to `POST /idle-sign-out/check-in` (signed in, antiforgery, 204) at most once every 5 minutes, which renews the cookie.
+  - At `IdleSignOut:WarningSeconds` (120) before the end, a dialog with a live countdown opens in every tab, with "Stay signed in" and "Sign out now". Tabs share the activity time through `localStorage`, so dismissing it in one tab dismisses it in all.
+  - On expiry the script signs out through the normal sign-out and every tab goes to Login with "You were signed out after 30 minutes of inactivity." and its own return address.
+  - The script loads only on signed-in pages; the Landing Page, the legal pages and the signed-out Identity pages don't load it.
+
+### Removed
+
+- **"Remember me" on sign-in**: Login and two-factor sign-in no longer offer "Remember me"; every sign-in uses a cookie that ends when the browser closes, as Google sign-in already did (#332).
+
 ## [12.2.3] - 2026-10-27
 
 ### Fixed

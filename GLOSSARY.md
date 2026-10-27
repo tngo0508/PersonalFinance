@@ -64,6 +64,12 @@ _Avoid_: Owner (clashes with "user-owned" data), superuser, root
 A named access rule, such as "requires Admin", that pages and endpoints check instead of naming a Role directly.
 _Avoid_: Rule, guard
 
+### Idle Sign-out
+Signing an Account out after 30 minutes with no user activity (keyboard, mouse, scroll or touch input) in any of its
+open tabs, after a warning two minutes before. The same limit for every Account; requests the app makes on its own do
+not count as activity.
+_Avoid_: Auto logout, session timeout
+
 ### Deletion Request
 An Account's confirmed request to be erased, which hides its data and starts the Grace Period.
 _Avoid_: Account closure, deactivation

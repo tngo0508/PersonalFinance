@@ -3,6 +3,7 @@ const {runResearchWalkthrough} = require('./research-walkthrough');
 const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough');
 const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
 const {runReportingCurrencySmoke} = require('./reporting-currency-smoke');
+const {runIdleSignOutSmoke} = require('./idle-sign-out-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -927,6 +928,16 @@ const {runReportingCurrencySmoke} = require('./reporting-currency-smoke');
             await runReportingCurrencySmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Reporting currency smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9g: Idle Sign-out smoke (#332): the warning, "Stay signed in", expiry to Login, and a second tab
+        // =========================================================
+        console.log('\n--- Test 9g: Idle Sign-out Smoke ---');
+        try {
+            await runIdleSignOutSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Idle Sign-out smoke failed: ${error.message}`);
         }
 
         // =========================================================
