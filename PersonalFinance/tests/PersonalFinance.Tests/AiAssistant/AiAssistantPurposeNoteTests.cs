@@ -277,5 +277,9 @@ public class AiAssistantPurposeNoteTests
     private sealed class AllowAllRateLimiter : IRateLimiterService
     {
         public bool TryAllow(string userId) => true;
+
+        public void Release(string userId)
+        {
+        }
     }
 }

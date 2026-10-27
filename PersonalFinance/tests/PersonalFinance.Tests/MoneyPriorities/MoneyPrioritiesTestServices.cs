@@ -34,5 +34,9 @@ internal static class MoneyPrioritiesTestServices
     private sealed class AllowAllRateLimiter : IRateLimiterService
     {
         public bool TryAllow(string userId) => true;
+
+        public void Release(string userId)
+        {
+        }
     }
 }

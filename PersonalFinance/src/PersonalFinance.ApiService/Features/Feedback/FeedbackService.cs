@@ -25,6 +25,10 @@ internal sealed class FeedbackService : IFeedbackService
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The limiter slot is reserved before the save, atomically, so concurrent submissions from one Account cannot
+    /// get past the limit. If the save fails, the slot is released so only stored Feedback counts.
+    /// </remarks>
     public async Task<SubmitFeedbackResult> SubmitAsync(string userId, SubmitFeedbackRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -40,7 +44,16 @@ internal sealed class FeedbackService : IFeedbackService
             Message = request.Message.Trim(),
             PageUrl = request.PageUrl
         });
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            _rateLimiter.Release(userId);
+            throw;
+        }
+
         return SubmitFeedbackResult.Success();
     }
 

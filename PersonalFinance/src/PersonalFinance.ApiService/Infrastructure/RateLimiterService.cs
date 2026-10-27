@@ -11,7 +11,7 @@ public class RateLimiterService : IRateLimiterService
 {
     private readonly object _lock = new();
     private readonly int _maxRequests;
-    private readonly ConcurrentDictionary<string, Queue<DateTime>> _requestTimestamps = new();
+    private readonly ConcurrentDictionary<string, LinkedList<DateTime>> _requestTimestamps = new();
     private readonly TimeSpan _window;
 
     /// <summary>
@@ -36,21 +36,35 @@ public class RateLimiterService : IRateLimiterService
 
         lock (_lock)
         {
-            if (!_requestTimestamps.TryGetValue(userId, out Queue<DateTime>? queue))
+            if (!_requestTimestamps.TryGetValue(userId, out LinkedList<DateTime>? timestamps))
             {
-                queue = new Queue<DateTime>();
-                _requestTimestamps[userId] = queue;
+                timestamps = new LinkedList<DateTime>();
+                _requestTimestamps[userId] = timestamps;
             }
 
             // Remove expired timestamps outside the current window
-            while (queue.Count > 0 && now - queue.Peek() > _window) queue.Dequeue();
+            while (timestamps.First is not null && now - timestamps.First.Value > _window) timestamps.RemoveFirst();
 
             // Check if the user has exceeded the rate limit
-            if (queue.Count >= _maxRequests) return false;
+            if (timestamps.Count >= _maxRequests) return false;
 
             // Record this request
-            queue.Enqueue(now);
+            timestamps.AddLast(now);
             return true;
+        }
+    }
+
+    /// <summary>
+    ///     Gives back the slot of the user's newest allowed request. With concurrent requests the newest slot may
+    ///     belong to another request; the count is the same either way, and the older slot that stays expires sooner.
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    public void Release(string userId)
+    {
+        lock (_lock)
+        {
+            if (_requestTimestamps.TryGetValue(userId, out LinkedList<DateTime>? timestamps) && timestamps.Count > 0)
+                timestamps.RemoveLast();
         }
     }
 }

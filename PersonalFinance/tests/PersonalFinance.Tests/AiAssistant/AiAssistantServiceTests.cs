@@ -667,5 +667,9 @@ public class AiAssistantServiceTests
         {
             return true;
         }
+
+        public void Release(string userId)
+        {
+        }
     }
 }

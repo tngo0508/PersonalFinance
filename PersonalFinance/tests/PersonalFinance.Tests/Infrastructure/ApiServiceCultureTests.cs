@@ -334,6 +334,10 @@ public sealed class ApiServiceCultureTests : IDisposable
     private sealed class AllowAllRateLimiter : IRateLimiterService
     {
         public bool TryAllow(string userId) => true;
+
+        public void Release(string userId)
+        {
+        }
     }
 
     private sealed class CapturingNotificationService : INotificationService
