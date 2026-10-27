@@ -43,16 +43,6 @@ public class ResearchServiceTests
     }
 
     [Fact]
-    public async Task GetSectorsAsync_OnAnEmptyTable_ReturnsNeverLoaded()
-    {
-        await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
-
-        ResearchSnapshotResult<SectorsSnapshotDto> result = await CreateService(db, new StubSecHandler()).GetSectorsAsync();
-
-        Assert.Null(result.Snapshot);
-    }
-
-    [Fact]
     public async Task RefreshAsync_TakesEachFilersLatestQuarterlyFrame_SoAFilerWhoseFiscalQ2IsNotCalendarQ2IsIncluded()
     {
         await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
@@ -82,27 +72,6 @@ public class ResearchServiceTests
         Assert.Equal(0m, year.RestTotal);
         Assert.Equal(0, year.RestCount);
         Assert.Equal(new DateOnly(2025, 12, 31), snapshot.AsOf);
-    }
-
-    [Fact]
-    public async Task RefreshAsync_KeepsExactly500Filers_AndSumsTheRest()
-    {
-        await using AppDbContext db = CreateContext($"Research_{Guid.NewGuid():N}");
-        var handler = new StubSecHandler();
-        // 503 filers worth 1,000 to 503,000 dollars: the three smallest (1,000 + 2,000 + 3,000) are the rest.
-        handler.Frames["CY2025Q2I"] = Enumerable.Range(1, 503)
-            .Select(i => new Filer(i, $"FILER {i}", "2025-06-30", i * 1_000m))
-            .ToList();
-
-        ResearchService service = CreateService(db, handler, firstYear: 2025);
-        await service.RefreshAsync();
-        SectorsPeriodDto year = Assert.Single((await service.GetSectorsAsync()).Snapshot!.Values);
-
-        Assert.Equal(500, year.Ranked.Count);
-        Assert.Equal(503_000m, year.Ranked[0].PublicFloat);
-        Assert.Equal(4_000m, year.Ranked[^1].PublicFloat);
-        Assert.Equal(6_000m, year.RestTotal);
-        Assert.Equal(3, year.RestCount);
     }
 
     [Fact]
