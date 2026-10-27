@@ -316,7 +316,7 @@ public class DriveResultMessageTests
         return new GoogleDriveController(api, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
-            TempData = new TempDataDictionary(httpContext, new FakeTempDataProvider())
+            TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())
         };
     }
 }
