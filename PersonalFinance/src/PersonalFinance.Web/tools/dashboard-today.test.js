@@ -129,3 +129,22 @@ test('budget pace is only shown for the current month with planned expenses', ()
     assert.strictEqual(today.budgetPace({ year: 2026, month: 10, budgetedExpenses: 0, actualExpenses: 0 }, noon), null);
     assert.strictEqual(today.budgetPace(null, noon), null);
 });
+
+test('a typical day spreads the year over 365 days and turns saving into time', () => {
+    const day = today.dayLedger({
+        annualIncome: 73000, annualSpending: 36500, annualSavings: 9125, currentNetWorth: 0, baseRoi: 7
+    });
+    assert.strictEqual(day.earned, 200);
+    assert.strictEqual(day.spent, 100);
+    assert.strictEqual(day.saved, 25);
+    assert.strictEqual(day.compounding, null);
+    // A quarter of a day's spending saved pays for six hours of living later.
+    assert.strictEqual(day.freedomHours, 6);
+});
+
+test('a typical day leaves out figures the settings do not have', () => {
+    const day = today.dayLedger(null);
+    assert.deepStrictEqual(
+        [day.earned, day.spent, day.saved, day.compounding, day.freedomHours], [null, null, null, null, null]);
+    assert.strictEqual(today.dayLedger({ annualSavings: 9125 }).freedomHours, null);
+});

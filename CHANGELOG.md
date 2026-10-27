@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [10.1.0] - 2026-10-27
+
+### Added
+
+- **"Your plan, per day" fills the Dashboard header**: under the welcome, your Net Worth settings are averaged over a day as a short statement: income, living costs, saving and estimated investment growth, each with a dotted leader to its amount.
+  - It says plainly that these are averages from your settings (a year's figures over 365 days), not your actual transactions, and shows no +/− signs. Each row appears only when its setting has a positive value, and the whole block stays out when none does.
+  - It closes with how much future living a day's saving pays for, in hours and minutes or in days.
+  - When the welcome has the whole row, the statement runs across it as a strip of figures, label over amount.
+
+### Changed
+
+- **The Today panel keeps its clock and calendar side by side**: it now asks for the width that fits both halves next to the welcome, and wraps under the welcome when the header cannot give it that, so the header no longer leaves a tall empty gap.
+
 ## [10.0.0] - 2026-10-27
 
 ### Removed
