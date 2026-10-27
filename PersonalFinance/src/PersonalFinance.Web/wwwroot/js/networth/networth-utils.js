@@ -55,22 +55,44 @@
         { id: 'nwAggressiveRoi', min: 0, max: 50 }
     ];
 
+    // The results' currency: the projection's (the Reporting Currency, or the inputs' own when no rate exists).
+    let resultCurrency = 'USD';
+
     /**
-     * Format a numeric value as a currency string (delegates to shared utils).
+     * Remember which currency the server's projection is in, so every result formats in it.
+     * @param {string} currencyCode - ISO 4217 code from the projection.
+     */
+    function setResultCurrency (currencyCode) {
+        if (currencyCode) {
+            resultCurrency = currencyCode;
+        }
+    }
+
+    /**
+     * The currency the inputs are typed in: the page's selector.
+     * @returns {string} ISO 4217 code.
+     */
+    function inputCurrency () {
+        const select = document.getElementById('nwCurrency');
+        return (select && select.value) || 'USD';
+    }
+
+    /**
+     * Format a numeric value as a whole-unit amount in the results' currency.
      * @param {number} value - The numeric value to format.
      * @returns {string} Formatted currency string (e.g., "$1,234,567").
      */
     function formatCurrency (value) {
-        return PF.formatCurrency(value);
+        return PFI18n.formatMoney(value, resultCurrency, { whole: true });
     }
 
     /**
-     * Format a numeric value as a compact currency string (delegates to shared utils).
+     * Format a numeric value as a compact amount in the results' currency.
      * @param {number} value - The numeric value to format.
      * @returns {string} Compact currency string (e.g., "$1.2M", "$50K").
      */
     function formatCompact (value) {
-        return PF.formatCompactCurrency(value);
+        return PFI18n.formatCompactMoney(value, resultCurrency);
     }
 
     /**
@@ -213,6 +235,8 @@
         VALIDATORS: VALIDATORS,
         formatCurrency: formatCurrency,
         formatCompact: formatCompact,
+        setResultCurrency: setResultCurrency,
+        inputCurrency: inputCurrency,
         formatRate: formatRate,
         scenarioName: scenarioName,
         hexToRgba: hexToRgba,

@@ -90,6 +90,7 @@
     function init () {
         const data = window.nwProjectionData;
         if (!data) { return; }
+        NW.setResultCurrency(data.currencyCode);
 
         // Parameters are already loaded server-side via the Index action.
         // The sliders reflect saved values from the database on page render.
@@ -107,6 +108,15 @@
 
         // Initialize live recalculation
         NW.initLiveRecalculation();
+
+        // The currency selector changes which currency the inputs are in; the server converts and recalculates.
+        const currencySelect = document.getElementById('nwCurrency');
+        if (currencySelect) {
+            currencySelect.addEventListener('change', () => {
+                NW.syncSaveInputs();
+                NW.recalculate();
+            });
+        }
 
         // Initialize preset scenario buttons
         NW.initPresets();

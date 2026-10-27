@@ -1,10 +1,11 @@
+using PersonalFinance.Shared.DTOs.Currency;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Infrastructure;
 
 /// <summary>
-/// Per-category normalized budget amount and actual spending/income.
+/// Per-category normalized budget amount and actual spending/income, in the month's Reporting Currency.
 /// </summary>
 public sealed class BudgetMonthCategoryData
 {
@@ -15,13 +16,21 @@ public sealed class BudgetMonthCategoryData
 }
 
 /// <summary>
-/// Normalized monthly budget data model returned by budget month readers.
+/// Normalized monthly budget data model returned by budget month readers. Every amount is in
+/// <see cref="CurrencyCode"/>, the Account's Reporting Currency: the readers convert each stored line, transaction or
+/// snapshot at its own month's rate (ADR 0016).
 /// </summary>
 public sealed class BudgetMonthData
 {
     public int Year { get; set; }
     public int Month { get; set; }
     public string MonthName { get; set; } = string.Empty;
+
+    /// <summary>The ISO 4217 code every amount is in: the Reporting Currency.</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    /// <summary>The rates that brought the month's stored amounts into the Reporting Currency.</summary>
+    public ConversionDto? Conversion { get; set; }
 
     /// <summary>Number of source records represented by this month: synced snapshots for Google Sheet, one available month for Budget Tracker.</summary>
     public int SourceRecordCount { get; set; }
@@ -58,7 +67,15 @@ public sealed class BudgetTransactionData
     public int Id { get; set; }
     public string Description { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
+
+    /// <summary>The stored amount, in <see cref="CurrencyCode"/>.</summary>
     public decimal Amount { get; set; }
+
+    /// <summary>The ISO 4217 currency of <see cref="Amount"/>.</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    /// <summary><see cref="Amount"/> in the Reporting Currency at the transaction's own day; null when no rate exists.</summary>
+    public decimal? ReportingAmount { get; set; }
     public DateTime Date { get; set; }
     public string Type { get; set; } = "Expense"; // "Expense" or "Income"
 }

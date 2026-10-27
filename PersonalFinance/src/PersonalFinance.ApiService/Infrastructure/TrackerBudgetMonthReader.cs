@@ -8,14 +8,18 @@ namespace PersonalFinance.ApiService.Infrastructure;
 
 /// <summary>
 /// Budget month reader implementation that reads user-entered Budget Tracker data (plans, lines, categories, transactions).
+/// Every figure it returns is in the Account's Reporting Currency: each line at its month's rate, each transaction at
+/// its own day's (ADR 0016).
 /// </summary>
 public class TrackerBudgetMonthReader : IBudgetMonthReader
 {
     private readonly AppDbContext _dbContext;
+    private readonly ICurrencyConverter _currencyConverter;
 
-    public TrackerBudgetMonthReader(AppDbContext dbContext)
+    public TrackerBudgetMonthReader(AppDbContext dbContext, ICurrencyConverter currencyConverter)
     {
         _dbContext = dbContext;
+        _currencyConverter = currencyConverter;
     }
 
     /// <inheritdoc />
@@ -64,7 +68,7 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             txsByMonth.TryGetValue(month, out List<BudgetTransaction>? monthTxs);
             monthTxs ??= new List<BudgetTransaction>();
 
-            BudgetMonthData? monthData = BuildMonthData(year, month, plan, monthTxs, allCategories);
+            BudgetMonthData? monthData = await BuildMonthDataAsync(userId, year, month, plan, monthTxs, allCategories, ct);
             if (monthData != null)
             {
                 result.Add(monthData);
@@ -110,7 +114,7 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             .ThenBy(c => c.Id)
             .ToListAsync(ct);
 
-        return BuildMonthData(year, month, plan, transactions, allCategories);
+        return await BuildMonthDataAsync(userId, year, month, plan, transactions, allCategories, ct);
     }
 
     /// <inheritdoc />
@@ -154,6 +158,8 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             .AsNoTracking()
             .Where(c => c.UserId == userId && categoryIds.Contains(c.Id))
             .ToDictionaryAsync(c => c.Id, ct);
+        ReportingConversion conversion = await ConversionAsync(userId,
+            transactions.Select(t => new MoneyAt(t.CurrencyCode, t.Date)), ct);
 
         return transactions.Select(t =>
         {
@@ -164,6 +170,8 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
                 Description = t.Description,
                 Category = cat?.Name ?? string.Empty,
                 Amount = t.Amount,
+                CurrencyCode = t.CurrencyCode,
+                ReportingAmount = conversion.Convert(t.Amount, t.CurrencyCode, t.Date),
                 Date = t.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
                 Type = cat?.Kind == BudgetCategoryKind.Income ? "Income" : "Expense"
             };
@@ -190,22 +198,36 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
         return planYears.Union(txYears).Distinct().OrderByDescending(y => y).ToList();
     }
 
-    private static BudgetMonthData? BuildMonthData(
+    /// <summary>A conversion into the Account's Reporting Currency, prepared for <paramref name="amounts"/>.</summary>
+    private async Task<ReportingConversion> ConversionAsync(string userId, IEnumerable<MoneyAt> amounts, CancellationToken ct)
+    {
+        string reportingCurrency = await _currencyConverter.GetReportingCurrencyAsync(userId, ct);
+        return await _currencyConverter.PrepareAsync(reportingCurrency, amounts, ct);
+    }
+
+    private async Task<BudgetMonthData?> BuildMonthDataAsync(
+        string userId,
         int year,
         int month,
         MonthlyBudgetPlan? plan,
         List<BudgetTransaction> transactions,
-        List<BudgetCategory> allCategories)
+        List<BudgetCategory> allCategories,
+        CancellationToken ct)
     {
         if (plan == null && transactions.Count == 0)
         {
             return null;
         }
 
-        Dictionary<int, MonthlyBudgetLine> lineMap = plan?.Lines.ToDictionary(l => l.CategoryId) ?? new Dictionary<int, MonthlyBudgetLine>();
-        var txSumByCategory = transactions
-            .GroupBy(t => t.CategoryId)
-            .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+        // Lines at the month's rate, transactions at their own day's (ADR 0016); the calculator sees converted figures.
+        var monthStart = new DateOnly(year, month, 1);
+        List<MonthlyBudgetLine> storedLines = plan?.Lines.ToList() ?? [];
+        ReportingConversion conversion = await ConversionAsync(userId,
+            transactions.Select(t => new MoneyAt(t.CurrencyCode, t.Date))
+                .Concat(storedLines.Select(l => new MoneyAt(l.CurrencyCode, monthStart))), ct);
+        Dictionary<int, MonthlyBudgetLine> lineMap = storedLines.ToDictionary(l => l.CategoryId,
+            l => MonthlyBudgetCalculator.InReportingCurrency(l, conversion, monthStart));
+        Dictionary<int, decimal> txSumByCategory = MonthlyBudgetCalculator.TransactionSums(transactions, conversion);
 
         List<CalculatedBudgetCategoryRow> calculatedRows = MonthlyBudgetCalculator.BuildRows(allCategories, lineMap, txSumByCategory);
 
@@ -229,11 +251,13 @@ public class TrackerBudgetMonthReader : IBudgetMonthReader
             Year = year,
             Month = month,
             MonthName = monthName,
+            CurrencyCode = conversion.ReportingCurrency,
+            Conversion = conversion.ToDto(),
             SourceRecordCount = 1,
-            BudgetedIncome = incomeRows.Sum(r => r.Planned),
-            ActualIncome = incomeRows.Sum(r => r.Actual),
-            BudgetedExpenses = expenseRows.Sum(r => r.Planned),
-            ActualExpenses = expenseRows.Sum(r => r.Actual),
+            BudgetedIncome = conversion.Total(incomeRows.Select(r => r.Planned)),
+            ActualIncome = conversion.Total(incomeRows.Select(r => r.Actual)),
+            BudgetedExpenses = conversion.Total(expenseRows.Select(r => r.Planned)),
+            ActualExpenses = conversion.Total(expenseRows.Select(r => r.Actual)),
             Categories = categoryDataList
         };
     }

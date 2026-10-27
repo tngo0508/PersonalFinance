@@ -41,10 +41,12 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
     ];
 
     private readonly AppDbContext _dbContext;
+    private readonly ICurrencyConverter _currencyConverter;
 
-    public MonthlyBudgetService(AppDbContext dbContext)
+    public MonthlyBudgetService(AppDbContext dbContext, ICurrencyConverter currencyConverter)
     {
         _dbContext = dbContext;
+        _currencyConverter = currencyConverter;
     }
 
     /// <inheritdoc />
@@ -141,15 +143,25 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
             .ThenBy(t => t.Id)
             .ToListAsync(ct);
 
-        var txSumByCategory = transactions
-            .GroupBy(t => t.CategoryId)
-            .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
-
         MonthlyBudgetPlan? plan = await _dbContext.MonthlyBudgetPlans
             .Include(p => p.Lines)
             .FirstOrDefaultAsync(p => p.UserId == userId && p.Year == year && p.Month == month, ct);
 
-        Dictionary<int, MonthlyBudgetLine> lineMap = plan?.Lines.ToDictionary(l => l.CategoryId) ?? new Dictionary<int, MonthlyBudgetLine>();
+        // Every stored amount is brought into the Reporting Currency (ADR 0016): a transaction at its own day's rate,
+        // a line at the month's. The calculator then works on converted figures, so rows and totals add up.
+        Dictionary<int, MonthlyBudgetLine> storedLines =
+            plan?.Lines.ToDictionary(l => l.CategoryId) ?? new Dictionary<int, MonthlyBudgetLine>();
+        string reportingCurrency = await _currencyConverter.GetReportingCurrencyAsync(userId, ct);
+        ReportingConversion conversion = await _currencyConverter.PrepareAsync(reportingCurrency,
+            transactions.Select(t => new MoneyAt(t.CurrencyCode, t.Date))
+                .Concat(storedLines.Values.Select(l => new MoneyAt(l.CurrencyCode, startDate))), ct);
+
+        Dictionary<int, decimal> txSumByCategory = MonthlyBudgetCalculator.TransactionSums(transactions, conversion);
+        Dictionary<int, (string CurrencyCode, decimal Sum)?> txOriginalByCategory = transactions
+            .GroupBy(t => t.CategoryId)
+            .ToDictionary(g => g.Key, g => OriginalSum(g, conversion));
+        Dictionary<int, MonthlyBudgetLine> lineMap = storedLines.ToDictionary(pair => pair.Key,
+            pair => MonthlyBudgetCalculator.InReportingCurrency(pair.Value, conversion, startDate));
 
         bool isInitialized = plan != null;
         bool canCopyFromPrevious = false;
@@ -177,39 +189,22 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         var expenseRows = calculatedRows
             .Where(r => r.Kind == BudgetCategoryKind.Expense)
-            .Select(r => new SheetRowDto
-            {
-                CategoryId = r.CategoryId,
-                Name = r.Name,
-                Planned = r.Planned,
-                Actual = r.Actual,
-                Diff = r.Diff,
-                ActualIsOverride = r.ActualIsOverride,
-                IsArchived = r.IsArchived
-            })
+            .Select(r => ToRow(r, storedLines, txOriginalByCategory, conversion))
             .ToList();
 
         var incomeRows = calculatedRows
             .Where(r => r.Kind == BudgetCategoryKind.Income)
-            .Select(r => new SheetRowDto
-            {
-                CategoryId = r.CategoryId,
-                Name = r.Name,
-                Planned = r.Planned,
-                Actual = r.Actual,
-                Diff = r.Diff,
-                ActualIsOverride = r.ActualIsOverride,
-                IsArchived = r.IsArchived
-            })
+            .Select(r => ToRow(r, storedLines, txOriginalByCategory, conversion))
             .ToList();
 
-        decimal expenseTotalPlanned = expenseRows.Sum(r => r.Planned);
-        decimal expenseTotalActual = expenseRows.Sum(r => r.Actual);
-        decimal expenseTotalDiff = expenseTotalPlanned - expenseTotalActual;
+        // Totals are in the Reporting Currency, each rounded once (localization spec §2.5).
+        decimal expenseTotalPlanned = conversion.Total(expenseRows.Select(r => r.Planned));
+        decimal expenseTotalActual = conversion.Total(expenseRows.Select(r => r.Actual));
+        decimal expenseTotalDiff = conversion.Round(expenseTotalPlanned - expenseTotalActual);
 
-        decimal incomeTotalPlanned = incomeRows.Sum(r => r.Planned);
-        decimal incomeTotalActual = incomeRows.Sum(r => r.Actual);
-        decimal incomeTotalDiff = incomeTotalActual - incomeTotalPlanned;
+        decimal incomeTotalPlanned = conversion.Total(incomeRows.Select(r => r.Planned));
+        decimal incomeTotalActual = conversion.Total(incomeRows.Select(r => r.Actual));
+        decimal incomeTotalDiff = conversion.Round(incomeTotalActual - incomeTotalPlanned);
 
         var transactionDtos = transactions.Select(t =>
         {
@@ -219,6 +214,8 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
                 Id = t.Id,
                 Date = t.Date,
                 Amount = t.Amount,
+                CurrencyCode = t.CurrencyCode,
+                ReportingAmount = conversion.Convert(t.Amount, t.CurrencyCode, t.Date),
                 Description = t.Description,
                 CategoryId = t.CategoryId,
                 CategoryName = cat?.Name ?? "Unknown",
@@ -228,6 +225,8 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         return new MonthlyBudgetSheetDto
         {
+            ReportingCurrency = reportingCurrency,
+            Conversion = conversion.ToDto(),
             Year = year,
             Month = month,
             MonthName = new DateTime(year, month, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture),
@@ -250,6 +249,73 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
                 TotalDiff = incomeTotalDiff
             },
             Transactions = transactionDtos
+        };
+    }
+
+    /// <summary>
+    /// The stored sum of a category's transactions, in their one shared currency, when that is not the Reporting
+    /// Currency; null for a mixed category or one already in the Reporting Currency.
+    /// </summary>
+    private static (string CurrencyCode, decimal Sum)? OriginalSum(IEnumerable<BudgetTransaction> transactions,
+        ReportingConversion conversion)
+    {
+        List<BudgetTransaction> list = transactions.ToList();
+        string currency = list[0].CurrencyCode;
+        if (conversion.IsReporting(currency) || list.Any(t => !string.Equals(t.CurrencyCode, currency, StringComparison.Ordinal)))
+        {
+            return null;
+        }
+
+        return (currency, list.Sum(t => t.Amount));
+    }
+
+    /// <summary>
+    /// A sheet row: the calculator's figures in the Reporting Currency, plus the stored amounts and currency of a line
+    /// (or a single-currency transaction sum) that is in another one, so the page can show both.
+    /// </summary>
+    private static SheetRowDto ToRow(CalculatedBudgetCategoryRow row, Dictionary<int, MonthlyBudgetLine> storedLines,
+        Dictionary<int, (string CurrencyCode, decimal Sum)?> txOriginalByCategory, ReportingConversion conversion)
+    {
+        storedLines.TryGetValue(row.CategoryId, out MonthlyBudgetLine? line);
+        bool foreignLine = line is not null && !conversion.IsReporting(line.CurrencyCode);
+        (string CurrencyCode, decimal Sum)? transactions = txOriginalByCategory.GetValueOrDefault(row.CategoryId);
+        string currencyCode = foreignLine
+            ? line!.CurrencyCode
+            : !row.ActualIsOverride && transactions is { } sum ? sum.CurrencyCode : conversion.ReportingCurrency;
+
+        return new SheetRowDto
+        {
+            CategoryId = row.CategoryId,
+            Name = row.Name,
+            Planned = row.Planned,
+            Actual = row.Actual,
+            Diff = row.Diff,
+            ActualIsOverride = row.ActualIsOverride,
+            IsArchived = row.IsArchived,
+            CurrencyCode = currencyCode,
+            OriginalPlanned = foreignLine ? line!.PlannedAmount : null,
+            OriginalActual = row.ActualIsOverride ? (foreignLine ? line!.ActualOverride : null) : transactions?.Sum
+        };
+    }
+
+    /// <summary>The transaction as the page shows it: its own amount and currency, plus the reporting amount at its day.</summary>
+    private async Task<BudgetTransactionDto> ToDtoAsync(string userId, BudgetTransaction transaction,
+        BudgetCategory category, CancellationToken ct)
+    {
+        string reportingCurrency = await _currencyConverter.GetReportingCurrencyAsync(userId, ct);
+        ReportingConversion conversion = await _currencyConverter.PrepareAsync(reportingCurrency,
+            [new MoneyAt(transaction.CurrencyCode, transaction.Date)], ct);
+        return new BudgetTransactionDto
+        {
+            Id = transaction.Id,
+            Date = transaction.Date,
+            Amount = transaction.Amount,
+            CurrencyCode = transaction.CurrencyCode,
+            ReportingAmount = conversion.Convert(transaction.Amount, transaction.CurrencyCode, transaction.Date),
+            Description = transaction.Description,
+            CategoryId = transaction.CategoryId,
+            CategoryName = category.Name,
+            Kind = category.Kind
         };
     }
 
@@ -689,16 +755,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
         _dbContext.BudgetTransactions.Add(transaction);
         await _dbContext.SaveChangesAsync(ct);
 
-        return new BudgetTransactionDto
-        {
-            Id = transaction.Id,
-            Date = transaction.Date,
-            Amount = transaction.Amount,
-            Description = transaction.Description,
-            CategoryId = transaction.CategoryId,
-            CategoryName = category.Name,
-            Kind = category.Kind
-        };
+        return await ToDtoAsync(userId, transaction, category, ct);
     }
 
     /// <inheritdoc />
@@ -739,16 +796,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         await _dbContext.SaveChangesAsync(ct);
 
-        return new BudgetTransactionDto
-        {
-            Id = transaction.Id,
-            Date = transaction.Date,
-            Amount = transaction.Amount,
-            Description = transaction.Description,
-            CategoryId = transaction.CategoryId,
-            CategoryName = category.Name,
-            Kind = category.Kind
-        };
+        return await ToDtoAsync(userId, transaction, category, ct);
     }
 
     /// <inheritdoc />

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using PersonalFinance.ApiService.Features.Research;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.Data;
 
@@ -34,6 +35,9 @@ internal static class ResearchServiceFactory
                 }
             })
             .AddResearchFeature(new ConfigurationBuilder().Build());
+        // The rate refresher evicts the converter's cache, which the ApiService registers with its Infrastructure.
+        services.AddMemoryCache();
+        services.AddSingleton<ExchangeRateCache>();
         services.Replace(ServiceDescriptor.Singleton(db));
         services.Replace(ServiceDescriptor.Singleton(secClient));
         services.Replace(ServiceDescriptor.Singleton(worldBankClient));

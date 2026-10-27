@@ -128,6 +128,15 @@
     }
 
     /**
+     * The symbol shown with an amount in a currency, in every culture ($, ₫).
+     * @param {string} [code='USD'] - ISO 4217 code.
+     * @returns {string} The symbol.
+     */
+    function currencySymbol (code) {
+        return currencyOf(code || DEFAULT_CURRENCY).symbol;
+    }
+
+    /**
      * Format an amount of money like the server's MoneyFormatter: symbol and minor units from the currency, separators
      * and the symbol's position from the culture ($1,234.56; 1.234.567 ₫).
      * @param {number} amount - The amount.
@@ -345,6 +354,7 @@
         t: t,
         plural: plural,
         format: format,
+        currencySymbol: currencySymbol,
         formatMoney: formatMoney,
         formatCompactMoney: formatCompactMoney,
         formatAmount: formatAmount,

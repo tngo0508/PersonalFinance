@@ -35,7 +35,7 @@ public class DashboardBudgetBreakdownTests
     private static async Task<BudgetSummaryDto?> GetBudgetAsync(AppDbContext db, string userId = UserId)
     {
         DashboardSummaryDto summary =
-            await new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(userId);
+            await new DashboardService(db, TestBudgetDataProviderFactory.Create(db), TestCurrencyConverter.Create(db)).GetDashboardSummaryAsync(userId);
         return summary.Budget;
     }
 

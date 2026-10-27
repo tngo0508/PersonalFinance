@@ -10,7 +10,7 @@
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
     Label = L["Shell.Nav.NetWorth"],
-    Value = netWorth is null ? null : MoneyFormatter.FormatWhole(netWorth.CurrentNetWorth, SupportedCurrencies.Default.Code),
+    Value = netWorth is null ? null : MoneyFormatter.FormatWhole(netWorth.CurrentNetWorth, SupportedCurrencies.CodeOrDefault(netWorth.CurrencyCode)),
     Caption = netWorth is null ? L["Dashboard.AddNetWorthSettings"] : L["Dashboard.KeyFigures.NetWorthCaption"],
     UnavailableText = L["Dashboard.KeyFigures.NotSetUp"],
     Icon = "wallet",

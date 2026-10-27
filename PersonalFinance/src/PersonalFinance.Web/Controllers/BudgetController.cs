@@ -6,8 +6,10 @@ using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
+using System.Security.Claims;
 using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.Budget;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -22,10 +24,12 @@ public class BudgetController : Controller
     private readonly IBudgetPlannerApi _budgetPlannerApi;
     private readonly ILogger<BudgetController> _logger;
     private readonly IStringLocalizer _localizer;
+    private readonly IUserPreferenceService _preferences;
 
     public BudgetController(IBudgetPlannerApi budgetPlannerApi, ILogger<BudgetController> logger,
-        IStringLocalizer localizer)
+        IStringLocalizer localizer, IUserPreferenceService preferences)
     {
+        _preferences = preferences;
         _budgetPlannerApi = budgetPlannerApi;
         _logger = logger;
         _localizer = localizer;
@@ -41,6 +45,7 @@ public class BudgetController : Controller
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
         var model = new BudgetViewModel();
+        string? savedCurrency = null;
 
         try
         {
@@ -48,6 +53,7 @@ public class BudgetController : Controller
 
             if (saved != null && saved.Allocations != null)
             {
+                savedCurrency = saved.CurrencyCode;
                 model.MonthlyIncome = saved.MonthlyIncome;
                 model.Housing = saved.Allocations.Housing;
                 model.Food = saved.Allocations.Food;
@@ -68,7 +74,20 @@ public class BudgetController : Controller
                 "Budget");
         }
 
+        // A saved budget keeps its currency; a new one starts in the Reporting Currency (localization spec §2.5).
+        model.CurrencyCode = SupportedCurrencies.IsSupported(savedCurrency)
+            ? savedCurrency!
+            : await ReportingCurrencyAsync(cancellationToken);
         return View(model);
+    }
+
+    /// <summary>The Account's Reporting Currency; US dollars when the request carries no Account id.</summary>
+    private async Task<string> ReportingCurrencyAsync(CancellationToken cancellationToken)
+    {
+        string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return userId is null
+            ? SupportedCurrencies.DefaultCode
+            : await _preferences.GetReportingCurrencyAsync(userId, cancellationToken);
     }
 
     /// <summary>
@@ -91,6 +110,12 @@ public class BudgetController : Controller
             return View("Index", model);
         }
 
+        if (!SupportedCurrencies.IsSupported(model.CurrencyCode))
+        {
+            ModelState.AddModelError(nameof(model.CurrencyCode), _localizer["BudgetPlanner.Validation.CurrencyUnsupported"]);
+            return View("Index", model);
+        }
+
         SaveBudgetRequestDto request = BuildRequest(model);
 
         try
@@ -99,8 +124,8 @@ public class BudgetController : Controller
             if (model.TotalAllocated > model.MonthlyIncome)
             {
                 TempData["SaveWarning"] = _localizer.Named("BudgetPlanner.Message.SavedOverIncome",
-                    ("total", MoneyFormatter.Format(model.TotalAllocated, SupportedCurrencies.Default.Code)),
-                    ("income", MoneyFormatter.Format(model.MonthlyIncome, SupportedCurrencies.Default.Code)));
+                    ("total", MoneyFormatter.Format(model.TotalAllocated, model.CurrencyCode)),
+                    ("income", MoneyFormatter.Format(model.MonthlyIncome, model.CurrencyCode)));
             }
             else
             {
@@ -141,6 +166,7 @@ public class BudgetController : Controller
 
         return Json(new
         {
+            currencyCode = saved.CurrencyCode,
             monthlyIncome = saved.MonthlyIncome,
             allocations = categories.Select(c => c.Amount),
             labels = categories.Select(c => c.Name)
@@ -155,6 +181,7 @@ public class BudgetController : Controller
         return new SaveBudgetRequestDto
         {
             Period = "current",
+            CurrencyCode = model.CurrencyCode,
             MonthlyIncome = model.MonthlyIncome,
             Allocations = new BudgetAllocationsDto
             {

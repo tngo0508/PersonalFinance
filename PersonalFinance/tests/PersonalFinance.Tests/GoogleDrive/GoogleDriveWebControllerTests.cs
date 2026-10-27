@@ -43,7 +43,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
@@ -88,7 +88,7 @@ public class GoogleDriveWebControllerTests
             }
         };
 
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
@@ -112,7 +112,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
@@ -132,7 +132,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
@@ -152,7 +152,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123"),
             TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
@@ -171,7 +171,7 @@ public class GoogleDriveWebControllerTests
     {
         var apiReport = new MonthlyBudgetReportDto { FileName = "Monthly budget 2026.xlsx", FileId = "file-123" };
         var fakeApi = new FakeGoogleDriveApi { BudgetReport = apiReport };
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -186,7 +186,7 @@ public class GoogleDriveWebControllerTests
     public async Task MonthlyBudgetReport_WhenApiServiceFails_ReturnsBadGatewayInsteadOfInventedData()
     {
         var fakeApi = new FakeGoogleDriveApi { BudgetReportFailure = new HttpRequestException("ApiService down") };
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -202,7 +202,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };
@@ -222,7 +222,7 @@ public class GoogleDriveWebControllerTests
     {
         // Arrange
         var fakeApi = new FakeGoogleDriveApi();
-        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        var controller = new GoogleDriveController(fakeApi, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = CreateControllerContext("test-user-123")
         };

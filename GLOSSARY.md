@@ -377,5 +377,9 @@ The ISO 4217 code (`USD`, `VND`) stored on every money-bearing row. It, not the 
 The one currency a user's totals are shown in, stored on their preference Entity (default `USD`). Converting into it never rewrites stored amounts.
 _Avoid_: Base currency (that is the exchange-rate table's USD base), home currency, display currency
 
+### Reporting Amount
+An amount brought into the Reporting Currency by the ApiService's one converter and carried in a DTO beside the original amount and its Currency Code; null when no Exchange Rate exists, never zero. Totals sum Reporting Amounts and are rounded once; the page captions them with the rate used.
+_Avoid_: Converted value, display amount
+
 ### Exchange Rate
 A system-owned daily rate from USD to a quote currency on a given date, fetched by a refresher and never user-edited. Dated amounts convert at their own date's rate, balances at the latest.

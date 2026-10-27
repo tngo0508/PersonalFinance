@@ -13,8 +13,17 @@ public class BudgetTransactionDto
     /// <summary>Calendar date of the transaction.</summary>
     public DateOnly Date { get; set; }
 
-    /// <summary>Transaction amount.</summary>
+    /// <summary>Transaction amount, in <see cref="CurrencyCode"/>.</summary>
     public decimal Amount { get; set; }
+
+    /// <summary>The ISO 4217 currency of <see cref="Amount"/> (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    /// <summary>
+    /// <see cref="Amount"/> in the Account's Reporting Currency at the rate of <see cref="Date"/>; null when there is no
+    /// rate at all. Equal to <see cref="Amount"/> when the transaction is in the Reporting Currency.
+    /// </summary>
+    public decimal? ReportingAmount { get; set; }
 
     /// <summary>Description or note for the transaction.</summary>
     public string Description { get; set; } = string.Empty;

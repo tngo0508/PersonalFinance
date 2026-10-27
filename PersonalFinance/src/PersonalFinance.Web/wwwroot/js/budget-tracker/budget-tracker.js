@@ -18,12 +18,93 @@
     let pendingDeleteAction = null;
 
     /**
-     * Formats a decimal number into USD currency string with 2 decimal places.
+     * The currency the sheet's rows and totals are in: the Account's Reporting Currency (ADR 0016).
+     * @returns {string} ISO 4217 code.
+     */
+    function reportingCurrency () {
+        if (currentSheet && currentSheet.reportingCurrency) {
+            return currentSheet.reportingCurrency;
+        }
+        const container = document.getElementById('budgetTrackerContainer');
+        return (container && container.dataset.reportingCurrency) || 'USD';
+    }
+
+    /**
+     * Formats an amount in the Reporting Currency, with that currency's minor units.
      * @param {number|null} num - Number to format.
      * @returns {string} Formatted currency.
      */
     function formatCurrency (num) {
-        return PFI18n.formatMoney(Number(num) || 0, 'USD');
+        return PFI18n.formatMoney(Number(num) || 0, reportingCurrency());
+    }
+
+    /**
+     * Formats a stored amount in its own currency.
+     * @param {number|null} num - Number to format.
+     * @param {string} currencyCode - ISO 4217 code of the amount; the Reporting Currency when missing.
+     * @returns {string} Formatted currency.
+     */
+    function formatOriginal (num, currencyCode) {
+        return PFI18n.formatMoney(Number(num) || 0, currencyCode || reportingCurrency());
+    }
+
+    /**
+     * A small note under a figure with the same amount in another currency; null when there is none to show.
+     * @param {number|null|undefined} amount - The amount, or null.
+     * @param {string} currencyCode - Its currency.
+     * @returns {HTMLElement|null} The note element.
+     */
+    function amountNote (amount, currencyCode) {
+        if (amount === null || amount === undefined) {
+            return null;
+        }
+        const note = document.createElement('small');
+        note.className = 'bt-amount-note';
+        note.textContent = formatOriginal(amount, currencyCode);
+        return note;
+    }
+
+    /**
+     * The chosen currency of a modal's amount, or null to keep the stored one.
+     * @param {string} selectId - The select's id.
+     * @returns {string|null} ISO 4217 code.
+     */
+    function currencyValue (selectId) {
+        const select = document.getElementById(selectId);
+        return select && select.value ? select.value : null;
+    }
+
+    /**
+     * Sets a modal's currency select and its symbol.
+     * @param {string} selectId - The select's id.
+     * @param {string} currencyCode - The code to select.
+     * @returns {void}
+     */
+    function setCurrencySelect (selectId, currencyCode) {
+        const select = document.getElementById(selectId);
+        if (!select) {
+            return;
+        }
+        select.value = currencyCode || reportingCurrency();
+        if (window.PFCurrencySelector) {
+            window.PFCurrencySelector.apply(select);
+        }
+    }
+
+    /**
+     * Shows the sheet's conversion caption: which rate converted lines and transactions in other currencies, or that
+     * the conversion is unavailable. Hidden when every amount is already in the Reporting Currency.
+     * @param {Object} sheet - The MonthlyBudgetSheetDto.
+     * @returns {void}
+     */
+    function renderConversionCaption (sheet) {
+        const caption = document.getElementById('btConversionCaption');
+        if (!caption) {
+            return;
+        }
+        const text = window.PFCurrency ? window.PFCurrency.captionText(sheet.conversion) : '';
+        caption.textContent = text;
+        caption.hidden = text === '';
     }
 
     /**
@@ -240,6 +321,7 @@
         renderSummaryTable('tbodyExpenses', sheet.expenses ? sheet.expenses.rows : [], 1);
         renderSummaryTable('tbodyIncome', sheet.income ? sheet.income.rows : [], 2);
         renderTotals(sheet);
+        renderConversionCaption(sheet);
         renderTransactions(sheet.transactions || []);
         refreshIcons();
     }
@@ -415,6 +497,10 @@
             btnPlanned.type = 'button';
             btnPlanned.className = 'bt-planned-btn';
             btnPlanned.textContent = formatCurrency(row.planned);
+            const plannedNote = amountNote(row.originalPlanned, row.currencyCode);
+            if (plannedNote) {
+                btnPlanned.appendChild(plannedNote);
+            }
             btnPlanned.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.EditPlannedAria', { name: row.name }));
             btnPlanned.title = isMonthInitialized
                 ? PFI18n.t('BudgetTracker.Js.EditPlannedTitle')
@@ -424,7 +510,8 @@
             btnPlanned.addEventListener('click', (e) => {
                 e.preventDefault();
                 if (isMonthInitialized) {
-                    startInlinePlannedEdit(tdPlanned, row.categoryId, row.planned, row.name);
+                    // The line is edited in its own currency; the server keeps that currency when none is sent.
+                    startInlinePlannedEdit(tdPlanned, row.categoryId, row.originalPlanned ?? row.planned, row.name);
                 }
             });
 
@@ -449,6 +536,10 @@
             const actualVal = document.createElement('span');
             actualVal.textContent = formatCurrency(row.actual);
             actualWrapper.appendChild(actualVal);
+            const actualNote = amountNote(row.originalActual, row.currencyCode);
+            if (actualNote) {
+                actualWrapper.appendChild(actualNote);
+            }
 
             // Button to open override modal
             const btnOverride = document.createElement('button');
@@ -810,7 +901,14 @@
             // Amount
             const tdAmount = document.createElement('td');
             tdAmount.className = `text-end bt-tx-amount ${ kind === 1 ? 'bt-tx-amount--expense' : 'bt-tx-amount--income'}`;
-            tdAmount.textContent = formatCurrency(tx.amount);
+            // The transaction's own amount and currency; its reporting amount beside it when they differ.
+            tdAmount.textContent = formatOriginal(tx.amount, tx.currencyCode);
+            if (tx.currencyCode && tx.currencyCode !== reportingCurrency()) {
+                const reportingNote = amountNote(tx.reportingAmount, reportingCurrency());
+                if (reportingNote) {
+                    tdAmount.appendChild(reportingNote);
+                }
+            }
             tr.appendChild(tdAmount);
 
             // Description
@@ -1129,8 +1227,12 @@
             catNameLabel.textContent = row.name;
         }
         if (amountInput) {
-            amountInput.value = (Number(row.actual) || 0).toFixed(2);
+            const stored = row.actualIsOverride && row.originalActual !== null && row.originalActual !== undefined
+                ? row.originalActual
+                : row.actual;
+            amountInput.value = (Number(stored) || 0).toFixed(2);
         }
+        setCurrencySelect('selectOverrideCurrency', row.currencyCode);
 
         if (btnRevert) {
             btnRevert.classList.toggle('d-none', !row.actualIsOverride);
@@ -1210,6 +1312,7 @@
         if (descInput) {
             descInput.value = '';
         }
+        setCurrencySelect('selectTxCurrency', reportingCurrency());
 
         // Default date to current local date if current month matches, otherwise 1st of viewed month
         const today = new Date();
@@ -1261,6 +1364,7 @@
         if (descInput) {
             descInput.value = tx.description || '';
         }
+        setCurrencySelect('selectTxCurrency', tx.currencyCode);
 
         populateCategoryDropdown(catSelect, tx.categoryId, tx.kind);
 
@@ -1776,7 +1880,7 @@
                         'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ amount: amount })
+                    body: JSON.stringify({ amount: amount, currencyCode: currencyValue('selectOverrideCurrency') })
                 }
             );
 
@@ -1845,7 +1949,8 @@
                 categoryId: categoryId,
                 date: date,
                 amount: amount,
-                description: desc
+                description: desc,
+                currencyCode: currencyValue('selectTxCurrency')
             };
 
             const url = txId

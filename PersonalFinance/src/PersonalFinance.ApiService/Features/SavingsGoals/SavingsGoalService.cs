@@ -24,17 +24,20 @@ internal sealed class SavingsGoalService : ISavingsGoalService
     private readonly ILogger<SavingsGoalService> _logger;
     private readonly INotificationService _notificationService;
     private readonly TimeProvider _timeProvider;
+    private readonly ICurrencyConverter _currencyConverter;
 
     public SavingsGoalService(
         AppDbContext dbContext,
         ILogger<SavingsGoalService> logger,
         INotificationService notificationService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ICurrencyConverter currencyConverter)
     {
         _dbContext = dbContext;
         _logger = logger;
         _notificationService = notificationService;
         _timeProvider = timeProvider;
+        _currencyConverter = currencyConverter;
     }
 
     public async Task<List<SavingsGoalResponseDto>> GetSavingsGoalsAsync(string userId,
@@ -47,6 +50,7 @@ internal sealed class SavingsGoalService : ISavingsGoalService
             {
                 Id = g.Id,
                 Name = g.Name,
+                CurrencyCode = g.CurrencyCode,
                 TargetAmount = g.TargetAmount,
                 CurrentAmount = g.CurrentAmount,
                 Description = g.Description,
@@ -73,6 +77,24 @@ internal sealed class SavingsGoalService : ISavingsGoalService
             goal.SavedThisMonth = SavingsGoalPace.SavedThisMonth(goal.Contributions, today);
             goal.Pace = SavingsGoalPace.Calculate(goal.CurrentAmount, goal.TargetAmount, goal.CreatedAtUtc,
                 goal.TargetDate, goal.Contributions, today);
+        }
+
+        // Each goal keeps its own currency; the page's totals need every amount in the Reporting Currency, converted
+        // once here at the latest rate (ADR 0016). A goal already in it needs no rate and gets no caption.
+        string reportingCurrency = await _currencyConverter.GetReportingCurrencyAsync(userId, cancellationToken);
+        ReportingConversion conversion = await _currencyConverter.PrepareAsync(reportingCurrency,
+            goals.Select(g => new MoneyAt(g.CurrencyCode, null)), cancellationToken);
+        foreach (SavingsGoalResponseDto goal in goals)
+        {
+            goal.ReportingCurrency = reportingCurrency;
+            goal.ReportingTargetAmount = conversion.Convert(goal.TargetAmount, goal.CurrencyCode, null);
+            goal.ReportingCurrentAmount = conversion.Convert(goal.CurrentAmount, goal.CurrencyCode, null);
+            goal.ReportingSavedThisMonth = conversion.Convert(goal.SavedThisMonth, goal.CurrencyCode, null);
+        }
+
+        foreach (SavingsGoalResponseDto goal in goals.Where(g => !conversion.IsReporting(g.CurrencyCode)))
+        {
+            goal.Conversion = conversion.ToDto();
         }
 
         return goals;
@@ -342,8 +364,8 @@ internal sealed class SavingsGoalService : ISavingsGoalService
     {
         try
         {
-            string current = MoneyFormatter.Format(goal.CurrentAmount, SupportedCurrencies.Default.Code);
-            string target = MoneyFormatter.Format(goal.TargetAmount, SupportedCurrencies.Default.Code);
+            string current = MoneyFormatter.Format(goal.CurrentAmount, goal.CurrencyCode);
+            string target = MoneyFormatter.Format(goal.TargetAmount, goal.CurrencyCode);
             await _notificationService.CreateNotificationAsync(goal.UserId, new CreateNotificationRequestDto
             {
                 Type = "SavingsMilestone",

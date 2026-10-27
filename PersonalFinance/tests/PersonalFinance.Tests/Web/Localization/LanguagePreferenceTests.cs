@@ -325,6 +325,12 @@ public class LanguagePreferenceTests
 
     private sealed class FailingPreferenceService : IUserPreferenceService
     {
+        public Task<string> GetReportingCurrencyAsync(string userId, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("database unavailable");
+
+        public Task SetReportingCurrencyAsync(string userId, string currencyCode, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("database unavailable");
+
         public Task<string?> GetLanguageAsync(string userId, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("database unavailable");
 

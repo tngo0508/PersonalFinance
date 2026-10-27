@@ -6,14 +6,18 @@
 
 @{
     var projection = Model.Projection;
+    // The inputs are in the chosen currency; the results in the projection's: the Reporting Currency, or the inputs'
+    // own when no rate exists (ADR 0016).
+    var inputCurrency = SupportedCurrencies.CodeOrDefault(Model.CurrencyCode);
+    var inputSymbol = SupportedCurrencies.Find(inputCurrency)!.Symbol;
 }
 
 @functions {
     // Whole units in the request culture. networth-ui.js rewrites the small tiles with PFI18n.formatCompactMoney after
     // the first recalculation, which runs as soon as the page loads.
-    private static string FormatCurrency(decimal value)
+    private string FormatCurrency(decimal value)
     {
-        return MoneyFormatter.FormatWhole(value, SupportedCurrencies.Default.Code);
+        return MoneyFormatter.FormatWhole(value, SupportedCurrencies.CodeOrDefault(Model.Projection?.CurrencyCode ?? Model.CurrencyCode));
     }
 
     private static string Rate(decimal ratePercent)
@@ -155,13 +159,26 @@
                     <span>@L["NetWorth.Section.FinancialOverview"]</span>
                 </div>
                 <div class="nw-sidebar-card__body">
+                    <div class="nw-slider-field nw-currency-field">
+                        <label class="nw-label" for="nwCurrency">
+                            @L["NetWorth.Field.Currency"]
+                            <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.CurrencyHint"]"></i>
+                        </label>
+                        <select class="form-select form-select-sm" id="nwCurrency" name="CurrencyCode" data-currency-selector
+                                data-currency-symbols="[data-nw-currency-symbol]">
+                            @foreach (var currency in SupportedCurrencies.All)
+                            {
+                                <option value="@currency.Code" selected="@(currency.Code == inputCurrency)">@currency.Code · @currency.DisplayName</option>
+                            }
+                        </select>
+                    </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
                             @L["NetWorth.Field.StartingBalance"]
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.StartingBalanceHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
+                            <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="StartingBalance" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwStartingBalance" />
                         </div>
@@ -173,7 +190,7 @@
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AnnualSavingsHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
+                            <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="AnnualSavings" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualSavings" />
                         </div>
@@ -185,7 +202,7 @@
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AnnualIncomeHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
+                            <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="AnnualIncome" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualIncome" />
                         </div>
@@ -197,7 +214,7 @@
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AnnualSpendingHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
+                            <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="AnnualSpending" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAnnualSpending" />
                         </div>
@@ -293,7 +310,7 @@
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.AggressiveSavingsHint"]"></i>
                         </label>
                         <div class="nw-slider-field__display">
-                            <span class="nw-slider-field__prefix">@SupportedCurrencies.Default.Symbol</span>
+                            <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="AggressiveSavings" type="text" inputmode="numeric" required
                                    class="form-control nw-slider-field__input" id="nwAggressiveSavings" />
                         </div>
@@ -318,6 +335,7 @@
                     <input type="hidden" asp-for="ConservativeRoi" id="nwSaveConservativeRoi" />
                     <input type="hidden" asp-for="AggressiveRoi" id="nwSaveAggressiveRoi" />
                     <input type="hidden" asp-for="AggressiveSavings" id="nwSaveAggressiveSavings" />
+                    <input type="hidden" asp-for="CurrencyCode" id="nwSaveCurrencyCode" />
                     <button type="submit" class="btn nw-btn-save">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         @L["NetWorth.Actions.Save"]
@@ -421,6 +439,9 @@
                 </div>
             </div>
         </div>
+
+        @* Which rate converted the inputs into the Reporting Currency; networth-ui.js rewrites it on each recalculation. *@
+        <div class="nw-conversion-caption" data-nw-conversion-caption><partial name="_ConversionCaption" model="projection!.Conversion"/></div>
 
         <!-- FI Breakdown: how the calculated figures come from the inputs -->
         <partial name="_FiBreakdown" model="FiBreakdownBuilder.Build(projection!, L)" />

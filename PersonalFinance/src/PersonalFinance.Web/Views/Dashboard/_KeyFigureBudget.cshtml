@@ -13,7 +13,7 @@
 <partial name="_KeyFigureTile" model="@(new DashboardKeyFigureViewModel
 {
     Label = L["Dashboard.KeyFigures.BudgetedIncome"],
-    Value = income is { } amount ? MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code) : null,
+    Value = income is { } amount ? MoneyFormatter.FormatWhole(amount, SupportedCurrencies.CodeOrDefault(plannerBudget?.CurrencyCode)) : null,
     Caption = caption,
     UnavailableText = L["Dashboard.KeyFigures.NotSetUp"],
     Icon = "pie-chart",

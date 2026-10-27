@@ -777,3 +777,14 @@
         transition: none;
     }
 }
+
+/* What a goal in another currency is worth in the Reporting Currency (ADR 0016). */
+.savings-goal-reporting {
+    margin: -0.25rem 0 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--app-text-muted, #5b6b78);
+}
+
+.savings-summary .conversion-caption {
+    grid-column: 1 / -1;
+}

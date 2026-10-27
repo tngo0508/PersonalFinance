@@ -2738,3 +2738,19 @@ button.bgt-rank-row:hover { background: var(--bgt-hover); }
 .admin-feedback__message {
   white-space: pre-wrap;
 }
+
+/* Conversion captions (ADR 0016): which exchange rate brought a total into the Reporting Currency. */
+.conversion-caption {
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--app-text-muted, #5b6b78);
+}
+
+.conversion-caption[hidden] {
+    display: none;
+}
+
+.conversion-caption__stale {
+    margin-left: 0.25rem;
+    font-style: italic;
+}

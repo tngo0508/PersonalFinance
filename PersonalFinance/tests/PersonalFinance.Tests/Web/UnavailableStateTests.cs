@@ -28,7 +28,7 @@ public class UnavailableStateTests
     public async Task BudgetIndex_WhenApiFails_RendersUnavailableStateInsteadOfDefaults()
     {
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi> _) = ApiProxy.Create<IBudgetPlannerApi>();
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService()));
 
         IActionResult result = await controller.Index();
 
@@ -39,7 +39,7 @@ public class UnavailableStateTests
     public async Task BudgetGetBudgetData_WhenApiFails_LetsJsonApiErrorsAnswerInsteadOfEmptyBudget()
     {
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi> _) = ApiProxy.Create<IBudgetPlannerApi>();
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService()));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => controller.GetBudgetData());
         Assert.NotNull(typeof(BudgetController).GetMethod(nameof(BudgetController.GetBudgetData))!
@@ -88,7 +88,7 @@ public class UnavailableStateTests
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
         SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer,
-            TimeProvider.System));
+            TimeProvider.System, new InMemoryUserPreferenceService()));
 
         IActionResult result = await controller.Index();
 
@@ -101,7 +101,7 @@ public class UnavailableStateTests
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi>? proxy) = ApiProxy.Create<ISavingsGoalsApi>();
         proxy.Returns(nameof(ISavingsGoalsApi.GetSavingsGoalsAsync), new List<SavingsGoalDto>());
         SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer,
-            TimeProvider.System));
+            TimeProvider.System, new InMemoryUserPreferenceService()));
 
         IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
 
@@ -116,7 +116,7 @@ public class UnavailableStateTests
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
         SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer,
-            TimeProvider.System));
+            TimeProvider.System, new InMemoryUserPreferenceService()));
 
         IActionResult result = await controller.Create("Emergency fund", 1000m, 0m, null, null);
 
@@ -130,7 +130,7 @@ public class UnavailableStateTests
     {
         (ISavingsGoalsApi? api, ApiProxy<ISavingsGoalsApi> _) = ApiProxy.Create<ISavingsGoalsApi>();
         SavingsGoalsController controller = WithContext(new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance, TestLocalization.Localizer,
-            TimeProvider.System));
+            TimeProvider.System, new InMemoryUserPreferenceService()));
 
         IActionResult result = action == nameof(SavingsGoalsController.AddContribution)
             ? await controller.AddContribution(1, 50m, "deposit", null, null)
@@ -147,7 +147,7 @@ public class UnavailableStateTests
         (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
         MoneyPrioritiesController controller =
             WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
-            TestLocalization.Localizer));
+            TestLocalization.Localizer, new InMemoryUserPreferenceService()));
 
         IActionResult result = await controller.Index();
 
@@ -161,7 +161,7 @@ public class UnavailableStateTests
         proxy.Returns(nameof(IMoneyPrioritiesApi.GetTreeAsync), new PriorityTreeDiagramDto());
         MoneyPrioritiesController controller =
             WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
-            TestLocalization.Localizer));
+            TestLocalization.Localizer, new InMemoryUserPreferenceService()));
 
         IActionResult result = await controller.Index();
 
@@ -174,7 +174,7 @@ public class UnavailableStateTests
         (IMoneyPrioritiesApi? api, ApiProxy<IMoneyPrioritiesApi> _) = ApiProxy.Create<IMoneyPrioritiesApi>();
         MoneyPrioritiesController controller =
             WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
-            TestLocalization.Localizer));
+            TestLocalization.Localizer, new InMemoryUserPreferenceService()));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => controller.Recent());
         Assert.NotNull(typeof(MoneyPrioritiesController).GetMethod(nameof(MoneyPrioritiesController.Recent))!
@@ -190,7 +190,7 @@ public class UnavailableStateTests
         proxy.Throws(nameof(IMoneyPrioritiesApi.GetTreeAsync), new OperationCanceledException(cts.Token));
         MoneyPrioritiesController controller =
             WithContext(new MoneyPrioritiesController(api, NullLogger<MoneyPrioritiesController>.Instance,
-            TestLocalization.Localizer));
+            TestLocalization.Localizer, new InMemoryUserPreferenceService()));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(cts.Token));
     }
@@ -231,7 +231,7 @@ public class UnavailableStateTests
         await cts.CancelAsync();
         (IBudgetPlannerApi? api, ApiProxy<IBudgetPlannerApi>? proxy) = ApiProxy.Create<IBudgetPlannerApi>();
         proxy.Throws(nameof(IBudgetPlannerApi.GetBudgetAsync), new OperationCanceledException(cts.Token));
-        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer));
+        BudgetController controller = WithContext(new BudgetController(api, NullLogger<BudgetController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService()));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => controller.Index(cts.Token));
     }

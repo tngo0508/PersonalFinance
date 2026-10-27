@@ -18,9 +18,11 @@ public class NetWorthViewModel
     public decimal StartingBalance { get; set; } = NetWorthDefaults.StartingBalance;
 
     /// <summary>
-    /// The currency of the saved amounts. The form does not post it yet (slice C2 adds the selector), and the ApiService
-    /// reads null as the saved currency, or US dollars before anything is saved.
+    /// The ISO 4217 currency of the amounts entered (ADR 0016), from the page's selector; null (an old form) reads as
+    /// the saved currency, or US dollars before anything is saved. The ApiService converts the projection into the
+    /// Reporting Currency.
     /// </summary>
+    [Display(Name = "NetWorth.Field.Currency")]
     public string? CurrencyCode { get; set; }
 
     /// <summary>

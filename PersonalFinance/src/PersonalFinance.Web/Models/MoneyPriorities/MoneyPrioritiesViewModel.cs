@@ -31,4 +31,7 @@ public class MoneyPrioritiesViewModel
     /// Language.
     /// </summary>
     public string PurposeNoteUnavailable { get; set; } = string.Empty;
+
+    /// <summary>The ISO 4217 currency the form starts in: the latest Walk's, else the Reporting Currency (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = "USD";
 }

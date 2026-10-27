@@ -10,7 +10,11 @@
     var todayIso = today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
     var summary = ViewData["Summary"] as SavingsGoalsSummaryViewModel ?? SavingsGoalsSummaryViewModel.From(goals, today);
     var culture = System.Globalization.CultureInfo.CurrentCulture;
-    string Money(decimal amount) => MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code);
+    // The summary tiles are in the Account's Reporting Currency (ADR 0016); each goal shows its own currency.
+    var reportingCurrency = SupportedCurrencies.CodeOrDefault(ViewData["ReportingCurrency"] as string ?? goals.FirstOrDefault()?.ReportingCurrency);
+    string Money(decimal amount) => MoneyFormatter.FormatWhole(amount, reportingCurrency);
+    string Currency(SavingsGoalDto goal) => SupportedCurrencies.CodeOrDefault(goal.CurrencyCode);
+    string Symbol(string currencyCode) => SupportedCurrencies.Find(currencyCode)!.Symbol;
     string Month(DateOnly date) => date.ToString("Y", culture);
 }
 
@@ -107,6 +111,7 @@
                     <span class="savings-summary__note" data-summary="next-target">@L["SavingsGoals.Summary.NoNextTarget"]</span>
                 }
             </div>
+            <partial name="_ConversionCaption" model="summary.Conversion"/>
         </section>
 
         <div class="savings-goals-grid">
@@ -170,9 +175,23 @@
                            translation puts it. *@
                         <div class="savings-goal-amounts">
                             @L.NamedHtml("SavingsGoals.Card.Progress", "savings-goal-separator",
-                                ("current", new HtmlString($"<span class=\"savings-goal-current\">{MoneyFormatter.FormatWhole(goal.CurrentAmount, SupportedCurrencies.Default.Code)}</span>")),
-                                ("target", new HtmlString($"<span class=\"savings-goal-target\">{MoneyFormatter.FormatWhole(goal.TargetAmount, SupportedCurrencies.Default.Code)}</span>")))
+                                ("current", new HtmlString($"<span class=\"savings-goal-current\">{MoneyFormatter.FormatWhole(goal.CurrentAmount, Currency(goal))}</span>")),
+                                ("target", new HtmlString($"<span class=\"savings-goal-target\">{MoneyFormatter.FormatWhole(goal.TargetAmount, Currency(goal))}</span>")))
                         </div>
+                        @* A goal in another currency also says what it is worth in the Reporting Currency, at the latest rate. *@
+                        @if (!string.Equals(Currency(goal), reportingCurrency, StringComparison.Ordinal))
+                        {
+                            <p class="savings-goal-reporting" data-goal-reporting>
+                                @if (goal.ReportingCurrentAmount is { } reportingCurrent && goal.ReportingTargetAmount is { } reportingTarget)
+                                {
+                                    @L.Named("SavingsGoals.Card.InReportingCurrency", ("current", Money(reportingCurrent)), ("target", Money(reportingTarget)))
+                                }
+                                else
+                                {
+                                    @L["Common.Conversion.Unavailable"]
+                                }
+                            </p>
+                        }
 
                         <!-- Progress Bar; the percentage sits beside the track so a narrow fill never clips it -->
                         <div class="savings-goal-progress">
@@ -199,7 +218,7 @@
                             else
                             {
                                 <span class="savings-goal-remaining">
-                                    @L.Named("SavingsGoals.Card.Remaining", ("amount", MoneyFormatter.FormatWhole(remaining, SupportedCurrencies.Default.Code)))
+                                    @L.Named("SavingsGoals.Card.Remaining", ("amount", MoneyFormatter.FormatWhole(remaining, Currency(goal))))
                                 </span>
                             }
                             @if (goal.TargetDate.HasValue)
@@ -234,7 +253,7 @@
                             </p>
                             @if (pace.NeededPerMonth is { } needed && goal.TargetDate is { } dueDate)
                             {
-                                <p class="savings-goal-pace__needed">@L.Named("SavingsGoals.Pace.NeededPerMonth", ("amount", MoneyFormatter.Format(needed, SupportedCurrencies.Default.Code)), ("month", Month(DateOnly.FromDateTime(dueDate))))</p>
+                                <p class="savings-goal-pace__needed">@L.Named("SavingsGoals.Pace.NeededPerMonth", ("amount", MoneyFormatter.Format(needed, Currency(goal))), ("month", Month(DateOnly.FromDateTime(dueDate))))</p>
                             }
                             @if (pace.Status != PaceStatus.Reached)
                             {
@@ -253,7 +272,7 @@
                                     }
                                 </p>
                             }
-                            <p class="savings-goal-pace__month">@L.Named("SavingsGoals.Card.SavedThisMonth", ("amount", MoneyFormatter.Format(goal.SavedThisMonth, SupportedCurrencies.Default.Code)))</p>
+                            <p class="savings-goal-pace__month">@L.Named("SavingsGoals.Card.SavedThisMonth", ("amount", MoneyFormatter.Format(goal.SavedThisMonth, Currency(goal))))</p>
                         </div>
                         }
 
@@ -278,8 +297,8 @@
                                     <label class="btn btn-sm btn-outline-secondary" for="withdrawal-@goal.Id">@L["SavingsGoals.Contribution.Withdrawal"]</label>
                                 </div>
                                 <div class="savings-contribution-input-wrapper">
-                                    <span class="savings-contribution-prefix" aria-hidden="true">$</span>
-                                    <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                                    <span class="savings-contribution-prefix" aria-hidden="true">@Symbol(Currency(goal))</span>
+                                    <input type="text" inputmode="decimal" data-money-input data-currency="@Currency(goal)"
                                            name="amount" required
                                            class="form-control savings-contribution-input"
                                            placeholder="@L["SavingsGoals.Contribution.Amount"]"
@@ -310,7 +329,7 @@
                                 <ul class="savings-history-list">
                                     @foreach (var contribution in goal.Contributions)
                                     {
-                                        var amountText = MoneyFormatter.Format(Math.Abs(contribution.Amount), SupportedCurrencies.Default.Code);
+                                        var amountText = MoneyFormatter.Format(Math.Abs(contribution.Amount), Currency(goal));
                                         var signedText = (contribution.Amount < 0 ? "−" : "+") + amountText;
                                         var dateText = contribution.Date.ToString("d", System.Globalization.CultureInfo.CurrentCulture);
                                         <li class="savings-history-item" data-contribution-id="@contribution.Id">
@@ -349,9 +368,9 @@
                                                                        id="withdrawal-@goal.Id-@contribution.Id" checked="@(contribution.Amount < 0)"/>
                                                                 <label class="btn btn-sm btn-outline-secondary" for="withdrawal-@goal.Id-@contribution.Id">@L["SavingsGoals.Contribution.Withdrawal"]</label>
                                                             </div>
-                                                            <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                                                            <input type="text" inputmode="decimal" data-money-input data-currency="@Currency(goal)"
                                                                    name="amount" required class="form-control form-control-sm"
-                                                                   value="@MoneyFormatter.FormatAmount(Math.Abs(contribution.Amount), SupportedCurrencies.Default.Code)"
+                                                                   value="@MoneyFormatter.FormatAmount(Math.Abs(contribution.Amount), Currency(goal))"
                                                                    aria-label="@L["SavingsGoals.Contribution.Amount"]"/>
                                                             <input type="date" name="date" class="form-control form-control-sm" required
                                                                    min="2000-01-01" max="@todayIso"
@@ -387,12 +406,12 @@
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="goalId" value="@goal.Id"/>
                                 <label class="savings-contribution-field" for="balance-@goal.Id">
-                                    <span class="form-label">@L.Named("SavingsGoals.Balance.Label", ("symbol", "$"))</span>
+                                    <span class="form-label">@L.Named("SavingsGoals.Balance.Label", ("symbol", Symbol(Currency(goal))))</span>
                                 </label>
                                 <div class="savings-contribution-row">
-                                    <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                                    <input type="text" inputmode="decimal" data-money-input data-currency="@Currency(goal)"
                                            name="balance" id="balance-@goal.Id" required class="form-control form-control-sm"
-                                           value="@MoneyFormatter.FormatAmount(goal.CurrentAmount, SupportedCurrencies.Default.Code)"/>
+                                           value="@MoneyFormatter.FormatAmount(goal.CurrentAmount, Currency(goal))"/>
                                     <button type="submit" class="btn btn-sm btn-outline-primary">@L["SavingsGoals.Balance.Submit"]</button>
                                 </div>
                                 <p class="savings-goal-correct-help">@L["SavingsGoals.Balance.Help"]</p>
@@ -457,22 +476,35 @@
                                    placeholder="@L["SavingsGoals.Modal.NamePlaceholder"]" required/>
                         </div>
                         <div class="col-md-6">
-                            <label for="goalTarget" class="form-label">@L.Named("SavingsGoals.Modal.TargetAmount", ("symbol", "$"))</label>
-                            <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                            <label for="goalTarget" class="form-label">@L.NamedHtml("SavingsGoals.Modal.TargetAmount", null, ("symbol", new HtmlString($"<span data-goal-currency-symbol>{Symbol(reportingCurrency)}</span>")))</label>
+                            <input type="text" inputmode="decimal" data-money-input data-currency="@reportingCurrency"
                                    name="targetAmount" class="form-control" id="goalTarget"
-                                   value="@MoneyFormatter.FormatAmount(10000m, SupportedCurrencies.Default.Code)" required/>
+                                   value="@MoneyFormatter.FormatAmount(10000m, reportingCurrency)" required/>
                         </div>
                     </div>
                     <div class="row g-3 mt-1">
                         <div class="col-md-6">
-                            <label for="goalCurrent" class="form-label">@L.Named("SavingsGoals.Modal.CurrentAmount", ("symbol", "$"))</label>
-                            <input type="text" inputmode="decimal" data-money-input data-currency="@SupportedCurrencies.Default.Code"
+                            <label for="goalCurrent" class="form-label">@L.NamedHtml("SavingsGoals.Modal.CurrentAmount", null, ("symbol", new HtmlString($"<span data-goal-currency-symbol>{Symbol(reportingCurrency)}</span>")))</label>
+                            <input type="text" inputmode="decimal" data-money-input data-currency="@reportingCurrency"
                                    name="currentAmount" class="form-control" id="goalCurrent"
-                                   value="@MoneyFormatter.FormatAmount(0m, SupportedCurrencies.Default.Code)"/>
+                                   value="@MoneyFormatter.FormatAmount(0m, reportingCurrency)"/>
                         </div>
                         <div class="col-md-6">
                             <label for="goalTargetDate" class="form-label">@L["SavingsGoals.Modal.TargetDate"]</label>
                             <input type="date" name="targetDate" class="form-control" id="goalTargetDate"/>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            @* Set once: the goal's Contributions and later edits use it (ADR 0016). *@
+                            <label for="goalCurrency" class="form-label">@L["SavingsGoals.Modal.Currency"]</label>
+                            <select name="currencyCode" id="goalCurrency" class="form-select" data-currency-selector
+                                    data-currency-targets="#goalTarget, #goalCurrent" data-currency-symbols="[data-goal-currency-symbol]">
+                                @foreach (var currency in SupportedCurrencies.All)
+                                {
+                                    <option value="@currency.Code" selected="@(currency.Code == reportingCurrency)">@currency.Code · @currency.DisplayName</option>
+                                }
+                            </select>
                         </div>
                     </div>
                     <div class="mt-3">

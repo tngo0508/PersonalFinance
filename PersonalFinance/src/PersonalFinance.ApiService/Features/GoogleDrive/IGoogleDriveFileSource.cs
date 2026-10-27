@@ -1,4 +1,5 @@
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.ApiService.Features.GoogleDrive;
 
@@ -40,4 +41,6 @@ public enum SpreadsheetFormat
 /// <param name="Format">How <paramref name="Content"/> is encoded.</param>
 /// <param name="Content">Raw file bytes.</param>
 /// <param name="DataSource">User-facing description of where the data came from.</param>
-public sealed record SpreadsheetDownload(string FileName, SpreadsheetFormat Format, byte[] Content, string DataSource);
+/// <param name="CurrencyCode">The ISO 4217 currency of the connection the file belongs to (ADR 0016); US dollars when there is none.</param>
+public sealed record SpreadsheetDownload(string FileName, SpreadsheetFormat Format, byte[] Content, string DataSource,
+    string CurrencyCode = SupportedCurrencies.DefaultCode);

@@ -95,6 +95,9 @@ public class PriorityWalkResultDto
     /// <summary>The leaf's label, e.g. "Pay down the high-interest debt first".</summary>
     public string LeafLabel { get; set; } = string.Empty;
 
+    /// <summary>The ISO 4217 currency of the Walk's amounts and every figure worked out from them (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
     /// <summary>
     /// The leaf's label as the end of the headline sentence, e.g. "Pay down the high-interest debt first.", for
     /// "Put your $500.00 a month toward: ...".
@@ -255,6 +258,9 @@ public class PriorityWalkSummaryDto
     public decimal MonthlyAmount { get; set; }
     public string LeafId { get; set; } = string.Empty;
     public string LeafLabel { get; set; } = string.Empty;
+
+    /// <summary>The ISO 4217 currency of the Walk's amounts and every figure worked out from them (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
 }
 
 /// <summary>The Priority Tree before a submit: the whole tree, nothing highlighted.</summary>

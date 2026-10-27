@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.GoogleDrive;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
@@ -8,6 +9,7 @@ using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Models.GoogleDrive;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -22,15 +24,18 @@ public class GoogleDriveController : Controller
     private readonly IGoogleDriveApi _googleDriveApi;
     private readonly IStringLocalizer _localizer;
     private readonly ILogger<GoogleDriveController> _logger;
+    private readonly IUserPreferenceService _preferences;
 
     public GoogleDriveController(
         IGoogleDriveApi googleDriveApi,
         ILogger<GoogleDriveController> logger,
-        IStringLocalizer localizer)
+        IStringLocalizer localizer,
+        IUserPreferenceService preferences)
     {
         _googleDriveApi = googleDriveApi;
         _logger = logger;
         _localizer = localizer;
+        _preferences = preferences;
     }
 
     /// <summary>
@@ -54,6 +59,9 @@ public class GoogleDriveController : Controller
 
         try
         {
+            // The connect form asks for the spreadsheets' currency, the Reporting Currency by default (ADR 0016).
+            model.CurrencyCode = await _preferences.GetReportingCurrencyAsync(userId, cancellationToken);
+
             // 1. Load all saved connections for this user from database
             List<GoogleDriveConnectionDto> connections = await _googleDriveApi.GetUserConnectionsAsync(cancellationToken);
             model.Connections = Localize(connections);
@@ -289,6 +297,13 @@ public class GoogleDriveController : Controller
             return View("Index", model);
         }
 
+        if (model.CurrencyCode is not null && !SupportedCurrencies.IsSupported(model.CurrencyCode))
+        {
+            model.ErrorMessage = _localizer["GoogleDrive.Validation.CurrencyUnsupported"];
+            model.ShowConnectForm = true;
+            return View("Index", model);
+        }
+
         try
         {
             GoogleDriveConnectionDto connection = await _googleDriveApi.ConnectDriveAsync(
@@ -296,7 +311,8 @@ public class GoogleDriveController : Controller
                 {
                     FolderUrl = model.FolderUrl,
                     ConnectionName = model.ConnectionName,
-                    ApiKey = model.ApiKey
+                    ApiKey = model.ApiKey,
+                    CurrencyCode = model.CurrencyCode
                 },
                 cancellationToken);
 

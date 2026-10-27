@@ -1,11 +1,19 @@
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
+using PersonalFinance.Shared.DTOs.Currency;
 using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 
+/// <summary>Everything the Analysis page shows for a period. Every amount is in <see cref="ReportingCurrency"/> (ADR 0016).</summary>
 public class AnalysisDashboardDto
 {
+    /// <summary>The ISO 4217 code every amount is in: the Account's Reporting Currency.</summary>
+    public string ReportingCurrency { get; set; } = string.Empty;
+
+    /// <summary>The rates that brought the period's months into the Reporting Currency; null when none was needed.</summary>
+    public ConversionDto? Conversion { get; set; }
+
     public bool HasData { get; set; }
     public int Year { get; set; }
     public int? Month { get; set; }
@@ -33,6 +41,12 @@ public class SummaryStatisticsDto
     public decimal NetSavings { get; set; }
     public decimal SavingsRate { get; set; }
     public int SnapshotCount { get; set; }
+
+    /// <summary>The ISO 4217 code the totals are in: the Reporting Currency.</summary>
+    public string ReportingCurrency { get; set; } = string.Empty;
+
+    /// <summary>The rates that brought the months' figures into the Reporting Currency; null when none was needed.</summary>
+    public ConversionDto? Conversion { get; set; }
 }
 
 public class SpendingVelocityDto
@@ -99,6 +113,12 @@ public class CategoryInsightsDto
 
     /// <summary>The month's actual expenses, from the same month as <see cref="Categories"/>.</summary>
     public decimal ActualExpenses { get; set; }
+
+    /// <summary>The ISO 4217 code every amount is in: the Reporting Currency.</summary>
+    public string ReportingCurrency { get; set; } = string.Empty;
+
+    /// <summary>The rates that brought the month's figures into the Reporting Currency; null when none was needed.</summary>
+    public ConversionDto? Conversion { get; set; }
 }
 
 public class CategoryBreakdownDto

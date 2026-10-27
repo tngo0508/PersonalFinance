@@ -830,3 +830,9 @@
         transition: none;
     }
 }
+
+/* The one currency of the whole budget (ADR 0016). */
+.budget-income-hero__currency {
+    margin-top: 0.5rem;
+    max-width: 14rem;
+}

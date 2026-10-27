@@ -11,8 +11,9 @@ public static class TestBudgetDataProviderFactory
     public static IBudgetDataProvider Create(AppDbContext db)
     {
         var prefService = new BudgetDataSourceService(db);
-        var sheetReader = new SheetBudgetMonthReader(db);
-        var trackerReader = new TrackerBudgetMonthReader(db);
+        ICurrencyConverter converter = TestCurrencyConverter.Create(db);
+        var sheetReader = new SheetBudgetMonthReader(db, converter);
+        var trackerReader = new TrackerBudgetMonthReader(db, converter);
         return new BudgetDataProvider(prefService, sheetReader, trackerReader);
     }
 }

@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.DTOs.Currency;
 using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Shared.DTOs.SavingsGoals;
@@ -6,8 +7,27 @@ public class SavingsGoalDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>The ISO 4217 currency of the goal's target, saved amount and Contributions (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    /// <summary>The Account's Reporting Currency, which the reporting amounts below are in.</summary>
+    public string ReportingCurrency { get; set; } = string.Empty;
+
     public decimal TargetAmount { get; set; }
     public decimal CurrentAmount { get; set; }
+
+    /// <summary><see cref="TargetAmount"/> in the Reporting Currency at the latest rate; null when no rate exists.</summary>
+    public decimal? ReportingTargetAmount { get; set; }
+
+    /// <summary><see cref="CurrentAmount"/> in the Reporting Currency at the latest rate; null when no rate exists.</summary>
+    public decimal? ReportingCurrentAmount { get; set; }
+
+    /// <summary>
+    /// How the reporting amounts were converted, for the page's caption; null when the goal is in the Reporting
+    /// Currency and needed no conversion.
+    /// </summary>
+    public ConversionDto? Conversion { get; set; }
     public string? Description { get; set; }
     public DateTime? TargetDate { get; set; }
     public bool IsCompleted { get; set; }
@@ -18,8 +38,11 @@ public class SavingsGoalDto
     /// <summary>The goal's Contributions, newest first (date descending, then id).</summary>
     public List<ContributionDto> Contributions { get; set; } = [];
 
-    /// <summary>The net of the goal's Regular Contributions dated this calendar month.</summary>
+    /// <summary>The net of the goal's Regular Contributions dated this calendar month, in the goal's currency.</summary>
     public decimal SavedThisMonth { get; set; }
+
+    /// <summary><see cref="SavedThisMonth"/> in the Reporting Currency at the latest rate; null when no rate exists.</summary>
+    public decimal? ReportingSavedThisMonth { get; set; }
 
     /// <summary>The goal's Pace, worked out from its Contribution log at today's date; null from an older ApiService.</summary>
     public SavingsGoalPaceDto? Pace { get; set; }

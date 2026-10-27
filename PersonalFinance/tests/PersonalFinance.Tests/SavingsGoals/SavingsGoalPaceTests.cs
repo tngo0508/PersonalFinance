@@ -234,7 +234,8 @@ public sealed class SavingsGoalPaceTests : IDisposable
 
     private SavingsGoalService Service() =>
         new(_db, NullLogger<SavingsGoalService>.Instance, new NoNotifications(),
-            new FixedTimeProvider(new DateTimeOffset(Today.ToDateTime(new TimeOnly(15, 0)), TimeSpan.Zero)));
+            new FixedTimeProvider(new DateTimeOffset(Today.ToDateTime(new TimeOnly(15, 0)), TimeSpan.Zero)),
+            TestCurrencyConverter.Create(_db));
 
     private sealed class NoNotifications : INotificationService
     {

@@ -27,7 +27,7 @@ public class DashboardServiceTests
 
     private static Task<DashboardSummaryDto> GetSummaryAsync(AppDbContext db, string userId = UserId)
     {
-        return new DashboardService(db, TestBudgetDataProviderFactory.Create(db)).GetDashboardSummaryAsync(userId);
+        return new DashboardService(db, TestBudgetDataProviderFactory.Create(db), TestCurrencyConverter.Create(db)).GetDashboardSummaryAsync(userId);
     }
 
     [Fact]

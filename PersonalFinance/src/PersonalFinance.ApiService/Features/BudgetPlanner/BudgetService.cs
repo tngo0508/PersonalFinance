@@ -46,6 +46,7 @@ internal sealed class BudgetService : IBudgetService
 
         return new BudgetAllocationResponseDto
         {
+            CurrencyCode = budget.CurrencyCode,
             Allocations = budget.ToAllocationsDto(),
             MonthlyIncome = budget.MonthlyIncome
         };

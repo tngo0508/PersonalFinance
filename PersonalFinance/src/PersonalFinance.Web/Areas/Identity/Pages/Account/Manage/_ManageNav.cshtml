@@ -6,6 +6,7 @@
 <ul class="account-nav">
     <li><a class="account-nav__link" id="profile" asp-page="./Index" aria-current="@Current(ManageNavPages.Index)">@L["Account.Nav.Profile"]</a></li>
     <li><a class="account-nav__link" id="language" asp-page="./Language" aria-current="@Current(ManageNavPages.Language)">@L["Account.Nav.Language"]</a></li>
+    <li><a class="account-nav__link" id="currency" asp-page="./Currency" aria-current="@Current(ManageNavPages.Currency)">@L["Account.Nav.Currency"]</a></li>
     <li><a class="account-nav__link" id="email" asp-page="./Email" aria-current="@Current(ManageNavPages.Email)">@L["Account.Nav.Email"]</a></li>
     <li><a class="account-nav__link" id="change-password" asp-page="./ChangePassword" aria-current="@Current(ManageNavPages.ChangePassword)">@L["Account.Nav.Password"]</a></li>
     @if (hasExternalLogins)

@@ -98,6 +98,15 @@ public sealed class NetWorthProjectionDto
     /// <summary>Progress to FI: starting balance over the FI Target, uncapped; <c>null</c> without an FI Target.</summary>
     public decimal? ProgressToFiPercent { get; set; }
 
+    /// <summary>
+    /// The ISO 4217 currency of every amount in the projection: the Account's Reporting Currency, the inputs converted
+    /// once at the latest rate (ADR 0016), or the inputs' own currency when no rate exists.
+    /// </summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    /// <summary>How the inputs were converted, for the page's caption; null when they were already in the Reporting Currency.</summary>
+    public Currency.ConversionDto? Conversion { get; set; }
+
     /// <summary>Base scenario projection.</summary>
     public NetWorthScenarioDto Base { get; set; } = new();
 

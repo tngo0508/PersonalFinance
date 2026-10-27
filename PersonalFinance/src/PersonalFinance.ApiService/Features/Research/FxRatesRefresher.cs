@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Features.Research.Adapters;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
@@ -11,7 +12,8 @@ namespace PersonalFinance.ApiService.Features.Research;
 /// US dollar, the USD rate of every day from the day after the latest Frankfurter rate (or <see cref="FirstDate"/>) to
 /// today. It runs with the Research datasets in the daily refresh job. When Frankfurter cannot be read, the latest rate
 /// comes from the currency-api instead, so the table still gains a recent day; the next Frankfurter read fills the days
-/// in between. No source needs a secret. Rows are only added, never rewritten.
+/// in between. No source needs a secret. Rows are only added, never rewritten. After writing, it evicts the quote's
+/// cached rates so a conversion in this process picks the new rows up at once.
 /// </summary>
 internal sealed class FxRatesRefresher : IResearchDatasetRefresher
 {
@@ -30,15 +32,17 @@ internal sealed class FxRatesRefresher : IResearchDatasetRefresher
     private readonly AppDbContext _db;
     private readonly IFrankfurterClient _frankfurter;
     private readonly ICurrencyApiClient _currencyApi;
+    private readonly ExchangeRateCache _rateCache;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<FxRatesRefresher> _logger;
 
     public FxRatesRefresher(AppDbContext db, IFrankfurterClient frankfurter, ICurrencyApiClient currencyApi,
-        TimeProvider timeProvider, ILogger<FxRatesRefresher> logger)
+        ExchangeRateCache rateCache, TimeProvider timeProvider, ILogger<FxRatesRefresher> logger)
     {
         _db = db;
         _frankfurter = frankfurter;
         _currencyApi = currencyApi;
+        _rateCache = rateCache;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -73,6 +77,7 @@ internal sealed class FxRatesRefresher : IResearchDatasetRefresher
 
             (IReadOnlyList<DailyRate> rates, string source) = await ReadAsync(quote.Code, from, today, cancellationToken);
             await StoreAsync(quote.Code, rates, source, cancellationToken);
+            _rateCache.Evict(quote.Code);
         }
     }
 

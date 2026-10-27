@@ -251,7 +251,7 @@ public class DataSourceRemovalTests
     public async Task AfterRemovingTheBudgetTracker_OpeningItSeedsTheDefaultCategoriesAgain()
     {
         await using AppDbContext db = CreateContext();
-        var budget = new MonthlyBudgetService(db);
+        var budget = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await budget.EnsureDefaultCategoriesAsync(UserId);
         await budget.CreateCategoryAsync(UserId,
             new SaveCategoryRequest { Name = "Hobbies", Kind = BudgetCategoryKind.Expense, SortOrder = 5 });
@@ -269,7 +269,7 @@ public class DataSourceRemovalTests
         await using AppDbContext db = CreateContext();
         SeedTracker(db, UserId);
         await db.SaveChangesAsync();
-        var budget = new MonthlyBudgetService(db);
+        var budget = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         BudgetCategory groceries = await db.BudgetCategories.SingleAsync(c => c.UserId == UserId);
         await budget.DeleteCategoryAsync(UserId, groceries.Id);
 

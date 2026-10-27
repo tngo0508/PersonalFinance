@@ -34,9 +34,9 @@
                     </div>
                     @{
                         Func<object?, HelperResult> current =
-                            @<span class="dash-money">@MoneyFormatter.FormatWhole(goal.CurrentAmount, SupportedCurrencies.Default.Code)</span>;
+                            @<span class="dash-money">@MoneyFormatter.FormatWhole(goal.CurrentAmount, SupportedCurrencies.CodeOrDefault(goal.CurrencyCode))</span>;
                         Func<object?, HelperResult> target =
-                            @<span class="dash-money">@MoneyFormatter.FormatWhole(goal.TargetAmount, SupportedCurrencies.Default.Code)</span>;
+                            @<span class="dash-money">@MoneyFormatter.FormatWhole(goal.TargetAmount, SupportedCurrencies.CodeOrDefault(goal.CurrencyCode))</span>;
                     }
                     <span class="dash-goal__amounts">
                         @L.NamedHtml("Dashboard.Goals.Amounts", null, ("current", current(null)), ("target", target(null)))

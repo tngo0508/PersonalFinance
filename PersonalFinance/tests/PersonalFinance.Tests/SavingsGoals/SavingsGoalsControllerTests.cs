@@ -211,7 +211,7 @@ public class SavingsGoalsControllerTests
     private static SavingsGoalsController Controller(ISavingsGoalsApi api)
     {
         var controller = new SavingsGoalsController(api, NullLogger<SavingsGoalsController>.Instance,
-            TestLocalization.Localizer, new FixedTimeProvider(Now));
+            TestLocalization.Localizer, new FixedTimeProvider(Now), new InMemoryUserPreferenceService());
         var httpContext = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(

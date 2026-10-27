@@ -8,6 +8,8 @@
     var barPercent = progress is null ? 0m : Math.Clamp(progress.Value, 0m, 100m);
     // Floored (like the goal tiles) so the label only reads 100% once the FI Target is actually reached.
     var progressLabel = progress is null ? null : Math.Floor(progress.Value).ToString("0");
+    // The Reporting Currency, or the settings' own when no rate exists (ADR 0016).
+    var currency = SupportedCurrencies.CodeOrDefault(netWorth?.CurrencyCode);
 }
 <section class="dash-card dash-summary" aria-labelledby="dash-summary-title">
     <div class="dash-card__header">
@@ -18,8 +20,9 @@
     {
         <div class="dash-summary__body">
             <div class="dash-summary__headline">
-                <p class="dash-summary__value dash-money">@MoneyFormatter.FormatWhole(netWorth.CurrentNetWorth, SupportedCurrencies.Default.Code)</p>
+                <p class="dash-summary__value dash-money">@MoneyFormatter.FormatWhole(netWorth.CurrentNetWorth, currency)</p>
                 <p class="dash-note">@L["Dashboard.Summary.FromSettings"]</p>
+                <partial name="_ConversionCaption" model="Model.Conversion"/>
             </div>
 
             <div class="dash-summary__fi">
@@ -44,7 +47,7 @@
                         <div class="dash-progress__bar" style="width: @barPercent.ToString("F1", CultureInfo.InvariantCulture)%"></div>
                     </div>
                     <p class="dash-summary__fi-target">
-                        @L["Dashboard.FiTarget"] <span class="dash-money">@MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code)</span>
+                        @L["Dashboard.FiTarget"] <span class="dash-money">@MoneyFormatter.FormatWhole(netWorth.FiTarget, currency)</span>
                         <span class="dash-summary__fi-hint">@L["Dashboard.Summary.FiTargetHint"]</span>
                     </p>
                     @if (netWorth.FiReachedAge is not null)

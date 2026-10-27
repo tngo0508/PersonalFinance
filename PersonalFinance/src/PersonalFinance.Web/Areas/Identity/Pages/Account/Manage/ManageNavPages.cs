@@ -10,6 +10,7 @@ public static class ManageNavPages
 {
     public const string Index = "Index";
     public const string Language = "Language";
+    public const string Currency = "Currency";
     public const string Email = "Email";
     public const string ChangePassword = "ChangePassword";
     public const string ExternalLogins = "ExternalLogins";

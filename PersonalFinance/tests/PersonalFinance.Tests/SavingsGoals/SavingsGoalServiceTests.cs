@@ -30,7 +30,8 @@ public sealed class SavingsGoalServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     private SavingsGoalService Service() =>
-        new(_db, NullLogger<SavingsGoalService>.Instance, _notifications, new FixedTimeProvider(Now));
+        new(_db, NullLogger<SavingsGoalService>.Instance, _notifications, new FixedTimeProvider(Now),
+            TestCurrencyConverter.Create(_db));
 
     [Fact]
     public async Task Create_WithAStartingAmount_RecordsItAsTheOpeningContribution_DatedToday()

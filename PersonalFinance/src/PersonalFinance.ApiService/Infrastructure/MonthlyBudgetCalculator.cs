@@ -21,9 +21,42 @@ public sealed class CalculatedBudgetCategoryRow
 
 /// <summary>
 /// Server-side calculator encapsulating monthly budget row visibility, effective Actual calculation, and Diff formulas.
+/// It works on amounts already in the Reporting Currency (ADR 0016): <see cref="InReportingCurrency"/> and
+/// <see cref="TransactionSums"/> bring the stored lines and transactions there first.
 /// </summary>
 public static class MonthlyBudgetCalculator
 {
+    /// <summary>
+    /// A copy of <paramref name="line"/> with its planned amount and override in the Reporting Currency, at the rate of
+    /// the first day of its month. The stored line is left as it is; the sheet shows its original beside the figure.
+    /// </summary>
+    public static MonthlyBudgetLine InReportingCurrency(MonthlyBudgetLine line, ReportingConversion conversion,
+        DateOnly monthStart)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        ArgumentNullException.ThrowIfNull(conversion);
+        return new MonthlyBudgetLine
+        {
+            Id = line.Id,
+            CategoryId = line.CategoryId,
+            CurrencyCode = conversion.ReportingCurrency,
+            PlannedAmount = conversion.ConvertOrOriginal(line.PlannedAmount, line.CurrencyCode, monthStart),
+            ActualOverride = line.ActualOverride is { } overrideAmount
+                ? conversion.ConvertOrOriginal(overrideAmount, line.CurrencyCode, monthStart)
+                : null
+        };
+    }
+
+    /// <summary>Each category's transactions summed in the Reporting Currency, each at its own day's rate.</summary>
+    public static Dictionary<int, decimal> TransactionSums(IEnumerable<BudgetTransaction> transactions,
+        ReportingConversion conversion)
+    {
+        ArgumentNullException.ThrowIfNull(conversion);
+        return transactions
+            .GroupBy(t => t.CategoryId)
+            .ToDictionary(g => g.Key, g => g.Sum(t => conversion.ConvertOrOriginal(t.Amount, t.CurrencyCode, t.Date)));
+    }
+
     /// <summary>
     /// Builds calculated rows for categories in a monthly plan.
     /// Active categories are always included. Archived (soft-deleted) categories are included only if they

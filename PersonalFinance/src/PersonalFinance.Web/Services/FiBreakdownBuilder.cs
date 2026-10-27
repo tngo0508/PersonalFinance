@@ -12,7 +12,7 @@ namespace PersonalFinance.Web.Services;
 ///     Builds the FI Breakdown cards from a Net Worth projection. All wording and number formatting lives here, so the
 ///     server-rendered panel and the live updates after each recalculation show exactly the same text. The wording
 ///     follows the UI language (<c>NetWorth.Breakdown.*</c> keys) and the amounts the request culture, through
-///     <see cref="MoneyFormatter"/> (localization spec §2.1, §2.2).
+///     <see cref="MoneyFormatter"/> (localization spec §2.1, §2.2), in the projection's currency (ADR 0016).
 /// </summary>
 public static class FiBreakdownBuilder
 {
@@ -40,8 +40,8 @@ public static class FiBreakdownBuilder
             Label = localizer["NetWorth.Field.SavingsRate"],
             Inputs =
             [
-                Input(localizer["NetWorth.Field.AnnualSavings"], Money(p.AnnualSavings)),
-                Input(localizer["NetWorth.Field.AnnualIncome"], Money(p.AnnualIncome))
+                Input(localizer["NetWorth.Field.AnnualSavings"], Money(p.AnnualSavings, p.CurrencyCode)),
+                Input(localizer["NetWorth.Field.AnnualIncome"], Money(p.AnnualIncome, p.CurrencyCode))
             ]
         };
 
@@ -51,7 +51,7 @@ public static class FiBreakdownBuilder
         }
 
         card.Value = Percent(rate);
-        card.Formula = $"{Money(p.AnnualSavings)} ÷ {Money(p.AnnualIncome)} = {card.Value}";
+        card.Formula = $"{Money(p.AnnualSavings, p.CurrencyCode)} ÷ {Money(p.AnnualIncome, p.CurrencyCode)} = {card.Value}";
         return card;
     }
 
@@ -61,9 +61,9 @@ public static class FiBreakdownBuilder
         {
             Key = "fi-target",
             Label = localizer["NetWorth.Js.FiTarget"],
-            Value = Money(p.FiTarget),
-            Inputs = [Input(localizer["NetWorth.Field.AnnualSpending"], Money(p.AnnualSpending))],
-            Formula = $"{Money(p.AnnualSpending)} × 25 = {Money(p.FiTarget)}"
+            Value = Money(p.FiTarget, p.CurrencyCode),
+            Inputs = [Input(localizer["NetWorth.Field.AnnualSpending"], Money(p.AnnualSpending, p.CurrencyCode))],
+            Formula = $"{Money(p.AnnualSpending, p.CurrencyCode)} × 25 = {Money(p.FiTarget, p.CurrencyCode)}"
         };
     }
 
@@ -75,8 +75,8 @@ public static class FiBreakdownBuilder
             Label = localizer["NetWorth.Breakdown.Progress"],
             Inputs =
             [
-                Input(localizer["NetWorth.Field.StartingBalance"], Money(p.StartingBalance)),
-                Input(localizer["NetWorth.Js.FiTarget"], Money(p.FiTarget))
+                Input(localizer["NetWorth.Field.StartingBalance"], Money(p.StartingBalance, p.CurrencyCode)),
+                Input(localizer["NetWorth.Js.FiTarget"], Money(p.FiTarget, p.CurrencyCode))
             ]
         };
 
@@ -86,7 +86,7 @@ public static class FiBreakdownBuilder
         }
 
         card.Value = Percent(progress);
-        card.Formula = $"{Money(p.StartingBalance)} ÷ {Money(p.FiTarget)} = {card.Value}";
+        card.Formula = $"{Money(p.StartingBalance, p.CurrencyCode)} ÷ {Money(p.FiTarget, p.CurrencyCode)} = {card.Value}";
         return card;
     }
 
@@ -98,12 +98,12 @@ public static class FiBreakdownBuilder
             Label = localizer["NetWorth.Breakdown.FiAge"],
             Inputs =
             [
-                Input(localizer["NetWorth.Field.StartingBalance"], Money(p.StartingBalance)),
-                Input(localizer["NetWorth.Field.AnnualSavings"], Money(p.AnnualSavings)),
+                Input(localizer["NetWorth.Field.StartingBalance"], Money(p.StartingBalance, p.CurrencyCode)),
+                Input(localizer["NetWorth.Field.AnnualSavings"], Money(p.AnnualSavings, p.CurrencyCode)),
                 Input(localizer["NetWorth.Breakdown.BaseReturn"], Rate(p.Base.RoiPercent)),
                 Input(localizer["NetWorth.Field.CurrentAge"], p.CurrentAge.ToString(CultureInfo.CurrentCulture)),
                 Input(localizer["NetWorth.Field.RetirementAge"], p.RetirementAge.ToString(CultureInfo.CurrentCulture)),
-                Input(localizer["NetWorth.Js.FiTarget"], Money(p.FiTarget))
+                Input(localizer["NetWorth.Js.FiTarget"], Money(p.FiTarget, p.CurrencyCode))
             ]
         };
 
@@ -115,8 +115,8 @@ public static class FiBreakdownBuilder
         card.Value = p.Base.FiReachedAge is { } age
             ? localizer.Named("NetWorth.Breakdown.AgeWhen", ("age", age), ("when", YearsFromNow(age - p.CurrentAge, localizer)))
             : localizer.Named("NetWorth.Breakdown.NotReached", ("age", p.RetirementAge));
-        card.Formula = localizer.Named("NetWorth.Breakdown.FiAgeFormula", ("balance", Money(p.StartingBalance)),
-            ("rate", Rate(p.Base.RoiPercent)), ("savings", Money(p.AnnualSavings)), ("target", Money(p.FiTarget)));
+        card.Formula = localizer.Named("NetWorth.Breakdown.FiAgeFormula", ("balance", Money(p.StartingBalance, p.CurrencyCode)),
+            ("rate", Rate(p.Base.RoiPercent)), ("savings", Money(p.AnnualSavings, p.CurrencyCode)), ("target", Money(p.FiTarget, p.CurrencyCode)));
         card.Scenarios =
         [
             Scenario(p, p.Base, showSavings: false, localizer),
@@ -131,7 +131,7 @@ public static class FiBreakdownBuilder
     {
         string assumptions = showSavings
             ? localizer.Named("NetWorth.Breakdown.RateAndSavings", ("rate", Rate(scenario.RoiPercent)),
-                ("savings", Money(scenario.AnnualSavings)))
+                ("savings", Money(scenario.AnnualSavings, p.CurrencyCode)))
             : Rate(scenario.RoiPercent);
         string outcome = scenario.FiReachedAge is { } age
             ? localizer.Named("NetWorth.Breakdown.ReachedAge", ("age", age))
@@ -163,9 +163,9 @@ public static class FiBreakdownBuilder
         return new FiBreakdownInputViewModel { Label = label, Value = value };
     }
 
-    private static string Money(decimal amount)
+    private static string Money(decimal amount, string currencyCode)
     {
-        return MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code);
+        return MoneyFormatter.FormatWhole(amount, SupportedCurrencies.CodeOrDefault(currencyCode));
     }
 
     private static string Percent(decimal percent)

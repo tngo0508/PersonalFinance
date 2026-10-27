@@ -26,7 +26,7 @@ public class MonthlyBudgetInitializationTests
     public async Task CanCopyFromPrevious_IsFalse_WhenNoEarlierMonthHasPlan()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
 
         MonthlyBudgetSheetDto sheet = await service.GetSheetAsync(UserId, 2026, 10);
 
@@ -40,7 +40,7 @@ public class MonthlyBudgetInitializationTests
     public async Task CanCopyFromPrevious_IsTrue_WhenEarlierMonthHasPlan()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -59,7 +59,7 @@ public class MonthlyBudgetInitializationTests
     public async Task PreviousPlanMonth_IsGivenAsNumbers_SoThePageCanNameItInTheUserLanguage()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -78,7 +78,7 @@ public class MonthlyBudgetInitializationTests
     public async Task InitializeMonth_CopyFromPrevious_CopiesOnlyPlannedAmounts()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -114,7 +114,7 @@ public class MonthlyBudgetInitializationTests
     public async Task InitializeMonth_CopyFromPrevious_SkipsArchivedCategories()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategoryDto customCat = await service.CreateCategoryAsync(UserId, new SaveCategoryRequest
@@ -146,7 +146,7 @@ public class MonthlyBudgetInitializationTests
     public async Task InitializeMonth_CopyFromPrevious_TakesNearestEarlierMonthWhenMonthsSkippedOrYearChanges()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -183,7 +183,7 @@ public class MonthlyBudgetInitializationTests
     public async Task InitializeMonth_StartBlank_LeavesPlannedAmountsAtZero()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
@@ -206,7 +206,7 @@ public class MonthlyBudgetInitializationTests
     public async Task InitializeMonth_IsIdempotent_DoubleSubmitDoesNotThrowOrDuplicate()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         await service.EnsureDefaultCategoriesAsync(UserId);
 
         BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");

@@ -79,7 +79,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
         CancellationToken cancellationToken = default)
     {
         var rows = await RecentWalksQuery(userId)
-            .Select(w => new { w.Id, w.CreatedAt, w.MonthlyAmount, w.LeafId, w.TreeVersion })
+            .Select(w => new { w.Id, w.CreatedAt, w.MonthlyAmount, w.CurrencyCode, w.LeafId, w.TreeVersion })
             .ToListAsync(cancellationToken);
 
         return rows
@@ -88,6 +88,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
                 WalkId = w.Id,
                 CreatedAtUtc = w.CreatedAt,
                 MonthlyAmount = w.MonthlyAmount,
+                CurrencyCode = w.CurrencyCode,
                 LeafId = w.LeafId,
                 LeafLabel = PriorityWalkMapping.TreeFor(w.TreeVersion).Node(w.LeafId).Label
             })
@@ -163,7 +164,8 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
 
         WalkView view = View(walk);
         PurposeNoteResponseDto written = await _aiAssistant.WritePurposeNoteAsync(userId,
-            PurposeNoteFacts.For(walk.Purpose, view.Path.Answers, view.PathSentences, view.LeafLabel, view.Figures),
+            PurposeNoteFacts.For(walk.Purpose, walk.CurrencyCode, view.Path.Answers, view.PathSentences, view.LeafLabel,
+                view.Figures),
             cancellationToken);
         if (written.State == PurposeNoteState.Written && !string.IsNullOrWhiteSpace(written.Note))
         {
@@ -248,6 +250,7 @@ internal sealed class MoneyPrioritiesService : IMoneyPrioritiesService
             LeafLabel = leafLabel,
             HeadlineLeafLabel = $"{leafLabel}.",
             MonthlyAmount = walk.MonthlyAmount,
+            CurrencyCode = walk.CurrencyCode,
             Purpose = walk.Purpose,
             Answers = PriorityWalkMapping.ToAnswersDto(walk.Purpose, answers),
             Figures = PriorityWalkMapping.ToDto(figures, limits),

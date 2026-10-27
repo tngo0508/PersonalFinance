@@ -110,7 +110,7 @@ internal sealed class SearchService : ISearchService
                 Id = t.Id.ToString(CultureInfo.InvariantCulture),
                 Title = t.Description,
                 Description =
-                    $"{t.Date:MMM d, yyyy} - {t.Category!.Name} - {MoneyFormatter.Format(t.Amount, SupportedCurrencies.Default.Code)} ({t.Category!.Kind})",
+                    $"{t.Date:MMM d, yyyy} - {t.Category!.Name} - {MoneyFormatter.Format(t.Amount, t.CurrencyCode)} ({t.Category!.Kind})",
                 Source = "Transaction",
                 Url = $"/BudgetTracker?year={t.Date.Year}&month={t.Date.Month}",
                 Date = t.Date.ToDateTime(TimeOnly.MinValue),
@@ -132,7 +132,7 @@ internal sealed class SearchService : ISearchService
             {
                 Id = t.Id.ToString(CultureInfo.InvariantCulture),
                 Title = t.Description,
-                Description = $"{t.Date:MMM d, yyyy} - {t.Category} - {MoneyFormatter.Format(t.Amount, SupportedCurrencies.Default.Code)} ({t.Type})",
+                Description = $"{t.Date:MMM d, yyyy} - {t.Category} - {MoneyFormatter.Format(t.Amount, t.CurrencyCode)} ({t.Type})",
                 Source = "Transaction",
                 Url = $"/Analysis?year={t.Date.Year}&month={t.Date.Month}",
                 Date = t.Date,
@@ -208,7 +208,7 @@ internal sealed class SearchService : ISearchService
             {
                 Id = g.Id.ToString(CultureInfo.InvariantCulture),
                 Title = g.Name,
-                Description = g.Description ?? $"Target: {MoneyFormatter.Format(g.TargetAmount, SupportedCurrencies.Default.Code)}",
+                Description = g.Description ?? $"Target: {MoneyFormatter.Format(g.TargetAmount, g.CurrencyCode)}",
                 Source = "SavingsGoal",
                 Url = "/SavingsGoals"
             });

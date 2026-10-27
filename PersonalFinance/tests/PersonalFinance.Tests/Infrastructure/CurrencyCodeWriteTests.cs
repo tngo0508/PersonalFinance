@@ -36,7 +36,7 @@ public class CurrencyCodeWriteTests
     public async Task Transaction_InVnd_IsStoredInWholeDong_AndAnUpdateWithoutACodeKeepsVnd()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         int categoryId = await AddCategoryAsync(db);
 
         BudgetTransactionDto created = await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
@@ -58,7 +58,7 @@ public class CurrencyCodeWriteTests
     public async Task Transaction_WithoutACode_IsUsd_AsBeforeAmountsCarriedACurrency()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         int categoryId = await AddCategoryAsync(db);
 
         await service.CreateTransactionAsync(UserId, new SaveTransactionRequest
@@ -75,7 +75,7 @@ public class CurrencyCodeWriteTests
     public async Task BudgetLine_TakesTheRequestedCurrency_AndACopiedMonthKeepsIt()
     {
         await using AppDbContext db = CreateContext();
-        var service = new MonthlyBudgetService(db);
+        var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
         int categoryId = await AddCategoryAsync(db);
 
         await service.SetPlannedAsync(UserId, 2026, 9, categoryId,
@@ -95,7 +95,7 @@ public class CurrencyCodeWriteTests
     {
         await using AppDbContext db = CreateContext();
         var service = new SavingsGoalService(db, NullLogger<SavingsGoalService>.Instance, new NoNotifications(),
-            TimeProvider.System);
+            TimeProvider.System, TestCurrencyConverter.Create(db));
 
         int id = await service.CreateSavingsGoalAsync(UserId, new CreateSavingsGoalRequestDto
         {

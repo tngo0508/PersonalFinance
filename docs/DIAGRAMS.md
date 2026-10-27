@@ -1297,6 +1297,20 @@ flowchart LR
     bind -- "1234.56, or a ModelState error" --> ctrl["Web controller"]
 ```
 
+Totals are shown in the Account's Reporting Currency ([ADR 0016](adr/0016-per-amount-currency-with-reporting-currency.md),
+slice C2): each stored amount keeps its own currency, and the ApiService converts once, server-side, through
+`ICurrencyConverter`. Web and JavaScript never multiply by a rate.
+
+```mermaid
+flowchart LR
+    pref[("UserPreference<br/>ReportingCurrency")] --> conv["ICurrencyConverter (ApiService/Infrastructure)<br/>GetReportingCurrencyAsync, PrepareAsync"]
+    rates[("ExchangeRate<br/>USD base, one row per quote and day")] --> cache["ExchangeRateCache (IMemoryCache)<br/>per quote and day, one hour,<br/>evicted by FxRatesRefresher"] --> conv
+    conv --> rc["ReportingConversion<br/>dated item: its own day's rate (nearest prior)<br/>balance: the latest rate<br/>same currency: no lookup<br/>no rate: null, never zero<br/>Total: rounded once"]
+    rc --> dto["DTOs: Amount + CurrencyCode + ReportingAmount<br/>totals in the Reporting Currency<br/>ConversionDto: rates used, stale (over 3 days), unavailable"]
+    dto --> web["Web: _ConversionCaption partial, PFCurrency.captionText<br/>converted at {rate} on {date} / rate as of / unavailable"]
+    sel["Account settings › Currency<br/>per-row USD | VND selectors (currency-selector.js)"] --> pref
+```
+
 The Account's Language is stored, and the cookie only mirrors it:
 
 ```mermaid
@@ -1346,6 +1360,8 @@ flowchart LR
 ```
 
 Drawn from `Web/Infrastructure/Localization/`, `Shared/Helpers/MoneyFormatter.cs`, `Shared/Constants/SupportedCurrencies.cs`,
+`ApiService/Infrastructure/CurrencyConverter.cs`, `ReportingConversion.cs`, `ExchangeRateCache.cs`, `Shared/DTOs/Currency/ConversionDto.cs`,
+`Web/Views/Shared/_ConversionCaption.cshtml`, `Web/wwwroot/js/core/currency-selector.js`, `Web/Areas/Identity/Pages/Account/Manage/Currency.cshtml`,
 `Web/Services/UserPreferenceService.cs`, `AccountEmailService.cs`,
 `Web/TagHelpers/JsStringsTagHelper.cs`, `Web/Controllers/LanguageController.cs`, `Web/Views/Shared/_LanguageSwitcher.cshtml`, `Web/wwwroot/js/core/i18n.js`,
 `Web/tools/i18n-translate.js`, `Web/tools/i18n-report.js`, `ApiService/Infrastructure/ApiErrorException*.cs`,

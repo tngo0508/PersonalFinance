@@ -55,7 +55,8 @@ public static class DashboardText
     {
         ArgumentNullException.ThrowIfNull(localizer);
         ArgumentNullException.ThrowIfNull(activity);
-        string currency = SupportedCurrencies.Default.Code;
+        // The item's own currency: a transaction's, or a goal's (ADR 0016).
+        string currency = SupportedCurrencies.CodeOrDefault(activity.CurrencyCode);
 
         if (activity is { TargetAmount: { } target, SavedAmount: { } saved })
         {

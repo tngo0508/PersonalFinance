@@ -4,15 +4,17 @@
 
 @{
     ViewData["Title"] = L["BudgetTracker.Title"].Value;
-    string zero = MoneyFormatter.Format(0m, SupportedCurrencies.Default.Code);
-    string currencySymbol = SupportedCurrencies.Default.Symbol;
+    // Rows and totals are in the Account's Reporting Currency (ADR 0016); each line and transaction keeps its own.
+    string reportingCurrency = SupportedCurrencies.CodeOrDefault(Model.Sheet?.ReportingCurrency);
+    string zero = MoneyFormatter.Format(0m, reportingCurrency);
+    string currencySymbol = SupportedCurrencies.Find(reportingCurrency)!.Symbol;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/budget-tracker.css" asp-append-version="true"/>
 }
 
-<div class="bt-page bt-relative" id="budgetTrackerContainer" data-year="@Model.Year" data-month="@Model.Month">
+<div class="bt-page bt-relative" id="budgetTrackerContainer" data-year="@Model.Year" data-month="@Model.Month" data-reporting-currency="@reportingCurrency">
     @Html.AntiForgeryToken()
 
     <!-- Loading Overlay -->
@@ -156,6 +158,9 @@
                     </div>
                 </div>
             </div>
+
+            @* Filled by budget-tracker.js: which rate converted lines and transactions in other currencies. *@
+            <p class="conversion-caption" id="btConversionCaption" hidden></p>
 
             <!-- Side-by-Side Category Tables -->
             <div class="row g-4">
@@ -429,9 +434,18 @@
                                 ("category", new HtmlString("<strong id=\"overrideCategoryName\"></strong>")))
                         </p>
                         <div class="mb-3">
-                            <label for="inputOverrideAmount" class="form-label">@L.Named("BudgetTracker.Override.Amount", ("symbol", currencySymbol))</label>
+                            <label for="inputOverrideAmount" class="form-label">@L.NamedHtml("BudgetTracker.Override.Amount", null, ("symbol", new HtmlString($"<span id=\"overrideCurrencySymbol\">{currencySymbol}</span>")))</label>
                             <input type="number" step="0.01" min="0" max="9999999999999999.99" class="form-control"
                                    id="inputOverrideAmount" required placeholder="0.00"/>
+                        </div>
+                        <div class="mb-3">
+                            <label for="selectOverrideCurrency" class="form-label">@L["BudgetTracker.Override.Currency"]</label>
+                            <select class="form-select" id="selectOverrideCurrency" data-currency-selector data-currency-symbols="#overrideCurrencySymbol">
+                                @foreach (var currency in SupportedCurrencies.All)
+                                {
+                                    <option value="@currency.Code" selected="@(currency.Code == reportingCurrency)">@currency.Code · @currency.DisplayName</option>
+                                }
+                            </select>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -471,9 +485,18 @@
                             <input type="date" class="form-control" id="inputTxDate" required/>
                         </div>
                         <div class="mb-3">
-                            <label for="inputTxAmount" class="form-label">@L.Named("BudgetTracker.Transaction.Amount", ("symbol", currencySymbol))</label>
+                            <label for="inputTxAmount" class="form-label">@L.NamedHtml("BudgetTracker.Transaction.Amount", null, ("symbol", new HtmlString($"<span id=\"txCurrencySymbol\">{currencySymbol}</span>")))</label>
                             <input type="number" step="0.01" min="0.01" max="9999999999999999.99" class="form-control"
                                    id="inputTxAmount" required placeholder="0.00"/>
+                        </div>
+                        <div class="mb-3">
+                            <label for="selectTxCurrency" class="form-label">@L["BudgetTracker.Transaction.Currency"]</label>
+                            <select class="form-select" id="selectTxCurrency" data-currency-selector data-currency-symbols="#txCurrencySymbol">
+                                @foreach (var currency in SupportedCurrencies.All)
+                                {
+                                    <option value="@currency.Code" selected="@(currency.Code == reportingCurrency)">@currency.Code · @currency.DisplayName</option>
+                                }
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label for="inputTxDescription" class="form-label">@L["BudgetTracker.Transaction.Description"]</label>

@@ -17,6 +17,9 @@ public class GoogleDriveConnectionDto
 
     public string FolderUrl { get; set; } = string.Empty;
 
+    /// <summary>The ISO 4217 currency of the folder's spreadsheets, chosen at connect time; imported rows inherit it.</summary>
+    public string CurrencyCode { get; set; } = "USD";
+
     public string? MaskedApiKey { get; set; }
 
     public bool HasApiKey => !string.IsNullOrEmpty(MaskedApiKey);

@@ -52,6 +52,11 @@
                 saveEl.value = PFI18n.formatNumber(Number(rangeEl.value), { useGrouping: false, maximumFractionDigits: 10 });
             }
         });
+        const currencySelect = document.getElementById('nwCurrency');
+        const currencySave = document.getElementById('nwSaveCurrencyCode');
+        if (currencySelect && currencySave) {
+            currencySave.value = currencySelect.value;
+        }
     }
 
     /**

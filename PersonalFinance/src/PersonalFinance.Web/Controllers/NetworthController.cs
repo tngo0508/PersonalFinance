@@ -73,6 +73,7 @@ public class NetworthController : Controller
     public async Task<IActionResult> Calculate([FromQuery] NetWorthViewModel parameters,
         CancellationToken cancellationToken = default)
     {
+        parameters.CurrencyCode = SupportedCurrencies.CodeOrDefault(parameters.CurrencyCode);
         NetWorthProjectionDto projection = await _netWorthApi.CalculateProjectionAsync(parameters.ToProjectionRequest(), cancellationToken);
         JsonObject result = JsonSerializer.SerializeToNode(projection, CalculateJsonOptions)!.AsObject();
         result["breakdown"] = JsonSerializer.SerializeToNode(FiBreakdownBuilder.Build(projection, _localizer), CalculateJsonOptions);
@@ -88,6 +89,11 @@ public class NetworthController : Controller
     public async Task<IActionResult> SaveParameters(NetWorthViewModel model)
     {
         NetWorthProjectionRequestDto request = model.ToProjectionRequest();
+        // An old form posts no currency: the ApiService then keeps the saved one (US dollars before anything is saved).
+        if (model.CurrencyCode is not null && !SupportedCurrencies.IsSupported(model.CurrencyCode))
+        {
+            ModelState.AddModelError(nameof(model.CurrencyCode), _localizer["NetWorth.Validation.CurrencyUnsupported"]);
+        }
 
         if (!ModelState.IsValid)
         {

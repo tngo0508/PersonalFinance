@@ -313,7 +313,7 @@ public class DriveResultMessageTests
         {
             User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test"))
         };
-        return new GoogleDriveController(api, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer)
+        return new GoogleDriveController(api, NullLogger<GoogleDriveController>.Instance, TestLocalization.Localizer, new InMemoryUserPreferenceService())
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())

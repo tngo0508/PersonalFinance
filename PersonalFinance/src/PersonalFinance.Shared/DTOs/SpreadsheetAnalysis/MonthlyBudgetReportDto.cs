@@ -11,6 +11,9 @@ public class MonthlyBudgetReportDto
     public string FileName { get; set; } = string.Empty;
     public string? FileId { get; set; }
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>The ISO 4217 currency of every amount: the connection's, chosen when the folder was connected (ADR 0016).</summary>
+    public string CurrencyCode { get; set; } = "USD";
     public int Year { get; set; } = DateTime.UtcNow.Year;
     public decimal TotalAnnualIncome { get; set; }
     public decimal TotalAnnualExpenses { get; set; }

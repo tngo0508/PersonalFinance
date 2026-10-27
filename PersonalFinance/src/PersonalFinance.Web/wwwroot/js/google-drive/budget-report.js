@@ -27,21 +27,23 @@
         let lastBudgetRequest = null;
         let budgetRequestSeq = 0;
         let budgetTableUserToggled = false;
+        // The spreadsheet's currency, chosen when its folder was connected (ADR 0016); read from each report.
+        let currentCurrency = 'USD';
 
         // Reference to shared utilities
         const PF = window.PFUtils;
 
         function formatCurrency (num) {
-            return PF.formatCurrencyCents(num);
+            return PFI18n.formatMoney(Number(num) || 0, currentCurrency);
         }
 
-        // Whole-dollar format for prose and tiles where cents are noise
+        // Whole-unit format for prose and tiles where minor units are noise
         function formatMoney (num) {
-            return PFI18n.formatMoney(Number(num) || 0, 'USD', { whole: true });
+            return PFI18n.formatMoney(Number(num) || 0, currentCurrency, { whole: true });
         }
 
         function formatCompactCurrency (val) {
-            return PF.formatCompactCurrencySigned(val);
+            return PFI18n.formatCompactMoney(val, currentCurrency);
         }
 
         function escapeHtml (value) {
@@ -669,6 +671,7 @@
                     }
 
                     currentBudgetData = data;
+                    currentCurrency = data.currencyCode || 'USD';
                     const rowsText = data.parsedRowCount > 0 ? ` · ${ PFI18n.plural('GoogleDrive.Js.Report.RowsRead', data.parsedRowCount) }` : '';
                     const sourceClass = data.isLiveSpreadsheetData ? 'bgt-source--live' : 'bgt-source--sample';
                     $('#budgetModalDataSource').html(`<span class="bgt-source ${ sourceClass }">${ escapeHtml(sourceLabel(data)) }${escapeHtml(rowsText) }</span>`);

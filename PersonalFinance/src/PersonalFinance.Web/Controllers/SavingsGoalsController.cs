@@ -1,12 +1,15 @@
 using System.Globalization;
 using System.Net;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.SavingsGoals;
+using PersonalFinance.Web.Services;
 using ApiException = Refit.ApiException;
 
 namespace PersonalFinance.Web.Controllers;
@@ -29,14 +32,16 @@ public class SavingsGoalsController : Controller
     private readonly ILogger<SavingsGoalsController> _logger;
     private readonly IStringLocalizer _localizer;
     private readonly TimeProvider _timeProvider;
+    private readonly IUserPreferenceService _preferences;
 
     public SavingsGoalsController(ISavingsGoalsApi savingsGoalsApi, ILogger<SavingsGoalsController> logger,
-        IStringLocalizer localizer, TimeProvider timeProvider)
+        IStringLocalizer localizer, TimeProvider timeProvider, IUserPreferenceService preferences)
     {
         _savingsGoalsApi = savingsGoalsApi;
         _logger = logger;
         _localizer = localizer;
         _timeProvider = timeProvider;
+        _preferences = preferences;
     }
 
     /// <summary>
@@ -60,10 +65,12 @@ public class SavingsGoalsController : Controller
         [FromForm] decimal currentAmount,
         [FromForm] string? description,
         [FromForm] string? targetDate,
+        [FromForm] string? currencyCode = null,
         CancellationToken cancellationToken = default)
     {
         // An amount the binder rejected (written the other culture's way) arrives as 0: never save it.
-        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(name) || targetAmount <= 0 || currentAmount < 0)
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(name) || targetAmount <= 0 || currentAmount < 0
+            || (currencyCode is not null && !SupportedCurrencies.IsSupported(currencyCode)))
         {
             ModelState.AddModelError("", _localizer["SavingsGoals.Message.InvalidGoal"]);
             return await IndexWithGoalsAsync(cancellationToken);
@@ -72,6 +79,7 @@ public class SavingsGoalsController : Controller
         var request = new CreateSavingsGoalRequestDto
         {
             Name = name.Trim(),
+            CurrencyCode = currencyCode,
             TargetAmount = targetAmount,
             CurrentAmount = currentAmount,
             Description = description?.Trim(),
@@ -297,6 +305,15 @@ public class SavingsGoalsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>The Account's Reporting Currency; US dollars when the request carries no Account id.</summary>
+    private async Task<string> ReportingCurrencyAsync(CancellationToken cancellationToken)
+    {
+        string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return userId is null
+            ? SupportedCurrencies.DefaultCode
+            : await _preferences.GetReportingCurrencyAsync(userId, cancellationToken);
+    }
+
     private string? FirstModelError() =>
         ModelState.IsValid
             ? null
@@ -316,6 +333,11 @@ public class SavingsGoalsController : Controller
             ViewData["Goals"] = goals;
             ViewData["Today"] = today;
             ViewData["Summary"] = SavingsGoalsSummaryViewModel.From(goals, today);
+            // The new-goal form defaults to the Reporting Currency (localization spec §2.5); the goals already say it.
+            string? reportingCurrency = goals.FirstOrDefault()?.ReportingCurrency;
+            ViewData["ReportingCurrency"] = SupportedCurrencies.IsSupported(reportingCurrency)
+                ? reportingCurrency
+                : await ReportingCurrencyAsync(cancellationToken);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {

@@ -24,9 +24,9 @@
     const SCENARIOS = ['Cash', 'Conservative', 'Base', 'Aggressive'];
     const SCENARIO_PREFIX = 'MoneyPriorities.Js.Scenario.';
 
-    // Separators and dates from the page culture, symbol from the currency (PFI18n, spec §2.2).
-    const wholeDollars = { format: (value) => PFI18n.formatMoney(value, 'USD', { whole: true }) };
-    const dollarsAndCents = { format: (value) => PFI18n.formatMoney(value, 'USD') };
+    // Separators and dates from the page culture, symbol from the currency (PFI18n, spec §2.2). Figures are in the
+    // Walk's own currency (ADR 0016): the form's selector before a result, the result's currency after.
+    let currentCurrency = 'USD';
     const rateNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 2 });
     const monthsNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 1 });
     const countNumber = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 0 });
@@ -44,14 +44,32 @@
     /** Counts the results shown, so a late Purpose Note reply for a Walk no longer on screen is ignored. */
     let shownResult = 0;
 
-    /** A computed figure, in whole dollars ("$86,542"). */
-    function formatComputed (value) {
-        return wholeDollars.format(value);
+    /** The currency chosen in the form. */
+    function selectedCurrency () {
+        const select = byId('mpCurrency');
+        return (select && select.value) || 'USD';
     }
 
-    /** An amount the user typed, with its cents ("$500.00"). */
-    function formatTyped (value) {
-        return dollarsAndCents.format(value);
+    /** Selects a currency in the form and swaps its symbol. */
+    function setCurrency (currencyCode) {
+        const select = byId('mpCurrency');
+        if (!select || !currencyCode) {
+            return;
+        }
+        select.value = currencyCode;
+        if (window.PFCurrencySelector) {
+            window.PFCurrencySelector.apply(select);
+        }
+    }
+
+    /** A computed figure, in whole units of the result's currency ("$86,542"). */
+    function formatComputed (value) {
+        return PFI18n.formatMoney(value, currentCurrency, { whole: true });
+    }
+
+    /** An amount the user typed, with its minor units ("$500.00"), in a currency or the result's. */
+    function formatTyped (value, currencyCode) {
+        return PFI18n.formatMoney(value, currencyCode || currentCurrency);
     }
 
     /** A rate with up to two decimals ("22.99%", "7%"). */
@@ -182,6 +200,7 @@
         const purpose = inputFor('Purpose');
         const purposeText = purpose ? purpose.value.trim() : '';
         request.Purpose = purposeText === '' ? null : purposeText;
+        request.CurrencyCode = selectedCurrency();
         return request;
     }
 
@@ -465,6 +484,7 @@
      */
     async function showResult (view) {
         const result = view.walk || {};
+        currentCurrency = result.currencyCode || selectedCurrency();
         byId('mpEmpty').hidden = true;
         byId('mpResult').hidden = false;
         const headline = byId('mpHeadline');
@@ -666,7 +686,7 @@
             details.append(
                 el('span', 'mp-earlier__date', date),
                 el('span', 'mp-earlier__amount',
-                    PFI18n.t('MoneyPriorities.Js.Earlier.Amount', { amount: formatTyped(walk.monthlyAmount) })),
+                    PFI18n.t('MoneyPriorities.Js.Earlier.Amount', { amount: formatTyped(walk.monthlyAmount, walk.currencyCode) })),
                 el('span', 'mp-earlier__leaf', walk.leafLabel));
             const actions = el('div', 'mp-earlier__actions');
             const view = el('button', 'btn btn-sm btn-outline-primary mp-earlier__view',
@@ -707,6 +727,7 @@
         }
         clearErrors();
         fillForm(outcome.body.walk.answers);
+        setCurrency(outcome.body.walk.currencyCode);
         await showResult(outcome.body);
         const headline = byId('mpHeadline');
         headline.scrollIntoView({ block: 'nearest' });

@@ -6,6 +6,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Data.Helpers;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.ApiService.Features.GoogleDrive.Adapters;
 
@@ -48,6 +49,7 @@ internal sealed class GoogleDriveFileSource : IGoogleDriveFileSource
         string name = fileName ?? cachedFile?.Name ?? "Spreadsheet.xlsx";
         string mimeType = cachedFile?.MimeType ?? string.Empty;
         string? apiKey = GoogleDriveApiKey.Resolve(CredentialProtector.Decrypt(connection?.EncryptedApiKey), _configuration);
+        string currency = connection?.CurrencyCode ?? SupportedCurrencies.DefaultCode;
         string id = Uri.EscapeDataString(fileId);
 
         bool isGoogleSheet = mimeType == GoogleSheetMimeType ||
@@ -64,7 +66,7 @@ internal sealed class GoogleDriveFileSource : IGoogleDriveFileSource
             if (xlsx is not null)
             {
                 yield return new SpreadsheetDownload(name, SpreadsheetFormat.Xlsx, xlsx,
-                    "Google Drive Live Spreadsheet (Exported XLSX)");
+                    "Google Drive Live Spreadsheet (Exported XLSX)", currency);
             }
 
             string csvUrl = apiKey is null
@@ -74,7 +76,7 @@ internal sealed class GoogleDriveFileSource : IGoogleDriveFileSource
             if (csv is not null)
             {
                 yield return new SpreadsheetDownload(name, SpreadsheetFormat.Csv, csv,
-                    "Google Drive Live Spreadsheet (Exported Data)");
+                    "Google Drive Live Spreadsheet (Exported Data)", currency);
             }
 
             yield break;
@@ -89,8 +91,8 @@ internal sealed class GoogleDriveFileSource : IGoogleDriveFileSource
         {
             bool isXlsx = name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) || mimeType == XlsxMimeType;
             yield return isXlsx
-                ? new SpreadsheetDownload(name, SpreadsheetFormat.Xlsx, file, "Google Drive Live XLSX (Actual Data)")
-                : new SpreadsheetDownload(name, SpreadsheetFormat.Csv, file, "Google Drive Live CSV (Actual Data)");
+                ? new SpreadsheetDownload(name, SpreadsheetFormat.Xlsx, file, "Google Drive Live XLSX (Actual Data)", currency)
+                : new SpreadsheetDownload(name, SpreadsheetFormat.Csv, file, "Google Drive Live CSV (Actual Data)", currency);
         }
     }
 

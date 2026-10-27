@@ -71,7 +71,7 @@ public sealed class ApiServiceCultureTests : IDisposable
 
     private static async Task<string> GetDashboardGoalActivityAsync(AppDbContext db)
     {
-        DashboardSummaryDto summary = await new DashboardService(db, TestBudgetDataProviderFactory.Create(db))
+        DashboardSummaryDto summary = await new DashboardService(db, TestBudgetDataProviderFactory.Create(db), TestCurrencyConverter.Create(db))
             .GetDashboardSummaryAsync(UserId);
         return Assert.Single(summary.RecentActivity, a => a.Type == "SavingsGoal").Description;
     }
@@ -142,7 +142,7 @@ public sealed class ApiServiceCultureTests : IDisposable
         await db.SaveChangesAsync();
         var notifications = new CapturingNotificationService();
         var service = new SavingsGoalService(db, NullLogger<SavingsGoalService>.Instance, notifications,
-            TimeProvider.System);
+            TimeProvider.System, TestCurrencyConverter.Create(db));
 
         ContributionResult added = await service.AddContributionAsync(UserId, goal.Id,
             new SaveContributionRequestDto { Amount = 600m });

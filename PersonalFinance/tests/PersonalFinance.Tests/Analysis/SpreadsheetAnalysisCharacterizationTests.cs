@@ -54,7 +54,8 @@ public class SpreadsheetAnalysisCharacterizationTests
             new FakeSpreadsheetReader(),
             NullLogger<SpreadsheetAnalysisController>.Instance,
             new BudgetDataSourceService(db),
-            new GoogleSheetRemovalService(db, new BudgetDataSourceService(db), TimeProvider.System))
+            new GoogleSheetRemovalService(db, new BudgetDataSourceService(db), TimeProvider.System),
+            TestCurrencyConverter.Create(db))
         {
             ControllerContext = new ControllerContext
             {

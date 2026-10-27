@@ -9,7 +9,7 @@
     string? summarySentence = null;
     if (netWorth is not null && last is not null)
     {
-        string currency = SupportedCurrencies.Default.Code;
+        string currency = SupportedCurrencies.CodeOrDefault(netWorth.CurrencyCode);
         string baseAmount = MoneyFormatter.FormatWhole(last.Base, currency);
         string fiTarget = MoneyFormatter.FormatWhole(netWorth.FiTarget, currency);
         string baseSentence = netWorth.FiTarget <= 0m
@@ -51,11 +51,11 @@
         <dl class="dash-stats">
             <div class="dash-stats__item">
                 <dt>@L.Named("Dashboard.Projection.BaseAt", ("age", last.Age))</dt>
-                <dd class="dash-money">@MoneyFormatter.FormatWhole(last.Base, SupportedCurrencies.Default.Code)</dd>
+                <dd class="dash-money">@MoneyFormatter.FormatWhole(last.Base, SupportedCurrencies.CodeOrDefault(netWorth.CurrencyCode))</dd>
             </div>
             <div class="dash-stats__item">
                 <dt>@L["Dashboard.FiTarget"]</dt>
-                <dd class="dash-money">@(netWorth.FiTarget > 0m ? MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.Default.Code) : "—")</dd>
+                <dd class="dash-money">@(netWorth.FiTarget > 0m ? MoneyFormatter.FormatWhole(netWorth.FiTarget, SupportedCurrencies.CodeOrDefault(netWorth.CurrencyCode)) : "—")</dd>
             </div>
         </dl>
     }

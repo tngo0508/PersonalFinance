@@ -48,14 +48,14 @@ public class MonthlyBudgetConcurrencyTests
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
-            var service = new MonthlyBudgetService(db);
+            var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
 
             // On save, simulate another concurrent thread completing seeding first and throwing DbUpdateException
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
                 await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
-                var secondaryService = new MonthlyBudgetService(secondaryDb);
+                var secondaryService = new MonthlyBudgetService(secondaryDb, TestCurrencyConverter.Create(secondaryDb));
                 await secondaryService.EnsureDefaultCategoriesAsync(UserId);
             };
 
@@ -85,7 +85,7 @@ public class MonthlyBudgetConcurrencyTests
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string _) = CreateContextWithInterceptor();
         await using (db)
         {
-            var service = new MonthlyBudgetService(db);
+            var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
 
             // Simulate DbUpdateException without inserting any competing categories
             interceptor.ShouldThrow = true;
@@ -101,14 +101,14 @@ public class MonthlyBudgetConcurrencyTests
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
-            var service = new MonthlyBudgetService(db);
+            var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
             await service.EnsureDefaultCategoriesAsync(UserId);
 
             interceptor.ShouldThrow = true;
             interceptor.OnSavingChangesAsync = async _ =>
             {
                 await using AppDbContext secondaryDb = CreateSecondaryContext(dbName);
-                var secondaryService = new MonthlyBudgetService(secondaryDb);
+                var secondaryService = new MonthlyBudgetService(secondaryDb, TestCurrencyConverter.Create(secondaryDb));
                 await secondaryService.InitializeMonthAsync(UserId, new InitializeMonthRequest
                 {
                     Year = 2026,
@@ -137,7 +137,7 @@ public class MonthlyBudgetConcurrencyTests
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
-            var service = new MonthlyBudgetService(db);
+            var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
             await service.EnsureDefaultCategoriesAsync(UserId);
             BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
@@ -176,7 +176,7 @@ public class MonthlyBudgetConcurrencyTests
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
-            var service = new MonthlyBudgetService(db);
+            var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
             await service.EnsureDefaultCategoriesAsync(UserId);
 
             interceptor.ShouldThrow = true;
@@ -219,7 +219,7 @@ public class MonthlyBudgetConcurrencyTests
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
-            var service = new MonthlyBudgetService(db);
+            var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
             await service.EnsureDefaultCategoriesAsync(UserId);
             BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
@@ -266,7 +266,7 @@ public class MonthlyBudgetConcurrencyTests
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string? dbName) = CreateContextWithInterceptor();
         await using (db)
         {
-            var service = new MonthlyBudgetService(db);
+            var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
             await service.EnsureDefaultCategoriesAsync(UserId);
             BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
@@ -314,7 +314,7 @@ public class MonthlyBudgetConcurrencyTests
         (AppDbContext? db, ConcurrencySimulationInterceptor? interceptor, string _) = CreateContextWithInterceptor();
         await using (db)
         {
-            var service = new MonthlyBudgetService(db);
+            var service = new MonthlyBudgetService(db, TestCurrencyConverter.Create(db));
             await service.EnsureDefaultCategoriesAsync(UserId);
             BudgetCategory food = await db.BudgetCategories.FirstAsync(c => c.UserId == UserId && c.Name == "Food");
 
