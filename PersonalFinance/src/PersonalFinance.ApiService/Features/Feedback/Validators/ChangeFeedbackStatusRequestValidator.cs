@@ -14,6 +14,7 @@ internal sealed class ChangeFeedbackStatusRequestValidator : AbstractValidator<C
     {
         RuleFor(x => x.Status)
             .IsInEnum()
-            .WithMessage(FeedbackMessages.UnknownStatus);
+                .WithErrorCode(ApiErrorKeys.Feedback.StatusUnknown)
+                .WithMessage(FeedbackMessages.UnknownStatus);
     }
 }

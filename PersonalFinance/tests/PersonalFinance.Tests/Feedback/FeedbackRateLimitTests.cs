@@ -51,21 +51,24 @@ public class FeedbackRateLimitTests
         new() { Category = FeedbackCategory.Bug, Message = "The chart is blank." };
 
     [Fact]
-    public async Task Submit_TheSixthWithinAnHour_Returns429WithAFriendlyMessage()
+    public async Task Submit_TheSixthWithinAnHour_Rejects429WithItsKey()
     {
         await using ServiceProvider provider = BuildProvider();
-        IActionResult result = new NoContentResult();
-
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 5; i++)
         {
             await using AsyncServiceScope scope = provider.CreateAsyncScope();
             FeedbackApiController controller = CreateController(scope.ServiceProvider.GetRequiredService<IFeedbackService>());
-            result = await controller.Submit(ValidRequest());
+            Assert.IsType<NoContentResult>(await controller.Submit(ValidRequest()));
         }
 
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status429TooManyRequests, objectResult.StatusCode);
-        Assert.Contains(FeedbackMessages.RateLimited, objectResult.Value!.ToString());
+        await using (AsyncServiceScope sixth = provider.CreateAsyncScope())
+        {
+            FeedbackApiController controller = CreateController(sixth.ServiceProvider.GetRequiredService<IFeedbackService>());
+            ApiErrorException error =
+                await Assert.ThrowsAsync<ApiErrorException>(() => controller.Submit(ValidRequest()));
+            Assert.Equal(StatusCodes.Status429TooManyRequests, error.StatusCode);
+            Assert.Equal(ApiErrorKeys.Feedback.RateLimited, error.Key);
+        }
 
         await using AsyncServiceScope check = provider.CreateAsyncScope();
         Assert.Equal(5, await check.ServiceProvider.GetRequiredService<AppDbContext>().Feedback.CountAsync());

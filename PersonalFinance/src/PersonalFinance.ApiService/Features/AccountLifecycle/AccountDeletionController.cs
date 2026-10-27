@@ -49,8 +49,11 @@ public class AccountDeletionController : ControllerBase
                 CancelToken = result.CancelToken!,
                 PurgeAfterUtc = result.PurgeAfter!.Value
             }),
-            DeletionRequestOutcome.LastAdmin => Conflict(new { error = AccountDeletionMessages.LastAdmin }),
-            DeletionRequestOutcome.AlreadyPending => Conflict(new { error = AccountDeletionMessages.AlreadyPending }),
+            DeletionRequestOutcome.LastAdmin => throw new ApiErrorException(ApiErrorKeys.AccountLifecycle.LastAdmin,
+                AccountDeletionMessages.LastAdmin, statusCode: StatusCodes.Status409Conflict),
+            DeletionRequestOutcome.AlreadyPending => throw new ApiErrorException(
+                ApiErrorKeys.AccountLifecycle.AlreadyPending, AccountDeletionMessages.AlreadyPending,
+                statusCode: StatusCodes.Status409Conflict),
             _ => NotFound()
         };
     }
@@ -70,11 +73,12 @@ public class AccountDeletionController : ControllerBase
         ValidationResult validation = await _cancelValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage).Distinct() });
+            return BadRequest(validation.ToApiError());
         }
 
         return await _accountDeletionService.CancelAsync(request.Token, cancellationToken)
             ? NoContent()
-            : NotFound(new { error = AccountDeletionMessages.InvalidCancelLink });
+            : throw new ApiErrorException(ApiErrorKeys.AccountLifecycle.InvalidCancelLink,
+                AccountDeletionMessages.InvalidCancelLink, statusCode: StatusCodes.Status404NotFound);
     }
 }

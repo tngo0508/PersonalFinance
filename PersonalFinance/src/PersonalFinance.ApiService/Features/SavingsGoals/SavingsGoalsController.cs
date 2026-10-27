@@ -3,6 +3,7 @@ using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.Helpers;
@@ -61,7 +62,7 @@ public class SavingsGoalsController : ControllerBase
         ValidationResult validation = await _createValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
@@ -131,7 +132,7 @@ public class SavingsGoalsController : ControllerBase
         ValidationResult validation = await _contributionValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
@@ -153,7 +154,7 @@ public class SavingsGoalsController : ControllerBase
         ValidationResult validation = await _contributionValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
@@ -191,7 +192,7 @@ public class SavingsGoalsController : ControllerBase
         ValidationResult validation = await _correctBalanceValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();
@@ -199,18 +200,18 @@ public class SavingsGoalsController : ControllerBase
     }
 
     /// <summary>
-    /// Maps a Contribution result to its response. A change that would leave the saved amount below zero is a 409,
-    /// which Web turns into a message in the reader's language.
+    /// Maps a Contribution result to its response. A change that would leave the saved amount below zero is a 409 and
+    /// an edit to an Adjustment a 400, each carrying its <see cref="ApiErrorKeys.SavingsGoals"/> key (ADR 0017).
     /// </summary>
     private IActionResult ToResponse(ContributionResult result) => result.Outcome switch
     {
         ContributionOutcome.Saved => Ok(new { success = true, id = result.ContributionId }),
         ContributionOutcome.NotFound => NotFound(),
-        ContributionOutcome.BelowZero => Conflict(new
-        {
-            error = "This change would leave the goal's saved amount below zero."
-        }),
-        ContributionOutcome.NotEditable => BadRequest(new { error = "A balance adjustment can only be deleted." }),
+        ContributionOutcome.BelowZero => throw new ApiErrorException(ApiErrorKeys.SavingsGoals.BelowZero,
+            "This change would leave the goal's saved amount below zero.",
+            statusCode: StatusCodes.Status409Conflict),
+        ContributionOutcome.NotEditable => throw new ApiErrorException(
+            ApiErrorKeys.SavingsGoals.AdjustmentNotEditable, "A balance adjustment can only be deleted."),
         _ => throw new ArgumentOutOfRangeException(nameof(result), result.Outcome, "Unknown Contribution outcome.")
     };
 }

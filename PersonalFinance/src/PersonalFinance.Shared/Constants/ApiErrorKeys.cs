@@ -200,4 +200,177 @@ public static class ApiErrorKeys
         /// <summary>A category's allocation had more than two decimal places.</summary>
         public const string AllocationWholeCents = "BudgetPlanner.Validation.AllocationWholeCents";
     }
+
+    /// <summary>The keys of the Feedback Feature's rejections.</summary>
+    public static class Feedback
+    {
+        /// <summary>The category was not Bug, Idea or Other.</summary>
+        public const string CategoryUnknown = "Feedback.Validation.CategoryUnknown";
+
+        /// <summary>The message was empty or only whitespace.</summary>
+        public const string MessageRequired = "Feedback.Validation.MessageRequired";
+
+        /// <summary>The message was longer than the <c>max</c> argument.</summary>
+        public const string MessageLength = "Feedback.Validation.MessageLength";
+
+        /// <summary>The page was longer than the <c>max</c> argument.</summary>
+        public const string PageTooLong = "Feedback.Validation.PageTooLong";
+
+        /// <summary>The page was not a path within the app.</summary>
+        public const string PageNotAppRelative = "Feedback.Validation.PageNotAppRelative";
+
+        /// <summary>A Feedback Status was not New, Reviewed or Archived.</summary>
+        public const string StatusUnknown = "Feedback.Validation.StatusUnknown";
+
+        /// <summary>The Account sent too much Feedback within the last hour.</summary>
+        public const string RateLimited = "Feedback.Error.RateLimited";
+    }
+
+    /// <summary>The keys of the Account Lifecycle Feature's rejections.</summary>
+    public static class AccountLifecycle
+    {
+        /// <summary>The only Admin asked to delete their Account.</summary>
+        public const string LastAdmin = "AccountLifecycle.Error.LastAdmin";
+
+        /// <summary>The Account already has a pending Deletion Request.</summary>
+        public const string AlreadyPending = "AccountLifecycle.Error.AlreadyPending";
+
+        /// <summary>A cancel link was malformed, unknown, used or expired.</summary>
+        public const string InvalidCancelLink = "AccountLifecycle.Error.InvalidCancelLink";
+    }
+
+    /// <summary>The keys of the Savings Goals Feature's rejections.</summary>
+    public static class SavingsGoals
+    {
+        /// <summary>A goal's name was empty.</summary>
+        public const string NameRequired = "SavingsGoals.Validation.NameRequired";
+
+        /// <summary>A goal's name was longer than the <c>max</c> argument.</summary>
+        public const string NameTooLong = "SavingsGoals.Validation.NameTooLong";
+
+        /// <summary>A goal's target amount was zero or less.</summary>
+        public const string TargetAmountPositive = "SavingsGoals.Validation.TargetAmountPositive";
+
+        /// <summary>A goal's target amount was over the <c>max</c> amount argument.</summary>
+        public const string TargetAmountTooLarge = "SavingsGoals.Validation.TargetAmountTooLarge";
+
+        /// <summary>A goal's starting amount was negative.</summary>
+        public const string StartingAmountNegative = "SavingsGoals.Validation.StartingAmountNegative";
+
+        /// <summary>A goal's starting amount was over the <c>max</c> amount argument.</summary>
+        public const string StartingAmountTooLarge = "SavingsGoals.Validation.StartingAmountTooLarge";
+
+        /// <summary>A goal's starting amount had more than two decimal places.</summary>
+        public const string StartingAmountWholeCents = "SavingsGoals.Validation.StartingAmountWholeCents";
+
+        /// <summary>A goal's description was longer than the <c>max</c> argument.</summary>
+        public const string DescriptionTooLong = "SavingsGoals.Validation.DescriptionTooLong";
+
+        /// <summary>A Contribution's amount was zero.</summary>
+        public const string ContributionAmountZero = "SavingsGoals.Validation.ContributionAmountZero";
+
+        /// <summary>A Contribution's amount was over the <c>max</c> amount argument, either way.</summary>
+        public const string ContributionAmountTooLarge = "SavingsGoals.Validation.ContributionAmountTooLarge";
+
+        /// <summary>A Contribution's amount had more than two decimal places.</summary>
+        public const string ContributionAmountWholeCents = "SavingsGoals.Validation.ContributionAmountWholeCents";
+
+        /// <summary>A Contribution was dated in the future.</summary>
+        public const string ContributionDateFuture = "SavingsGoals.Validation.ContributionDateFuture";
+
+        /// <summary>A Contribution was dated before the year 2000.</summary>
+        public const string ContributionDateTooEarly = "SavingsGoals.Validation.ContributionDateTooEarly";
+
+        /// <summary>A Contribution's note was longer than the <c>max</c> argument.</summary>
+        public const string NoteTooLong = "SavingsGoals.Validation.NoteTooLong";
+
+        /// <summary>A balance correction named a negative amount.</summary>
+        public const string BalanceNegative = "SavingsGoals.Validation.BalanceNegative";
+
+        /// <summary>A balance correction named an amount over the <c>max</c> amount argument.</summary>
+        public const string BalanceTooLarge = "SavingsGoals.Validation.BalanceTooLarge";
+
+        /// <summary>A balance correction named an amount with more than two decimal places.</summary>
+        public const string BalanceWholeCents = "SavingsGoals.Validation.BalanceWholeCents";
+
+        /// <summary>A Contribution change would leave the goal's saved amount below zero.</summary>
+        public const string BelowZero = "SavingsGoals.Error.BelowZero";
+
+        /// <summary>An edit was sent for a balance Adjustment, which can only be deleted.</summary>
+        public const string AdjustmentNotEditable = "SavingsGoals.Error.AdjustmentNotEditable";
+    }
+
+    /// <summary>The keys of the Watchlist Feature's rejections.</summary>
+    public static class Watchlist
+    {
+        /// <summary>A saved article had no title.</summary>
+        public const string TitleRequired = "Watchlist.Validation.TitleRequired";
+
+        /// <summary>A saved article's title was longer than the <c>max</c> argument.</summary>
+        public const string TitleTooLong = "Watchlist.Validation.TitleTooLong";
+
+        /// <summary>A saved article had no address.</summary>
+        public const string UrlRequired = "Watchlist.Validation.UrlRequired";
+
+        /// <summary>A saved article's address was longer than the <c>max</c> argument.</summary>
+        public const string UrlTooLong = "Watchlist.Validation.UrlTooLong";
+
+        /// <summary>A saved article's address was not an absolute http or https link.</summary>
+        public const string UrlNotHttp = "Watchlist.Validation.UrlNotHttp";
+
+        /// <summary>A saved article had no source.</summary>
+        public const string SourceRequired = "Watchlist.Validation.SourceRequired";
+
+        /// <summary>A saved article's source was longer than the <c>max</c> argument.</summary>
+        public const string SourceTooLong = "Watchlist.Validation.SourceTooLong";
+
+        /// <summary>A saved article had no topic.</summary>
+        public const string CategoryRequired = "Watchlist.Validation.CategoryRequired";
+
+        /// <summary>A saved article's topic was longer than the <c>max</c> argument.</summary>
+        public const string CategoryTooLong = "Watchlist.Validation.CategoryTooLong";
+
+        /// <summary>A saved article's notes were longer than the <c>max</c> argument.</summary>
+        public const string NotesTooLong = "Watchlist.Validation.NotesTooLong";
+
+        /// <summary>A saved article's image address was longer than the <c>max</c> argument.</summary>
+        public const string ImageUrlTooLong = "Watchlist.Validation.ImageUrlTooLong";
+    }
+
+    /// <summary>The keys of the Net Worth Feature's rejections. The range keys are also the Web form's own messages.</summary>
+    public static class NetWorth
+    {
+        /// <summary>The starting balance was outside 0 to 1 billion.</summary>
+        public const string StartingBalanceRange = "NetWorth.Validation.StartingBalanceRange";
+
+        /// <summary>The annual savings were outside 0 to 10 million.</summary>
+        public const string AnnualSavingsRange = "NetWorth.Validation.AnnualSavingsRange";
+
+        /// <summary>The annual income was outside 0 to 100 million.</summary>
+        public const string AnnualIncomeRange = "NetWorth.Validation.AnnualIncomeRange";
+
+        /// <summary>The annual spending was outside 0 to 10 million.</summary>
+        public const string AnnualSpendingRange = "NetWorth.Validation.AnnualSpendingRange";
+
+        /// <summary>The aggressive savings were outside 0 to 10 million.</summary>
+        public const string AggressiveSavingsRange = "NetWorth.Validation.AggressiveSavingsRange";
+
+        /// <summary>The current age was outside 18 to 100.</summary>
+        public const string CurrentAgeRange = "NetWorth.Validation.CurrentAgeRange";
+
+        /// <summary>The retirement age was outside 18 to 120.</summary>
+        public const string RetirementAgeRange = "NetWorth.Validation.RetirementAgeRange";
+
+        /// <summary>The retirement age was not greater than the current age.</summary>
+        public const string RetirementAfterCurrentAge = "NetWorth.Validation.RetirementAfterCurrentAge";
+
+        /// <summary>The base ROI was outside 0% to 50%.</summary>
+        public const string BaseRoiRange = "NetWorth.Validation.BaseRoiRange";
+
+        /// <summary>The conservative ROI was outside 0% to 50%.</summary>
+        public const string ConservativeRoiRange = "NetWorth.Validation.ConservativeRoiRange";
+
+        /// <summary>The aggressive ROI was outside 0% to 50%.</summary>
+        public const string AggressiveRoiRange = "NetWorth.Validation.AggressiveRoiRange";
+    }
 }

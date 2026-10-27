@@ -55,7 +55,7 @@ public class WatchlistController : ControllerBase
         ValidationResult validation = await _saveValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         string userId = User.GetUserId();

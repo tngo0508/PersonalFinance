@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Features.NetWorth.Validators;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
 
@@ -33,10 +34,10 @@ public class NetWorthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public IActionResult CalculateProjection([FromBody] NetWorthProjectionRequestDto request)
     {
-        string? error = NetWorthProjectionValidator.Validate(request);
+        ApiErrorEntryDto? error = NetWorthProjectionValidator.Validate(request);
         if (error != null)
         {
-            return BadRequest(error);
+            return BadRequest(new ApiErrorDto { Errors = [error] });
         }
 
         NetWorthProjectionDto projection = NetWorthProjectionService.ComputeProjection(request);
@@ -51,10 +52,10 @@ public class NetWorthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SaveParameters([FromBody] NetWorthProjectionRequestDto request)
     {
-        string? error = NetWorthProjectionValidator.Validate(request);
+        ApiErrorEntryDto? error = NetWorthProjectionValidator.Validate(request);
         if (error != null)
         {
-            return BadRequest(error);
+            return BadRequest(new ApiErrorDto { Errors = [error] });
         }
 
         string userId = User.GetUserId();

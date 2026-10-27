@@ -1,10 +1,12 @@
 using FluentValidation;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 
 namespace PersonalFinance.ApiService.Features.SavingsGoals.Validators;
 
 /// <summary>
-/// Validator for a balance correction: the new saved amount is zero or more.
+/// Validator for a balance correction: the new saved amount is zero or more. Every rule carries its
+/// <see cref="ApiErrorKeys.SavingsGoals"/> key (ADR 0017).
 /// </summary>
 internal sealed class CorrectBalanceRequestValidator : AbstractValidator<CorrectBalanceRequestDto>
 {
@@ -12,10 +14,14 @@ internal sealed class CorrectBalanceRequestValidator : AbstractValidator<Correct
     {
         RuleFor(x => x.Balance)
             .GreaterThanOrEqualTo(0m)
-            .WithMessage("Balance cannot be negative.")
+                .WithErrorCode(ApiErrorKeys.SavingsGoals.BalanceNegative)
+                .WithMessage("Balance cannot be negative.")
             .LessThanOrEqualTo(ContributionRules.MaxAmount)
-            .WithMessage("Balance cannot exceed 9,999,999,999,999,999.99.")
+                .WithErrorCode(ApiErrorKeys.SavingsGoals.BalanceTooLarge)
+                .WithMessage("Balance cannot exceed 9,999,999,999,999,999.99.")
+                .WithState(_ => ContributionRules.MaxAmountArgs)
             .Must(balance => decimal.Round(balance, 2) == balance)
-            .WithMessage("Balance cannot have more than 2 decimal places.");
+                .WithErrorCode(ApiErrorKeys.SavingsGoals.BalanceWholeCents)
+                .WithMessage("Balance cannot have more than 2 decimal places.");
     }
 }

@@ -7,7 +7,7 @@ namespace PersonalFinance.Tests.AccountLifecycle;
 
 /// <summary>
 /// A cancel token must look like one the service issued (Base64Url) before it is hashed and looked up; anything
-/// else is refused with the invalid-link message, which the controller returns as 400.
+/// else is refused with one invalid-link error and its key, which the controller returns as 400.
 /// </summary>
 public class CancelDeletionRequestValidatorTests
 {
@@ -28,9 +28,9 @@ public class CancelDeletionRequestValidatorTests
     {
         ValidationResult result = _validator.Validate(new CancelDeletionRequest { Token = token });
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.ErrorMessage == AccountDeletionMessages.InvalidCancelLink
-                                            || e.PropertyName == nameof(CancelDeletionRequest.Token));
+        ValidationFailure failure = Assert.Single(result.Errors);
+        Assert.Equal(ApiErrorKeys.AccountLifecycle.InvalidCancelLink, failure.ErrorCode);
+        Assert.Equal(AccountDeletionMessages.InvalidCancelLink, failure.ErrorMessage);
     }
 
     [Fact]

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [8.4.0] - 2026-10-26
+
+### Added
+
+- **Feedback, account deletion, Savings Goals, Watchlist and Net Worth errors in Vietnamese**: every rejection these Features return carries a localization key, so their validation messages and refusals answer in the reader's language, with limits formatted in the reader's culture (slice E3a of the localized API errors spec, #385).
+  - Feedback: the five submit rules, the status rule and the rate limit (429) are keys; the message-length limit is an argument instead of a positional format.
+  - Account deletion: "only Admin" and "already scheduled" (409) and the invalid cancel link are keys; a malformed cancel token is one error instead of up to three.
+  - Savings Goals: the goal, Contribution and balance-correction rules are keys with the largest amount as a money argument; "below zero" (409) and "an adjustment can only be deleted" are keys.
+  - Watchlist: every save rule has its own key and message, replacing FluentValidation's default English.
+  - Net Worth: the projection validator returns a keyed entry naming the field, reusing the form's own `NetWorth.Validation.*` messages, plus a new key for "retirement age must be greater than current age".
+- **Key coverage test for the five Features**: every `ApiErrorKeys` key of each Feature is produced by a real rejection, and every rejection resolves in English with no placeholder left; `ApiErrorArchitectureTests` now scans these Features too.
+
 ## [8.3.0] - 2026-10-26
 
 ### Added
