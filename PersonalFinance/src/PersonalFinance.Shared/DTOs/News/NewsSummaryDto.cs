@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Contracts;
+
 namespace PersonalFinance.Shared.DTOs.News;
 
 /// <summary>
@@ -28,6 +30,12 @@ public class NewsArticleSummaryResponseDto
     ///     The AI-generated summary text.
     /// </summary>
     public string Summary { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The keyed entry of <see cref="Summary"/> when it is a fixed server message rather than a model-written summary,
+    ///     so the Web app can show it in the reader's language (#381); null for a model summary.
+    /// </summary>
+    public ApiErrorEntryDto? FixedText { get; set; }
 
     /// <summary>
     ///     The model used for the summary (e.g., "gpt-4o-mini").

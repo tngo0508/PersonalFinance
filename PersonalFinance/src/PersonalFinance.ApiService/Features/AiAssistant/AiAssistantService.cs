@@ -76,6 +76,8 @@ internal sealed class AiAssistantService : IAiAssistantService
             {
                 Response =
                     "AI assistant is currently unavailable. Please configure the OpenAI API key to enable this feature.",
+                FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.Unavailable,
+                    "AI assistant is currently unavailable. Please configure the OpenAI API key to enable this feature."),
                 Model = _modelName,
                 TimestampUtc = DateTime.UtcNow,
                 Disclaimer = AiAssistantMessages.Disclaimer
@@ -140,9 +142,8 @@ internal sealed class AiAssistantService : IAiAssistantService
             // The registered IChatClient runs the tool-call loop (UseFunctionInvocation)
             ChatResponse response = await _chatClient.GetResponseAsync(messages, options, cancellationToken);
 
-            string responseText = string.IsNullOrWhiteSpace(response.Text)
-                ? "I'm sorry, I couldn't generate a response."
-                : response.Text;
+            bool emptyReply = string.IsNullOrWhiteSpace(response.Text);
+            string responseText = emptyReply ? EmptyReplyText : response.Text;
 
             // Record token usage (aggregated across all tool rounds)
             UsageDetails? usage = response.Usage;
@@ -163,6 +164,9 @@ internal sealed class AiAssistantService : IAiAssistantService
             return new AiChatResponseDto
             {
                 Response = responseText,
+                FixedText = emptyReply
+                    ? ResultMessage.Entry(ResultMessageKeys.AiAssistant.EmptyReply, EmptyReplyText)
+                    : null,
                 Model = _modelName,
                 TimestampUtc = DateTime.UtcNow,
                 Disclaimer = AiAssistantMessages.Disclaimer
@@ -174,12 +178,16 @@ internal sealed class AiAssistantService : IAiAssistantService
             return new AiChatResponseDto
             {
                 Response = "I'm sorry, I encountered an error processing your request. Please try again later.",
+                FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.Failed,
+                    "I'm sorry, I encountered an error processing your request. Please try again later."),
                 Model = _modelName,
                 TimestampUtc = DateTime.UtcNow,
                 Disclaimer = AiAssistantMessages.Disclaimer
             };
         }
     }
+
+    private const string EmptyReplyText = "I'm sorry, I couldn't generate a response.";
 
     /// <summary>
     /// The English names of the Languages the assistant replies in, by the code stored in
@@ -449,6 +457,8 @@ internal sealed class AiAssistantService : IAiAssistantService
             {
                 Summary =
                     "AI summarization is currently unavailable. Please configure the OpenAI API key to enable this feature.",
+                FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.SummaryUnavailable,
+                    "AI summarization is currently unavailable. Please configure the OpenAI API key to enable this feature."),
                 Model = _modelName,
                 TimestampUtc = DateTime.UtcNow,
                 Disclaimer = AiAssistantMessages.Disclaimer
@@ -464,9 +474,11 @@ internal sealed class AiAssistantService : IAiAssistantService
                     ? string.Concat(request.Description.AsSpan(0, 4000), "...")
                     : request.Description;
 
-            // Build the system prompt — news only, no financial advice
+            // Build the system prompt — news only, no financial advice. The summary is in the reader's Language,
+            // whatever language the article is in (#381).
+            string summaryLanguage = await GetReplyLanguageAsync(userId, cancellationToken);
             string systemPrompt =
-                "You are a helpful news summarizer. Summarize the following news article in 2-3 concise sentences in plain English. " +
+                $"You are a helpful news summarizer. Summarize the following news article in 2-3 concise sentences in plain {summaryLanguage}. " +
                 "Focus on the key facts and main points. Do not provide financial advice or recommendations.";
 
             string userMessage = $"Title: {request.Title[..Math.Min(request.Title.Length, 500)]}\n\nDescription: {description}";
@@ -503,6 +515,8 @@ internal sealed class AiAssistantService : IAiAssistantService
             return new NewsArticleSummaryResponseDto
             {
                 Summary = "I'm sorry, I encountered an error generating the summary. Please try again later.",
+                FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.SummaryFailed,
+                    "I'm sorry, I encountered an error generating the summary. Please try again later."),
                 Model = _modelName,
                 TimestampUtc = DateTime.UtcNow,
                 Disclaimer = AiAssistantMessages.Disclaimer
@@ -539,12 +553,14 @@ internal sealed class AiAssistantService : IAiAssistantService
             return refused;
         }
 
+        // A note is written once, in the Language the user has now; a saved note keeps that language (#381).
+        string noteLanguage = await GetReplyLanguageAsync(userId, cancellationToken);
         ChatResponse response;
         try
         {
             response = await _chatClient.GetResponseAsync(
                 [
-                    new AiMessage(ChatRole.System, PurposeNoteSystemPrompt),
+                    new AiMessage(ChatRole.System, BuildPurposeNoteSystemPrompt(noteLanguage)),
                     new AiMessage(ChatRole.User, BuildPurposeNoteFacts(request))
                 ],
                 new ChatOptions { ModelId = _modelName, MaxOutputTokens = PurposeNoteMaxOutputTokens },
@@ -578,9 +594,13 @@ internal sealed class AiAssistantService : IAiAssistantService
 
     /// <summary>
     /// Confines a Purpose Note to explaining the priority already computed. The facts arrive as data in the user
-    /// message; nothing else about the Account is sent and no tools are offered.
+    /// message; nothing else about the Account is sent and no tools are offered. The note's language is the last line,
+    /// so the rules before it stay identical for every user.
     /// </summary>
-    private static readonly string PurposeNoteSystemPrompt = $"""
+    private static string BuildPurposeNoteSystemPrompt(string noteLanguage) => PurposeNoteRules
+        + $"\n7. Write the note in {noteLanguage}, whatever language the purpose is written in.";
+
+    private static readonly string PurposeNoteRules = $"""
         You write a short note for the Money Priorities page of a personal finance app. The app has already chosen the
         user's suggested priority from their answers; you explain how that priority serves the purpose the user gave.
 

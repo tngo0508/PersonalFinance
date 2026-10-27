@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Contracts;
+
 namespace PersonalFinance.Shared.DTOs.AiAssistant;
 
 /// <summary>
@@ -27,6 +29,12 @@ public class AiChatResponseDto
     /// The AI assistant's response message.
     /// </summary>
     public string Response { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The keyed entry of <see cref="Response"/> when it is a fixed server reply rather than model-written text, so the
+    /// Web app can show it in the reader's language (#381); null for a model reply.
+    /// </summary>
+    public ApiErrorEntryDto? FixedText { get; set; }
 
     /// <summary>
     /// The model used for the response (e.g., "gpt-4o-mini").

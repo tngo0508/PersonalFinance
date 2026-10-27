@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 
@@ -135,6 +136,9 @@ internal sealed class AiScopeFilter : IAiScopeFilter
             {
                 Response = "Your message is too long. Please keep it under "
                           + AiAssistantMessages.MaxMessageLength + " characters.",
+                FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.TooLong,
+                    "Your message is too long. Please keep it under {max} characters.",
+                    ErrorArgs.Number("max", AiAssistantMessages.MaxMessageLength)),
                 IsRefusal = true,
                 Disclaimer = null,
                 TimestampUtc = DateTime.UtcNow,
@@ -232,6 +236,7 @@ internal sealed class AiScopeFilter : IAiScopeFilter
         return new AiChatResponseDto
         {
             Response = AiAssistantMessages.OffTopicRefusal,
+            FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.OffTopic, AiAssistantMessages.OffTopicRefusal),
             IsRefusal = true,
             Disclaimer = null,
             TimestampUtc = DateTime.UtcNow,
@@ -246,6 +251,8 @@ internal sealed class AiScopeFilter : IAiScopeFilter
         return new AiChatResponseDto
         {
             Response = AiAssistantMessages.GreetingAcknowledgement,
+            FixedText = ResultMessage.Entry(ResultMessageKeys.AiAssistant.Greeting,
+                AiAssistantMessages.GreetingAcknowledgement),
             IsRefusal = true,
             Disclaimer = null,
             TimestampUtc = DateTime.UtcNow,
