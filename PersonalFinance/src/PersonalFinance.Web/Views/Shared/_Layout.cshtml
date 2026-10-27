@@ -128,6 +128,11 @@
                     <span class="sidebar-link-icon"><i data-lucide="calculator"></i></span>
                     <span class="sidebar-link-text">@L["Shell.Nav.InvestmentCalculator"]</span>
                 </a>
+                <a class="sidebar-link @(currentController == "CurrencyConverter" ? "active" : "")"
+                   asp-area="" asp-controller="CurrencyConverter" asp-action="Index">
+                    <span class="sidebar-link-icon"><i data-lucide="arrow-left-right"></i></span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.CurrencyConverter"]</span>
+                </a>
                 <a class="sidebar-link @(currentController == "Research" ? "active" : "")"
                    asp-area="" asp-controller="Research" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="globe"></i></span>
@@ -277,7 +282,7 @@
             <i data-lucide="dollar-sign"></i>
             <span>@L["Shell.BottomNav.Finances"]</span>
         </a>
-        <a class="bottom-nav-item @(currentController == "InvestmentCalculator" || currentController == "Research" || currentController == "News" || currentController == "GoogleDrive" ? "active" : "")"
+        <a class="bottom-nav-item @(currentController == "InvestmentCalculator" || currentController == "CurrencyConverter" || currentController == "Research" || currentController == "News" || currentController == "GoogleDrive" ? "active" : "")"
            asp-area="" asp-controller="InvestmentCalculator" asp-action="Index">
             <i data-lucide="calculator"></i>
             <span>@L["Shell.BottomNav.Tools"]</span>

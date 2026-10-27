@@ -1,0 +1,146 @@
+@using System.Globalization
+@using PersonalFinance.Web.Models.CurrencyConverter
+@model CurrencyConverterViewModel
+@{
+    ViewData["Title"] = L["CurrencyConverter.Title"].Value;
+    var culture = CultureInfo.CurrentCulture;
+    var isoDate = "yyyy-MM-dd";
+
+    // Query-string keys bind case-insensitively, so a field's errors are matched the same way.
+    string[] ErrorsFor(string field) => ViewData.ModelState
+        .Where(entry => string.Equals(entry.Key, field, StringComparison.OrdinalIgnoreCase))
+        .SelectMany(entry => entry.Value!.Errors)
+        .Select(error => error.ErrorMessage)
+        .ToArray();
+
+    string SourceName(string source) => source switch
+    {
+        "frankfurter" => L["CurrencyConverter.Source.Frankfurter"].Value,
+        "currency-api" => L["CurrencyConverter.Source.CurrencyApi"].Value,
+        _ => source
+    };
+
+    var pageErrors = ErrorsFor(string.Empty);
+    var amountErrors = ErrorsFor(nameof(CurrencyConverterViewModel.Amount));
+    var fromErrors = ErrorsFor(nameof(CurrencyConverterViewModel.From));
+    var toErrors = ErrorsFor(nameof(CurrencyConverterViewModel.To));
+    var dateErrors = ErrorsFor(nameof(CurrencyConverterViewModel.Date));
+}
+
+<div class="py-3">
+    <header class="mb-4">
+        <h1 class="h3 mb-1">@L["CurrencyConverter.Title"]</h1>
+        <p class="text-muted mb-0">@L["CurrencyConverter.Intro"]</p>
+    </header>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="Index" method="get" novalidate id="currency-converter-form">
+                        @if (pageErrors.Length > 0)
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @foreach (var message in pageErrors)
+                                {
+                                    <div>@message</div>
+                                }
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label for="converter-amount" class="form-label">@L["CurrencyConverter.Form.Amount"]</label>
+                            <input id="converter-amount" name="amount" type="number" min="0" step="any" inputmode="decimal"
+                                   class="form-control @(amountErrors.Length > 0 ? "is-invalid" : "")"
+                                   value="@Model.Amount?.ToString(CultureInfo.InvariantCulture)" required/>
+                            @foreach (var message in amountErrors)
+                            {
+                                <div class="invalid-feedback d-block">@message</div>
+                            }
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-sm-6">
+                                <label for="converter-from" class="form-label">@L["CurrencyConverter.Form.From"]</label>
+                                <select id="converter-from" name="from" class="form-select @(fromErrors.Length > 0 ? "is-invalid" : "")">
+                                    @foreach (var currency in Model.Currencies)
+                                    {
+                                        <option value="@currency.Code" selected="@(currency.Code == Model.From)">@L.Named("CurrencyConverter.Form.CurrencyOption", ("name", L[currency.NameKey].Value), ("code", currency.Code))</option>
+                                    }
+                                </select>
+                                @foreach (var message in fromErrors)
+                                {
+                                    <div class="invalid-feedback d-block">@message</div>
+                                }
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="converter-to" class="form-label">@L["CurrencyConverter.Form.To"]</label>
+                                <select id="converter-to" name="to" class="form-select @(toErrors.Length > 0 ? "is-invalid" : "")">
+                                    @foreach (var currency in Model.Currencies)
+                                    {
+                                        <option value="@currency.Code" selected="@(currency.Code == Model.To)">@L.Named("CurrencyConverter.Form.CurrencyOption", ("name", L[currency.NameKey].Value), ("code", currency.Code))</option>
+                                    }
+                                </select>
+                                @foreach (var message in toErrors)
+                                {
+                                    <div class="invalid-feedback d-block">@message</div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="converter-date" class="form-label">@L["CurrencyConverter.Form.Date"]</label>
+                            <input id="converter-date" name="date" type="date"
+                                   class="form-control @(dateErrors.Length > 0 ? "is-invalid" : "")"
+                                   min="@CurrencyConverterViewModel.MinDate.ToString(isoDate, CultureInfo.InvariantCulture)"
+                                   max="@Model.MaxDate.ToString(isoDate, CultureInfo.InvariantCulture)"
+                                   value="@Model.Date?.ToString(isoDate, CultureInfo.InvariantCulture)"
+                                   aria-describedby="converter-date-help"/>
+                            <div id="converter-date-help" class="form-text">@L["CurrencyConverter.Form.DateHelp"]</div>
+                            @foreach (var message in dateErrors)
+                            {
+                                <div class="invalid-feedback d-block">@message</div>
+                            }
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="converter-submit">@L["CurrencyConverter.Form.Submit"]</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Result is { } result)
+        {
+            <div class="col-12 col-lg-6">
+                <div class="card" data-converter-result aria-live="polite">
+                    <div class="card-body">
+                        <h2 class="h5">@L["CurrencyConverter.Result.Title"]</h2>
+                        @if (result.Unavailable || result.ConvertedAmount is not { } converted || result.Rate is not { } rate)
+                        {
+                            <p class="mb-0" data-converter-unavailable>@L["CurrencyConverter.Result.Unavailable"]</p>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-1">@MoneyFormatter.FormatConvertible(result.Amount, result.From) =</p>
+                            <p class="h3 mb-3" data-converter-amount>@MoneyFormatter.FormatConvertible(converted, result.To)</p>
+                            <p class="mb-1" data-converter-rate>@L.Named("CurrencyConverter.Result.Rate", ("from", result.From), ("rate", CurrencyConverterViewModel.FormatRate(rate, culture)), ("to", result.To))</p>
+                            @if (result.RateDate is { } rateDate)
+                            {
+                                var dateText = rateDate.ToString("d", culture);
+                                <p class="mb-1" data-converter-rate-date>@L.Named("CurrencyConverter.Result.RateDate", ("date", dateText))</p>
+                                @if (result.IsStale)
+                                {
+                                    <p class="text-warning-emphasis mb-1" data-converter-stale>@L.Named("Common.Conversion.RateAsOf", ("date", dateText))</p>
+                                }
+                            }
+                            @if (result.Sources.Count > 0)
+                            {
+                                <p class="small text-muted mb-0" data-converter-source>@L.Named("CurrencyConverter.Result.Source", ("source", string.Join(", ", result.Sources.Select(SourceName))))</p>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
